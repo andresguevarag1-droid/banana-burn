@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🍌 Banana Burn
 
-## Getting Started
+Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + Supabase + Tailwind v4, desplegado en Vercel.
 
-First, run the development server:
+## Qué hay
+
+| Ruta | Qué es |
+|---|---|
+| `/` · `/precios` | Landing de ventas (tema claro, marca Banana) |
+| `/entrar` | Login multiusuario: código por correo (OTP) + Google |
+| `/app` | **Hoy**: rutina del día (distinta a ayer y mañana), meta, macros, semana |
+| `/app/entrenar` · `/nutricion` · `/progreso` · `/coach` | Plan semanal, macros con comida tica, pesaje + perfil, coach IA (pronto) |
+| `/admin` · `/admin/usuarios` | Panel de staff con KPIs y usuarios (solo roles coach/support/admin/superadmin) |
+
+- `src/lib/engine/` — motor portado del prototipo: calorías (Mifflin-St Jeor), doble progresión con reinicio −10 %, descargas, tendencia de peso, plan semanal anti-aburrimiento. Tests: `npm test`.
+- `src/middleware.ts` — protege `/app` y `/admin`.
+- `supabase/migrations/0001_init.sql` — esquema completo con RLS, roles y consentimiento de salud (Ley 8968).
+
+**Sin variables de entorno la app corre en modo demo** (datos de Andrés, sin login) para que el deploy funcione desde el día 1.
+
+## Activar cuentas reales (10 min)
+
+1. Crea un proyecto en [Supabase](https://supabase.com) (región `us-east-1` recomendada).
+2. SQL Editor → pega y ejecuta `supabase/migrations/0001_init.sql`.
+3. Authentication → Email: activa *Email OTP*. En **Email Templates → Magic Link** incluye `{{ .Token }}` para que llegue el código de 6 dígitos.
+4. Authentication → URL Configuration: Site URL = tu dominio de Vercel; Redirect URLs = `https://TU-DOMINIO/auth/callback` y `http://localhost:3000/auth/callback`.
+5. (Opcional) Authentication → Providers → Google con tu Client ID/Secret.
+6. Copia `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a Vercel → Settings → Environment Variables y redepliega.
+7. Regístrate en `/entrar` y hazte superadmin en el SQL Editor:
+   ```sql
+   update public.profiles set role = 'superadmin'
+   where id = (select id from auth.users where email = 'TU_CORREO');
+   ```
+
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # opcional
+npm install
+npm run dev     # http://localhost:3000
+npm test        # motor de entrenamiento
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Roadmap
+Fase 1 (2–22 nov): reproductor de entreno + registro de series, onboarding, coach IA (Claude), PWA.
+Fase 2 (23 nov–6 dic): pagos ONVO (tarjeta, SINPE Móvil, Apple Pay), admin v1 completo.
+Fase 3 (7–20 dic): beta cerrada CR. Fase 4 (ene 2027): lanzamiento LATAM.
