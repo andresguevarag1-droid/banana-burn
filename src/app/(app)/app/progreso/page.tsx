@@ -8,6 +8,7 @@ import { getDaily } from "@/lib/daily";
 import { ProfileForm } from "./forms";
 import { Measures, Photos } from "./body";
 import { ProgressBar } from "@/components/progress-bar";
+import { FUN_LABELS } from "@/components/workout/logic";
 import { getMeasures, getPhotos } from "@/lib/measures";
 import { navyBodyFat } from "@/lib/body";
 import { BananaCoin, BananaFlame, BananaMedal, Barbell, BrandIcon, Calendar, Camera, CheckCircle, Lightning, LevelIcon, Lock, Monkey, MonkeyBanana, CaretDown, Ruler, Scales, Smiley, SmileyMeh, SmileySad, Target, TrendDown, TrendUp, Timer, type PhosphorIcon } from "@/components/icons";
@@ -20,8 +21,9 @@ const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDig
 function H({ icon: I, children }: { icon: PhosphorIcon | typeof Monkey; children: React.ReactNode }) {
   return <h2 className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
 }
+// Misma escala y etiquetas que la pregunta "¿Qué tan divertido estuvo?" del reproductor
 const FUN: { I: PhosphorIcon; w: "duotone" | "fill"; l: string }[] = [
-  { I: SmileySad, w: "duotone", l: "Pesado" }, { I: SmileyMeh, w: "duotone", l: "Normal" }, { I: Smiley, w: "duotone", l: "Bien" }, { I: Smiley, w: "fill", l: "Muy bien" }, { I: Smiley, w: "fill", l: "Brutal" },
+  { I: SmileySad, w: "duotone", l: FUN_LABELS[0] }, { I: SmileyMeh, w: "duotone", l: FUN_LABELS[1] }, { I: Smiley, w: "duotone", l: FUN_LABELS[2] }, { I: Smiley, w: "fill", l: FUN_LABELS[3] }, { I: Smiley, w: "fill", l: FUN_LABELS[4] },
 ];
 
 export default async function Progreso() {
@@ -138,7 +140,7 @@ export default async function Progreso() {
           <ul className="divide-y divide-line">
             {workouts.map((w, i) => (
               <li key={i} className="py-3 flex items-center gap-4">
-                {(() => { const f = FUN[(w.fun ?? 3) - 1]; return f ? <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink" title={`Sensación: ${f.l}`}><f.I weight={f.w} className="size-6" /><span className="sr-only">Sensación: {f.l}</span></span> : <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><Barbell weight="duotone" className="size-6" /></span>; })()}
+                {(() => { const f = FUN[(w.fun ?? 0) - 1]; return f ? <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink" title={`Diversión: ${f.l}`}><f.I weight={f.w} className="size-6" /><span className="sr-only">Diversión: {f.l}</span></span> : <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><Barbell weight="duotone" className="size-6" /></span>; })()}
                 <div className="flex-1 min-w-0"><p className="font-bold text-ink">{w.tpl}</p><p className="text-sm text-muted">{new Date(w.d + "T12:00:00").toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "short" })}</p></div>
                 <div className="text-right text-sm tabular-nums"><p className="font-bold text-ink">{w.vol.toLocaleString("es-419")} kg</p><p className="text-muted">{w.sets} series</p></div>
               </li>

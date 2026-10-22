@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { BananaCoin, BananaFlame, BananaTrophy, CaretDown, Check } from "@/components/icons";
+import { BananaCoin, BananaFlame, BananaTrophy, CaretDown, Check, Timer } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { EFFORTS, clock, type Effort } from "./logic";
 import { CountRing, GoldBanana } from "./ui";
@@ -13,6 +13,10 @@ export type RestInfo = {
   xp: number; xpKey: number;
   combo: number;
   pr: string | null;
+  /** Serie marcada más rápido de lo posible: no suma XP (se dice, no se esconde) */
+  rushed?: boolean;
+  /** Pista de una línea la primera vez que aparece algo nuevo */
+  tip?: "xp" | "combo" | null;
   /** Nombre del ejercicio que se acaba de completar entero */
   finished: string | null;
   bananas: { got: number; total: number };
@@ -80,6 +84,13 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
               </span>
             )}
           </div>
+          {info.rushed && (
+            <p className="mt-2 mx-auto flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-2 text-[13px] font-bold text-white/85">
+              <Timer weight="bold" className="size-4 shrink-0" />Ritmo muy rápido: esta serie no suma XP
+            </p>
+          )}
+          {info.tip === "xp" && <p className="mt-2 text-center text-[13px] font-semibold text-white/70">Cada serie suma 10 XP y terminar todo el entreno, 30 más.</p>}
+          {info.tip === "combo" && <p className="mt-2 text-center text-[13px] font-semibold text-white/70">Combo: sube con cada serie que haces sin pasarte del descanso. Si te demoras mucho, vuelve a x1.</p>}
           {info.pr && (
             <div className={`${css.shine} ${css.collect} mt-3 flex items-center gap-3 rounded-[1.5rem] bg-banana p-3.5 text-ink`}>
               <BananaTrophy weight="fill" className="size-9 shrink-0" />

@@ -5,6 +5,9 @@ import css from "./workout.module.css";
 
 type Props = {
   rows: Row[]; active: number; bw: boolean; unit?: string; restSec: number; plates: number[] | null;
+  /** Pesos para empezar (calibración o serie sin peso): un toque y listo */
+  chips?: { kg: number; label?: string }[] | null;
+  onPickKg?: (si: number, kg: number) => void;
   prev: { kg: number | null; reps: number } | undefined;
   onStep: (si: number, field: "kg" | "reps", d: number) => void;
   onChange: (si: number, field: "kg" | "reps", v: string) => void;
@@ -48,7 +51,7 @@ export function DoneRow({ si, row, unit, bw, onUndo }: { si: number; row: Row; u
   );
 }
 
-export function FocusSet({ rows, active, bw, unit, restSec, plates, prev, onStep, onChange, onCopy, onUndo }: Props) {
+export function FocusSet({ rows, active, bw, unit, restSec, plates, prev, chips, onPickKg, onStep, onChange, onCopy, onUndo }: Props) {
   const r = rows[active];
   const n = rows.length;
   const lastDone = [...rows.slice(0, active)].reverse().find((x) => x.done);
@@ -77,6 +80,18 @@ export function FocusSet({ rows, active, bw, unit, restSec, plates, prev, onStep
           </div>
         </div>
 
+        {chips && chips.length > 0 && (
+          <div className="mt-3">
+            <p className="text-center text-[13px] font-semibold text-muted">{num(r.kg) > 0 ? "Peso sugerido para empezar. Ajústalo si hace falta:" : "Elige un peso para empezar:"}</p>
+            <div role="group" aria-label="Pesos para empezar" className="mt-2 flex flex-wrap justify-center gap-2">
+              {chips.map((c) => {
+                const on = num(r.kg) === c.kg;
+                return <button key={c.kg} type="button" onClick={() => onPickKg?.(active, c.kg)} aria-pressed={on} className={`chip h-11 px-4 ${on ? "bg-ink text-white" : "bg-cream text-ink border border-line"}`}>{c.label ? `${c.label} ${kgFmt(c.kg)} kg` : `${kgFmt(c.kg)} kg`}</button>;
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="mt-3 flex items-start">
           {showKg && <>
             <Big label={bw ? "lastre en kg" : "kilos"} unit={bw ? "lastre kg" : "kg"} value={r.kg} placeholder={bw ? "PC" : "0"} inputMode="decimal"
@@ -89,8 +104,8 @@ export function FocusSet({ rows, active, bw, unit, restSec, plates, prev, onStep
 
         {(same || fromPrev) && (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {same && lastDone && <button type="button" onClick={() => onCopy(active, lastDone.kg, lastDone.reps)} className="chip h-9 px-3.5 bg-cream text-ink border border-line">Igual que la anterior: {targetText(lastDone, { unit, bw })}</button>}
-            {fromPrev && prev && <button type="button" onClick={() => onCopy(active, prev.kg != null ? String(prev.kg) : "", String(prev.reps))} className="chip h-9 px-3.5 bg-cream text-ink border border-line">La vez pasada: {prev.kg != null ? `${kgFmt(prev.kg)} × ` : ""}{prev.reps}</button>}
+            {same && lastDone && <button type="button" onClick={() => onCopy(active, lastDone.kg, lastDone.reps)} className="chip h-11 px-4 bg-cream text-ink border border-line">Igual que la anterior: {targetText(lastDone, { unit, bw })}</button>}
+            {fromPrev && prev && <button type="button" onClick={() => onCopy(active, prev.kg != null ? String(prev.kg) : "", String(prev.reps))} className="chip h-11 px-4 bg-cream text-ink border border-line">La vez pasada: {prev.kg != null ? `${kgFmt(prev.kg)} × ` : ""}{prev.reps}</button>}
           </div>
         )}
 
