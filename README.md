@@ -36,6 +36,42 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
    where id = (select id from auth.users where email = 'TU_CORREO');
    ```
 
+## Comunicaciones
+
+Correo (Resend), Web Push (VAPID), avisos in-app (campanita) y un cron de recordatorios. **Todo es no-op sin variables de entorno**: el build y el modo demo funcionan igual.
+
+| Pieza | Dónde |
+|---|---|
+| Lógica de decisión (quién recibe qué, a qué hora local, silencio, tope de 2 push/día) | `src/lib/notify.ts` · tests `src/lib/notify.test.ts` |
+| Plantillas de correo (HTML + texto, marca banana, español) | `src/lib/email/templates.ts` |
+| Envío Resend + funciones transaccionales para auth/onboarding/pagos | `src/lib/email/send.ts`, `src/lib/email/index.ts` |
+| Baja con un clic (token HMAC) | `GET/POST /api/email/baja?token=…` · `src/lib/email/token.ts` |
+| Web Push | `public/sw.js` (solo push, **sin caché offline**), `src/lib/push.ts`, `POST/DELETE /api/push/subscribe` |
+| Cron | `GET /api/cron/recordatorios` (`Authorization: Bearer $CRON_SECRET`) · `src/lib/notify-run.ts` |
+| UI | `src/components/notifications/{settings,bell,enable-push}.tsx` · server actions `src/app/actions/notifications.ts` |
+| Esquema | `supabase/migrations/0006_notifications.sql` (prefs, push_subscriptions, notification_log, notifications + RLS) |
+
+**Qué se manda** (hora local del usuario, zona por defecto `America/Costa_Rica`):
+- A su `reminder_time`, día de entreno y sin entreno → "Hoy te toca {rutina} 💪" (push + correo según preferencias).
+- 3 y 7 días sin actividad → reactivación (reemplaza al recordatorio ese día).
+- 20:00, sin actividad hoy y racha ≥ 2 → racha en peligro.
+- Lunes 07:00 → resumen semanal por correo (ese día el recordatorio va solo por push: un correo a la vez).
+- Máximo 2 push por día, nunca en horas de silencio (por defecto 22:00–07:00). Cada tipo una vez por día (`notification_log`).
+
+### Activar
+
+1. **Supabase**: ejecuta `supabase/migrations/0006_notifications.sql`. Requiere `SUPABASE_SERVICE_ROLE_KEY` en Vercel (el cron y los webhooks usan service_role).
+2. **Resend + dominio `bananaburn.app`**: Resend → Domains → Add domain `bananaburn.app` (región us-east-1). Copia en tu DNS los registros que te da: **MX y TXT (SPF) del subdominio `send`**, el **TXT DKIM `resend._domainkey`** y, recomendado, un **TXT DMARC** en `_dmarc` (`v=DMARC1; p=none; rua=mailto:hola@bananaburn.app`). Espera a que salga *Verified* y crea una API key con permiso *Sending*. Variables: `RESEND_API_KEY`, `EMAIL_FROM="Banana Burn <hola@bananaburn.app>"`.
+3. **Enlaces de baja**: `EMAIL_UNSUB_SECRET=$(openssl rand -hex 32)`. Si lo cambias, los enlaces viejos dejan de funcionar.
+4. **Web Push (VAPID)**:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+   Pon la pública en `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (y opcionalmente `VAPID_PUBLIC_KEY`), la privada en `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT=mailto:hola@bananaburn.app`. **No las rotes**: cambiar las llaves invalida todas las suscripciones. En iPhone el push solo funciona con la app instalada en inicio (iOS 16.4+); la UI lo explica.
+5. **Cron**: `CRON_SECRET=$(openssl rand -hex 32)` en Vercel. Vercel lo manda solo como `Authorization: Bearer …`. `vercel.json` lo programa **cada hora** (`0 * * * *`), lo que requiere **Vercel Pro**.
+   - **Vercel Hobby solo permite crons diarios** (y un deploy con un cron horario falla). Fallback: cambia el schedule a `"0 13 * * *"` (07:00 Costa Rica) y pon `NOTIFY_CRON_MODE=daily`. En ese modo el recordatorio, la reactivación y el semanal de los lunes salen en esa corrida (ignorando `reminder_time`) y el aviso de racha de las 20:00 se omite. Pro desbloquea el horario por usuario y la racha.
+   - Probar a mano: `curl -H "Authorization: Bearer $CRON_SECRET" https://TU-DOMINIO/api/cron/recordatorios` (es idempotente: repetirlo no duplica envíos).
+
 ## Desarrollo
 
 ```bash
