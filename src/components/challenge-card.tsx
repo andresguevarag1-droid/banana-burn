@@ -28,7 +28,7 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
       <div className="flex items-start gap-3">
         <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-white text-2xl shadow-soft">{v.c.emoji}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-ink/60">Día {v.day} de {v.c.days}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-ink/75">Día {v.day} de {v.c.days}</p>
           <p className="font-extrabold text-ink leading-tight">{v.c.title}</p>
           <div className="mt-2 h-2 rounded-full bg-white/70 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={v.c.days} aria-valuenow={completed} aria-label={`${completed} de ${v.c.days} días`}>
             <div className="h-full rounded-full bg-ink transition-all duration-700" style={{ width: `${(completed / v.c.days) * 100}%` }} />
@@ -46,11 +46,11 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
           <span className="text-[11px] font-semibold text-muted max-w-28 text-right">{v.hint}</span>
         )}
       </div>
-      {compact && <button onClick={() => setShowCal((s) => !s)} className="mt-2 text-xs font-bold text-ink/60" aria-expanded={showCal}>{showCal ? "Ocultar calendario" : "Ver calendario"}</button>}
+      {compact && <button onClick={() => setShowCal((s) => !s)} className="mt-2 text-xs font-bold text-ink/75" aria-expanded={showCal}>{showCal ? "Ocultar calendario" : "Ver calendario"}</button>}
       {showCal && (
         <ol className="mt-3 grid grid-cols-10 gap-1" aria-label="Calendario del reto">
           {cells.map((c) => (
-            <li key={c.n} title={`Día ${c.n}`} className={`aspect-square grid place-items-center rounded-md text-[10px] font-bold ${c.done ? "bg-ink text-banana" : c.today ? "border-2 border-ink text-ink bg-white" : c.past ? "bg-white/40 text-faint line-through" : "bg-white/60 text-ink/40"}`}>
+            <li key={c.n} title={`Día ${c.n}`} className={`aspect-square grid place-items-center rounded-md text-[10px] font-bold ${c.done ? "bg-ink text-banana" : c.today ? "border-2 border-ink text-ink bg-white" : c.past ? "bg-white/40 text-faint line-through" : "bg-white/60 text-ink/60"}`}>
               {c.done ? "✓" : c.n}<span className="sr-only">{c.done ? " cumplido" : c.past ? " no cumplido" : ""}</span>
             </li>
           ))}

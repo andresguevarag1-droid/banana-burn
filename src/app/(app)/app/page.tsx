@@ -94,13 +94,13 @@ export default async function Hoy() {
         {/* Rutina de hoy */}
         <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-peel/10 border border-peel/30" : training ? "bg-banana" : "card"}`}>
           {training && !g.trainedToday && <span aria-hidden className="absolute -right-6 -top-8 text-[140px] leading-none opacity-[.13] rotate-12 select-none">{plan.emoji}</span>}
-          <p className="relative text-xs font-bold uppercase tracking-wider text-ink/60">Hoy {DAY_NAMES[d.today.dow]} · {plan.tag}{d.deload && " · descarga 🌴"}</p>
+          <p className="relative text-xs font-bold uppercase tracking-wider text-ink/75">Hoy {DAY_NAMES[d.today.dow]} · {plan.tag}{d.deload && " · descarga 🌴"}</p>
           <h2 className="relative mt-1 text-[32px] leading-none font-extrabold tracking-tight text-ink">{plan.emoji} {plan.name}</h2>
           {training ? (
             <>
               <p className="relative mt-2 text-sm font-semibold text-ink/70">{plan.exercises.length} ejercicios · ~{mins} min{plan.cardio ? " · + cardio" : ""}</p>
               <ul className="relative mt-4 flex flex-wrap gap-1.5">
-                {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/50">{e.cfg.sets}×{e.cfg.lo}–{e.cfg.hi}</span></li>)}
+                {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/70">{e.cfg.sets}×{e.cfg.lo}–{e.cfg.hi}</span></li>)}
               </ul>
               {g.trainedToday ? (
                 <p className="relative mt-5 font-extrabold text-peel">✅ ¡Entreno de hoy completado! Descansa y come bien.</p>
@@ -112,7 +112,7 @@ export default async function Hoy() {
             <p className="relative mt-3 text-ink/80">🚶 {plan.cardio}. Tu músculo crece hoy.</p>
           )}
           {!g.trainedToday && <div className="relative mt-4"><ExpressChips /></div>}
-          <p className="relative mt-4 text-xs font-semibold text-ink/60">Ayer {d.yesterday.emoji} {d.yesterday.name} · Mañana {d.tomorrow.emoji} {d.tomorrow.name}</p>
+          <p className="relative mt-4 text-xs font-semibold text-ink/75">Ayer {d.yesterday.emoji} {d.yesterday.name} · Mañana {d.tomorrow.emoji} {d.tomorrow.name}</p>
         </section>
 
         {/* Peso y meta */}

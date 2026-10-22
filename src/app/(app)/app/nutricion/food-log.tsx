@@ -128,7 +128,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
         return (
           <section key={s.id} className="card overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <h3 className="font-extrabold text-ink">{s.e} {s.n}</h3>
+              <h2 className="font-extrabold text-ink">{s.e} {s.n}</h2>
               <span className="text-sm font-semibold text-muted tabular-nums">{k ? `${n0(k)} kcal` : ""}</span>
             </div>
             {its.length > 0 && (

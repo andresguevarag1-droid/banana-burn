@@ -28,13 +28,13 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
 
       <section key={sel} className={`rounded-[1.75rem] p-5 sm:p-6 animate-rise ${isToday && p.tpl ? "bg-banana" : "card"}`}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-ink/60">{DAY_NAMES[p.dow]}{isToday && " · hoy"}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-ink/75">{DAY_NAMES[p.dow]}{isToday && " · hoy"}</p>
           <span className="chip bg-ink/5 text-ink">{p.tag}</span>
         </div>
         <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">{p.emoji} {p.name}</h2>
         {p.exercises.length > 0 ? (
           <>
-            <p className="mt-1 text-sm font-semibold text-ink/60">{p.exercises.length} ejercicios · ~{p.mins ?? 55} min · tempo 3-1-1</p>
+            <p className="mt-1 text-sm font-semibold text-ink/75">{p.exercises.length} ejercicios · ~{p.mins ?? 55} min · tempo 3-1-1</p>
             <ol className="mt-4 space-y-2">
               {p.exercises.map((e, i) => (
                 <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white/80 px-3.5 py-3">

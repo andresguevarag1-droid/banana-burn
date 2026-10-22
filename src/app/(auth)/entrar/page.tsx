@@ -10,13 +10,13 @@ export default function Entrar() {
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
       <div className="flex flex-col px-5 sm:px-10 py-6">
-        <Logo />
-        <div className="flex-1 grid place-items-center py-10">
+        <header><Logo /></header>
+        <main className="flex-1 grid place-items-center py-10">
           <div className="w-full max-w-[400px]">
             <Suspense><LoginForm configured={isSupabaseConfigured} /></Suspense>
           </div>
-        </div>
-        <p className="text-xs text-faint text-center">Al continuar aceptas los <Link href="/terminos" className="underline">Términos</Link> y la <Link href="/privacidad" className="underline">Política de privacidad</Link>.</p>
+        </main>
+        <footer className="text-xs text-faint text-center">Al continuar aceptas los <Link href="/terminos" className="underline">Términos</Link> y la <Link href="/privacidad" className="underline">Política de privacidad</Link>.</footer>
       </div>
       <aside className="hidden lg:flex relative overflow-hidden bg-banana p-14 flex-col justify-end">
         <div aria-hidden className="absolute -top-20 -right-20 text-[420px] leading-none opacity-25 rotate-12 select-none">🍌</div>

@@ -19,7 +19,7 @@ export default async function Entrenar() {
       <header>
         <p className="eyebrow">Programa Recomposición Banana</p>
         <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Semana {block} de 6{d.deload && " · descarga 🌴"}</h1>
-        <div className="mt-3 flex gap-1.5" aria-label={`Semana ${block} de 6`}>
+        <div className="mt-3 flex gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={6} aria-valuenow={block} aria-label={`Semana ${block} de 6`}>
           {[1, 2, 3, 4, 5, 6].map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < block ? "bg-ink" : w === block ? "bg-ember" : w === 6 ? "bg-sky/30" : "bg-line"}`} />)}
         </div>
         <p className="mt-2 text-sm text-muted">{a.trainDays} días por semana · nivel {a.level}{a.minutes ? ` · ${a.minutes} min por sesión` : ""} · ningún día repite al anterior ni al siguiente · los accesorios rotan cada lunes · la semana 6 es de descarga.</p>

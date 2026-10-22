@@ -74,7 +74,7 @@ export default function Landing() {
           <p className="eyebrow">La app por dentro</p>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Todo lo que necesitas para bajar de peso, en tu bolsillo.</h2>
         </div>
-        <div className="mt-12 -mx-4 px-4 flex gap-6 overflow-x-auto snap-x snap-mandatory pb-6 lg:grid lg:grid-cols-4 lg:overflow-visible">
+        <div tabIndex={0} role="region" aria-label="Pantallas de la app" className="mt-12 -mx-4 px-4 flex gap-6 overflow-x-auto snap-x snap-mandatory pb-6 lg:grid lg:grid-cols-4 lg:overflow-visible focus:outline-none focus-visible:ring-4 focus-visible:ring-banana">
           {[
             ["/landing/hoy.png", "🔥 Hoy", "Tu rutina del día, tu racha y tus metas de proteína, agua y pasos de un vistazo."],
             ["/landing/entreno.png", "🏋️ En el gym", "Te dice cuánto levantar en cada serie, cuenta tu descanso y celebra tus récords."],
@@ -115,13 +115,13 @@ export default function Landing() {
           </div>
           <p className="text-muted max-w-sm">Ejemplo real generado por el motor de Banana Burn. La semana siguiente, los accesorios cambian.</p>
         </div>
-        <div className="mt-10 -mx-4 px-4 sm:mx-0 sm:px-0 flex sm:grid sm:grid-cols-7 gap-3 overflow-x-auto snap-x pb-2">
+        <div tabIndex={0} role="region" aria-label="Semana de ejemplo" className="mt-10 -mx-4 px-4 sm:mx-0 sm:px-0 flex sm:grid sm:grid-cols-7 gap-3 overflow-x-auto snap-x pb-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-banana">
           {week.map((d) => (
             <div key={d.dow} className={`snap-start shrink-0 w-[220px] sm:w-auto rounded-3xl p-4 border ${d.tpl ? (d.tag === "Fuerza" ? "bg-banana border-banana" : d.tag === "Volumen" ? "bg-white border-line" : "bg-cream border-line") : "bg-white/50 border-dashed border-line"}`}>
-              <p className="text-xs font-bold uppercase tracking-wider text-ink/60">{DAY_NAMES[d.dow]}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-ink/75">{DAY_NAMES[d.dow]}</p>
               <p className="mt-1 text-2xl">{d.emoji}</p>
               <p className="mt-1 font-extrabold text-ink leading-tight">{d.name}</p>
-              <p className="text-xs font-semibold text-ink/60">{d.tag}</p>
+              <p className="text-xs font-semibold text-ink/75">{d.tag}</p>
               <ul className="mt-3 space-y-1 text-[12px] text-ink/80">
                 {d.exercises.slice(0, 4).map((e) => <li key={e.id}>• {e.name}</li>)}
                 {!d.exercises.length && <li>{d.cardio}</li>}

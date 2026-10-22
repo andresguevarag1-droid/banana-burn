@@ -264,7 +264,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden" role="region" aria-label="Series del ejercicio">
         <div className={`mx-auto max-w-xl px-4 pt-4 ${rest ? "pb-44" : "pb-6"}`}>
           {/* Encabezado del ejercicio: compacto para que las series quepan sin scroll */}
           <section key={ex.id} className="flex gap-3 items-stretch animate-rise">
@@ -332,7 +332,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
           <p className="mt-3 text-center text-xs text-faint">Tempo 3-1-1 · 1–2 reps en reserva · descanso {ex.cfg.rest >= 120 ? `${ex.cfg.rest / 60} min` : `${ex.cfg.rest} s`}</p>
           {idx === exercises.length - 1 && cardio && <p className="mt-3 card p-4 text-sm font-semibold text-ink">🚶 Al final: {cardio}</p>}
         </div>
-      </main>
+      </div>
 
       <footer className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line bg-white/95 backdrop-blur">
         <div className="mx-auto max-w-xl">

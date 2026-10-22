@@ -48,7 +48,7 @@ export default async function Recetas() {
         <p className="mt-1 text-muted">Fáciles, con lo que hay en cualquier súper de Costa Rica. Macros aproximados.</p>
       </header>
       <section className="rounded-[1.75rem] bg-banana p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-ink/60">Plan de comidas de hoy</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-ink/75">Plan de comidas de hoy</p>
         <p className="mt-1 text-2xl font-extrabold text-ink">{totK.toLocaleString("es-CR")} kcal · {totP} g proteína</p>
         <p className="text-sm text-ink/70">Calculado para tu meta de {d.t.kcal.toLocaleString("es-CR")} kcal y {d.t.protein} g. Cambia cada día.</p>
         <div className="mt-4 space-y-2">{plan.map((r) => <RecipeCard key={r.id} r={r} factor={factor} />)}</div>
