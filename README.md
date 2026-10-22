@@ -138,3 +138,14 @@ npm run build
 Fase 1 (2–22 nov): reproductor de entreno + registro de series, onboarding, coach IA (Claude), PWA.
 Fase 2 (23 nov–6 dic): pagos ONVO (tarjeta, SINPE Móvil, Apple Pay), admin v1 completo.
 Fase 3 (7–20 dic): beta cerrada CR. Fase 4 (ene 2027): lanzamiento LATAM.
+
+## Biblioteca de ejercicios
+
+`/app/ejercicios` lista 1.324 ejercicios con pasos en español, músculos y equipo, generados desde
+[hasaneyldrm/exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) (datos bajo licencia MIT,
+ver `src/data/EXERCISES-DATASET-LICENSE.txt`). Regenerar: `node scripts/build-exercise-library.mjs <exercises.json> <names_es.json>`.
+
+**Medios (GIF/imágenes):** son © Gym visual y la licencia MIT **no** los cubre; el permiso del repo es para ese autor,
+no para nosotros. Por eso no están en este repo. Para mostrarlos en una app de pago hay que obtener licencia propia de
+Gym visual (https://gymvisual.com/), subir los archivos a un CDN y definir `EXERCISE_MEDIA_BASE_URL`; mientras tanto la app
+usa sus propias animaciones SVG y no muestra GIFs.

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Dumbbell, Salad, LineChart, Sparkles, Shield, LogOut, Users, Trophy, Watch } from "lucide-react";
+import { Home, Dumbbell, Salad, LineChart, Sparkles, Shield, LogOut, Users, Trophy, Watch, BookOpen, ShieldCheck } from "lucide-react";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
 
@@ -15,6 +15,8 @@ const TABS = [
 const EXTRA = [
   { href: "/app/coach", label: "Coach IA", icon: Sparkles },
   { href: "/app/retos", label: "Retos", icon: Trophy },
+  { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen },
+  { href: "/app/glp1", label: "GLP-1 Shield", icon: ShieldCheck },
   { href: "/app/conexiones", label: "Relojes", icon: Watch },
 ];
 
