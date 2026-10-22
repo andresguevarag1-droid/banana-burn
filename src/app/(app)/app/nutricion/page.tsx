@@ -1,7 +1,9 @@
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getMeals } from "@/lib/meals";
+import Link from "next/link";
 import { FoodLog } from "./food-log";
+import { PLANS, hasNutrition, usd } from "@/lib/plans";
 
 export const metadata = { title: "Nutrición" };
 
@@ -18,6 +20,19 @@ export default async function Nutricion() {
   const d = dashboard(await getAthlete(v));
   const meals = await getMeals(v);
   const { t } = d;
+  if (!hasNutrition(v.plan)) {
+    const p = PLANS.find((x) => x.nutrition)!;
+    return (
+      <div className="max-w-xl mx-auto text-center py-8 animate-rise">
+        <p className="text-6xl">🥗</p>
+        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink">Baja de peso más rápido con tu plan de nutrición</h1>
+        <p className="mt-3 text-muted">Tu entreno ya está listo. La nutrición es donde se pierde la grasa: calorías y macros para ti, registro con comida tica y ajuste cada semana según tu peso real.</p>
+        <ul className="mt-6 space-y-2 text-left card p-5">{p.feats.slice(1).map((f) => <li key={f} className="flex gap-2 text-ink">✅ {f}</li>)}</ul>
+        <Link href="/precios" className="btn-banana w-full h-14 mt-6 text-base">Mejorar a {p.name} · {usd(p.price.mes)}/mes</Link>
+        <p className="mt-2 text-xs text-faint">Cancela cuando quieras.</p>
+      </div>
+    );
+  }
   return (
     <div className="space-y-5 animate-rise">
       <header>

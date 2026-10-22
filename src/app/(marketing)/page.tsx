@@ -19,7 +19,7 @@ const COMPARE: [string, boolean, boolean][] = [
   ["Progresión automática de cargas", true, true],
   ["Coach IA que ajusta calorías con tu peso real", true, false],
   ["Base de comidas de Costa Rica y LATAM", true, false],
-  ["Pago con SINPE Móvil y en colones", true, false],
+  ["Pago con SINPE Móvil, tarjeta o Apple Pay", true, false],
 ];
 
 const FAQ = [
@@ -27,7 +27,8 @@ const FAQ = [
   ["¿Cuánto peso voy a bajar?", "Un ritmo sano es 0,5–1 % de tu peso por semana. Banana Burn mide tu tendencia real y ajusta para que llegues a tu meta sin perder músculo."],
   ["¿Sirve si entreno en casa?", "Sí. Puedes elegir equipo disponible y el plan cambia variantes con mancuernas, bandas o peso corporal."],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados, cifrados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras (Ley 8968)."],
-  ["¿Cómo pago?", "Tarjeta, SINPE Móvil o Apple Pay, en colones. Cancelas con un toque."],
+  ["¿Cuánto cuesta?", "Entreno: $9.99/mes o $99/año. Entreno + Nutrición: $14.99/mes o $149.99/año. Con el plan anual ahorras 17 %."],
+  ["¿Cómo pago?", "Tarjeta, SINPE Móvil o Apple Pay. Cancelas con un toque, sin letra pequeña."],
 ];
 
 export default function Landing() {
@@ -48,10 +49,10 @@ export default function Landing() {
               Tu entrenador personal con IA te dice <b className="text-ink">qué te toca hoy en el gym</b>, cuánto levantar y qué comer — y se ajusta solo cada semana según tus resultados.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link href="/entrar?modo=registro" className="btn-primary h-14 px-7 text-base">Crear mi plan gratis <ArrowRight className="size-5" /></Link>
+              <Link href="/entrar?modo=registro" className="btn-primary h-14 px-7 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
               <a href="#app" className="btn-ghost h-14 px-7 text-base">Ver cómo funciona</a>
             </div>
-            <p className="mt-4 text-sm text-faint">Sin tarjeta · Listo en 2 minutos · Cancela cuando quieras</p>
+            <p className="mt-4 text-sm text-faint">Desde $8.25/mes · Listo en 2 minutos · Cancela cuando quieras</p>
           </div>
           <div className="relative"><PhoneMock /></div>
         </div>
@@ -130,7 +131,7 @@ export default function Landing() {
       <section id="precios" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <p className="eyebrow">Precios</p>
-          <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Empieza gratis. Sube a Pro cuando veas resultados.</h2>
+          <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Un plan para cada meta. Menos que una mensualidad de gym.</h2>
         </div>
         <Pricing />
       </section>
@@ -155,7 +156,7 @@ export default function Landing() {
         <div className="relative overflow-hidden rounded-[2rem] bg-banana px-6 py-14 sm:p-16 text-center">
           <div aria-hidden className="absolute -right-10 -bottom-16 text-[220px] leading-none opacity-20 rotate-12">🍌</div>
           <h2 className="relative text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Tu mejor versión empieza el lunes.<br className="hidden sm:block" /> O mejor: hoy.</h2>
-          <Link href="/entrar?modo=registro" className="relative mt-8 btn-primary h-14 px-8 text-base">Crear mi plan gratis <ArrowRight className="size-5" /></Link>
+          <Link href="/entrar?modo=registro" className="relative mt-8 btn-primary h-14 px-8 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
         </div>
       </section>
     </>
