@@ -1,4 +1,5 @@
 // Corrida del cron de recordatorios: carga usuarios por lotes, decide con `decide()` y envía push/correo/in-app.
+import "server-only";
 // Idempotente: cada envío se "reclama" primero en notification_log (unique user_id+kind+local_day).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";

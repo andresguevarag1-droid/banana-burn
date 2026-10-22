@@ -1,4 +1,5 @@
 // Guardas de acceso del panel (solo servidor). Toda página y acción del admin pasa por aquí.
+import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getViewer, type Role, type Viewer } from "@/lib/supabase/server";

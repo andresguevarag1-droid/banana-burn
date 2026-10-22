@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getViewer } from "@/lib/supabase/server";
+import { isSameOrigin } from "@/lib/security";
 import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError, startCheckout } from "@/lib/billing";
 
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** Inicia el pago de un plan. Body: { plan: "entreno"|"completo", billing: "mes"|"anual" } -> { url } */
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return NextResponse.json({ ok: false, error: "Origen no permitido." }, { status: 403 });
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "Inicia sesión para continuar." }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { plan?: unknown; billing?: unknown };

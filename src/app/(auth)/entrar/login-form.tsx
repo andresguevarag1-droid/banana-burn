@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CircleNotch, Envelope, Eye, EyeSlash, Lock, MonkeyBanana } from "@/components/icons";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/security/redirect";
 
 type Step = "email" | "code";
 type Method = "password" | "code";
@@ -20,7 +21,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
   const params = useSearchParams();
   const router = useRouter();
   const isSignup = params.get("modo") === "registro";
-  const next = params.get("next") || "/app";
+  const next = safeNext(params.get("next"), "/app");
   if (typeof document !== "undefined" && params.get("programa") === "glp1") document.cookie = "bb_programa=glp1; path=/; max-age=86400; samesite=lax";
   const objetivo = params.get("objetivo");
   if (typeof document !== "undefined" && objetivo && ["grasa", "recomp", "fuerza"].includes(objetivo)) document.cookie = `bb_objetivo=${objetivo}; path=/; max-age=86400; samesite=lax`;

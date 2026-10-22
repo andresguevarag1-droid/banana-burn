@@ -1,6 +1,8 @@
+import "server-only";
 import webpush from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SITE_URL } from "@/lib/env";
+import { isKnownPushEndpoint, safeNext } from "@/lib/security";
 
 export type PushPayload = { title: string; body: string; url?: string; tag?: string };
 export type PushSub = { endpoint: string; p256dh: string; auth: string };
@@ -17,12 +19,14 @@ function setup() {
 }
 
 /** Envía un push a cada dispositivo. Borra suscripciones vencidas (404/410). Devuelve cuántos llegaron. Sin VAPID: no-op. */
-export async function sendPush(admin: SupabaseClient | null, subs: PushSub[], payload: PushPayload): Promise<number> {
+export async function sendPush(admin: SupabaseClient | null, allSubs: PushSub[], payload: PushPayload): Promise<number> {
+  // Filas viejas (antes del CHECK de 0012) podrían tener endpoints arbitrarios: nunca hacemos POST fuera de los servicios de push.
+  const subs = allSubs.filter((s) => isKnownPushEndpoint(s.endpoint));
   if (!subs.length || !setup()) return 0;
   const body = JSON.stringify({
     title: payload.title.slice(0, 120),
     body: payload.body.slice(0, 240),
-    url: payload.url && payload.url.startsWith("/") ? payload.url : "/app",
+    url: safeNext(payload.url, "/app"),
     tag: payload.tag ?? "bb",
     icon: `${SITE_URL}/icons/icon-192.png`,
   });

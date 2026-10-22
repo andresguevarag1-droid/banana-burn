@@ -1,4 +1,5 @@
 // Correos transaccionales listos para llamar desde otros módulos (auth, onboarding, pagos ONVO).
+import "server-only";
 // Todas las funciones son seguras sin variables de entorno: devuelven { ok:false, skipped:true } y no lanzan.
 import { adminClient } from "@/lib/supabase/admin";
 import { ONCE_DAY } from "@/lib/notify";

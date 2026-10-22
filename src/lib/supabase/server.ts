@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, isDemoMode, isSupabaseConfigured } from "@/lib/env";
 
 export async function createClient() {
   const store = await cookies();
@@ -23,7 +23,7 @@ const DEMO: Viewer = { demo: true, id: "demo", email: "demo@bananaburn.app", nam
 
 /** Usuario actual + perfil. En modo demo devuelve un usuario de ejemplo. */
 export async function getViewer(): Promise<Viewer | null> {
-  if (!isSupabaseConfigured) return DEMO;
+  if (!isSupabaseConfigured) return isDemoMode ? DEMO : null; // producción sin llaves: falla cerrada
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;

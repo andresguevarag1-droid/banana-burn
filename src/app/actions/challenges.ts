@@ -6,7 +6,7 @@ import { CHALLENGE_BY_ID } from "@/lib/challenges";
 
 export async function joinChallenge(id: string) {
   const v = await getViewer();
-  if (!v || !CHALLENGE_BY_ID[id]) return { ok: false };
+  if (!v || typeof id !== "string" || !Object.hasOwn(CHALLENGE_BY_ID, id)) return { ok: false };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { count } = await sb.from("user_challenges").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("status", "activo");
@@ -23,8 +23,9 @@ export async function checkInChallenge(ucId: string) {
   const sb = await createClient();
   const { data: uc } = await sb.from("user_challenges").select("id,challenge_id").eq("id", Number(ucId)).eq("user_id", v.id).eq("status", "activo").maybeSingle();
   if (!uc || CHALLENGE_BY_ID[uc.challenge_id as string]?.verify !== "manual") return { ok: false };
-  const { error } = await sb.from("challenge_checkins").upsert({ user_challenge_id: uc.id, user_id: v.id, day: crToday().iso }, { onConflict: "user_challenge_id,day", ignoreDuplicates: true });
-  if (!error) await sb.from("xp_events").insert({ user_id: v.id, kind: "challenge_day", xp: 10 });
+  const { data: added, error } = await sb.from("challenge_checkins").upsert({ user_challenge_id: uc.id, user_id: v.id, day: crToday().iso }, { onConflict: "user_challenge_id,day", ignoreDuplicates: true }).select("day");
+  // XP solo la primera vez del día (antes se sumaba en cada clic).
+  if (!error && added?.length) await sb.from("xp_events").insert({ user_id: v.id, kind: "challenge_day", xp: 10 });
   revalidatePath("/app", "layout");
   return { ok: !error };
 }

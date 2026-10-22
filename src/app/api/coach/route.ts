@@ -2,14 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getViewer, createClient } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { getProgress } from "@/lib/progress";
-import { coachSystem, demoReply, safetyCheck, stripEmoji } from "@/lib/coach";
-import { crToday } from "@/lib/today";
+import { coachSystem, demoReply, safetyCheck, sanitizeMessages, stripEmoji } from "@/lib/coach";
+import { clientIp, isSameOrigin, memoryRateLimit } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-type Msg = { role: "user" | "assistant"; content: string };
-const DAILY_LIMIT = 40;
+const MAX_BODY_BYTES = 64_000;
+const LIMIT_TEXT = "Llegaste al límite de mensajes de hoy. Mañana seguimos.";
 
 function textStream(gen: AsyncIterable<string>, onDone?: (full: string) => Promise<void>) {
   const enc = new TextEncoder();
@@ -17,7 +17,11 @@ function textStream(gen: AsyncIterable<string>, onDone?: (full: string) => Promi
     async start(c) {
       let full = "";
       try { for await (const raw of gen) { const t = stripEmoji(raw); if (!t) continue; full += t; c.enqueue(enc.encode(t)); } }
-      catch { c.enqueue(enc.encode("\n\nSe cortó la respuesta. Intenta de nuevo.")); }
+      catch (e) {
+        // Al usuario: mensaje genérico. Al log: solo tipo/estado, sin contenido del chat (datos de salud).
+        console.error("[coach] stream", e instanceof Anthropic.APIError ? `APIError ${e.status}` : e instanceof Error ? e.name : "error");
+        c.enqueue(enc.encode("\n\nSe cortó la respuesta. Intenta de nuevo."));
+      }
       c.close();
       if (onDone) await onDone(full).catch(() => {});
     },
@@ -27,26 +31,39 @@ function textStream(gen: AsyncIterable<string>, onDone?: (full: string) => Promi
 async function* fake(text: string) { for (const w of text.split(/(?<=\s)/)) { yield w; await new Promise((r) => setTimeout(r, 18)); } }
 
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return new Response("Origen no permitido", { status: 403 });
   const v = await getViewer();
   if (!v) return new Response("No autorizado", { status: 401 });
-  const body = (await req.json().catch(() => null)) as { messages?: Msg[] } | null;
-  const messages = (body?.messages ?? []).filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string").slice(-16).map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
+  const len = Number(req.headers.get("content-length") ?? 0);
+  if (len > MAX_BODY_BYTES) return new Response("Mensaje demasiado largo", { status: 413 });
+  const body = (await req.json().catch(() => null)) as { messages?: unknown } | null;
+  const messages = sanitizeMessages(body?.messages);
   const last = messages.at(-1);
   if (!last || last.role !== "user") return new Response("Mensaje vacío", { status: 400 });
 
-  const key = process.env.ANTHROPIC_API_KEY;
   const headers = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" };
+  // Las respuestas de seguridad (urgencias) nunca se bloquean ni gastan cupo.
   const urgent = safetyCheck(last.content);
   if (urgent) return new Response(textStream(fake(urgent)), { headers });
+
+  // Cupo diario en el servidor: con Supabase, contador atómico que el usuario no puede editar (coach_consume, 0012);
+  // en modo demo, límite en memoria por IP. Aplica también al camino sin llave de Anthropic.
+  const sb = v.demo ? null : await createClient();
+  if (sb) {
+    const { data: left, error } = await sb.rpc("coach_consume", { p_kind: "chat" });
+    if (error) {
+      console.error("[coach] cupo", error.code);
+      return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+    }
+    if (typeof left === "number" && left < 0) return new Response(textStream(fake(LIMIT_TEXT)), { headers });
+  } else if (!memoryRateLimit(`coach:${clientIp(req)}`, 40, 24 * 3600_000)) {
+    return new Response(textStream(fake(LIMIT_TEXT)), { headers });
+  }
+
+  const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     const a0 = await getAthlete(v);
     return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? ""))), { headers });
-  }
-
-  const sb = v.demo ? null : await createClient();
-  if (sb) {
-    const { count } = await sb.from("coach_messages").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("role", "user").gte("created_at", crToday().iso + "T06:00:00Z");
-    if ((count ?? 0) >= DAILY_LIMIT) return new Response(textStream(fake("Llegaste al límite de mensajes de hoy. Mañana seguimos.")), { headers });
   }
 
   const a = await getAthlete(v);

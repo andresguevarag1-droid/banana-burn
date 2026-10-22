@@ -1,3 +1,4 @@
+import "server-only";
 import { SITE_URL } from "@/lib/env";
 import { signUnsubToken, unsubSecret, type UnsubScope } from "./token";
 

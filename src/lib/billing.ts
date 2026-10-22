@@ -1,3 +1,4 @@
+import "server-only";
 // Orquestación de pagos (servidor): ONVO + Supabase con service_role.
 // Regla de oro: SOLO processWebhook() sube a un usuario a plan pagado.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -124,10 +125,13 @@ async function setProfilePlan(db: SupabaseClient, userId: string, plan: "entreno
   if (error) throw new Error(`profiles.plan: ${error.message}`);
 }
 
-/** Recalcula el plan del perfil a partir de TODAS sus suscripciones (el mejor plan vigente gana). */
+/** Recalcula el plan del perfil a partir de TODAS sus suscripciones y cortesías vigentes (el mejor plan gana). */
 async function syncProfilePlan(db: SupabaseClient, userId: string) {
-  const { data } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", userId);
-  const plans = ((data as SubscriptionRow[] | null) ?? []).map((r) => profilePlanFor(r));
+  const [{ data }, { data: comps }] = await Promise.all([
+    db.from("subscriptions").select(SUB_COLS).eq("user_id", userId),
+    db.from("comp_grants").select("plan").eq("user_id", userId).is("revoked_at", null).gt("expires_at", new Date().toISOString()),
+  ]);
+  const plans: string[] = [...((data as SubscriptionRow[] | null) ?? []).map((r) => profilePlanFor(r)), ...((comps as { plan: string }[] | null) ?? []).map((c) => c.plan)];
   const plan = plans.includes("completo") ? "completo" : plans.includes("entreno") ? "entreno" : "free";
   await setProfilePlan(db, userId, plan);
   return plan;
@@ -157,6 +161,21 @@ async function activate(db: SupabaseClient, row: SubscriptionRow, a: { periodSta
   const updated = { ...row, status: "active", current_period_end: keepEnd };
   await cancelOthers(db, updated);
   return syncProfilePlan(db, row.user_id);
+}
+
+/**
+ * Valida el cobro informado por ONVO contra el precio del servidor (plans.ts). Pura y testeada.
+ * - Moneda distinta de USD o monto menor al esperado: no se activa.
+ * - Monto mayor (p. ej. impuestos): se activa con nota.
+ * - ONVO no informó monto: se activa (el evento ya viene autenticado y la suscripción la creamos con el priceId del servidor).
+ */
+export function checkPaidAmount(row: { plan: PlanId | null; billing: Billing | null }, amountMinor: number | null, currency: string | null): { ok: boolean; note?: string } {
+  if (currency && currency.toUpperCase() !== "USD") return { ok: false, note: `moneda ${currency} (se esperaba USD)` };
+  if (!row.plan || !row.billing || amountMinor === null) return { ok: true };
+  const expected = expectedAmountMinor(row.plan, row.billing);
+  if (amountMinor < expected) return { ok: false, note: `monto ${amountMinor} < ${expected} centavos USD de plans.ts` };
+  if (amountMinor > expected) return { ok: true, note: `monto ${amountMinor} > ${expected} centavos USD de plans.ts (revisa el precio en ONVO)` };
+  return { ok: true };
 }
 
 const planName = (p: PlanId | null) => PLANS.find((x) => x.id === p)?.name ?? "Banana Burn";
@@ -209,13 +228,13 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", action.subscriptionId).maybeSingle();
       const row = data as SubscriptionRow | null;
       if (!row) return finish("ignored", "suscripción desconocida (no creada desde la app)");
-      let note: string | undefined;
-      if (row.plan && row.billing && action.amountMinor !== null) {
-        const expected = expectedAmountMinor(row.plan, row.billing);
-        if (action.amountMinor !== expected || (action.currency && action.currency.toUpperCase() !== "USD")) {
-          note = `monto distinto al de plans.ts: ${action.amountMinor} ${action.currency ?? ""} vs ${expected} USD (revisa el precio en ONVO)`;
-        }
+      const check = checkPaidAmount(row, action.amountMinor, action.currency);
+      if (!check.ok) {
+        // Nunca otorgamos un plan con un cobro menor al precio del servidor o en otra moneda. Queda para revisión manual.
+        console.error(JSON.stringify({ scope: "pagos", msg: "ALERTA monto inválido: no se activa", userId: row.user_id, subscriptionId: row.provider_subscription_id, note: check.note }));
+        return finish("ignored", `NO ACTIVADA: ${check.note}`, row.user_id);
       }
+      const note = check.note;
       const plan = await activate(db, row, action);
       await notifyPaid(row, action.amountMinor, action.currency, action.periodEnd, action.paymentIntentId ?? key);
       return finish("processed", note ? `${note} · plan=${plan}` : `plan=${plan}`, row.user_id);
