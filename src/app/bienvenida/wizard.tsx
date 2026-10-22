@@ -6,6 +6,7 @@ import { ageOn, DAY_NAMES, planWeek, scheduleFor, targets } from "@/lib/engine";
 import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
 import { completeOnboarding, type Onboard } from "./actions";
+import { INTENT_COOKIE, decodeIntent, intentPath } from "@/lib/checkout-intent";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -85,7 +86,12 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
             ))}
           </div>
           {demo && <p className="mt-4 text-sm text-banana-ink">Modo demo: no se guardó nada.</p>}
-          <button onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Ver mi rutina de hoy <ArrowRight className="size-5" /></button>
+          {(() => {
+            const intent = typeof document !== "undefined" ? decodeIntent(document.cookie.split("; ").find((c) => c.startsWith(INTENT_COOKIE + "="))?.split("=")[1]) : null;
+            return intent
+              ? <button onClick={() => router.replace(intentPath(intent))} className="btn-banana w-full h-14 mt-8 text-base">Activar mi plan <ArrowRight className="size-5" /></button>
+              : <button onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Ver mi rutina de hoy <ArrowRight className="size-5" /></button>;
+          })()}
         </div>
       </main>
     );

@@ -4,7 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import type { Viewer } from "@/lib/supabase/server";
 import type { SubscriptionRow } from "@/lib/entitlements";
-import type { Billing, PlanId } from "@/lib/plans";
+import { PLANS, type Billing, type PlanId } from "@/lib/plans";
+import { sendPaymentFailed, sendPaymentReceipt, sendSubscriptionCanceled } from "@/lib/email";
 import {
   OnvoError, actionForEvent, cancelSubscription, createCustomer, createSubscription, estimatePeriodEnd, eventKey,
   expectedAmountMinor, fetchSubscriptionState, priceIdFor, profilePlanFor, type OnvoEvent,
@@ -158,6 +159,14 @@ async function activate(db: SupabaseClient, row: SubscriptionRow, a: { periodSta
   return syncProfilePlan(db, row.user_id);
 }
 
+const planName = (p: PlanId | null) => PLANS.find((x) => x.id === p)?.name ?? "Banana Burn";
+
+/** Recibo por correo (idempotente por referencia). Nunca bloquea el webhook. */
+async function notifyPaid(row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string) {
+  const amount = amountMinor != null ? amountMinor / 100 : row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0;
+  await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd }).catch(() => {});
+}
+
 /**
  * Procesa un evento ya verificado. Idempotente: el mismo evento dos veces no hace nada la segunda.
  * Devuelve "error" para que la ruta responda 500 y ONVO reintente.
@@ -208,6 +217,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
         }
       }
       const plan = await activate(db, row, action);
+      await notifyPaid(row, action.amountMinor, action.currency, action.periodEnd, action.paymentIntentId ?? key);
       return finish("processed", note ? `${note} · plan=${plan}` : `plan=${plan}`, row.user_id);
     }
 
@@ -218,6 +228,9 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const status = action.terminal ? "canceled" : "past_due";
       await db.from("subscriptions").update({ status, cancel_at_period_end: false, canceled_at: action.terminal ? new Date().toISOString() : row.canceled_at, last_event_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", row.id);
       const plan = await syncProfilePlan(db, row.user_id);
+      const pn = planName(row.plan);
+      if (action.terminal) await sendSubscriptionCanceled({ userId: row.user_id, plan: pn, accessUntil: row.current_period_end, subscriptionId: row.provider_subscription_id ?? undefined }).catch(() => {});
+      else await sendPaymentFailed({ userId: row.user_id, plan: pn, amount: row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0, currency: "USD", reference: key, updateUrl: "/app/suscripcion" }).catch(() => {});
       return finish("processed", `renovación fallida → ${status} (ONVO: ${action.subscriptionStatus ?? "?"}) · plan=${plan}`, row.user_id);
     }
 
@@ -231,6 +244,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const st = await fetchSubscriptionState(row.provider_subscription_id);
       if (st.active) {
         const plan = await activate(db, row, { periodStart: st.periodStart, periodEnd: st.periodEnd, customerId: action.customerId });
+        await notifyPaid(row, null, null, st.periodEnd, piId ?? key);
         return finish("processed", `activada vía payment intent (ONVO status=${st.status}) · plan=${plan}`, row.user_id);
       }
     }

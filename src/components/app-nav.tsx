@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Dumbbell, Salad, LineChart, Sparkles, Shield, LogOut, Users, Trophy, Watch } from "lucide-react";
 import { Logo } from "./brand";
+import { NotificationBell } from "./notifications/bell";
 
 const TABS = [
   { href: "/app", label: "Hoy", icon: Home },
@@ -23,7 +24,7 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
   return (
     <>
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
-        <div className="px-2"><Logo href="/app" /></div>
+        <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
         <nav className="mt-10 space-y-1">
           {TABS.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={`flex items-center gap-3 rounded-2xl px-3 h-11 font-semibold transition ${active(href) ? "bg-ink text-white" : "text-muted hover:bg-white hover:text-ink"}`}>

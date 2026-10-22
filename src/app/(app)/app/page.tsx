@@ -9,6 +9,8 @@ import { DayTracker } from "@/components/day-tracker";
 import { WeighIn } from "@/components/weigh-in";
 import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
+import { NotificationBell } from "@/components/notifications/bell";
+import { EnablePush } from "@/components/notifications/enable-push";
 import { ChallengeCard } from "@/components/challenge-card";
 import { getMyChallenges } from "@/lib/challenges-server";
 import { toView } from "@/lib/challenge-view";
@@ -47,6 +49,7 @@ export default async function Hoy() {
           <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">¡Pura vida, {a.name}!</h1>
         </div>
         <div className="shrink-0 flex items-center gap-2">
+          <NotificationBell className="lg:hidden" />
           <Link href="/app/progreso#logros" className="flex flex-col items-center rounded-2xl bg-white border border-line px-3 py-1.5" aria-label={`Racha de ${g.streak.days} días`}>
             <span className={`text-2xl leading-none ${g.streak.todayDone ? "" : "grayscale-[.6] opacity-80"}`}>🔥</span>
             <span className="text-sm font-extrabold text-ink tabular-nums">{g.streak.days}</span>
@@ -54,6 +57,8 @@ export default async function Hoy() {
           <Link href="/app/perfil" className="lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
         </div>
       </header>
+
+      <EnablePush hideWhenSnoozed />
 
       <Link href="/app/progreso#logros" className="block card p-3.5">
         <div className="flex items-center gap-3">

@@ -1,9 +1,10 @@
 import { getViewer } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/entitlements";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getMeals } from "@/lib/meals";
 import Link from "next/link";
 import { FoodLog } from "./food-log";
-import { PLANS, hasNutrition, usd } from "@/lib/plans";
+import { PLANS, usd } from "@/lib/plans";
 
 export const metadata = { title: "Nutrición" };
 
@@ -20,7 +21,7 @@ export default async function Nutricion() {
   const d = dashboard(await getAthlete(v));
   const meals = await getMeals(v);
   const { t } = d;
-  if (!hasNutrition(v.plan)) {
+  if (!(await getEntitlements(v)).nutrition) {
     const p = PLANS.find((x) => x.nutrition)!;
     return (
       <div className="max-w-xl mx-auto text-center py-8 animate-rise">

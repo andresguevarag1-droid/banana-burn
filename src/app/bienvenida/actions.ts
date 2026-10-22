@@ -1,6 +1,8 @@
 "use server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { crToday } from "@/lib/today";
+import { sendPlanReadyEmail } from "@/lib/email";
+import { ageOn, planDay, scheduleFor, targets } from "@/lib/engine";
 
 export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean };
 
@@ -22,5 +24,8 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   if (g.error) return { ok: false, error: "No se pudo guardar tu meta." };
   await sb.from("weights").upsert({ user_id: v.id, day: crToday().iso, kg: o.weight }, { onConflict: "user_id,day" });
   await sb.from("xp_events").insert({ user_id: v.id, kind: "onboard", xp: 50 });
+  const t = targets({ kg: o.weight, heightCm: o.heightCm, age: ageOn(o.dob), sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : "recomp" });
+  const today = planDay(new Date(crToday().iso + "T12:00:00").getDay(), 0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
+  await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, todayEmoji: today.emoji, kcal: t.kcal, protein: t.protein, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
   return { ok: true };
 }

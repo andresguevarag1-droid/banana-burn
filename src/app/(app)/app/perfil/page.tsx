@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { CommunitySettings } from "./community-settings";
+import { NotificationSettings } from "@/components/notifications/settings";
+import { getEntitlements } from "@/lib/entitlements";
 import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
@@ -17,7 +19,8 @@ export default async function Perfil() {
     const { data } = await (await createClient()).from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle();
     cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
   }
-  const plan = PLANS.find((p) => p.id === v.plan) ?? (v.plan === "pro" ? PLANS[1] : null);
+  const ent = await getEntitlements(v);
+  const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
   return (
     <div className="space-y-5 animate-rise max-w-2xl">
       <header className="flex items-center gap-4">
@@ -32,7 +35,7 @@ export default async function Perfil() {
       <section className="card p-5">
         <div className="flex items-center justify-between">
           <div><p className="text-xs font-bold uppercase tracking-wider text-muted">Suscripción</p><p className="text-lg font-extrabold text-ink">{plan ? plan.name : "Beta sin costo"}</p></div>
-          <Link href="/precios" className="btn-ghost h-10 text-sm px-4">{plan ? "Cambiar plan" : "Ver planes"}</Link>
+          <Link href="/app/suscripcion" className="btn-ghost h-10 text-sm px-4">{plan ? "Gestionar" : "Ver planes"}</Link>
         </div>
         <p className="mt-2 text-sm text-muted">{plan ? "Pagas con tarjeta, SINPE Móvil o Apple Pay. Cancela cuando quieras." : "Durante la beta tienes acceso completo. Te avisaremos antes de cualquier cobro."}</p>
       </section>
@@ -41,6 +44,8 @@ export default async function Perfil() {
         <h2 className="font-extrabold text-ink mb-4">🏋️ Mi plan de entreno</h2>
         <TrainingSettings days={a.trainDays} equipment={a.equipment} mode={a.mode} level={a.level} minutes={a.minutes} />
       </section>
+
+      <section className="card p-5"><NotificationSettings /></section>
 
       <section id="comunidad" className="card p-5 scroll-mt-6">
         <h2 className="font-extrabold text-ink mb-4">👥 Perfil en la comunidad</h2>

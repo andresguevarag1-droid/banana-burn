@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/entitlements";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { hasNutrition } from "@/lib/plans";
 import { RECIPES, mealPlan, type Recipe } from "@/lib/recipes";
 import { AddRecipe } from "./add";
 
@@ -34,7 +34,7 @@ function RecipeCard({ r, factor = 1 }: { r: Recipe; factor?: number }) {
 
 export default async function Recetas() {
   const v = (await getViewer())!;
-  if (!hasNutrition(v.plan)) return <div className="text-center py-16"><p className="text-5xl">🥗</p><h1 className="mt-3 text-2xl font-extrabold text-ink">Recetas y plan de comidas</h1><p className="mt-2 text-muted">Incluido en Entreno + Nutrición.</p><Link href="/precios" className="btn-banana mt-6">Ver planes</Link></div>;
+  if (!(await getEntitlements(v)).nutrition) return <div className="text-center py-16"><p className="text-5xl">🥗</p><h1 className="mt-3 text-2xl font-extrabold text-ink">Recetas y plan de comidas</h1><p className="mt-2 text-muted">Incluido en Entreno + Nutrición.</p><Link href="/precios" className="btn-banana mt-6">Ver planes</Link></div>;
   const d = dashboard(await getAthlete(v));
   const plan = mealPlan({ kcal: d.t.kcal, protein: d.t.protein }, d.today.dow);
   const base = plan.reduce((a, r) => a + r.kcal, 0);

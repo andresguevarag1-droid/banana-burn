@@ -19,7 +19,7 @@ export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
 
 export function cronMode(): "hourly" | "daily" {
-  return process.env.NOTIFY_CRON_MODE === "daily" ? "daily" : "hourly";
+  return process.env.NOTIFY_CRON_MODE === "hourly" ? "hourly" : "daily";
 }
 
 export async function runReminders(now = new Date(), mode = cronMode()): Promise<RunStats> {
