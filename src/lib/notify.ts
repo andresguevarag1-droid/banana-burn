@@ -103,14 +103,14 @@ export function isRelevantHour(now: Date, prefs: Prefs, mode: "hourly" | "daily"
 
 /**
  * Decide qué mandar ahora. Reglas:
- * - Lunes 07:00 local → resumen semanal (correo + in-app) si weekly_summary.
- * - Hora del recordatorio, 3 o 7 días sin actividad → reactivación (reemplaza al recordatorio ese día).
- * - Hora del recordatorio, día de entreno y sin entreno hoy → "Hoy te toca {rutina}".
- * - 20:00 local, sin actividad hoy y racha ≥ 2 → racha en peligro.
+ * - Lunes 07:00 local -> resumen semanal (correo + in-app) si weekly_summary.
+ * - Hora del recordatorio, 3 o 7 días sin actividad -> reactivación (reemplaza al recordatorio ese día).
+ * - Hora del recordatorio, día de entreno y sin entreno hoy -> "Hoy te toca {rutina}".
+ * - 20:00 local, sin actividad hoy y racha ≥ 2 -> racha en peligro.
  * Push solo si push_reminders, hay suscripción, fuera de horas de silencio y bajo el tope diario.
  * Correo solo si email_reminders (o weekly_summary para el resumen). In-app siempre.
  * Cada tipo máximo una vez por día local (dedupe con notification_log).
- * Modo "daily": no hay hora que comparar → recordatorio/reactivación/semanal (lunes) en la corrida; la racha de las 20:00 se omite.
+ * Modo "daily": no hay hora que comparar -> recordatorio/reactivación/semanal (lunes) en la corrida; la racha de las 20:00 se omite.
  */
 export function decide(i: DecideInput): Decision[] {
   const mode = i.mode ?? "hourly";
@@ -155,7 +155,7 @@ export function decide(i: DecideInput): Decision[] {
 // ───────────── Copy de push / in-app ─────────────
 // Motivador, específico, nunca culpa ni vergüenza.
 
-export type CopyCtx = { name: string; routine: string; trainingDay?: boolean; emoji?: string; mins?: number; streak: number; workouts?: number; kgDelta?: number | null; day: string };
+export type CopyCtx = { name: string; routine: string; trainingDay?: boolean; mins?: number; streak: number; workouts?: number; kgDelta?: number | null; day: string };
 export type Copy = { title: string; body: string; url: string };
 
 const pick = <T,>(list: T[], seed: string) => {
@@ -170,14 +170,14 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
     case "recordatorio": {
       const bodies = [
         `${x.mins ? `${x.mins} min` : "Una sesión"} y listo. Tus cargas ya están calculadas, ${first}.`,
-        x.streak >= 2 ? `Vas ${x.streak} días seguidos 🔥 Hoy la racha sigue creciendo.` : `Cada sesión suma. Hoy es un buen día para sumar una más.`,
+        x.streak >= 2 ? `Vas ${x.streak} días seguidos. Hoy la racha sigue creciendo.` : `Cada sesión suma. Hoy es un buen día para sumar una más.`,
         `Tu yo de dentro de un mes te lo va a agradecer. Abre la rutina y arrancamos.`,
       ];
-      return { title: `Hoy te toca ${x.routine} ${x.emoji ?? "💪"}`, body: pick(bodies, x.day + kind), url: "/app/entreno" };
+      return { title: `Hoy te toca ${x.routine}`, body: pick(bodies, x.day + kind), url: "/app/entreno" };
     }
     case "racha":
       return {
-        title: `Tu racha de ${x.streak} días sigue viva 🔥`,
+        title: `Tu racha de ${x.streak} días sigue viva`,
         body: pick([
           `Con 2 minutos basta: registra tu agua o tu peso y la mantienes.`,
           `Un check-in rápido antes de dormir y mañana vas por el día ${x.streak + 1}.`,
@@ -185,12 +185,13 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
         url: "/app",
       };
     case "semanal": {
-      const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` · ${x.kgDelta.toFixed(1)} kg` : x.kgDelta > 0 ? ` · +${x.kgDelta.toFixed(1)} kg` : " · peso estable";
-      return { title: "Tu semana en Banana Burn 📊", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
+      const f = (n: number) => n.toLocaleString("es-CR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` · ${f(x.kgDelta)} kg` : x.kgDelta > 0 ? ` · +${f(x.kgDelta)} kg` : " · peso estable";
+      return { title: "Tu semana en Banana Burn", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
     }
     case "reactivacion_3":
-      return { title: `Te guardamos el lugar, ${first} 🍌`, body: x.trainingDay === false ? "Volver es más fácil con algo corto: hoy toca caminar y estirar 10 minutos." : `Volver es más fácil con una sesión corta. Hoy: ${x.routine}.`, url: "/app/entreno" };
+      return { title: `Te guardamos el lugar, ${first}`, body: x.trainingDay === false ? "Volver es más fácil con algo corto: hoy toca caminar y estirar 10 minutos." : `Volver es más fácil con una sesión corta. Hoy: ${x.routine}.`, url: "/app/entreno" };
     case "reactivacion_7":
-      return { title: "Empezamos de nuevo, sin presión", body: "Tu plan sigue aquí. Una sesión de 20 minutos hoy y arrancamos otra vez 💛", url: "/app" };
+      return { title: "Empezamos de nuevo, sin presión", body: "Tu plan sigue aquí. Una sesión de 20 minutos hoy y arrancamos otra vez.", url: "/app" };
   }
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Banana, MonkeyBanana } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { PLANS, perMonthAnnual, usd } from "@/lib/plans";
 import { OnvoPayForm } from "./onvo-pay-form";
@@ -14,7 +14,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (v.demo || !s) {
     return (
-      <Notice title={v.demo ? "Modo demo 🧪" : "Falta el pago"} body={v.demo ? "Esta es una vista previa: aquí no se hace ningún cobro." : "No encontramos el pago que intentas completar."} />
+      <Notice demo={v.demo} title={v.demo ? "Modo demo" : "Falta el pago"} body={v.demo ? "Esta es una vista previa: aquí no se hace ningún cobro." : "No encontramos el pago que intentas completar."} />
     );
   }
 
@@ -32,10 +32,10 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6 animate-rise">
-      <Link href="/app/suscripcion" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden />Volver</Link>
+      <Link href="/app/suscripcion" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver</Link>
       <header>
         <p className="eyebrow">Último paso</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">Activa tu plan 🍌</h1>
+        <h1 className="mt-2 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink">Activa tu plan <Banana weight="fill" className="size-8 text-banana-ink" /></h1>
       </header>
 
       <section className="card p-5" aria-label="Resumen">
@@ -63,9 +63,10 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   );
 }
 
-function Notice({ title, body }: { title: string; body: string }) {
+function Notice({ title, body, demo }: { title: string; body: string; demo?: boolean }) {
   return (
     <div className="card p-6 text-center space-y-4 animate-rise">
+      {demo && <span className="mx-auto grid place-items-center size-16 rounded-3xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>}
       <h1 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h1>
       <p className="text-muted">{body}</p>
       <div className="flex flex-col sm:flex-row gap-2 justify-center">

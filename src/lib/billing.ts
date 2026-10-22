@@ -34,7 +34,7 @@ async function getOrCreateCustomer(db: SupabaseClient, v: Viewer): Promise<strin
   if (!c?.id) throw new BillingError("ONVO no devolvió el cliente.", 502);
   const { error } = await db.from("billing_customers").insert({ user_id: v.id, provider_customer_id: c.id });
   if (error) {
-    // Carrera: otro request lo creó primero → usamos el guardado.
+    // Carrera: otro request lo creó primero -> usamos el guardado.
     const { data: again } = await db.from("billing_customers").select("provider_customer_id").eq("user_id", v.id).maybeSingle();
     if (again?.provider_customer_id) return again.provider_customer_id as string;
     throw new BillingError("No se pudo guardar el cliente de pago.", 500);
@@ -95,7 +95,7 @@ export async function cancelAtPeriodEnd(v: Viewer, reason?: string): Promise<{ e
       try {
         await cancelSubscription(r.provider_subscription_id);
       } catch (e) {
-        // 404 = ya no existe en ONVO → seguimos; otros errores sí detienen.
+        // 404 = ya no existe en ONVO -> seguimos; otros errores sí detienen.
         if (!(e instanceof OnvoError && e.status === 404)) {
           log("error cancelando en ONVO", { userId: v.id, subscriptionId: r.provider_subscription_id, error: String(e) });
           throw new BillingError("No pudimos cancelar con el procesador de pagos. Intenta de nuevo o escríbenos.", 502);
@@ -231,7 +231,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const pn = planName(row.plan);
       if (action.terminal) await sendSubscriptionCanceled({ userId: row.user_id, plan: pn, accessUntil: row.current_period_end, subscriptionId: row.provider_subscription_id ?? undefined }).catch(() => {});
       else await sendPaymentFailed({ userId: row.user_id, plan: pn, amount: row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0, currency: "USD", reference: key, updateUrl: "/app/suscripcion" }).catch(() => {});
-      return finish("processed", `renovación fallida → ${status} (ONVO: ${action.subscriptionStatus ?? "?"}) · plan=${plan}`, row.user_id);
+      return finish("processed", `renovación fallida -> ${status} (ONVO: ${action.subscriptionStatus ?? "?"}) · plan=${plan}`, row.user_id);
     }
 
     // verify_customer: payment-intent.succeeded de un cliente con suscripción pendiente.
@@ -240,7 +240,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
     if (!candidates.length) return finish("ignored", "payment intent sin suscripción pendiente");
     for (const row of candidates) {
       if (!row.provider_subscription_id) continue;
-      // Fuente de verdad: preguntamos a ONVO por la suscripción (servidor→servidor con la llave secreta).
+      // Fuente de verdad: preguntamos a ONVO por la suscripción (servidor a servidor con la llave secreta).
       const st = await fetchSubscriptionState(row.provider_subscription_id);
       if (st.active) {
         const plan = await activate(db, row, { periodStart: st.periodStart, periodEnd: st.periodEnd, customerId: action.customerId });

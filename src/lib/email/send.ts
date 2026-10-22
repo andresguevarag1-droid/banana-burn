@@ -22,7 +22,7 @@ export async function sendEmail(to: string, msg: EmailMessage, opts: { idempoten
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "correo inválido" };
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    if (process.env.NODE_ENV !== "production") console.info(`[email:demo] → ${to}: ${msg.subject}`);
+    if (process.env.NODE_ENV !== "production") console.info(`[email:demo] -> ${to}: ${msg.subject}`);
     return { ok: false, skipped: true };
   }
   const headers: Record<string, string> = {};

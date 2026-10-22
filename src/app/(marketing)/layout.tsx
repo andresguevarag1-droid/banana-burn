@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand";
+import { ShieldCheck } from "@/components/icons";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,7 +11,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="hidden md:flex items-center gap-8 text-[15px] font-medium text-muted">
             <Link href="/#metodo" className="hover:text-ink">Método</Link>
             <Link href="/#app" className="hover:text-ink">La app</Link>
-            <Link href="/glp1" className="hover:text-ink">GLP-1 🛡️</Link>
+            <Link href="/glp1" className="inline-flex items-center gap-1.5 hover:text-ink">GLP-1 <ShieldCheck weight="duotone" className="size-4 text-banana-ink" /></Link>
             <Link href="/precios" className="hover:text-ink">Precios</Link>
             <Link href="/#faq" className="hover:text-ink">Preguntas</Link>
           </div>
@@ -25,7 +26,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-8 sm:grid-cols-[1.5fr_1fr_1fr_1fr] text-sm">
           <div className="space-y-3">
             <Logo />
-            <p className="text-muted max-w-xs">Tu entrenador personal con IA, en español y hecho en Costa Rica 🇨🇷 para toda LATAM.</p>
+            <p className="text-muted max-w-xs">Tu entrenador personal con IA, en español y hecho en Costa Rica para toda LATAM.</p>
           </div>
           <div className="space-y-2"><p className="font-bold text-ink">Producto</p><Link className="block text-muted hover:text-ink" href="/#metodo">Método</Link><Link className="block text-muted hover:text-ink" href="/precios">Precios</Link><Link className="block text-muted hover:text-ink" href="/entrar">Entrar</Link></div>
           <div className="space-y-2"><p className="font-bold text-ink">Legal</p><Link className="block text-muted hover:text-ink" href="/privacidad">Privacidad</Link><Link className="block text-muted hover:text-ink" href="/terminos">Términos</Link></div>
