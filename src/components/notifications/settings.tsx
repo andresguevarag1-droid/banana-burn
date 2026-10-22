@@ -16,8 +16,8 @@ function Toggle({ on, onChange, title, hint }: { on: boolean; onChange: (v: bool
   return (
     <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex w-full items-center gap-3 py-3 text-left">
       <span className="flex-1 min-w-0"><span className="block text-sm font-bold text-ink">{title}</span>{hint && <span className="block text-xs text-muted">{hint}</span>}</span>
-      <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-ink" : "bg-line"}`}>
-        <span className={`absolute top-1 size-5 rounded-full bg-white shadow transition-all ${on ? "left-6 bg-banana" : "left-1"}`} />
+      <span className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-(--dur-fast) ${on ? "bg-ink" : "bg-line"}`}>
+        <span className={`absolute left-1 top-1 size-5 rounded-full shadow transition-[translate,background-color] duration-(--dur-fast) ease-out ${on ? "translate-x-5 bg-banana" : "bg-white"}`} />
       </span>
     </button>
   );
@@ -95,7 +95,7 @@ function Form({ data }: { data: Initial }) {
 
       <p className="text-xs text-muted">
         Zona horaria: <b className="text-ink">{p.timezone.replace(/_/g, " ")}</b>
-        {browserTz && browserTz !== p.timezone && <> · <button type="button" onClick={() => set("timezone", browserTz)} className="tap font-bold text-banana-ink underline">Usar {browserTz.replace(/_/g, " ")}</button></>}
+        {browserTz && browserTz !== p.timezone && <>. <button type="button" onClick={() => set("timezone", browserTz)} className="tap font-bold text-banana-ink underline">Usar {browserTz.replace(/_/g, " ")}</button></>}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

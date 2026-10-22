@@ -11,6 +11,7 @@ import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
 import { EnablePush } from "@/components/notifications/enable-push";
+import { ProgressBar } from "@/components/progress-bar";
 import { AnnouncementBanner } from "@/components/admin/announcement-banner";
 import { Glp1Card } from "@/components/glp1-card";
 import { ChallengeCard } from "@/components/challenge-card";
@@ -43,7 +44,7 @@ export default async function Hoy() {
   const kgLost = a.startWeight - a.currentWeight;
 
   return (
-    <div className="space-y-5 animate-rise">
+    <div className="space-y-5 animate-enter">
       {/* Encabezado + motivación */}
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -67,8 +68,8 @@ export default async function Hoy() {
         <div className="flex items-center gap-3">
           <span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft ring-1 ring-banana/40"><LevelIcon idx={g.level.idx} className="size-6" /></span>
           <div className="flex-1 min-w-0">
-            <div className="flex justify-between text-xs font-bold"><span className="text-ink">Nivel {g.level.idx} · {g.level.n}</span><span className="text-muted tabular-nums">{g.xp.toLocaleString("es-CR")} XP</span></div>
-            <div className="mt-1.5 h-2 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember" style={{ width: `${Math.max(4, g.level.progress * 100)}%` }} /></div>
+            <div className="flex items-baseline justify-between gap-2 text-xs font-bold"><span className="text-ink">{g.level.n} <span className="font-semibold text-muted">nivel {g.level.idx}</span></span><span className="text-muted tabular-nums">{g.xp.toLocaleString("es-CR")} XP</span></div>
+            <ProgressBar value={g.level.progress} min={0.04} className="mt-1.5 h-2" fill="bg-ember" />
           </div>
           <div className="hidden sm:flex gap-1.5 pl-3 border-l border-line">
             {g.week.map((w) => {
@@ -102,16 +103,16 @@ export default async function Hoy() {
               {g.trainedToday ? <CheckCircle weight="duotone" className="size-8 sm:size-9" /> : <BrandIcon name={plan.icon} className="size-8 sm:size-9" />}
             </span>
             <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-x-1.5 text-xs font-bold uppercase tracking-wider text-ink/75">
-                <span>Hoy {DAY_NAMES[d.today.dow]} · {plan.tag}</span>
-                {d.deload && <span className="inline-flex items-center gap-1 normal-case tracking-normal rounded-full bg-white/70 px-2 py-0.5 text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-semibold text-ink/75">
+                <span>Hoy {DAY_NAMES[d.today.dow]}, {/^(fuerza|volumen)$/i.test(plan.tag) ? `día de ${plan.tag.toLowerCase()}` : plan.tag.toLowerCase()}</span>
+                {d.deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
               </p>
               <h2 className="mt-1 text-[28px] sm:text-[32px] leading-none font-extrabold tracking-tight text-ink">{plan.name}</h2>
             </div>
           </div>
           {training ? (
             <>
-              <p className="relative mt-2 text-sm font-semibold text-ink/70">{plan.exercises.length} ejercicios · ~{mins} min{plan.cardio ? " · + cardio" : ""}</p>
+              <p className="relative mt-2 text-sm font-semibold text-ink/70 tabular-nums">{plan.exercises.length} ejercicios en unos {mins} min{plan.cardio ? ", más cardio al final" : ""}</p>
               <ul className="relative mt-4 flex flex-wrap gap-1.5">
                 {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/70">{e.cfg.sets}×{e.cfg.lo}-{e.cfg.hi}</span></li>)}
               </ul>
@@ -133,11 +134,11 @@ export default async function Hoy() {
 
         {/* Peso y meta */}
         <section className="card p-5 flex flex-col">
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 rounded-lg bg-banana-soft text-banana-ink"><Scales weight="duotone" className="size-5" /></span>{g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?"}</p>
             <Link href="/app/progreso" className="tap inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink">Ver curva <ArrowRight weight="bold" className="size-3.5" /></Link>
           </div>
-          <p className="text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
+          <p className="mt-1 text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
           <div className="mt-3"><WeighIn last={a.currentWeight} /></div>
           <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
             <div><p className="text-lg font-extrabold text-peel tabular-nums">−{nf(Math.max(0, kgLost))}</p><p className="text-[11px] font-semibold text-muted">kg perdidos</p></div>
@@ -164,12 +165,12 @@ export default async function Hoy() {
         {ch.active.length ? (
           <div className="grid gap-3 lg:grid-cols-2">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
         ) : (
-          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Únete a un reto de 30 días</span><span className="block text-sm text-muted">Flexiones, plancha, 10.000 pasos… y gana tu medalla.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
+          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Únete a un reto de 30 días</span><span className="block text-sm text-muted">Flexiones, plancha o {(10000).toLocaleString("es-CR")} pasos al día, y gana tu medalla.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
         )}
       </section>
 
       {/* Coach */}
-      <Link href="/app/coach" className="card p-4 flex gap-3 items-center hover:shadow-lift transition">
+      <Link href="/app/coach" className="card p-4 flex gap-3 items-center">
         <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
         <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{tipFor(d.today.dow, training, t.protein - g.log.protein - eaten.protein)}</p></div>
         <CaretRight weight="bold" className="size-5 text-faint shrink-0" />

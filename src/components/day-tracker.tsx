@@ -11,7 +11,7 @@ function MiniRing({ v, color, size = 56 }: { v: number; color: string; size?: nu
   return (
     <svg width={size} height={size} className="-rotate-90 shrink-0" aria-hidden>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F3EBD3" strokeWidth={sw} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, Math.max(0.001, v)))} style={{ transition: "stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1)" }} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, Math.max(0.001, v)))} style={{ transition: "stroke-dashoffset var(--dur-fill) var(--ease-out)" }} />
     </svg>
   );
 }
@@ -38,7 +38,7 @@ export function DayTracker({ initial, base, target, dateKey, demo }: { initial: 
     { f: "protein", label: "Proteína", icon: <Egg weight="duotone" className="size-5" />, color: "#FF5A1F", val: log.protein + base.protein, goal: target.protein, unit: "g", fmt: (n) => `${Math.round(n)}`, quick: [["+20 g", 20], ["+30 g", 30]] },
     { f: "kcal", label: "Calorías", icon: <BananaFlame className="size-5" />, color: "#D98200", val: log.kcal + base.kcal, goal: target.kcal, unit: "kcal", fmt: (n) => Math.round(n).toLocaleString("es-CR"), quick: [["+250", 250], ["+500", 500]] },
     { f: "water", label: "Agua", icon: <Drop weight="duotone" className="size-5" />, color: "#2F6FED", val: log.water, goal: target.water, unit: "vasos", fmt: (n) => `${Math.round(n)}`, quick: [["+1 vaso", 1]] },
-    { f: "steps", label: "Pasos", icon: <Footprints weight="duotone" className="size-5" />, color: "#23A455", val: log.steps, goal: target.steps, unit: "", fmt: (n) => Math.round(n).toLocaleString("es-CR"), quick: [["+1.000", 1000]] },
+    { f: "steps", label: "Pasos", icon: <Footprints weight="duotone" className="size-5" />, color: "#23A455", val: log.steps, goal: target.steps, unit: "", fmt: (n) => Math.round(n).toLocaleString("es-CR"), quick: [[`+${(1000).toLocaleString("es-CR")}`, 1000]] },
     { f: "sleep", label: "Sueño", icon: <Moon weight="duotone" className="size-5" />, color: "#6B4FD8", val: log.sleep, goal: target.sleep, unit: "h", fmt: (n) => n.toLocaleString("es-CR", { maximumFractionDigits: 1 }), quick: [["7 h", -7], ["8 h", -8]] },
   ];
 
@@ -54,7 +54,7 @@ export function DayTracker({ initial, base, target, dateKey, demo }: { initial: 
                 <MiniRing v={pct} color={it.color} />
                 <span className="absolute" style={{ color: it.color }}>{done ? <><Check weight="bold" className="size-5" /><span className="sr-only">Meta cumplida</span></> : it.icon}</span>
               </div>
-              <button onClick={() => setEdit(edit === it.f ? null : it.f)} className="min-w-0 text-left" aria-label={`Editar ${it.label}`}>
+              <button onClick={() => setEdit(edit === it.f ? null : it.f)} className="min-w-0 rounded-lg text-left transition-opacity hover:opacity-75" aria-label={`Editar ${it.label}`}>
                 <p className="text-xs font-bold text-muted">{it.label}</p>
                 <p className="text-lg font-extrabold text-ink tabular-nums leading-tight">{it.fmt(it.val)}</p>
                 <p className="text-[11px] font-semibold text-faint tabular-nums">de {it.fmt(it.goal)} {it.unit}</p>

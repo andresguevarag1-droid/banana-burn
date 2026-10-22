@@ -21,11 +21,43 @@
   --radius-xl2: 1.5rem;
   --shadow-soft: 0 1px 2px rgb(27 21 5 / .04), 0 8px 24px -8px rgb(27 21 5 / .10);
   --shadow-lift: 0 2px 4px rgb(27 21 5 / .05), 0 24px 48px -16px rgb(27 21 5 / .18);
+
+  /* Movimiento. Las utilidades ease-out / ease-in-out de Tailwind usan estas curvas (más firmes que las de CSS). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* `transition` sin más: 160 ms con salida fuerte */
+  --default-transition-duration: 160ms;
+  --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/*
+  Duraciones del sistema (usar con duration-(--dur-*)):
+  press 140 ms: respuesta al tocar · fast 180 ms: hover, popovers, chips
+  base 240 ms: entradas en página · enter 300 ms: hojas y toasts al entrar · exit 200 ms: al salir (siempre más rápido)
+*/
+:root {
+  --dur-press: 140ms;
+  --dur-fast: 180ms;
+  --dur-base: 240ms;
+  --dur-enter: 300ms;
+  --dur-exit: 200ms;
+  --dur-fill: 450ms;
+}
+
+/* El hover solo existe con puntero fino: en táctil el "hover" pegado tras un toque se ve roto. */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { @slot; }
+  }
 }
 
 html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
 body { background: var(--color-paper); color: var(--color-body); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--color-banana); color: var(--color-ink); }
+/* Títulos sin palabras huérfanas; párrafos con cortes más parejos */
+:where(h1, h2, h3) { text-wrap: balance; }
+:where(p, li, dd, blockquote) { text-wrap: pretty; }
 
 /* Zona táctil mínima de 44×44 px sin agrandar el diseño: un ::before invisible centrado. */
 @utility tap {
@@ -34,48 +66,93 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 }
 
 /* Respuesta táctil para botones sueltos, pestañas y segmentos que no usan btn/chip. */
-@utility pressable { @apply cursor-pointer select-none transition duration-150 active:scale-[.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60 disabled:cursor-default; }
+@utility pressable {
+  @apply cursor-pointer select-none transition-[transform,translate,scale,background-color,color,border-color,box-shadow,opacity] duration-(--dur-press) ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60 disabled:cursor-default disabled:active:scale-100;
+}
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-12 font-semibold text-[15px] cursor-pointer select-none transition-all duration-200 active:scale-[.97] disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-12 font-semibold text-[15px] cursor-pointer select-none transition-[transform,translate,scale,background-color,color,border-color,box-shadow,filter,opacity] duration-150 ease-out active:scale-[.97] disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60;
   &:is(button, a, label) { position: relative; }
   &:is(button, a, label)::before { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 }
-@utility btn-primary { @apply btn bg-ink text-white hover:bg-black shadow-[0_8px_24px_-8px_rgb(27_21_5/.5)]; }
-@utility btn-banana { @apply btn bg-banana text-ink hover:brightness-95 shadow-[0_8px_24px_-8px_rgb(255_214_10/.9)] focus-visible:ring-ink/25; }
+@utility btn-primary { @apply btn bg-ink text-white hover:bg-black shadow-[0_4px_12px_-6px_rgb(27_21_5/.35)]; }
+@utility btn-banana { @apply btn bg-banana text-ink hover:brightness-95 shadow-[0_4px_12px_-6px_rgb(138_98_0/.35)] focus-visible:ring-ink/25; }
 @utility btn-ghost { @apply btn bg-white/70 text-ink border border-line hover:bg-white hover:border-ink/25; }
 @utility card {
   @apply bg-card rounded-[1.5rem] border border-line/70 shadow-soft;
-  /* Tarjetas clicables: se levantan al pasar el cursor y ceden al tocar */
-  &:is(a, button) { @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-lift hover:border-line active:translate-y-0 active:scale-[.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60; }
+  /* Tarjetas clicables: se levantan con el cursor (solo puntero fino) y ceden al tocar */
+  &:is(a, button) { @apply transition-[transform,translate,scale,box-shadow,border-color] duration-(--dur-fast) ease-out hover:-translate-y-0.5 hover:shadow-lift hover:border-line active:translate-y-0 active:scale-[.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60; }
 }
 @utility chip {
   @apply inline-flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-semibold;
   /* Chips que actúan como botón, enlace o pestaña */
-  &:is(button, a, label, [role="tab"]) { @apply relative cursor-pointer select-none transition duration-150 hover:brightness-[.97] active:scale-[.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60; }
+  &:is(button, a, label, [role="tab"]) { @apply relative cursor-pointer select-none transition-[transform,translate,scale,background-color,color,border-color,filter] duration-(--dur-press) ease-out hover:brightness-[.97] active:scale-[.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60; }
   &:is(button, a, label, [role="tab"])::before { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
   &:is(button, a, label, [role="tab"]):disabled { @apply cursor-default opacity-60; }
 }
 @utility eyebrow { @apply text-[12px] font-bold uppercase tracking-[.14em] text-banana-ink; }
-@utility input { @apply w-full h-13 rounded-2xl border border-line bg-white px-4 text-[16px] text-ink placeholder:text-faint outline-none transition focus:border-ink focus:ring-4 focus:ring-banana/40; }
+@utility input { @apply w-full h-13 rounded-2xl border border-line bg-white px-4 text-[16px] text-ink placeholder:text-faint outline-none transition-[border-color,box-shadow] focus:border-ink focus:ring-4 focus:ring-banana/40; }
 
+/* ---------- Animaciones de entrada ---------- */
 @keyframes floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
-@keyframes rise { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes enter { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+/* Celebración: nunca desde scale(0); un leve rebote porque es un momento raro */
+@keyframes pop { from { transform: scale(.6); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+@keyframes confetti { from { transform: translate3d(0,0,0) rotate(var(--r, 0deg)) } to { transform: translate3d(var(--dx, 30px),110dvh,0) rotate(calc(var(--r, 0deg) + 540deg)) } }
+
+/* Marketing y pantallas sueltas: entrada única de 320 ms. En la app se usa animate-enter (240 ms, menos recorrido). */
 .animate-floaty { animation: floaty 6s ease-in-out infinite; }
-.animate-rise { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+.animate-rise { animation: rise 320ms var(--ease-out) both; }
+/* App: entrada corta (se ve decenas de veces al día) */
+.animate-enter { animation: enter var(--dur-base) var(--ease-out) both; }
+.animate-fade { animation: fade var(--dur-fast) var(--ease-out) both; }
+.animate-pop { animation: pop 520ms cubic-bezier(.34,1.56,.64,1) both; }
+/* Escalonado de listas: 40 ms por elemento, tope de 8 (320 ms) para no hacer esperar */
+.stagger > * { animation: enter var(--dur-base) var(--ease-out) both; }
+.stagger > :nth-child(2) { animation-delay: 40ms } .stagger > :nth-child(3) { animation-delay: 80ms }
+.stagger > :nth-child(4) { animation-delay: 120ms } .stagger > :nth-child(5) { animation-delay: 160ms }
+.stagger > :nth-child(6) { animation-delay: 200ms } .stagger > :nth-child(7) { animation-delay: 240ms }
+.stagger > :nth-child(n+8) { animation-delay: 280ms }
+
+/* ---------- Hojas (bottom sheet / diálogo) ----------
+   Entran con la curva de cajón en 300 ms y salen en 200 ms. Transiciones (no keyframes) para que abrir y cerrar
+   rápido se pueda interrumpir sin saltos. El estado de salida lo pone data-closing. */
+.sheet-backdrop { opacity: 1; transition: opacity var(--dur-enter) var(--ease-out); }
+.sheet-backdrop[data-closing] { opacity: 0; transition-duration: var(--dur-exit); pointer-events: none; }
+.sheet-panel { transform: translate3d(0,0,0); transition: transform var(--dur-enter) var(--ease-drawer), opacity var(--dur-enter) var(--ease-out); }
+.sheet-panel[data-closing] { transform: translate3d(0,100%,0); transition-duration: var(--dur-exit); }
+@starting-style {
+  .sheet-backdrop { opacity: 0; }
+  .sheet-panel { transform: translate3d(0,100%,0); }
+}
+@media (min-width: 40rem) {
+  /* En escritorio es un diálogo centrado: aparece desde .96 y queda centrado (sin origen de disparador) */
+  .sheet-panel[data-closing] { transform: scale(.97); opacity: 0; }
+  @starting-style { .sheet-panel { transform: scale(.96); opacity: 0; } }
+}
+
+/* ---------- Toasts: entran y salen por el mismo lado ---------- */
+.toast { transform: none; opacity: 1; transition: transform var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out); }
+.toast[data-side="top"][data-closing] { transform: translateY(-100%); opacity: 0; transition-duration: var(--dur-exit); }
+.toast[data-side="bottom"][data-closing] { transform: translateY(100%); opacity: 0; transition-duration: var(--dur-exit); }
+@starting-style {
+  .toast[data-side="top"] { transform: translateY(-100%); opacity: 0; }
+  .toast[data-side="bottom"] { transform: translateY(100%); opacity: 0; }
+}
+
+/* ---------- Popover anclado (campana): crece desde su disparador ---------- */
+.popover { transform-origin: top right; transform: none; opacity: 1; transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out); }
+.popover[data-closing] { transform: scale(.97); opacity: 0; transition-duration: 120ms; pointer-events: none; }
+@starting-style { .popover { transform: scale(.96); opacity: 0; } }
+
+/* ---------- Barras de progreso: solo transform ---------- */
+.bar-fill { transition: transform var(--dur-fill) var(--ease-out); }
 
 /* Variables del motor de animación */
 :root { --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B; }
 .motion svg { width: 100%; height: 100%; display: block; overflow: visible; }
-
-@keyframes confetti { 0% { transform: translate3d(0,0,0) rotate(0); opacity: 1 } 100% { transform: translate3d(30px,110vh,0) rotate(720deg); opacity: .9 } }
-@keyframes pop { 0% { transform: scale(.3); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes sheet { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
-
-.animate-fade { animation: fade .2s both; }
-.animate-sheet { animation: sheet .3s cubic-bezier(.2,.9,.3,1) both; }
-.animate-pop { animation: pop .6s cubic-bezier(.2,1.6,.4,1) both; }
 
 /* Foco visible por defecto para todo lo interactivo (las utilidades con anillo propio lo sustituyen). */
 @layer base {
@@ -90,14 +167,20 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
   html { scroll-behavior: smooth; }
 }
 
-/* Movimiento reducido: sin animaciones decorativas ni desplazamientos. Las entradas quedan en su estado final. */
+/*
+  Movimiento reducido: menos y más suave, no cero. Se quitan desplazamientos, rebotes y bucles;
+  se conservan los fundidos de opacidad y los cambios de color, que ayudan a entender qué pasó.
+*/
 @media (prefers-reduced-motion: reduce) {
-  .animate-floaty, .animate-rise, .animate-fade, .animate-sheet, .animate-pop,
-  .animate-bounce, .animate-ping, .animate-spin, [class*="animate-["] { animation: none !important; }
+  .animate-floaty, .animate-bounce, .animate-ping, [class*="animate-["] { animation: none !important; }
+  .animate-rise, .animate-enter, .animate-pop, .stagger > * { animation-name: fade !important; animation-duration: var(--dur-fast) !important; }
   .animate-pulse { animation: none !important; opacity: .7; }
-  *, ::before, ::after {
-    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  .animate-spin { animation-duration: 1.6s !important; }
+  .sheet-panel, .sheet-panel[data-closing], .toast, .toast[data-closing], .popover, .popover[data-closing] { transform: none !important; }
+  @starting-style {
+    .sheet-panel, .toast[data-side], .popover { transform: none !important; opacity: 0; }
   }
-  .card:is(a, button):hover { translate: none; }
+  .sheet-panel[data-closing] { opacity: 0; }
+  .bar-fill { transition-duration: var(--dur-fast); }
+  .card:is(a, button), .card:is(a, button):hover { translate: none; }
 }
