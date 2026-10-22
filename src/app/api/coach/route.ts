@@ -53,7 +53,9 @@ export async function POST(req: Request) {
     const { data: left, error } = await sb.rpc("coach_consume", { p_kind: "chat" });
     if (error) {
       console.error("[coach] cupo", error.code);
-      return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+      // Migración 0012 aún sin aplicar (función inexistente): cupo en memoria en vez de apagar el coach.
+      if (error.code !== "PGRST202" && error.code !== "42883") return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+      if (!memoryRateLimit(`coach:${v.id}`, 40, 24 * 3600_000)) return new Response(textStream(fake(LIMIT_TEXT)), { headers });
     }
     if (typeof left === "number" && left < 0) return new Response(textStream(fake(LIMIT_TEXT)), { headers });
   } else if (!memoryRateLimit(`coach:${clientIp(req)}`, 40, 24 * 3600_000)) {
