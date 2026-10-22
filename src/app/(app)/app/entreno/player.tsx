@@ -59,6 +59,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
   const [idx, setIdx] = useState(0);
   const [startedAt, setStartedAt] = useState<string>(() => new Date().toISOString());
   const [rest, setRest] = useState<Rest>(null);
+  const [work, setWork] = useState<{ end: number; total: number; si: number; ex: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [prs, setPrs] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -81,6 +82,11 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
   const restLeft = rest ? Math.max(0, (rest.end - now) / 1000) : 0;
   useEffect(() => { if (rest && restLeft <= 0) { beep(); setRest(null); } }, [rest, restLeft]);
+  const workLeft = work ? Math.max(0, (work.end - now) / 1000) : 0;
+  useEffect(() => {
+    if (work && workLeft <= 0) { const w = work; setWork(null); beep(); if (w.ex === idx && !rows[idx][w.si].done) toggleDone(w.si); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [work, workLeft]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 2600); return () => clearTimeout(t); }, [toast]);
 
   const ex = exercises[idx];
@@ -283,14 +289,27 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
                       <p className={`text-lg font-extrabold leading-none ${r.done ? "text-peel" : "text-ink"}`}>{si + 1}</p>
                       {prev && <p className="mt-1 text-[10px] font-semibold text-faint leading-none tabular-nums" title="Última vez">{prev.kg ?? "PC"}×{prev.reps}</p>}
                     </div>
-                    <Stepper label={ex.bw ? "lastre kg" : "kg"} value={r.kg} placeholder={ex.bw ? "PC" : "—"} inputMode="decimal" disabled={r.done}
-                      onMinus={() => step(si, "kg", -1)} onPlus={() => step(si, "kg", 1)} onChange={(v) => update(si, { kg: v })} />
+                    {!(ex.bw && ex.cfg.unit === "s") && <Stepper label={ex.bw ? "lastre kg" : "kg"} value={r.kg} placeholder={ex.bw ? "PC" : "—"} inputMode="decimal" disabled={r.done}
+                      onMinus={() => step(si, "kg", -1)} onPlus={() => step(si, "kg", 1)} onChange={(v) => update(si, { kg: v })} />}
                     <Stepper label={unit} value={r.reps} inputMode="numeric" disabled={r.done}
                       onMinus={() => step(si, "reps", -1)} onPlus={() => step(si, "reps", 1)} onChange={(v) => update(si, { reps: v.replace(/\D/g, "") })} />
                     <button onClick={() => toggleDone(si)} className={`grid place-items-center size-14 shrink-0 rounded-2xl transition active:scale-90 ${r.done ? "bg-peel text-white" : active ? "bg-ink text-white" : "bg-line text-muted"}`} aria-label={r.done ? `Desmarcar serie ${si + 1}` : `Completar serie ${si + 1}`}>
                       <Check className="size-7" strokeWidth={3} />
                     </button>
                   </div>
+                  {active && ex.cfg.unit === "s" && !rest && (
+                    <div className="px-3 pb-3">
+                      {work && work.si === si && work.ex === idx ? (
+                        <div className="flex items-center gap-3 rounded-2xl bg-peel text-white p-3" aria-live="polite">
+                          <span className="text-3xl font-extrabold tabular-nums w-20 text-center">{Math.ceil(workLeft)}</span>
+                          <div className="flex-1 h-2 rounded-full bg-white/30 overflow-hidden"><div className="h-full bg-white" style={{ width: `${(1 - workLeft / work.total) * 100}%`, transition: "width .25s linear" }} /></div>
+                          <button onClick={() => setWork(null)} className="h-9 px-3 rounded-full bg-white/20 text-sm font-bold">Parar</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { const n = num(r.reps) || ex.cfg.hi; setWork({ end: Date.now() + n * 1000 + 3000, total: n + 3, si, ex: idx }); buzz(20); }} className="w-full h-12 rounded-2xl bg-peel text-white font-extrabold">▶ Iniciar {num(r.reps) || ex.cfg.hi} s <span className="font-semibold opacity-80">(3 s para prepararte)</span></button>
+                      )}
+                    </div>
+                  )}
                   {active && plates && plates.length > 0 && <p className="px-4 pb-2.5 -mt-0.5 text-[12px] font-semibold text-muted">🏋️ Por lado: {plates.map(kgFmt).join(" + ")} kg <span className="text-faint">(barra 20)</span></p>}
                   {r.done && (
                     <label className="flex items-center gap-2 px-4 pb-2.5 -mt-0.5 text-xs font-semibold text-muted">

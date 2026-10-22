@@ -1,4 +1,4 @@
-import { DEFAULT_WEEK, EX, SLOTS, TPL, forEquipment, type Equipment, type ExerciseId, type SlotCfg, type TemplateId } from "./data";
+import { DEFAULT_WEEK, EX, EXPRESS_POOL, SLOTS, TPL, forEquipment, type Equipment, type ExerciseId, type Level, type SlotCfg, type TemplateId } from "./data";
 
 export * from "./data";
 
@@ -91,20 +91,72 @@ export type PlannedExercise = { id: ExerciseId; name: string; muscle: string; cf
 export type PlannedDay = { dow: number; tpl: TemplateId | null; name: string; tag: string; emoji: string; exercises: PlannedExercise[]; cardio?: string; mins?: number };
 
 /** Rutina de un día: las variantes rotan cada semana, así nada se repite. */
-export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, equipment: Equipment = "gym"): PlannedDay {
+export type PlanOpts = { equipment?: Equipment; level?: Level; minutes?: number };
+
+/** Minutos estimados de una sesión: ~40 s por serie + descansos + 5 min de calentamiento. */
+export function estimateMinutes(ex: { cfg: SlotCfg }[]) {
+  const secs = ex.reduce((a, e) => a + e.cfg.sets * (40 + e.cfg.rest), 0);
+  return Math.round(secs / 60 + 5);
+}
+
+/** Ajusta volumen por nivel y recorta para caber en los minutos disponibles. */
+export function personalize(exs: PlannedExercise[], level: Level = "intermedio", minutes?: number): PlannedExercise[] {
+  let out = exs.map((e, i) => {
+    const c = { ...e.cfg };
+    if (level === "principiante") { c.sets = Math.max(2, c.sets - 1); if (!c.unit) { c.lo += 2; c.hi += 2; } c.rest = Math.min(c.rest, 150); }
+    if (level === "avanzado" && i < 2) c.sets += 1;
+    return { ...e, cfg: c };
+  });
+  if (minutes) {
+    // 1) recorta descansos largos, 2) quita series de accesorios, 3) quita el último ejercicio (mínimo 2)
+    if (estimateMinutes(out) > minutes) out = out.map((e) => ({ ...e, cfg: { ...e.cfg, rest: Math.min(e.cfg.rest, 90) } }));
+    let guard = 0;
+    while (estimateMinutes(out) > minutes && guard++ < 30) {
+      const j = [...out].reverse().findIndex((e) => e.cfg.sets > 2);
+      if (j >= 0) { const k = out.length - 1 - j; out = out.map((e, i) => (i === k ? { ...e, cfg: { ...e.cfg, sets: e.cfg.sets - 1 } } : e)); }
+      else if (out.length > 2) out = out.slice(0, -1);
+      else break;
+    }
+  }
+  return out;
+}
+
+export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay {
+  const o: PlanOpts = typeof opts === "string" ? { equipment: opts } : opts;
   const tplId = schedule[dow];
   if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", emoji: "🌴", exercises: [], cardio: "Camina 8–12k pasos y estira 10 min" };
   const t = TPL[tplId];
-  const exercises = t.ex.map((cfg) => {
+  const raw = t.ex.map((cfg) => {
     const base = (cfg.id ?? SLOTS[cfg.slot!][week % SLOTS[cfg.slot!].length]) as ExerciseId;
-    const id = forEquipment(base, equipment);
+    const id = forEquipment(base, o.equipment ?? "gym", o.level ?? "intermedio");
     return { id, name: EX[id].n, muscle: EX[id].m, cfg };
   });
-  return { dow, tpl: tplId, name: t.n, tag: t.tag, emoji: t.emoji, exercises, cardio: t.cardio, mins: t.mins };
+  // evita repetir el mismo ejercicio dentro del día tras los reemplazos
+  const seen = new Set<string>();
+  const exercises = personalize(raw.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))), o.level, o.minutes);
+  const mins = estimateMinutes(exercises) + (t.cardio ? 10 : 0);
+  return { dow, tpl: tplId, name: t.n, tag: t.tag, emoji: t.emoji, exercises, cardio: t.cardio, mins };
 }
 
-export function planWeek(week: number, schedule = DEFAULT_WEEK, equipment: Equipment = "gym"): PlannedDay[] {
-  return [1, 2, 3, 4, 5, 6, 0].map((d) => planDay(d, week, schedule, equipment));
+/** Entreno exprés de 10/20/30 min sin equipo: series por tiempo, descansos cortos, cuerpo completo. */
+export function expressDay(minutes: number, seed = 0): PlannedDay {
+  const m = [10, 20, 30].includes(minutes) ? minutes : 20;
+  const nEx = m === 10 ? 4 : m === 20 ? 5 : 6;
+  const kinds = ["piernas", "empuje", "core", "cardio", "tiron", "piernas", "empuje", "core"];
+  const picked: ExerciseId[] = [];
+  for (let i = 0; picked.length < nEx && i < 40; i++) {
+    const kind = kinds[i % kinds.length];
+    const pool = EXPRESS_POOL.filter((x) => x.kind === kind && !picked.includes(x.id));
+    if (pool.length) picked.push(pool[(seed + i) % pool.length].id);
+  }
+  const work = 40, rest = 20;
+  const sets = Math.max(2, Math.floor(((m - 2) * 60) / (nEx * (work + rest))));
+  const exercises = picked.map((id) => ({ id, name: EX[id].n, muscle: EX[id].m, cfg: { id, sets, lo: work - 10, hi: work, rest, unit: "s" as const } }));
+  return { dow: -1, tpl: null, name: `Exprés ${m} min`, tag: "Sin equipo", emoji: "⚡", exercises, mins: m, cardio: undefined };
+}
+
+export function planWeek(week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay[] {
+  return [1, 2, 3, 4, 5, 6, 0].map((d) => planDay(d, week, schedule, opts));
 }
 
 /** Semana según días disponibles (3–6). Nunca repite plantilla en días seguidos. */

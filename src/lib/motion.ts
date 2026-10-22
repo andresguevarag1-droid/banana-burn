@@ -97,6 +97,15 @@ const ANIM={
     A:{a:80},B:{a:-4},
     ph:[['B',1,'Sube con el codo','con'],['B',.6,'Pausa arriba','hold'],['A',3,'Baja lento · 3 s','ecc'],['A',.4,'Abajo','hold']]}
 };
+// Variantes sin equipo (misma cinemática, sin barra ni discos)
+Object.assign(ANIM,{
+  squat_bw:{...ANIM.squat,props:[],bar:null,A:{...ANIM.squat.A,ua:-10,fa:-10},B:{...ANIM.squat.B,ua:20,fa:10}},
+  jump_bw:{...ANIM.squat,props:[],bar:null,A:{...ANIM.squat.A,ua:100,fa:100},B:{...ANIM.squat.B,ua:150,fa:120},ph:[['B',.8,'Baja rápido','ecc'],['A',.5,'¡Salta!','con'],['A',.6,'Aterriza suave','hold']]},
+  rdl_bw:{...ANIM.rdl,props:[],bar:null},
+  curl_bw:{...ANIM.curl,props:[],bar:null},
+  burpee:{...ANIM.pushup,ph:[['B',.7,'Pecho al piso','ecc'],['A',.6,'Empuja y salta','con'],['A',.4,'Arriba','hold']]},
+  mountain:{...ANIM.plank,A:{...ANIM.pushup.A},B:{...ANIM.pushup.A,thigh:-70,shin:-150},ph:[['B',.35,'Rodilla al pecho','con'],['A',.35,'Cambia rápido','ecc']]},
+});
 const lerp=(a,b,t)=>a+(b-a)*t;
 const ease={con:t=>1-Math.pow(1-t,3),ecc:t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2,hold:t=>t};
 function poseAt(an,time){

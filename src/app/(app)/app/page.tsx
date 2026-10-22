@@ -8,6 +8,7 @@ import { DAY_NAMES } from "@/lib/engine";
 import { DayTracker } from "@/components/day-tracker";
 import { WeighIn } from "@/components/weigh-in";
 import { Readiness } from "@/components/readiness";
+import { ExpressChips } from "@/components/express-chips";
 
 export const metadata = { title: "Hoy" };
 
@@ -101,6 +102,7 @@ export default async function Hoy() {
           ) : (
             <p className="relative mt-3 text-ink/80">🚶 {plan.cardio}. Tu músculo crece hoy.</p>
           )}
+          {!g.trainedToday && <div className="relative mt-4"><ExpressChips /></div>}
           <p className="relative mt-4 text-xs font-semibold text-ink/60">Ayer {d.yesterday.emoji} {d.yesterday.name} · Mañana {d.tomorrow.emoji} {d.tomorrow.name}</p>
         </section>
 

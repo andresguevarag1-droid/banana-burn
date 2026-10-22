@@ -7,7 +7,7 @@ import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
 import { completeOnboarding, type Onboard } from "./actions";
 
-const STEPS = 6;
+const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -42,7 +42,7 @@ function Choice({ on, onClick, e, t, d }: { on: boolean; onClick: () => void; e:
 export function Wizard({ name: initialName, demo }: { name: string; demo: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", consent: false }));
+  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false }));
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -58,9 +58,9 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
   const weeksTo = Math.max(1, (new Date(o.goalDate + "T12:00:00").getTime() - Date.now()) / (7 * 864e5));
   const pace = (o.weight - o.goalWeight) / weeksTo;
   const paceWarn = pace > o.weight * 0.01;
-  const week = planWeek(0, scheduleFor(o.days));
+  const week = planWeek(0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
 
-  const canNext = [true, o.name.trim().length > 0 && age >= 16 && age <= 90, o.goalWeight > 0, true, true, o.consent][step];
+  const canNext = [true, o.name.trim().length > 0 && age >= 16 && age <= 90, o.goalWeight > 0, true, true, true, o.consent][step];
 
   function finish() {
     setErr(null);
@@ -133,24 +133,36 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
           </>)}
 
           {step === 3 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuántos días puedes entrenar? 📅</h1><p className="mt-2 text-muted">Sé realista: es mejor 4 días siempre que 6 a veces.</p></div>
-            <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`h-20 rounded-3xl border-2 text-3xl font-extrabold ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}</button>)}</div>
-            <div className="card p-4">
-              <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
-              <ul className="space-y-1.5">{week.map((d) => <li key={d.dow} className="flex items-center justify-between text-sm"><span className="w-20 font-semibold text-muted capitalize">{DAY_NAMES[d.dow]}</span><span className={`flex-1 font-bold ${d.tpl ? "text-ink" : "text-faint"}`}>{d.emoji} {d.name}</span></li>)}</ul>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuánta experiencia tienes? 💪</h1><p className="mt-2 text-muted">Ajustamos ejercicios, series y descansos a tu nivel.</p></div>
+            <div className="space-y-3">
+              <Choice on={o.level === "principiante"} onClick={() => up({ level: "principiante" })} e="🌱" t="Principiante" d="Nunca o casi nunca he entrenado con pesas" />
+              <Choice on={o.level === "intermedio"} onClick={() => up({ level: "intermedio" })} e="🍌" t="Intermedio" d="Entreno hace meses y conozco los básicos" />
+              <Choice on={o.level === "avanzado"} onClick={() => up({ level: "avanzado" })} e="🦍" t="Avanzado" d="Más de 2 años entrenando en serio" />
             </div>
           </>)}
 
           {step === 4 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Dónde entrenas? 🏋️</h1><p className="mt-2 text-muted">Elegimos los ejercicios según tu equipo.</p></div>
-            <div className="space-y-3">
-              <Choice on={o.equipment === "gym"} onClick={() => up({ equipment: "gym" })} e="🏋️" t="Gimnasio" d="Barras, mancuernas, poleas y máquinas" />
-              <Choice on={o.equipment === "mixto"} onClick={() => up({ equipment: "mixto" })} e="🔀" t="Gym y casa" d="A veces voy, a veces entreno en casa" />
-              <Choice on={o.equipment === "casa"} onClick={() => up({ equipment: "casa" })} e="🏠" t="En casa" d="Mancuernas, bandas o solo peso corporal" />
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuántos días puedes entrenar? 📅</h1><p className="mt-2 text-muted">Sé realista: es mejor 4 días siempre que 6 a veces.</p></div>
+            <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`h-20 rounded-3xl border-2 text-3xl font-extrabold ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}</button>)}</div>
+            <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-4 gap-2">{[20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`h-14 rounded-2xl border-2 font-extrabold ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
+              <p className="mt-2 text-xs text-muted">¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.</p></div>
+            <div className="card p-4">
+              <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
+              <ul className="space-y-1.5">{week.map((d) => <li key={d.dow} className="flex items-center justify-between text-sm"><span className="w-20 font-semibold text-muted capitalize">{DAY_NAMES[d.dow]}</span><span className={`flex-1 font-bold ${d.tpl ? "text-ink" : "text-faint"}`}>{d.emoji} {d.name}</span>{d.tpl && <span className="text-xs text-muted tabular-nums">~{d.mins} min</span>}</li>)}</ul>
             </div>
           </>)}
 
           {step === 5 && (<>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Dónde entrenas? 🏋️</h1><p className="mt-2 text-muted">Elegimos los ejercicios según tu equipo.</p></div>
+            <div className="space-y-3">
+              <Choice on={o.equipment === "gym"} onClick={() => up({ equipment: "gym" })} e="🏋️" t="Gimnasio" d="Barras, mancuernas, poleas y máquinas" />
+              <Choice on={o.equipment === "mixto"} onClick={() => up({ equipment: "mixto" })} e="🔀" t="Gym y casa" d="A veces voy, a veces entreno en casa" />
+              <Choice on={o.equipment === "casa"} onClick={() => up({ equipment: "casa" })} e="🏠" t="En casa con mancuernas" d="Un par de mancuernas o bandas" />
+              <Choice on={o.equipment === "ninguno"} onClick={() => up({ equipment: "ninguno" })} e="🛏️" t="Sin equipo" d="Solo tu cuerpo y un espacio de 2 × 2 m" />
+            </div>
+          </>)}
+
+          {step === 6 && (<>
             <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Un último detalle 🔒</h1><p className="mt-2 text-muted">Tus datos de salud son tuyos y solo los usamos para personalizar tu plan.</p></div>
             <div className="card p-5 space-y-2 text-sm text-body">
               <p>✅ Cifrados y privados: nadie más ve tu peso ni tus fotos.</p>

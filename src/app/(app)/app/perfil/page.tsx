@@ -33,7 +33,7 @@ export default async function Perfil() {
 
       <section className="card p-5">
         <h2 className="font-extrabold text-ink mb-4">🏋️ Mi plan de entreno</h2>
-        <TrainingSettings days={a.trainDays} equipment={a.equipment} mode={a.mode} />
+        <TrainingSettings days={a.trainDays} equipment={a.equipment} mode={a.mode} level={a.level} minutes={a.minutes} />
       </section>
 
       <section className="card p-5">

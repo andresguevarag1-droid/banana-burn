@@ -47,6 +47,19 @@ export const EX = {
   bandpull: { n: "Jalón con banda", m: "Espalda", inc: 0 },
   legraisef: { n: "Elevación de piernas en el piso", m: "Core", inc: 0 },
   bicycle: { n: "Bicicleta abdominal", m: "Core", inc: 0 },
+  bwsquat: { n: "Sentadilla con peso corporal", m: "Piernas", inc: 0 },
+  bulgarian: { n: "Sentadilla búlgara", m: "Piernas", inc: 0 },
+  pikepush: { n: "Flexión pica", m: "Hombros", inc: 0 },
+  slrdl: { n: "Peso muerto a una pierna", m: "Femorales", inc: 0 },
+  glutebridge: { n: "Puente de glúteo", m: "Glúteos", inc: 0 },
+  towelcurl: { n: "Curl isométrico con toalla", m: "Bíceps", inc: 0 },
+  ytw: { n: "Y-T-W boca abajo", m: "Hombro posterior", inc: 0 },
+  bearcrawl: { n: "Caminata del oso", m: "Core", inc: 0 },
+  jumpsquat: { n: "Sentadilla con salto", m: "Piernas", inc: 0 },
+  burpee: { n: "Burpees", m: "Cuerpo completo", inc: 0 },
+  mountain: { n: "Escaladores", m: "Core", inc: 0 },
+  lunge: { n: "Zancadas alternas", m: "Piernas", inc: 0 },
+  jacks: { n: "Jumping jacks", m: "Cardio", inc: 0 },
 } as const;
 
 export const SLOTS: Record<string, ExerciseId[]> = {
@@ -89,7 +102,8 @@ export const ALTS: Record<string, ExerciseId[]> = {
   deadlift: ["rdl"], rdl: ["deadlift"],
   pullup: ["chinup", "lat"], chinup: ["pullup", "lat"], lat: ["pullup", "chinup"],
   row: ["dbrow"], dbrow: ["row"],
-  floorpress: ["pushupe", "pushup"], dbrdl: ["goblet"], invrow: ["dbrow", "bandpull"], bandpull: ["invrow", "dbrow"],
+  floorpress: ["pushupe", "pushup"], dbrdl: ["goblet", "slrdl"], invrow: ["dbrow", "bandpull"], bandpull: ["invrow", "dbrow"],
+  bulgarian: ["bwsquat", "lunge"], pushup: ["pushupe", "pushupd"], pikepush: ["pushupe"], slrdl: ["glutebridge"], towelcurl: ["hammer"], ytw: ["reardelt"],
 };
 
 /** Ejercicios con barra olímpica (para la calculadora de discos). */
@@ -104,7 +118,8 @@ export function platesPerSide(kg: number, bar = 20): number[] | null {
   return side > 0.01 ? null : out;
 }
 
-export type Equipment = "gym" | "casa" | "mixto";
+export type Equipment = "gym" | "casa" | "mixto" | "ninguno";
+export type Level = "principiante" | "intermedio" | "avanzado";
 
 /** Versión en casa (mancuernas, bandas o peso corporal) de cada ejercicio que requiere gimnasio. */
 export const HOME: Partial<Record<ExerciseId, ExerciseId>> = {
@@ -113,4 +128,27 @@ export const HOME: Partial<Record<ExerciseId, ExerciseId>> = {
   row: "dbrow", dips: "pushupd", dipsw: "pushupd", facepull: "reardelt", facepullp: "reardelt", lateralc: "lateral",
   kneeraise: "legraisef", legraise: "legraisef", twistraise: "bicycle", curl: "hammer",
 };
-export const forEquipment = (id: ExerciseId, eq: Equipment = "gym"): ExerciseId => (eq === "casa" ? HOME[id] ?? id : id);
+/** Sin equipo: solo peso corporal, para un cuarto pequeño. */
+export const NOEQUIP: Partial<Record<ExerciseId, ExerciseId>> = {
+  squat: "bulgarian", frontsquat: "bulgarian", goblet: "bulgarian", bench: "pushup", floorpress: "pushup", closebench: "pushupd", incline: "pushupe",
+  ohp: "pikepush", dbpress: "pikepush", deadlift: "slrdl", rdl: "slrdl", dbrdl: "slrdl", pullup: "invrow", chinup: "invrow", lat: "invrow", bandpull: "invrow",
+  row: "invrow", dbrow: "invrow", dips: "pushupd", dipsw: "pushupd", curl: "towelcurl", hammer: "towelcurl", curlp: "towelcurl",
+  lateral: "ytw", lateralc: "ytw", laterall: "ytw", facepull: "ytw", facepullp: "ytw", reardelt: "ytw",
+  carry: "bearcrawl", suitcase: "bearcrawl", carryp: "bearcrawl", kneeraise: "legraisef", legraise: "legraisef", twistraise: "bicycle",
+};
+/** Principiante: variantes más fáciles de aprender en las primeras semanas. */
+export const BEGINNER: Partial<Record<ExerciseId, ExerciseId>> = { pullup: "lat", chinup: "lat", dipsw: "dips", deadlift: "rdl", plankrkc: "plank", legraise: "kneeraise", pushupe: "pushup" };
+
+export function forEquipment(id: ExerciseId, eq: Equipment = "gym", level: Level = "intermedio"): ExerciseId {
+  let x = level === "principiante" ? BEGINNER[id] ?? id : id;
+  if (eq === "casa") x = HOME[x] ?? x;
+  if (eq === "ninguno") x = NOEQUIP[HOME[x] ?? x] ?? NOEQUIP[x] ?? HOME[x] ?? x;
+  return x;
+}
+
+/** Ejercicios para entrenos exprés (sin equipo, en cualquier lugar). */
+export const EXPRESS_POOL: { id: ExerciseId; kind: "piernas" | "empuje" | "core" | "cardio" | "tiron" }[] = [
+  { id: "bwsquat", kind: "piernas" }, { id: "pushup", kind: "empuje" }, { id: "mountain", kind: "core" }, { id: "lunge", kind: "piernas" },
+  { id: "plank", kind: "core" }, { id: "burpee", kind: "cardio" }, { id: "glutebridge", kind: "piernas" }, { id: "pikepush", kind: "empuje" },
+  { id: "jumpsquat", kind: "cardio" }, { id: "bicycle", kind: "core" }, { id: "jacks", kind: "cardio" }, { id: "ytw", kind: "tiron" },
+];

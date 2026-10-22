@@ -4,26 +4,32 @@ import { useRouter } from "next/navigation";
 import { Download, LogOut, Trash2 } from "lucide-react";
 import { updateTraining } from "./actions";
 
-type Eq = "gym" | "casa" | "mixto";
+type Eq = "gym" | "casa" | "mixto" | "ninguno";
+type Lv = "principiante" | "intermedio" | "avanzado";
 type Mode = "acelerada" | "recomp";
 
-export function TrainingSettings({ days: d0, equipment: e0, mode: m0 }: { days: number; equipment: Eq; mode: Mode }) {
+export function TrainingSettings({ days: d0, equipment: e0, mode: m0, level: l0, minutes: n0 }: { days: number; equipment: Eq; mode: Mode; level: Lv; minutes: number | null }) {
+  const [level, setLevel] = useState<Lv>(l0);
+  const [mins, setMins] = useState<number | null>(n0);
   const [days, setDays] = useState(d0);
   const [eq, setEq] = useState<Eq>(e0);
   const [mode, setMode] = useState<Mode>(m0);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
-  const dirty = days !== d0 || eq !== e0 || mode !== m0;
+  const dirty = days !== d0 || eq !== e0 || mode !== m0 || level !== l0 || mins !== n0;
   const seg = (on: boolean) => `h-11 rounded-2xl text-sm font-bold border-2 transition ${on ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`;
   return (
     <div className="space-y-5">
       <div><p className="text-sm font-bold text-ink mb-2">Días por semana</p><div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} onClick={() => setDays(n)} className={seg(days === n)}>{n}</button>)}</div></div>
-      <div><p className="text-sm font-bold text-ink mb-2">Dónde entrenas</p><div className="grid grid-cols-3 gap-2">{([["gym", "🏋️ Gym"], ["mixto", "🔀 Ambos"], ["casa", "🏠 Casa"]] as const).map(([k, l]) => <button key={k} onClick={() => setEq(k)} className={seg(eq === k)}>{l}</button>)}</div>
+      <div><p className="text-sm font-bold text-ink mb-2">Minutos por sesión</p><div className="grid grid-cols-4 gap-2">{[20, 30, 45, 60].map((n) => <button key={n} onClick={() => setMins(n)} className={seg(mins === n)}>{n}</button>)}</div></div>
+      <div><p className="text-sm font-bold text-ink mb-2">Nivel</p><div className="grid grid-cols-3 gap-2">{([["principiante", "🌱 Inicio"], ["intermedio", "🍌 Medio"], ["avanzado", "🦍 Avanzado"]] as const).map(([k, l]) => <button key={k} onClick={() => setLevel(k)} className={seg(level === k)}>{l}</button>)}</div></div>
+      <div><p className="text-sm font-bold text-ink mb-2">Dónde entrenas</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{([["gym", "🏋️ Gym"], ["mixto", "🔀 Ambos"], ["casa", "🏠 Casa"], ["ninguno", "🛏️ Sin equipo"]] as const).map(([k, l]) => <button key={k} onClick={() => setEq(k)} className={seg(eq === k)}>{l}</button>)}</div>
+        {eq === "ninguno" && <p className="mt-2 text-xs text-muted">Solo peso corporal en un espacio de 2 × 2 m: búlgaras, flexiones pica, remo invertido en una mesa…</p>}
         {eq === "casa" && <p className="mt-2 text-xs text-muted">Usamos mancuernas, bandas y peso corporal: goblet en vez de sentadilla con barra, remo invertido en vez de dominadas…</p>}</div>
       <div><p className="text-sm font-bold text-ink mb-2">Ritmo</p><div className="grid grid-cols-2 gap-2">{([["acelerada", "🔥 Acelerado (−500)"], ["recomp", "⚖️ Recomposición (−200)"]] as const).map(([k, l]) => <button key={k} onClick={() => setMode(k)} className={seg(mode === k)}>{l}</button>)}</div></div>
       <div className="flex items-center gap-3">
-        <button disabled={!dirty || pending} onClick={() => start(async () => { const r = await updateTraining({ days, equipment: eq, mode }); setMsg(r.ok ? (r.demo ? "Demo: no se guardó." : "✅ Plan actualizado") : r.error ?? "Error"); router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar cambios"}</button>
+        <button disabled={!dirty || pending} onClick={() => start(async () => { const r = await updateTraining({ days, equipment: eq, mode, level, minutes: mins }); setMsg(r.ok ? (r.demo ? "Demo: no se guardó." : "✅ Plan actualizado") : r.error ?? "Error"); router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar cambios"}</button>
         {msg && <p className="text-sm font-semibold text-peel">{msg}</p>}
       </div>
     </div>

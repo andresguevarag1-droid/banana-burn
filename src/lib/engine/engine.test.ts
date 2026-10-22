@@ -94,3 +94,26 @@ describe("entreno en casa", () => {
   });
   it("todos los reemplazos existen", () => Object.values(HOME).forEach((id) => expect(EX[id!]).toBeDefined()));
 });
+
+import { expressDay, estimateMinutes, personalize, NOEQUIP } from ".";
+describe("personalización", () => {
+  it("sin equipo: todo es peso corporal", () => {
+    for (const d of [1, 2, 3, 4, 5, 6]) pd(d, 0, undefined, { equipment: "ninguno" }).exercises.forEach((e) => expect(EX[e.id].inc, e.id).toBe(0));
+    Object.values(NOEQUIP).forEach((id) => expect(EX[id!]).toBeDefined());
+  });
+  it("respeta el tiempo disponible", () => {
+    for (const min of [30, 45]) for (const d of [1, 2, 4, 5]) expect(estimateMinutes(pd(d, 0, undefined, { minutes: min }).exercises)).toBeLessThanOrEqual(min + 3);
+  });
+  it("principiante: menos series y más reps", () => {
+    const base = pd(1, 0).exercises, beg = pd(1, 0, undefined, { level: "principiante" }).exercises;
+    expect(beg.reduce((a, e) => a + e.cfg.sets, 0)).toBeLessThan(base.reduce((a, e) => a + e.cfg.sets, 0));
+    expect(personalize(base, "avanzado")[0].cfg.sets).toBe(base[0].cfg.sets + 1);
+  });
+  it.each([10, 20, 30])("exprés de %i min cabe en el tiempo", (m) => {
+    const x = expressDay(m);
+    const secs = x.exercises.reduce((a, e) => a + e.cfg.sets * (e.cfg.hi + e.cfg.rest), 0);
+    expect(secs / 60).toBeLessThanOrEqual(m);
+    expect(secs / 60).toBeGreaterThanOrEqual(m * 0.6);
+    x.exercises.forEach((e) => expect(EX[e.id].inc).toBe(0));
+  });
+});

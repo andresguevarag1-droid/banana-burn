@@ -2,6 +2,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { WeekTabs } from "./week-tabs";
+import Link from "next/link";
 import { mondayOf } from "@/lib/today";
 
 export const metadata = { title: "Entrenar" };
@@ -21,9 +22,21 @@ export default async function Entrenar() {
         <div className="mt-3 flex gap-1.5" aria-label={`Semana ${block} de 6`}>
           {[1, 2, 3, 4, 5, 6].map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < block ? "bg-ink" : w === block ? "bg-ember" : w === 6 ? "bg-sky/30" : "bg-line"}`} />)}
         </div>
-        <p className="mt-2 text-sm text-muted">{a.trainDays} días por semana · ningún día repite al anterior ni al siguiente · los accesorios rotan cada lunes · la semana 6 es de descarga.</p>
+        <p className="mt-2 text-sm text-muted">{a.trainDays} días por semana · nivel {a.level}{a.minutes ? ` · ${a.minutes} min por sesión` : ""} · ningún día repite al anterior ni al siguiente · los accesorios rotan cada lunes · la semana 6 es de descarga.</p>
       </header>
       <WeekTabs days={d.weekPlan} todayDow={d.today.dow} done={done} />
+      <section className="rounded-[1.75rem] bg-ink text-white p-5 sm:p-6">
+        <p className="text-xs font-bold uppercase tracking-wider text-banana">Exprés · sin equipo</p>
+        <h2 className="mt-1 text-2xl font-extrabold">¿Día ocupado? Entrena donde estés ⚡</h2>
+        <p className="mt-1 text-sm text-white/70">Cuerpo completo con peso corporal en un espacio de 2 × 2 m. Cuenta para tu racha.</p>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {[[10, "Activa"], [20, "Quema"], [30, "Completo"]].map(([m, l]) => (
+            <Link key={m} href={`/app/entreno?expres=${m}`} className="rounded-2xl bg-white/10 hover:bg-white/15 p-4 text-center transition">
+              <p className="text-3xl font-extrabold text-banana tabular-nums">{m}</p><p className="text-xs font-bold text-white/70">min · {l}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
       <p className="text-sm text-faint text-center">¿Te perdiste un día? Toca cualquier día y hazlo ahora; el motor ajusta tus cargas igual.</p>
     </div>
   );
