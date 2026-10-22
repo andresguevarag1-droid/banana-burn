@@ -3,7 +3,7 @@ import { crToday } from "@/lib/today";
 import { demoWorkouts } from "@/lib/demo-story";
 
 export type Author = { id: string; username: string | null; name: string };
-export type PostData = { title?: string; mins?: number; sets?: number; volume?: number; prs?: string[]; emoji?: string; challenge?: string };
+export type PostData = { title?: string; mins?: number; sets?: number; volume?: number; prs?: string[]; emoji?: string; icon?: string; challenge?: string };
 export type FeedPost = { id: string; author: Author; kind: string; body: string | null; data: PostData; at: string; kudos: number; mine: boolean; iKudo: boolean; comments: { id: string; author: Author; body: string; at: string }[]; commentCount: number };
 
 const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
@@ -25,10 +25,10 @@ function demoFeed(v: Viewer): FeedPost[] {
   const last = all[0];
   const lastH = Math.round((Date.now() - new Date(last.d + "T18:30:00-06:00").getTime()) / 3600e3);
   return [
-    { id: "p1", author: DEMO_AUTHORS[0], kind: "workout", body: "Primera vez que llego a 60 kg en sentadilla 😤", data: { title: "Pierna y empuje A", emoji: "🏋️", mins: 52, sets: 13, volume: 7420, prs: ["Sentadilla trasera"] }, at: ago(2), kudos: 14, mine: false, iKudo: false, commentCount: 2, comments: [{ id: "c1", author: DEMO_AUTHORS[1], body: "¡Pura vida! Qué nivel", at: ago(1.5) }, { id: "c1b", author: DEMO_AUTHORS[2], body: "Esa sentadilla viene subiendo cada semana.", at: ago(1) }] },
-    { id: "p2", author: DEMO_AUTHORS[1], kind: "challenge", body: null, data: { title: "Completó el reto 30 días Banana", emoji: "🍌", challenge: "30 días Banana" }, at: ago(5), kudos: 31, mine: false, iKudo: true, commentCount: 0, comments: [] },
-    { id: "p3", author: me, kind: "workout", body: null, data: { title: last.tpl, emoji: "🦍", mins: 48, sets: 12, volume: 6840, prs: [] }, at: ago(Math.max(3, lastH)), kudos: 6, mine: true, iKudo: false, commentCount: 1, comments: [{ id: "c2", author: DEMO_AUTHORS[2], body: "Constancia 👏", at: ago(20) }] },
-    { id: "p4", author: DEMO_AUTHORS[2], kind: "workout", body: "Exprés en el cuarto del hotel, no hay excusa", data: { title: "Exprés 20 min", emoji: "⚡", mins: 20, sets: 15, volume: 0, prs: [] }, at: ago(30), kudos: 9, mine: false, iKudo: false, commentCount: 0, comments: [] },
+    { id: "p1", author: DEMO_AUTHORS[0], kind: "workout", body: "Primera vez que llego a 60 kg en sentadilla. Se siente increíble.", data: { title: "Pierna y empuje A", icon: "barbell", mins: 52, sets: 13, volume: 7420, prs: ["Sentadilla trasera"] }, at: ago(2), kudos: 14, mine: false, iKudo: false, commentCount: 2, comments: [{ id: "c1", author: DEMO_AUTHORS[1], body: "¡Pura vida! Qué nivel", at: ago(1.5) }, { id: "c1b", author: DEMO_AUTHORS[2], body: "Esa sentadilla viene subiendo cada semana.", at: ago(1) }] },
+    { id: "p2", author: DEMO_AUTHORS[1], kind: "challenge", body: null, data: { title: "Completó el reto 30 días Banana", icon: "medal", challenge: "30 días Banana" }, at: ago(5), kudos: 31, mine: false, iKudo: true, commentCount: 0, comments: [] },
+    { id: "p3", author: me, kind: "workout", body: null, data: { title: last.tpl, icon: "gorilla", mins: 48, sets: 12, volume: 6840, prs: [] }, at: ago(Math.max(3, lastH)), kudos: 6, mine: true, iKudo: false, commentCount: 1, comments: [{ id: "c2", author: DEMO_AUTHORS[2], body: "Constancia pura. Así se hace.", at: ago(20) }] },
+    { id: "p4", author: DEMO_AUTHORS[2], kind: "workout", body: "Exprés en el cuarto del hotel, no hay excusa", data: { title: "Exprés 20 min", icon: "bolt", mins: 20, sets: 15, volume: 0, prs: [] }, at: ago(30), kudos: 9, mine: false, iKudo: false, commentCount: 0, comments: [] },
   ];
 }
 

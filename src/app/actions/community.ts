@@ -59,12 +59,12 @@ export async function saveCommunityProfile(input: { username: string; bio: strin
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
   const username = input.username.toLowerCase().trim();
-  if (!/^[a-z0-9_.]{3,24}$/.test(username)) return { ok: false, error: "Usuario: 3–24 letras, números, punto o guion bajo." };
+  if (!/^[a-z0-9_.]{3,24}$/.test(username)) return { ok: false, error: "Usuario: de 3 a 24 letras, números, punto o guion bajo." };
   if (!["publico", "seguidores", "privado"].includes(input.visibility)) return { ok: false, error: "Visibilidad inválida." };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { error } = await sb.from("profiles").update({ username, bio: clean(input.bio, 160) || null, visibility: input.visibility, share_workouts: input.share }).eq("id", v.id);
-  if (error) return { ok: false, error: error.code === "23505" ? "Ese usuario ya existe." : "No se pudo guardar." };
+  if (error) return { ok: false, error: error.code === "23505" ? "Ese usuario ya existe." : "No pudimos guardar. Intenta de nuevo." };
   revalidatePath("/app", "layout");
   return { ok: true };
 }

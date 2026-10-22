@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useId, useRef } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import { Portal } from "@/components/portal";
 
 const TitleCtx = createContext<string | undefined>(undefined);
@@ -97,7 +97,7 @@ function SheetPanel({ onClose, label, className, children }: { onClose: () => vo
           <div className="sticky top-0 z-10 flex h-12 shrink-0 items-start justify-center rounded-t-[2rem] bg-paper pt-3">
             <span aria-hidden className="h-1.5 w-10 rounded-full bg-line" />
             <button type="button" onClick={onClose} aria-label="Cerrar" className="absolute right-2 top-2 grid place-items-center size-11 rounded-full text-muted transition hover:bg-white hover:text-ink active:scale-[.94]">
-              <X className="size-5" aria-hidden />
+              <X weight="bold" className="size-5" aria-hidden />
             </button>
           </div>
           <TitleCtx.Provider value={titleId}>{children}</TitleCtx.Provider>

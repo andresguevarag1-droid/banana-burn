@@ -6,6 +6,7 @@ import { BODY, DS_ID, EQUIP, MUSCLE, es, getLibEx, mediaUrl, similar } from "@/l
 import { TECH } from "@/lib/engine/technique";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { RichTip } from "@/components/rich-tip";
+import { ArrowLeft, Barbell, Check, Monkey } from "@/components/icons";
 
 export default async function Ejercicio({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,7 +20,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
   const alts = similar(e, a.equipment);
   return (
     <article className="space-y-5 animate-rise max-w-3xl">
-      <Link href="/app/ejercicios" className="tap text-sm font-semibold text-muted hover:text-ink">← Biblioteca</Link>
+      <Link href="/app/ejercicios" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Biblioteca</Link>
       <header>
         <p className="eyebrow">{es(BODY, e.bp)} · {es(EQUIP, e.eq)}</p>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">{e.n}</h1>
@@ -32,19 +33,19 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
         ) : tech ? (
           <div className="rounded-2xl bg-white/75 px-4 pt-6 pb-2"><ExerciseMotion anim={tech.anim} className="mx-auto h-56 max-w-[300px]" /></div>
         ) : (
-          <p className="py-10 text-center text-5xl" aria-hidden>🏋️</p>
+          <p className="py-10 flex justify-center text-ink/80" aria-hidden><Barbell weight="duotone" className="size-16" /></p>
         )}
-        {gif && <p className="mt-2 text-center text-[11px] text-ink/70">© Gym visual — gymvisual.com</p>}
+        {gif && <p className="mt-2 text-center text-[11px] text-ink/70">© Gym visual (gymvisual.com)</p>}
       </div>
       <section className="card p-5">
         <h2 className="font-extrabold text-ink">Músculos</h2>
-        <p className="mt-1 text-body"><b className="text-ink capitalize">{es(MUSCLE, e.t)}</b>{e.m2.length > 0 && <> · también {e.m2.map((m) => es(MUSCLE, m)).join(", ")}</>}</p>
+        <p className="mt-1 text-body"><b className="text-ink capitalize">{es(MUSCLE, e.t)}</b>{e.m2.length > 0 && <>, también {e.m2.map((m) => es(MUSCLE, m)).join(", ")}</>}</p>
       </section>
       <section className="card p-5">
         <h2 className="font-extrabold text-ink">Cómo hacerlo</h2>
         <ol className="mt-3 space-y-2">{(tech?.how ?? e.s).map((s, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{s}</span></li>)}</ol>
-        {tech?.cues && <div className="mt-4 flex flex-wrap gap-2">{tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel">✓ {c}</span>)}</div>}
-        {tech?.mono && <p className="mt-3 rounded-2xl bg-cream p-3 text-sm">🐒 <RichTip text={tech.mono} /></p>}
+        {tech?.cues && <div className="mt-4 flex flex-wrap gap-2">{tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel"><Check weight="bold" className="size-3.5" />{c}</span>)}</div>}
+        {tech?.mono && <p className="mt-3 flex gap-2.5 rounded-2xl bg-cream p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={tech.mono} /></span></p>}
         <p className="mt-4 text-xs text-muted">Tempo 3-1-1: baja en 3 s, pausa 1 s, sube con fuerza. Si sientes dolor (no ardor muscular), para y consulta.</p>
       </section>
       {alts.length > 0 && (

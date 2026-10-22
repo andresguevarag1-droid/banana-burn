@@ -4,7 +4,7 @@ export type Technique = { anim: string; mus: string; how: string[]; cues: string
 export const TECH: Record<string, Technique> = {
  "squat": {
   "anim": "squat",
-  "mus": "Cuádriceps · glúteos · aductores · core",
+  "mus": "Cuádriceps, glúteos, aductores, core",
   "how": [
    "Barra sobre el trapecio, manos firmes, codos abajo.",
    "Pies al ancho de hombros, puntas ligeramente afuera.",
@@ -27,7 +27,7 @@ export const TECH: Record<string, Technique> = {
  },
  "frontsquat": {
   "anim": "frontsquat",
-  "mus": "Cuádriceps · core · espalda alta",
+  "mus": "Cuádriceps, core, espalda alta",
   "how": [
    "Barra sobre los deltoides delanteros, codos altos.",
    "Pies al ancho de hombros.",
@@ -47,7 +47,7 @@ export const TECH: Record<string, Technique> = {
  },
  "goblet": {
   "anim": "frontsquat",
-  "mus": "Cuádriceps · glúteos · core",
+  "mus": "Cuádriceps, glúteos, core",
   "how": [
    "Mancuerna pegada al pecho, codos dentro.",
    "Baja 3 s entre tus piernas.",
@@ -64,7 +64,7 @@ export const TECH: Record<string, Technique> = {
  },
  "bench": {
   "anim": "bench",
-  "mus": "Pectoral · tríceps · deltoide anterior",
+  "mus": "Pectoral, tríceps, deltoide anterior",
   "how": [
    "Ojos bajo la barra, escápulas juntas y abajo.",
    "Arco natural, glúteos en el banco, pies firmes.",
@@ -87,7 +87,7 @@ export const TECH: Record<string, Technique> = {
  },
  "closebench": {
   "anim": "bench",
-  "mus": "Tríceps · pectoral",
+  "mus": "Tríceps, pectoral",
   "how": [
    "Agarre al ancho de hombros.",
    "Codos pegados al torso.",
@@ -103,7 +103,7 @@ export const TECH: Record<string, Technique> = {
  },
  "incline": {
   "anim": "incline",
-  "mus": "Pectoral superior · deltoide anterior · tríceps",
+  "mus": "Pectoral superior, deltoide anterior, tríceps",
   "how": [
    "Banco a 30°.",
    "Mancuernas a la altura del pecho alto, codos a 45°.",
@@ -121,7 +121,7 @@ export const TECH: Record<string, Technique> = {
  },
  "ohp": {
   "anim": "ohp",
-  "mus": "Deltoides · tríceps · core",
+  "mus": "Deltoides, tríceps, core",
   "how": [
    "Barra en la clavícula, agarre al ancho de hombros.",
    "Glúteos y abdomen apretados.",
@@ -142,7 +142,7 @@ export const TECH: Record<string, Technique> = {
  },
  "dbpress": {
   "anim": "dbpress",
-  "mus": "Deltoides · tríceps",
+  "mus": "Deltoides, tríceps",
   "how": [
    "Sentado con respaldo vertical.",
    "Mancuernas a la altura de orejas.",
@@ -159,7 +159,7 @@ export const TECH: Record<string, Technique> = {
  },
  "dips": {
   "anim": "dips",
-  "mus": "Pectoral inferior · tríceps",
+  "mus": "Pectoral inferior, tríceps",
   "how": [
    "Brazos estirados, hombros abajo.",
    "Inclina el torso un poco adelante.",
@@ -176,7 +176,7 @@ export const TECH: Record<string, Technique> = {
  },
  "dipsw": {
   "anim": "dips",
-  "mus": "Pectoral inferior · tríceps",
+  "mus": "Pectoral inferior, tríceps",
   "how": [
    "Cinturón con disco o mancuerna entre pies.",
    "Misma técnica que fondos normales."
@@ -191,7 +191,7 @@ export const TECH: Record<string, Technique> = {
  },
  "deadlift": {
   "anim": "deadlift",
-  "mus": "Glúteos · isquios · espalda baja · trapecio · agarre",
+  "mus": "Glúteos, isquios, espalda baja, trapecio, agarre",
   "how": [
    "Barra sobre el medio del pie, pies a ancho de cadera.",
    "Agarra la barra justo fuera de las piernas.",
@@ -214,7 +214,7 @@ export const TECH: Record<string, Technique> = {
  },
  "rdl": {
   "anim": "rdl",
-  "mus": "Isquiotibiales · glúteos · espalda baja",
+  "mus": "Isquiotibiales, glúteos, espalda baja",
   "how": [
    "De pie con la barra, rodillas un poco flexionadas.",
    "Lleva la cadera atrás 3 s, barra pegada a los muslos.",
@@ -233,7 +233,7 @@ export const TECH: Record<string, Technique> = {
  },
  "pullup": {
   "anim": "pullup",
-  "mus": "Dorsales · bíceps · espalda alta",
+  "mus": "Dorsales, bíceps, espalda alta",
   "how": [
    "Agarre prono algo más ancho que hombros.",
    "Cuelga con hombros activos (no hundidos).",
@@ -254,7 +254,7 @@ export const TECH: Record<string, Technique> = {
  },
  "chinup": {
   "anim": "pullup",
-  "mus": "Dorsales · bíceps · braquial",
+  "mus": "Dorsales, bíceps, braquial",
   "how": [
    "Palmas mirándose (o supinas).",
    "Misma técnica: codos abajo, baja 3 s."
@@ -269,7 +269,7 @@ export const TECH: Record<string, Technique> = {
  },
  "lat": {
   "anim": "pullup",
-  "mus": "Dorsales · bíceps",
+  "mus": "Dorsales, bíceps",
   "how": [
    "Muslos fijos.",
    "Tira la barra al pecho alto.",
@@ -285,13 +285,13 @@ export const TECH: Record<string, Technique> = {
  },
  "row": {
   "anim": "row",
-  "mus": "Espalda media · dorsales · bíceps",
+  "mus": "Espalda media, dorsales, bíceps",
   "how": [
    "Bisagra de cadera a ~45° o más, espalda plana.",
    "Agarre algo más ancho que hombros.",
    "Lleva la barra al ombligo con los codos atrás.",
    "Aprieta escápulas 1 s.",
-   "Baja 2–3 s."
+   "Baja 2-3 s."
   ],
   "cues": [
    "Torso quieto",
@@ -305,12 +305,12 @@ export const TECH: Record<string, Technique> = {
  },
  "dbrow": {
   "anim": "dbrow",
-  "mus": "Dorsales · espalda media",
+  "mus": "Dorsales, espalda media",
   "how": [
    "Mano y rodilla en el banco.",
    "Espalda plana.",
    "Lleva la mancuerna a la cadera.",
-   "Baja 2–3 s estirando el dorsal."
+   "Baja 2-3 s estirando el dorsal."
   ],
   "cues": [
    "Codo al bolsillo"
@@ -322,7 +322,7 @@ export const TECH: Record<string, Technique> = {
  },
  "curl": {
   "anim": "curl",
-  "mus": "Bíceps · braquial",
+  "mus": "Bíceps, braquial",
   "how": [
    "Codos pegados al torso.",
    "Sube sin balanceo.",
@@ -339,7 +339,7 @@ export const TECH: Record<string, Technique> = {
  },
  "hammer": {
   "anim": "curl",
-  "mus": "Braquial · antebrazo · bíceps",
+  "mus": "Braquial, antebrazo, bíceps",
   "how": [
    "Palmas mirándose.",
    "Sube y baja 3 s."
@@ -417,12 +417,12 @@ export const TECH: Record<string, Technique> = {
  },
  "facepull": {
   "anim": "facepull",
-  "mus": "Deltoide posterior · manguito rotador · trapecio medio",
+  "mus": "Deltoide posterior, manguito rotador, trapecio medio",
   "how": [
    "Polea a la altura de la cara, cuerda.",
    "Tira separando las manos hacia las orejas.",
    "Rota los pulgares hacia atrás.",
-   "Vuelve 2–3 s."
+   "Vuelve 2-3 s."
   ],
   "cues": [
    "Codos altos",
@@ -451,7 +451,7 @@ export const TECH: Record<string, Technique> = {
  },
  "pushup": {
   "anim": "pushup",
-  "mus": "Pectoral · tríceps · core",
+  "mus": "Pectoral, tríceps, core",
   "how": [
    "Manos un poco más anchas que los hombros.",
    "Cuerpo en tabla: glúteos y abdomen apretados.",
@@ -470,7 +470,7 @@ export const TECH: Record<string, Technique> = {
  },
  "pushupd": {
   "anim": "pushup",
-  "mus": "Tríceps · pectoral",
+  "mus": "Tríceps, pectoral",
   "how": [
    "Manos juntas formando un diamante bajo el pecho.",
    "Baja 3 s con codos pegados.",
@@ -486,7 +486,7 @@ export const TECH: Record<string, Technique> = {
  },
  "pushupe": {
   "anim": "pushup",
-  "mus": "Pectoral superior · hombros",
+  "mus": "Pectoral superior, hombros",
   "how": [
    "Pies en un banco, manos en el piso.",
    "Baja 3 s, empuja fuerte."
@@ -501,7 +501,7 @@ export const TECH: Record<string, Technique> = {
  },
  "plank": {
   "anim": "plank",
-  "mus": "Abdomen · core profundo · glúteos",
+  "mus": "Abdomen, core profundo, glúteos",
   "how": [
    "Antebrazos bajo los hombros.",
    "Cuerpo en línea recta de talón a cabeza.",
@@ -520,7 +520,7 @@ export const TECH: Record<string, Technique> = {
  },
  "planktap": {
   "anim": "plank",
-  "mus": "Core antirotación · hombros",
+  "mus": "Core antirotación, hombros",
   "how": [
    "Plancha alta sobre las manos.",
    "Toca el hombro contrario alternando.",
@@ -536,7 +536,7 @@ export const TECH: Record<string, Technique> = {
  },
  "plankrkc": {
   "anim": "plank",
-  "mus": "Abdomen · glúteos",
+  "mus": "Abdomen, glúteos",
   "how": [
    "Plancha de antebrazos.",
    "Jala codos hacia los pies y aprieta todo al máximo.",
@@ -552,7 +552,7 @@ export const TECH: Record<string, Technique> = {
  },
  "kneeraise": {
   "anim": "kneeraise",
-  "mus": "Abdomen inferior · flexores de cadera · agarre",
+  "mus": "Abdomen inferior, flexores de cadera, agarre",
   "how": [
    "Cuélgate con hombros activos.",
    "Sube las rodillas al pecho redondeando la pelvis.",
@@ -569,7 +569,7 @@ export const TECH: Record<string, Technique> = {
  },
  "legraise": {
   "anim": "kneeraise",
-  "mus": "Abdomen · flexores de cadera",
+  "mus": "Abdomen, flexores de cadera",
   "how": [
    "Piernas casi rectas.",
    "Sube hasta la horizontal o más.",
@@ -585,7 +585,7 @@ export const TECH: Record<string, Technique> = {
  },
  "twistraise": {
   "anim": "kneeraise",
-  "mus": "Oblicuos · abdomen",
+  "mus": "Oblicuos, abdomen",
   "how": [
    "Sube las rodillas hacia un lado, luego al otro.",
    "Baja lento."
@@ -600,7 +600,7 @@ export const TECH: Record<string, Technique> = {
  },
  "carry": {
   "anim": "carry",
-  "mus": "Agarre · trapecio · core · todo",
+  "mus": "Agarre, trapecio, core, todo",
   "how": [
    "Mancuernas pesadas a los lados.",
    "Pecho alto, hombros abajo.",
@@ -618,7 +618,7 @@ export const TECH: Record<string, Technique> = {
  },
  "suitcase": {
   "anim": "carry",
-  "mus": "Oblicuos · agarre · core",
+  "mus": "Oblicuos, agarre, core",
   "how": [
    "Una sola mancuerna.",
    "No te inclines hacia el peso.",
@@ -634,7 +634,7 @@ export const TECH: Record<string, Technique> = {
  },
  "carryp": {
   "anim": "carry",
-  "mus": "Agarre · core",
+  "mus": "Agarre, core",
   "how": [
    "Camina 10 m, pausa 5 s, repite."
   ],
@@ -664,27 +664,27 @@ export const TECH: Record<string, Technique> = {
 
 // Variantes para entrenar en casa
 Object.assign(TECH, {
-  floorpress: { anim: "bench", mus: "Pecho · tríceps · hombro anterior", how: ["Acuéstate en el piso con rodillas dobladas y una mancuerna en cada mano.", "Codos a 45° del torso, tocan el piso suave en cada rep.", "Pausa 1 s abajo y empuja fuerte hacia arriba."], cues: ["Codos a 45°", "Escápulas pegadas al piso"], err: ["Rebotar los codos en el piso"], mono: "Mono empuja el coco al techo <b>sin rebotar</b>." },
-  dbrdl: { anim: "rdl", mus: "Femorales · glúteos · espalda baja", how: ["De pie, mancuernas frente a los muslos.", "Lleva la cadera atrás con rodillas apenas dobladas.", "Baja hasta sentir el estiramiento atrás del muslo y sube apretando glúteo."], cues: ["Cadera atrás", "Espalda neutra"], err: ["Redondear la espalda"], mono: "Mono cierra la puerta del carro <b>con la cola</b>." },
-  invrow: { anim: "row", mus: "Espalda · bíceps", how: ["Acuéstate bajo una mesa firme o barra baja y agárrala.", "Cuerpo en tabla, talones en el piso.", "Tira del pecho hacia la mesa y baja lento 3 s."], cues: ["Cuerpo en tabla", "Codos al bolsillo"], err: ["Dejar caer la cadera"], mono: "Mono se sube al árbol <b>con la espalda</b>, no con los brazos." },
-  bandpull: { anim: "pullup", mus: "Dorsales · bíceps", how: ["Ancla la banda arriba de una puerta.", "De rodillas, tira codos hacia las costillas.", "Vuelve lento sin soltar la tensión."], cues: ["Pecho alto", "Codos abajo y atrás"], err: ["Encoger los hombros"], mono: "Mono jala la liana <b>con los codos</b>." },
+  floorpress: { anim: "bench", mus: "Pecho, tríceps, hombro anterior", how: ["Acuéstate en el piso con rodillas dobladas y una mancuerna en cada mano.", "Codos a 45° del torso, tocan el piso suave en cada rep.", "Pausa 1 s abajo y empuja fuerte hacia arriba."], cues: ["Codos a 45°", "Escápulas pegadas al piso"], err: ["Rebotar los codos en el piso"], mono: "Mono empuja el coco al techo <b>sin rebotar</b>." },
+  dbrdl: { anim: "rdl", mus: "Femorales, glúteos, espalda baja", how: ["De pie, mancuernas frente a los muslos.", "Lleva la cadera atrás con rodillas apenas dobladas.", "Baja hasta sentir el estiramiento atrás del muslo y sube apretando glúteo."], cues: ["Cadera atrás", "Espalda neutra"], err: ["Redondear la espalda"], mono: "Mono cierra la puerta del carro <b>con la cola</b>." },
+  invrow: { anim: "row", mus: "Espalda, bíceps", how: ["Acuéstate bajo una mesa firme o barra baja y agárrala.", "Cuerpo en tabla, talones en el piso.", "Tira del pecho hacia la mesa y baja lento 3 s."], cues: ["Cuerpo en tabla", "Codos al bolsillo"], err: ["Dejar caer la cadera"], mono: "Mono se sube al árbol <b>con la espalda</b>, no con los brazos." },
+  bandpull: { anim: "pullup", mus: "Dorsales, bíceps", how: ["Ancla la banda arriba de una puerta.", "De rodillas, tira codos hacia las costillas.", "Vuelve lento sin soltar la tensión."], cues: ["Pecho alto", "Codos abajo y atrás"], err: ["Encoger los hombros"], mono: "Mono jala la liana <b>con los codos</b>." },
   legraisef: { anim: "plank", mus: "Abdomen inferior", how: ["Boca arriba, manos bajo la cadera.", "Sube las piernas rectas hasta 90°.", "Baja lento sin que la espalda baja se despegue."], cues: ["Espalda baja pegada al piso"], err: ["Arquear la espalda"], mono: "Mono baja las piernas <b>como en cámara lenta</b>." },
-  bicycle: { anim: "plank", mus: "Oblicuos · abdomen", how: ["Boca arriba, manos detrás de la cabeza.", "Lleva codo hacia la rodilla contraria alternando.", "Ritmo controlado, sin jalar el cuello."], cues: ["Gira el torso, no el cuello"], err: ["Ir demasiado rápido"], mono: "Mono pedalea <b>lento y con giro</b>." },
+  bicycle: { anim: "plank", mus: "Oblicuos, abdomen", how: ["Boca arriba, manos detrás de la cabeza.", "Lleva codo hacia la rodilla contraria alternando.", "Ritmo controlado, sin jalar el cuello."], cues: ["Gira el torso, no el cuello"], err: ["Ir demasiado rápido"], mono: "Mono pedalea <b>lento y con giro</b>." },
 });
 
 // Sin equipo y exprés
 Object.assign(TECH, {
-  bwsquat: { anim: "squat_bw", mus: "Cuádriceps · glúteos", how: ["Pies al ancho de hombros, brazos al frente.", "Baja 3 s como si te sentaras en una silla baja.", "Sube empujando el piso con todo el pie."], cues: ["Rodillas siguen las puntas", "Pecho orgulloso"], err: ["Talones se despegan"], mono: "Mono se sienta en una silla <b>invisible</b>." },
-  bulgarian: { anim: "squat_bw", mus: "Cuádriceps · glúteos", how: ["Pie de atrás apoyado en una silla o sofá.", "Baja recto hasta que la rodilla de atrás casi toque el piso.", "Sube con la pierna de adelante. Cambia de lado."], cues: ["Torso alto", "Peso en el pie de adelante"], err: ["Rodilla de adelante hacia adentro"], mono: "Mono sube la escalera <b>una pierna a la vez</b>." },
-  pikepush: { anim: "pushup", mus: "Hombros · tríceps", how: ["Manos al piso y cadera arriba en forma de V invertida.", "Baja la cabeza hacia el piso entre las manos.", "Empuja de vuelta arriba."], cues: ["Cadera alta", "Codos hacia atrás"], err: ["Cadera baja (se vuelve flexión normal)"], mono: "Mono hace de <b>techo de casita</b>." },
-  slrdl: { anim: "rdl_bw", mus: "Femorales · glúteos · equilibrio", how: ["De pie en una pierna, rodilla apenas doblada.", "Lleva la cadera atrás y la otra pierna estirada hacia atrás.", "Vuelve apretando glúteo. Cambia de lado."], cues: ["Cadera cuadrada al piso"], err: ["Girar la cadera"], mono: "Mono es <b>un avión</b> que despega lento." },
-  glutebridge: { anim: "plank", mus: "Glúteos · femorales", how: ["Boca arriba, rodillas dobladas, pies al ancho de cadera.", "Sube la cadera apretando glúteos 2 s arriba.", "Baja lento sin tocar del todo el piso."], cues: ["Aprieta glúteo arriba", "Costillas abajo"], err: ["Arquear la espalda baja"], mono: "Mono hace <b>puente</b> para que pasen los carros." },
+  bwsquat: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pies al ancho de hombros, brazos al frente.", "Baja 3 s como si te sentaras en una silla baja.", "Sube empujando el piso con todo el pie."], cues: ["Rodillas siguen las puntas", "Pecho orgulloso"], err: ["Talones se despegan"], mono: "Mono se sienta en una silla <b>invisible</b>." },
+  bulgarian: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pie de atrás apoyado en una silla o sofá.", "Baja recto hasta que la rodilla de atrás casi toque el piso.", "Sube con la pierna de adelante. Cambia de lado."], cues: ["Torso alto", "Peso en el pie de adelante"], err: ["Rodilla de adelante hacia adentro"], mono: "Mono sube la escalera <b>una pierna a la vez</b>." },
+  pikepush: { anim: "pushup", mus: "Hombros, tríceps", how: ["Manos al piso y cadera arriba en forma de V invertida.", "Baja la cabeza hacia el piso entre las manos.", "Empuja de vuelta arriba."], cues: ["Cadera alta", "Codos hacia atrás"], err: ["Cadera baja (se vuelve flexión normal)"], mono: "Mono hace de <b>techo de casita</b>." },
+  slrdl: { anim: "rdl_bw", mus: "Femorales, glúteos, equilibrio", how: ["De pie en una pierna, rodilla apenas doblada.", "Lleva la cadera atrás y la otra pierna estirada hacia atrás.", "Vuelve apretando glúteo. Cambia de lado."], cues: ["Cadera cuadrada al piso"], err: ["Girar la cadera"], mono: "Mono es <b>un avión</b> que despega lento." },
+  glutebridge: { anim: "plank", mus: "Glúteos, femorales", how: ["Boca arriba, rodillas dobladas, pies al ancho de cadera.", "Sube la cadera apretando glúteos 2 s arriba.", "Baja lento sin tocar del todo el piso."], cues: ["Aprieta glúteo arriba", "Costillas abajo"], err: ["Arquear la espalda baja"], mono: "Mono hace <b>puente</b> para que pasen los carros." },
   towelcurl: { anim: "curl_bw", mus: "Bíceps", how: ["Pisa el centro de una toalla y agarra las puntas.", "Tira hacia arriba con todas tus fuerzas sin mover el pie.", "Aguanta el tiempo indicado y respira."], cues: ["Codos pegados al cuerpo"], err: ["Contener la respiración"], mono: "Mono jala la cuerda del <b>tesoro escondido</b>." },
-  ytw: { anim: "lateral", mus: "Hombro posterior · espalda alta", how: ["Boca abajo en el piso, frente en una toalla.", "Sube los brazos en Y, luego T, luego W.", "Pausa 1 s arriba en cada letra."], cues: ["Pulgares al techo", "Escápulas juntas"], err: ["Levantar el pecho del piso"], mono: "Mono escribe <b>YTW</b> en el aire." },
-  bearcrawl: { anim: "plank", mus: "Core · hombros", how: ["En cuatro apoyos con rodillas a 2 cm del piso.", "Avanza mano y pie contrario a la vez.", "Espalda plana como una mesa."], cues: ["Rodillas bajitas", "Espalda plana"], err: ["Cadera muy alta"], mono: "Mono gatea <b>sin hacer ruido</b>." },
-  jumpsquat: { anim: "jump_bw", mus: "Piernas · potencia", how: ["Baja a media sentadilla.", "Salta explosivo estirando todo el cuerpo.", "Aterriza suave y encadena."], cues: ["Aterriza suave"], err: ["Aterrizar con rodillas rectas"], mono: "Mono salta a <b>la rama de arriba</b>." },
+  ytw: { anim: "lateral", mus: "Hombro posterior, espalda alta", how: ["Boca abajo en el piso, frente en una toalla.", "Sube los brazos en Y, luego T, luego W.", "Pausa 1 s arriba en cada letra."], cues: ["Pulgares al techo", "Escápulas juntas"], err: ["Levantar el pecho del piso"], mono: "Mono escribe <b>YTW</b> en el aire." },
+  bearcrawl: { anim: "plank", mus: "Core, hombros", how: ["En cuatro apoyos con rodillas a 2 cm del piso.", "Avanza mano y pie contrario a la vez.", "Espalda plana como una mesa."], cues: ["Rodillas bajitas", "Espalda plana"], err: ["Cadera muy alta"], mono: "Mono gatea <b>sin hacer ruido</b>." },
+  jumpsquat: { anim: "jump_bw", mus: "Piernas, potencia", how: ["Baja a media sentadilla.", "Salta explosivo estirando todo el cuerpo.", "Aterriza suave y encadena."], cues: ["Aterriza suave"], err: ["Aterrizar con rodillas rectas"], mono: "Mono salta a <b>la rama de arriba</b>." },
   burpee: { anim: "burpee", mus: "Cuerpo completo", how: ["Manos al piso, salta los pies atrás a plancha.", "Pecho al piso, empuja arriba.", "Pies a las manos y salta con brazos arriba."], cues: ["Ritmo constante"], err: ["Espalda caída en la plancha"], mono: "Mono <b>cae y se levanta</b>, una y otra vez." },
-  mountain: { anim: "mountain", mus: "Core · cardio", how: ["Posición de plancha alta.", "Lleva una rodilla al pecho y cambia rápido.", "Cadera baja todo el tiempo."], cues: ["Hombros sobre las manos"], err: ["Cadera rebotando"], mono: "Mono <b>escala la montaña</b> sin moverse de lugar." },
-  lunge: { anim: "squat_bw", mus: "Cuádriceps · glúteos", how: ["Da un paso largo al frente.", "Baja hasta que ambas rodillas formen 90°.", "Empuja de vuelta y alterna."], cues: ["Torso alto"], err: ["Rodilla pasa mucho la punta"], mono: "Mono da <b>pasos de gigante</b>." },
+  mountain: { anim: "mountain", mus: "Core, cardio", how: ["Posición de plancha alta.", "Lleva una rodilla al pecho y cambia rápido.", "Cadera baja todo el tiempo."], cues: ["Hombros sobre las manos"], err: ["Cadera rebotando"], mono: "Mono <b>escala la montaña</b> sin moverse de lugar." },
+  lunge: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Da un paso largo al frente.", "Baja hasta que ambas rodillas formen 90°.", "Empuja de vuelta y alterna."], cues: ["Torso alto"], err: ["Rodilla pasa mucho la punta"], mono: "Mono da <b>pasos de gigante</b>." },
   jacks: { anim: "lateral", mus: "Cardio", how: ["Salta abriendo piernas y brazos arriba.", "Vuelve a cerrar.", "Ritmo cómodo y constante."], cues: ["Respira por la nariz"], err: ["Aterrizar con talones"], mono: "Mono hace <b>estrellitas</b>." },
 });

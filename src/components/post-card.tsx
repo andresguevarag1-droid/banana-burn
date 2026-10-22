@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Flag, MessageCircle, Send, Trash2 } from "lucide-react";
+import { Banana, BananaMedal, BananaTrophy, BrandIcon, ChatCircle, Flag, PaperPlaneTilt, Trash } from "@/components/icons";
 import { addComment, deletePost, report, toggleKudo } from "@/app/actions/community";
 import type { FeedPost } from "@/lib/community";
 
@@ -53,9 +53,9 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
           <p className="text-xs text-muted"><time dateTime={p.at}>{timeAgo(p.at)}</time></p>
         </div>
         {p.mine ? (
-          <button onClick={() => { setGone(true); start(() => { deletePost(p.id); }); }} className="tap pressable grid place-items-center size-9 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label="Borrar publicación"><Trash2 className="size-4" /></button>
+          <button onClick={() => { setGone(true); start(() => { deletePost(p.id); }); }} className="tap pressable grid place-items-center size-9 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label="Borrar publicación"><Trash weight="duotone" className="size-4" /></button>
         ) : (
-          <button disabled={reported} onClick={() => setOpenReport((o) => !o)} aria-expanded={openReport} aria-controls={`report-${p.id}`} className="tap pressable grid place-items-center size-9 rounded-full text-faint hover:bg-cream hover:text-ink disabled:text-peel" aria-label={reported ? "Reportado" : "Reportar publicación"}><Flag className="size-4" /></button>
+          <button disabled={reported} onClick={() => setOpenReport((o) => !o)} aria-expanded={openReport} aria-controls={`report-${p.id}`} className="tap pressable grid place-items-center size-9 rounded-full text-faint hover:bg-cream hover:text-ink disabled:text-peel" aria-label={reported ? "Reportado" : "Reportar publicación"}><Flag weight="duotone" className="size-4" /></button>
         )}
       </header>
 
@@ -71,25 +71,25 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
       )}
       {reported && <p className="mx-4 mb-2 text-xs font-semibold text-peel" role="status">Gracias, lo revisaremos.</p>}
       <div className="px-4">
-        <p className="text-lg font-extrabold text-ink">{d.emoji} {d.title ?? (p.kind === "workout" ? "Entreno" : "")}</p>
+        <p className="flex items-center gap-2.5 text-lg font-extrabold text-ink"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BrandIcon name={d.icon ?? (p.kind === "challenge" ? "medal" : p.kind === "pr" ? "trophy" : "barbell")} className="size-5" /></span><span className="min-w-0">{d.title ?? (p.kind === "workout" ? "Entreno" : "")}</span></p>
         {p.body && <p className="mt-1 text-[15px] text-body">{p.body}</p>}
         {p.kind === "workout" && (
           <dl className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-cream p-3 text-center">
-            <div><dt className="text-[11px] font-semibold text-muted">Tiempo</dt><dd className="font-extrabold text-ink tabular-nums">{d.mins ?? "—"} min</dd></div>
-            <div><dt className="text-[11px] font-semibold text-muted">Series</dt><dd className="font-extrabold text-ink tabular-nums">{d.sets ?? "—"}</dd></div>
-            <div><dt className="text-[11px] font-semibold text-muted">Volumen</dt><dd className="font-extrabold text-ink tabular-nums">{d.volume ? `${(d.volume / 1000).toLocaleString("es-CR", { maximumFractionDigits: 1 })} t` : "—"}</dd></div>
+            <div><dt className="text-[11px] font-semibold text-muted">Tiempo</dt><dd className="font-extrabold text-ink tabular-nums">{d.mins != null ? `${d.mins} min` : "Sin dato"}</dd></div>
+            <div><dt className="text-[11px] font-semibold text-muted">Series</dt><dd className="font-extrabold text-ink tabular-nums">{d.sets ?? "Sin dato"}</dd></div>
+            <div><dt className="text-[11px] font-semibold text-muted">Volumen</dt><dd className="font-extrabold text-ink tabular-nums">{d.volume ? `${(d.volume / 1000).toLocaleString("es-CR", { maximumFractionDigits: 1 })} t` : "Sin dato"}</dd></div>
           </dl>
         )}
-        {d.prs && d.prs.length > 0 && <p className="mt-2 rounded-xl bg-banana-soft px-3 py-2 text-sm font-bold text-banana-ink">🏆 Récord en {d.prs.join(", ")}</p>}
-        {p.kind === "challenge" && <p className="mt-2 rounded-xl bg-peel/10 px-3 py-2 text-sm font-bold text-peel">🏅 Medalla desbloqueada</p>}
+        {d.prs && d.prs.length > 0 && <p className="mt-2 flex items-center gap-2 rounded-xl bg-banana-soft px-3 py-2 text-sm font-bold text-banana-ink"><BananaTrophy className="size-5 shrink-0" />Récord en {d.prs.join(", ")}</p>}
+        {p.kind === "challenge" && <p className="mt-2 flex items-center gap-2 rounded-xl bg-peel/10 px-3 py-2 text-sm font-bold text-peel"><BananaMedal className="size-5 shrink-0" />Medalla desbloqueada</p>}
       </div>
 
       <div className="flex items-center gap-1 px-2 py-2 mt-2 border-t border-line">
         <button onClick={banana} className={`tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm transition ${kudo ? "bg-banana text-ink" : "text-muted hover:bg-cream"}`} aria-pressed={kudo} aria-label={`${kudo ? "Quitar" : "Dar"} banana. ${count} bananas`}>
-          <span className={`text-lg transition-transform ${pop ? "scale-150" : ""}`}>🍌</span><span className="tabular-nums">{count}</span>
+          <Banana weight={kudo ? "fill" : "duotone"} className={`size-5 transition-transform ${kudo ? "text-ink" : "text-banana-ink"} ${pop ? "scale-150" : ""}`} /><span className="hidden sm:inline">Dar banana</span><span className="tabular-nums">{count}</span>
         </button>
         <button onClick={() => setOpen((o) => !o)} className="tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm text-muted hover:bg-cream" aria-expanded={open}>
-          <MessageCircle className="size-4" /><span className="tabular-nums">{Math.max(p.commentCount, comments.length)}</span>
+          <ChatCircle weight="duotone" className="size-4" /><span className="tabular-nums">{Math.max(p.commentCount, comments.length)}</span>
         </button>
       </div>
 
@@ -99,7 +99,7 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
           {open && (
             <form onSubmit={send} className="flex gap-2 pt-1">
               <input value={text} onChange={(e) => setText(e.target.value)} maxLength={300} placeholder="Escribe algo motivador…" className="input h-10 text-sm" aria-label="Comentario" />
-              <button className="tap pressable grid place-items-center size-10 shrink-0 rounded-full bg-ink text-white hover:bg-black disabled:opacity-30" disabled={!text.trim()} aria-label="Enviar comentario"><Send className="size-4" /></button>
+              <button className="tap pressable grid place-items-center size-10 shrink-0 rounded-full bg-ink text-white hover:bg-black disabled:opacity-30" disabled={!text.trim()} aria-label="Enviar comentario"><PaperPlaneTilt weight="fill" className="size-4" /></button>
             </form>
           )}
         </div>

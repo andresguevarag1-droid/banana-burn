@@ -4,6 +4,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getFeed, getLeaderboard, getSuggestions } from "@/lib/community";
 import { PostCard } from "@/components/post-card";
 import { FollowButton } from "./follow";
+import { ArrowRight, Banana, BananaMedal, BananaTrophy, MonkeyBanana } from "@/components/icons";
 
 export const metadata = { title: "Comunidad" };
 
@@ -24,9 +25,9 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
       <header className="flex items-end justify-between gap-3">
         <div>
           <p className="eyebrow">Comunidad</p>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">La tropa 🍌</h1>
+          <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">La tropa <Banana className="inline-block size-9 align-[-0.15em] text-banana-ink" /></h1>
         </div>
-        <Link href="/app/retos" className="btn-ghost h-10 px-4 text-sm">🏆 Retos</Link>
+        <Link href="/app/retos" className="btn-ghost h-10 px-4 text-sm"><BananaTrophy className="size-5 text-banana-ink" />Retos</Link>
       </header>
 
       <nav className="flex rounded-full bg-white border border-line p-1 w-fit" aria-label="Vistas de la comunidad">
@@ -37,12 +38,12 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
         <div className="space-y-4">
           {tab === "ranking" ? (
             <section className="card overflow-hidden">
-              <h2 className="p-4 pb-2 font-extrabold text-ink">🏆 Ranking de la semana</h2>
-              <p className="px-4 text-xs text-muted">Tú y las personas que sigues · XP ganado desde el lunes</p>
+              <h2 className="flex items-center gap-2 p-4 pb-2 font-extrabold text-ink"><BananaTrophy className="size-6 text-banana-ink" />Ranking de la semana</h2>
+              <p className="px-4 text-xs text-muted">Tú y las personas que sigues. XP ganado desde el lunes.</p>
               <ol className="mt-2">
                 {board.map((r, i) => (
                   <li key={r.userId} className={`flex items-center gap-3 px-4 py-3 border-t border-line ${r.me ? "bg-banana-soft/50" : ""}`}>
-                    <span className={`grid place-items-center size-8 rounded-full text-sm font-extrabold ${i === 0 ? "bg-banana text-ink" : i < 3 ? "bg-cream text-ink" : "text-muted"}`}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
+                    <span className={`grid place-items-center size-8 rounded-full text-sm font-extrabold ${i === 0 ? "bg-banana text-ink" : i < 3 ? "bg-cream text-ink" : "text-muted"}`}>{i < 3 ? <><BananaMedal weight={i === 0 ? "fill" : "duotone"} className={`size-5 ${i === 0 ? "text-ink" : "text-banana-ink"}`} /><span className="sr-only">{i + 1}</span></> : i + 1}</span>
                     <span className="flex-1 min-w-0 font-bold text-ink truncate">{r.name}{r.me && " (tú)"}</span>
                     <span className="text-sm text-muted tabular-nums">{r.workouts} entrenos</span>
                     <span className="w-20 text-right font-extrabold text-ink tabular-nums">{r.xp.toLocaleString("es-CR")} XP</span>
@@ -54,7 +55,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
             feed.map((p) => <PostCard key={p.id} p={p} me={a.name} />)
           ) : (
             <div className="card p-8 text-center">
-              <p className="text-5xl">👋</p>
+              <span className="mx-auto grid place-items-center size-20 rounded-[1.75rem] bg-banana-soft text-banana-ink" aria-hidden><MonkeyBanana className="size-12" /></span>
               <p className="mt-3 text-lg font-extrabold text-ink">{tab === "siguiendo" ? "Tu feed está vacío" : "Aún no hay publicaciones públicas"}</p>
               <p className="mt-1 text-muted">Sigue a otras personas y termina tu primer entreno: aparece aquí automáticamente.</p>
             </div>
@@ -74,12 +75,12 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
                   </li>
                 ))}
               </ul>
-            ) : <p className="mt-2 text-sm text-muted">Invita a tus amigos del gym 💪</p>}
+            ) : <p className="mt-2 text-sm text-muted">Invita a tus amigos del gym.</p>}
           </section>
           <section className="card p-4 text-sm text-muted">
             <p className="font-bold text-ink">Tu privacidad</p>
             <p className="mt-1">Solo compartimos el resumen del entreno (tiempo, series, volumen, récords). Nunca tu peso, medidas ni fotos.</p>
-            <Link href="/app/perfil#comunidad" className="tap mt-2 inline-block font-bold text-banana-ink hover:text-ink">Configurar perfil público →</Link>
+            <Link href="/app/perfil#comunidad" className="tap mt-2 inline-flex items-center gap-1 font-bold text-banana-ink hover:text-ink">Configurar perfil público<ArrowRight weight="bold" className="size-4" /></Link>
           </section>
         </aside>
       </div>

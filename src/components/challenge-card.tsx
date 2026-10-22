@@ -1,11 +1,11 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Check } from "lucide-react";
+import { BrandIcon, Check, PushPin } from "@/components/icons";
 import { checkInChallenge, leaveChallenge } from "@/app/actions/challenges";
 import type { Challenge } from "@/lib/challenges";
 
 type Cell = { n: number; iso: string; done: boolean; past: boolean; today: boolean };
-export type ChallengeView = { ucId: string; c: Pick<Challenge, "id" | "title" | "emoji" | "days" | "verify" | "color" | "xp">; task: string; day: number; completed: number; todayDone: boolean; cells: Cell[]; autoOk: boolean; hint: string };
+export type ChallengeView = { ucId: string; c: Pick<Challenge, "id" | "title" | "icon" | "days" | "verify" | "color" | "xp">; task: string; day: number; completed: number; todayDone: boolean; cells: Cell[]; autoOk: boolean; hint: string };
 
 export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compact?: boolean }) {
   const [done, setDone] = useState(v.todayDone);
@@ -26,7 +26,7 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
   return (
     <div className={`rounded-[1.5rem] border border-line/70 p-4 sm:p-5 ${v.c.color} `}>
       <div className="flex items-start gap-3">
-        <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-white text-2xl shadow-soft">{v.c.emoji}</span>
+        <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-white text-banana-ink shadow-soft"><BrandIcon name={v.c.icon} className="size-7" /></span>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold uppercase tracking-wider text-ink/75">Día {v.day} de {v.c.days}</p>
           <p className="font-extrabold text-ink leading-tight">{v.c.title}</p>
@@ -37,11 +37,11 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
         <span className="text-sm font-extrabold text-ink tabular-nums">{completed}/{v.c.days}</span>
       </div>
       <div className="mt-3 rounded-2xl bg-white/80 p-3 flex items-center gap-3">
-        <p className="flex-1 text-sm font-semibold text-ink">📌 Hoy: {v.task}</p>
+        <p className="flex-1 flex gap-1.5 text-sm font-semibold text-ink"><PushPin weight="duotone" className="mt-0.5 size-4 shrink-0 text-ink/70" /><span>Hoy: {v.task}</span></p>
         {done ? (
-          <span className="chip h-9 bg-peel text-white"><Check className="size-4" strokeWidth={3} />Hecho</span>
+          <span className="chip h-9 bg-peel text-white"><Check weight="bold" className="size-4" />Hecho</span>
         ) : manual ? (
-          <button onClick={check} className="tap pressable h-10 px-4 rounded-full bg-ink text-white text-sm font-bold hover:bg-black">Hecho ✓</button>
+          <button onClick={check} className="tap pressable inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold hover:bg-black">Hecho <Check weight="bold" className="size-4" /></button>
         ) : (
           <span className="text-[11px] font-semibold text-muted max-w-28 text-right">{v.hint}</span>
         )}
@@ -51,7 +51,7 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
         <ol className="mt-3 grid grid-cols-10 gap-1" aria-label="Calendario del reto">
           {cells.map((c) => (
             <li key={c.n} title={`Día ${c.n}`} className={`aspect-square grid place-items-center rounded-md text-[10px] font-bold ${c.done ? "bg-ink text-banana" : c.today ? "border-2 border-ink text-ink bg-white" : c.past ? "bg-white/40 text-faint line-through" : "bg-white/60 text-ink/60"}`}>
-              {c.done ? "✓" : c.n}<span className="sr-only">{c.done ? " cumplido" : c.past ? " no cumplido" : ""}</span>
+              {c.done ? <Check weight="bold" className="size-3" /> : c.n}<span className="sr-only">{c.done ? " cumplido" : c.past ? " no cumplido" : ""}</span>
             </li>
           ))}
         </ol>

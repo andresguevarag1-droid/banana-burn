@@ -1,8 +1,9 @@
 import type { Point } from "@/lib/progress";
+import { ChartLine } from "@/components/icons";
 
 /** Gráfica de línea SVG ligera (sin librerías). `goal` dibuja una línea meta. */
 export function LineChart({ data, goal, unit = "kg", height = 180, trend = false }: { data: Point[]; goal?: number; unit?: string; height?: number; trend?: boolean }) {
-  if (data.length < 2) return <div className="grid place-items-center rounded-2xl bg-cream text-sm text-muted" style={{ height }}>Registra al menos 2 datos para ver la curva 📈</div>;
+  if (data.length < 2) return <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-cream px-4 text-center text-sm text-muted" style={{ height }}><ChartLine weight="duotone" className="size-7 text-banana-ink" />Registra al menos 2 datos para ver la curva</div>;
   const W = 600, H = height, pl = 8, pr = 44, pt = 14, pb = 26;
   const xs = data.map((p) => new Date(p.d + "T12:00:00").getTime());
   const vals = data.map((p) => p.v);
@@ -29,7 +30,7 @@ export function LineChart({ data, goal, unit = "kg", height = 180, trend = false
       <path d={path} fill="none" stroke={trend ? "#D9C79A" : "#1B1505"} strokeWidth={trend ? 1.5 : 2.5} strokeLinejoin="round" strokeLinecap="round" />
       {trend && <path d={maPath} fill="none" stroke="#1B1505" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />}
       {data.map((p, i) => <circle key={p.d} cx={x(xs[i])} cy={y(p.v)} r={i === data.length - 1 ? 5 : 2.5} fill={i === data.length - 1 ? "#FF5A1F" : "#1B1505"} stroke="#fff" strokeWidth={i === data.length - 1 ? 2 : 0} />)}
-      {goal != null && goal < lo && <text x={W - pr} y={H - pb - 6} fontSize="15" fontWeight="700" fill="#23A455" textAnchor="end">Meta {goal} {unit} ↓</text>}
+      {goal != null && goal < lo && <g><text x={W - pr - 16} y={H - pb - 6} fontSize="15" fontWeight="700" fill="#23A455" textAnchor="end">Meta {goal} {unit}</text><path d={`M${W - pr - 6} ${H - pb - 18}v12m-4.5-4.5 4.5 4.5 4.5-4.5`} fill="none" stroke="#23A455" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden /></g>}
       <text x={pl} y={H - 6} fontSize="15" fill="#A0957C">{fmt(data[0].d)}</text>
       <text x={W - pr} y={H - 6} fontSize="15" fill="#A0957C" textAnchor="end">{fmt(last.d)}</text>
     </svg>

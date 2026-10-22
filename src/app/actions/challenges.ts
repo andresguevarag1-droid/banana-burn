@@ -10,7 +10,7 @@ export async function joinChallenge(id: string) {
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { count } = await sb.from("user_challenges").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("status", "activo");
-  if ((count ?? 0) >= 3) return { ok: false, error: "Máximo 3 retos a la vez. ¡Enfócate!" };
+  if ((count ?? 0) >= 3) return { ok: false, error: "Máximo 3 retos a la vez. Termina uno para empezar otro." };
   const { error } = await sb.from("user_challenges").insert({ user_id: v.id, challenge_id: id, started_on: crToday().iso });
   revalidatePath("/app", "layout");
   return { ok: !error, error: error ? "Ya estás en este reto." : undefined };

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { LineChart } from "./line-chart";
+import { TrendDown, TrendUp } from "@/components/icons";
 import type { Point } from "@/lib/progress";
 
 const RANGES: [string, number][] = [["7 d", 7], ["30 d", 30], ["90 d", 90], ["Todo", 9999]];
@@ -14,7 +15,7 @@ export function WeightChart({ data, goal }: { data: Point[]; goal: number }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className={`text-sm font-extrabold tabular-nums ${delta <= 0 ? "text-peel" : "text-ember-ink"}`}>{pts.length > 1 ? `${delta <= 0 ? "▼" : "▲"} ${Math.abs(delta).toLocaleString("es-CR", { maximumFractionDigits: 1 })} kg en ${r > 900 ? "total" : `${r} días`}` : " "}</p>
+        <p className={`flex items-center gap-1 text-sm font-extrabold tabular-nums ${delta <= 0 ? "text-peel" : "text-ember-ink"}`}>{pts.length > 1 ? <>{delta <= 0 ? <TrendDown weight="bold" className="size-4" /> : <TrendUp weight="bold" className="size-4" />}<span className="sr-only">{delta <= 0 ? "Bajaste" : "Subiste"}</span>{`${Math.abs(delta).toLocaleString("es-CR", { maximumFractionDigits: 1 })} kg en ${r > 900 ? "total" : `${r} días`}`}</> : " "}</p>
         <div className="flex rounded-full bg-cream p-0.5">
           {RANGES.map(([l, n]) => <button key={l} onClick={() => setR(n)} className={`tap pressable h-8 px-3 whitespace-nowrap rounded-full text-xs font-bold transition ${r === n ? "bg-ink text-white" : "text-muted"}`}>{l}</button>)}
         </div>

@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, BrandIcon, Check, Heartbeat, MagnifyingGlass, PersonArmsSpread, User } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { BODY, EQUIP, LIB_COUNT, MUSCLE, es, searchLibrary } from "@/lib/library";
 
 export const metadata = { title: "Biblioteca de ejercicios" };
 
-const BP_E: Record<string, string> = { back: "🦍", cardio: "❤️", chest: "🏋️", "lower arms": "✊", "lower legs": "🦵", neck: "🙆", shoulders: "💪", "upper arms": "💪", "upper legs": "🦵", waist: "🌀" };
+// Ícono por zona del cuerpo: marca (gorila, racimo) donde hay identidad, Phosphor para lo demás.
+const BP_NAME: Record<string, string> = { back: "gorilla", chest: "barbell", "lower arms": "bolt", "lower legs": "sneaker", "upper arms": "bunch", "upper legs": "run", waist: "target" };
+function BodyIcon({ bp }: { bp: string }) {
+  if (bp === "cardio") return <Heartbeat weight="duotone" className="size-6" />;
+  if (bp === "shoulders") return <PersonArmsSpread weight="duotone" className="size-6" />;
+  if (bp === "neck") return <User weight="duotone" className="size-6" />;
+  return <BrandIcon name={BP_NAME[bp] ?? "barbell"} className="size-6" />;
+}
 
 export default async function Biblioteca({ searchParams }: { searchParams: Promise<{ q?: string; zona?: string; equipo?: string; mio?: string; p?: string }> }) {
   const sp = await searchParams;
@@ -24,7 +31,7 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
       </header>
       <form className="flex gap-2" role="search">
         <label className="flex-1 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40">
-          <Search className="size-5 text-faint" aria-hidden /><span className="sr-only">Buscar ejercicio</span>
+          <MagnifyingGlass weight="bold" className="size-5 text-faint" aria-hidden /><span className="sr-only">Buscar ejercicio</span>
           <input name="q" defaultValue={sp.q} placeholder="Sentadilla, glúteos, banda…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" />
         </label>
         {sp.zona && <input type="hidden" name="zona" value={sp.zona} />}
@@ -32,17 +39,17 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
       </form>
       <nav aria-label="Filtrar por zona" className="-mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1 relative">
         <Link href={qs({ zona: undefined, p: undefined })} aria-current={!sp.zona ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${!sp.zona ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>Todo</Link>
-        {Object.entries(BODY).filter(([k]) => k !== "neck").map(([k, l]) => <Link key={k} href={qs({ zona: k, p: undefined })} aria-current={sp.zona === k ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${sp.zona === k ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>{BP_E[k]} {l}</Link>)}
+        {Object.entries(BODY).filter(([k]) => k !== "neck").map(([k, l]) => <Link key={k} href={qs({ zona: k, p: undefined })} aria-current={sp.zona === k ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${sp.zona === k ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>{l}</Link>)}
       </nav>
       {(a.equipment === "casa" || a.equipment === "ninguno") && (
-        <Link href={qs({ mio: sp.mio === "1" ? undefined : "1", p: undefined })} className={`chip h-9 px-4 ${sp.mio === "1" ? "bg-banana text-ink" : "bg-cream text-ink"}`}>{sp.mio === "1" ? "✓ " : ""}Solo lo que puedo hacer {a.equipment === "ninguno" ? "sin equipo" : "en casa"}</Link>
+        <Link href={qs({ mio: sp.mio === "1" ? undefined : "1", p: undefined })} className={`chip h-9 px-4 ${sp.mio === "1" ? "bg-banana text-ink" : "bg-cream text-ink"}`}>{sp.mio === "1" && <Check weight="bold" className="size-4" />}Solo lo que puedo hacer {a.equipment === "ninguno" ? "sin equipo" : "en casa"}</Link>
       )}
       <p className="text-sm text-muted" aria-live="polite">{r.total.toLocaleString("es-CR")} resultados</p>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {r.items.map((e) => (
           <li key={e.id}>
             <Link href={`/app/ejercicios/${e.id}`} className="card p-3 flex items-center gap-3 hover:shadow-lift transition">
-              <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-cream text-xl" aria-hidden>{BP_E[e.bp] ?? "🏋️"}</span>
+              <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-cream text-banana-ink" aria-hidden><BodyIcon bp={e.bp} /></span>
               <span className="min-w-0"><span className="block font-bold text-ink leading-tight line-clamp-2">{e.n}</span><span className="block text-xs text-muted truncate">{es(MUSCLE, e.t)} · {es(EQUIP, e.eq)}</span></span>
             </Link>
           </li>
@@ -50,9 +57,9 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
       </ul>
       {r.pages > 1 && (
         <nav aria-label="Páginas" className="flex items-center justify-center gap-2">
-          {r.page > 1 && <Link href={qs({ p: String(r.page - 1) })} className="btn-ghost h-10 px-4 text-sm">← Anterior</Link>}
+          {r.page > 1 && <Link href={qs({ p: String(r.page - 1) })} className="btn-ghost h-10 px-4 text-sm"><ArrowLeft weight="bold" className="size-4" />Anterior</Link>}
           <span className="text-sm text-muted">Página {r.page} de {r.pages}</span>
-          {r.page < r.pages && <Link href={qs({ p: String(r.page + 1) })} className="btn-ghost h-10 px-4 text-sm">Siguiente →</Link>}
+          {r.page < r.pages && <Link href={qs({ p: String(r.page + 1) })} className="btn-ghost h-10 px-4 text-sm">Siguiente<ArrowRight weight="bold" className="size-4" /></Link>}
         </nav>
       )}
       <p className="text-[11px] text-faint">Datos de ejercicios: exercises-dataset de Hasan Emir Yıldırım (licencia MIT).</p>

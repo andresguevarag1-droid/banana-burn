@@ -1,4 +1,4 @@
-// Retos de 21–30 días. Catálogo por defecto en código; el admin podrá sobrescribirlo desde la BD.
+// Retos de 21 a 30 días. Catálogo por defecto en código; el admin podrá sobrescribirlo desde la BD.
 export type Verify = "manual" | "workout" | "steps" | "protein" | "water";
 export type Challenge = { id: string; title: string; emoji: string; icon: string; days: number; desc: string; verify: Verify; color: string; task: (day: number) => string; xp: number };
 
@@ -13,7 +13,7 @@ export const CHALLENGES: Challenge[] = [
     desc: "De 20 segundos a 3 minutos de plancha. Core de acero en un mes.",
     task: (d) => { const s = Math.round(20 + (d - 1) * (160 / 29)); return `Plancha total de ${s >= 60 ? `${Math.floor(s / 60)} min ${s % 60 ? `${s % 60} s` : ""}` : `${s} s`} (puedes partirla)`; } },
   { id: "pasos-30", title: "10.000 pasos", icon: "sneaker", emoji: "👟", days: 30, verify: "steps", color: "bg-peel/15", xp: 300,
-    desc: "30 días caminando 10.000 pasos. La forma más fácil de quemar 300–400 kcal extra al día.",
+    desc: "30 días caminando 10.000 pasos. La forma más fácil de quemar 300-400 kcal extra al día.",
     task: () => "Llega a 10.000 pasos (regístralos en Hoy)" },
   { id: "proteina-21", title: "Proteína perfecta", icon: "egg", emoji: "🥩", days: 21, verify: "protein", color: "bg-ember/10", xp: 250,
     desc: "21 días llegando a tu meta de proteína. El hábito que protege tu músculo mientras bajas de grasa.",

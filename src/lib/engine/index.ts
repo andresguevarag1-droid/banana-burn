@@ -23,7 +23,7 @@ export function targets(p: { kg: number; heightCm: number; age: number; sex?: Se
   const { bmr, tdee } = energy(p);
   const deficit = p.mode === "recomp" ? 200 : 500;
   const kcal = Math.round((tdee - deficit) / 50) * 50;
-  const protein = Math.round((2.0 * p.kg) / 5) * 5; // 1.6–2.2 g/kg → 2.0 centro
+  const protein = Math.round((2.0 * p.kg) / 5) * 5; // 1.6-2.2 g/kg, 2.0 al centro
   const fat = Math.round((0.75 * p.kg) / 5) * 5;
   const carbs = Math.round((kcal - protein * 4 - fat * 9) / 4);
   return { kcal, protein, fat, carbs, steps: 10000, sleep: 8, bmr, tdee };
@@ -35,14 +35,14 @@ const roundTo = (kg: number, step: number) => Math.round(kg / step) * step;
 
 export type Prescription = { sets: number; kg: number | null; reps: number[]; type: "cal" | "up" | "reps" | "reset" | "deload"; note: string };
 
-/** Doble progresión + reinicio −10 % tras 2 sesiones flojas + descarga. `history` = sesiones previas (antigua→reciente). */
+/** Doble progresión + reinicio −10 % tras 2 sesiones flojas + descarga. `history` = sesiones previas (de antigua a reciente). */
 export function prescribe(id: ExerciseId | string, cfg: SlotCfg, history: SetLog[][], opts: { deload?: boolean; inc?: number } = {}): Prescription {
   const ex = { inc: opts.inc ?? EX[id as ExerciseId]?.inc ?? 0 };
   const step = ex.inc >= 2.5 ? 2.5 : ex.inc || 1;
   const sets = opts.deload ? Math.max(2, cfg.sets - 1) : cfg.sets;
   // Intervalos (exprés): trabajo por tiempo con descanso corto; no hay reps que anotar.
   if (cfg.unit === "s" && cfg.rest <= 30) return { sets, kg: null, reps: Array(sets).fill(cfg.hi), type: "reps", note: `Intervalos: ${cfg.hi} s de trabajo y ${cfg.rest} s de descanso. Ritmo firme y técnica limpia; si se rompe la forma, baja la velocidad.` };
-  if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: ex.inc ? `Calibración: elige un peso con el que llegues a ${cfg.lo}–${cfg.hi} reps dejando 2 en reserva.` : `Calibración: haz ${cfg.lo}–${cfg.hi} ${cfg.unit === "s" ? "segundos" : cfg.unit === "m" ? "metros" : "reps"} limpias dejando 1–2 en reserva. Anota lo que hiciste en cada serie.` };
+  if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: ex.inc ? `Calibración: elige un peso con el que llegues a ${cfg.lo}-${cfg.hi} reps dejando 2 en reserva.` : `Calibración: haz ${cfg.lo}-${cfg.hi} ${cfg.unit === "s" ? "segundos" : cfg.unit === "m" ? "metros" : "reps"} limpias dejando 1 a 2 en reserva. Anota lo que hiciste en cada serie.` };
   const last = history[history.length - 1];
   const prev = history.length > 1 ? history[history.length - 2] : null;
   const kg = Math.max(...last.map((s) => s.kg || 0));
@@ -127,7 +127,7 @@ export function personalize(exs: PlannedExercise[], level: Level = "intermedio",
 export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay {
   const o: PlanOpts = typeof opts === "string" ? { equipment: opts } : opts;
   const tplId = schedule[dow];
-  if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", emoji: "🌴", icon: "palm", exercises: [], cardio: "Camina 8–12k pasos y estira 10 min" };
+  if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", emoji: "🌴", icon: "palm", exercises: [], cardio: "Camina 8-12k pasos y estira 10 min" };
   const t = TPL[tplId];
   const raw = t.ex.map((cfg) => {
     const base = (cfg.id ?? SLOTS[cfg.slot!][week % SLOTS[cfg.slot!].length]) as ExerciseId;

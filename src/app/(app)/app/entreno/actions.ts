@@ -5,7 +5,7 @@ import { crToday } from "@/lib/today";
 import { workoutXp } from "@/lib/gamify";
 
 export type DoneSet = { kg: number | null; reps: number; rir: number | null };
-export type Finished = { template: string; startedAt: string; fun: number; exercises: { id: string; sets: DoneSet[] }[]; xp: number; prs: number; total?: number; title?: string; emoji?: string; prNames?: string[]; note?: string };
+export type Finished = { template: string; startedAt: string; fun: number; exercises: { id: string; sets: DoneSet[] }[]; xp: number; prs: number; total?: number; title?: string; icon?: string; prNames?: string[]; note?: string };
 
 export async function saveWorkout(w: Finished): Promise<{ ok: boolean; demo?: boolean; error?: string; postId?: string }> {
   const v = await getViewer();
@@ -22,11 +22,11 @@ export async function saveWorkout(w: Finished): Promise<{ ok: boolean; demo?: bo
   const { data: wk, error } = await sb.from("workouts").insert({
     user_id: v.id, day: crToday().iso, template: w.template, started_at: new Date(started).toISOString(), finished_at: new Date().toISOString(), fun: Math.min(5, Math.max(1, Math.round(w.fun))), xp: w.xp,
   }).select("id").single();
-  if (error || !wk) return { ok: false, error: "No se pudo guardar el entreno." };
+  if (error || !wk) return { ok: false, error: "No pudimos guardar el entreno. Intenta de nuevo." };
   const rows = w.exercises.flatMap((e) => e.sets.map((s, i) => ({ workout_id: wk.id, user_id: v.id, exercise: e.id, set_no: i + 1, kg: s.kg, reps: s.reps, rir: s.rir })));
   if (rows.length) {
     const r = await sb.from("workout_sets").insert(rows);
-    if (r.error) return { ok: false, error: "Se guardó el entreno pero no las series." };
+    if (r.error) return { ok: false, error: "Guardamos el entreno, pero no las series. Intenta de nuevo." };
   }
   const prXp = w.prs * 50;
   await sb.from("xp_events").insert([{ user_id: v.id, kind: "workout", xp: Math.max(0, w.xp - prXp) }, ...Array.from({ length: w.prs }, () => ({ user_id: v.id, kind: "pr", xp: 50 }))]);
@@ -38,7 +38,7 @@ export async function saveWorkout(w: Finished): Promise<{ ok: boolean; demo?: bo
     const mins = Math.max(1, Math.round((now - started) / 60000));
     const { data: post } = await sb.from("posts").insert({
       user_id: v.id, kind: "workout", workout_id: wk.id, body: w.note?.slice(0, 500) || null, visibility: prof?.visibility === "privado" ? "privado" : prof?.visibility ?? "seguidores",
-      data: { title: w.title?.slice(0, 60), emoji: w.emoji?.slice(0, 4), mins: Math.min(mins, 240), sets: rows.length, volume, prs: (w.prNames ?? []).slice(0, 10) },
+      data: { title: w.title?.slice(0, 60), icon: /^[a-zA-Z]{1,24}$/.test(w.icon ?? "") ? w.icon : "barbell", mins: Math.min(mins, 240), sets: rows.length, volume, prs: (w.prNames ?? []).slice(0, 10) },
     }).select("id").single();
     postId = post ? String(post.id) : undefined;
   }

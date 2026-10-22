@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BrandIcon, Check, PersonSimpleWalk, TreePalm } from "@/components/icons";
 import { DAY_NAMES, type PlannedDay } from "@/lib/engine";
 
 const fmtRest = (s: number) => (s >= 120 ? `${s / 60} min` : `${s} s`);
@@ -18,8 +18,8 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
           return (
             <button key={d.dow} onClick={() => setSel(d.dow)} className={`pressable relative rounded-2xl py-2.5 text-center transition ${active ? "bg-ink text-white shadow-lift" : d.tpl ? "bg-white border border-line" : "bg-transparent border border-dashed border-line"}`} aria-pressed={active}>
               <p className={`text-[11px] font-bold uppercase ${active ? "text-banana" : today ? "text-ember-ink" : "text-muted"}`}>{DAY_NAMES[d.dow].slice(0, 3)}</p>
-              <p className="text-xl mt-0.5">{d.emoji}</p>
-              {ok && <span className="absolute -top-1 -right-1 grid place-items-center size-5 rounded-full bg-peel text-white text-[10px] font-bold">✓</span>}
+              <span className={`mt-1 flex justify-center ${active ? "text-banana" : d.tpl ? "text-banana-ink" : "text-faint"}`}><BrandIcon name={d.icon} className="size-6" title={d.name} /></span>
+              {ok && <span className="absolute -top-1 -right-1 grid place-items-center size-5 rounded-full bg-peel text-white" aria-label="Hecho"><Check weight="bold" className="size-3" /></span>}
               {today && !active && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-ember" />}
             </button>
           );
@@ -31,7 +31,7 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
           <p className="text-xs font-bold uppercase tracking-wider text-ink/75">{DAY_NAMES[p.dow]}{isToday && " · hoy"}</p>
           <span className="chip bg-ink/5 text-ink">{p.tag}</span>
         </div>
-        <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">{p.emoji} {p.name}</h2>
+        <h2 className="mt-1 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-ink"><BrandIcon name={p.icon} className="size-8 shrink-0 text-banana-ink" />{p.name}</h2>
         {p.exercises.length > 0 ? (
           <>
             <p className="mt-1 text-sm font-semibold text-ink/75">{p.exercises.length} ejercicios · ~{p.mins ?? 55} min · tempo 3-1-1</p>
@@ -40,15 +40,15 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
                 <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white/80 px-3.5 py-3">
                   <span className="grid place-items-center size-8 shrink-0 rounded-xl bg-ink text-white text-sm font-bold">{i + 1}</span>
                   <div className="flex-1 min-w-0"><p className="font-bold text-ink leading-tight">{e.name}</p><p className="text-xs text-muted">{e.muscle} · descanso {fmtRest(e.cfg.rest)}</p></div>
-                  <p className="shrink-0 whitespace-nowrap font-extrabold text-ink tabular-nums">{e.cfg.sets}×{e.cfg.lo}–{e.cfg.hi}{e.cfg.unit === "s" ? " s" : e.cfg.unit === "m" ? " m" : ""}</p>
+                  <p className="shrink-0 whitespace-nowrap font-extrabold text-ink tabular-nums">{e.cfg.sets}×{e.cfg.lo}-{e.cfg.hi}{e.cfg.unit === "s" ? " s" : e.cfg.unit === "m" ? " m" : ""}</p>
                 </li>
               ))}
             </ol>
-            {p.cardio && <p className="mt-3 text-sm font-semibold text-ink/70">🚶 Al final: {p.cardio}</p>}
-            <Link href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight className="size-5" /></Link>
+            {p.cardio && <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink/70"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0" />Al final: {p.cardio}</p>}
+            <Link href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
           </>
         ) : (
-          <p className="mt-3 text-ink/80">🌴 {p.cardio}. El músculo crece cuando descansas.</p>
+          <p className="mt-3 flex gap-2.5 text-ink/80"><TreePalm weight="duotone" className="mt-0.5 size-5 shrink-0 text-sky" /><span>{p.cardio}. El músculo crece cuando descansas.</span></p>
         )}
       </section>
     </div>
