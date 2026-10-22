@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { BananaCoin, BananaFlame, BananaTrophy, CaretDown, Check, Timer } from "@/components/icons";
+import { BananaCoin, BananaFlame, BananaTrophy, CaretDown, Check, FlagCheckered, LevelIcon, Lightbulb, Timer } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { EFFORTS, clock, type Effort } from "./logic";
-import { CountRing, GoldBanana } from "./ui";
+import { CountRing, GoldBanana, LevelMeter } from "./ui";
 import css from "./workout.module.css";
 
 export type RestInfo = {
@@ -21,6 +21,16 @@ export type RestInfo = {
   finished: string | null;
   bananas: { got: number; total: number };
   next: { title: string; detail: string; anim?: string; isNew: boolean; last: boolean } | null;
+  /** Nivel al que se acaba de subir con esta serie */
+  levelUp?: { idx: number; n: string } | null;
+  /** Hito del entreno (mitad, último empujón...) la primera vez que se cruza */
+  milestone?: string | null;
+  /** Meta de nivel tras esta serie */
+  goal?: { idx: number; progress: number; text: string } | null;
+  /** Lo que vale terminar completo y la racha que se protege */
+  finish?: string | null;
+  /** Dato motivador con números reales (rota en cada descanso) */
+  fact?: string | null;
 };
 
 /**
@@ -66,6 +76,8 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </button>
           </div>
 
+          {info.goal && <LevelMeter tone="dark" idx={info.goal.idx} progress={info.goal.progress} text={info.goal.text} className="mt-3" />}
+
           {/* Recompensa */}
           <div className="mt-3 flex min-h-10 flex-wrap items-center justify-center gap-2">
             {info.xp > 0 && (
@@ -78,12 +90,22 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
                 <BananaFlame weight="fill" className="size-4 text-ember" />Combo x{info.combo}
               </span>
             )}
+            {info.levelUp && (
+              <span className={`${css.collect} inline-flex items-center gap-1.5 h-9 pl-2 pr-3.5 rounded-full bg-banana text-ink text-sm font-extrabold`}>
+                <LevelIcon idx={info.levelUp.idx} className="size-5 text-ink!" />Nivel {info.levelUp.idx}: {info.levelUp.n}
+              </span>
+            )}
             {info.finished && (
               <span className="inline-flex items-center gap-1.5 h-9 pl-2 pr-3.5 rounded-full bg-white/10 text-sm font-extrabold tabular-nums">
                 <GoldBanana className="size-6" pop />Banana {info.bananas.got} de {info.bananas.total}
               </span>
             )}
           </div>
+          {info.milestone && (
+            <p className={`${css.phase} mt-2 mx-auto flex w-fit max-w-full items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[15px] font-extrabold text-banana`}>
+              <FlagCheckered weight="fill" className="size-5 shrink-0" />{info.milestone}
+            </p>
+          )}
           {info.rushed && (
             <p className="mt-2 mx-auto flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-2 text-[13px] font-bold text-white/85">
               <Timer weight="bold" className="size-4 shrink-0" />Ritmo muy rápido: esta serie no suma XP
@@ -139,6 +161,12 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
                 <p className="font-extrabold leading-tight truncate">{info.next.title}</p>
                 <p className="text-sm font-semibold text-white/70 tabular-nums truncate">{info.next.detail}</p>
               </div>
+            </div>
+          )}
+          {(info.finish || info.fact) && (
+            <div className="mt-2 space-y-1.5 px-1">
+              {info.finish && <p className="flex gap-2 text-[13px] font-semibold text-white/80"><BananaCoin className="mt-px size-4 shrink-0 text-banana" /><span>{info.finish}</span></p>}
+              {info.fact && <p className="flex gap-2 text-[13px] font-semibold text-white/80"><Lightbulb weight="fill" className="mt-px size-4 shrink-0 text-banana" /><span>{info.fact}</span></p>}
             </div>
           )}
         </div>

@@ -194,7 +194,7 @@ export function speechFor(kind: "exercise" | "rest" | "go" | "last" | "done" | "
     case "exercise": return `${o.name}. ${o.sets} series${o.target ? `, ${o.target.replace("×", "por").replace("kg", "kilos")}` : ""}.${o.cue ? ` Clave: ${o.cue}.` : ""}`;
     case "rest": return `Descanso. ${restLabel(o.rest ?? 60).replace("min", "minutos").replace(" s", " segundos")}.`;
     case "go": return `Vamos. Serie ${o.set} de ${o.sets}.`;
-    case "last": return "Última serie. Con todo.";
+    case "last": return "Última serie: déjalo todo.";
     case "work": return `${o.name}. Ya.`;
     case "done": return "Entreno completado. Bien hecho.";
     case "count": return String(o.n);
@@ -245,7 +245,7 @@ export function timedPhase(w: { end: number; secs: number }, now: number) {
 }
 
 /* ---------- Sesión guardada en el teléfono ---------- */
-export type Saved = { rows: Row[][]; idx: number; startedAt: string; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean; mode?: string; repeat?: boolean; /** Ids elegidos por ejercicio (el índice cambia si la lista de opciones cambia). */ choiceIds?: string[] };
+export type Saved = { rows: Row[][]; idx: number; startedAt: string; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean; mode?: string; repeat?: boolean; /** Ids elegidos por ejercicio (el índice cambia si la lista de opciones cambia). */ choiceIds?: string[]; /** Hitos ya mostrados (no se repiten al deshacer) */ ms?: string[]; /** Series del plan antes de pasar a modo exprés */ plan?: number };
 /** Acepta sesiones del formato anterior (sin combo ni esfuerzo) y descarta las que no calzan con el plan de hoy. */
 export function readSaved(v: unknown, exercises: number): Saved | null {
   if (!v || typeof v !== "object") return null;
@@ -260,5 +260,7 @@ export function readSaved(v: unknown, exercises: number): Saved | null {
     combo: Number(s.combo) || 0, best: Number(s.best) || 0, lastAt: Number(s.lastAt) || undefined, warm: !!s.warm,
     ...(typeof s.mode === "string" ? { mode: s.mode } : {}), ...(s.repeat ? { repeat: true } : {}),
     ...(Array.isArray(s.choiceIds) && s.choiceIds.length === exercises ? { choiceIds: s.choiceIds.map((x) => String(x ?? "").slice(0, 40)) } : {}),
+    ...(Array.isArray(s.ms) ? { ms: s.ms.filter((x) => typeof x === "string").slice(0, 8) } : {}),
+    ...(Number(s.plan) > 0 ? { plan: Math.min(80, Math.round(Number(s.plan))) } : {}),
   };
 }

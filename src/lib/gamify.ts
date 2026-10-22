@@ -47,6 +47,10 @@ export function badges(s: { workouts: number; streak: number; prs: number; weigh
 
 /** Segundos mínimos razonables por serie (ejecución + algo de descanso). Debajo de eso, no se premia. */
 export const MIN_SET_SECONDS = 25;
+/** XP por serie hecha, por récord (máx. 3 por entreno) y bono por completar todas las series. */
+export const SET_XP = 10;
+export const PR_XP = 50;
+export const FULL_BONUS = 30;
 
 /**
  * XP de un entreno, calculado igual en el cliente y en el servidor.
@@ -59,7 +63,20 @@ export function workoutXp(o: { doneSets: number; totalSets: number; prs: number;
   if (rushed) return { xp: 0, prs: 0, rushed: true }; // series demasiado rápidas: no suman XP (coincide con lo que dice la app)
   const prs = Math.max(0, Math.min(Math.round(o.prs), 3));
   const full = o.totalSets > 0 && done >= o.totalSets;
-  return { xp: done * 10 + prs * 50 + (full ? 30 : 0), prs, rushed: false };
+  return { xp: done * SET_XP + prs * PR_XP + (full ? FULL_BONUS : 0), prs, rushed: false };
+}
+
+/** Nivel nuevo si pasar de `xpBefore` a `xpAfter` cruza un umbral; si no, null. */
+export function levelCrossed(xpBefore: number, xpAfter: number) {
+  const a = levelOf(xpBefore), b = levelOf(xpAfter);
+  return b.idx > a.idx ? b : null;
+}
+
+/** Entrenos que faltan para el próximo nivel si cada uno vale `perWorkout` XP. null si no aplica. */
+export function workoutsToNext(xp: number, perWorkout: number) {
+  const lv = levelOf(xp);
+  if (!lv.next || perWorkout <= 0) return null;
+  return Math.max(1, Math.ceil(lv.toNext / perWorkout));
 }
 
 // ───────────── XP por registrar comida ─────────────
