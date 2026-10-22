@@ -11,6 +11,16 @@ export function crDay(ts: string | number | Date): string {
 export function addDays(iso: string, n: number): string {
   return new Date(Date.parse(iso + "T00:00:00Z") + n * DAY_MS).toISOString().slice(0, 10);
 }
+/** Suma meses calendario a una fecha ISO (31 ene + 1 mes = 28/29 feb). */
+export function addMonths(iso: string, n: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, last));
+  return target.toISOString().slice(0, 10);
+}
+/** Siguiente renovación según la periodicidad: mensual = +1 mes, anual = +1 año. */
+export const nextRenewal = (lastPayment: string, billing: Billing) => addMonths(lastPayment, billing === "anual" ? 12 : 1);
 /** Días entre dos fechas ISO (b − a). */
 export function dayDiff(a: string, b: string): number {
   return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / DAY_MS);
@@ -38,7 +48,11 @@ export type SubRow = {
   billing?: string | null;
   price_id?: string | null;
   amount?: number | null;          // USD por periodo, si la integración lo guarda
+  current_period_start?: string | null; // último cobro
   current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
+  provider_customer_id?: string | null;
+  provider_subscription_id?: string | null;
   canceled_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -160,8 +174,9 @@ export type Cell = { n: number; eligible: number; rate: number | null };
 export type CohortRow = { cohort: string; size: number } & Record<RetKey, Cell>;
 
 /**
- * Tabla de cohortes semanales. Solo cuentan como elegibles los usuarios cuya ventana ya terminó
- * (si no, la celda queda en null en vez de mostrar una retención falsa de 0 %).
+ * Tabla de cohortes semanales. Una celda solo muestra tasa cuando la ventana ya terminó para TODOS los usuarios
+ * de la cohorte (eligible === size); si no, queda en null ("en curso") en vez de mezclar denominadores.
+ * Así D1 ≥ D7 ≥ D30 se compara siempre sobre el mismo grupo de personas.
  */
 export function cohortRetention(users: { id: string; created_at: string }[], act: ActivityMap, today: string, weeks = 8): CohortRow[] {
   const firstWeek = addDays(weekOf(today), -7 * (weeks - 1));
@@ -183,10 +198,12 @@ export function cohortRetention(users: { id: string; created_at: string }[], act
       for (let d = a; d <= b; d++) if (days.has(addDays(signup, d))) { row[k].n++; break; }
     }
   }
-  for (const r of rows.values()) for (const k of Object.keys(RETENTION_WINDOWS) as RetKey[]) r[k].rate = r[k].eligible ? pct(r[k].n, r[k].eligible) : null;
+  for (const r of rows.values()) for (const k of Object.keys(RETENTION_WINDOWS) as RetKey[]) r[k].rate = cellRate(r[k].n, r[k].eligible, r.size);
   return [...rows.values()].reverse();
 }
 const cell = (): Cell => ({ n: 0, eligible: 0, rate: null });
+/** Tasa de una celda de cohorte: solo con la cohorte completa (todas sus ventanas cerradas). */
+export const cellRate = (n: number, eligible: number, size: number): number | null => (size > 0 && eligible >= size ? pct(Math.min(n, eligible), eligible) : null);
 
 /** Serie diaria con ceros para los últimos N días (incluye hoy). */
 export function dailySeries(dates: string[], today: string, days: number): { day: string; n: number }[] {
@@ -201,4 +218,4 @@ export function delta(curr: number, prev: number): number | null {
   return Math.round(((curr - prev) / prev) * 100);
 }
 
-export const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export { money } from "./admin-format";

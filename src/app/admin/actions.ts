@@ -11,6 +11,7 @@ import { ValidationError } from "@/lib/admin-validate";
 import { EX } from "@/lib/engine/data";
 import { FOODS } from "@/lib/foods";
 import { demoWorld } from "@/lib/admin-demo";
+import { fmtDate } from "@/lib/admin-format";
 
 export type ActionState = { ok: boolean; message: string; at?: number } | null;
 
@@ -89,11 +90,11 @@ export async function grantComp(_: ActionState, fd: FormData): Promise<ActionSta
     const t = Date.parse(expires);
     if (t <= Date.now()) return fail("El vencimiento debe ser una fecha futura.");
     if (t > Date.now() + 366 * 864e5) return fail("Una cortesía puede durar máximo 1 año.");
-    if (!sb) return ok(`Cortesía otorgada hasta ${new Date(t).toLocaleDateString("es-CR")}${DEMO_MSG}`);
+    if (!sb) return ok(`Cortesía otorgada hasta ${fmtDate(expires)}${DEMO_MSG}`);
     const { error } = await sb.rpc("admin_grant_comp", { p_target: target, p_plan: plan, p_expires: expires, p_reason: reason });
     if (error) return fail(pgMessage(error)!);
     revalidatePath(`/admin/usuarios/${target}`);
-    return ok(`Cortesía otorgada hasta ${new Date(t).toLocaleDateString("es-CR")}.`);
+    return ok(`Cortesía otorgada hasta ${fmtDate(expires)}.`);
   });
 }
 

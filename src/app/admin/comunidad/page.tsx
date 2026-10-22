@@ -10,6 +10,8 @@ export const metadata = { title: "Comunidad" };
 const STATUSES = [["abierto", "Abiertos"], ["oculto", "Ocultos"], ["resuelto", "Resueltos"], ["descartado", "Descartados"], ["todos", "Todos"]] as const;
 const REASON: Record<string, string> = { spam: "Spam", acoso: "Acoso", contenido_inapropiado: "Contenido inapropiado", desinformacion_salud: "Desinformación de salud", otro: "Otro" };
 const TONE: Record<string, "warn" | "bad" | "good" | "muted"> = { abierto: "warn", oculto: "bad", resuelto: "good", descartado: "muted" };
+const STATUS_LABEL: Record<string, string> = { abierto: "Abierto", oculto: "Oculto", resuelto: "Resuelto", descartado: "Descartado" };
+const TYPE_LABEL: Record<string, string> = { post: "Publicación", comment: "Comentario" };
 
 export default async function Comunidad({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const v = await requireSection("comunidad");
@@ -19,7 +21,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Comunidad" desc="Cola de moderación. Ocultar marca el contenido como oculto: la comunidad debe filtrarlo con public.is_hidden(tipo, id)." />
+      <PageHeader title="Comunidad" desc="Cola de moderación: revisa reportes y oculta, resuelve o descarta." />
       {v.demo && <DemoNotice what="los reportes" />}
       {needsMigration && <MigrationNotice />}
       <nav aria-label="Estado de reportes">
@@ -36,11 +38,11 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
         {rows.map((r) => (
           <li key={r.id} className="card p-5 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={TONE[r.status]}>{r.status}</Badge>
+              <Badge tone={TONE[r.status]}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
               <Badge tone={r.reason === "desinformacion_salud" || r.reason === "acoso" ? "bad" : "info"}>{REASON[r.reason] ?? r.reason}</Badge>
-              <span className="text-xs text-muted">{r.target_type} · <code>{r.target_id}</code> · reportado por {r.reporter_name ?? "usuario"} · {fmtDateTime(r.created_at)}</span>
+              <span className="text-xs text-muted break-words">{TYPE_LABEL[r.target_type] ?? r.target_type} · <code>{r.target_id}</code> · reportado por {r.reporter_name ?? "usuario"} · {fmtDateTime(r.created_at)}</span>
             </div>
-            {r.excerpt && <blockquote className="rounded-2xl border-l-4 border-banana bg-paper/70 px-4 py-3 text-sm text-ink">“{r.excerpt}”</blockquote>}
+            {r.excerpt && <blockquote className="rounded-2xl border-l-4 border-banana bg-paper/70 px-4 py-3 text-sm text-ink break-words">“{r.excerpt}”</blockquote>}
             {r.details && <p className="text-sm text-body"><b>Detalle del reporte:</b> {r.details}</p>}
             {r.resolution_note && <p className="text-xs text-muted">Nota de moderación: {r.resolution_note}{r.resolved_at ? ` · ${fmtDateTime(r.resolved_at)}` : ""}</p>}
             <ActionForm action={moderateReport} className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -62,7 +64,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
           </li>
         ))}
       </ul>
-      {!rows.length && <div className="card"><Empty>{status === "abierto" ? "No hay reportes pendientes. 🙌" : "Sin reportes en este estado."}</Empty></div>}
+      {!rows.length && <div className="card">{status === "abierto" ? <Empty title="No hay reportes pendientes">La comunidad está tranquila. 🙌</Empty> : <Empty title="Sin reportes en este estado" action={<Link href="/admin/comunidad" className="btn-ghost h-10! px-4! text-sm!">Ver abiertos</Link>} />}</div>}
       <Notice title="Integración">La comunidad crea reportes con <code>insert into reports (target_type, target_id, reporter, reason, details, excerpt)</code> (RLS: reporter = auth.uid()) y esconde lo moderado con <code>is_hidden()</code>.</Notice>
     </div>
   );

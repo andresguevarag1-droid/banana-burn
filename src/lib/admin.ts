@@ -3,13 +3,14 @@
 import { createClient, type Role, type Viewer } from "@/lib/supabase/server";
 import { can } from "@/lib/admin-perms";
 import {
-  activeCounts, activityMap, addDays, churn, cohortRetention, crDay, dailySeries, FAILED, mrr, pct, resolvePlan, monthlyValue,
+  activeCounts, activityMap, addDays, cellRate, churn, cohortRetention, crDay, dailySeries, FAILED, mrr, pct, resolvePlan, monthlyValue,
   signupsWithin, weekOf, type CohortRow, type SubRow,
 } from "@/lib/admin-kpis";
-import { DEMO_ANNOUNCEMENTS, DEMO_AUDIT, DEMO_CHALLENGES, DEMO_OVERRIDES, DEMO_REPORTS, demoWorld } from "@/lib/admin-demo";
+import { DEMO_ANNOUNCEMENTS, DEMO_CHALLENGES, DEMO_OVERRIDES, DEMO_REPORTS, demoAudit, demoCompLive, demoWorld, type DemoUser } from "@/lib/admin-demo";
 import { crToday } from "@/lib/today";
 import { EX } from "@/lib/engine/data";
 import { FOODS } from "@/lib/foods";
+import { PLANS } from "@/lib/plans";
 
 export const PAGE_SIZE = 25;
 
@@ -42,21 +43,20 @@ export async function getDashboard(v: Viewer): Promise<Dashboard> {
     const { users, subs } = demoWorld();
     const act = new Map(users.map((u) => [u.id, u.days]));
     const acts = activeCounts(act, today);
-    const allDays = users.flatMap((u) => [...u.days]);
     const signups = dailySeries(users.map((u) => crDay(u.created_at)), today, 30);
-    const work = dailySeries(allDays.filter((_, i) => i % 3 !== 0), today, 30);
-    const active = dailySeries(allDays, today, 30);
-    const paying = new Set(subs.filter((s) => s.status === "active" || s.status === "past_due").map((s) => s.user_id)).size;
+    const work = dailySeries(users.flatMap((u) => [...u.workouts]), today, 30);
+    const active = dailySeries(users.flatMap((u) => [...u.days]), today, 30);
+    const paying = new Set(subs.filter((s) => PAYING_STATUSES.has(s.status ?? "")).map((s) => s.user_id)).size;
     const created = users.map((u) => u.created_at);
     return {
       source: "demo", today,
       users_total: users.length, onboarded: users.filter((u) => u.onboarded).length,
       new_7: signupsWithin(created, today, 7), new_prev_7: signupsWithin(created, addDays(today, -7), 7), new_30: signupsWithin(created, today, 30),
-      active_today: acts.today, active_7: acts.d7, active_30: acts.d30, paying, comps_active: 2,
+      active_today: acts.today, active_7: acts.d7, active_30: acts.d30, paying, comps_active: users.filter((u) => demoCompLive(u)).length,
       workouts_today: work[work.length - 1].n, workouts_7: work.slice(-7).reduce((a, b) => a + b.n, 0),
       series: signups.map((s, i) => ({ day: s.day, signups: s.n, workouts: work[i].n, active: active[i].n })),
       retention: cohortRetention(users, act, today, RET_WEEKS),
-      revenue: withRevenue ? revenueOf(subs, (id) => users.find((u) => u.id === id)?.plan, users.length, paying) : null,
+      revenue: withRevenue ? revenueOf(subs, (id) => users.find((u) => u.id === id)?.plan, users.length, paying, crNow(today)) : null,
     };
   }
 
@@ -80,25 +80,30 @@ export async function getDashboard(v: Viewer): Promise<Dashboard> {
   if (withRevenue) {
     const { data: subs } = await sb.from("subscriptions").select("*").order("created_at", { ascending: false }).limit(5000);
     const planOf = await profilePlans(sb, ((subs ?? []) as SubRow[]).map((x) => x.user_id!).filter(Boolean));
-    revenue = revenueOf((subs ?? []) as SubRow[], (id) => (id ? planOf.get(id) : null), base.users_total, base.paying);
+    revenue = revenueOf((subs ?? []) as SubRow[], (id) => (id ? planOf.get(id) : null), base.users_total, base.paying, new Date());
   }
   return { ...base, revenue };
 }
 
-function revenueOf(subs: SubRow[], planOf: (id?: string) => string | null | undefined, users: number, paying: number): NonNullable<Dashboard["revenue"]> {
+const PAYING_STATUSES = new Set(["active", "past_due"]);
+/** Mediodía de Costa Rica del día dado: "ahora" fijo para que los cálculos demo no dependan de la hora. */
+const crNow = (today: string) => new Date(`${today}T12:00:00-06:00`);
+
+function revenueOf(subs: SubRow[], planOf: (id?: string) => string | null | undefined, users: number, paying: number, now: Date): NonNullable<Dashboard["revenue"]> {
   const m = mrr(subs, planOf);
-  return { mrr: m.total, byPlan: m.byPlan, churn: churn(subs, new Date(), 30), conversion: pct(paying, users) };
+  return { mrr: m.total, byPlan: m.byPlan, churn: churn(subs, now, 30), conversion: pct(paying, users) };
 }
 
 type RetRpc = { cohort: string; size: number; d1: number; d1_eligible: number; d7: number; d7_eligible: number; d30: number; d30_eligible: number };
 function retentionFromRpc(rows: RetRpc[], today: string): CohortRow[] {
   const by = new Map(rows.map((x) => [String(x.cohort).slice(0, 10), x]));
   const first = addDays(weekOf(today), -7 * (RET_WEEKS - 1));
-  const c = (n: number, e: number) => ({ n, eligible: e, rate: e ? pct(n, e) : null });
   return Array.from({ length: RET_WEEKS }, (_, i) => {
     const w = addDays(first, 7 * (RET_WEEKS - 1 - i));
     const x = by.get(w);
-    return { cohort: w, size: x?.size ?? 0, d1: c(x?.d1 ?? 0, x?.d1_eligible ?? 0), d7: c(x?.d7 ?? 0, x?.d7_eligible ?? 0), d30: c(x?.d30 ?? 0, x?.d30_eligible ?? 0) };
+    const size = Number(x?.size ?? 0);
+    const c = (n: number, e: number) => ({ n: Number(n), eligible: Number(e), rate: cellRate(Number(n), Number(e), size) });
+    return { cohort: w, size, d1: c(x?.d1 ?? 0, x?.d1_eligible ?? 0), d7: c(x?.d7 ?? 0, x?.d7_eligible ?? 0), d30: c(x?.d30 ?? 0, x?.d30_eligible ?? 0) };
   });
 }
 
@@ -158,9 +163,14 @@ async function profileNames(sb: SB, ids: string[]): Promise<Map<string, string>>
 // ─────────── Usuarios ───────────
 
 export type UserFilters = { q?: string; plan?: string; role?: string; status?: string; from?: string; to?: string; page?: number };
-export type UserRow = { id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; last_active: string | null; comp_until: string | null };
+export type UserRow = {
+  id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; last_active: string | null; comp_until: string | null;
+  /** Estado y periodicidad de la suscripción más reciente (misma fila que muestra Pagos). */
+  sub_status: string | null; billing: string | null;
+};
 
 export const USER_STATUS = [["activo", "Activo (7 d)"], ["inactivo", "Inactivo"], ["pendiente", "Sin terminar bienvenida"], ["cortesia", "Con cortesía"]] as const;
+export const ACTIVITY_LABEL: Record<string, string> = { activo: "Activo", inactivo: "Inactivo", pendiente: "Sin bienvenida" };
 
 export function statusOf(u: Pick<UserRow, "onboarded" | "last_active" | "comp_until">, today = crToday().iso): string {
   if (!u.onboarded) return "pendiente";
@@ -168,17 +178,25 @@ export function statusOf(u: Pick<UserRow, "onboarded" | "last_active" | "comp_un
   return "inactivo";
 }
 
+const norm = (x?: string | null) => (x ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const lastOf = (days: Set<string>) => [...days].sort().pop() ?? null;
+
+function demoUserRow(u: DemoUser): UserRow {
+  const comp = demoCompLive(u);
+  return {
+    id: u.id, full_name: u.full_name, email: u.email, role: u.role, plan: u.plan, onboarded: u.onboarded, created_at: u.created_at,
+    last_active: lastOf(u.days), comp_until: comp && u.plan === comp.plan && !(u.sub && PAYING_STATUSES.has(u.sub.status ?? "")) ? comp.expires_at : null,
+    sub_status: u.sub?.status ?? null, billing: u.sub?.billing ?? null,
+  };
+}
+
 export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: UserRow[]; total: number; limited: boolean }> {
   const page = Math.max(1, f.page ?? 1);
   const today = crToday().iso;
   if (v.demo) {
     const { users } = demoWorld();
-    const norm = (x?: string | null) => (x ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const q = f.q ? norm(f.q.trim()) : "";
-    let rows: UserRow[] = users.map((u) => {
-      const last = [...u.days].sort().pop() ?? null;
-      return { id: u.id, full_name: u.full_name, email: u.email, role: u.role, plan: u.plan, onboarded: u.onboarded, created_at: u.created_at, last_active: last, comp_until: u.id.endsWith("09") || u.id.endsWith("17") ? `${addDays(today, 20)}T23:59:59Z` : null };
-    });
+    let rows = users.map(demoUserRow);
     rows = rows.filter((u) =>
       (!q || norm(u.full_name).includes(q) || norm(u.email).includes(q) || u.id === q) &&
       (!f.plan || u.plan === f.plan) && (!f.role || u.role === f.role) &&
@@ -193,8 +211,8 @@ export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: User
     p_from: f.from || null, p_to: f.to || null, p_limit: PAGE_SIZE, p_offset: (page - 1) * PAGE_SIZE,
   });
   if (!error) {
-    const rows = (data ?? []) as (UserRow & { total: number })[];
-    return { rows, total: Number(rows[0]?.total ?? 0), limited: false };
+    const rows = (data ?? []) as (Omit<UserRow, "sub_status" | "billing"> & { total: number })[];
+    return { rows: await withSubs(sb, rows), total: Number(rows[0]?.total ?? 0), limited: false };
   }
   // Sin 0005: lectura directa de perfiles (sin correo ni última actividad).
   let query = sb.from("profiles").select("id,full_name,role,plan,onboarded,created_at", { count: "exact" }).order("created_at", { ascending: false });
@@ -205,8 +223,21 @@ export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: User
   if (f.from) query = query.gte("created_at", `${f.from}T00:00:00-06:00`);
   if (f.to) query = query.lte("created_at", `${f.to}T23:59:59-06:00`);
   const res = await query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-  const rows = ((res.data ?? []) as Omit<UserRow, "email" | "last_active" | "comp_until">[]).map((u) => ({ ...u, email: null, last_active: null, comp_until: null }));
-  return { rows, total: res.count ?? rows.length, limited: true };
+  const rows = ((res.data ?? []) as Omit<UserRow, "email" | "last_active" | "comp_until" | "sub_status" | "billing">[]).map((u) => ({ ...u, email: null, last_active: null, comp_until: null }));
+  return { rows: await withSubs(sb, rows), total: res.count ?? rows.length, limited: true };
+}
+
+/** Agrega a cada fila la suscripción más reciente del usuario (una sola consulta por página). */
+async function withSubs<T extends { id: string }>(sb: SB, rows: T[]): Promise<(T & { sub_status: string | null; billing: string | null })[]> {
+  const latest = new Map<string, SubRow>();
+  if (rows.length) {
+    const { data } = await sb.from("subscriptions").select("user_id,status,billing,price_id,created_at").in("user_id", rows.map((r) => r.id)).order("created_at", { ascending: false });
+    for (const s of (data ?? []) as SubRow[]) if (s.user_id && !latest.has(s.user_id)) latest.set(s.user_id, s);
+  }
+  return rows.map((r) => {
+    const s = latest.get(r.id);
+    return { ...r, sub_status: s?.status ?? null, billing: s ? resolvePlan(s).billing : null };
+  });
 }
 
 export type CompGrant = { id: number | string; plan: string; reason: string | null; starts_at: string; expires_at: string; revoked_at: string | null; granted_by_name?: string };
@@ -216,7 +247,7 @@ export type UserDetail = {
   account: { id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; country: string | null; last_sign_in_at: string | null; last_active: string | null };
   health?: { goal_type: string | null; equipment: string | null; train_days: number | null; goal: { start_weight: number; goal_weight: number; goal_date: string; mode: string } | null; weights: { day: string; kg: number }[] };
   activity?: { workouts_total: number; workouts_30: number; active_days_30: number; recent: string[] };
-  billing?: { subs: (SubRow & { planLabel: string; monthly: number })[]; comps: CompGrant[] };
+  billing?: { subs: (SubRow & { planLabel: string; monthly: number; period: number })[]; comps: CompGrant[] };
   audit?: AuditRow[];
 };
 
@@ -224,18 +255,22 @@ export async function getUserDetail(v: Viewer, id: string): Promise<UserDetail |
   const today = crToday().iso;
   const from30 = addDays(today, -29);
   if (v.demo) {
-    const { users, subs } = demoWorld();
+    const { users } = demoWorld();
     const u = users.find((x) => x.id === id);
     if (!u) return null;
     const days = [...u.days].sort();
-    const d: UserDetail = { account: { id: u.id, full_name: u.full_name, email: u.email, role: u.role, plan: u.plan, onboarded: u.onboarded, created_at: u.created_at, country: u.country, last_sign_in_at: days.length ? `${days[days.length - 1]}T07:30:00-06:00` : null, last_active: days[days.length - 1] ?? null } };
+    const last = days[days.length - 1] ?? null;
+    const d: UserDetail = { account: { id: u.id, full_name: u.full_name, email: u.email, role: u.role, plan: u.plan, onboarded: u.onboarded, created_at: u.created_at, country: u.country, last_sign_in_at: last ? `${last}T07:30:00-06:00` : null, last_active: last } };
     if (can(v.role, "users.health")) d.health = { goal_type: u.goal_type, equipment: u.equipment, train_days: u.train_days, goal: u.goal, weights: u.weights.slice(-60) };
-    if (can(v.role, "users.activity")) d.activity = { workouts_total: Math.round(days.length * 0.7), workouts_30: Math.round(days.filter((x) => x >= from30).length * 0.7), active_days_30: days.filter((x) => x >= from30).length, recent: days.slice(-28) };
+    if (can(v.role, "users.activity")) {
+      const w = [...u.workouts].sort();
+      d.activity = { workouts_total: w.length, workouts_30: w.filter((x) => x >= from30).length, active_days_30: days.filter((x) => x >= from30).length, recent: w.filter((x) => x >= addDays(today, -27)) };
+    }
     if (can(v.role, "users.billing")) d.billing = {
-      subs: subs.filter((s) => s.user_id === u.id).map((s) => decorateSub(s, u.plan)),
-      comps: u.id.endsWith("09") || u.id.endsWith("17") ? [{ id: 1, plan: "completo", reason: "Influencer piloto", starts_at: `${addDays(today, -10)}T10:00:00Z`, expires_at: `${addDays(today, 20)}T23:59:59Z`, revoked_at: null, granted_by_name: "Andrés Guevara" }] : [],
+      subs: u.sub ? [decorateSub(u.sub, u.plan)] : [],
+      comps: u.comp ? [{ id: 1, plan: u.comp.plan, reason: u.comp.reason, starts_at: u.comp.starts_at, expires_at: u.comp.expires_at, revoked_at: null, granted_by_name: "Andrés Guevara" }] : [],
     };
-    if (can(v.role, "audit.view")) d.audit = DEMO_AUDIT.filter((a) => a.target === u.id);
+    if (can(v.role, "audit.view")) d.audit = demoAudit().filter((a) => a.target === u.id);
     return d;
   }
 
@@ -282,55 +317,82 @@ export async function getUserDetail(v: Viewer, id: string): Promise<UserDetail |
   return d;
 }
 
-const PLAN_LABEL: Record<string, string> = { entreno: "Entreno", completo: "Entreno + Nutrición" };
+export const PLAN_LABEL: Record<string, string> = { free: "Gratis", entreno: "Entreno", completo: "Entreno + Nutrición", pro: "Entreno + Nutrición (legado)" };
+export const BILLING_LABEL: Record<string, string> = { mes: "mensual", anual: "anual" };
 function decorateSub(s: SubRow, fallbackPlan?: string | null) {
   const { plan, billing } = resolvePlan(s, fallbackPlan);
-  return { ...s, planLabel: `${plan ? PLAN_LABEL[plan] : "—"} · ${billing === "anual" ? "anual" : "mensual"}`, monthly: Math.round(monthlyValue(s, fallbackPlan) * 100) / 100 };
+  const period = typeof s.amount === "number" && s.amount > 0 ? s.amount : plan ? PLANS.find((x) => x.id === plan)!.price[billing] : 0;
+  return { ...s, planLabel: `${plan ? PLAN_LABEL[plan] : "Plan sin identificar"} · ${BILLING_LABEL[billing]}`, monthly: Math.round(monthlyValue(s, fallbackPlan) * 100) / 100, period };
 }
 
 // ─────────── Pagos ───────────
 
-type PaymentRow = { id: string | number; user_id?: string; amount?: number; status?: string; created_at?: string; failure_reason?: string };
-export type SubListRow = SubRow & { planLabel: string; monthly: number; name: string | null };
-export async function listSubscriptions(v: Viewer, f: { status?: string; page?: number }) {
-  const page = Math.max(1, f.page ?? 1);
-  let all: SubRow[] = [];
-  let names = new Map<string, string>();
-  let plans = new Map<string, string>();
-  let payments: PaymentRow[] | null = null;
+export type PaymentRow = { id: string | number; user_id?: string; amount?: number; status?: string; created_at?: string; failure_reason?: string };
+export type SubListRow = SubRow & { planLabel: string; monthly: number; period: number; name: string | null; email: string | null; planId: string | null; billingId: string };
+export type SubFilters = { status?: string; plan?: string; billing?: string; q?: string; page?: number };
+
+async function loadSubs(v: Viewer) {
   if (v.demo) {
     const w = demoWorld();
-    all = w.subs;
-    names = new Map(w.users.map((u) => [u.id, u.full_name]));
-    plans = new Map(w.users.map((u) => [u.id, u.plan]));
-  } else {
-    const sb = await createClient();
-    const { data } = await sb.from("subscriptions").select("*").order("created_at", { ascending: false }).limit(5000);
-    all = (data ?? []) as SubRow[];
-    const ids = all.map((s) => s.user_id!).filter(Boolean);
-    [names, plans] = await Promise.all([profileNames(sb, ids), profilePlans(sb, ids)]);
-    // La integración de pagos puede crear public.payments; si existe, mostramos los cobros fallidos.
-    const pay = await sb.from("payments").select("*").in("status", ["failed", "declined", "error"]).order("created_at", { ascending: false }).limit(50);
-    if (!pay.error) payments = (pay.data ?? []) as PaymentRow[];
+    return {
+      now: crNow(w.key), all: w.subs.slice().sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")),
+      names: new Map(w.users.map((u) => [u.id, u.full_name])), emails: new Map(w.users.map((u) => [u.id, u.email])), plans: new Map(w.users.map((u) => [u.id, u.plan])),
+      payments: w.failedPayments.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)) as PaymentRow[] | null,
+    };
   }
-  const now = new Date();
+  const sb = await createClient();
+  const { data } = await sb.from("subscriptions").select("*").order("created_at", { ascending: false }).limit(5000);
+  const all = (data ?? []) as SubRow[];
+  const ids = all.map((s) => s.user_id!).filter(Boolean);
+  const [names, plans] = await Promise.all([profileNames(sb, ids), profilePlans(sb, ids)]);
+  // La integración de pagos puede crear public.payments; si existe, mostramos los cobros fallidos.
+  const pay = await sb.from("payments").select("*").in("status", ["failed", "declined", "error"]).order("created_at", { ascending: false }).limit(50);
+  return { now: new Date(), all, names, emails: new Map<string, string>(), plans, payments: pay.error ? null : ((pay.data ?? []) as PaymentRow[]) };
+}
+
+type Loaded = Awaited<ReturnType<typeof loadSubs>>;
+function decorateAll({ all, names, emails, plans }: Loaded): SubListRow[] {
+  return all.map((s) => {
+    const fallback = s.user_id ? plans.get(s.user_id) : null;
+    const { plan, billing } = resolvePlan(s, fallback);
+    return { ...decorateSub(s, fallback), name: s.user_id ? names.get(s.user_id) ?? null : null, email: s.user_id ? emails.get(s.user_id) ?? null : null, planId: plan, billingId: billing };
+  });
+}
+
+function filterSubs(rows: SubListRow[], f: SubFilters) {
+  const q = f.q ? norm(f.q.trim()) : "";
+  return rows.filter((s) =>
+    (!f.status || (f.status === "fallido" ? FAILED.has(s.status ?? "") : f.status === "canceled" ? s.status === "canceled" || s.status === "cancelled" : s.status === f.status)) &&
+    (!f.plan || s.planId === f.plan) && (!f.billing || s.billingId === f.billing) &&
+    (!q || norm(s.name).includes(q) || norm(s.email).includes(q) || norm(s.provider_customer_id).includes(q) || norm(s.provider_subscription_id).includes(q)));
+}
+
+export async function listSubscriptions(v: Viewer, f: SubFilters) {
+  const page = Math.max(1, f.page ?? 1);
+  const loaded = await loadSubs(v);
+  const { now, all, names, plans, payments } = loaded;
   const m = mrr(all, (id) => (id ? plans.get(id) : null));
   const count = (st: string) => all.filter((s) => s.status === st).length;
-  const deco = (s: SubRow): SubListRow => ({ ...decorateSub(s, s.user_id ? plans.get(s.user_id) : null), name: s.user_id ? names.get(s.user_id) ?? null : null });
-  const filtered = f.status ? all.filter((s) => (f.status === "fallido" ? FAILED.has(s.status ?? "") : s.status === f.status)) : all;
+  const decorated = decorateAll(loaded);
+  const filtered = filterSubs(decorated, f);
   const in7 = now.getTime() + 7 * 864e5;
   return {
     summary: {
       mrr: m.total, byPlan: m.byPlan, arr: Math.round(m.total * 12 * 100) / 100,
       active: count("active"), trialing: count("trialing"), past_due: count("past_due"), canceled: all.filter((s) => s.status === "canceled" || s.status === "cancelled").length,
       churn: churn(all, now, 30),
-      renewing7: all.filter((s) => s.status === "active" && s.current_period_end && Date.parse(s.current_period_end) <= in7 && Date.parse(s.current_period_end) >= now.getTime()).length,
+      renewing7: all.filter((s) => s.status === "active" && !s.cancel_at_period_end && s.current_period_end && Date.parse(s.current_period_end) <= in7 && Date.parse(s.current_period_end) >= now.getTime()).length,
     },
-    failed: all.filter((s) => FAILED.has(s.status ?? "")).map(deco),
-    payments,
-    rows: filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(deco),
+    failed: decorated.filter((s) => FAILED.has(s.status ?? "")),
+    payments: payments?.map((p) => ({ ...p, name: p.user_id ? names.get(p.user_id) ?? null : null })) ?? null,
+    rows: filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     total: filtered.length,
   };
+}
+
+/** Todas las filas que coinciden con los filtros (sin paginar), para exportar a CSV. */
+export async function exportSubscriptions(v: Viewer, f: SubFilters): Promise<SubListRow[]> {
+  return filterSubs(decorateAll(await loadSubs(v)), f);
 }
 
 // ─────────── Contenido ───────────
@@ -407,9 +469,10 @@ export type AuditFilters = { action?: string; actor?: string; target?: string; f
 export async function listAudit(v: Viewer, f: AuditFilters): Promise<{ rows: AuditRow[]; total: number; actions: string[] }> {
   const page = Math.max(1, f.page ?? 1);
   if (v.demo) {
-    let rows: AuditRow[] = DEMO_AUDIT;
+    const all: AuditRow[] = demoAudit();
+    let rows = all;
     rows = rows.filter((r) => (!f.action || r.action.startsWith(f.action)) && (!f.actor || r.actor === f.actor || r.actor_name?.toLowerCase().includes(f.actor.toLowerCase())) && (!f.target || r.target?.includes(f.target)) && (!f.from || crDay(r.created_at) >= f.from) && (!f.to || crDay(r.created_at) <= f.to));
-    return { rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: rows.length, actions: [...new Set(DEMO_AUDIT.map((r) => r.action))].sort() };
+    return { rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: rows.length, actions: [...new Set(all.map((r) => r.action))].sort() };
   }
   const sb = await createClient();
   let q = sb.from("audit_log").select("*", { count: "exact" }).order("created_at", { ascending: false });
