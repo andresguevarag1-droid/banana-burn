@@ -31,7 +31,7 @@ export function DayTracker({ initial, base, target, dateKey, demo }: { initial: 
     setLog(next);
     try { navigator.vibrate?.(15); } catch { /* */ }
     if (demo) { try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* */ } return; }
-    start(() => { setDaily(field, next[field]); });
+    start(() => { setDaily(field, next[field] ?? 0); });
   }
 
   const items: { f: DailyField; label: string; icon: React.ReactNode; color: string; val: number; goal: number; unit: string; fmt: (n: number) => string; quick: [string, number][] }[] = [

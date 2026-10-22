@@ -28,8 +28,8 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
           {staff && <Link href="/admin" className="flex items-center gap-3 rounded-2xl px-3 h-11 font-semibold text-muted hover:bg-white hover:text-ink"><Shield className="size-5" />Admin</Link>}
         </nav>
         <div className="mt-auto flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
-          <span className="grid place-items-center size-9 rounded-full bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
-          <span className="flex-1 truncate font-semibold text-ink">{name}</span>
+          <Link href="/app/perfil" className="flex flex-1 min-w-0 items-center gap-3"><span className="grid place-items-center size-9 rounded-full bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
+          <span className="flex-1 truncate font-semibold text-ink">{name}</span></Link>
           <form action="/auth/salir" method="post"><button className="text-muted hover:text-ink" aria-label="Cerrar sesión"><LogOut className="size-4" /></button></form>
         </div>
       </aside>

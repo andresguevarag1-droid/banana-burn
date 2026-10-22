@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Brain, Dumbbell, Flame, Moon, Repeat, Salad, Check, X } from "lucide-react";
-import { PhoneMock } from "@/components/phone";
+import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
 import { DAY_NAMES, planWeek } from "@/lib/engine";
 
@@ -54,7 +54,10 @@ export default function Landing() {
             </div>
             <p className="mt-4 text-sm text-faint">Desde $4.99/mes · Listo en 2 minutos · Cancela cuando quieras</p>
           </div>
-          <div className="relative"><PhoneMock /></div>
+          <div className="relative flex justify-center">
+            <Phone src="/landing/entreno.png" alt="Reproductor de entreno de Banana Burn" className="hidden sm:block absolute w-[240px] -left-2 top-16 -rotate-6 opacity-95" />
+            <Phone src="/landing/hoy.png" alt="Pantalla Hoy de Banana Burn con la rutina del día" className="relative w-[280px] sm:w-[300px] animate-floaty sm:translate-x-16" priority />
+          </div>
         </div>
       </section>
 
@@ -62,6 +65,27 @@ export default function Landing() {
       <section className="border-y border-line bg-cream">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm font-semibold text-muted">
           <span>🍌 Español real, no traducido</span><span>🫘 Comida tica y latina</span><span>📲 SINPE Móvil</span><span>🏋️ Gym o casa</span><span>🔒 Datos privados</span>
+        </div>
+      </section>
+
+      {/* LA APP POR DENTRO */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
+        <div className="max-w-2xl">
+          <p className="eyebrow">La app por dentro</p>
+          <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Todo lo que necesitas para bajar de peso, en tu bolsillo.</h2>
+        </div>
+        <div className="mt-12 -mx-4 px-4 flex gap-6 overflow-x-auto snap-x snap-mandatory pb-6 lg:grid lg:grid-cols-4 lg:overflow-visible">
+          {[
+            ["/landing/hoy.png", "🔥 Hoy", "Tu rutina del día, tu racha y tus metas de proteína, agua y pasos de un vistazo."],
+            ["/landing/entreno.png", "🏋️ En el gym", "Te dice cuánto levantar en cada serie, cuenta tu descanso y celebra tus récords."],
+            ["/landing/nutricion.png", "🥗 Comida tica", "Registra gallo pinto o un casado en 2 toques y ve cuánto te queda del día."],
+            ["/landing/progreso.png", "📉 Progreso real", "Tu tendencia de peso y tu fuerza. La IA ajusta calorías cada semana."],
+          ].map(([src, t, d]) => (
+            <figure key={src} className="snap-center shrink-0 w-[260px] lg:w-auto">
+              <Phone src={src} alt={t} />
+              <figcaption className="mt-5"><p className="text-lg font-extrabold text-ink">{t}</p><p className="mt-1 text-muted leading-relaxed">{d}</p></figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 
@@ -76,7 +100,7 @@ export default function Landing() {
             <div key={t} className="card p-6 hover:shadow-lift transition-shadow">
               <span className="grid place-items-center size-12 rounded-2xl bg-banana-soft text-ink"><Icon className="size-6" /></span>
               <h3 className="mt-5 text-lg font-bold text-ink">{t}</h3>
-              <p className="mt-2 text-muted leading-relaxed">{d}</p>
+              <p className="mt-2 text-[17px] text-muted leading-relaxed">{d}</p>
             </div>
           ))}
         </div>
@@ -127,6 +151,22 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* RETO DEL FUNDADOR */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] items-center rounded-[2rem] bg-ink text-white p-8 sm:p-12">
+          <div>
+            <p className="eyebrow text-banana">El reto del fundador</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">94 → 85 kg antes del 31 de diciembre. En público.</h2>
+            <p className="mt-4 text-lg text-white/70 leading-relaxed">Soy Andrés, de San José, y soy el usuario #1 de Banana Burn. La construí porque ninguna app me decía qué hacer hoy en el gym, en español y con la comida de aquí. Sígueme el reto: cada semana comparto mi peso, mi fuerza y lo que estoy comiendo.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            {[["−9 kg", "meta"], ["4 días", "de gym"], ["185 g", "proteína/día"]].map(([v, l]) => (
+              <div key={l} className="rounded-3xl bg-white/5 border border-white/10 p-5"><p className="text-3xl font-extrabold text-banana tabular-nums">{v}</p><p className="mt-1 text-sm text-white/60">{l}</p></div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* PRECIOS */}
       <section id="precios" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
         <div className="text-center max-w-2xl mx-auto mb-14">
@@ -157,6 +197,7 @@ export default function Landing() {
           <div aria-hidden className="absolute -right-10 -bottom-16 text-[220px] leading-none opacity-20 rotate-12">🍌</div>
           <h2 className="relative text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Tu mejor versión empieza el lunes.<br className="hidden sm:block" /> O mejor: hoy.</h2>
           <Link href="/entrar?modo=registro" className="relative mt-8 btn-primary h-14 px-8 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
+          <p className="relative mt-4 text-sm font-semibold text-ink/70">Desde $4.99/mes con el plan anual · cancela cuando quieras</p>
         </div>
       </section>
     </>

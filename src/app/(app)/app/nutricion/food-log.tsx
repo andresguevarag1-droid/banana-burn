@@ -102,7 +102,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
             <p className="text-sm font-semibold text-muted">{left >= 0 ? "Te quedan" : "Te pasaste por"}</p>
             <p className={`text-4xl font-extrabold tracking-tight tabular-nums ${left >= 0 ? "text-ink" : "text-ember-ink"}`}>{n0(Math.abs(left))} <span className="text-lg text-muted">kcal</span></p>
           </div>
-          <p className="text-right text-sm text-muted tabular-nums"><b className="text-ink">{n0(tot.kcal)}</b> comidas<br />de {n0(targets.kcal)} meta</p>
+          <p className="text-right text-sm text-muted tabular-nums"><b className="text-ink">{n0(tot.kcal)}</b> consumidas<br />de {n0(targets.kcal)} kcal</p>
         </div>
         <div className="mt-3 h-3 rounded-full bg-line overflow-hidden"><div className={`h-full rounded-full transition-all duration-700 ${left >= 0 ? "bg-ink" : "bg-ember"}`} style={{ width: `${Math.min(100, (tot.kcal / targets.kcal) * 100)}%` }} /></div>
         <div className="mt-4 grid grid-cols-3 gap-3">

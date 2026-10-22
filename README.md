@@ -12,6 +12,7 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
 | `/app` | **Hoy**: racha 🔥, nivel/XP, rutina del día, pesaje rápido, anillos de proteína/kcal/agua/pasos/sueño |
 | `/app/entreno` | Reproductor para el gym: animación de técnica, cargas sugeridas, descanso con alarma, récords, resumen |
 | `/app/entrenar` · `/nutricion` · `/progreso` · `/coach` | Programa por bloques con selector de día, registro de comidas con base tica (70 alimentos), gráficas de peso y fuerza con ajuste semanal, Coach IA con Claude (streaming) |
+| `/app/perfil` | Plan de entreno (días, gym/casa, ritmo), suscripción, descargar datos y borrar cuenta (Ley 8968) |
 | `/admin` · `/admin/usuarios` | Panel de staff con KPIs y usuarios (solo roles coach/support/admin/superadmin) |
 
 - `src/lib/engine/` — motor portado del prototipo: calorías (Mifflin-St Jeor), doble progresión con reinicio −10 %, descargas, tendencia de peso, plan semanal anti-aburrimiento. Tests: `npm test`.
@@ -27,7 +28,7 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
 3. Authentication → Email: activa *Email OTP*. En **Email Templates → Magic Link** incluye `{{ .Token }}` para que llegue el código de 6 dígitos.
 4. Authentication → URL Configuration: Site URL = tu dominio de Vercel; Redirect URLs = `https://TU-DOMINIO/auth/callback` y `http://localhost:3000/auth/callback`.
 5. (Opcional) Authentication → Providers → Google con tu Client ID/Secret.
-6. (Coach IA) agrega `ANTHROPIC_API_KEY` en Vercel.
+6. (Coach IA) agrega `ANTHROPIC_API_KEY` en Vercel. Para que "Borrar mi cuenta" funcione agrega también `SUPABASE_SERVICE_ROLE_KEY` (solo servidor).
 7. Copia `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a Vercel → Settings → Environment Variables y redepliega.
 8. Regístrate en `/entrar` y hazte superadmin en el SQL Editor:
    ```sql

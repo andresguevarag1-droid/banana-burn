@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
@@ -7,6 +7,7 @@ import { getMeals, sumMeals } from "@/lib/meals";
 import { DAY_NAMES } from "@/lib/engine";
 import { DayTracker } from "@/components/day-tracker";
 import { WeighIn } from "@/components/weigh-in";
+import { Readiness } from "@/components/readiness";
 
 export const metadata = { title: "Hoy" };
 
@@ -40,10 +41,13 @@ export default async function Hoy() {
           <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
           <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">¡Pura vida, {a.name}!</h1>
         </div>
-        <Link href="/app/progreso#logros" className="shrink-0 flex flex-col items-center rounded-2xl bg-white border border-line px-3 py-1.5" aria-label={`Racha de ${g.streak.days} días`}>
-          <span className={`text-2xl leading-none ${g.streak.todayDone ? "" : "grayscale-[.6] opacity-80"}`}>🔥</span>
-          <span className="text-sm font-extrabold text-ink tabular-nums">{g.streak.days}</span>
-        </Link>
+        <div className="shrink-0 flex items-center gap-2">
+          <Link href="/app/progreso#logros" className="flex flex-col items-center rounded-2xl bg-white border border-line px-3 py-1.5" aria-label={`Racha de ${g.streak.days} días`}>
+            <span className={`text-2xl leading-none ${g.streak.todayDone ? "" : "grayscale-[.6] opacity-80"}`}>🔥</span>
+            <span className="text-sm font-extrabold text-ink tabular-nums">{g.streak.days}</span>
+          </Link>
+          <Link href="/app/perfil" className="lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
+        </div>
       </header>
 
       <Link href="/app/progreso#logros" className="block card p-3.5">
@@ -91,7 +95,7 @@ export default async function Hoy() {
               {g.trainedToday ? (
                 <p className="relative mt-5 font-extrabold text-peel">✅ ¡Entreno de hoy completado! Descansa y come bien.</p>
               ) : (
-                <Link href="/app/entreno" className="relative mt-5 btn-primary w-full sm:w-auto h-14 px-7 text-base">Empezar entreno <ArrowRight className="size-5" /></Link>
+                <div className="relative mt-5"><Readiness initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
               )}
             </>
           ) : (

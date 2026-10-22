@@ -661,3 +661,13 @@ export const TECH: Record<string, Technique> = {
   "mono": "Pausa atrás: <b>calidad sobre ego</b>."
  }
 };
+
+// Variantes para entrenar en casa
+Object.assign(TECH, {
+  floorpress: { anim: "bench", mus: "Pecho · tríceps · hombro anterior", how: ["Acuéstate en el piso con rodillas dobladas y una mancuerna en cada mano.", "Codos a 45° del torso, tocan el piso suave en cada rep.", "Pausa 1 s abajo y empuja fuerte hacia arriba."], cues: ["Codos a 45°", "Escápulas pegadas al piso"], err: ["Rebotar los codos en el piso"], mono: "Mono empuja el coco al techo <b>sin rebotar</b>." },
+  dbrdl: { anim: "rdl", mus: "Femorales · glúteos · espalda baja", how: ["De pie, mancuernas frente a los muslos.", "Lleva la cadera atrás con rodillas apenas dobladas.", "Baja hasta sentir el estiramiento atrás del muslo y sube apretando glúteo."], cues: ["Cadera atrás", "Espalda neutra"], err: ["Redondear la espalda"], mono: "Mono cierra la puerta del carro <b>con la cola</b>." },
+  invrow: { anim: "row", mus: "Espalda · bíceps", how: ["Acuéstate bajo una mesa firme o barra baja y agárrala.", "Cuerpo en tabla, talones en el piso.", "Tira del pecho hacia la mesa y baja lento 3 s."], cues: ["Cuerpo en tabla", "Codos al bolsillo"], err: ["Dejar caer la cadera"], mono: "Mono se sube al árbol <b>con la espalda</b>, no con los brazos." },
+  bandpull: { anim: "pullup", mus: "Dorsales · bíceps", how: ["Ancla la banda arriba de una puerta.", "De rodillas, tira codos hacia las costillas.", "Vuelve lento sin soltar la tensión."], cues: ["Pecho alto", "Codos abajo y atrás"], err: ["Encoger los hombros"], mono: "Mono jala la liana <b>con los codos</b>." },
+  legraisef: { anim: "plank", mus: "Abdomen inferior", how: ["Boca arriba, manos bajo la cadera.", "Sube las piernas rectas hasta 90°.", "Baja lento sin que la espalda baja se despegue."], cues: ["Espalda baja pegada al piso"], err: ["Arquear la espalda"], mono: "Mono baja las piernas <b>como en cámara lenta</b>." },
+  bicycle: { anim: "plank", mus: "Oblicuos · abdomen", how: ["Boca arriba, manos detrás de la cabeza.", "Lleva codo hacia la rodilla contraria alternando.", "Ritmo controlado, sin jalar el cuello."], cues: ["Gira el torso, no el cuello"], err: ["Ir demasiado rápido"], mono: "Mono pedalea <b>lento y con giro</b>." },
+});

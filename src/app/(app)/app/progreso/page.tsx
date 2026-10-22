@@ -110,7 +110,7 @@ export default async function Progreso() {
         ) : <p className="text-muted">Tu primer entreno aparecerá aquí. ¡Hoy es buen día! 🍌</p>}
       </section>
 
-      <details className="card group" open={!a.complete}>
+      <details id="meta" className="card group scroll-mt-6" open={!a.complete}>
         <summary className="cursor-pointer list-none p-5 flex items-center justify-between font-bold text-ink">🎯 Mi perfil y meta<span className="text-xl transition-transform group-open:rotate-45">+</span></summary>
         <div className="px-5 pb-5"><ProfileForm a={a} /></div>
       </details>

@@ -3,8 +3,8 @@ import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { crToday } from "@/lib/today";
 
-const COL = { water: "water_glasses", steps: "steps", sleep: "sleep_h", protein: "protein_g", kcal: "kcal" } as const;
-const MAX = { water: 20, steps: 80000, sleep: 16, protein: 500, kcal: 8000 };
+const COL = { water: "water_glasses", steps: "steps", sleep: "sleep_h", protein: "protein_g", kcal: "kcal", energy: "energy" } as const;
+const MAX = { water: 20, steps: 80000, sleep: 16, protein: 500, kcal: 8000, energy: 3 };
 export type DailyField = keyof typeof COL;
 
 /** Guarda un valor del día (absoluto). XP la primera vez que se registra algo hoy. */

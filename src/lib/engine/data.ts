@@ -41,6 +41,12 @@ export const EX = {
   carry: { n: "Paseo del granjero", m: "Agarre", inc: 2 },
   suitcase: { n: "Paseo maleta (una mano)", m: "Core", inc: 2 },
   carryp: { n: "Paseo con pausa", m: "Agarre", inc: 2 },
+  floorpress: { n: "Press de piso con mancuernas", m: "Pecho", inc: 2 },
+  dbrdl: { n: "Peso muerto rumano con mancuernas", m: "Femorales", inc: 2 },
+  invrow: { n: "Remo invertido (mesa o barra baja)", m: "Espalda", inc: 0 },
+  bandpull: { n: "Jalón con banda", m: "Espalda", inc: 0 },
+  legraisef: { n: "Elevación de piernas en el piso", m: "Core", inc: 0 },
+  bicycle: { n: "Bicicleta abdominal", m: "Core", inc: 0 },
 } as const;
 
 export const SLOTS: Record<string, ExerciseId[]> = {
@@ -83,6 +89,7 @@ export const ALTS: Record<string, ExerciseId[]> = {
   deadlift: ["rdl"], rdl: ["deadlift"],
   pullup: ["chinup", "lat"], chinup: ["pullup", "lat"], lat: ["pullup", "chinup"],
   row: ["dbrow"], dbrow: ["row"],
+  floorpress: ["pushupe", "pushup"], dbrdl: ["goblet"], invrow: ["dbrow", "bandpull"], bandpull: ["invrow", "dbrow"],
 };
 
 /** Ejercicios con barra olímpica (para la calculadora de discos). */
@@ -96,3 +103,14 @@ export function platesPerSide(kg: number, bar = 20): number[] | null {
   for (const p of [25, 20, 15, 10, 5, 2.5, 1.25]) while (side >= p - 1e-9) { out.push(p); side -= p; }
   return side > 0.01 ? null : out;
 }
+
+export type Equipment = "gym" | "casa" | "mixto";
+
+/** Versión en casa (mancuernas, bandas o peso corporal) de cada ejercicio que requiere gimnasio. */
+export const HOME: Partial<Record<ExerciseId, ExerciseId>> = {
+  squat: "goblet", frontsquat: "goblet", bench: "floorpress", closebench: "pushupd", incline: "pushupe",
+  ohp: "dbpress", deadlift: "dbrdl", rdl: "dbrdl", pullup: "invrow", chinup: "invrow", lat: "bandpull",
+  row: "dbrow", dips: "pushupd", dipsw: "pushupd", facepull: "reardelt", facepullp: "reardelt", lateralc: "lateral",
+  kneeraise: "legraisef", legraise: "legraisef", twistraise: "bicycle", curl: "hammer",
+};
+export const forEquipment = (id: ExerciseId, eq: Equipment = "gym"): ExerciseId => (eq === "casa" ? HOME[id] ?? id : id);

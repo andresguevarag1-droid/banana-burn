@@ -81,3 +81,16 @@ describe("discos y alternativas", () => {
   it("menos que la barra = null", () => expect(platesPerSide(15)).toBeNull());
   it("todas las alternativas existen", () => Object.values(ALTS).flat().forEach((id) => expect(EX[id]).toBeDefined()));
 });
+
+import { planDay as pd, HOME, BARBELL } from ".";
+describe("entreno en casa", () => {
+  it("ningún ejercicio de barra ni barra fija en casa", () => {
+    for (let w = 0; w < 3; w++) for (const d of [1, 2, 3, 4, 5, 6]) {
+      pd(d, w, undefined, "casa").exercises.forEach((e) => {
+        expect(BARBELL.has(e.id)).toBe(false);
+        expect(["pullup", "chinup", "kneeraise", "legraise", "twistraise", "dips", "lat"]).not.toContain(e.id);
+      });
+    }
+  });
+  it("todos los reemplazos existen", () => Object.values(HOME).forEach((id) => expect(EX[id!]).toBeDefined()));
+});

@@ -1,4 +1,4 @@
-import { DEFAULT_WEEK, EX, SLOTS, TPL, type ExerciseId, type SlotCfg, type TemplateId } from "./data";
+import { DEFAULT_WEEK, EX, SLOTS, TPL, forEquipment, type Equipment, type ExerciseId, type SlotCfg, type TemplateId } from "./data";
 
 export * from "./data";
 
@@ -91,19 +91,20 @@ export type PlannedExercise = { id: ExerciseId; name: string; muscle: string; cf
 export type PlannedDay = { dow: number; tpl: TemplateId | null; name: string; tag: string; emoji: string; exercises: PlannedExercise[]; cardio?: string; mins?: number };
 
 /** Rutina de un día: las variantes rotan cada semana, así nada se repite. */
-export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK): PlannedDay {
+export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, equipment: Equipment = "gym"): PlannedDay {
   const tplId = schedule[dow];
   if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", emoji: "🌴", exercises: [], cardio: "Camina 8–12k pasos y estira 10 min" };
   const t = TPL[tplId];
   const exercises = t.ex.map((cfg) => {
-    const id = (cfg.id ?? SLOTS[cfg.slot!][week % SLOTS[cfg.slot!].length]) as ExerciseId;
+    const base = (cfg.id ?? SLOTS[cfg.slot!][week % SLOTS[cfg.slot!].length]) as ExerciseId;
+    const id = forEquipment(base, equipment);
     return { id, name: EX[id].n, muscle: EX[id].m, cfg };
   });
   return { dow, tpl: tplId, name: t.n, tag: t.tag, emoji: t.emoji, exercises, cardio: t.cardio, mins: t.mins };
 }
 
-export function planWeek(week: number, schedule = DEFAULT_WEEK): PlannedDay[] {
-  return [1, 2, 3, 4, 5, 6, 0].map((d) => planDay(d, week, schedule));
+export function planWeek(week: number, schedule = DEFAULT_WEEK, equipment: Equipment = "gym"): PlannedDay[] {
+  return [1, 2, 3, 4, 5, 6, 0].map((d) => planDay(d, week, schedule, equipment));
 }
 
 /** Semana según días disponibles (3–6). Nunca repite plantilla en días seguidos. */
