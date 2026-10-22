@@ -59,7 +59,11 @@ export async function saveWorkout(input: Finished): Promise<SaveResult> {
     const mins = Math.max(1, Math.round((now - started) / 60000));
     const { data: post } = await sb.from("posts").insert({
       user_id: v.id, kind: "workout", workout_id: wk.id, body: w.note?.slice(0, 500) || null, visibility: prof?.visibility === "privado" ? "privado" : prof?.visibility ?? "seguidores",
-      data: { title: w.title?.slice(0, 60), icon: /^[a-zA-Z]{1,24}$/.test(w.icon ?? "") ? w.icon : "barbell", mins: Math.min(mins, 240), sets: rows.length, volume, prs: prNames.slice(0, 10) },
+      data: {
+        title: w.title?.slice(0, 60), icon: /^[a-zA-Z]{1,24}$/.test(w.icon ?? "") ? w.icon : "barbell", mins: Math.min(mins, 240), sets: rows.length, volume, prs: prNames.slice(0, 10),
+        // Para la tarjeta del feed: XP ganado y los ejercicios hechos (nombres, máx. 6). Nunca peso corporal ni medidas.
+        xp, ex: [...new Set(w.exercises.filter((e) => e.sets.length).map((e) => nameOf(e.id).slice(0, 40)))].slice(0, 6),
+      },
     }).select("id").single();
     postId = post ? String(post.id) : undefined;
   }
