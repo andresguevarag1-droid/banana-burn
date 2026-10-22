@@ -345,9 +345,10 @@ async function loadSubs(v: Viewer) {
   const all = (data ?? []) as SubRow[];
   const ids = all.map((s) => s.user_id!).filter(Boolean);
   const [names, plans] = await Promise.all([profileNames(sb, ids), profilePlans(sb, ids)]);
-  // La integración de pagos puede crear public.payments; si existe, mostramos los cobros fallidos.
-  const pay = await sb.from("payments").select("*").in("status", ["failed", "declined", "error"]).order("created_at", { ascending: false }).limit(50);
-  return { now: new Date(), all, names, emails: new Map<string, string>(), plans, payments: pay.error ? null : ((pay.data ?? []) as PaymentRow[]) };
+  // Cobros rechazados: eventos de ONVO guardados por el webhook (payment_events).
+  const pay = await sb.from("payment_events").select("id,user_id,amount_minor,type,note,received_at").ilike("type", "%failed%").order("received_at", { ascending: false }).limit(50);
+  const payments = pay.error ? null : (pay.data ?? []).map((r) => ({ id: r.id as number, user_id: (r.user_id as string) ?? undefined, amount: r.amount_minor != null ? Number(r.amount_minor) / 100 : undefined, status: "failed", created_at: r.received_at as string, failure_reason: (r.note as string) ?? (r.type as string) })) as PaymentRow[];
+  return { now: new Date(), all, names, emails: new Map<string, string>(), plans, payments };
 }
 
 type Loaded = Awaited<ReturnType<typeof loadSubs>>;

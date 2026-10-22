@@ -2,7 +2,7 @@
 // Formularios de acciones del panel: estado accesible (aria-live), botón con pending y diálogo de confirmación nativo.
 import { useActionState, useEffect, useId, useRef, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, Warning as TriangleAlert } from "@/components/icons";
 import type { ActionState } from "@/app/admin/actions";
 
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, ExternalLink, Undo2 } from "lucide-react";
+import { DownloadSimple as Download, ArrowSquareOut as ExternalLink, ArrowUUpLeft as Undo2 } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { listSubscriptions, PAGE_SIZE } from "@/lib/admin";
 import { SUB_BILLING_FILTERS, SUB_PLAN_FILTERS, SUB_STATUS_FILTERS, subFiltersFrom, type SubFilterInput } from "@/lib/admin-csv";
@@ -60,7 +60,7 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
                 <Td className="text-right">{x.provider_subscription_id ? <CopyButton value={x.provider_subscription_id} label="ID de suscripción ONVO" /> : null}</Td>
               </tr>))}</tbody>
           </Table>
-        ) : <div className="card"><Empty title="Sin pagos fallidos">Todas las renovaciones se cobraron. 🎉</Empty></div>}
+        ) : <div className="card"><Empty title="Sin pagos fallidos">Todas las renovaciones se cobraron.</Empty></div>}
         {d.payments && d.payments.length > 0 && (
           <Table caption="Últimos cobros rechazados" minWidth={600}>
             <thead className="border-b border-line"><tr><Th>Fecha</Th><Th>Usuario</Th><Th className="text-right">Monto</Th><Th>Motivo</Th></tr></thead>

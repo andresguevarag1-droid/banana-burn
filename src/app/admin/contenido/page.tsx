@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Apple, BookOpen, ChefHat, Dumbbell, Megaphone, Plus, Trophy } from "lucide-react";
+import { OrangeSlice as Apple, BookOpen, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, Flag as Trophy } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { getAnnouncements, getChallenges, getExercises, getFoods, PAGE_SIZE, type AnnouncementRow, type ChallengeRow, type FoodRow } from "@/lib/admin";
 import { can, type Capability } from "@/lib/admin-perms";

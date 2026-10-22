@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Gift, Lock, RotateCcw, UserCog } from "lucide-react";
+import { Gift, Lock, ArrowCounterClockwise as RotateCcw, UserGear as UserCog } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { ACTIVITY_LABEL, getUserDetail, PLAN_LABEL, statusOf } from "@/lib/admin";
 import { assignableRoles, can, PRIVILEGED, ROLE_LABEL } from "@/lib/admin-perms";

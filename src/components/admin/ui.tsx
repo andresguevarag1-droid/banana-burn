@@ -1,7 +1,7 @@
 // Piezas de UI del panel (server-safe).
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Info, TriangleAlert } from "lucide-react";
+import { ArrowLeft, CaretLeft as ChevronLeft, CaretRight as ChevronRight, Info, Warning as TriangleAlert } from "@/components/icons";
 import { ROLE_LABEL } from "@/lib/admin-perms";
 import { EMPTY, fmtNum } from "@/lib/admin-format";
 import type { Role } from "@/lib/supabase/server";

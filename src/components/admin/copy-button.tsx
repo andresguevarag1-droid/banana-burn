@@ -1,7 +1,7 @@
 "use client";
 // Botón para copiar un identificador (p. ej. cliente o suscripción de ONVO) con confirmación accesible.
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@/components/icons";
 
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const [done, setDone] = useState<null | "ok" | "error">(null);

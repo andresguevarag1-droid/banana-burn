@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, MagnifyingGlass as Search } from "@/components/icons";
 import { DemoBanner, Logo } from "@/components/brand";
 import { AdminSidebarNav, AdminTabsNav, type NavItem } from "@/components/admin/nav";
 import { RoleBadge } from "@/components/admin/ui";

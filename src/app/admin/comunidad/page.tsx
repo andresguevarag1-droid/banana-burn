@@ -64,7 +64,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
           </li>
         ))}
       </ul>
-      {!rows.length && <div className="card">{status === "abierto" ? <Empty title="No hay reportes pendientes">La comunidad está tranquila. 🙌</Empty> : <Empty title="Sin reportes en este estado" action={<Link href="/admin/comunidad" className="btn-ghost h-10! px-4! text-sm!">Ver abiertos</Link>} />}</div>}
+      {!rows.length && <div className="card">{status === "abierto" ? <Empty title="No hay reportes pendientes">La comunidad está tranquila.</Empty> : <Empty title="Sin reportes en este estado" action={<Link href="/admin/comunidad" className="btn-ghost h-10! px-4! text-sm!">Ver abiertos</Link>} />}</div>}
       <Notice title="Integración">La comunidad crea reportes con <code>insert into reports (target_type, target_id, reporter, reason, details, excerpt)</code> (RLS: reporter = auth.uid()) y esconde lo moderado con <code>is_hidden()</code>.</Notice>
     </div>
   );

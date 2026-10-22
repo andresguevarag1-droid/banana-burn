@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, CreditCard, LayoutDashboard, ScrollText, ShieldAlert, Users } from "lucide-react";
+import { BookOpen, CreditCard, SquaresFour as LayoutDashboard, Scroll as ScrollText, ShieldWarning as ShieldAlert, Users } from "@/components/icons";
 
 const ICONS = { resumen: LayoutDashboard, usuarios: Users, pagos: CreditCard, contenido: BookOpen, comunidad: ShieldAlert, auditoria: ScrollText } as const;
 export type NavItem = { key: keyof typeof ICONS; href: string; label: string; badge?: number };

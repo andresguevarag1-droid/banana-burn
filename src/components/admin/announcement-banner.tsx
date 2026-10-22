@@ -1,7 +1,7 @@
 // Banner de anuncios para la app (/app). Uso: `<AnnouncementBanner />` en un Server Component (p. ej. arriba de "Hoy").
 // Lee public.announcements vía getLiveAnnouncements(): RLS filtra vigencia y audiencia; en demo muestra ejemplos.
 import Link from "next/link";
-import { Megaphone } from "lucide-react";
+import { Megaphone } from "@/components/icons";
 import { getLiveAnnouncements, type LiveAnnouncement } from "@/lib/admin-content";
 
 const TONES: Record<string, string> = {

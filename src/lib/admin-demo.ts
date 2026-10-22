@@ -206,9 +206,9 @@ export function demoAudit() {
 export const DEMO_REPORTS = (() => {
   const today = crToday().iso;
   return [
-    { id: 3, target_type: "post", target_id: "p_204", reporter: demoUuid(21), reason: "desinformacion_salud", details: "Recomienda comer 600 kcal al día.", excerpt: "Yo bajé 8 kg en 2 semanas comiendo solo 600 kcal, háganlo 💪", status: "abierto", created_at: `${today}T08:12:00-06:00`, resolved_at: null, resolution_note: null },
+    { id: 3, target_type: "post", target_id: "p_204", reporter: demoUuid(21), reason: "desinformacion_salud", details: "Recomienda comer 600 kcal al día.", excerpt: "Yo bajé 8 kg en 2 semanas comiendo solo 600 kcal, háganlo ", status: "abierto", created_at: `${today}T08:12:00-06:00`, resolved_at: null, resolution_note: null },
     { id: 2, target_type: "comment", target_id: "c_871", reporter: demoUuid(30), reason: "acoso", details: "Comentarios sobre el cuerpo de otra usuaria.", excerpt: "Con ese cuerpo mejor ni subas fotos…", status: "abierto", created_at: `${addDays(today, -1)}T19:40:00-06:00`, resolved_at: null, resolution_note: null },
-    { id: 1, target_type: "post", target_id: "p_118", reporter: demoUuid(12), reason: "spam", details: null, excerpt: "Compren mis pastillas quemagrasa en este link 👉", status: "oculto", created_at: `${addDays(today, -4)}T11:05:00-06:00`, resolved_at: `${addDays(today, -4)}T12:00:00-06:00`, resolution_note: "Spam comercial" },
+    { id: 1, target_type: "post", target_id: "p_118", reporter: demoUuid(12), reason: "spam", details: null, excerpt: "Compren mis pastillas quemagrasa en este link", status: "oculto", created_at: `${addDays(today, -4)}T11:05:00-06:00`, resolved_at: `${addDays(today, -4)}T12:00:00-06:00`, resolution_note: "Spam comercial" },
   ];
 })();
 
@@ -221,7 +221,7 @@ export const DEMO_CHALLENGES = [
 export const DEMO_ANNOUNCEMENTS = (() => {
   const today = crToday().iso;
   return [
-    { id: "a1", title: "Nuevo: entrena en casa 🏠", body: "Cambia a modo casa en tu perfil y tu rutina se adapta a mancuernas y peso corporal.", audience: "todos", tone: "banana", cta_label: "Probar", cta_href: "/app/perfil", starts_at: `${addDays(today, -3)}T00:00:00-06:00`, ends_at: `${addDays(today, 10)}T23:59:00-06:00`, active: true },
+    { id: "a1", title: "Nuevo: entrena en casa", body: "Cambia a modo casa en tu perfil y tu rutina se adapta a mancuernas y peso corporal.", audience: "todos", tone: "banana", cta_label: "Probar", cta_href: "/app/perfil", starts_at: `${addDays(today, -3)}T00:00:00-06:00`, ends_at: `${addDays(today, 10)}T23:59:00-06:00`, active: true },
     { id: "a2", title: "Plan anual con descuento", body: "Solo esta semana: Entreno + Nutrición anual a $89.99.", audience: "free", tone: "ember", cta_label: "Ver planes", cta_href: "/precios", starts_at: `${addDays(today, 2)}T00:00:00-06:00`, ends_at: `${addDays(today, 9)}T23:59:00-06:00`, active: true },
   ];
 })();

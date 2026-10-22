@@ -2,7 +2,7 @@
 // Error de cualquier sección del panel: mensaje claro, reintento y salida segura. El detalle técnico no se muestra.
 import Link from "next/link";
 import { useEffect } from "react";
-import { TriangleAlert } from "lucide-react";
+import { Warning as TriangleAlert } from "@/components/icons";
 
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => { console.error(error); }, [error]);
