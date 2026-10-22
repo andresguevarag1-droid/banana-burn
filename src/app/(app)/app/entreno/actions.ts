@@ -39,6 +39,8 @@ export async function saveWorkout(input: Finished): Promise<SaveResult> {
   const { data: wk, error } = await sb.from("workouts").insert({
     user_id: v.id, day, template: w.template, started_at: new Date(started).toISOString(), finished_at: new Date().toISOString(), fun: w.fun, xp,
   }).select("id").single();
+  // Doble envío (mismo usuario, plantilla e inicio): ya estaba guardado; no es un error para quien entrena.
+  if (error?.code === "23505") return { ok: true, repeat: true, xp: 0, prNames: [] };
   if (error || !wk) return { ok: false, error: "No pudimos guardar el entreno. Intenta de nuevo." };
   const rows = w.exercises.flatMap((e) => e.sets.map((s, i) => ({ workout_id: wk.id, user_id: v.id, exercise: e.id, set_no: i + 1, kg: s.kg, reps: s.reps, rir: s.rir })));
   if (rows.length) {
