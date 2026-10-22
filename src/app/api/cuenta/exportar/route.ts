@@ -1,4 +1,5 @@
 import { createClient, getViewer } from "@/lib/supabase/server";
+import { memoryRateLimit } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ const BY_USER = [
 export async function GET() {
   const v = await getViewer();
   if (!v) return new Response("No autorizado", { status: 401 });
+  // ~25 consultas y enlaces firmados por descarga: tope por persona.
+  if (!memoryRateLimit(`exportar:${v.id}`, 6, 3600_000)) return new Response("Ya descargaste tus datos varias veces. Intenta en una hora.", { status: 429, headers: { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "3600" } });
   const out: Record<string, unknown> = { exportado: new Date().toISOString(), cuenta: { id: v.id, email: v.email } };
   if (!v.demo) {
     const sb = await createClient();

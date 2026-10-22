@@ -60,6 +60,21 @@ export function memoryRateLimit(key: string, max: number, windowMs: number, now 
   return true;
 }
 
+/**
+ * Une llamadas simultáneas con la misma clave (doble clic, dos pestañas): la segunda espera y recibe el resultado de
+ * la primera en vez de repetir el efecto (p. ej. crear dos suscripciones en el procesador). Por instancia (best-effort).
+ */
+const inflight = new Map<string, Promise<unknown>>();
+export function singleFlight<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const running = inflight.get(key) as Promise<T> | undefined;
+  if (running) return running;
+  const p = (async () => {
+    try { return await fn(); } finally { inflight.delete(key); }
+  })();
+  inflight.set(key, p);
+  return p;
+}
+
 export function clientIp(req: Request): string {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "local";
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
-import { bearerOk, isKnownPushEndpoint, isSameOrigin, isUuid, memoryRateLimit, safeEqual, safeNext } from "./index";
+import { bearerOk, isKnownPushEndpoint, isSameOrigin, isUuid, memoryRateLimit, safeEqual, safeNext, singleFlight } from "./index";
 import { verifyWebhook } from "@/lib/onvo";
 import { checkPaidAmount } from "@/lib/billing";
 import { validateUsername } from "@/lib/username";
@@ -84,6 +84,26 @@ describe("límite en memoria (modo demo)", () => {
     const k = `t-${Math.random()}`;
     expect([1, 2, 3].map(() => memoryRateLimit(k, 2, 1000, 0))).toEqual([true, true, false]);
     expect(memoryRateLimit(k, 2, 1000, 1001)).toBe(true);
+  });
+});
+
+describe("singleFlight (doble clic en acciones con efectos externos)", () => {
+  it("dos llamadas simultáneas con la misma clave ejecutan una sola vez y comparten el resultado", async () => {
+    let calls = 0;
+    const fn = async () => { calls++; await new Promise((r) => setTimeout(r, 10)); return { url: `/pago/${calls}` }; };
+    const [a, b] = await Promise.all([singleFlight("checkout:u1", fn), singleFlight("checkout:u1", fn)]);
+    expect(calls).toBe(1);
+    expect(a).toEqual(b);
+  });
+  it("claves distintas no se bloquean y la clave se libera al terminar (también si falla)", async () => {
+    let calls = 0;
+    const ok = async () => { calls++; return calls; };
+    await Promise.all([singleFlight("k:a", ok), singleFlight("k:b", ok)]);
+    expect(calls).toBe(2);
+    await expect(singleFlight("k:err", async () => { throw new Error("x"); })).rejects.toThrow("x");
+    await expect(singleFlight("k:err", async () => "otra vez")).resolves.toBe("otra vez");
+    await singleFlight("k:a", ok);
+    expect(calls).toBe(3);
   });
 });
 
