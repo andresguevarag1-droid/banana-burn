@@ -13,8 +13,8 @@ type Item = { href: string; label: string; icon: PhosphorIcon | typeof Monkey; h
 const MAIN: Item[] = [
   { href: "/app", label: "Hoy", icon: House },
   { href: "/app/entrenar", label: "Entrenar", icon: Barbell },
-  { href: "/app/nutricion", label: "Comida", icon: BowlFood },
-  { href: "/app/progreso", label: "Progreso", icon: ChartLine },
+  { href: "/app/nutricion", label: "Comida", icon: BowlFood, hint: "Calorías, recetas y menú" },
+  { href: "/app/progreso", label: "Progreso", icon: ChartLine, hint: "Peso, medidas y fotos" },
   { href: "/app/comunidad", label: "Comunidad", icon: Users },
 ];
 const EXTRA: Item[] = [
@@ -81,19 +81,19 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
         </div>
       </nav>
 
-      <Sheet open={more} onClose={() => setMore(false)}>
+      <Sheet open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-4 grid grid-cols-2 gap-2">
           {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }].map(({ href, label, icon: Icon, hint }) => (
             <li key={href}>
-              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 transition ${active(href) ? "bg-ink text-white" : "bg-cream text-ink hover:bg-banana-soft"}`}>
+              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 transition ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />
                 <span className="font-extrabold leading-tight">{label}</span>
                 {hint && <span className={`text-xs ${active(href) ? "text-white/70" : "text-muted"}`}>{hint}</span>}
               </Link>
             </li>
           ))}
-          {staff && <li className="col-span-2"><Link href="/admin" className="pressable flex items-center gap-3 rounded-2xl bg-cream p-4 font-extrabold text-ink"><Shield className="size-6 text-banana-ink" weight="duotone" />Panel de administración</Link></li>}
+          {staff && <li className="col-span-2"><Link href="/admin" className="pressable flex items-center gap-3 rounded-2xl bg-white border border-line/70 p-4 font-extrabold text-ink"><Shield className="size-6 text-banana-ink" weight="duotone" />Panel de administración</Link></li>}
         </ul>
         <form action="/auth/salir" method="post" className="mt-4"><button className="btn-ghost w-full"><SignOut className="size-5" weight="bold" />Cerrar sesión</button></form>
       </Sheet>

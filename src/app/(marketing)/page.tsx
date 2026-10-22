@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Banana, BananaFlame, Barbell, BowlFood, BrandIcon, Brain, Check, DeviceMobile, Lock, Moon, Plus, Repeat, ShieldCheck, TrendDown, X } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
+import { PLANS, perMonthAnnual, usd } from "@/lib/plans";
 import { DAY_NAMES, planWeek } from "@/lib/engine";
 
 const PILLARS = [
@@ -52,7 +53,7 @@ export default function Landing() {
               <Link href="/entrar?modo=registro" className="btn-primary h-14 px-7 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
               <a href="#app" className="btn-ghost h-14 px-7 text-base">Ver cómo funciona</a>
             </div>
-            <p className="mt-4 text-sm text-faint">Desde $4.99/mes · Listo en 2 minutos, cancela cuando quieras</p>
+            <p className="mt-4 text-sm text-faint">Desde {usd(perMonthAnnual(PLANS[0]))}/mes · Listo en 2 minutos, cancela cuando quieras</p>
           </div>
           <div className="relative flex justify-center">
             <Phone src="/landing/entreno.png" alt="Reproductor de entreno de Banana Burn" className="hidden sm:block absolute w-[240px] -left-2 top-16 -rotate-6 opacity-95" />
@@ -211,7 +212,7 @@ export default function Landing() {
           <Banana weight="fill" className="absolute -right-10 -bottom-16 size-[220px] text-ink opacity-10 rotate-12" />
           <h2 className="relative text-4xl sm:text-5xl font-extrabold tracking-tight text-ink">Tu mejor versión empieza el lunes.<br className="hidden sm:block" /> O mejor: hoy.</h2>
           <Link href="/entrar?modo=registro" className="relative mt-8 btn-primary h-14 px-8 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
-          <p className="relative mt-4 text-sm font-semibold text-ink/70">Desde $4.99/mes con el plan anual · cancela cuando quieras</p>
+          <p className="relative mt-4 text-sm font-semibold text-ink/70">Desde {usd(perMonthAnnual(PLANS[0]))}/mes con el plan anual · cancela cuando quieras</p>
         </div>
       </section>
     </>

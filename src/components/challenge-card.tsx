@@ -60,7 +60,7 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
         <div className="mt-3 flex items-center gap-2 text-xs"><span className="font-semibold text-ink">¿Seguro? Pierdes tu progreso.</span>
           <button onClick={() => start(async () => { await leaveChallenge(v.ucId); location.reload(); })} className="tap px-1 font-bold text-bad underline">Sí, abandonar</button>
           <button onClick={() => setLeaving(false)} className="tap px-2 font-bold text-ink underline">No</button></div>
-      ) : <button onClick={() => setLeaving(true)} className="tap mt-3 text-xs font-semibold text-muted underline hover:text-ink">Abandonar reto</button>)}
+      ) : <button onClick={() => setLeaving(true)} className="tap mt-3 text-xs font-semibold text-ink/75 underline hover:text-ink">Abandonar reto</button>)}
     </div>
   );
 }

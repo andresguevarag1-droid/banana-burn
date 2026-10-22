@@ -9,7 +9,7 @@ const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:0
 export async function getMeasures(v: Viewer): Promise<Measure[]> {
   if (v.demo) {
     const t = crToday().iso;
-    return [-35, -28, -21, -14, -7, 0].map((o, i) => ({ d: addDays(t, o), waist: 101 - i * 0.7, neck: 40.5 - i * 0.1, chest: 108 - i * 0.3, arm: 37 + (i % 2) * 0.2, thigh: 62 - i * 0.3, hip: null }));
+    return [-21, -14, -7, 0].map((o, i) => ({ d: addDays(t, o), waist: 99.6 - i * 0.7, neck: 40.3 - i * 0.1, chest: 107.4 - i * 0.3, arm: 37 + (i % 2) * 0.2, thigh: 61.4 - i * 0.3, hip: null }));
   }
   const sb = await createClient();
   const { data } = await sb.from("measurements").select("day,waist,neck,chest,arm,thigh,hip").eq("user_id", v.id).order("day");

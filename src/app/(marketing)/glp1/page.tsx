@@ -19,7 +19,7 @@ const FAQ = [
   ["¿Qué medicamentos aplica?", "GLP-1 recetados como semaglutida (Ozempic, Wegovy), tirzepatida (Mounjaro, Zepbound) o liraglutida (Saxenda). No trabajamos con péptidos sin aprobación ni compuestos de mercado gris."],
   ["¿Por qué importa el músculo?", "Al bajar de peso rápido una parte puede ser músculo. Perder músculo baja tu metabolismo y tu fuerza y facilita el rebote. La fuerza y la proteína son las herramientas con más evidencia para protegerlo."],
   ["¿Y si dejo el medicamento?", "Los hábitos que construyes (fuerza, proteína, pesarte cada semana) son tu seguro. La app ajusta tus calorías con tu peso real para una transición gradual, siempre con tu médico."],
-  ["¿Cuánto cuesta?", "Banana Shield está incluido en Entreno + Nutrición: $14.99/mes o $89.99/año (equivale a $7.49/mes)."],
+  ["¿Cuánto cuesta?", "Banana Shield está incluido en Entreno + Nutrición: $14.99/mes o $89.99/año (equivale a $7.50 al mes)."],
 ];
 
 export default function Glp1Landing() {
@@ -36,7 +36,7 @@ export default function Glp1Landing() {
               <Link href="/entrar?modo=registro&programa=glp1" className="btn-primary h-14 px-7 text-base">Activar Banana Shield <ArrowRight className="size-5" /></Link>
               <a href="#como" className="btn-ghost h-14 px-7 text-base">Cómo funciona</a>
             </div>
-            <p className="mt-4 text-sm text-muted">Incluido en Entreno + Nutrición · desde $7.49/mes, en español</p>
+            <p className="mt-4 text-sm text-muted">Incluido en Entreno + Nutrición · desde $7.50 al mes, en español</p>
           </div>
           <div className="flex justify-center"><Phone src="/landing/hoy.png" alt="Banana Burn en el teléfono" className="w-[280px] animate-floaty" priority /></div>
         </div>
