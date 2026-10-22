@@ -1,7 +1,23 @@
 // Base de alimentos de Latinoamérica (macros aproximados por porción típica, valores de referencia tipo USDA).
 // `cc`: países (ISO 2 letras) donde el plato es típico; sin `cc`, es común en toda la región.
 // Restaurantes: `cad` (cadena), `src` (dato oficial o aproximado) y `best` (opción ligera de esa cadena).
-export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup; cc?: string[]; cad?: string; src?: "oficial" | "aprox"; best?: boolean };
+// `gr`: gramos (o ml) de la porción `p`, para calcular por gramos. `fi`/`su`: fibra y azúcar (g) de la porción.
+// `cat`: categoría fina para listas y búsqueda; `al`: otros nombres con los que la gente lo busca (no se muestran).
+export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup; cc?: string[]; cad?: string; src?: "oficial" | "aprox"; best?: boolean; gr?: number; fi?: number; su?: number; cat?: FoodCat; al?: string };
+
+/** Categorías del buscador (más finas que los grupos de la base editable). */
+export type FoodCat =
+  | "desayunos" | "platos" | "resto" | "rapida" | "dulces" | "carnes" | "mar" | "huevos" | "lacteos" | "vegano"
+  | "panes" | "granos" | "legumbres" | "verduras" | "frutas" | "nueces" | "salsas" | "bebidas" | "alcohol" | "suplementos";
+/** Orden, nombre e ícono de cada categoría (pestañas del buscador y encabezados de resultados). */
+export const FOOD_CATS: [FoodCat, string, string][] = [
+  ["desayunos", "Desayunos", "sunrise"], ["platos", "Platos típicos", "bowl"], ["resto", "Restaurantes", "fork"], ["rapida", "Comida rápida y antojos", "fastfood"],
+  ["carnes", "Carnes y aves", "meat"], ["mar", "Pescados y mariscos", "fish"], ["huevos", "Huevos", "egg"], ["lacteos", "Lácteos y quesos", "drop"],
+  ["vegano", "Vegano y vegetal", "plant"], ["panes", "Panes y tortillas", "bread"], ["granos", "Granos, pastas y tubérculos", "grains"], ["legumbres", "Legumbres", "bowl"],
+  ["verduras", "Verduras", "carrot"], ["frutas", "Frutas", "fruit"], ["nueces", "Nueces y semillas", "leaf"], ["salsas", "Aceites, salsas y aderezos", "avocado"],
+  ["dulces", "Dulces y snacks", "cookie"], ["bebidas", "Bebidas", "coffee"], ["alcohol", "Bebidas con alcohol", "drop"], ["suplementos", "Suplementos", "bolt"],
+];
+export const FOOD_CAT_LABEL = Object.fromEntries(FOOD_CATS.map(([c, l]) => [c, l])) as Record<FoodCat, string>;
 // La clave "tica" se conserva por compatibilidad con datos guardados; en pantalla el grupo se llama "Típicos".
 // "rapida" se muestra como "Antojos" (comida rápida casera, postres, bebidas con alcohol...); "resto" = cadenas.
 export type FoodGroup = "tica" | "prot" | "carb" | "fruta" | "bebida" | "resto" | "rapida" | "extra";

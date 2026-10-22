@@ -1,0 +1,53 @@
+// Snacks, golosinas, postres y repostería. Macros por 100 g (USDA y etiquetas comunes del mercado).
+import { per100 } from "./make";
+
+export const DULCES = per100("dulces", [
+  // Snacks salados
+  ["dl-totopos", "Totopos (chips de tortilla)", "28 g (10 unid.)", 28, 489, 7, 64, 23, 5, 1, { al: "nachos tortilla chips tostitos" }],
+  ["dl-doritos", "Doritos o similares", "1 bolsa (45 g)", 45, 500, 7, 60, 26, 4, 3, { al: "chips de maiz" }],
+  ["dl-papashorno", "Papas de bolsa horneadas", "1 bolsa (28 g)", 28, 428, 7, 75, 11, 5, 3, { al: "chips" }],
+  ["dl-chifles", "Chips de plátano", "30 g", 30, 519, 2.3, 58.4, 33.6, 7.7, 35, { al: "chifles mariquitas platanitos tajaditas tostoncitos" }],
+  ["dl-chicharronharina", "Chicharrones de harina", "30 g", 30, 540, 3, 57, 33, 2, 1, { cc: ["MX"], al: "duritos" }],
+  ["dl-palomitasaire", "Palomitas naturales", "3 tazas (24 g)", 24, 387, 13, 78, 4.5, 14.5, 0.9, { al: "cotufas pochoclo crispetas canchita cabritas poporopo popcorn" }],
+  ["dl-palomitasmicro", "Palomitas de microondas con mantequilla", "3 tazas (33 g)", 33, 535, 8, 57, 30, 10, 1, { al: "cotufas pochoclo crispetas canchita cabritas popcorn" }],
+  ["dl-pretzels", "Pretzels", "30 g", 30, 380, 10, 80, 3, 3, 3],
+  ["dl-galletasaladas", "Galletas saladas con queso", "1 paquete (30 g)", 30, 490, 9, 60, 24, 2, 5],
+  // Galletas y barras
+  ["dl-oreo", "Galletas de chocolate rellenas", "3 unid. (34 g)", 34, 470, 4.5, 70, 20, 3, 41, { al: "oreo" }],
+  ["dl-avena", "Galletas de avena", "2 unid. (36 g)", 36, 450, 6, 69, 18, 3, 30],
+  ["dl-barragranola", "Barra de granola", "1 unid. (24 g)", 24, 450, 8, 66, 17, 4.5, 28, { al: "barrita de cereal" }],
+  ["dl-barracereal", "Barra de cereal con fruta", "1 unid. (37 g)", 37, 370, 4, 71, 8, 3, 32, { al: "nutrigrain" }],
+  ["dl-wafer", "Galletas de wafer (barquillos)", "4 unid. (30 g)", 30, 510, 5, 65, 26, 1.5, 38, { al: "obleas barquillos" }],
+  // Chocolates y golosinas
+  ["dl-amargo", "Chocolate amargo 70 %", "2 cuadros (20 g)", 20, 598, 7.8, 45.9, 42.6, 10.9, 24, { al: "chocolate oscuro negro" }],
+  ["dl-mm", "Chocolates confitados", "1 bolsa (48 g)", 48, 492, 4.3, 71, 21, 2.6, 64, { al: "m&m lentejas de chocolate" }],
+  ["dl-snickers", "Barra de chocolate con maní y caramelo", "1 unid. (52 g)", 52, 488, 7.5, 60, 24, 2.3, 50, { al: "snickers" }],
+  ["dl-kitkat", "Barquillo cubierto de chocolate", "1 unid. (42 g)", 42, 518, 6.5, 64, 26, 1.5, 48, { al: "kit kat" }],
+  ["dl-caramelos", "Caramelos duros", "3 unid. (15 g)", 15, 394, 0, 98, 0.2, 0, 63, { al: "dulces confites" }],
+  ["dl-gomitas", "Gomitas", "10 unid. (30 g)", 30, 340, 6, 77, 0, 0, 46, { al: "gomas ositos" }],
+  ["dl-malvaviscos", "Malvaviscos", "4 unid. (28 g)", 28, 318, 1.8, 81.3, 0.2, 0.1, 57.6, { al: "masmelos bombones marshmallows" }],
+  ["dl-pastelito", "Pastelito empacado de chocolate", "1 unid. (50 g)", 50, 400, 4, 60, 17, 1.5, 35, { al: "gansito pinguinos submarino ponque" }],
+  ["dl-bocadillo", "Dulce de guayaba (bocadillo)", "1 porción (30 g)", 30, 300, 0.4, 76, 0, 1.5, 60, { al: "guayabate pasta de guayaba" }],
+  ["dl-cocada", "Cocada", "1 unid. (40 g)", 40, 450, 3, 60, 22, 4, 50],
+  // Postres
+  ["dl-heladolight", "Helado de yogur o light", "½ taza (70 g)", 70, 150, 4, 23, 4, 0, 20],
+  ["dl-paletacrema", "Paleta de crema", "1 unid. (70 g)", 70, 200, 3, 24, 10, 0, 20, { al: "helado de palito" }],
+  ["dl-gelatina", "Gelatina de sabor", "1 taza (240 g)", 240, 62, 1.2, 14.2, 0, 0, 13.5, { al: "jello" }],
+  ["dl-gelatinalight", "Gelatina light", "1 taza (240 g)", 240, 6, 1, 0.5, 0, 0, 0],
+  ["dl-pudin", "Pudín de chocolate", "1 vaso (113 g)", 113, 120, 2.8, 20, 3.4, 0.8, 16, { al: "budin" }],
+  ["dl-cheesecake", "Cheesecake", "1 rebanada (125 g)", 125, 321, 5.5, 25.5, 22.5, 0.4, 21.8, { al: "pay de queso tarta de queso" }],
+  ["dl-piemanzana", "Pie de manzana", "1 rebanada (125 g)", 125, 265, 2.4, 37, 12.5, 1.8, 16, { al: "pay de manzana tarta" }],
+  ["dl-queque", "Queque o bizcocho de vainilla", "1 rebanada (80 g)", 80, 370, 4.5, 55, 15, 0.8, 35, { al: "ponque torta pastel bizcochuelo" }],
+  ["dl-muffin", "Muffin de arándanos", "1 unid. (113 g)", 113, 377, 4.6, 54, 16, 1.4, 27, { al: "panque magdalena" }],
+  ["dl-rolcanela", "Rol de canela", "1 unid. (100 g)", 100, 380, 6, 54, 15, 1.5, 25, { al: "cinnamon roll" }],
+  ["dl-panbanana", "Pan de banana", "1 rebanada (60 g)", 60, 326, 4.3, 54.6, 10.5, 1.1, 29, { al: "queque budin" }],
+  ["dl-cachitodulce", "Quesadilla salvadoreña", "1 porción (80 g)", 80, 400, 8, 50, 18, 0.5, 25, { cc: ["SV"] }],
+  ["dl-mazamorra", "Mazamorra morada", "1 taza (250 g)", 250, 90, 0.5, 22, 0.1, 0.5, 15, { cc: ["PE"] }],
+  ["dl-picarones", "Picarones", "3 unid. (120 g)", 120, 330, 4, 48, 14, 2, 20, { cc: ["PE"] }],
+  ["dl-bunuelos", "Buñuelos", "1 unid. (40 g)", 40, 380, 9, 38, 21, 0.5, 5, { cc: ["CO"] }],
+  ["dl-obleas", "Oblea con arequipe", "1 unid. (40 g)", 40, 420, 5, 70, 13, 0.5, 45, { cc: ["CO"] }],
+  ["dl-raspado", "Raspado con jarabe", "1 vaso (250 g)", 250, 60, 0, 15, 0, 0, 15, { al: "granizado cholado minuta raspadilla granizada" }],
+  ["dl-fresascrema", "Fresas con crema", "1 taza (200 g)", 200, 150, 1.5, 15, 9.5, 1, 13],
+  ["dl-crepa", "Crepa dulce con crema de avellanas", "1 unid. (90 g)", 90, 333, 6.7, 39, 16.7, 1.5, 22, { al: "crepe panqueque nutella" }],
+  ["dl-galletamantequilla", "Galletas de mantequilla", "4 unid. (40 g)", 40, 498, 6, 65, 24, 1.5, 22, { al: "danesas" }],
+]);

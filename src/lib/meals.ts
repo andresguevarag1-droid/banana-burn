@@ -2,6 +2,7 @@ import { createClient, type Viewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { localDayStartUtc } from "@/lib/foods-gamify";
 import type { SavedFood } from "@/lib/foods-catalog";
+import { recipeFromRow, type UserRecipe } from "@/lib/user-recipes";
 
 import type { MealItem, Slot } from "@/lib/meals-shared";
 export * from "@/lib/meals-shared";
@@ -42,6 +43,8 @@ export type NutritionExtras = {
   xpToday: number;
   /** "Mis comidas" guardadas (en demo viven en el navegador). */
   saved: SavedFood[];
+  /** "Mis recetas" (en demo viven en el navegador). */
+  recipes: UserRecipe[];
 };
 
 /** Lo que solo necesita Nutrición: balance semanal, racha de registro, XP de comidas de hoy y "Mis comidas". */
@@ -50,15 +53,16 @@ export async function getNutritionExtras(v: Viewer): Promise<NutritionExtras> {
   const monday = addDays(today, -((new Date(today + "T12:00:00").getDay() + 6) % 7));
   if (v.demo) {
     const past = DEMO_PAST_KCAL.map((kcal, i) => ({ day: addDays(today, -(i + 1)), kcal }));
-    return { week: past.filter((d) => d.day >= monday), mealDays: past.map((d) => d.day), xpToday: DEMO_TODAY.length, saved: [] };
+    return { week: past.filter((d) => d.day >= monday), mealDays: past.map((d) => d.day), xpToday: DEMO_TODAY.length, saved: [], recipes: [] };
   }
   const sb = await createClient();
   const since = addDays(today, -60);
-  const [{ data: dayRows }, { data: quick }, { data: saved }, { count: xpToday }] = await Promise.all([
+  const [{ data: dayRows }, { data: quick }, { data: saved }, { count: xpToday }, { data: recipes }] = await Promise.all([
     sb.from("meals").select("day,kcal").eq("user_id", v.id).gte("day", since).lt("day", today),
     sb.from("daily_logs").select("day,kcal").eq("user_id", v.id).gte("day", monday).lt("day", today),
     sb.from("saved_foods").select("id,name,portion,kcal,protein,carbs,fat").eq("user_id", v.id).order("created_at", { ascending: false }).limit(100),
     sb.from("xp_events").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("kind", "meal").gte("created_at", localDayStartUtc(today, v.tz)),
+    sb.from("user_recipes").select("id,name,servings,ingredients,kcal,protein,carbs,fat").eq("user_id", v.id).order("updated_at", { ascending: false }).limit(100),
   ]);
   const kcalByDay = new Map<string, number>();
   for (const r of [...(dayRows ?? []), ...(quick ?? [])]) if ((r.day as string) >= monday) kcalByDay.set(r.day as string, (kcalByDay.get(r.day as string) ?? 0) + Number(r.kcal ?? 0));
@@ -68,5 +72,7 @@ export async function getNutritionExtras(v: Viewer): Promise<NutritionExtras> {
     xpToday: xpToday ?? 0,
     // Si la migración 0015 aún no corre, la tabla no existe: "Mis comidas" queda vacía sin romper la página.
     saved: (saved ?? []).map((s) => ({ id: String(s.id), name: s.name as string, portion: (s.portion as string) ?? "1 porción", kcal: Number(s.kcal ?? 0), protein: Number(s.protein ?? 0), carbs: Number(s.carbs ?? 0), fat: Number(s.fat ?? 0) })),
+    // Si la migración 0017 aún no corre, "Mis recetas" queda vacía sin romper la página.
+    recipes: (recipes ?? []).map(recipeFromRow),
   };
 }
