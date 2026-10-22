@@ -19,10 +19,10 @@ export default async function Coach() {
   const [g, meals] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v)]);
   const protLeft = Math.max(0, Math.round(d.t.protein - g.log.protein - sumMeals(meals.today).protein));
   const lines = [
-    `¡Pura vida, ${a.name}! 🍌`,
-    d.plan.tpl ? (g.trainedToday ? `✅ Ya hiciste **${d.plan.name}** hoy. ¡Bien ahí!` : `Hoy te toca **${d.plan.emoji} ${d.plan.name}** (${d.plan.exercises.length} ejercicios). Ayer fue ${d.yesterday.name}, así que vas fresco.`) : `Hoy es **descanso activo**: camina y estira.`,
-    protLeft > 0 ? `- Te faltan **${protLeft} g de proteína** hoy.` : `- ✅ Proteína del día completa.`,
-    g.streak.days > 0 ? `- Llevas **${g.streak.days} días de racha** 🔥${g.streak.todayDone ? "" : " (regístrate hoy para no perderla)"}.` : `- Hoy empieza tu racha 🔥`,
+    `¡Pura vida, ${a.name}!`,
+    d.plan.tpl ? (g.trainedToday ? `Ya hiciste **${d.plan.name}** hoy. Bien ahí.` : `Hoy te toca **${d.plan.name}** (${d.plan.exercises.length} ejercicios). Ayer fue ${d.yesterday.name}, así que vas fresco.`) : `Hoy es **descanso activo**: camina y estira.`,
+    protLeft > 0 ? `- Te faltan **${protLeft} g de proteína** hoy.` : `- Proteína del día completa.`,
+    g.streak.days > 0 ? `- Llevas **${g.streak.days} días de racha**${g.streak.todayDone ? "" : " (regístrate hoy para no perderla)"}.` : `- Hoy empieza tu racha.`,
     `- Vas por **${d.toGo.toLocaleString("es-CR", { maximumFractionDigits: 1 })} kg** para tu meta.`,
     "¿En qué te ayudo?",
   ];
@@ -32,5 +32,5 @@ export default async function Coach() {
     "Siento que me estanqué, ¿qué ajusto?",
     "Me duele el hombro en press banca",
   ];
-  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} />;
+  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} />;
 }

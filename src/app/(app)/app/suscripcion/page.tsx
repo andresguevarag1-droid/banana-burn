@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { ArrowLeft, Receipt } from "lucide-react";
+import { ArrowLeft, Info, Receipt } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements, type Entitlements } from "@/lib/entitlements";
 import { isOnvoConfigured } from "@/lib/onvo";
@@ -10,7 +10,7 @@ import { SubscriptionManager } from "./manager";
 
 export const metadata = { title: "Mi suscripción" };
 
-const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric" }) : "—");
+const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric" }) : "Sin fecha");
 
 const STATUS: Record<Entitlements["status"], { label: string; cls: string }> = {
   demo: { label: "Demo", cls: "bg-ink text-white" },
@@ -60,13 +60,13 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-5 animate-rise max-w-2xl">
-      <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden />Perfil</Link>
+      <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Perfil</Link>
       <header>
         <p className="eyebrow">Suscripción</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
       </header>
 
-      {v.demo && <p className="rounded-2xl bg-ink text-white/90 p-4 text-sm">🧪 <b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</p>}
+      {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}
       {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos se activan muy pronto. Mientras tanto disfrutas la beta sin costo.</p>}
 
       <section className="card p-5 sm:p-6" aria-labelledby="plan-actual">
@@ -97,7 +97,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       />
 
       <section className="card p-5 sm:p-6" aria-labelledby="historial">
-        <h2 id="historial" className="font-extrabold text-ink flex items-center gap-2"><Receipt className="size-5" aria-hidden />Pagos</h2>
+        <h2 id="historial" className="font-extrabold text-ink flex items-center gap-2"><Receipt weight="duotone" className="size-5" />Pagos</h2>
         {history.length === 0 ? (
           <p className="mt-2 text-sm text-muted">{v.demo ? "En la demo no hay pagos." : "Aún no tienes pagos registrados."}</p>
         ) : (
@@ -106,7 +106,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
               <li key={h.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <div className="min-w-0">
                   <p className="font-semibold text-ink">{fmtDate(h.received_at)}</p>
-                  {h.period_start && h.period_end && <p className="text-xs text-muted">Periodo {fmtDate(h.period_start)} – {fmtDate(h.period_end)}</p>}
+                  {h.period_start && h.period_end && <p className="text-xs text-muted">Periodo del {fmtDate(h.period_start)} al {fmtDate(h.period_end)}</p>}
                 </div>
                 <p className="font-bold tabular-nums text-ink shrink-0">{h.amount_minor !== null ? `${usd(h.amount_minor / 100)} ${h.currency ?? ""}`.trim() : "Pagado"}</p>
               </li>

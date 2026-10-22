@@ -9,10 +9,19 @@ import { ProfileForm } from "./forms";
 import { Measures, Photos } from "./body";
 import { getMeasures, getPhotos } from "@/lib/measures";
 import { navyBodyFat } from "@/lib/body";
+import { BananaCoin, BananaFlame, BananaMedal, Barbell, BrandIcon, Calendar, Camera, CheckCircle, Lightning, LevelIcon, Lock, Monkey, MonkeyBanana, Plus, Ruler, Scales, Smiley, SmileyMeh, SmileySad, Target, TrendDown, TrendUp, Timer, type PhosphorIcon } from "@/components/icons";
 
 export const metadata = { title: "Progreso" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/** Encabezado de sección con ícono en mosaico. */
+function H({ icon: I, children }: { icon: PhosphorIcon | typeof Monkey; children: React.ReactNode }) {
+  return <h2 className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
+}
+const FUN: { I: PhosphorIcon; w: "duotone" | "fill"; l: string }[] = [
+  { I: SmileySad, w: "duotone", l: "Pesado" }, { I: SmileyMeh, w: "duotone", l: "Normal" }, { I: Smiley, w: "duotone", l: "Bien" }, { I: Smiley, w: "fill", l: "Muy bien" }, { I: Smiley, w: "fill", l: "Brutal" },
+];
 
 export default async function Progreso() {
   const v = (await getViewer())!;
@@ -25,12 +34,12 @@ export default async function Progreso() {
   const adj = kcalAdjustment(rate, d.needPerWeek);
   const lost = a.startWeight - a.currentWeight;
 
-  let insight: { tone: string; t: string; b: string };
-  if (rate == null) insight = { tone: "bg-sky/10", t: "📏 Calibrando tu ritmo", b: "Pésate al menos 4 mañanas esta semana (al despertar, después del baño). Con eso calculo tu tendencia real." };
-  else if (adj <= -150) insight = { tone: "bg-ember/10", t: `🐢 Vas a ${nf(-rate, 2)} kg/sem, necesitas ${nf(d.needPerWeek, 2)}`, b: `Te bajo ${-adj} kcal al día (≈ ${Math.round(-adj / 4)} g de carbos menos) y súmale 2.000 pasos. Proteína intacta.` };
-  else if (adj < 0) insight = { tone: "bg-banana-soft", t: `🎯 Casi: ${nf(-rate, 2)} de ${nf(d.needPerWeek, 2)} kg/sem`, b: `Vas bien, pero un poco por debajo del ritmo. Ajuste suave: −${-adj} kcal al día (media taza de arroz menos en la cena). Proteína intacta.` };
-  else if (adj > 0) insight = { tone: "bg-banana-soft", t: `⚡ Vas muy rápido: ${nf(-rate, 2)} kg/sem`, b: `Te subo ${adj} kcal para no perder músculo ni fuerza. Lo rápido no dura; lo constante sí.` };
-  else insight = { tone: "bg-peel/10", t: `✅ En ritmo: ${nf(-rate, 2)} kg/sem`, b: `Necesitas ${nf(d.needPerWeek, 2)} kg/sem para llegar a ${a.goalWeight} kg el ${new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}. No cambies nada.` };
+  let insight: { tone: string; icon: PhosphorIcon; ink: string; t: string; b: string };
+  if (rate == null) insight = { tone: "bg-sky/10", icon: Ruler, ink: "text-sky", t: "Calibrando tu ritmo", b: "Pésate al menos 4 mañanas esta semana (al despertar, después del baño). Con eso calculo tu tendencia real." };
+  else if (adj <= -150) insight = { tone: "bg-ember/10", icon: Timer, ink: "text-ember-ink", t: `Vas a ${nf(-rate, 2)} kg/sem, necesitas ${nf(d.needPerWeek, 2)}`, b: `Te bajo ${-adj} kcal al día (≈ ${Math.round(-adj / 4)} g de carbos menos) y súmale 2.000 pasos. Proteína intacta.` };
+  else if (adj < 0) insight = { tone: "bg-banana-soft", icon: Target, ink: "text-banana-ink", t: `Casi: ${nf(-rate, 2)} de ${nf(d.needPerWeek, 2)} kg/sem`, b: `Vas bien, pero un poco por debajo del ritmo. Ajuste suave: −${-adj} kcal al día (media taza de arroz menos en la cena). Proteína intacta.` };
+  else if (adj > 0) insight = { tone: "bg-banana-soft", icon: Lightning, ink: "text-banana-ink", t: `Vas muy rápido: ${nf(-rate, 2)} kg/sem`, b: `Te subo ${adj} kcal para no perder músculo ni fuerza. Lo rápido no dura; lo constante sí.` };
+  else insight = { tone: "bg-peel/10", icon: CheckCircle, ink: "text-peel", t: `En ritmo: ${nf(-rate, 2)} kg/sem`, b: `Necesitas ${nf(d.needPerWeek, 2)} kg/sem para llegar a ${a.goalWeight} kg el ${new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}. No cambies nada.` };
 
   return (
     <div className="space-y-6 animate-rise">
@@ -44,13 +53,13 @@ export default async function Progreso() {
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr] [&>*]:min-w-0">
         <section className="card p-5">
-          <div className="flex items-center justify-between mb-2"><h2 className="font-bold text-ink">⚖️ Peso</h2></div>
+          <div className="flex items-center justify-between mb-2"><H icon={Scales}>Peso</H></div>
           <WeightChart data={weights} goal={a.goalWeight} />
         </section>
         <div className="space-y-4">
           <section className={`rounded-[1.5rem] p-5 ${insight.tone}`}>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Coach · ajuste semanal</p>
-            <p className="mt-1 text-lg font-extrabold text-ink">{insight.t}</p>
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted"><Monkey className="size-4 text-ink" />Coach · ajuste semanal</p>
+            <p className="mt-2 flex items-start gap-2.5 text-lg font-extrabold text-ink"><span className={`grid place-items-center size-9 shrink-0 rounded-xl bg-white/80 ${insight.ink}`}><insight.icon weight="duotone" className="size-5" /></span><span className="pt-1 leading-snug">{insight.t}</span></p>
             <p className="mt-1 text-sm text-body">{insight.b}</p>
           </section>
           <section className="card p-5">
@@ -61,18 +70,22 @@ export default async function Progreso() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {[["🏋️", g.workoutsTotal, "entrenos completados"], ["🔥", g.streak.days, "días de racha"], ["⭐", g.xp.toLocaleString("es-CR"), "XP total"]].map(([e, v2, l]) => (
-          <div key={String(l)} className="card p-4 text-center"><p className="text-xl">{e}</p><p className="text-2xl font-extrabold text-ink tabular-nums">{v2}</p><p className="text-[11px] font-semibold text-muted">{l}</p></div>
+        {([
+          [<Barbell key="i" weight="duotone" className="size-5" />, "bg-banana-soft text-banana-ink", g.workoutsTotal, "entrenos completados"],
+          [<BananaFlame key="i" weight="fill" className="size-5" />, "bg-ember/10 text-ember-ink", g.streak.days, "días de racha"],
+          [<BananaCoin key="i" className="size-5" />, "bg-banana-soft text-banana-ink", g.xp.toLocaleString("es-CR"), "XP total"],
+        ] as const).map(([icon, tile, v2, l]) => (
+          <div key={l} className="card p-4 flex flex-col items-center text-center"><span className={`grid place-items-center size-9 rounded-xl ${tile}`}>{icon}</span><p className="mt-1.5 text-2xl font-extrabold text-ink tabular-nums">{v2}</p><p className="text-[11px] font-semibold text-muted">{l}</p></div>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
-        <section className="card p-5"><h2 className="font-bold text-ink mb-3">📏 Medidas</h2><Measures history={measures} bodyFat={bf} demo={v.demo} /></section>
-        <section className="card p-5"><h2 className="font-bold text-ink mb-3">📸 Fotos de progreso</h2><Photos photos={photos} userId={v.id} demo={v.demo} /></section>
+        <section className="card p-5"><div className="mb-3"><H icon={Ruler}>Medidas</H></div><Measures history={measures} bodyFat={bf} demo={v.demo} /></section>
+        <section className="card p-5"><div className="mb-3"><H icon={Camera}>Fotos de progreso</H></div><Photos photos={photos} userId={v.id} demo={v.demo} /></section>
       </div>
 
       <section>
-        <div className="flex items-baseline justify-between mb-3"><h2 className="font-bold text-ink">💪 Fuerza (1RM estimado)</h2><p className="text-xs text-muted">Si sube mientras bajas de peso = estás quemando grasa, no músculo</p></div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-3"><H icon={Barbell}>Fuerza (1RM estimado)</H><p className="text-xs text-muted">Si sube mientras bajas de peso, estás quemando grasa y no músculo.</p></div>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           {MAIN_LIFTS.map((k) => {
             const pts = lifts[k] ?? [];
@@ -81,9 +94,9 @@ export default async function Progreso() {
             return (
               <div key={k} className="card p-4">
                 <p className="text-sm font-semibold text-muted truncate">{liftName(k)}</p>
-                <p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{cur ? `${nf(cur, 0)} kg` : "—"}</p>
+                <p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{cur ? `${nf(cur, 0)} kg` : <span className="text-faint">Sin dato</span>}</p>
                 <p className="text-[10px] text-faint">1RM estimado</p>
-                <p className={`text-xs font-bold ${pct && pct > 0 ? "text-peel" : "text-faint"}`}>{pct != null ? `${pct >= 0 ? "▲" : "▼"} ${nf(Math.abs(pct))} %` : "Sin datos aún"}</p>
+                <p className={`inline-flex items-center gap-1 text-xs font-bold ${pct && pct > 0 ? "text-peel" : "text-faint"}`}>{pct != null ? <>{pct >= 0 ? <TrendUp weight="bold" className="size-3.5" /> : <TrendDown weight="bold" className="size-3.5" />}<span className="sr-only">{pct >= 0 ? "Sube" : "Baja"}</span>{nf(Math.abs(pct))} %</> : "Sin datos aún"}</p>
                 {pts.length > 1 && <div className="mt-2 -mx-1"><Spark data={pts.map((p) => p.v)} /></div>}
               </div>
             );
@@ -93,42 +106,49 @@ export default async function Progreso() {
 
       <section id="logros" className="card p-5 scroll-mt-6">
         <div className="flex items-center gap-4">
-          <span className="grid place-items-center size-14 rounded-2xl bg-banana text-3xl">{g.level.e}</span>
+          <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-banana-soft ring-1 ring-banana/40"><LevelIcon idx={g.level.idx} className="size-9" /></span>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-muted">Nivel {g.level.idx}</p>
             <p className="text-xl font-extrabold text-ink">{g.level.n}</p>
             <div className="mt-1.5 h-2.5 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember" style={{ width: `${Math.max(4, g.level.progress * 100)}%` }} /></div>
-            <p className="mt-1 text-xs text-muted">{g.xp.toLocaleString("es-CR")} XP{g.level.next ? ` · ${g.level.toNext} para ${g.level.next.n}` : ""} · 🔥 racha {g.streak.days} días</p>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+              <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{g.xp.toLocaleString("es-CR")} XP{g.level.next ? `, faltan ${g.level.toNext} para ${g.level.next.n}` : ""}</span>
+              <span className="inline-flex items-center gap-1"><BananaFlame className="size-3.5 text-ember-ink" />Racha de {g.streak.days} días</span>
+            </p>
           </div>
         </div>
-        <h2 className="mt-5 font-bold text-ink">🏅 Logros <span className="text-muted font-semibold">{g.badges.filter((b) => b.got).length}/{g.badges.length}</span></h2>
+        <div className="mt-5"><H icon={BananaMedal}>Logros <span className="text-muted font-semibold tabular-nums">{g.badges.filter((b) => b.got).length}/{g.badges.length}</span></H></div>
         <div className="mt-3 grid grid-cols-4 sm:grid-cols-8 gap-2">
           {g.badges.map((b) => (
-            <div key={b.id} className={`rounded-2xl p-2 text-center ${b.got ? "bg-banana-soft" : "bg-cream opacity-60"}`} title={b.d}>
-              <p className={`text-2xl ${b.got ? "" : "grayscale"}`}>{b.got ? b.e : "🔒"}</p>
-              <p className="mt-1 text-[10px] font-bold leading-tight text-ink">{b.n}</p>
+            <div key={b.id} role="img" aria-label={`Logro: ${b.n}, ${b.got ? "desbloqueado" : "bloqueado"}. ${b.d}.`} title={b.d}
+              className={`flex flex-col items-center rounded-2xl p-2 text-center ${b.got ? "bg-banana-soft text-banana-ink ring-1 ring-banana/40" : "bg-cream text-faint"}`}>
+              <span className="relative grid place-items-center size-10">
+                <BrandIcon name={b.icon} weight="duotone" className={b.got ? "size-8" : "size-8 opacity-50"} />
+                {!b.got && <span className="absolute -bottom-0.5 -right-0.5 grid place-items-center size-4.5 rounded-full bg-white text-muted ring-1 ring-line"><Lock weight="bold" className="size-2.5" /></span>}
+              </span>
+              <p className={`mt-1 text-[10px] font-bold leading-tight ${b.got ? "text-ink" : "text-muted"}`}>{b.n}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section className="card p-5">
-        <h2 className="font-bold text-ink mb-3">🗓️ Últimos entrenos</h2>
+        <div className="mb-3"><H icon={Calendar}>Últimos entrenos</H></div>
         {workouts.length ? (
           <ul className="divide-y divide-line">
             {workouts.map((w, i) => (
               <li key={i} className="py-3 flex items-center gap-4">
-                <span className="grid place-items-center size-11 rounded-2xl bg-banana-soft text-lg">{["😴", "😐", "🙂", "😄", "🤩"][(w.fun ?? 3) - 1] ?? "🏋️"}</span>
+                {(() => { const f = FUN[(w.fun ?? 3) - 1]; return f ? <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink" title={`Sensación: ${f.l}`}><f.I weight={f.w} className="size-6" /><span className="sr-only">Sensación: {f.l}</span></span> : <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><Barbell weight="duotone" className="size-6" /></span>; })()}
                 <div className="flex-1 min-w-0"><p className="font-bold text-ink">{w.tpl}</p><p className="text-sm text-muted">{new Date(w.d + "T12:00:00").toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "short" })}</p></div>
                 <div className="text-right text-sm tabular-nums"><p className="font-bold text-ink">{w.vol.toLocaleString("es-CR")} kg</p><p className="text-muted">{w.sets} series</p></div>
               </li>
             ))}
           </ul>
-        ) : <p className="text-muted">Tu primer entreno aparecerá aquí. ¡Hoy es buen día! 🍌</p>}
+        ) : <div className="flex items-center gap-3 text-muted"><span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-6" /></span><p>Tu primer entreno aparecerá aquí. Hoy es buen día para empezar.</p></div>}
       </section>
 
       <details id="meta" className="card group scroll-mt-6" open={!a.complete}>
-        <summary className="cursor-pointer list-none p-5 flex items-center justify-between font-bold text-ink">🎯 Mi perfil y meta<span className="text-xl transition-transform group-open:rotate-45">+</span></summary>
+        <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><Plus weight="bold" className="size-5 text-muted transition-transform group-open:rotate-45" /></summary>
         <div className="px-5 pb-5"><ProfileForm a={a} /></div>
       </details>
     </div>

@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateGlp1 } from "./actions";
 import { MEDS, type Glp1Med } from "@/lib/glp1";
+import { CheckCircle, WarningCircle } from "@/components/icons";
 
 const DAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
@@ -10,7 +11,7 @@ export function Glp1Settings({ on: on0, med: m0, dow: d0 }: { on: boolean; med: 
   const [on, setOn] = useState(on0);
   const [med, setMed] = useState<Glp1Med>(m0);
   const [dow, setDow] = useState<number | null>(d0);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
@@ -26,8 +27,8 @@ export function Glp1Settings({ on: on0, med: m0, dow: d0 }: { on: boolean; med: 
         </div>
       )}
       <div className="flex items-center gap-3">
-        <button disabled={pending} onClick={() => start(async () => { const r = await updateGlp1({ on, med, dow }); setMsg(r.ok ? (r.demo ? "Demo: no se guardó." : "✅ Guardado") : r.error ?? "Error"); router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar"}</button>
-        {msg && <p role="status" className="text-sm font-semibold text-peel">{msg}</p>}
+        <button disabled={pending} onClick={() => start(async () => { const r = await updateGlp1({ on, med, dow }); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Guardado" } : { ok: false, t: r.error ?? "No pudimos guardar. Intenta de nuevo." }); router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar"}</button>
+        {msg && <p role={msg.ok ? "status" : "alert"} className={`flex items-center gap-1.5 text-sm font-semibold ${msg.ok ? "text-peel" : "text-bad"}`}>{msg.ok ? <CheckCircle weight="fill" className="size-4 shrink-0" /> : <WarningCircle weight="fill" className="size-4 shrink-0" />}{msg.t}</p>}
       </div>
       <p className="text-[11px] text-faint">No damos indicaciones de dosis. Cualquier cambio en tu medicamento, con tu médico.</p>
     </div>

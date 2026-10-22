@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Copy, Plus, Search, X } from "lucide-react";
-import { FOODS, FOOD_GROUPS, type Food, type FoodGroup } from "@/lib/foods";
+import { BrandIcon, CheckCircle, Clock, Copy, Egg, MagnifyingGlass, Plus, WarningCircle, X } from "@/components/icons";
+import { FOODS, FOOD_GROUPS, FOOD_GROUP_ICON, type Food, type FoodGroup } from "@/lib/foods";
 import { SLOTS_MEAL, sumMeals, type MealItem, type Slot } from "@/lib/meals-shared";
 import { addMeal, copyMeals, removeMeal } from "@/app/actions/meals";
 import { Portal } from "@/components/portal";
@@ -28,7 +28,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
   const [custom, setCustom] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const [, start] = useTransition();
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ ok: boolean; t: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -56,12 +56,12 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
     const nr = [f.id, ...recent.filter((r) => r !== f.id)].slice(0, 12);
     setRecent(nr); try { localStorage.setItem("bb.recentFoods", JSON.stringify(nr)); } catch { /* */ }
     try { navigator.vibrate?.(20); } catch { /* */ }
-    setToast(`✅ ${f.n} · ${temp.kcal} kcal`);
+    setToast({ ok: true, t: `${f.n} · ${temp.kcal} kcal` });
     setPick(null); setQty(1);
     start(async () => {
       const r = await addMeal({ slot, foodId: f.id, qty: n });
       if (r.ok && r.item) setItems((x) => x.map((i) => (i.id === temp.id ? r.item! : i)));
-      else { setItems((x) => x.filter((i) => i.id !== temp.id)); setToast("⚠️ No se pudo guardar"); }
+      else { setItems((x) => x.filter((i) => i.id !== temp.id)); setToast({ ok: false, t: "No pudimos guardarlo. Intenta de nuevo." }); }
     });
   }
 
@@ -70,7 +70,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
     const name = String(fd.get("name") || "").trim(), kcal = Number(fd.get("kcal")), protein = Number(fd.get("protein") || 0);
     if (!name || !(kcal >= 0)) return;
     const temp: MealItem = { id: `tmp-${Date.now()}`, slot, name, qty: 1, kcal: Math.round(kcal), protein, carbs: 0, fat: 0 };
-    setItems((x) => [...x, temp]); setCustom(false); setToast(`✅ ${name}`);
+    setItems((x) => [...x, temp]); setCustom(false); setToast({ ok: true, t: `${name} agregado` });
     start(async () => {
       const r = await addMeal({ slot, custom: { name, kcal, protein } });
       if (r.ok && r.item) setItems((x) => x.map((i) => (i.id === temp.id ? r.item! : i)));
@@ -85,7 +85,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
 
   function copyYesterday() {
     const src = yesterday.map(({ slot, name, qty, kcal, protein, carbs, fat }) => ({ slot, name, qty, kcal, protein, carbs, fat }));
-    start(async () => { const r = await copyMeals(src); if (r.ok && r.items) { setItems((x) => [...x, ...r.items!]); setToast(`📋 Copiado: ${r.items.length} alimentos de ayer`); } });
+    start(async () => { const r = await copyMeals(src); if (r.ok && r.items) { setItems((x) => [...x, ...r.items!]); setToast({ ok: true, t: `Copiado: ${r.items.length} alimentos de ayer` }); } });
   }
 
   const bars: [string, number, number, string, string][] = [
@@ -115,11 +115,11 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
             </div>
           ))}
         </div>
-        {targets.protein - tot.protein > 25 && tot.kcal > 0 && <p className="mt-4 rounded-2xl bg-ember/10 p-3 text-sm font-semibold text-ember-ink">🥩 Te faltan {n0(targets.protein - tot.protein)} g de proteína: pechuga 150 g (46 g) o yogur griego 200 g (20 g).</p>}
+        {targets.protein - tot.protein > 25 && tot.kcal > 0 && <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-ember/10 p-3 text-sm font-semibold text-ember-ink"><Egg weight="duotone" className="size-5 shrink-0" /><span>Te faltan {n0(targets.protein - tot.protein)} g de proteína: pechuga 150 g (46 g) o yogur griego 200 g (20 g).</span></p>}
       </section>
 
       {!items.length && yesterday.length > 0 && (
-        <button onClick={copyYesterday} className="btn-ghost w-full h-12"><Copy className="size-4" />Copiar lo de ayer ({yesterday.length} alimentos · {n0(sumMeals(yesterday).kcal)} kcal)</button>
+        <button onClick={copyYesterday} className="btn-ghost w-full h-12"><Copy weight="bold" className="size-4" />Copiar lo de ayer ({yesterday.length} alimentos · {n0(sumMeals(yesterday).kcal)} kcal)</button>
       )}
 
       {/* Comidas */}
@@ -129,7 +129,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
         return (
           <section key={s.id} className="card overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <h2 className="font-extrabold text-ink">{s.e} {s.n}</h2>
+              <h2 className="flex items-center gap-2.5 font-extrabold text-ink"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BrandIcon name={s.icon} className="size-5" /></span>{s.n}</h2>
               <span className="text-sm font-semibold text-muted tabular-nums">{k ? `${n0(k)} kcal` : ""}</span>
             </div>
             {its.length > 0 && (
@@ -137,12 +137,12 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
                 {its.map((i) => (
                   <li key={i.id} className="py-2.5 flex items-center gap-3 animate-rise">
                     <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-CR")}</span>}</p><p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal · {n0(i.protein)} g P</p></div>
-                    <button onClick={() => remove(i.id)} className="tap pressable grid place-items-center size-8 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label={`Quitar ${i.name}`}><X className="size-4" /></button>
+                    <button onClick={() => remove(i.id)} className="tap pressable grid place-items-center size-8 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label={`Quitar ${i.name}`}><X weight="bold" className="size-4" /></button>
                   </li>
                 ))}
               </ul>
             )}
-            <button onClick={() => open(s.id)} className="pressable w-full flex items-center gap-2 px-4 py-3 min-h-11 text-sm font-bold text-banana-ink hover:bg-cream active:scale-100"><Plus className="size-4" strokeWidth={3} />Agregar a {s.n.split(" ")[0].toLowerCase()}</button>
+            <button onClick={() => open(s.id)} className="pressable w-full flex items-center gap-2 px-4 py-3 min-h-11 text-sm font-bold text-banana-ink hover:bg-cream active:scale-100"><Plus weight="bold" className="size-4" />Agregar a {s.n.split(" ")[0].toLowerCase()}</button>
           </section>
         );
       })}
@@ -152,12 +152,12 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
             <div className="px-4 pb-2">
               <SheetTitle className="text-xl font-extrabold text-ink">Agregar a {SLOTS_MEAL.find((s) => s.id === sheet)?.n.toLowerCase()}</SheetTitle>
               <label className="mt-3 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 focus-within:border-ink">
-                <Search className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Busca: pinto, pollo, casado…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
+                <MagnifyingGlass weight="bold" className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Busca: pinto, pollo, casado…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
               </label>
               {!q && (
                 <div className="mt-3 -mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-                  {recent.length > 0 && <button onClick={() => setGroup("recent")} className={`chip h-8 shrink-0 ${group === "recent" ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>🕑 Recientes</button>}
-                  {FOOD_GROUPS.map(([g, l]) => <button key={g} onClick={() => setGroup(g)} className={`chip h-8 shrink-0 ${group === g ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>{l}</button>)}
+                  {recent.length > 0 && <button onClick={() => setGroup("recent")} className={`chip h-8 shrink-0 gap-1.5 ${group === "recent" ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}><Clock weight="duotone" className="size-4" />Recientes</button>}
+                  {FOOD_GROUPS.map(([g, l]) => <button key={g} onClick={() => setGroup(g)} className={`chip h-8 shrink-0 gap-1.5 ${group === g ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}><BrandIcon name={FOOD_GROUP_ICON[g]} className={`size-4 ${group === g ? "text-banana" : "text-banana-ink"}`} />{l}</button>)}
                 </div>
               )}
             </div>
@@ -177,7 +177,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
                     ) : (
                       <button onClick={() => { setPick(f); setQty(1); }} className="w-full flex items-center gap-3 rounded-2xl bg-white border border-line p-3 text-left hover:border-ink transition">
                         <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{f.n}</p><p className="text-xs text-muted">{f.p} · {f.k} kcal · {f.pr} g P</p></div>
-                        <span onClick={(e) => { e.stopPropagation(); add(f, 1); }} role="button" aria-label={`Agregar ${f.n}`} className="tap pressable grid place-items-center size-9 rounded-full bg-banana text-ink hover:brightness-95"><Plus className="size-4" strokeWidth={3} /></span>
+                        <span onClick={(e) => { e.stopPropagation(); add(f, 1); }} role="button" aria-label={`Agregar ${f.n}`} className="tap pressable grid place-items-center size-9 rounded-full bg-banana text-ink hover:brightness-95"><Plus weight="bold" className="size-4" /></span>
                       </button>
                     )}
                   </li>
@@ -191,12 +191,12 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
                   <button className="btn-primary w-full h-11">Agregar</button>
                 </form>
               ) : (
-                <button onClick={() => setCustom(true)} className="pressable mt-3 w-full h-11 rounded-2xl border border-dashed border-line text-sm font-bold text-muted hover:border-ink/40 hover:text-ink">+ Alimento personalizado</button>
+                <button onClick={() => setCustom(true)} className="pressable mt-3 w-full h-11 rounded-2xl border border-dashed border-line text-sm font-bold text-muted hover:border-ink/40 hover:text-ink inline-flex items-center justify-center gap-1.5"><Plus weight="bold" className="size-4" />Alimento personalizado</button>
               )}
               <p className="mt-3 text-center text-[11px] text-faint">Valores aproximados por porción típica.</p>
             </div>
       </Sheet>
-      {toast && <Portal><div role="status" className="fixed bottom-28 lg:bottom-8 inset-x-0 z-[90] flex justify-center px-4 animate-rise pointer-events-none"><p className="rounded-full bg-ink text-white font-bold px-5 py-3 shadow-lift">{toast}</p></div></Portal>}
+      {toast && <Portal><div role="status" className="fixed bottom-28 lg:bottom-8 inset-x-0 z-[90] flex justify-center px-4 animate-rise pointer-events-none"><p className="inline-flex items-center gap-2 rounded-full bg-ink text-white font-bold px-5 py-3 shadow-lift">{toast.ok ? <CheckCircle weight="fill" className="size-5 shrink-0 text-banana" /> : <WarningCircle weight="fill" className="size-5 shrink-0 text-ember" />}{toast.t}</p></div></Portal>}
     </div>
   );
 }

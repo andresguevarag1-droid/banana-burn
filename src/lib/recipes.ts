@@ -40,7 +40,7 @@ export const RECIPES: Recipe[] = [
     steps: ["Sirve el yogur, corona con papaya y granola."] },
   { id: "huevo-taza", t: "Huevos en taza de microondas", icon: "egg", e: "🥚", slot: "merienda", min: 3, serves: 1, kcal: 180, p: 20, c: 3, f: 9, tags: ["porción pequeña", "GLP-1"],
     ing: ["2 claras + 1 huevo", "20 g de queso tierno", "Espinaca picada"],
-    steps: ["Bate todo en una taza.", "Microondas 60–90 s, revolviendo a la mitad."] },
+    steps: ["Bate todo en una taza.", "Microondas de 60 a 90 s, revolviendo a la mitad."] },
   { id: "gelatina-proteina", t: "Gelatina con yogur griego", icon: "drop", e: "🍮", slot: "merienda", min: 5, serves: 2, kcal: 120, p: 15, c: 10, f: 1, tags: ["porción pequeña", "GLP-1", "suave para náuseas"],
     ing: ["1 sobre de gelatina sin azúcar", "200 g de yogur griego 0 %"],
     steps: ["Prepara la gelatina con la mitad del agua.", "Cuando esté tibia, mezcla el yogur y refrigera 2 h."] },

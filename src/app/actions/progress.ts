@@ -19,7 +19,7 @@ export async function saveMeasures(input: Partial<Record<(typeof FIELDS)[number]
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { error } = await sb.from("measurements").upsert({ user_id: v.id, day: crToday().iso, ...row }, { onConflict: "user_id,day" });
-  if (error) return { ok: false, error: "No se pudo guardar." };
+  if (error) return { ok: false, error: "No pudimos guardar tus medidas. Intenta de nuevo." };
   await sb.from("xp_events").insert({ user_id: v.id, kind: "measure", xp: 15 });
   revalidatePath("/app/progreso");
   return { ok: true };

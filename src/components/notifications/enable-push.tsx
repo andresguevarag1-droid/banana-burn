@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Bell, BellOff, Share, PlusSquare } from "lucide-react";
+import { Banana, BananaFlame, Barbell, Bell, BellSlash, Export, Moon, PlusSquare } from "@/components/icons";
 
 type State = "checking" | "unsupported" | "ios-install" | "not-configured" | "default" | "denied" | "subscribed" | "working";
 
@@ -82,7 +82,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
         await sub.unsubscribe();
       }
       setState("default"); onChange?.(false);
-    } catch { setErr("No se pudo desactivar."); void refresh(); }
+    } catch { setErr("No pudimos desactivar los avisos. Intenta de nuevo."); void refresh(); }
   };
 
   const snooze = () => { setSnoozed(true); try { localStorage.setItem(SNOOZE_KEY, String(Date.now())); } catch { /* */ } };
@@ -93,7 +93,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
   if (state === "subscribed") {
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-peel/30 bg-peel/5 p-3">
-        <span className="grid place-items-center size-10 rounded-xl bg-peel/15 text-peel"><Bell className="size-5" /></span>
+        <span className="grid place-items-center size-10 rounded-xl bg-peel/15 text-peel"><Bell weight="fill" className="size-5" /></span>
         <div className="flex-1 min-w-0"><p className="text-sm font-bold text-ink">Avisos activos en este dispositivo</p><p className="text-xs text-muted">Máximo 2 al día, nunca en tus horas de silencio.</p></div>
         <button onClick={disable} className="tap text-xs font-bold text-muted underline hover:text-ink">Desactivar</button>
       </div>
@@ -103,12 +103,12 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
   if (state === "ios-install") {
     return (
       <div className="rounded-3xl border border-line bg-cream p-4">
-        <p className="font-extrabold text-ink">🔔 Avisos en iPhone</p>
+        <p className="flex items-center gap-2 font-extrabold text-ink"><Bell weight="duotone" className="size-5 text-banana-ink" />Avisos en iPhone</p>
         <p className="mt-1 text-sm text-muted">Apple solo permite notificaciones cuando Banana Burn está instalada en tu pantalla de inicio (iOS 16.4 o superior).</p>
         <ol className="mt-3 space-y-2 text-sm text-body">
-          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">1</span>Abre esta página en Safari y toca <Share className="inline size-4" /> <b>Compartir</b></li>
-          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">2</span>Elige <PlusSquare className="inline size-4" /> <b>Agregar a inicio</b></li>
-          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span>Abre la app desde el ícono 🍌 y activa los avisos aquí</li>
+          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">1</span>Abre esta página en Safari y toca <Export weight="bold" className="inline size-4" /> <b>Compartir</b></li>
+          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">2</span>Elige <PlusSquare weight="bold" className="inline size-4" /> <b>Agregar a inicio</b></li>
+          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span>Abre la app desde el ícono <Banana weight="fill" className="inline size-4 text-banana-ink" /> y activa los avisos aquí</li>
         </ol>
         {hideWhenSnoozed && <button onClick={snooze} className="tap mt-3 text-xs font-bold text-muted underline hover:text-ink">Ahora no</button>}
       </div>
@@ -121,8 +121,8 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
   if (state === "denied") {
     return (
       <div className="flex items-start gap-3 rounded-2xl border border-line bg-cream p-3">
-        <span className="grid place-items-center size-10 shrink-0 rounded-xl bg-white text-muted"><BellOff className="size-5" /></span>
-        <p className="text-sm text-muted">Los avisos están bloqueados en este navegador. Para activarlos, toca el candado 🔒 junto a la dirección → <b>Notificaciones</b> → <b>Permitir</b>, y recarga la página.</p>
+        <span className="grid place-items-center size-10 shrink-0 rounded-xl bg-white text-muted"><BellSlash weight="duotone" className="size-5" /></span>
+        <p className="text-sm text-muted">Los avisos están bloqueados en este navegador. Para activarlos, toca el candado junto a la dirección, luego <b>Notificaciones</b> y <b>Permitir</b>, y recarga la página.</p>
       </div>
     );
   }
@@ -131,13 +131,13 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
   return (
     <div className="rounded-3xl border-2 border-banana bg-banana-soft/40 p-4">
       <div className="flex items-start gap-3">
-        <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><Bell className="size-5" /></span>
+        <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><Bell weight="duotone" className="size-6" /></span>
         <div className="min-w-0">
           <p className="font-extrabold text-ink">Que no se te pase ningún entreno</p>
           <ul className="mt-2 space-y-1 text-sm text-body">
-            <li>💪 Qué te toca hoy, a la hora que elijas</li>
-            <li>🔥 Un empujón a las 8 p. m. si tu racha está en juego</li>
-            <li>🌙 Máximo 2 al día y nunca en tus horas de silencio</li>
+            <li className="flex items-center gap-2"><Barbell weight="duotone" className="size-4 shrink-0 text-banana-ink" />Qué te toca hoy, a la hora que elijas</li>
+            <li className="flex items-center gap-2"><BananaFlame className="size-4 shrink-0 text-ember-ink" />Un empujón a las 8 p. m. si tu racha está en juego</li>
+            <li className="flex items-center gap-2"><Moon weight="duotone" className="size-4 shrink-0 text-banana-ink" />Máximo 2 al día y nunca en tus horas de silencio</li>
           </ul>
         </div>
       </div>

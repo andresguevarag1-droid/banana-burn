@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Banana } from "@/components/icons";
 
 export function Logo({ href = "/", small = false }: { href?: string; small?: boolean }) {
   return (
@@ -12,8 +13,9 @@ export function Logo({ href = "/", small = false }: { href?: string; small?: boo
 
 export function DemoBanner() {
   return (
-    <aside aria-label="Aviso de demo" className="bg-ink text-white/90 text-center text-[11px] font-semibold py-1 px-4 truncate">
-      🧪 Demo con datos de ejemplo
+    <aside aria-label="Aviso de demo" className="flex items-center justify-center gap-1.5 bg-ink text-white/90 text-[11px] font-semibold py-1 px-4">
+      <Banana weight="fill" className="size-3.5 shrink-0 text-banana" />
+      <span className="truncate">Demo con datos de ejemplo</span>
     </aside>
   );
 }
