@@ -46,7 +46,7 @@ export default async function Perfil() {
           <div><p className="text-sm font-semibold text-muted">Suscripción</p><p className="text-lg font-extrabold text-ink">{plan ? plan.name : "Beta sin costo"}</p></div>
           <Link href="/app/suscripcion" className="btn-ghost h-10 text-sm px-4">{plan ? "Gestionar" : "Ver planes"}</Link>
         </div>
-        <p className="mt-2 text-sm text-muted">{plan ? "Pagas con tarjeta, SINPE Móvil o Apple Pay. Cancela cuando quieras." : "Durante la beta tienes acceso completo. Te avisaremos antes de cualquier cobro."}</p>
+        <p className="mt-2 text-sm text-muted">{plan ? "Pagas con tarjeta de crédito o débito. Cancela cuando quieras." : "Durante la beta tienes acceso completo. Te avisaremos antes de cualquier cobro."}</p>
       </section>
 
       <section className="card p-5">

@@ -17,7 +17,7 @@ const SDK_URL = "https://sdk.onvopay.com/sdk.js";
 
 function errorText(d: OnvoErrorData | undefined) {
   const reason = d?.details?.card?.reason;
-  if (reason === "issuer_declined") return "Tu banco rechazó el pago. Prueba con otra tarjeta o con SINPE Móvil.";
+  if (reason === "issuer_declined") return "Tu banco rechazó el pago. Prueba con otra tarjeta.";
   if (reason === "gateway_declined") return "El pago fue rechazado. Revisa los datos o prueba otro método.";
   return d?.message || "No se pudo completar el pago. Intenta de nuevo.";
 }

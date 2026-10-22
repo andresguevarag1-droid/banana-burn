@@ -40,7 +40,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
 
   if (!confirmed) {
     return (
-      <Card icon={<Clock weight="duotone" className="size-8" />} title="Estamos confirmando tu pago…" body="Suele tardar unos segundos. Con SINPE Móvil puede tardar unos minutos. No cierres esta página; se actualiza sola.">
+      <Card icon={<Clock weight="duotone" className="size-8" />} title="Estamos confirmando tu pago…" body="Suele tardar unos segundos. No cierres esta página; se actualiza sola.">
         <AutoRefresh />
         <div className="flex flex-col sm:flex-row gap-2 justify-center">
           <Link href="/app" className="btn-primary">Ir a la app mientras tanto</Link>

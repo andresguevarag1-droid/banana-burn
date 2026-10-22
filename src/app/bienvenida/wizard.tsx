@@ -46,7 +46,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
-  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1 }));
+  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: (() => { const m = typeof document !== "undefined" ? document.cookie.match(/bb_objetivo=(grasa|recomp|fuerza)/) : null; return (m?.[1] ?? "grasa") as Onboard["goal"]; })(), sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1 }));
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [parq, setParq] = useState<boolean[]>([false, false, false, false]);

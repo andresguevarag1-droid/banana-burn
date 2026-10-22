@@ -131,11 +131,11 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
   const body = h1("Tu pago no pasó") +
     p(`Hola ${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó. Pasa seguido: tarjeta vencida, límite o bloqueo de compras en línea.`) +
     p(d.retryDate ? `Lo volveremos a intentar el <b>${esc(longDate(d.retryDate))}</b>. Mientras tanto mantienes tu acceso.` : "Mientras tanto mantienes tu acceso.") +
-    button("Actualizar método de pago", url) + p(`<span style="font-size:14px;color:${C.muted};">Puedes pagar con tarjeta, SINPE Móvil o Apple Pay. ¿Dudas? Responde este correo.</span>`);
+    button("Actualizar método de pago", url) + p(`<span style="font-size:14px;color:${C.muted};">Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.</span>`);
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque hubo un problema con el pago de tu suscripción." }),
-    text: textLayout([`Hola ${n}, no pudimos cobrar ${total} de tu plan ${d.plan}.`, d.retryDate ? `Lo volveremos a intentar el ${longDate(d.retryDate)}. Mientras tanto mantienes tu acceso.` : "Mientras tanto mantienes tu acceso.", "", `Actualiza tu método de pago: ${abs(url)}`, "Aceptamos tarjeta, SINPE Móvil o Apple Pay."]),
+    text: textLayout([`Hola ${n}, no pudimos cobrar ${total} de tu plan ${d.plan}.`, d.retryDate ? `Lo volveremos a intentar el ${longDate(d.retryDate)}. Mientras tanto mantienes tu acceso.` : "Mientras tanto mantienes tu acceso.", "", `Actualiza tu método de pago: ${abs(url)}`, "Aceptamos tarjetas de crédito y débito."]),
   };
 }
 
