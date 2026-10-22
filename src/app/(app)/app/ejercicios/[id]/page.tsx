@@ -31,7 +31,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
           // eslint-disable-next-line @next/next/no-img-element
           <img src={gif} alt={`Demostración: ${e.n}`} width={180} height={180} className="mx-auto rounded-2xl bg-white" />
         ) : tech ? (
-          <div className="rounded-2xl bg-white/75 px-4 pt-6 pb-2"><ExerciseMotion anim={tech.anim} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>
+          <div className="rounded-2xl bg-white/75 px-4 pt-6 pb-2"><ExerciseMotion anim={tech.anim} mus={tech.mus} cues={tech.cues} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>
         ) : (
           <p className="py-10 flex justify-center text-ink/80" aria-hidden><Barbell weight="duotone" className="size-16" /></p>
         )}

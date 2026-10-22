@@ -196,3 +196,15 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
   .bar-fill { transition-duration: var(--dur-fast); }
   .card:is(a, button), .card:is(a, button):hover { translate: none; }
 }
+
+/* Motion graphics de técnica (flecha del esfuerzo, conteo, claves) */
+.mg-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: mg-draw calc(var(--mg-d, .6s) * .8) cubic-bezier(.23, 1, .32, 1) forwards; }
+.mg-fade { opacity: 0; animation: mg-fade calc(var(--mg-d, .6s) * .6) ease-out forwards; }
+.mg-head { opacity: 0; animation: mg-fade 160ms ease-out calc(var(--mg-d, .6s) * .55) forwards; }
+.mg-pop { animation: mg-pop 260ms cubic-bezier(.23, 1, .32, 1) both; }
+.mg-rise { animation: mg-rise 320ms cubic-bezier(.23, 1, .32, 1) both; }
+@keyframes mg-draw { to { stroke-dashoffset: 0; } }
+@keyframes mg-fade { to { opacity: 1; } }
+@keyframes mg-pop { from { opacity: 0; transform: scale(.86); } }
+@keyframes mg-rise { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .mg-draw, .mg-fade, .mg-head, .mg-pop, .mg-rise { animation: none; stroke-dashoffset: 0; opacity: 1; } }
