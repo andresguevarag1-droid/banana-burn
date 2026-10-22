@@ -1,23 +1,24 @@
 "use client";
-import { useId, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Banana, BananaMedal, BananaTrophy, BrandIcon, ChatCircle, DotsThree, Flag, PaperPlaneTilt, Trash, WarningCircle } from "@/components/icons";
+import { Banana, BananaCoin, BananaMedal, BananaTrophy, Barbell, BrandIcon, ChatCircle, Clock, DotsThree, Flag, ForkKnife, Lightning, PaperPlaneTilt, Question, Trash, TrendUp, WarningCircle } from "@/components/icons";
+import { Avatar, LevelBadge } from "@/components/community/avatar";
 import { addComment, deleteComment, deletePost, getComments, report, toggleKudo, type ReportReason } from "@/app/actions/community";
+import { fmtDuration, fmtNum, fmtVolume, tagDef, timeAgo } from "@/lib/community-view";
 import type { Author, FeedComment, FeedPost } from "@/lib/community";
 
-function timeAgo(iso: string) {
-  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return "ahora";
-  if (m < 60) return `hace ${m} min`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `hace ${h} h`;
-  const d = Math.round(h / 24);
-  return d === 1 ? "ayer" : `hace ${d} días`;
-}
-const Avatar = ({ name }: { name: string }) => <span className="grid place-items-center size-10 shrink-0 rounded-full bg-banana font-extrabold text-ink" aria-hidden>{name[0]?.toUpperCase()}</span>;
 const profileHref = (a: Author) => (a.username ? `/app/comunidad/u/${a.username}` : null);
+const TAG_ICON = { entreno: Barbell, logro: BananaMedal, pregunta: Question, comida: ForkKnife, progreso: TrendUp } as const;
+const TAG_SKIN: Record<string, string> = { entreno: "bg-ink text-white", logro: "bg-banana text-ink", pregunta: "bg-sky/10 text-sky", comida: "bg-peel/10 text-peel", progreso: "bg-ember/10 text-ember-ink" };
 
 const REASONS: [ReportReason, string][] = [["spam", "Spam"], ["acoso", "Acoso"], ["contenido_inapropiado", "Inapropiado"], ["desinformacion_salud", "Info de salud falsa"], ["otro", "Otro"]];
+
+/** Tiempo relativo que se actualiza solo (y no rompe la hidratación: el primer render usa el del servidor). */
+function Ago({ iso }: { iso: string }) {
+  const [label, setLabel] = useState(() => timeAgo(iso));
+  useEffect(() => { setLabel(timeAgo(iso)); const t = setInterval(() => setLabel(timeAgo(iso)), 60_000); return () => clearInterval(t); }, [iso]);
+  return <time dateTime={iso} title={new Date(iso).toLocaleString("es-419", { dateStyle: "medium", timeStyle: "short" })} suppressHydrationWarning>{label}</time>;
+}
 
 function ReportChips({ onPick, onCancel, label }: { onPick: (r: ReportReason) => void; onCancel: () => void; label: string }) {
   return (
@@ -41,24 +42,29 @@ function Comment({ c, onDeleted }: { c: FeedComment; onDeleted: (id: string) => 
   return (
     <li className="group">
       <div className="flex items-start gap-2">
-        <p className="flex-1 min-w-0 text-sm py-1.5 break-words">
-          {href ? <Link href={href} className="font-bold text-ink hover:underline">{c.author.name}</Link> : <b className="text-ink">{c.author.name}</b>} <span className="text-body">{c.body}</span>
-        </p>
+        <Avatar name={c.author.name} size="sm" xp={c.author.xp} className="mt-1.5" />
+        <div className="flex-1 min-w-0 rounded-2xl rounded-tl-md bg-cream px-3 py-2">
+          <p className="text-sm break-words">
+            {href ? <Link href={href} className="font-bold text-ink hover:underline">{c.author.name}</Link> : <b className="text-ink">{c.author.name}</b>}
+            <span className="ml-1.5 text-xs text-faint"><Ago iso={c.at} /></span>
+          </p>
+          <p className="text-sm text-body break-words">{c.body}</p>
+        </div>
         {!temp && state !== "reported" && (
-          <button type="button" onClick={() => setMenu((m) => (m === "closed" ? "open" : "closed"))} aria-expanded={menu !== "closed"} aria-label={`Opciones del comentario de ${c.author.name}`} className="tap pressable grid place-items-center size-11 -my-1.5 shrink-0 rounded-full text-faint hover:bg-cream hover:text-ink">
+          <button type="button" onClick={() => setMenu((m) => (m === "closed" ? "open" : "closed"))} aria-expanded={menu !== "closed"} aria-label={`Opciones del comentario de ${c.author.name}`} className="tap pressable grid place-items-center size-11 shrink-0 rounded-full text-faint hover:bg-cream hover:text-ink">
             <DotsThree weight="bold" className="size-5" />
           </button>
         )}
       </div>
       {menu === "open" && (
-        <div className="mb-2 flex flex-wrap gap-2 animate-fade">
+        <div className="mt-1 ml-10 flex flex-wrap gap-2 animate-fade">
           {c.mine
             ? <button type="button" onClick={() => setMenu("confirm")} className="chip pressable h-11 px-4 bg-white border border-line text-bad"><Trash weight="duotone" className="size-4" />Borrar comentario</button>
             : <button type="button" onClick={() => setMenu("report")} className="chip pressable h-11 px-4 bg-white border border-line text-ink"><Flag weight="duotone" className="size-4" />Reportar comentario</button>}
         </div>
       )}
       {menu === "confirm" && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-sm animate-fade" role="group" aria-label="Confirmar borrado">
+        <div className="mt-1 ml-10 flex flex-wrap items-center gap-2 text-sm animate-fade" role="group" aria-label="Confirmar borrado">
           <span className="font-semibold text-ink">¿Borrar tu comentario?</span>
           <button type="button" disabled={pending} onClick={() => start(async () => {
             const r = await deleteComment(c.id).catch(() => ({ ok: false, error: "Sin conexión. Intenta de nuevo." }));
@@ -67,10 +73,67 @@ function Comment({ c, onDeleted }: { c: FeedComment; onDeleted: (id: string) => 
           <button type="button" onClick={() => setMenu("closed")} className="tap h-11 px-3 font-bold text-ink underline">No</button>
         </div>
       )}
-      {menu === "report" && <div className="mb-2"><ReportChips label="Motivo del reporte del comentario" onCancel={() => setMenu("closed")} onPick={(k) => { setMenu("closed"); setState("reported"); start(async () => { const r = await report("comment", c.id, k).catch(() => ({ ok: false, error: "Sin conexión." })); if (!r.ok) { setState("error"); setMsg(r.error ?? "No pudimos enviar el reporte."); } }); }} /></div>}
-      {state === "reported" && <p className="mb-2 text-xs font-semibold text-peel" role="status">Gracias, lo revisaremos.</p>}
-      {state === "error" && msg && <p className="mb-2 text-xs font-semibold text-bad" role="alert">{msg}</p>}
+      {menu === "report" && <div className="mt-1 ml-10"><ReportChips label="Motivo del reporte del comentario" onCancel={() => setMenu("closed")} onPick={(k) => { setMenu("closed"); setState("reported"); start(async () => { const r = await report("comment", c.id, k).catch(() => ({ ok: false, error: "Sin conexión." })); if (!r.ok) { setState("error"); setMsg(r.error ?? "No pudimos enviar el reporte."); } }); }} /></div>}
+      {state === "reported" && <p className="mt-1 ml-10 text-xs font-semibold text-peel" role="status">Gracias, lo revisaremos.</p>}
+      {state === "error" && msg && <p className="mt-1 ml-10 text-xs font-semibold text-bad" role="alert">{msg}</p>}
     </li>
+  );
+}
+
+/** Tarjeta de entreno: título, cifras (duración, series, volumen, XP), ejercicios y récords. Solo lo que viene en los datos. */
+function WorkoutCard({ d }: { d: FeedPost["data"] }) {
+  const stats = ([
+    ["Duración", fmtDuration(d.mins), Clock],
+    ["Series", d.sets ? fmtNum(d.sets) : null, Barbell],
+    ["Volumen", fmtVolume(d.volume), Lightning],
+    ["XP", d.xp && d.xp > 0 ? `+${fmtNum(d.xp)}` : null, BananaCoin],
+  ] as const).filter((x) => x[1] !== null);
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl border border-ink/10 bg-ink text-white">
+      <div className="relative flex items-center gap-3 px-4 pt-4">
+        <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><BrandIcon name={d.icon ?? "barbell"} className="size-6" /></span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-white/60">Entreno completado</p>
+          <p className="text-lg font-extrabold leading-tight truncate">{d.title ?? "Entreno"}</p>
+        </div>
+        <Banana aria-hidden weight="fill" className="pointer-events-none absolute -right-3 -top-2 size-20 text-banana/10 rotate-12" />
+      </div>
+      {stats.length > 0 && (
+        <dl className={`mt-3 grid gap-px bg-white/10 border-y border-white/10 ${stats.length >= 4 ? "grid-cols-4" : stats.length === 3 ? "grid-cols-3" : stats.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+          {stats.map(([k, val, Icon]) => (
+            <div key={k} className="bg-ink px-2 py-2.5 text-center">
+              <dt className="flex items-center justify-center gap-1 text-[11px] font-semibold text-white/60"><Icon weight="duotone" className="size-3.5" />{k}</dt>
+              <dd className={`mt-0.5 text-[15px] leading-tight font-extrabold tabular-nums ${k === "XP" ? "text-banana" : ""}`}>{val}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {d.ex && d.ex.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5 px-4 pt-3" aria-label="Ejercicios">
+          {d.ex.slice(0, 6).map((e) => <li key={e} className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/85">{e}</li>)}
+        </ul>
+      )}
+      {d.prs && d.prs.length > 0 ? (
+        <p className="m-3 flex items-center gap-2 rounded-xl bg-banana px-3 py-2 text-sm font-extrabold text-ink"><BananaTrophy className="size-5 shrink-0" /><span className="min-w-0">{d.prs.length === 1 ? "Récord personal" : `${d.prs.length} récords personales`}: {d.prs.join(", ")}</span></p>
+      ) : <div className="h-3" />}
+    </div>
+  );
+}
+
+/** Banana (kudos) optimista con salto y tres bananitas. */
+function KudoButton({ on, count, onPress }: { on: boolean; count: number; onPress: () => void }) {
+  const [burst, setBurst] = useState(0);
+  return (
+    <button type="button" onClick={() => { if (!on) setBurst((b) => b + 1); onPress(); }}
+      className={`tap pressable relative flex items-center gap-1.5 h-11 px-3.5 rounded-full font-bold text-sm ${on ? "bg-banana text-ink shadow-[0_4px_12px_-6px_rgb(138_98_0/.5)]" : "text-muted hover:bg-banana-soft hover:text-ink"}`}
+      aria-pressed={on} aria-label={`${on ? "Quitar" : "Dar"} banana. ${count} ${count === 1 ? "banana" : "bananas"}`}>
+      <span className="relative grid place-items-center">
+        <Banana key={`b${burst}`} weight={on ? "fill" : "duotone"} className={`size-5 ${on ? "text-ink" : "text-banana-ink"} ${burst ? "bb-kudo-pop" : ""}`} />
+        {burst > 0 && on && <span key={`s${burst}`} aria-hidden className="bb-kudo-burst"><i><Banana weight="fill" className="size-3" /></i><i><Banana weight="fill" className="size-3" /></i><i><Banana weight="fill" className="size-3" /></i></span>}
+      </span>
+      <span className="hidden sm:inline">{on ? "Banana dada" : "Dar banana"}</span>
+      <span key={count} className="bb-count-in tabular-nums">{fmtNum(count)}</span>
+    </button>
   );
 }
 
@@ -84,23 +147,25 @@ export function PostCard({ p, me, onDeleted }: { p: FeedPost; me: string; onDele
   const [gone, setGone] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [reported, setReported] = useState(false);
-  const [pop, setPop] = useState(false);
   const [openReport, setOpenReport] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [loadingAll, setLoadingAll] = useState(false);
   const [pending, start] = useTransition();
+  const [, startKudo] = useTransition();
   const input = useRef<HTMLInputElement>(null);
   const cid = useId();
   if (gone) return null;
   const d = p.data;
   const href = profileHref(p.author);
+  const tag = p.kind === "text" ? tagDef(d.tag) : null;
+  const TagIcon = tag ? TAG_ICON[tag.id] : null;
 
   function banana() {
     const on = !kudo;
     setErr(null);
     setKudo(on); setCount((c) => c + (on ? 1 : -1));
-    if (on) { setPop(true); setTimeout(() => setPop(false), 300); try { navigator.vibrate?.(15); } catch { /* */ } }
-    start(async () => {
+    if (on) { try { navigator.vibrate?.(12); } catch { /* sin vibración */ } }
+    startKudo(async () => {
       const r = await toggleKudo(p.id, on).catch(() => ({ ok: false, error: "Sin conexión. Intenta de nuevo." }));
       if (!r.ok) { setKudo(!on); setCount((c) => c + (on ? -1 : 1)); setErr(r.error ?? "No pudimos guardar tu banana."); }
     });
@@ -137,21 +202,18 @@ export function PostCard({ p, me, onDeleted }: { p: FeedPost; me: string; onDele
     if (r?.ok) { setComments(r.comments); setTotal(r.comments.length); setOpen(true); } else setErr("No pudimos cargar los comentarios. Intenta de nuevo.");
   }
 
-  const raw: [string, string | null][] = p.kind === "workout" ? [
-    ["Tiempo", d.mins ? `${d.mins} min` : null],
-    ["Series", d.sets ? String(d.sets) : null],
-    ["Volumen", d.volume ? `${(d.volume / 1000).toLocaleString("es-419", { maximumFractionDigits: 1 })} t` : null],
-  ] : [];
-  const stats = raw.filter((x): x is [string, string] => x[1] !== null);
   const hidden = Math.max(0, total - comments.length);
 
   return (
-    <article className="card overflow-hidden">
-      <header className="flex items-center gap-3 p-4 pb-2">
-        {href ? <Link href={href} className="rounded-full" tabIndex={-1} aria-hidden><Avatar name={p.author.name} /></Link> : <Avatar name={p.author.name} />}
+    <article className="card overflow-hidden animate-enter" aria-label={`Publicación de ${p.author.name}`}>
+      <header className="flex items-center gap-3 p-4 pb-0">
+        {href ? <Link href={href} className="rounded-full" tabIndex={-1} aria-hidden><Avatar name={p.author.name} xp={p.author.xp} /></Link> : <Avatar name={p.author.name} xp={p.author.xp} />}
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}{p.author.username && <span className="font-semibold text-faint"> @{p.author.username}</span>}</p>
-          <p className="text-xs text-muted"><time dateTime={p.at}>{timeAgo(p.at)}</time></p>
+          <p className="flex items-center gap-1.5 min-w-0">
+            <span className="font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}</span>
+            <LevelBadge xp={p.author.xp} compact className="shrink-0" />
+          </p>
+          <p className="text-xs text-muted truncate">{p.author.username && <span>@{p.author.username} </span>}<Ago iso={p.at} /></p>
         </div>
         {p.mine ? (
           <button onClick={() => setConfirmDel((o) => !o)} aria-expanded={confirmDel} className="tap pressable grid place-items-center size-11 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label="Borrar publicación"><Trash weight="duotone" className="size-4" /></button>
@@ -161,50 +223,49 @@ export function PostCard({ p, me, onDeleted }: { p: FeedPost; me: string; onDele
       </header>
 
       {confirmDel && (
-        <div className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm animate-fade" role="group" aria-label="Confirmar borrado">
+        <div className="mx-4 mt-2 flex flex-wrap items-center gap-2 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm animate-fade" role="group" aria-label="Confirmar borrado">
           <span className="flex-1 min-w-0 font-semibold text-ink">¿Borrar esta publicación? Se borran también sus bananas y comentarios.</span>
           <button type="button" onClick={() => setConfirmDel(false)} className="btn-ghost h-11 px-4 text-sm">Cancelar</button>
           <button type="button" onClick={removePost} disabled={pending} className="btn h-11 px-4 text-sm bg-bad text-white">{pending ? "Borrando…" : "Borrar"}</button>
         </div>
       )}
       {openReport && !reported && (
-        <div id={`report-${p.id}`} className="mx-4 mb-2">
+        <div id={`report-${p.id}`} className="mx-4 mt-2">
           <ReportChips label="Motivo del reporte" onCancel={() => setOpenReport(false)} onPick={(k) => { setReported(true); setOpenReport(false); start(async () => { const r = await report("post", p.id, k).catch(() => ({ ok: false, error: "Sin conexión." })); if (!r.ok) { setReported(false); setErr(r.error ?? "No pudimos enviar el reporte."); } }); }} />
         </div>
       )}
-      {reported && <p className="mx-4 mb-2 text-xs font-semibold text-peel" role="status">Gracias, lo revisaremos.</p>}
+      {reported && <p className="mx-4 mt-2 text-xs font-semibold text-peel" role="status">Gracias, lo revisaremos.</p>}
 
-      <div className="px-4">
-        {p.kind !== "text" && <p className="flex items-center gap-2.5 text-lg font-extrabold text-ink"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BrandIcon name={d.icon ?? (p.kind === "challenge" ? "medal" : p.kind === "pr" ? "trophy" : "barbell")} className="size-5" /></span><span className="min-w-0">{d.title ?? (p.kind === "workout" ? "Entreno" : "")}</span></p>}
-        {p.body && <p className={`${p.kind === "text" ? "text-base" : "mt-1 text-[15px]"} text-body whitespace-pre-line break-words`}>{p.body}</p>}
-        {stats.length > 0 && (
-          <dl className={`mt-3 grid gap-2 rounded-2xl bg-cream p-3 text-center ${stats.length === 3 ? "grid-cols-3" : stats.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
-            {stats.map(([k, val]) => <div key={k}><dt className="text-[11px] font-semibold text-muted">{k}</dt><dd className="font-extrabold text-ink tabular-nums">{val}</dd></div>)}
-          </dl>
+      <div className="px-4 pt-3">
+        {tag && TagIcon && <p className={`mb-2 inline-flex items-center gap-1.5 rounded-full px-2.5 h-7 text-xs font-bold ${TAG_SKIN[tag.id]}`}><TagIcon weight="duotone" className="size-4" />{tag.label}</p>}
+        {p.body && <p className={`${p.kind === "text" ? "text-[17px] leading-relaxed" : "text-[15px]"} text-body whitespace-pre-line break-words`}>{p.body}</p>}
+        {p.kind === "workout" && <WorkoutCard d={d} />}
+        {p.kind === "pr" && d.prs && d.prs.length > 0 && <p className="mt-2 flex items-center gap-2 rounded-xl bg-banana px-3 py-2 text-sm font-extrabold text-ink"><BananaTrophy className="size-5 shrink-0" />Récord en {d.prs.join(", ")}</p>}
+        {p.kind === "challenge" && (
+          <div className="mt-1 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-banana to-banana-soft p-4 text-ink">
+            <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><BananaMedal weight="fill" className="size-7" /></span>
+            <div className="min-w-0"><p className="text-xs font-bold text-ink/70">Medalla desbloqueada</p><p className="font-extrabold leading-tight">{d.title ?? "Completó un reto"}</p></div>
+          </div>
         )}
-        {d.prs && d.prs.length > 0 && <p className="mt-2 flex items-center gap-2 rounded-xl bg-banana-soft px-3 py-2 text-sm font-bold text-banana-ink"><BananaTrophy className="size-5 shrink-0" />Récord en {d.prs.join(", ")}</p>}
-        {p.kind === "challenge" && <p className="mt-2 flex items-center gap-2 rounded-xl bg-peel/10 px-3 py-2 text-sm font-bold text-peel"><BananaMedal className="size-5 shrink-0" />Medalla desbloqueada</p>}
       </div>
 
-      <div className="flex items-center gap-1 px-2 py-2 mt-2 border-t border-line">
-        <button onClick={banana} className={`tap pressable flex items-center gap-1.5 h-11 px-3 rounded-full font-bold text-sm ${kudo ? "bg-banana text-ink" : "text-muted hover:bg-cream"}`} aria-pressed={kudo} aria-label={`${kudo ? "Quitar" : "Dar"} banana. ${count} ${count === 1 ? "banana" : "bananas"}`}>
-          <Banana weight={kudo ? "fill" : "duotone"} className={`size-5 transition-transform duration-200 ease-out motion-reduce:transition-none ${kudo ? "text-ink" : "text-banana-ink"} ${pop ? "scale-125" : ""}`} /><span className="hidden sm:inline">Dar banana</span><span className="tabular-nums">{count}</span>
-        </button>
-        <button onClick={() => { setOpen((o) => !o); if (!open) setTimeout(() => input.current?.focus(), 0); }} className="tap pressable flex items-center gap-1.5 h-11 px-3 rounded-full font-bold text-sm text-muted hover:bg-cream" aria-expanded={open} aria-controls={cid} aria-label={`${total} ${total === 1 ? "comentario" : "comentarios"}. ${open ? "Ocultar caja de comentario" : "Comentar"}`}>
-          <ChatCircle weight="duotone" className="size-4" /><span className="tabular-nums">{total}</span>
+      <div className="flex items-center gap-1 px-2 py-2 mt-3 border-t border-line">
+        <KudoButton on={kudo} count={count} onPress={banana} />
+        <button onClick={() => { setOpen((o) => !o); if (!open) setTimeout(() => input.current?.focus(), 0); }} className="tap pressable flex items-center gap-1.5 h-11 px-3.5 rounded-full font-bold text-sm text-muted hover:bg-cream hover:text-ink" aria-expanded={open} aria-controls={cid} aria-label={`${total} ${total === 1 ? "comentario" : "comentarios"}. ${open ? "Ocultar caja de comentario" : "Comentar"}`}>
+          <ChatCircle weight="duotone" className="size-5" /><span className="hidden sm:inline">Comentar</span><span className="tabular-nums">{fmtNum(total)}</span>
         </button>
       </div>
 
       {err && <p role="alert" className="mx-4 mb-2 flex items-center gap-1.5 text-xs font-semibold text-bad"><WarningCircle weight="fill" className="size-4 shrink-0" />{err}</p>}
 
       {(open || comments.length > 0) && (
-        <div id={cid} className="px-4 pb-4">
-          {hidden > 0 && <button type="button" onClick={showAll} disabled={loadingAll} className="tap h-11 text-sm font-bold text-muted hover:text-ink">{loadingAll ? "Cargando…" : `Ver los ${total} comentarios`}</button>}
-          {comments.length > 0 && <ul aria-label="Comentarios">{comments.map((c) => <Comment key={c.id} c={c} onDeleted={(id) => { setComments((xs) => xs.filter((x) => x.id !== id)); setTotal((n) => Math.max(0, n - 1)); }} />)}</ul>}
+        <div id={cid} className="px-4 pb-4 space-y-2">
+          {hidden > 0 && <button type="button" onClick={showAll} disabled={loadingAll} className="tap h-11 text-sm font-bold text-muted hover:text-ink">{loadingAll ? "Cargando…" : `Ver los ${fmtNum(total)} comentarios`}</button>}
+          {comments.length > 0 && <ul aria-label="Comentarios" className="space-y-2">{comments.map((c) => <Comment key={c.id} c={c} onDeleted={(id) => { setComments((xs) => xs.filter((x) => x.id !== id)); setTotal((n) => Math.max(0, n - 1)); }} />)}</ul>}
           {open && (
             <form onSubmit={send} className="flex gap-2 pt-1">
-              <input ref={input} value={text} onChange={(e) => setText(e.target.value)} maxLength={300} placeholder="Escribe algo motivador…" className="input h-11 text-[16px] sm:text-sm" aria-label="Comentario" enterKeyHint="send" />
-              <button className="tap pressable grid place-items-center size-11 shrink-0 rounded-full bg-ink text-white hover:bg-black disabled:opacity-30" disabled={!text.trim() || pending} aria-label="Enviar comentario"><PaperPlaneTilt weight="fill" className="size-4" /></button>
+              <input ref={input} value={text} onChange={(e) => setText(e.target.value)} maxLength={300} placeholder="Escribe algo motivador…" className="input h-11 rounded-full text-[16px] sm:text-sm" aria-label="Comentario" enterKeyHint="send" />
+              <button className="tap pressable grid place-items-center size-11 shrink-0 rounded-full bg-banana text-ink hover:brightness-95 disabled:opacity-40" disabled={!text.trim() || pending} aria-label="Enviar comentario"><PaperPlaneTilt weight="fill" className="size-4" /></button>
             </form>
           )}
         </div>

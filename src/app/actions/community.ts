@@ -2,7 +2,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
-import { getComments as loadComments, getCommunityMe, POST_MAX, type FeedComment, type FeedPost } from "@/lib/community";
+import { getComments as loadComments, getCommunityMe, getTodayWorkout, POST_MAX, summarizeWorkout, type FeedComment, type FeedPost, type PostData } from "@/lib/community";
+import { isPostTag, type PostTag } from "@/lib/community-view";
+import { todayFor } from "@/lib/today";
 import { isUuid } from "@/lib/security";
 import { validateUsername } from "@/lib/username";
 
@@ -32,7 +34,7 @@ async function canWrite(): Promise<{ ok: true; v: NonNullable<Awaited<ReturnType
   return { ok: true, v };
 }
 
-export async function createPost(body: string, visibility?: "publico" | "seguidores"): Promise<Res & { post?: FeedPost; demo?: boolean }> {
+export async function createPost(body: string, visibility?: "publico" | "seguidores", tag?: PostTag | null): Promise<Res & { post?: FeedPost; demo?: boolean }> {
   const text = cleanBody(body, POST_MAX);
   if (!text) return { ok: false, error: "Escribe algo antes de publicar." };
   if (String(body ?? "").trim().length > POST_MAX) return { ok: false, error: `Máximo ${POST_MAX} caracteres.` };
@@ -41,13 +43,47 @@ export async function createPost(body: string, visibility?: "publico" | "seguido
   const v = w.v;
   const me = await getCommunityMe(v);
   const vis = visibility === "publico" || visibility === "seguidores" ? visibility : me.visibility === "publico" ? "publico" : "seguidores";
+  // Solo la etiqueta de tipo; el servidor (0019) descarta cualquier otro dato en publicaciones de texto.
+  const data: PostData = isPostTag(tag) ? { tag } : {};
   const author = { id: v.id, username: me.username, name: v.name };
-  if (v.demo) return { ok: true, demo: true, post: { id: `demo-${Date.now()}`, author, kind: "text", body: text, data: {}, at: new Date().toISOString(), kudos: 0, mine: true, iKudo: false, comments: [], commentCount: 0 } };
+  if (v.demo) return { ok: true, demo: true, post: { id: `demo-${Date.now()}`, author, kind: "text", body: text, data, at: new Date().toISOString(), kudos: 0, mine: true, iKudo: false, comments: [], commentCount: 0 } };
   const sb = await createClient();
-  const { data, error } = await sb.from("posts").insert({ user_id: v.id, kind: "text", body: text, visibility: vis, data: {} }).select("id,created_at").single();
-  if (error || !data) return { ok: false, error: dbError(error, "No pudimos publicar. Intenta de nuevo.") };
+  const { data: row, error } = await sb.from("posts").insert({ user_id: v.id, kind: "text", body: text, visibility: vis, data }).select("id,created_at,data").single();
+  if (error || !row) return { ok: false, error: dbError(error, "No pudimos publicar. Intenta de nuevo.") };
   revalidatePath("/app/comunidad");
-  return { ok: true, post: { id: String(data.id), author, kind: "text", body: text, data: {}, at: data.created_at as string, kudos: 0, mine: true, iKudo: false, comments: [], commentCount: 0 } };
+  return { ok: true, post: { id: String(row.id), author, kind: "text", body: text, data: (row.data ?? {}) as PostData, at: row.created_at as string, kudos: 0, mine: true, iKudo: false, comments: [], commentCount: 0 } };
+}
+
+/**
+ * "Terminé mi entreno": publica el entreno de HOY (el último registrado) con su resumen real, más el texto opcional.
+ * El resumen lo arma el servidor desde las series guardadas; la base (guard_post_write) exige que el entreno sea tuyo
+ * y que no esté publicado.
+ */
+export async function publishTodayWorkout(body: string, visibility?: "publico" | "seguidores"): Promise<Res & { post?: FeedPost; demo?: boolean }> {
+  const text = cleanBody(body, POST_MAX);
+  if (String(body ?? "").trim().length > POST_MAX) return { ok: false, error: `Máximo ${POST_MAX} caracteres.` };
+  const w = await canWrite();
+  if (!w.ok) return { ok: false, error: w.error };
+  const v = w.v;
+  if (v.demo) return { ok: false, error: "En el demo no hay un entreno de hoy para publicar." };
+  const today = await getTodayWorkout(v);
+  if (!today) return { ok: false, error: "Todavía no registras un entreno hoy." };
+  if (today.published) return { ok: false, error: "Tu entreno de hoy ya está publicado." };
+  const me = await getCommunityMe(v);
+  const vis = visibility === "publico" || visibility === "seguidores" ? visibility : me.visibility === "publico" ? "publico" : "seguidores";
+  const sb = await createClient();
+  const [{ data: wk }, { data: sets }] = await Promise.all([
+    sb.from("workouts").select("id,template,started_at,finished_at,xp,day").eq("id", today.id).eq("user_id", v.id).maybeSingle(),
+    sb.from("workout_sets").select("exercise,kg,reps").eq("workout_id", today.id),
+  ]);
+  if (!wk || wk.day !== todayFor(v).iso) return { ok: false, error: "Todavía no registras un entreno hoy." };
+  const sum = summarizeWorkout(wk, sets ?? []);
+  const data: PostData = { title: sum.title, icon: "barbell", sets: sum.sets, volume: sum.volume, ex: sum.ex, prs: [], ...(sum.mins ? { mins: sum.mins } : {}), ...(Number(wk.xp) > 0 ? { xp: Number(wk.xp) } : {}) };
+  const { data: row, error } = await sb.from("posts").insert({ user_id: v.id, kind: "workout", workout_id: today.id, body: text || null, visibility: vis, data }).select("id,created_at").single();
+  if (error?.code === "23505") return { ok: false, error: "Tu entreno de hoy ya está publicado." };
+  if (error || !row) return { ok: false, error: dbError(error, "No pudimos publicar tu entreno. Intenta de nuevo.") };
+  revalidatePath("/app/comunidad");
+  return { ok: true, post: { id: String(row.id), author: { id: v.id, username: me.username, name: v.name }, kind: "workout", body: text || null, data, at: row.created_at as string, kudos: 0, mine: true, iKudo: false, comments: [], commentCount: 0 } };
 }
 
 export async function toggleKudo(postId: string, on: boolean): Promise<Res> {
