@@ -6,6 +6,9 @@ import { WeightChart } from "@/components/weight-chart";
 import { WeighIn } from "@/components/weigh-in";
 import { getDaily } from "@/lib/daily";
 import { ProfileForm } from "./forms";
+import { Measures, Photos } from "./body";
+import { getMeasures, getPhotos } from "@/lib/measures";
+import { navyBodyFat } from "@/lib/body";
 
 export const metadata = { title: "Progreso" };
 
@@ -15,7 +18,9 @@ export default async function Progreso() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
-  const [{ weights, lifts, workouts }, g] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight)]);
+  const [{ weights, lifts, workouts }, g, measures, photos] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight), getMeasures(v), getPhotos(v)]);
+  const lm = measures.at(-1);
+  const bf = lm ? navyBodyFat({ sex: a.sex, heightCm: a.heightCm, waist: lm.waist, neck: lm.neck, hip: lm.hip }) : null;
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
   const adj = kcalAdjustment(rate, d.needPerWeek);
   const lost = a.startWeight - a.currentWeight;
@@ -52,6 +57,17 @@ export default async function Progreso() {
             <WeighIn last={a.currentWeight} />
           </section>
         </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[["🏋️", g.workoutsTotal, "entrenos completados"], ["🔥", g.streak.days, "días de racha"], ["⭐", g.xp.toLocaleString("es-CR"), "XP total"]].map(([e, v2, l]) => (
+          <div key={String(l)} className="card p-4 text-center"><p className="text-xl">{e}</p><p className="text-2xl font-extrabold text-ink tabular-nums">{v2}</p><p className="text-[11px] font-semibold text-muted">{l}</p></div>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
+        <section className="card p-5"><h2 className="font-bold text-ink mb-3">📏 Medidas</h2><Measures history={measures} bodyFat={bf} demo={v.demo} /></section>
+        <section className="card p-5"><h2 className="font-bold text-ink mb-3">📸 Fotos de progreso</h2><Photos photos={photos} userId={v.id} demo={v.demo} /></section>
       </div>
 
       <section>
