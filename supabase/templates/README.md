@@ -6,6 +6,7 @@ Pégalas en **Supabase → Authentication → Emails → Templates**:
 | --- | --- | --- |
 | Magic Link | `magic-link.html` | Tu código para entrar a Banana Burn |
 | Confirm signup | `confirm-signup.html` | Tu código para crear tu cuenta en Banana Burn |
+| Reset Password | `reset-password.html` | Crea tu nueva contraseña de Banana Burn |
 
 Ambas incluyen el código (`{{ .Token }}`), que es lo que pide la pantalla de entrar, y un enlace con
 `token_hash` que funciona aunque se abra en otro dispositivo (lo procesa `/auth/callback`).

@@ -24,13 +24,15 @@ const CON_DIR: Record<string, Dir> = {
   burpee: "up", mountain: "none",
 };
 const REVERSE: Record<Dir, Dir> = { up: "down", down: "up", forward: "back", back: "forward", out: "in", in: "out", none: "none" };
-const frameOf = (to: string | number) => (typeof to === "number" ? to : to === "A" ? 0 : 3);
-const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+const frameOf = (to: string | number, last: number) => (typeof to === "number" ? to : to === "A" ? 0 : last);
+const easeInOut = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+/** Subida (concéntrica): arranque decidido y frenado suave arriba. */
+const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
 /**
- * Técnica del ejercicio con motion graphics: el mono recorre 4 fotogramas del mismo plano al tempo de
+ * Técnica del ejercicio con motion graphics: el mono recorre 4 o 9 fotogramas del mismo plano al tempo de
  * cada fase, con rango de movimiento en fantasma, flecha del esfuerzo, conteo de la bajada, músculo que
- * trabaja y claves de técnica. Sin hoja de fotogramas, o si la imagen falla, usa el atleta vectorial.
+ * trabaja y claves de técnica. Sin hoja de fotogramas, o si la imagen falla, muestra el mono quieto.
  */
 export function ExerciseMotion({ anim, label = true, className = "", mus, cues }: { anim: string; label?: boolean; className?: string; mus?: string; cues?: string[] }) {
   const sheet = sheetFor(anim);
@@ -54,12 +56,12 @@ function ExerciseMascot({ label, className }: { label: boolean; className: strin
 
 type Live = { i: number; left: number; cycle: number };
 
-/** Un fotograma de la hoja 2x2: recorta su cuadrante (con un margen para esconder las líneas divisorias). */
-function Frame({ src, n, sizes, onFail, refCb, className = "" }: { src: string; n: number; sizes: string; onFail: () => void; refCb?: (el: HTMLDivElement | null) => void; className?: string }) {
-  const col = n % 2, row = Math.floor(n / 2);
+/** Un fotograma de la hoja (2x2 o 3x3): recorta su celda, con un margen para esconder las líneas divisorias. */
+function Frame({ src, n, grid = 2, sizes, onFail, refCb, className = "" }: { src: string; n: number; grid?: 2 | 3; sizes: string; onFail: () => void; refCb?: (el: HTMLDivElement | null) => void; className?: string }) {
+  const col = n % grid, row = Math.floor(n / grid), cx = ((col + 0.5) / grid) * 100, cy = ((row + 0.5) / grid) * 100;
   return (
     <div ref={refCb} className={`absolute inset-0 overflow-hidden ${className}`}>
-      <div className="absolute w-[200%] h-[200%]" style={{ left: `${-100 * col}%`, top: `${-100 * row}%`, transform: "scale(1.035)", transformOrigin: `${col ? 75 : 25}% ${row ? 75 : 25}%` }}>
+      <div className="absolute" style={{ width: `${grid * 100}%`, height: `${grid * 100}%`, left: `${-100 * col}%`, top: `${-100 * row}%`, transform: `scale(${grid === 3 ? 1.05 : 1.035})`, transformOrigin: `${cx}% ${cy}%` }}>
         <Image src={src} alt="" fill sizes={sizes} onError={onFail} draggable={false} className="object-cover select-none" />
       </div>
     </div>
@@ -67,7 +69,7 @@ function Frame({ src, n, sizes, onFail, refCb, className = "" }: { src: string; 
 }
 
 function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
-  anim: string; sheet: string; label: boolean; className: string; mus?: string; cues?: string[]; onFail: () => void;
+  anim: string; sheet: { url: string; grid: 2 | 3 }; label: boolean; className: string; mus?: string; cues?: string[]; onFail: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const layers = useRef<(HTMLDivElement | null)[]>([]);
@@ -79,7 +81,8 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
   const [live, setLive] = useState<Live>({ i: -1, left: 0, cycle: 0 });
   const [still, setStill] = useState(false);
   const conDir = CON_DIR[anim] ?? "none";
-  const sizes = label ? "720px" : "224px";
+  const grid = sheet.grid, last = grid * grid - 1, src = sheet.url;
+  const sizes = label ? (grid === 3 ? "1080px" : "720px") : (grid === 3 ? "336px" : "224px");
 
   useEffect(() => {
     setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -96,7 +99,7 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
     const el = root.current;
     if (!el || !phases || still) return;
     const total = phases.reduce((s, p) => s + p[1], 0);
-    const from = (i: number) => frameOf(phases[(i - 1 + phases.length) % phases.length][0]);
+    const from = (i: number) => frameOf(phases[(i - 1 + phases.length) % phases.length][0], last);
     let raf = 0, visible = true, start = performance.now(), paused = 0, lastI = -1, lastLeft = -1;
     const paint = (f: number, a: number, b: number) => {
       // Fotograma base opaco + el siguiente encima con opacidad = avance: así el paso entre poses se ve continuo.
@@ -107,9 +110,9 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
         l.style.opacity = n === lo ? "1" : n === hi ? String(w) : "0";
       });
       if (ghostRef.current) {
-        const g = f >= 1.5 ? 0 : 3;
+        const g = f >= last / 2 ? 0 : last;
         ghostRef.current.dataset.frame = String(g);
-        ghostRef.current.style.opacity = loop ? "0" : String(Math.min(1, Math.abs(f - g) / 2) * 0.28);
+        ghostRef.current.style.opacity = loop ? "0" : String(Math.min(1, Math.abs(f - g) / (last * 0.66)) * 0.28);
       }
     };
     const tick = (now: number) => {
@@ -119,7 +122,7 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
       let t = elapsed % total, i = 0;
       while (i < phases.length - 1 && t >= phases[i][1]) { t -= phases[i][1]; i++; }
       const [to, d, , k] = phases[i];
-      const a = from(i), b = frameOf(to), p = k === "hold" && a === b ? 1 : easeInOut(Math.min(1, t / d));
+      const a = from(i), b = frameOf(to, last), u = Math.min(1, t / d), p = k === "hold" && a === b ? 1 : k === "con" ? easeOut(u) : easeInOut(u);
       if (loop) paint(p, a, b);
       else paint(a + (b - a) * p, a, b);
       const left = Math.ceil(d - t);
@@ -143,8 +146,8 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
     return (
       <div role="img" aria-label="Posición inicial y final del ejercicio" className={`motion ${className}`}>
         <div className="relative flex-1 min-h-0 grid grid-cols-2 gap-1">
-          <div className="relative overflow-hidden rounded-xl"><Frame src={sheet} n={0} sizes={sizes} onFail={onFail} /></div>
-          {label ? <div className="relative overflow-hidden rounded-xl"><Frame src={sheet} n={3} sizes={sizes} onFail={onFail} /></div> : null}
+          <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={0} grid={grid} sizes={sizes} onFail={onFail} /></div>
+          {label ? <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={last} grid={grid} sizes={sizes} onFail={onFail} /></div> : null}
         </div>
       </div>
     );
@@ -171,17 +174,17 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
       ) : null}
       <div className="relative flex-1 min-h-0 flex justify-center">
         <div className="relative h-full aspect-square max-w-full overflow-hidden rounded-2xl bg-banana">
-          {[0, 1, 2, 3].map((n) => (
-            <Frame key={n} src={sheet} n={n} sizes={sizes} onFail={onFail} refCb={(l) => { layers.current[n] = l; }} className={n === 0 ? "" : "opacity-0"} />
+          {Array.from({ length: grid * grid }, (_, n) => n).map((n) => (
+            <Frame key={n} src={src} n={n} grid={grid} sizes={sizes} onFail={onFail} refCb={(l) => { layers.current[n] = l; }} className={n === 0 ? "" : "opacity-0"} />
           ))}
-          {label && !loop ? <GhostFrame sheet={sheet} sizes={sizes} onFail={onFail} refCb={(g) => { ghostRef.current = g; }} /> : null}
+          {label && !loop ? <GhostFrame sheet={src} grid={grid} sizes={sizes} onFail={onFail} refCb={(g) => { ghostRef.current = g; }} /> : null}
           {label && ph ? (
             <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden="true">
               {moving && dir !== "none" ? <Arrow key={`a${live.i}-${live.cycle}`} dir={dir} strong={kind === "con"} dur={Math.min(ph[1], 0.9)} /> : null}
               {kind === "ecc" && ph[1] >= 1.5 && live.left > 0 ? (
                 <span key={`n${live.i}-${live.left}`} className="mg-pop absolute left-[6%] top-[5%] text-5xl font-black tabular-nums text-ink [text-shadow:0_2px_0_#fff,0_0_14px_rgb(255_255_255/.8)]">{live.left}</span>
               ) : null}
-              {kind === "hold" && ph[1] >= 0.6 && !loop && frameOf(ph[0]) === 3 ? (
+              {kind === "hold" && ph[1] >= 0.6 && !loop && frameOf(ph[0], last) === last ? (
                 <span key={`h${live.i}`} className="mg-pop absolute left-[6%] top-[6%] rounded-full bg-ink px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-banana">Sostén</span>
               ) : null}
               {muscles ? (
@@ -199,8 +202,8 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
 }
 
 /** Silueta del extremo opuesto del movimiento: deja ver el rango completo mientras el mono se mueve. */
-function GhostFrame({ sheet, sizes, onFail, refCb }: { sheet: string; sizes: string; onFail: () => void; refCb: (el: HTMLDivElement | null) => void }) {
-  const [frame, setFrame] = useState(3);
+function GhostFrame({ sheet, grid, sizes, onFail, refCb }: { sheet: string; grid: 2 | 3; sizes: string; onFail: () => void; refCb: (el: HTMLDivElement | null) => void }) {
+  const [frame, setFrame] = useState(grid * grid - 1);
   const box = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = box.current;
@@ -210,8 +213,8 @@ function GhostFrame({ sheet, sizes, onFail, refCb }: { sheet: string; sizes: str
     return () => mo.disconnect();
   }, []);
   return (
-    <div ref={(el) => { box.current = el; refCb(el); }} data-frame="3" className="absolute inset-0 z-[3] mix-blend-darken opacity-0">
-      <Frame src={sheet} n={frame} sizes={sizes} onFail={onFail} />
+    <div ref={(el) => { box.current = el; refCb(el); }} data-frame={String(grid * grid - 1)} className="absolute inset-0 z-[3] mix-blend-darken opacity-0">
+      <Frame src={sheet} n={frame} grid={grid} sizes={sizes} onFail={onFail} />
     </div>
   );
 }
