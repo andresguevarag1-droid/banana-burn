@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Banana, BananaFlame, Barbell, BowlFood, Check, Clock, CreditCard, MonkeyBanana, Scales, ShieldCheck, Syringe, Target, X,
+  ArrowCounterClockwise, ArrowRight, Banana, BananaFlame, Barbell, BowlFood, Check, Clock, CreditCard, Lock, MonkeyBanana, Scales, Scroll, ShieldCheck, Syringe, Target, X,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
@@ -11,7 +11,8 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
-import { COMPLETO, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_CTA, TRIAL_NOTE } from "./content";
+import { ANIMATED_TECHNIQUES, COMPLETO, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_CTA, TRIAL_NOTE } from "./content";
+import { LIB_COUNT } from "@/lib/library";
 
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
 
@@ -79,6 +80,22 @@ const SCENES: [string, string][] = [
   ["hf_20261022_155003_11f3b250-6cbe-4354-ab64-49e1d65832ec", "Cada récord se celebra."],
 ];
 
+/** Cifras reales del producto (la biblioteca se cuenta en el build). */
+const FACTS: [string, string][] = [
+  [LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía en la biblioteca"],
+  [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"],
+  ["10 min", "el entreno exprés más corto, sin equipo"],
+  [`${TRIAL_DAYS} días`, "gratis con todo incluido, sin tarjeta"],
+];
+
+/** Objeciones que se resuelven junto al CTA final. */
+const RISK: [typeof Lock, string][] = [
+  [CreditCard, "Sin tarjeta y sin cobros automáticos"],
+  [ArrowCounterClockwise, "Cancelas cuando quieras"],
+  [Scroll, "8 días hábiles de retracto al pagar"],
+  [Lock, "Pago seguro con ONVO Pay"],
+];
+
 const H2 = "text-4xl sm:text-5xl font-extrabold tracking-tight text-ink text-balance";
 const LEAD = "mt-4 text-lg text-muted leading-relaxed text-pretty max-w-[60ch]";
 
@@ -100,12 +117,12 @@ export default function Landing() {
           </p>
           <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
             <Link href={SIGNUP} data-cta="hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
-            <a href="#como-funciona" data-cta="hero-secundario" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver cómo funciona</a>
+            <a href="#como-funciona" data-cta="hero-secundario" className="tap hidden sm:inline-flex items-center font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver cómo funciona</a>
           </div>
           <p className="mt-5 text-sm font-semibold text-ink">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
           <p className="mt-1 text-sm text-muted">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-semibold text-ink underline underline-offset-4">Entrar</Link></p>
           <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-            {([[CreditCard, "Sin tarjeta para probar"], [Clock, "Tu plan listo en 2 minutos"], [ArrowCounterClockwise, "Cancela cuando quieras"]] as const).map(([I, t]) => (
+            {([[Clock, "Tu plan listo en 2 minutos"], [ArrowCounterClockwise, "Cancela cuando quieras"]] as const).map(([I, t]) => (
               <li key={t} className="inline-flex items-center gap-1.5"><I weight="duotone" aria-hidden className="size-4 text-banana-ink" />{t}</li>
             ))}
           </ul>
@@ -136,6 +153,15 @@ export default function Landing() {
               </li>
             ))}
           </ul>
+          {/* Prueba honesta: cifras reales del producto, no usuarios ni reseñas. */}
+          <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
+            {FACTS.map(([v, l]) => (
+              <div key={l} className="flex flex-col-reverse">
+                <dt className="mt-0.5 text-sm text-muted text-pretty">{l}</dt>
+                <dd className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink tabular-nums">{v}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
@@ -298,10 +324,13 @@ export default function Landing() {
           <h2 className={`${H2} mt-4 max-w-3xl mx-auto`}>Mañana entras al gym sabiendo exactamente qué hacer.</h2>
           <Link href={SIGNUP} data-cta="final" className="mt-8 btn-primary h-14 px-8 text-base">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
           <p className="mt-4 text-sm font-semibold text-ink/80">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
+          <ul className="mt-8 mx-auto grid max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:grid-cols-2 sm:w-fit">
+            {RISK.map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
+          </ul>
         </div>
       </section>
 
-      <StickyCta note={TRIAL_NOTE}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={TRIAL_NOTE}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 px-5 shrink-0">Crear mi plan <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }

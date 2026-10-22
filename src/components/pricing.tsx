@@ -4,18 +4,24 @@ import Link from "next/link";
 import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
 import { PLANS, annualSavingPct, perMonthAnnual, type Billing, type PlanId } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/env";
-import { createClient } from "@/lib/supabase/client";
 import { intentPath } from "@/lib/checkout-intent";
 import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
 import { useCheckout } from "@/components/pagos/use-checkout";
 
-/** ¿Hay sesión? (lectura local de la sesión de Supabase, sin red). En demo no hay cuentas. */
-function useLoggedIn() {
-  const [loggedIn, setLoggedIn] = useState(false);
+/**
+ * ¿Hay sesión? (lectura local de la sesión de Supabase, sin red). En demo no hay cuentas.
+ * El cliente de Supabase se carga aparte y solo si hay cookie de sesión: la landing no arrastra supabase-js para visitantes nuevos.
+ */
+function useLoggedIn(known?: boolean) {
+  const [loggedIn, setLoggedIn] = useState(Boolean(known));
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    createClient().auth.getSession().then(({ data }) => setLoggedIn(Boolean(data.session))).catch(() => {});
-  }, []);
+    if (known !== undefined || !isSupabaseConfigured) return;
+    if (!/(?:^|;\s*)sb-[^=]*-auth-token/.test(document.cookie)) return;
+    import("@/lib/supabase/client")
+      .then(({ createClient }) => createClient().auth.getSession())
+      .then(({ data }) => setLoggedIn(Boolean(data.session)))
+      .catch(() => {});
+  }, [known]);
   return loggedIn;
 }
 
@@ -50,9 +56,13 @@ const GUARANTEES = [
   [Lock, "Pago seguro con ONVO Pay", "Los datos de tu tarjeta van directo a ONVO Pay, nuestro procesador de pagos, y nunca pasan por nuestros servidores."],
 ] as const;
 
-export function Pricing() {
+/**
+ * Planes con el anual anclado. `recommended` decide qué plan va destacado (por defecto el completo;
+ * el muro de planes lo elige según el uso de la prueba). `loggedIn` evita leer la sesión cuando ya se sabe.
+ */
+export function Pricing({ recommended = "completo", loggedIn: known, reason }: { recommended?: PlanId; loggedIn?: boolean; reason?: string } = {}) {
   const [b, setB] = useState<Billing>("anual");
-  const loggedIn = useLoggedIn();
+  const loggedIn = useLoggedIn(known);
   const checkout = useCheckout();
   const save = Math.max(...PLANS.map(annualSavingPct));
   return (
@@ -69,14 +79,14 @@ export function Pricing() {
 
       <div data-sticky-hide className="grid gap-5 md:grid-cols-2 max-w-4xl mx-auto items-stretch">
         {PLANS.map((p) => {
-          const hot = p.nutrition;
+          const hot = p.id === recommended;
           const annual = b === "anual";
           const saved = Math.round((p.price.mes * 12 - p.price.anual) * 100) / 100;
           return (
             <div key={p.id} className={`relative flex flex-col rounded-[1.75rem] p-7 sm:p-8 ${hot ? "bg-ink text-white shadow-lift max-md:order-first" : "card"}`}>
-              {hot && <span className="chip absolute -top-3 left-7 gap-1.5 bg-banana text-ink"><MonkeyCrown className="size-4" />Recomendado</span>}
+              {hot && <span className="chip absolute -top-3 left-7 gap-1.5 bg-banana text-ink"><MonkeyCrown className="size-4" />{reason ? "Recomendado para ti" : "Recomendado"}</span>}
               <h3 className={`text-lg font-extrabold ${hot ? "text-banana" : "text-ink"}`}>{p.name}</h3>
-              <p className={`text-sm ${hot ? "text-white/75" : "text-muted"}`}>{p.tagline}</p>
+              <p className={`text-sm ${hot ? "text-white/75" : "text-muted"}`}>{hot && reason ? reason : p.tagline}</p>
               <p className="mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 {annual && <s className={`text-xl font-bold ${hot ? "text-white/60" : "text-faint"}`}><span className="sr-only">Antes </span>{money(p.price.mes)}</s>}
                 <span className={`text-5xl font-extrabold tracking-tight tabular-nums ${hot ? "" : "text-ink"}`}>{money(annual ? perMonthAnnual(p) : p.price.mes)}</span>

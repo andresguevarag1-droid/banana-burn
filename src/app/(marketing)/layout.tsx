@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand";
 import { MobileMenu } from "./mobile-menu";
+import { FunnelTracker } from "@/components/analytics";
 import { SITE_URL } from "@/lib/env";
 import { ogImage } from "./seo";
 import { GLP1, TRIAL_DAYS } from "@/lib/copy";
@@ -40,6 +41,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         </nav>
       </header>
       <main>{children}</main>
+      <FunnelTracker view="page_view" perPath />
       <footer className="mt-24 border-t border-line">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <Logo />

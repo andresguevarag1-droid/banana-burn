@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleNotch, Handshake, MonkeyBanana } from "@/components/icons";
-import { PLANS, annualSavingPct, usd, type Billing, type PlanId } from "@/lib/plans";
+import { ArrowCounterClockwise, ArrowRight, CircleNotch, Handshake, Lock, MonkeyBanana, Scroll } from "@/components/icons";
+import { PLANS, annualSavingPct, perMonthAnnual, usd, type Billing, type PlanId } from "@/lib/plans";
+import { money } from "@/lib/copy";
 import { INTENT_COOKIE, type CheckoutIntent } from "@/lib/checkout-intent";
 import { useCheckout } from "@/components/pagos/use-checkout";
 import type { Entitlements } from "@/lib/entitlements";
@@ -31,8 +32,11 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
     try { document.cookie = `${INTENT_COOKIE}=; path=/; max-age=0; samesite=lax`; } catch { /* sin cookies */ }
   }, []);
 
-  const options = PLANS.flatMap((p) => (["mes", "anual"] as const).map((b) => ({ p, b }))).filter(({ p, b }) => !isCurrent(p.id, b));
   const paid = current.plan !== "free" && current.status !== "canceled" && current.status !== "expired";
+  // Sin plan (prueba o vencida): anual primero y el plan completo anual destacado como recomendado.
+  const options = PLANS.flatMap((p) => (["anual", "mes"] as const).map((b) => ({ p, b }))).filter(({ p, b }) => !isCurrent(p.id, b))
+    .sort((x, y) => (paid ? 0 : Number(y.b === "anual") - Number(x.b === "anual")));
+  const recommended = paid ? null : "completo.anual";
   const disabled = !payments || Boolean(checkout.busy);
 
   return (
@@ -42,7 +46,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
           <h2 id="intent-title" className="text-xl font-extrabold">Estás a un paso: {label(intent.plan, intent.billing)}</h2>
           <p className="text-white/70"><b className="text-white tabular-nums">{usd(planOf(intent.plan).price[intent.billing])}</b> {intent.billing === "anual" ? "/año" : "/mes"}. Cancela cuando quieras.</p>
           {paid && <p className="mt-2 text-sm text-white/70">Reemplaza tu plan actual en cuanto se confirme el pago (sin prorrateo).</p>}
-          <button type="button" disabled={disabled} onClick={() => choose(intent.plan, intent.billing)} className="btn-banana mt-4 w-full h-13" aria-busy={checkout.busy === `${intent.plan}.${intent.billing}`}>
+          <button type="button" disabled={disabled} onClick={() => choose(intent.plan, intent.billing)} data-cta="manager-intent" className="btn-banana mt-4 w-full h-13" aria-busy={checkout.busy === `${intent.plan}.${intent.billing}`}>
             {checkout.busy === `${intent.plan}.${intent.billing}` ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Preparando tu pago…</> : <>Continuar al pago<ArrowRight weight="bold" className="size-5" /></>}
           </button>
           {!payments && <p className="mt-2 text-sm text-white/70">{demo ? "Modo demo: no se procesan pagos." : "Los pagos aún no están activos."}</p>}
@@ -72,19 +76,21 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
             const key = `${p.id}.${b}`;
             const up = current.plan === "entreno" && p.id === "completo";
             const down = current.plan === "completo" && p.id === "entreno";
+            const hot = key === recommended;
             return (
               <li key={key}>
-                <button type="button" disabled={disabled} onClick={() => choose(p.id, b)} aria-busy={checkout.busy === key}
-                  className="pressable w-full text-left rounded-2xl border-2 border-line bg-white p-4 hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/50 disabled:opacity-50">
+                <button type="button" disabled={disabled} onClick={() => choose(p.id, b)} aria-busy={checkout.busy === key} data-cta={`manager-${p.id}-${b}`}
+                  className={`pressable w-full text-left rounded-2xl border-2 p-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/50 disabled:opacity-50 ${hot ? "border-ink bg-banana-soft" : "border-line bg-white hover:border-ink"}`}>
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-bold text-ink">{p.name}</span>
                     {up && <span className="chip h-6 bg-peel/10 text-peel">Mejorar</span>}
                     {down && <span className="chip h-6 bg-line text-muted">Bajar</span>}
-                    {b === "anual" && !up && !down && <span className="chip h-6 bg-banana-soft text-banana-ink">−{annualSavingPct(p)} %</span>}
+                    {hot && <span className="chip h-6 bg-ink text-banana">Recomendado</span>}
+                    {b === "anual" && !up && !down && !hot && <span className="chip h-6 bg-banana-soft text-banana-ink">−{annualSavingPct(p)} %</span>}
                   </span>
-                  <span className="mt-1 flex items-center justify-between text-sm text-muted">
-                    <span>{b === "anual" ? "Anual" : "Mensual"}: <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}</span>
-                    {checkout.busy === key ? <CircleNotch weight="bold" className="size-4 animate-spin" /> : <ArrowRight weight="bold" className="size-4" />}
+                  <span className="mt-1 flex items-center justify-between gap-2 text-sm text-muted">
+                    <span>{b === "anual" ? "Anual" : "Mensual"}: <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}{b === "anual" && <span className="block text-xs tabular-nums">Equivale a {money(perMonthAnnual(p))} al mes, ahorras {annualSavingPct(p)} %</span>}</span>
+                    {checkout.busy === key ? <CircleNotch weight="bold" className="size-4 shrink-0 animate-spin" /> : <ArrowRight weight="bold" className="size-4 shrink-0" />}
                   </span>
                 </button>
               </li>
@@ -92,6 +98,13 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
           })}
         </ul>
         {!payments && demo && <p className="mt-3 text-sm text-muted">Modo demo: los botones de pago están desactivados.</p>}
+        {!paid && (
+          <ul className="mt-4 grid gap-1.5 text-xs font-semibold text-muted sm:grid-cols-3">
+            <li className="flex items-center gap-1.5"><Lock weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />Pago seguro con ONVO Pay</li>
+            <li className="flex items-center gap-1.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />Cancela cuando quieras</li>
+            <li className="flex items-center gap-1.5"><Scroll weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />8 días hábiles de retracto</li>
+          </ul>
+        )}
       </section>
 
       {current.cancellable && current.plan !== "free" && current.billing && (

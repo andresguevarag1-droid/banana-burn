@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, MonkeyBanana } from "@/components/icons";
+import { ArrowCounterClockwise, ArrowLeft, Check, Lock, MonkeyBanana, Scroll } from "@/components/icons";
+import { FunnelTracker } from "@/components/analytics";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { PLANS, perMonthAnnual } from "@/lib/plans";
-import { money } from "@/lib/copy";
+import { money, noBreakGlp1 } from "@/lib/copy";
 import { OnvoPayForm } from "./onvo-pay-form";
 
 export const metadata = { title: "Completa tu pago" };
@@ -38,6 +39,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-6 animate-rise">
       <Link href="/app/suscripcion" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver a Mi suscripción</Link>
+      <FunnelTracker view="checkout_view" props={{ plan: plan.id, billing: row.billing as string }} />
       <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Activa {plan.name}</h1>
 
       <section className="card p-5" aria-label="Resumen">
@@ -51,20 +53,28 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
             <span className="text-xs text-muted">{annual ? "al año" : "al mes"}</span>
           </p>
         </div>
+        <ul className="mt-4 grid gap-1.5 text-sm text-body sm:grid-cols-2">
+          {plan.feats.slice(0, 4).map((f) => <li key={f} className="flex gap-2"><Check weight="bold" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">{noBreakGlp1(f)}</span></li>)}
+        </ul>
         <dl className="mt-4 border-t border-line pt-4 space-y-2 text-sm">
           <div className="flex items-baseline justify-between gap-4"><dt className="font-extrabold text-ink">Hoy pagas</dt><dd className="text-lg font-extrabold tabular-nums text-ink">{money(price)} USD</dd></div>
           <div className="flex items-baseline justify-between gap-4"><dt className="text-muted">Se renueva el</dt><dd className="font-semibold text-ink text-right">{renews}, por {money(price)}</dd></div>
         </dl>
-        <p className="mt-4 text-xs text-muted text-pretty">Pagas con tarjeta de crédito o débito. Cancelas cuando quieras desde Mi suscripción y tienes 8 días hábiles de derecho de retracto: lee los <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">Términos</Link> y la sección de <Link href="/terminos#reembolsos" className="tap font-semibold text-ink underline underline-offset-2">reembolsos y retracto</Link>.</p>
       </section>
 
       <section className="card p-5" aria-labelledby="pay-title">
-        <h2 id="pay-title" className="font-extrabold text-ink mb-4">Método de pago</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 id="pay-title" className="font-extrabold text-ink">Tarjeta de crédito o débito</h2>
+          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-peel"><Lock weight="duotone" aria-hidden className="size-4" />Pago seguro</span>
+        </div>
         <OnvoPayForm publicKey={publicKey} subscriptionId={s} customerId={row.provider_customer_id ?? undefined} />
+        <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-body">
+          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Procesado por ONVO Pay. Banana Burn no ve ni guarda tu tarjeta. Cobro en dólares (USD).</span></li>
+          <li className="flex gap-2.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Cancelas cuando quieras desde Mi suscripción, sin llamadas. Conservas el acceso hasta el final del periodo pagado.</span></li>
+          <li className="flex gap-2.5"><Scroll weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">8 días hábiles de derecho de retracto. Lee los <Link href="/terminos#planes" className="font-semibold text-ink underline underline-offset-2">Términos</Link> y <Link href="/terminos#reembolsos" className="font-semibold text-ink underline underline-offset-2">reembolsos y retracto</Link>.</span></li>
+        </ul>
       </section>
-
-      <p className="text-xs text-muted text-center">Tus datos de pago los procesa ONVO Pay; Banana Burn no ve ni guarda tu tarjeta. El cobro es en dólares (USD).</p>
-      <p className="text-center"><Link href={`/pago/cancelado?s=${encodeURIComponent(s)}`} className="tap text-sm font-semibold text-muted underline hover:text-ink">No quiero pagar ahora</Link></p>
+      <p className="text-center"><Link href={`/pago/cancelado?s=${encodeURIComponent(s)}`} data-cta="checkout-ahora-no" className="tap text-sm font-semibold text-muted underline hover:text-ink">No quiero pagar ahora</Link></p>
     </div>
   );
 }

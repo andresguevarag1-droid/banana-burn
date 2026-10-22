@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CircleNotch, Envelope, Eye, EyeSlash, Lock, MonkeyBanana } from "@/components/icons";
+import { ArrowLeft, Check, CircleNotch, Envelope, Eye, EyeSlash, Lock, MonkeyBanana } from "@/components/icons";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/security/redirect";
 import { INTENT_COOKIE, INTENT_MAX_AGE, encodeIntent, parseIntent } from "@/lib/checkout-intent";
@@ -186,8 +186,8 @@ export function LoginForm({ configured, googleEnabled = false }: { configured: b
     <div className="animate-rise">
       {step === "email" && (
         <>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{isSignup ? "Crea tu cuenta" : "Qué bueno verte"}</h1>
-          <p className="mt-2 text-muted text-pretty">{isSignup ? `${TRIAL_DAYS} días gratis con todo incluido. Sin tarjeta.` : "Entra para ver qué te toca hoy."}</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{isSignup ? "Crea tu cuenta gratis" : "Qué bueno verte"}</h1>
+          <p className="mt-2 text-muted text-pretty">{isSignup ? `Solo necesitas tu correo. Después respondes 7 preguntas rápidas y tienes ${TRIAL_DAYS} días gratis con todo incluido.` : "Entra para ver qué te toca hoy."}</p>
           {isSignup && chosen && intent && (
             <p className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl bg-cream px-4 py-3 text-sm text-body">
               <span>Elegiste <b className="text-ink">{chosen.name}</b>, {intent.billing === "anual" ? "pago anual" : "pago mensual"}. Lo activas cuando termine tu prueba.</span>
@@ -195,7 +195,7 @@ export function LoginForm({ configured, googleEnabled = false }: { configured: b
             </p>
           )}
           {googleEnabled ? (<>
-            <button type="button" onClick={google} disabled={busy} className="btn-ghost w-full mt-8 h-13"><GoogleG />Continuar con Google</button>
+            <button type="button" onClick={google} disabled={busy} data-cta={isSignup ? "registro-google" : "entrar-google"} className="btn-ghost w-full mt-8 h-13"><GoogleG />Continuar con Google</button>
             <div className="my-6 flex items-center gap-3 text-xs font-semibold text-faint"><span className="h-px flex-1 bg-line" />o con tu correo<span className="h-px flex-1 bg-line" /></div>
           </>) : <div className="mt-8" />}
           <form onSubmit={method === "password" ? withPassword : sendCode} className="space-y-3">
@@ -212,7 +212,14 @@ export function LoginForm({ configured, googleEnabled = false }: { configured: b
               </div>
               {isSignup && <p id="pw-hint" className="text-xs text-muted">Mínimo 8 caracteres.</p>}
             </>)}
-            <button disabled={busy || !email || (method === "password" && !password)} className="btn-primary w-full h-13">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : method === "password" ? <Lock weight="duotone" className="size-5" /> : <Envelope weight="duotone" className="size-5" />}{method === "password" ? (isSignup ? "Crear mi cuenta gratis" : "Entrar") : "Enviarme un código"}</button>
+            <button disabled={busy || !email || (method === "password" && !password)} data-cta={isSignup ? `registro-${method}` : `entrar-${method}`} className="btn-primary w-full h-13">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : method === "password" ? <Lock weight="duotone" className="size-5" /> : <Envelope weight="duotone" className="size-5" />}{method === "password" ? (isSignup ? "Empezar mi prueba gratis" : "Entrar") : "Enviarme un código"}</button>
+            {isSignup && (
+              <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-1 text-xs font-semibold text-muted">
+                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Sin tarjeta</li>
+                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Sin cobros automáticos</li>
+                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Tu plan en 2 minutos</li>
+              </ul>
+            )}
           </form>
           <button type="button" onClick={() => { setMethod(method === "password" ? "code" : "password"); setErr(null); setInfo(null); }} className="tap mt-3 w-full text-sm font-semibold text-muted underline-offset-4 hover:text-ink hover:underline">{method === "password" ? "Prefiero recibir un código por correo" : "Prefiero usar contraseña"}</button>
           {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{info}</p>}
