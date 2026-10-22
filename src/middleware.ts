@@ -17,7 +17,7 @@ export async function middleware(req: NextRequest) {
   });
   const { data: { user } } = await sb.auth.getUser();
   const path = req.nextUrl.pathname;
-  const isPrivate = path.startsWith("/app") || path.startsWith("/admin");
+  const isPrivate = path.startsWith("/app") || path.startsWith("/admin") || path.startsWith("/bienvenida");
   if (isPrivate && !user) {
     const url = req.nextUrl.clone();
     url.pathname = "/entrar";
@@ -33,4 +33,4 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
-export const config = { matcher: ["/app/:path*", "/admin/:path*", "/entrar", "/registro"] };
+export const config = { matcher: ["/app/:path*", "/admin/:path*", "/bienvenida", "/entrar", "/registro"] };

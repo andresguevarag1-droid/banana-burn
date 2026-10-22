@@ -2,8 +2,10 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getProgress, liftName, MAIN_LIFTS } from "@/lib/progress";
 import { kcalAdjustment, weeklyTrend } from "@/lib/engine";
-import { LineChart } from "@/components/line-chart";
-import { ProfileForm, WeightForm } from "./forms";
+import { WeightChart } from "@/components/weight-chart";
+import { WeighIn } from "@/components/weigh-in";
+import { getDaily } from "@/lib/daily";
+import { ProfileForm } from "./forms";
 
 export const metadata = { title: "Progreso" };
 
@@ -13,7 +15,7 @@ export default async function Progreso() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
-  const { weights, lifts, workouts } = await getProgress(v);
+  const [{ weights, lifts, workouts }, g] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight)]);
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
   const adj = kcalAdjustment(rate, d.needPerWeek);
   const lost = a.startWeight - a.currentWeight;
@@ -36,8 +38,8 @@ export default async function Progreso() {
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr] [&>*]:min-w-0">
         <section className="card p-5">
-          <div className="flex items-center justify-between mb-2"><h2 className="font-bold text-ink">⚖️ Peso</h2><span className="text-xs font-semibold text-muted">línea gruesa = tendencia</span></div>
-          <LineChart data={weights} goal={a.goalWeight} trend />
+          <div className="flex items-center justify-between mb-2"><h2 className="font-bold text-ink">⚖️ Peso</h2></div>
+          <WeightChart data={weights} goal={a.goalWeight} />
         </section>
         <div className="space-y-4">
           <section className={`rounded-[1.5rem] p-5 ${insight.tone}`}>
@@ -47,7 +49,7 @@ export default async function Progreso() {
           </section>
           <section className="card p-5">
             <h2 className="font-bold text-ink mb-3">Peso de hoy</h2>
-            <WeightForm last={a.currentWeight} />
+            <WeighIn last={a.currentWeight} />
           </section>
         </div>
       </div>
@@ -63,11 +65,33 @@ export default async function Progreso() {
               <div key={k} className="card p-4">
                 <p className="text-sm font-semibold text-muted truncate">{liftName(k)}</p>
                 <p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{cur ? `${nf(cur, 0)} kg` : "—"}</p>
+                <p className="text-[10px] text-faint">1RM estimado</p>
                 <p className={`text-xs font-bold ${pct && pct > 0 ? "text-peel" : "text-faint"}`}>{pct != null ? `${pct >= 0 ? "▲" : "▼"} ${nf(Math.abs(pct))} %` : "Sin datos aún"}</p>
                 {pts.length > 1 && <div className="mt-2 -mx-1"><Spark data={pts.map((p) => p.v)} /></div>}
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section id="logros" className="card p-5 scroll-mt-6">
+        <div className="flex items-center gap-4">
+          <span className="grid place-items-center size-14 rounded-2xl bg-banana text-3xl">{g.level.e}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">Nivel {g.level.idx}</p>
+            <p className="text-xl font-extrabold text-ink">{g.level.n}</p>
+            <div className="mt-1.5 h-2.5 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember" style={{ width: `${Math.max(4, g.level.progress * 100)}%` }} /></div>
+            <p className="mt-1 text-xs text-muted">{g.xp.toLocaleString("es-CR")} XP{g.level.next ? ` · ${g.level.toNext} para ${g.level.next.n}` : ""} · 🔥 racha {g.streak.days} días</p>
+          </div>
+        </div>
+        <h2 className="mt-5 font-bold text-ink">🏅 Logros <span className="text-muted font-semibold">{g.badges.filter((b) => b.got).length}/{g.badges.length}</span></h2>
+        <div className="mt-3 grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {g.badges.map((b) => (
+            <div key={b.id} className={`rounded-2xl p-2 text-center ${b.got ? "bg-banana-soft" : "bg-cream opacity-60"}`} title={b.d}>
+              <p className={`text-2xl ${b.got ? "" : "grayscale"}`}>{b.got ? b.e : "🔒"}</p>
+              <p className="mt-1 text-[10px] font-bold leading-tight text-ink">{b.n}</p>
+            </div>
+          ))}
         </div>
       </section>
 

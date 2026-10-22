@@ -1,7 +1,8 @@
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
-import { EX, e1rm, planDay, prescribe } from "@/lib/engine";
+import { getDaily } from "@/lib/daily";
+import { ALTS, BARBELL, EX, SLOTS, e1rm, planDay, prescribe, type ExerciseId, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { Player, type PlayerExercise } from "./player";
 
@@ -10,15 +11,22 @@ export const metadata = { title: "Entreno" };
 export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string }> }) {
   const { dia } = await searchParams;
   const v = (await getViewer())!;
-  const d = dashboard(await getAthlete(v));
+  const a = await getAthlete(v);
+  const d = dashboard(a);
+  const g = await getDaily(v, a.startWeight, a.currentWeight);
   const n = Number(dia);
-  const plan = dia != null && n >= 0 && n <= 6 ? planDay(n, d.week) : d.plan;
-  const hist = await getHistory(v, plan.exercises.map((e) => e.id));
-  const exercises: PlayerExercise[] = plan.exercises.map((e) => {
-    const h = hist[e.id] ?? [];
-    const best = Math.max(0, ...h.flat().map((s) => (s.kg ? e1rm(s.kg, s.reps) : 0)));
-    const last = h.at(-1);
-    return { tech: TECH[e.id] ?? null, bw: EX[e.id].inc === 0, id: e.id, name: e.name, muscle: e.muscle, cfg: e.cfg, rx: prescribe(e.id, e.cfg, h, { deload: d.deload }), best, last: last ? last.map((s) => `${s.kg ?? "—"}×${s.reps}`).join(" · ") : null };
+  const plan = dia != null && n >= 0 && n <= 6 ? planDay(n, d.week, d.sched) : d.plan;
+
+  const optionIds = plan.exercises.map((e) => {
+    const pool = e.cfg.slot ? SLOTS[e.cfg.slot] : ALTS[e.id] ?? [];
+    return [e.id, ...pool.filter((x) => x !== e.id)].filter((x, i, a) => a.indexOf(x) === i).slice(0, 4) as ExerciseId[];
   });
-  return <Player template={plan.tpl ?? "descanso"} title={`${plan.emoji} ${plan.name}`} cardio={plan.cardio} exercises={exercises} dateKey={d.today.iso} />;
+  const hist = await getHistory(v, [...new Set(optionIds.flat())]);
+  const build = (id: ExerciseId, cfg: SlotCfg): PlayerExercise => {
+    const h = hist[id] ?? [];
+    const best = Math.max(0, ...h.flat().map((s) => (s.kg ? e1rm(s.kg, s.reps) : 0)));
+    return { id, name: EX[id].n, muscle: EX[id].m, cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), rx: prescribe(id, cfg, h, { deload: d.deload }), best, lastSets: h.at(-1) ?? null };
+  };
+  const options = plan.exercises.map((e, i) => optionIds[i].map((id) => build(id, e.cfg)));
+  return <Player template={plan.tpl ?? "descanso"} title={plan.name} emoji={plan.emoji} cardio={plan.cardio} options={options} dateKey={d.today.iso} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
 }

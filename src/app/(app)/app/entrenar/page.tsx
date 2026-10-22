@@ -1,44 +1,30 @@
-import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { DAY_NAMES } from "@/lib/engine";
+import { getDaily } from "@/lib/daily";
+import { WeekTabs } from "./week-tabs";
+import { mondayOf } from "@/lib/today";
 
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
   const v = (await getViewer())!;
-  const d = dashboard(await getAthlete(v));
+  const a = await getAthlete(v);
+  const d = dashboard(a);
+  const g = await getDaily(v, a.startWeight, a.currentWeight);
+  const block = (d.week % 6) + 1;
+  const done = g.week.filter((w) => w.active && w.d < d.today.iso && w.d >= mondayOf(d.today.iso)).map((w) => new Date(w.d + "T12:00:00").getDay()).filter((dow) => d.weekPlan.find((p) => p.dow === dow)?.tpl);
   return (
-    <div className="space-y-6 animate-rise">
+    <div className="space-y-5 animate-rise">
       <header>
-        <p className="eyebrow">Semana {d.week + 1}{d.deload && " · descarga"}</p>
-        <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Tu plan de la semana</h1>
-        <p className="mt-2 text-muted">Ningún día se repite con el anterior o el siguiente. Los accesorios rotan cada lunes.</p>
+        <p className="eyebrow">Programa Recomposición Banana</p>
+        <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Semana {block} de 6{d.deload && " · descarga 🌴"}</h1>
+        <div className="mt-3 flex gap-1.5" aria-label={`Semana ${block} de 6`}>
+          {[1, 2, 3, 4, 5, 6].map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < block ? "bg-ink" : w === block ? "bg-ember" : w === 6 ? "bg-sky/30" : "bg-line"}`} />)}
+        </div>
+        <p className="mt-2 text-sm text-muted">{a.trainDays} días por semana · ningún día repite al anterior ni al siguiente · los accesorios rotan cada lunes · la semana 6 es de descarga.</p>
       </header>
-      <div className="grid gap-4 md:grid-cols-2">
-        {d.weekPlan.map((p) => {
-          const today = p.dow === d.today.dow;
-          return (
-            <section key={p.dow} className={`rounded-[1.5rem] p-5 border ${today ? "bg-banana border-banana shadow-lift" : "card"}`}>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wider text-ink/60">{DAY_NAMES[p.dow]}{today && " · hoy"}</p>
-                <span className="chip bg-ink/5 text-ink">{p.tag}</span>
-              </div>
-              <h2 className="mt-1 text-xl font-extrabold text-ink">{p.emoji} {p.name}</h2>
-              {p.exercises.length ? (
-                <ul className="mt-3 divide-y divide-ink/10 text-[15px]">
-                  {p.exercises.map((e) => (
-                    <li key={e.id} className="py-2 flex justify-between gap-3"><span className="text-ink">{e.name}<span className="text-ink/50 text-xs"> · {e.muscle}</span></span><span className="font-bold tabular-nums text-ink">{e.cfg.sets}×{e.cfg.lo}–{e.cfg.hi}{e.cfg.unit === "s" ? " s" : e.cfg.unit === "m" ? " m" : ""}</span></li>
-                  ))}
-                </ul>
-              ) : null}
-              {p.cardio && <p className="mt-3 text-sm text-ink/70">🚶 {p.cardio}</p>}
-              {p.tpl && <Link href={today ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-4 w-full h-11 text-sm ${today ? "btn-primary" : "btn-ghost"}`}>{today ? "Empezar entreno de hoy" : "Hacer esta rutina"}</Link>}
-            </section>
-          );
-        })}
-      </div>
-      <p className="text-sm text-faint text-center">¿Te perdiste un día? Puedes hacer cualquier rutina de la semana; el motor ajusta tus cargas igual.</p>
+      <WeekTabs days={d.weekPlan} todayDow={d.today.dow} done={done} />
+      <p className="text-sm text-faint text-center">¿Te perdiste un día? Toca cualquier día y hazlo ahora; el motor ajusta tus cargas igual.</p>
     </div>
   );
 }

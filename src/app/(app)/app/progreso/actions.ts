@@ -10,12 +10,16 @@ export async function logWeight(_: FormState, fd: FormData): Promise<FormState> 
   if (!v) return { error: "Inicia sesión." };
   const kg = Number(String(fd.get("kg")).replace(",", "."));
   if (!(kg >= 30 && kg <= 300)) return { error: "Peso inválido." };
-  if (v.demo) return { ok: `Demo: registrarías ${kg} kg.` };
+  const kgTxt = kg.toLocaleString("es-CR", { maximumFractionDigits: 1 });
+  if (v.demo) return { ok: `✅ ${kgTxt} kg anotado (demo)` };
   const sb = await createClient();
-  const { error } = await sb.from("weights").upsert({ user_id: v.id, day: crToday().iso, kg }, { onConflict: "user_id,day" });
+  const day = crToday().iso;
+  const { data: had } = await sb.from("weights").select("day").eq("user_id", v.id).eq("day", day).maybeSingle();
+  const { error } = await sb.from("weights").upsert({ user_id: v.id, day, kg }, { onConflict: "user_id,day" });
   if (error) return { error: "No se pudo guardar." };
+  if (!had) await sb.from("xp_events").insert({ user_id: v.id, kind: "weigh", xp: 10 });
   revalidatePath("/app", "layout");
-  return { ok: `¡Listo! ${kg} kg guardado ✅` };
+  return { ok: had ? `✅ Actualizado a ${kgTxt} kg` : `✅ ${kgTxt} kg guardado · +10 XP` };
 }
 
 export async function saveProfile(_: FormState, fd: FormData): Promise<FormState> {

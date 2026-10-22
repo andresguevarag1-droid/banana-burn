@@ -45,3 +45,8 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 /* Variables del motor de animación */
 :root { --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B; }
 .motion svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+@keyframes confetti { 0% { transform: translate3d(0,0,0) rotate(0); opacity: 1 } 100% { transform: translate3d(30px,110vh,0) rotate(720deg); opacity: .9 } }
+@keyframes pop { 0% { transform: scale(.3); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sheet { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }

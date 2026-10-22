@@ -105,3 +105,12 @@ export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK): Pla
 export function planWeek(week: number, schedule = DEFAULT_WEEK): PlannedDay[] {
   return [1, 2, 3, 4, 5, 6, 0].map((d) => planDay(d, week, schedule));
 }
+
+/** Semana según días disponibles (3–6). Nunca repite plantilla en días seguidos. */
+export function scheduleFor(days: number): Record<number, TemplateId | null> {
+  const n = Math.max(3, Math.min(6, Math.round(days || 6)));
+  if (n === 6) return DEFAULT_WEEK;
+  if (n === 5) return { 0: null, 1: "pushA", 2: "pullA", 3: "core", 4: "pushB", 5: "pullB", 6: null };
+  if (n === 4) return { 0: null, 1: "pushA", 2: "pullA", 3: null, 4: "pushB", 5: "pullB", 6: null };
+  return { 0: null, 1: "pushA", 2: null, 3: "pullA", 4: null, 5: "pushB", 6: null };
+}

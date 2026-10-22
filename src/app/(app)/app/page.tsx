@@ -1,131 +1,136 @@
 import Link from "next/link";
-import { ArrowRight, Clock, Flame, Footprints, Moon, Timer } from "lucide-react";
-import { Ring } from "@/components/ring";
+import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
+import { getDaily } from "@/lib/daily";
+import { getMeals, sumMeals } from "@/lib/meals";
 import { DAY_NAMES } from "@/lib/engine";
+import { DayTracker } from "@/components/day-tracker";
+import { WeighIn } from "@/components/weigh-in";
 
 export const metadata = { title: "Hoy" };
 
-const fmtRest = (s: number) => (s >= 120 ? `${s / 60} min` : `${s} s`);
+const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
+
+function tipFor(dow: number, training: boolean, proteinLeft: number) {
+  if (!training) return "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo 💪";
+  if (proteinLeft > 100) return "Come tus carbos 60–90 min antes de entrenar: gallo pinto con huevo o plátano con yogurt griego 🍌";
+  if (dow === 5) return "Viernes: después del gym, casado con pechuga y doble ensalada. Guarda el fresco para el finde 😉";
+  return "Tempo 3-1-1 en cada rep. Bajar lento es donde se construye el músculo.";
+}
 
 export default async function Hoy() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
+  const [g, meals] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v)]);
+  const eaten = sumMeals(meals.today);
   const { plan, t } = d;
-  const dateLabel = d.today.date.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
   const training = !!plan.tpl;
-  const unit = (u?: string) => (u === "s" ? " s" : u === "m" ? " m" : "");
+  const dateLabel = d.today.date.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
+  const mins = plan.mins ?? (training ? 55 : 0);
+  const kgLost = a.startWeight - a.currentWeight;
 
   return (
-    <div className="space-y-6 animate-rise">
-      <header className="flex items-end justify-between gap-4">
-        <div>
+    <div className="space-y-5 animate-rise">
+      {/* Encabezado + motivación */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">¡Pura vida, {a.name}! 🍌</h1>
+          <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">¡Pura vida, {a.name}!</h1>
         </div>
-        <span className="chip shrink-0 whitespace-nowrap bg-white border border-line text-ink h-9 px-4 text-sm">🔥 Semana {d.week + 1}{d.deload && " · descarga"}</span>
+        <Link href="/app/progreso#logros" className="shrink-0 flex flex-col items-center rounded-2xl bg-white border border-line px-3 py-1.5" aria-label={`Racha de ${g.streak.days} días`}>
+          <span className={`text-2xl leading-none ${g.streak.todayDone ? "" : "grayscale-[.6] opacity-80"}`}>🔥</span>
+          <span className="text-sm font-extrabold text-ink tabular-nums">{g.streak.days}</span>
+        </Link>
       </header>
 
-      {!a.complete && (
-        <div className="card p-5 flex items-center justify-between gap-4 border-banana bg-banana-soft/50">
-          <p className="font-semibold text-ink">Completa tu perfil para calcular tu plan exacto ✍️</p>
-          <Link href="/app/progreso" className="btn-primary h-10 text-sm">Completar</Link>
+      <Link href="/app/progreso#logros" className="block card p-3.5">
+        <div className="flex items-center gap-3">
+          <span className="grid place-items-center size-10 rounded-xl bg-banana text-lg">{g.level.e}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between text-xs font-bold"><span className="text-ink">Nivel {g.level.idx} · {g.level.n}</span><span className="text-muted tabular-nums">{g.xp.toLocaleString("es-CR")} XP</span></div>
+            <div className="mt-1.5 h-2 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember" style={{ width: `${Math.max(4, g.level.progress * 100)}%` }} /></div>
+          </div>
+          <div className="hidden sm:flex gap-1.5 pl-3 border-l border-line">
+            {g.week.map((w) => {
+              const dw = new Date(w.d + "T12:00:00").getDay();
+              const isToday = w.d === d.today.iso;
+              return <span key={w.d} className={`grid place-items-center size-7 rounded-full text-[11px] font-bold ${w.active ? "bg-ember text-white" : isToday ? "border-2 border-dashed border-ember text-ember" : "bg-cream text-faint"}`}>{w.active ? "✓" : DOW1[dw]}</span>;
+            })}
+          </div>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr] [&>*]:min-w-0">
-        {/* Rutina de hoy */}
-        <section className={`rounded-[1.75rem] p-6 sm:p-7 ${training ? "bg-banana" : "card"}`}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-bold uppercase tracking-wider text-ink/70">Hoy {DAY_NAMES[d.today.dow]} te toca</p>
-            <span className="chip bg-ink/10 text-ink">{plan.tag}</span>
-          </div>
-          <h2 className="mt-2 text-4xl font-extrabold tracking-tight text-ink">{plan.emoji} {plan.name}</h2>
-          <p className="mt-1 text-sm font-semibold text-ink/70 flex items-center gap-1.5"><Clock className="size-4" />{plan.mins ? `~${plan.mins} min` : training ? "~55 min" : "Día libre"} · tempo 3-1-1 · deja 1–2 reps en reserva</p>
-
-          {training ? (
-            <ol className="mt-6 space-y-2">
-              {plan.exercises.map((e, i) => (
-                <li key={e.id} className="flex items-center gap-4 rounded-2xl bg-white/70 backdrop-blur px-4 py-3">
-                  <span className="grid place-items-center size-9 shrink-0 rounded-xl bg-ink text-white font-bold">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-ink truncate">{e.name}</p>
-                    <p className="text-xs font-semibold text-ink/60">{e.muscle} · descanso {fmtRest(e.cfg.rest)}</p>
-                  </div>
-                  <p className="text-right font-extrabold text-ink tabular-nums">{e.cfg.sets}×{e.cfg.lo}–{e.cfg.hi}{unit(e.cfg.unit)}</p>
-                </li>
-              ))}
-              {plan.cardio && <li className="rounded-2xl bg-white/50 px-4 py-3 text-sm font-semibold text-ink">🚶 {plan.cardio}</li>}
-            </ol>
-          ) : (
-            <p className="mt-6 text-lg text-ink">🚶 {plan.cardio}. Tu músculo crece hoy — duerme bien y llega a tu proteína.</p>
-          )}
-
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-            {training && <Link href="/app/entreno" className="btn-primary h-13 px-6">Empezar entreno <ArrowRight className="size-5" /></Link>}
-            <p className="text-sm font-semibold text-ink/70">Ayer: {d.yesterday.emoji} {d.yesterday.name} · Mañana: {d.tomorrow.emoji} {d.tomorrow.name}</p>
-          </div>
-        </section>
-
-        {/* Meta */}
-        <section className="card p-6 flex flex-col items-center text-center">
-          <p className="eyebrow">Tu meta</p>
-          <div className="mt-4">
-            <Ring value={d.progress} size={160}>
-              <div><p className="text-3xl font-extrabold text-ink tabular-nums">{d.toGo.toLocaleString("es-CR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p><p className="text-xs font-semibold text-muted">kg por bajar</p></div>
-            </Ring>
-          </div>
-          <p className="mt-4 font-bold text-ink">{a.currentWeight} kg → {a.goalWeight} kg</p>
-          <p className="text-sm text-muted">{d.daysLeft} días · necesitas −{d.needPerWeek.toLocaleString("es-CR")} kg/sem</p>
-          <Link href="/app/progreso" className="btn-ghost h-10 mt-5 text-sm w-full">⚖️ Registrar peso de hoy</Link>
-        </section>
-      </div>
-
-      {/* Objetivos diarios */}
-      <section>
-        <h3 className="font-bold text-ink mb-3">Objetivos de hoy</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { i: <Flame className="size-5 text-ember" />, v: t.kcal.toLocaleString("es-CR"), l: "kcal" },
-            { i: <span className="text-lg">🥩</span>, v: `${t.protein} g`, l: "proteína" },
-            { i: <span className="text-lg">🍚</span>, v: `${t.carbs} g`, l: "carbos (pre-entreno)" },
-            { i: <span className="text-lg">🥑</span>, v: `${t.fat} g`, l: "grasa" },
-            { i: <Footprints className="size-5 text-sky" />, v: "10.000", l: "pasos" },
-            { i: <Moon className="size-5 text-banana-ink" />, v: "7–9 h", l: "sueño" },
-          ].map((m) => (
-            <div key={m.l} className="card p-4">
-              {m.i}<p className="mt-2 text-xl font-extrabold text-ink tabular-nums">{m.v}</p><p className="text-xs font-semibold text-muted">{m.l}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Semana */}
-      <section className="card p-5">
-        <div className="flex items-center justify-between mb-4"><h3 className="font-bold text-ink">Esta semana</h3><Link href="/app/entrenar" className="text-sm font-semibold text-muted hover:text-ink">Ver plan →</Link></div>
-        <div className="grid grid-cols-7 gap-2">
-          {d.weekPlan.map((p) => {
-            const isToday = p.dow === d.today.dow;
+        <div className="sm:hidden mt-3 flex justify-between">
+          {g.week.map((w) => {
+            const dw = new Date(w.d + "T12:00:00").getDay();
+            const isToday = w.d === d.today.iso;
             return (
-              <div key={p.dow} className={`rounded-2xl py-3 text-center ${isToday ? "bg-ink text-white" : p.tpl ? "bg-cream" : "bg-white border border-dashed border-line"}`}>
-                <p className={`text-[11px] font-bold uppercase ${isToday ? "text-banana" : "text-muted"}`}>{DAY_NAMES[p.dow].slice(0, 3)}</p>
-                <p className="text-xl mt-1">{p.emoji}</p>
-                <p className={`hidden sm:block text-[11px] font-semibold mt-1 px-1 truncate ${isToday ? "" : "text-ink"}`}>{p.name}</p>
-              </div>
+              <span key={w.d} className="flex flex-col items-center gap-1">
+                <span className={`grid place-items-center size-8 rounded-full text-xs font-bold ${w.active ? "bg-ember text-white" : isToday ? "border-2 border-dashed border-ember text-ember" : "bg-cream text-faint"}`}>{w.active ? "✓" : ""}</span>
+                <span className={`text-[10px] font-bold ${isToday ? "text-ink" : "text-faint"}`}>{DOW1[dw]}</span>
+              </span>
             );
           })}
         </div>
+        {!g.streak.todayDone && g.streak.days > 0 && <p className="mt-2.5 text-xs font-semibold text-ember-ink">Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días 🔥</p>}
+      </Link>
+
+      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
+        {/* Rutina de hoy */}
+        <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-peel/10 border border-peel/30" : training ? "bg-banana" : "card"}`}>
+          {training && !g.trainedToday && <span aria-hidden className="absolute -right-6 -top-8 text-[140px] leading-none opacity-[.13] rotate-12 select-none">{plan.emoji}</span>}
+          <p className="relative text-xs font-bold uppercase tracking-wider text-ink/60">Hoy {DAY_NAMES[d.today.dow]} · {plan.tag}{d.deload && " · descarga 🌴"}</p>
+          <h2 className="relative mt-1 text-[32px] leading-none font-extrabold tracking-tight text-ink">{plan.emoji} {plan.name}</h2>
+          {training ? (
+            <>
+              <p className="relative mt-2 text-sm font-semibold text-ink/70">{plan.exercises.length} ejercicios · ~{mins} min{plan.cardio ? " · + cardio" : ""}</p>
+              <ul className="relative mt-4 flex flex-wrap gap-1.5">
+                {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/50">{e.cfg.sets}×{e.cfg.lo}–{e.cfg.hi}</span></li>)}
+              </ul>
+              {g.trainedToday ? (
+                <p className="relative mt-5 font-extrabold text-peel">✅ ¡Entreno de hoy completado! Descansa y come bien.</p>
+              ) : (
+                <Link href="/app/entreno" className="relative mt-5 btn-primary w-full sm:w-auto h-14 px-7 text-base">Empezar entreno <ArrowRight className="size-5" /></Link>
+              )}
+            </>
+          ) : (
+            <p className="relative mt-3 text-ink/80">🚶 {plan.cardio}. Tu músculo crece hoy.</p>
+          )}
+          <p className="relative mt-4 text-xs font-semibold text-ink/60">Ayer {d.yesterday.emoji} {d.yesterday.name} · Mañana {d.tomorrow.emoji} {d.tomorrow.name}</p>
+        </section>
+
+        {/* Peso y meta */}
+        <section className="card p-5 flex flex-col">
+          <div className="flex items-baseline justify-between">
+            <p className="font-bold text-ink">⚖️ {g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?"}</p>
+            <Link href="/app/progreso" className="text-xs font-semibold text-muted">Ver curva →</Link>
+          </div>
+          <p className="text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
+          <div className="mt-3"><WeighIn last={a.currentWeight} /></div>
+          <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
+            <div><p className="text-lg font-extrabold text-peel tabular-nums">−{nf(Math.max(0, kgLost))}</p><p className="text-[11px] font-semibold text-muted">kg perdidos</p></div>
+            <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(d.toGo)}</p><p className="text-[11px] font-semibold text-muted">kg a la meta</p></div>
+            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">días</p></div>
+          </div>
+        </section>
+      </div>
+
+      {/* Tu día */}
+      <section>
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-lg font-extrabold text-ink">Tu día</h3>
+          <Link href="/app/nutricion" className="text-sm font-semibold text-muted">Registrar comida →</Link>
+        </div>
+        <DayTracker initial={g.log} base={{ kcal: eaten.kcal, protein: eaten.protein }} target={{ kcal: t.kcal, protein: t.protein, steps: t.steps, sleep: t.sleep, water: 8 }} dateKey={d.today.iso} demo={v.demo} />
       </section>
 
-      <section className="card p-5 flex gap-4 items-start">
-        <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft"><Timer className="size-5 text-ink" /></span>
-        <div>
-          <p className="font-bold text-ink">Consejo del coach</p>
-          <p className="text-muted">Come tus carbos 60–90 min antes de entrenar (gallo pinto con huevo o plátano con yogurt griego) y pésate mañana al despertar, después del baño.</p>
-        </div>
-      </section>
+      {/* Coach */}
+      <Link href="/app/coach" className="card p-4 flex gap-3 items-center hover:shadow-lift transition">
+        <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-ink text-banana"><Sparkles className="size-5" /></span>
+        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{tipFor(d.today.dow, training, t.protein - g.log.protein - eaten.protein)}</p></div>
+        <ChevronRight className="size-5 text-faint shrink-0" />
+      </Link>
     </div>
   );
 }

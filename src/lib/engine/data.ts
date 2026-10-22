@@ -18,6 +18,7 @@ export const EX = {
   pullup: { n: "Dominadas", m: "Espalda", inc: 0 },
   chinup: { n: "Dominadas agarre neutro", m: "Espalda", inc: 0 },
   row: { n: "Remo con barra", m: "Espalda", inc: 2.5 },
+  lat: { n: "Jalón al pecho", m: "Espalda", inc: 2.5 },
   dbrow: { n: "Remo con mancuerna", m: "Espalda", inc: 2 },
   curl: { n: "Curl con barra", m: "Bíceps", inc: 1.25 },
   hammer: { n: "Curl martillo", m: "Bíceps", inc: 1 },
@@ -65,11 +66,33 @@ export const TPL: Record<TemplateId, Template> = {
   pullA: { n: "Tracción A", tag: "Fuerza", emoji: "🦍", ex: [{ id: "deadlift", sets: 3, lo: 4, hi: 6, rest: 180 }, { id: "pullup", sets: 4, lo: 5, hi: 10, rest: 150 }, { id: "row", sets: 3, lo: 6, hi: 10, rest: 120 }, { slot: "pullA_acc", sets: 2, lo: 8, hi: 12, rest: 75 }] },
   pushB: { n: "Empuje B", tag: "Volumen", emoji: "💪", ex: [{ id: "incline", sets: 4, lo: 8, hi: 12, rest: 120 }, { slot: "pushB_leg", sets: 3, lo: 8, hi: 12, rest: 150 }, { id: "dbpress", sets: 3, lo: 8, hi: 12, rest: 120 }, { slot: "pushB_acc", sets: 3, lo: 12, hi: 20, rest: 60 }] },
   pullB: { n: "Tracción B", tag: "Volumen", emoji: "🔥", ex: [{ id: "rdl", sets: 3, lo: 8, hi: 10, rest: 150 }, { id: "chinup", sets: 4, lo: 6, hi: 12, rest: 120 }, { id: "dbrow", sets: 3, lo: 8, hi: 12, rest: 90 }, { slot: "pullB_acc", sets: 2, lo: 12, hi: 20, rest: 60 }] },
-  core: { n: "Core + Cardio", tag: "Activo", emoji: "🌀", light: true, mins: 40, ex: [{ slot: "core_hang", sets: 3, lo: 8, hi: 15, rest: 60 }, { slot: "core_plank", sets: 3, lo: 30, hi: 60, rest: 45, unit: "s" }, { slot: "core_carry", sets: 3, lo: 30, hi: 40, rest: 60, unit: "m" }], cardio: "20 min de caminata inclinada (10–12 %) a ritmo de conversación" },
-  pump: { n: "Bombeo + Reto", tag: "Activo", emoji: "⚡", light: true, mins: 35, finisher: true, ex: [{ slot: "pump_push", sets: 3, lo: 10, hi: 20, rest: 60 }, { slot: "pump_arm", sets: 3, lo: 10, hi: 15, rest: 60 }, { slot: "pump_sh", sets: 3, lo: 12, hi: 20, rest: 45 }] },
+  core: { n: "Core + Cardio", tag: "Ligero", emoji: "🌀", light: true, mins: 40, ex: [{ slot: "core_hang", sets: 3, lo: 8, hi: 15, rest: 60 }, { slot: "core_plank", sets: 3, lo: 30, hi: 60, rest: 45, unit: "s" }, { slot: "core_carry", sets: 3, lo: 30, hi: 40, rest: 60, unit: "m" }], cardio: "20 min de caminata inclinada (10–12 %) a ritmo de conversación" },
+  pump: { n: "Bombeo + Reto", tag: "Ligero", emoji: "⚡", light: true, mins: 35, finisher: true, ex: [{ slot: "pump_push", sets: 3, lo: 10, hi: 20, rest: 60 }, { slot: "pump_arm", sets: 3, lo: 10, hi: 15, rest: 60 }, { slot: "pump_sh", sets: 3, lo: 12, hi: 20, rest: 45 }] },
 };
 
 /** Semana por defecto: 1=lunes … 6=sábado; domingo descanso. */
 export const DEFAULT_WEEK: Record<number, TemplateId | null> = { 0: null, 1: "pushA", 2: "pullA", 3: "core", 4: "pushB", 5: "pullB", 6: "pump" };
 
 export const DAY_NAMES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+/** Alternativas por si la máquina está ocupada o falta equipo (mismo patrón de movimiento). */
+export const ALTS: Record<string, ExerciseId[]> = {
+  squat: ["frontsquat", "goblet"], frontsquat: ["squat", "goblet"], goblet: ["frontsquat", "squat"],
+  bench: ["incline", "closebench", "pushupe"], incline: ["bench", "pushupe"], closebench: ["dips", "pushupd"],
+  ohp: ["dbpress"], dbpress: ["ohp"], dips: ["closebench", "pushupd"], dipsw: ["dips", "closebench"],
+  deadlift: ["rdl"], rdl: ["deadlift"],
+  pullup: ["chinup", "lat"], chinup: ["pullup", "lat"], lat: ["pullup", "chinup"],
+  row: ["dbrow"], dbrow: ["row"],
+};
+
+/** Ejercicios con barra olímpica (para la calculadora de discos). */
+export const BARBELL = new Set<string>(["squat", "frontsquat", "bench", "closebench", "ohp", "deadlift", "rdl", "row"]);
+
+/** Discos por lado para llegar a `kg` con barra de 20 kg. */
+export function platesPerSide(kg: number, bar = 20): number[] | null {
+  let side = (kg - bar) / 2;
+  if (side < 0) return null;
+  const out: number[] = [];
+  for (const p of [25, 20, 15, 10, 5, 2.5, 1.25]) while (side >= p - 1e-9) { out.push(p); side -= p; }
+  return side > 0.01 ? null : out;
+}

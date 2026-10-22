@@ -9,11 +9,18 @@ const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:0
 
 function demo() {
   const t = crToday().iso;
-  const noise = [0.2, -0.1, 0.3, 0, -0.2, 0.1, 0.25, -0.15, 0.05, 0.2, -0.1, 0, 0.15, -0.05, 0.1, -0.2, 0.05];
-  const weights: Point[] = noise.map((n, i) => ({ d: addDays(t, -16 + i), v: Math.round((94.6 - i * 0.085 + n) * 10) / 10 })).filter((_, i) => i % 3 !== 1);
-  const base: Record<string, number> = { squat: 100, bench: 92, deadlift: 135, ohp: 52, row: 68 };
+  const weights: Point[] = [];
+  for (let i = 42; i >= 0; i--) {
+    if (i % 3 === 1 && i > 6) continue; // no todos los días se pesa
+    const noise = Math.sin(i * 1.7) * 0.35 + Math.cos(i * 0.9) * 0.15;
+    weights.push({ d: addDays(t, -i), v: Math.round((93.1 + i * 0.085 + noise) * 10) / 10 });
+  }
+  const base: Record<string, [number, number]> = { squat: [96, 0.09], bench: [88, 0.045], deadlift: [130, 0.07], ohp: [50, 0.02], row: [64, 0.055] };
   const lifts: Record<string, Point[]> = {};
-  for (const k of MAIN_LIFTS) lifts[k] = [-14, -7, 0].map((o, i) => ({ d: addDays(t, o - 2), v: Math.round(base[k] * (1 + i * 0.025) * 10) / 10 }));
+  for (const k of MAIN_LIFTS) {
+    const [b, g] = base[k];
+    lifts[k] = [-37, -30, -23, -16, -9, -2].map((o, i) => ({ d: addDays(t, o), v: Math.round(b * (1 + (g * i) / 5 + Math.sin(i * 2 + b) * 0.008) * 10) / 10 }));
+  }
   const workouts = [
     { d: addDays(t, -2), tpl: "Tracción A", sets: 12, vol: 6840, fun: 5 },
     { d: addDays(t, -3), tpl: "Empuje A", sets: 13, vol: 7420, fun: 4 },

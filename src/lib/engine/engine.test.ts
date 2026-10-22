@@ -63,3 +63,21 @@ describe("tendencia de peso", () => {
   it("pide recorte si no baja", () => expect(kcalAdjustment(0, 0.8)).toBe(-150));
   it("null con pocos datos", () => expect(weeklyTrend([{ d: "2026-10-01", kg: 94 }])).toBeNull());
 });
+
+import { scheduleFor } from ".";
+describe("horario por días disponibles", () => {
+  it.each([3, 4, 5, 6])("%i días: cuenta correcta y sin repetir seguidos", (n) => {
+    const s = scheduleFor(n);
+    expect(Object.values(s).filter(Boolean).length).toBe(n);
+    const w = planWeek(0, s);
+    w.forEach((d, i) => { const nx = w[(i + 1) % 7]; if (d.tpl && nx.tpl) expect(d.tpl).not.toBe(nx.tpl); });
+  });
+});
+
+import { platesPerSide, ALTS, EX } from ".";
+describe("discos y alternativas", () => {
+  it("100 kg = 25+15 por lado", () => expect(platesPerSide(100)).toEqual([25, 15]));
+  it("82,5 kg = 25+5+1,25", () => expect(platesPerSide(82.5)).toEqual([25, 5, 1.25]));
+  it("menos que la barra = null", () => expect(platesPerSide(15)).toBeNull());
+  it("todas las alternativas existen", () => Object.values(ALTS).flat().forEach((id) => expect(EX[id]).toBeDefined()));
+});

@@ -8,9 +8,10 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
 |---|---|
 | `/` · `/precios` | Landing de ventas (tema claro, marca Banana) |
 | `/entrar` | Login multiusuario: código por correo (OTP) + Google |
-| `/app` | **Hoy**: rutina del día (distinta a ayer y mañana), meta, macros, semana |
+| `/bienvenida` | Onboarding de 6 pasos: meta, datos, peso y fecha con ritmo sano, días, equipo, consentimiento → plan calculado |
+| `/app` | **Hoy**: racha 🔥, nivel/XP, rutina del día, pesaje rápido, anillos de proteína/kcal/agua/pasos/sueño |
 | `/app/entreno` | Reproductor para el gym: animación de técnica, cargas sugeridas, descanso con alarma, récords, resumen |
-| `/app/entrenar` · `/nutricion` · `/progreso` · `/coach` | Plan semanal, macros con comida tica, gráficas de peso y fuerza con ajuste semanal, Coach IA con Claude (streaming) |
+| `/app/entrenar` · `/nutricion` · `/progreso` · `/coach` | Programa por bloques con selector de día, registro de comidas con base tica (70 alimentos), gráficas de peso y fuerza con ajuste semanal, Coach IA con Claude (streaming) |
 | `/admin` · `/admin/usuarios` | Panel de staff con KPIs y usuarios (solo roles coach/support/admin/superadmin) |
 
 - `src/lib/engine/` — motor portado del prototipo: calorías (Mifflin-St Jeor), doble progresión con reinicio −10 %, descargas, tendencia de peso, plan semanal anti-aburrimiento. Tests: `npm test`.
@@ -22,7 +23,7 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
 ## Activar cuentas reales (10 min)
 
 1. Crea un proyecto en [Supabase](https://supabase.com) (región `us-east-1` recomendada).
-2. SQL Editor → pega y ejecuta `supabase/migrations/0001_init.sql`.
+2. SQL Editor → ejecuta en orden `supabase/migrations/0001_init.sql` y `0002_onboarding.sql`.
 3. Authentication → Email: activa *Email OTP*. En **Email Templates → Magic Link** incluye `{{ .Token }}` para que llegue el código de 6 dígitos.
 4. Authentication → URL Configuration: Site URL = tu dominio de Vercel; Redirect URLs = `https://TU-DOMINIO/auth/callback` y `http://localhost:3000/auth/callback`.
 5. (Opcional) Authentication → Providers → Google con tu Client ID/Secret.
