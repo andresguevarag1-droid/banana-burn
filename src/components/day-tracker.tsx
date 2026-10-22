@@ -63,12 +63,12 @@ export function DayTracker({ initial, base, target, dateKey, demo }: { initial: 
             {edit === it.f ? (
               <form className="mt-2.5 flex gap-1.5" onSubmit={(e) => { e.preventDefault(); const n = Number(String(new FormData(e.currentTarget).get("v")).replace(",", ".")); if (Number.isFinite(n)) set(it.f, n); setEdit(null); }}>
                 <input name="v" autoFocus defaultValue={it.val || ""} inputMode="decimal" className="w-full min-w-0 h-9 rounded-xl bg-cream px-3 text-sm font-bold text-ink outline-none focus:ring-2 focus:ring-banana" aria-label={`${it.label} total`} />
-                <button className="h-9 px-3 rounded-xl bg-ink text-white text-xs font-bold">OK</button>
+                <button className="tap pressable h-9 px-3 rounded-xl bg-ink text-white text-xs font-bold">OK</button>
               </form>
             ) : (
               <div className="mt-2.5 flex gap-1.5">
                 {it.quick.map(([l, d]) => (
-                  <button key={l} onClick={() => set(it.f, d < 0 ? -d : it.val + d)} className="flex-1 h-9 rounded-xl bg-cream text-xs font-bold text-ink active:scale-95 transition inline-flex items-center justify-center gap-1">
+                  <button key={l} onClick={() => set(it.f, d < 0 ? -d : it.val + d)} className="tap pressable flex-1 h-9 rounded-xl bg-cream text-xs font-bold text-ink hover:bg-line/60 inline-flex items-center justify-center gap-1">
                     {d > 0 && <Plus className="size-3" strokeWidth={3} />}{l.replace("+", "")}
                   </button>
                 ))}

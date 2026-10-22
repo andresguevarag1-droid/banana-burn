@@ -16,7 +16,7 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
         {days.map((d) => {
           const active = d.dow === sel, today = d.dow === todayDow, ok = done.includes(d.dow);
           return (
-            <button key={d.dow} onClick={() => setSel(d.dow)} className={`relative rounded-2xl py-2.5 text-center transition ${active ? "bg-ink text-white shadow-lift" : d.tpl ? "bg-white border border-line" : "bg-transparent border border-dashed border-line"}`} aria-pressed={active}>
+            <button key={d.dow} onClick={() => setSel(d.dow)} className={`pressable relative rounded-2xl py-2.5 text-center transition ${active ? "bg-ink text-white shadow-lift" : d.tpl ? "bg-white border border-line" : "bg-transparent border border-dashed border-line"}`} aria-pressed={active}>
               <p className={`text-[11px] font-bold uppercase ${active ? "text-banana" : today ? "text-ember-ink" : "text-muted"}`}>{DAY_NAMES[d.dow].slice(0, 3)}</p>
               <p className="text-xl mt-0.5">{d.emoji}</p>
               {ok && <span className="absolute -top-1 -right-1 grid place-items-center size-5 rounded-full bg-peel text-white text-[10px] font-bold">✓</span>}

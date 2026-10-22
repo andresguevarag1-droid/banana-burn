@@ -53,14 +53,14 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
           <p className="text-xs text-muted"><time dateTime={p.at}>{timeAgo(p.at)}</time></p>
         </div>
         {p.mine ? (
-          <button onClick={() => { setGone(true); start(() => { deletePost(p.id); }); }} className="grid place-items-center size-9 rounded-full text-faint hover:bg-cream" aria-label="Borrar publicación"><Trash2 className="size-4" /></button>
+          <button onClick={() => { setGone(true); start(() => { deletePost(p.id); }); }} className="tap pressable grid place-items-center size-9 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label="Borrar publicación"><Trash2 className="size-4" /></button>
         ) : (
-          <button disabled={reported} onClick={() => setOpenReport((o) => !o)} className="grid place-items-center size-9 rounded-full text-faint hover:bg-cream disabled:text-peel" aria-label={reported ? "Reportado" : "Reportar publicación"}><Flag className="size-4" /></button>
+          <button disabled={reported} onClick={() => setOpenReport((o) => !o)} aria-expanded={openReport} aria-controls={`report-${p.id}`} className="tap pressable grid place-items-center size-9 rounded-full text-faint hover:bg-cream hover:text-ink disabled:text-peel" aria-label={reported ? "Reportado" : "Reportar publicación"}><Flag className="size-4" /></button>
         )}
       </header>
 
       {openReport && !reported && (
-        <div className="mx-4 mb-2 rounded-2xl bg-cream p-3" role="group" aria-label="Motivo del reporte">
+        <div id={`report-${p.id}`} className="mx-4 mb-2 rounded-2xl bg-cream p-3 animate-fade" role="group" aria-label="Motivo del reporte" onKeyDown={(e) => { if (e.key === "Escape") setOpenReport(false); }}>
           <p className="text-sm font-bold text-ink">¿Por qué lo reportas?</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {([["spam", "Spam"], ["acoso", "Acoso"], ["contenido_inapropiado", "Inapropiado"], ["desinformacion_salud", "Info de salud falsa"], ["otro", "Otro"]] as const).map(([k, l]) => (
@@ -85,10 +85,10 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
       </div>
 
       <div className="flex items-center gap-1 px-2 py-2 mt-2 border-t border-line">
-        <button onClick={banana} className={`flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm transition ${kudo ? "bg-banana text-ink" : "text-muted hover:bg-cream"}`} aria-pressed={kudo} aria-label={`${kudo ? "Quitar" : "Dar"} banana. ${count} bananas`}>
+        <button onClick={banana} className={`tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm transition ${kudo ? "bg-banana text-ink" : "text-muted hover:bg-cream"}`} aria-pressed={kudo} aria-label={`${kudo ? "Quitar" : "Dar"} banana. ${count} bananas`}>
           <span className={`text-lg transition-transform ${pop ? "scale-150" : ""}`}>🍌</span><span className="tabular-nums">{count}</span>
         </button>
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm text-muted hover:bg-cream" aria-expanded={open}>
+        <button onClick={() => setOpen((o) => !o)} className="tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm text-muted hover:bg-cream" aria-expanded={open}>
           <MessageCircle className="size-4" /><span className="tabular-nums">{Math.max(p.commentCount, comments.length)}</span>
         </button>
       </div>
@@ -99,7 +99,7 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
           {open && (
             <form onSubmit={send} className="flex gap-2 pt-1">
               <input value={text} onChange={(e) => setText(e.target.value)} maxLength={300} placeholder="Escribe algo motivador…" className="input h-10 text-sm" aria-label="Comentario" />
-              <button className="grid place-items-center size-10 shrink-0 rounded-full bg-ink text-white disabled:opacity-30" disabled={!text.trim()} aria-label="Enviar comentario"><Send className="size-4" /></button>
+              <button className="tap pressable grid place-items-center size-10 shrink-0 rounded-full bg-ink text-white hover:bg-black disabled:opacity-30" disabled={!text.trim()} aria-label="Enviar comentario"><Send className="size-4" /></button>
             </form>
           )}
         </div>

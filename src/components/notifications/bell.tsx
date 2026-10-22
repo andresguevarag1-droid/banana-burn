@@ -56,7 +56,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
 
   return (
     <div ref={box} className={`relative ${className}`}>
-      <button onClick={() => { setOpen((o) => !o); if (!open) void load(); }} className="relative grid place-items-center size-10 rounded-full bg-white border border-line text-ink hover:bg-cream transition" aria-label={unread ? `Avisos: ${unread} sin leer` : "Avisos"} aria-expanded={open} aria-haspopup="dialog">
+      <button onClick={() => { setOpen((o) => !o); if (!open) void load(); }} className="tap pressable relative grid place-items-center size-10 rounded-full bg-white border border-line text-ink hover:bg-cream" aria-label={unread ? `Avisos: ${unread} sin leer` : "Avisos"} aria-expanded={open} aria-haspopup="dialog">
         <BellIcon className="size-5" />
         {unread > 0 && <span className="absolute -top-1 -right-1 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-ember text-white text-[11px] font-bold ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
@@ -64,7 +64,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
         <div role="dialog" aria-label="Avisos" className="fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-96 card shadow-lift overflow-hidden" style={{ animation: "sheet .2s ease-out" }}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-line">
             <p className="font-extrabold text-ink">Avisos</p>
-            {unread > 0 && <button onClick={() => markRead()} className="inline-flex items-center gap-1 text-xs font-bold text-banana-ink"><CheckCheck className="size-4" />Marcar todo leído</button>}
+            {unread > 0 && <button onClick={() => markRead()} className="tap inline-flex items-center gap-1 text-xs font-bold text-banana-ink hover:text-ink"><CheckCheck className="size-4" />Marcar todo leído</button>}
           </div>
           <ul className="max-h-[60vh] overflow-y-auto">
             {!loaded && <li className="p-6 text-center text-sm text-muted">Cargando…</li>}

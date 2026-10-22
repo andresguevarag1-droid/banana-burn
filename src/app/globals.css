@@ -27,12 +27,35 @@ html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
 body { background: var(--color-paper); color: var(--color-body); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--color-banana); color: var(--color-ink); }
 
-@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-12 font-semibold text-[15px] transition-all duration-200 active:scale-[.97] disabled:opacity-50 disabled:pointer-events-none; }
+/* Zona táctil mínima de 44×44 px sin agrandar el diseño: un ::before invisible centrado. */
+@utility tap {
+  &:not(.absolute, .fixed, .sticky) { position: relative; }
+  &::before { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}
+
+/* Respuesta táctil para botones sueltos, pestañas y segmentos que no usan btn/chip. */
+@utility pressable { @apply cursor-pointer select-none transition duration-150 active:scale-[.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60 disabled:cursor-default; }
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-12 font-semibold text-[15px] cursor-pointer select-none transition-all duration-200 active:scale-[.97] disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60;
+  &:is(button, a, label) { position: relative; }
+  &:is(button, a, label)::before { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+}
 @utility btn-primary { @apply btn bg-ink text-white hover:bg-black shadow-[0_8px_24px_-8px_rgb(27_21_5/.5)]; }
-@utility btn-banana { @apply btn bg-banana text-ink hover:brightness-95 shadow-[0_8px_24px_-8px_rgb(255_214_10/.9)]; }
-@utility btn-ghost { @apply btn bg-white/70 text-ink border border-line hover:bg-white; }
-@utility card { @apply bg-card rounded-[1.5rem] border border-line/70 shadow-soft; }
-@utility chip { @apply inline-flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-semibold; }
+@utility btn-banana { @apply btn bg-banana text-ink hover:brightness-95 shadow-[0_8px_24px_-8px_rgb(255_214_10/.9)] focus-visible:ring-ink/25; }
+@utility btn-ghost { @apply btn bg-white/70 text-ink border border-line hover:bg-white hover:border-ink/25; }
+@utility card {
+  @apply bg-card rounded-[1.5rem] border border-line/70 shadow-soft;
+  /* Tarjetas clicables: se levantan al pasar el cursor y ceden al tocar */
+  &:is(a, button) { @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-lift hover:border-line active:translate-y-0 active:scale-[.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60; }
+}
+@utility chip {
+  @apply inline-flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-semibold;
+  /* Chips que actúan como botón, enlace o pestaña */
+  &:is(button, a, label, [role="tab"]) { @apply relative cursor-pointer select-none transition duration-150 hover:brightness-[.97] active:scale-[.97] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60; }
+  &:is(button, a, label, [role="tab"])::before { content: ""; position: absolute; top: 50%; left: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
+  &:is(button, a, label, [role="tab"]):disabled { @apply cursor-default opacity-60; }
+}
 @utility eyebrow { @apply text-[12px] font-bold uppercase tracking-[.14em] text-banana-ink; }
 @utility input { @apply w-full h-13 rounded-2xl border border-line bg-white px-4 text-[16px] text-ink placeholder:text-faint outline-none transition focus:border-ink focus:ring-4 focus:ring-banana/40; }
 
@@ -40,7 +63,6 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 @keyframes rise { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
 .animate-floaty { animation: floaty 6s ease-in-out infinite; }
 .animate-rise { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
-@media (prefers-reduced-motion: reduce) { .animate-floaty, .animate-rise { animation: none; } }
 
 /* Variables del motor de animación */
 :root { --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B; }
@@ -50,3 +72,32 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 @keyframes pop { 0% { transform: scale(.3); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes sheet { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+.animate-fade { animation: fade .2s both; }
+.animate-sheet { animation: sheet .3s cubic-bezier(.2,.9,.3,1) both; }
+.animate-pop { animation: pop .6s cubic-bezier(.2,1.6,.4,1) both; }
+
+/* Foco visible por defecto para todo lo interactivo (las utilidades con anillo propio lo sustituyen). */
+@layer base {
+  :where(a, button, summary, [role="button"], [role="tab"], [role="switch"], [tabindex]:not([tabindex="-1"]), input[type="checkbox"], input[type="radio"]):focus-visible {
+    outline: 2px solid var(--color-ink); outline-offset: 2px;
+  }
+  :where(.bg-ink, .bg-black) :where(a, button, [role="button"]):focus-visible { outline-color: var(--color-banana); }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for] { cursor: pointer; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* Movimiento reducido: sin animaciones decorativas ni desplazamientos. Las entradas quedan en su estado final. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-floaty, .animate-rise, .animate-fade, .animate-sheet, .animate-pop,
+  .animate-bounce, .animate-ping, .animate-spin, [class*="animate-["] { animation: none !important; }
+  .animate-pulse { animation: none !important; opacity: .7; }
+  *, ::before, ::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+  .card:is(a, button):hover { translate: none; }
+}

@@ -8,6 +8,7 @@ import { levelOf } from "@/lib/gamify";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { RichTip } from "@/components/rich-tip";
 import { Confetti } from "@/components/confetti";
+import { Sheet as BottomSheet, SheetTitle } from "@/components/sheet";
 import { saveWorkout } from "./actions";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; rx: Prescription; best: number; lastSets: SetLog[] | null };
@@ -213,7 +214,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
       <Shell>
         <div className="flex-1 overflow-y-auto px-5 py-6 animate-rise">
           <div className="mx-auto max-w-md">
-            <button onClick={() => setPhase("play")} className="text-sm font-semibold text-muted">← Volver al entreno</button>
+            <button onClick={() => setPhase("play")} className="tap text-sm font-semibold text-muted hover:text-ink">← Volver al entreno</button>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink">¿Terminamos? 💪</h1>
             <p className="text-muted">{doneSets} de {totalSets} series · {fmt(elapsed)}</p>
             {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} series. Puedes terminar igual; el motor lo toma en cuenta.</p>}
@@ -222,7 +223,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
               <p className="text-sm text-muted">Si se pone aburrido, metemos más variedad y retos.</p>
               <div className="mt-4 grid grid-cols-5 gap-2">
                 {["😴", "😐", "🙂", "😄", "🤩"].map((f, i) => (
-                  <button key={f} onClick={() => { setFun(i + 1); buzz(15); }} className={`h-14 rounded-2xl text-2xl transition ${fun === i + 1 ? "bg-banana scale-110 shadow-soft" : "bg-cream"}`} aria-label={`Diversión ${i + 1} de 5`}>{f}</button>
+                  <button key={f} onClick={() => { setFun(i + 1); buzz(15); }} className={`pressable h-14 rounded-2xl text-2xl transition ${fun === i + 1 ? "bg-banana scale-110 shadow-soft" : "bg-cream"}`} aria-label={`Diversión ${i + 1} de 5`}>{f}</button>
                 ))}
               </div>
             </div>
@@ -245,7 +246,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
     <Shell>
       <header className="px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-2.5 bg-paper/95 backdrop-blur border-b border-line/60">
         <div className="flex items-center justify-between gap-3">
-          <button onClick={() => setSheet("exit")} className="grid place-items-center size-10 rounded-full bg-white border border-line" aria-label="Salir del entreno"><X className="size-5" /></button>
+          <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-10 rounded-full bg-white border border-line hover:bg-cream" aria-label="Salir del entreno"><X className="size-5" /></button>
           <div className="text-center min-w-0">
             <p className="font-extrabold text-ink truncate">{emoji} {title}</p>
             <p className="text-xs font-semibold text-muted tabular-nums">{fmt(elapsed)} · {doneSets}/{totalSets} series</p>
@@ -256,8 +257,8 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
           {exercises.map((e, i) => {
             const d = rows[i].filter((s) => s.done).length / rows[i].length;
             return (
-              <button key={i} onClick={() => setIdx(i)} className={`h-2 flex-1 rounded-full overflow-hidden ${i === idx ? "ring-2 ring-ink/20 ring-offset-1 ring-offset-paper bg-line" : "bg-line"}`} aria-label={`Ir a ${e.name}`}>
-                <span className="block h-full bg-ink transition-all duration-300" style={{ width: `${d * 100}%` }} />
+              <button key={i} onClick={() => setIdx(i)} className="group flex-1 -mt-2 pt-2 -mb-2.5 pb-2.5 cursor-pointer focus-visible:outline-none" aria-label={`Ir a ${e.name}`}>
+                <span className={`block h-2 rounded-full overflow-hidden group-focus-visible:ring-4 group-focus-visible:ring-banana/60 ${i === idx ? "ring-2 ring-ink/20 ring-offset-1 ring-offset-paper bg-line" : "bg-line"}`}><span className="block h-full bg-ink transition-all duration-300" style={{ width: `${d * 100}%` }} /></span>
               </button>
             );
           })}
@@ -301,7 +302,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
                       onMinus={() => step(si, "kg", -1)} onPlus={() => step(si, "kg", 1)} onChange={(v) => update(si, { kg: v })} />}
                     <Stepper label={unit} value={r.reps} inputMode="numeric" disabled={r.done}
                       onMinus={() => step(si, "reps", -1)} onPlus={() => step(si, "reps", 1)} onChange={(v) => update(si, { reps: v.replace(/\D/g, "") })} />
-                    <button onClick={() => toggleDone(si)} className={`grid place-items-center size-14 shrink-0 rounded-2xl transition active:scale-90 ${r.done ? "bg-peel text-white" : active ? "bg-ink text-white" : "bg-line text-muted"}`} aria-label={r.done ? `Desmarcar serie ${si + 1}` : `Completar serie ${si + 1}`}>
+                    <button onClick={() => toggleDone(si)} className={`pressable grid place-items-center size-14 shrink-0 rounded-2xl transition active:scale-90 ${r.done ? "bg-peel text-white" : active ? "bg-ink text-white" : "bg-line text-muted"}`} aria-label={r.done ? `Desmarcar serie ${si + 1}` : `Completar serie ${si + 1}`}>
                       <Check className="size-7" strokeWidth={3} />
                     </button>
                   </div>
@@ -311,7 +312,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
                         <div className="flex items-center gap-3 rounded-2xl bg-peel text-white p-3" aria-live="polite">
                           <span className="text-3xl font-extrabold tabular-nums w-20 text-center">{Math.ceil(workLeft)}</span>
                           <div className="flex-1 h-2 rounded-full bg-white/30 overflow-hidden"><div className="h-full bg-white" style={{ width: `${(1 - workLeft / work.total) * 100}%`, transition: "width .25s linear" }} /></div>
-                          <button onClick={() => setWork(null)} className="h-9 px-3 rounded-full bg-white/20 text-sm font-bold">Parar</button>
+                          <button onClick={() => setWork(null)} className="tap pressable h-9 px-3 rounded-full bg-white/20 text-sm font-bold">Parar</button>
                         </div>
                       ) : (
                         <button onClick={() => { const n = num(r.reps) || ex.cfg.hi; setWork({ end: Date.now() + n * 1000 + 3000, total: n + 3, si, ex: idx }); buzz(20); }} className="w-full h-12 rounded-2xl bg-peel text-white font-extrabold">▶ Iniciar {num(r.reps) || ex.cfg.hi} s <span className="font-semibold opacity-80">(3 s para prepararte)</span></button>
@@ -320,7 +321,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
                   )}
                   {active && plates && plates.length > 0 && <p className="px-4 pb-2.5 -mt-0.5 text-[12px] font-semibold text-muted">🏋️ Por lado: {plates.map(kgFmt).join(" + ")} kg <span className="text-faint">(barra 20)</span></p>}
                   {r.done && (
-                    <label className="flex items-center gap-2 px-4 pb-2.5 -mt-0.5 text-xs font-semibold text-muted">
+                    <label className="tap flex items-center gap-2 px-4 pb-2.5 -mt-0.5 text-xs font-semibold text-muted cursor-pointer">
                       <input type="checkbox" checked={r.easy} onChange={(e) => update(si, { easy: e.target.checked })} className="size-4 accent-ink" />Muy fácil (me sobraron 4+)
                     </label>
                   )}
@@ -354,9 +355,9 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
                 <p className="text-sm font-semibold text-white/60">Descansa · respira hondo</p>
                 <p className="font-bold truncate">Sigue: {activeSet >= 0 ? `serie ${activeSet + 1} · ${here[activeSet].kg || "PC"} kg × ${here[activeSet].reps}` : exercises[Math.min(idx + 1, exercises.length - 1)].name}</p>
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => setRest((r) => r && { ...r, end: r.end - 15000 })} className="h-10 px-3 rounded-full bg-white/10 text-sm font-bold">−15</button>
-                  <button onClick={() => setRest((r) => r && { end: r.end + 15000, total: r.total + 15 })} className="h-10 px-3 rounded-full bg-white/10 text-sm font-bold">+15</button>
-                  <button onClick={() => setRest(null)} className="h-10 px-5 rounded-full bg-banana text-ink text-sm font-bold ml-auto">Saltar</button>
+                  <button onClick={() => setRest((r) => r && { ...r, end: r.end - 15000 })} className="tap pressable h-10 px-3 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">−15</button>
+                  <button onClick={() => setRest((r) => r && { end: r.end + 15000, total: r.total + 15 })} className="tap pressable h-10 px-3 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">+15</button>
+                  <button onClick={() => setRest(null)} className="tap pressable h-10 px-5 rounded-full bg-banana text-ink text-sm font-bold ml-auto hover:brightness-95">Saltar</button>
                 </div>
               </div>
             </div>
@@ -365,14 +366,12 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
       )}
 
       {/* Hojas */}
-      {sheet && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-sm animate-[fade_.2s_both]" onClick={() => setSheet(null)}>
-          <div className="w-full sm:max-w-lg max-h-[88dvh] overflow-y-auto rounded-t-[2rem] sm:rounded-[2rem] bg-paper p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-[sheet_.3s_cubic-bezier(.2,.9,.3,1)_both]" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line" />
+      <BottomSheet open={!!sheet} onClose={() => setSheet(null)} label={sheet === "tech" && !ex.tech ? "Técnica" : undefined} className="max-h-[88dvh] overflow-y-auto">
+          <div className="px-5">
             {sheet === "tech" && ex.tech && (
               <div className="space-y-4">
                 {ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} className="mx-auto h-56 max-w-[300px]" /></div>}
-                <h2 className="text-2xl font-extrabold text-ink">{ex.name}</h2>
+                <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
                 <p className="text-sm text-muted">{ex.tech.mus}</p>
                 <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>
                 {ex.tech.cues.length > 0 && <div className="flex flex-wrap gap-2">{ex.tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel">✓ {c}</span>)}</div>}
@@ -383,7 +382,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
             )}
             {sheet === "swap" && (
               <div>
-                <h2 className="text-2xl font-extrabold text-ink">Cambiar ejercicio</h2>
+                <SheetTitle className="text-2xl font-extrabold text-ink">Cambiar ejercicio</SheetTitle>
                 <p className="text-sm text-muted">¿Máquina ocupada o sin equipo? Mismo patrón, mismas series.</p>
                 <div className="mt-4 space-y-2">
                   {options[idx].map((o, i) => (
@@ -399,7 +398,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
             )}
             {sheet === "exit" && (
               <div className="space-y-3">
-                <h2 className="text-2xl font-extrabold text-ink">¿Salir del entreno?</h2>
+                <SheetTitle className="text-2xl font-extrabold text-ink">¿Salir del entreno?</SheetTitle>
                 <p className="text-muted">Llevas {doneSets} de {totalSets} series. Tu progreso queda guardado en este teléfono.</p>
                 <button onClick={() => setSheet(null)} className="btn-primary w-full h-13">Seguir entrenando 💪</button>
                 {doneSets > 0 && <button onClick={() => { setSheet(null); setPhase("summary"); }} className="btn-ghost w-full h-13">Terminar y guardar</button>}
@@ -407,8 +406,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
               </div>
             )}
           </div>
-        </div>
-      )}
+      </BottomSheet>
 
       {toast && <div role="status" className="fixed top-24 inset-x-0 z-[90] flex justify-center px-4 animate-rise"><p className="rounded-full bg-ink text-white font-bold px-5 py-3 shadow-lift">{toast}</p></div>}
     </Shell>
@@ -419,10 +417,10 @@ function Stepper({ label, value, placeholder, inputMode, disabled, onMinus, onPl
   return (
     <div className={`flex-1 min-w-0 rounded-2xl bg-cream ${disabled ? "opacity-70" : ""}`}>
       <div className="flex items-center h-12">
-        <button type="button" disabled={disabled} onClick={onMinus} className="grid place-items-center w-9 h-full text-muted active:text-ink disabled:opacity-0" aria-label={`Menos ${label}`}><Minus className="size-4" strokeWidth={3} /></button>
+        <button type="button" disabled={disabled} onClick={onMinus} className="tap grid place-items-center w-9 h-full text-muted hover:text-ink active:text-ink disabled:opacity-0" aria-label={`Menos ${label}`}><Minus className="size-4" strokeWidth={3} /></button>
         <input value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} inputMode={inputMode} placeholder={placeholder} onFocus={(e) => e.target.select()}
           className="w-full min-w-0 bg-transparent text-center text-xl font-extrabold text-ink outline-none tabular-nums placeholder:text-faint" aria-label={label} />
-        <button type="button" disabled={disabled} onClick={onPlus} className="grid place-items-center w-9 h-full text-muted active:text-ink disabled:opacity-0" aria-label={`Más ${label}`}><Plus className="size-4" strokeWidth={3} /></button>
+        <button type="button" disabled={disabled} onClick={onPlus} className="tap grid place-items-center w-9 h-full text-muted hover:text-ink active:text-ink disabled:opacity-0" aria-label={`Más ${label}`}><Plus className="size-4" strokeWidth={3} /></button>
       </div>
       <p className="-mt-1.5 pb-1 text-center text-[9px] font-bold uppercase tracking-wider text-faint">{label}</p>
     </div>

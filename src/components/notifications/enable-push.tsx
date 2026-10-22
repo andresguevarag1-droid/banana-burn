@@ -95,7 +95,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
       <div className="flex items-center gap-3 rounded-2xl border border-peel/30 bg-peel/5 p-3">
         <span className="grid place-items-center size-10 rounded-xl bg-peel/15 text-peel"><Bell className="size-5" /></span>
         <div className="flex-1 min-w-0"><p className="text-sm font-bold text-ink">Avisos activos en este dispositivo</p><p className="text-xs text-muted">Máximo 2 al día, nunca en tus horas de silencio.</p></div>
-        <button onClick={disable} className="text-xs font-bold text-muted underline">Desactivar</button>
+        <button onClick={disable} className="tap text-xs font-bold text-muted underline hover:text-ink">Desactivar</button>
       </div>
     );
   }
@@ -110,7 +110,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
           <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">2</span>Elige <PlusSquare className="inline size-4" /> <b>Agregar a inicio</b></li>
           <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span>Abre la app desde el ícono 🍌 y activa los avisos aquí</li>
         </ol>
-        {hideWhenSnoozed && <button onClick={snooze} className="mt-3 text-xs font-bold text-muted underline">Ahora no</button>}
+        {hideWhenSnoozed && <button onClick={snooze} className="tap mt-3 text-xs font-bold text-muted underline hover:text-ink">Ahora no</button>}
       </div>
     );
   }

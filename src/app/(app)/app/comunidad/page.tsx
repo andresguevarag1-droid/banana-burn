@@ -30,7 +30,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
       </header>
 
       <nav className="flex rounded-full bg-white border border-line p-1 w-fit" aria-label="Vistas de la comunidad">
-        {TABS.map(([k, l]) => <Link key={k} href={`/app/comunidad?vista=${k}`} aria-current={tab === k ? "page" : undefined} className={`h-10 px-4 grid place-items-center rounded-full text-sm font-bold ${tab === k ? "bg-ink text-white" : "text-muted"}`}>{l}</Link>)}
+        {TABS.map(([k, l]) => <Link key={k} href={`/app/comunidad?vista=${k}`} aria-current={tab === k ? "page" : undefined} className={`tap pressable h-10 px-4 grid place-items-center rounded-full text-sm font-bold ${tab === k ? "bg-ink text-white" : "text-muted hover:bg-cream hover:text-ink"}`}>{l}</Link>)}
       </nav>
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] items-start [&>*]:min-w-0">
@@ -79,7 +79,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
           <section className="card p-4 text-sm text-muted">
             <p className="font-bold text-ink">Tu privacidad</p>
             <p className="mt-1">Solo compartimos el resumen del entreno (tiempo, series, volumen, récords). Nunca tu peso, medidas ni fotos.</p>
-            <Link href="/app/perfil#comunidad" className="mt-2 inline-block font-bold text-banana-ink">Configurar perfil público →</Link>
+            <Link href="/app/perfil#comunidad" className="tap mt-2 inline-block font-bold text-banana-ink hover:text-ink">Configurar perfil público →</Link>
           </section>
         </aside>
       </div>

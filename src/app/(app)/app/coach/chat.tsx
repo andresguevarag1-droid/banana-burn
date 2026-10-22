@@ -59,7 +59,7 @@ export function Chat({ initial, opener, suggest }: { initial: Msg[]; opener: str
         </div>
         {!msgs.length && (
           <div className="flex flex-wrap gap-2 animate-rise">
-            {suggest.map((s) => <button key={s} onClick={() => send(s)} className="rounded-full bg-white border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-ink transition text-left">{s}</button>)}
+            {suggest.map((s) => <button key={s} onClick={() => send(s)} className="pressable min-h-11 rounded-full bg-white border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-ink transition text-left">{s}</button>)}
           </div>
         )}
         {msgs.map((m, i) => (
@@ -74,7 +74,7 @@ export function Chat({ initial, opener, suggest }: { initial: Msg[]; opener: str
 
       <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="sticky bottom-24 lg:bottom-6 flex gap-2 rounded-full bg-white border border-line p-1.5 shadow-lift">
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Escríbele a tu coach…" maxLength={2000} className="flex-1 min-w-0 bg-transparent px-4 text-[16px] text-ink outline-none placeholder:text-faint" aria-label="Mensaje" />
-        <button disabled={busy || !input.trim()} className="grid place-items-center size-11 rounded-full bg-ink text-white disabled:opacity-30" aria-label="Enviar"><ArrowUp className="size-5" /></button>
+        <button disabled={busy || !input.trim()} className="pressable grid place-items-center size-11 rounded-full bg-ink text-white hover:bg-black disabled:opacity-30" aria-label="Enviar"><ArrowUp className="size-5" /></button>
       </form>
     </div>
   );
