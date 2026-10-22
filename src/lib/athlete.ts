@@ -6,7 +6,7 @@ export type Athlete = {
   name: string; dob: string; heightCm: number; startWeight: number; currentWeight: number; goalWeight: number; goalDate: string; startDate: string; mode: Mode; complete: boolean;
 };
 
-const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 94, currentWeight: 94, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true };
+const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 94.6, currentWeight: 93.1, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true };
 
 export async function getAthlete(v: Viewer): Promise<Athlete> {
   if (v.demo) return DEMO;

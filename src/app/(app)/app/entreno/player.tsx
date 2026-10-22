@@ -4,8 +4,11 @@ import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, Minus, Plus, Trophy, X } from "lucide-react";
 import type { Prescription, SlotCfg } from "@/lib/engine";
 import { saveWorkout } from "./actions";
+import type { Technique } from "@/lib/engine/technique";
+import { ExerciseMotion } from "@/components/exercise-motion";
+import { RichTip } from "@/components/rich-tip";
 
-export type PlayerExercise = { bw: boolean; id: string; name: string; muscle: string; cfg: SlotCfg; rx: Prescription; best: number; last: string | null };
+export type PlayerExercise = { tech: Technique | null; bw: boolean; id: string; name: string; muscle: string; cfg: SlotCfg; rx: Prescription; best: number; last: string | null };
 type Row = { kg: string; reps: string; done: boolean; easy: boolean };
 type Rest = { end: number; total: number } | null;
 
@@ -216,6 +219,11 @@ export function Player({ template, title, cardio, exercises, dateKey }: { templa
           </div>
 
           <section key={ex.id} className="rounded-[1.75rem] bg-banana p-5 animate-rise">
+            {ex.tech?.anim && (
+              <div className="-mx-1 -mt-1 mb-4 rounded-[1.4rem] bg-white/75 px-4 pt-6 pb-2">
+                <ExerciseMotion anim={ex.tech.anim} className="mx-auto h-56 max-w-[300px]" />
+              </div>
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="chip bg-ink/10 text-ink">{ex.muscle}</span>
               <span className={`chip ${badgeCls} bg-white`}>{badge}</span>
@@ -227,6 +235,24 @@ export function Player({ template, title, cardio, exercises, dateKey }: { templa
             <p className="mt-2 text-sm text-ink/80">{ex.rx.note}</p>
             {ex.last && <p className="mt-2 text-xs font-semibold text-ink/60">Última vez: {ex.last}</p>}
           </section>
+
+          {ex.tech && (
+            <details className="card group" open={!ex.last}>
+              <summary className="cursor-pointer list-none p-4 flex items-center justify-between font-bold text-ink">
+                <span>🎓 Técnica {ex.tech.cues[0] && <span className="font-semibold text-muted">· {ex.tech.cues[0]}</span>}</span>
+                <span className="text-xl transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <div className="px-4 pb-4 space-y-4 text-[15px]">
+                <ol className="space-y-1.5">
+                  {ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span className="text-body">{h}</span></li>)}
+                </ol>
+                {ex.tech.cues.length > 0 && <div className="flex flex-wrap gap-2">{ex.tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel">✓ {c}</span>)}</div>}
+                {ex.tech.err.length > 0 && <div className="space-y-1">{ex.tech.err.map((c) => <p key={c} className="text-sm text-ember-ink">✗ {c}</p>)}</div>}
+                {ex.tech.mono && <p className="rounded-2xl bg-cream p-3 text-sm text-body">🐒 <RichTip text={ex.tech.mono} /></p>}
+                <p className="text-xs text-faint">Músculos: {ex.tech.mus}</p>
+              </div>
+            </details>
+          )}
 
           <section className="card divide-y divide-line">
             <div className="grid grid-cols-[2rem_minmax(0,1.2fr)_minmax(0,1fr)_3rem] gap-2 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-muted">

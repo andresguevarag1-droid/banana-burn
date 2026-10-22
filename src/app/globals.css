@@ -41,3 +41,7 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 .animate-floaty { animation: floaty 6s ease-in-out infinite; }
 .animate-rise { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .animate-floaty, .animate-rise { animation: none; } }
+
+/* Variables del motor de animación */
+:root { --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B; }
+.motion svg { width: 100%; height: 100%; display: block; overflow: visible; }
