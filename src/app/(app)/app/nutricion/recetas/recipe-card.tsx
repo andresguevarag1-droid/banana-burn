@@ -95,7 +95,7 @@ export function MenuToday({ target, eaten: eaten0, quick: quick0, dateKey, demo,
     <div className={main ? "mt-4" : "mt-5 rounded-2xl bg-white/55 p-4"}>
       {!main && <h3 className="flex items-center gap-2 font-extrabold text-ink"><Calendar weight="duotone" className="size-5" />Para mañana</h3>}
       {!main && <p className="text-sm text-ink/75">{list(tomorrow.slots.map((s) => SLOT_N[s].toLowerCase())).replace(/^./, (c) => c.toUpperCase())} del {fmtDay(tomorrow.iso)}. Revisa los ingredientes para comprar o dejar listo.</p>}
-      <div className="mt-3 space-y-2">{tomorrow.menu.items.map((x) => <RecipeCard key={x.r.id} r={x.r} portions={x.portions} showSlot dateKey={dateKey} demo={demo} base={eaten0} open noAdd />)}</div>
+      <div className="mt-3 space-y-2">{tomorrow.menu.items.map((x) => <RecipeCard key={x.r.id} r={x.r} portions={x.portions} showSlot dateKey={dateKey} demo={demo} base={eaten0} open={x.r.slot === "desayuno"} noAdd />)}</div>
     </div>
   ) : null;
 

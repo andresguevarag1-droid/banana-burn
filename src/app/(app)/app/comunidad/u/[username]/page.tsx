@@ -78,9 +78,9 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
           <h2 id="pp-logros" className="font-extrabold text-ink">Logros</h2>
           <ul className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
             {shownBadges.map((b) => (
-              <li key={b.id} className={`flex items-center gap-2.5 rounded-2xl p-2.5 ${b.got ? "bg-banana-soft" : "bg-cream opacity-60"}`}>
+              <li key={b.id} className={`flex items-center gap-2.5 rounded-2xl p-2.5 ${b.got ? "bg-banana-soft" : "bg-cream"}`}>
                 <span className={`grid place-items-center size-10 shrink-0 rounded-xl ${b.got ? "bg-banana text-ink" : "bg-white text-faint"}`}>{b.got ? <BrandIcon name={b.icon} className="size-5" /> : <Lock weight="duotone" className="size-5" />}</span>
-                <span className="min-w-0"><span className="block text-sm font-bold text-ink leading-tight">{b.n}</span><span className="block text-[11px] text-muted leading-tight">{b.got ? "Conseguido" : b.d}</span></span>
+                <span className="min-w-0"><span className={`block text-sm font-bold leading-tight ${b.got ? "text-ink" : "text-muted"}`}>{b.n}</span><span className="block text-[11px] text-muted leading-tight">{b.got ? "Conseguido" : b.d}</span></span>
               </li>
             ))}
           </ul>

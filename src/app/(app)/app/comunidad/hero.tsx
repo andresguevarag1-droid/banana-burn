@@ -44,7 +44,7 @@ export function TropaHero({ stats }: { stats: WeekStats }) {
           <div key={k} className="rounded-2xl bg-white/[.08] border border-white/10 px-3 py-3">
             <p className="flex items-center gap-1.5 text-xs font-bold text-white/70"><Icon weight="duotone" className="size-4 text-banana" />{k}</p>
             <p className="mt-1 text-2xl sm:text-3xl font-extrabold tabular-nums leading-none">{fmtNum(v)}</p>
-            <p className="mt-1 text-[11px] text-white/55">{sub}</p>
+            <p className="mt-1 text-[11px] text-white/75">{sub}</p>
           </div>
         ))}
       </div>
