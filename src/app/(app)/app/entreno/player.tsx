@@ -557,7 +557,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
         <div className="px-5">
           {shownSheet === "tech" && ex.tech && (
             <div className="space-y-4">
-              {ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} className="mx-auto h-56 max-w-[300px]" /></div>}
+              {ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>}
               <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
               <p className="text-sm text-muted">{ex.tech.mus}</p>
               <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>

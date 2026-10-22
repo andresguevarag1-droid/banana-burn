@@ -84,7 +84,7 @@ function ExerciseFrames({ anim, frames, label, className, onFail }: { anim: stri
   }, [phases, still]);
 
   const img = (src: string, on: boolean, alt: string) => (
-    <Image src={src} alt={alt} fill sizes={label ? "320px" : "96px"} onError={onFail} draggable={false}
+    <Image src={src} alt={alt} fill sizes={label ? "360px" : "112px"} onError={onFail} draggable={false}
       className={`object-contain select-none transition-[opacity,filter] duration-[420ms] ease-(--ease-in-out) ${on ? "opacity-100 blur-0" : "opacity-0 blur-[2px]"}`} />
   );
 
