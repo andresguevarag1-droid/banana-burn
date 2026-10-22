@@ -1,4 +1,5 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
+import { demoActiveDays, demoWorkouts, demoXp } from "@/lib/demo-story";
 import { crToday } from "@/lib/today";
 import { badges, levelOf, streakOf } from "@/lib/gamify";
 
@@ -10,14 +11,15 @@ const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:0
 export async function getDaily(v: Viewer, startWeight: number, currentWeight: number) {
   const today = crToday().iso;
   if (v.demo) {
-    const days = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => addDays(today, -i - 1)));
-    const xp = 1180;
+    const days = demoActiveDays(today);
+    const xp = demoXp(today);
+    const nW = demoWorkouts(today).length;
     const streak = streakOf(days, today);
     return {
-      log: { water: 3, steps: 4820, sleep: 7.5, protein: 92, kcal: 1240 } as DailyLog,
-      xp, level: levelOf(xp), streak, workoutsTotal: 9, trainedToday: false, weighedToday: false,
+      log: { water: 5, steps: 4820, sleep: 7.5, protein: 0, kcal: 0 } as DailyLog,
+      xp, level: levelOf(xp), streak, workoutsTotal: nW, trainedToday: false, weighedToday: false,
       week: [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, -6 + i)).map((d) => ({ d, active: days.has(d) })),
-      badges: badges({ workouts: 9, streak: streak.days, prs: 3, weighIns: 11, lostKg: startWeight - currentWeight }),
+      badges: badges({ workouts: nW, streak: streak.days, prs: 3, weighIns: 14, lostKg: startWeight - currentWeight }),
     };
   }
   const sb = await createClient();

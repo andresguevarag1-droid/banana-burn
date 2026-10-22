@@ -27,7 +27,8 @@ export default async function Progreso() {
 
   let insight: { tone: string; t: string; b: string };
   if (rate == null) insight = { tone: "bg-sky/10", t: "📏 Calibrando tu ritmo", b: "Pésate al menos 4 mañanas esta semana (al despertar, después del baño). Con eso calculo tu tendencia real." };
-  else if (adj < 0) insight = { tone: "bg-ember/10", t: `🐢 Vas a ${nf(-rate, 2)} kg/sem, necesitas ${nf(d.needPerWeek, 2)}`, b: `Te bajo ${-adj} kcal al día (≈ ${Math.round(-adj / 4)} g de carbos menos) y súmale 2.000 pasos. Proteína intacta.` };
+  else if (adj <= -150) insight = { tone: "bg-ember/10", t: `🐢 Vas a ${nf(-rate, 2)} kg/sem, necesitas ${nf(d.needPerWeek, 2)}`, b: `Te bajo ${-adj} kcal al día (≈ ${Math.round(-adj / 4)} g de carbos menos) y súmale 2.000 pasos. Proteína intacta.` };
+  else if (adj < 0) insight = { tone: "bg-banana-soft", t: `🎯 Casi: ${nf(-rate, 2)} de ${nf(d.needPerWeek, 2)} kg/sem`, b: `Vas bien, pero un poco por debajo del ritmo. Ajuste suave: −${-adj} kcal al día (media taza de arroz menos en la cena). Proteína intacta.` };
   else if (adj > 0) insight = { tone: "bg-banana-soft", t: `⚡ Vas muy rápido: ${nf(-rate, 2)} kg/sem`, b: `Te subo ${adj} kcal para no perder músculo ni fuerza. Lo rápido no dura; lo constante sí.` };
   else insight = { tone: "bg-peel/10", t: `✅ En ritmo: ${nf(-rate, 2)} kg/sem`, b: `Necesitas ${nf(d.needPerWeek, 2)} kg/sem para llegar a ${a.goalWeight} kg el ${new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}. No cambies nada.` };
 

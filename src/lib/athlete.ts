@@ -1,5 +1,6 @@
 import { ageOn, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
 import { crToday, mondayOf } from "@/lib/today";
+import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 
@@ -7,10 +8,10 @@ export type Athlete = {
   name: string; dob: string; heightCm: number; startWeight: number; currentWeight: number; goalWeight: number; goalDate: string; startDate: string; mode: Mode; complete: boolean; trainDays: number; sex: Sex; equipment: Equipment; level: Level; minutes: number | null; glp1: Glp1;
 };
 
-const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 96.7, currentWeight: 93.1, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true, trainDays: 6, sex: "m", equipment: "gym", level: "intermedio", minutes: null, glp1: { on: false, med: "semaglutida", injectionDow: null, since: null } };
+const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 94.9, currentWeight: 93.1, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true, trainDays: 6, sex: "m", equipment: "gym", level: "intermedio", minutes: null, glp1: { on: false, med: "semaglutida", injectionDow: null, since: null } };
 
 export async function getAthlete(v: Viewer): Promise<Athlete> {
-  if (v.demo) return DEMO;
+  if (v.demo) return { ...DEMO, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(crToday().iso) };
   const sb = await createClient();
   const [{ data: p }, { data: g }, { data: w }] = await Promise.all([
     sb.from("profiles").select("full_name,dob,height_cm,train_days,sex,onboarded,equipment,level,session_minutes,glp1,glp1_med,glp1_injection_dow,glp1_since").eq("id", v.id).maybeSingle(),

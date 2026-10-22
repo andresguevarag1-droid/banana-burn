@@ -40,7 +40,9 @@ export function prescribe(id: ExerciseId | string, cfg: SlotCfg, history: SetLog
   const ex = { inc: opts.inc ?? EX[id as ExerciseId]?.inc ?? 0 };
   const step = ex.inc >= 2.5 ? 2.5 : ex.inc || 1;
   const sets = opts.deload ? Math.max(2, cfg.sets - 1) : cfg.sets;
-  if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: ex.inc ? `Calibración: elige un peso con el que llegues a ${cfg.lo}–${cfg.hi} reps dejando 2 en reserva.` : `Calibración: haz ${cfg.lo}–${cfg.hi} ${cfg.unit === "s" ? "segundos" : cfg.unit === "m" ? "metros" : "reps"} limpias dejando 1–2 en reserva. Anota lo que logres.` };
+  // Intervalos (exprés): trabajo por tiempo con descanso corto; no hay reps que anotar.
+  if (cfg.unit === "s" && cfg.rest <= 30) return { sets, kg: null, reps: Array(sets).fill(cfg.hi), type: "reps", note: `Intervalos: ${cfg.hi} s de trabajo y ${cfg.rest} s de descanso. Ritmo firme y técnica limpia; si se rompe la forma, baja la velocidad.` };
+  if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: ex.inc ? `Calibración: elige un peso con el que llegues a ${cfg.lo}–${cfg.hi} reps dejando 2 en reserva.` : `Calibración: haz ${cfg.lo}–${cfg.hi} ${cfg.unit === "s" ? "segundos" : cfg.unit === "m" ? "metros" : "reps"} limpias dejando 1–2 en reserva. Anota lo que hiciste en cada serie.` };
   const last = history[history.length - 1];
   const prev = history.length > 1 ? history[history.length - 2] : null;
   const kg = Math.max(...last.map((s) => s.kg || 0));
@@ -76,6 +78,7 @@ export function kcalAdjustment(rate: number | null, needPerWeek: number): number
   if (rate == null) return 0;
   const lost = -rate;
   if (lost < needPerWeek * 0.6) return -150;
+  if (lost < needPerWeek * 0.85) return -75; // un poco por debajo: ajuste suave
   if (lost > Math.max(1.2, needPerWeek * 1.6)) return +150;
   return 0;
 }

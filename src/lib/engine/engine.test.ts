@@ -58,7 +58,8 @@ describe("tendencia de peso", () => {
     const ws = [0, 2, 4, 7, 9, 11, 14].map((d) => ({ d: `2026-10-${String(d + 1).padStart(2, "0")}`, kg: 94 - d * 0.1 }));
     const r = weeklyTrend(ws)!;
     expect(r).toBeCloseTo(-0.7, 1);
-    expect(kcalAdjustment(r, 0.85)).toBe(0);
+    expect(kcalAdjustment(r, 0.8)).toBe(0);
+    expect(kcalAdjustment(r, 0.95)).toBe(-75);
   });
   it("pide recorte si no baja", () => expect(kcalAdjustment(0, 0.8)).toBe(-150));
   it("null con pocos datos", () => expect(weeklyTrend([{ d: "2026-10-01", kg: 94 }])).toBeNull());

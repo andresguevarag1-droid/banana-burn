@@ -47,6 +47,8 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
   const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1 }));
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [parq, setParq] = useState<boolean[]>([false, false, false, false]);
+  const [medOk, setMedOk] = useState(false);
   const [pending, start] = useTransition();
   const up = (p: Partial<Onboard>) => setO((x) => {
     const n = { ...x, ...p };
@@ -65,9 +67,12 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
   const weeksTo = Math.max(1, (new Date(o.goalDate + "T12:00:00").getTime() - Date.now()) / (7 * 864e5));
   const pace = (o.weight - o.goalWeight) / weeksTo;
   const paceWarn = pace > o.weight * 0.01;
+  const goalBmi = o.goalWeight / (o.heightCm / 100) ** 2;
+  const goalErr = o.goalWeight > o.weight ? "Tu meta es más alta que tu peso actual. Para ganar peso, elige el objetivo de fuerza." : goalBmi < 18.5 ? `Esa meta queda por debajo de un peso saludable para tu estatura (mínimo ${Math.ceil(18.5 * (o.heightCm / 100) ** 2)} kg).` : null;
+  const parqYes = parq.some(Boolean);
   const week = planWeek(0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
 
-  const canNext = [true, o.name.trim().length > 0 && age >= 16 && age <= 90, o.goalWeight > 0, true, true, true, o.consent][step];
+  const canNext = [true, o.name.trim().length > 0 && age >= 18 && age <= 90, o.goalWeight > 0 && !goalErr, true, true, true, o.consent && (!parqYes || medOk)][step];
 
   function finish() {
     setErr(null);
@@ -141,10 +146,10 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
           </>)}
 
           {step === 1 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Cuéntame de ti 👋</h1><p className="mt-2 text-muted">Lo usamos para calcular tu metabolismo exacto.</p></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Cuéntame de ti 👋</h1><p className="mt-2 text-muted">Con esto estimamos cuánta energía gastas al día.</p></div>
             <label className="block"><span className="text-sm font-bold text-ink">¿Cómo te llamas?</span><input value={o.name} onChange={(e) => up({ name: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="given-name" /></label>
             <div><span className="text-sm font-bold text-ink">Sexo biológico</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["m", "👨 Hombre"], ["f", "👩 Mujer"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => up({ sex: k })} className={`h-14 rounded-2xl border-2 font-bold ${o.sex === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{l}</button>)}</div></div>
-            <label className="block"><span className="text-sm font-bold text-ink">Fecha de nacimiento</span><input type="date" value={o.dob} max={iso(new Date())} onChange={(e) => up({ dob: e.target.value })} className="input mt-1.5 h-14 text-lg" /><span className="mt-1 block text-xs text-muted">{age} años</span></label>
+            <label className="block"><span className="text-sm font-bold text-ink">Fecha de nacimiento</span><input type="date" value={o.dob} max={iso(new Date())} onChange={(e) => up({ dob: e.target.value })} className="input mt-1.5 h-14 text-lg" /><span className={`mt-1 block text-xs ${age < 18 ? "font-semibold text-bad" : "text-muted"}`} role={age < 18 ? "alert" : undefined}>{age < 18 ? "Banana Burn es para personas mayores de 18 años." : `${age} años`}</span></label>
             <div><span className="text-sm font-bold text-ink">Estatura</span><div className="mt-1.5"><Num value={o.heightCm} onChange={(n) => up({ heightCm: n })} step={1} unit="cm" min={130} max={220} d={0} /></div></div>
           </>)}
 
@@ -153,11 +158,12 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
             <div><span className="text-sm font-bold text-ink">Peso actual</span><div className="mt-1.5"><Num value={o.weight} onChange={(n) => up({ weight: n })} step={0.5} unit="kg" min={40} max={250} /></div></div>
             <div><span className="text-sm font-bold text-ink">Peso meta</span><div className="mt-1.5"><Num value={o.goalWeight} onChange={(n) => up({ goalWeight: n })} step={0.5} unit="kg" min={40} max={250} /></div></div>
             <label className="block"><span className="text-sm font-bold text-ink">¿Para cuándo?</span><input type="date" value={o.goalDate} min={iso(new Date())} onChange={(e) => { setTouchedDate(true); up({ goalDate: e.target.value }); }} className="input mt-1.5 h-14 text-lg" /></label>
+            {goalErr ? <p role="alert" className="rounded-3xl bg-bad/10 p-4 text-sm font-semibold text-bad">{goalErr}</p> :
             <div className={`rounded-3xl p-4 ${paceWarn ? "bg-ember/10" : "bg-peel/10"}`}>
               <p className={`font-extrabold ${paceWarn ? "text-ember-ink" : "text-peel"}`}>{paceWarn ? "⚠️ Muy agresivo" : "✅ Ritmo sano"}: {nf(Math.max(0, pace), 2)} kg por semana</p>
               <p className="mt-1 text-sm text-body">{paceWarn ? `Más de 1 % por semana suele costar músculo. Te recomiendo el ${new Date(sug.date + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}.` : "Perderás grasa y conservarás tu músculo."}</p>
               {paceWarn && <button type="button" onClick={() => { setTouchedDate(false); up({ goalDate: sug.date }); }} className="mt-2 chip h-8 bg-white text-ink">Usar fecha recomendada</button>}
-            </div>
+            </div>}
           </>)}
 
           {step === 3 && (<>
@@ -172,7 +178,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
           {step === 4 && (<>
             <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuántos días puedes entrenar? 📅</h1><p className="mt-2 text-muted">Sé realista: es mejor 4 días siempre que 6 a veces.</p></div>
             <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`h-20 rounded-3xl border-2 text-3xl font-extrabold ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}</button>)}</div>
-            <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-4 gap-2">{[20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`h-14 rounded-2xl border-2 font-extrabold ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
+            <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`h-14 rounded-2xl border-2 font-extrabold ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
               <p className="mt-2 text-xs text-muted">¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.</p></div>
             <div className="card p-4">
               <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
@@ -197,6 +203,22 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
               <p>✅ Puedes exportarlos o borrar tu cuenta cuando quieras.</p>
               <p>✅ Nunca vendemos tus datos.</p>
             </div>
+            <fieldset className="card p-5">
+              <legend className="sr-only">Antes de empezar</legend>
+              <p className="text-sm font-bold text-ink">Antes de empezar, ¿alguna aplica a ti?</p>
+              <ul className="mt-3 space-y-2">
+                {["Un médico me dijo que tengo una condición del corazón o presión alta no controlada", "Siento dolor de pecho, mareo o me desmayo al hacer ejercicio", "Tengo una lesión o dolor en articulaciones o espalda que empeora al moverme", o.sex === "f" ? "Estoy embarazada o di a luz hace menos de 6 meses" : "Tomo medicamentos para el corazón o la presión"].map((q, i) => (
+                  <li key={i}><label className="flex gap-3 items-start text-sm text-body cursor-pointer"><input type="checkbox" checked={parq[i]} onChange={(e) => setParq((p) => p.map((x, j) => (j === i ? e.target.checked : x)))} className="mt-0.5 size-5 shrink-0 accent-ink" />{q}</label></li>
+                ))}
+              </ul>
+              {parqYes && (
+                <div className="mt-4 rounded-2xl bg-ember/10 p-3 text-sm text-body">
+                  <p className="font-bold text-ember-ink">Habla con tu médico antes de empezar.</p>
+                  <p className="mt-1">No es un no: es para que entrenes con seguridad. Cuando te dé el visto bueno, arrancamos en nivel principiante y con modo suave.</p>
+                  <label className="mt-2 flex gap-3 items-start font-semibold text-ink cursor-pointer"><input type="checkbox" checked={medOk} onChange={(e) => { setMedOk(e.target.checked); if (e.target.checked) up({ level: "principiante" }); }} className="mt-0.5 size-5 shrink-0 accent-ink" />Mi médico me autorizó a hacer ejercicio</label>
+                </div>
+              )}
+            </fieldset>
             <label className="flex gap-3 items-start rounded-3xl bg-white border-2 border-line p-4 cursor-pointer has-[:checked]:border-ink">
               <input type="checkbox" checked={o.consent} onChange={(e) => up({ consent: e.target.checked })} className="mt-1 size-5 accent-ink" />
               <span className="text-sm text-body">Autorizo a Banana Burn a procesar mis datos de salud (peso, medidas, alimentación) para personalizar mi plan, según la Ley 8968 de Costa Rica.</span>

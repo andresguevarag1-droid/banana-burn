@@ -22,6 +22,9 @@ export default async function Glp1Guide() {
   const changes = MAIN_LIFTS.map((k) => { const p = prog.lifts[k] ?? []; return p.length > 1 ? (p.at(-1)!.v - p[0].v) / p[0].v * 100 : null; }).filter((x): x is number => x != null);
   const sh = muscleShield({ startKg: ms[0] ? a.startWeight : a.startWeight, nowKg: a.currentWeight, startBf: bf(ms[0]), nowBf: bf(ms.at(-1)), strengthChangePct: changes.length ? changes.reduce((x, y) => x + y, 0) / changes.length : null });
   const med = MEDS.find((m) => m.id === a.glp1.med);
+  // La calificación solo es confiable con el programa activo, 2+ mediciones y 4+ semanas entre ellas.
+  const spanDays = ms.length > 1 ? (new Date(ms.at(-1)!.d + "T12:00:00").getTime() - new Date(ms[0].d + "T12:00:00").getTime()) / 864e5 : 0;
+  const enough = a.glp1.on && ms.length >= 2 && spanDays >= 28;
 
   return (
     <div className="space-y-6 animate-rise max-w-3xl">
@@ -35,23 +38,23 @@ export default async function Glp1Guide() {
 
       <section className="rounded-[1.75rem] bg-ink text-white p-6">
         <div className="flex items-center gap-3"><ShieldCheck className="size-7 text-banana" /><h2 className="text-xl font-extrabold">Tu escudo de músculo</h2></div>
-        {sh.grade ? (
+        {enough && sh.grade ? (
           <div className="mt-4 grid grid-cols-3 gap-3 text-center">
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-4xl font-extrabold text-banana">{sh.grade}</p><p className="text-xs text-white/70">calificación</p></div>
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-3xl font-extrabold tabular-nums">{sh.fatShare != null ? `${nf(sh.fatShare * 100)} %` : "—"}</p><p className="text-xs text-white/70">de lo perdido fue grasa</p></div>
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-3xl font-extrabold">{sh.strengthOk == null ? "—" : sh.strengthOk ? "💪" : "⚠️"}</p><p className="text-xs text-white/70">{sh.strengthOk === false ? "fuerza bajando" : "fuerza se mantiene"}</p></div>
           </div>
-        ) : <p className="mt-3 text-white/80">Anota tus medidas (cintura y cuello) cada 2 semanas y registra tus entrenos: así medimos si lo que bajas es grasa.</p>}
+        ) : <p className="mt-3 text-white/80">{!a.glp1.on ? "Activa Banana Shield y anota tus medidas (cintura y cuello) cada 2 semanas. En 4 semanas te mostramos cuánto de lo que bajas es grasa." : `Anota tus medidas (cintura y cuello) cada 2 semanas y registra tus entrenos. Tu primera calificación aparece cuando tengamos 4 semanas de datos${ms.length ? ` (llevas ${Math.max(0, Math.round(spanDays / 7))} de 4)` : ""}.`}</p>}
         <p className="mt-4 text-sm text-white/70">Meta: que al menos 3 de cada 4 kg perdidos sean grasa y que tu fuerza no baje. Estudios con GLP-1 muestran que, sin fuerza ni proteína, cerca de 1 de cada 4 kg perdidos puede ser masa magra.</p>
       </section>
 
       <section>
-        <h2 className="text-xl font-extrabold text-ink">Tus 4 pilares de hoy</h2>
+        <h2 className="text-xl font-extrabold text-ink">{a.glp1.on ? "Tus 4 pilares de hoy" : "Tus metas si activas Banana Shield"}</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {[
             ["🏋️", "Fuerza 3+ días por semana", "Es la señal que le dice a tu cuerpo “este músculo se queda”. Básicos, cerca del fallo, sin prisa. En días de náusea, modo suave — pero no la saltes."],
             ["🥩", `${g.protein} g de proteína al día`, `≈ ${g.perMeal} g por comida en ${g.meals} comidas pequeñas. Come la proteína primero: si te llenas rápido, que sea con lo importante.`],
-            ["🔥", `Mínimo ${nf(g.kcalMin)} kcal`, "Con poco apetito es fácil comer de menos y perder músculo. Si un día no llegas, prioriza batido de proteína o yogur griego."],
+            ["🔥", `${nf(g.kcal)} kcal al día`, `Nunca menos de ${nf(g.kcalMin)} kcal. Con poco apetito es fácil comer de menos y perder músculo; si un día no llegas, prioriza batido de proteína o yogur griego.`],
             ["🥦", `${g.fiber} g de fibra · ${nf(g.waterL, 1)} L de agua`, "Frijoles, avena, frutas y vegetales poco a poco, y agua durante el día: es lo que más ayuda con el estreñimiento."],
           ].map(([e, t, b]) => <div key={t} className="card p-4"><p className="text-2xl">{e}</p><p className="mt-1 font-extrabold text-ink">{t}</p><p className="text-sm text-muted">{b}</p></div>)}
         </div>

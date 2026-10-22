@@ -10,7 +10,7 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
   if (!o.consent) return { ok: false, error: "Necesitamos tu consentimiento para procesar tus datos de salud." };
-  const valid = /^\d{4}-\d{2}-\d{2}$/.test(o.dob) && /^\d{4}-\d{2}-\d{2}$/.test(o.goalDate) && o.heightCm >= 120 && o.heightCm <= 230 && o.weight >= 35 && o.weight <= 300 && o.goalWeight >= 35 && o.goalWeight <= 300 && [3, 4, 5, 6].includes(o.days) && ["gym", "casa", "mixto", "ninguno"].includes(o.equipment) && ["principiante", "intermedio", "avanzado"].includes(o.level) && [20, 30, 45, 60].includes(o.minutes) && ["semaglutida", "tirzepatida", "liraglutida", "otro"].includes(o.glp1Med) && (o.glp1Dow == null || (o.glp1Dow >= 0 && o.glp1Dow <= 6));
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(o.dob) && /^\d{4}-\d{2}-\d{2}$/.test(o.goalDate) && o.heightCm >= 120 && o.heightCm <= 230 && o.weight >= 35 && o.weight <= 300 && o.goalWeight >= 35 && o.goalWeight <= 300 && [3, 4, 5, 6].includes(o.days) && ["gym", "casa", "mixto", "ninguno"].includes(o.equipment) && ["principiante", "intermedio", "avanzado"].includes(o.level) && [15, 20, 30, 45, 60].includes(o.minutes) && ageOn(o.dob) >= 18 && o.goalWeight <= o.weight && o.goalWeight / (o.heightCm / 100) ** 2 >= 18.5 && ["semaglutida", "tirzepatida", "liraglutida", "otro"].includes(o.glp1Med) && (o.glp1Dow == null || (o.glp1Dow >= 0 && o.glp1Dow <= 6));
   if (!valid) return { ok: false, error: "Revisa los datos ingresados." };
   if (v.demo) return { ok: true };
   const sb = await createClient();

@@ -85,13 +85,11 @@ function Form({ data }: { data: Initial }) {
       </div>
 
       {quietOn && (
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs font-bold text-muted">Desde
-            <select value={p.quiet_start ?? "22:00"} onChange={(e) => set("quiet_start", e.target.value)} className="input h-11 mt-1">{HOURS.map((h) => <option key={h} value={h}>{label(h)}</option>)}</select>
-          </label>
-          <label className="text-xs font-bold text-muted">Hasta
-            <select value={p.quiet_end ?? "07:00"} onChange={(e) => set("quiet_end", e.target.value)} className="input h-11 mt-1">{HOURS.map((h) => <option key={h} value={h}>{label(h)}</option>)}</select>
-          </label>
+        <div role="radiogroup" aria-label="Horario de silencio" className="flex flex-wrap gap-2">
+          {([["21:00", "06:00"], ["22:00", "07:00"], ["23:00", "08:00"], ["00:00", "09:00"]] as const).map(([from, to]) => {
+            const on = p.quiet_start === from && p.quiet_end === to;
+            return <button key={from} type="button" role="radio" aria-checked={on} onClick={() => { set("quiet_start", from); set("quiet_end", to); }} className={`chip h-10 px-4 ${on ? "bg-ink text-white" : "bg-cream text-ink"}`}>{label(from)} a {label(to)}</button>;
+          })}
         </div>
       )}
 

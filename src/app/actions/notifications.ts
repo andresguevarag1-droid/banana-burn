@@ -1,4 +1,5 @@
 "use server";
+import { dashboard, getAthlete } from "@/lib/athlete";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { DEFAULT_PREFS, isHHMM, isValidTimeZone, type Prefs } from "@/lib/notify";
@@ -50,10 +51,13 @@ export async function sendTestNotification(): Promise<{ ok: boolean; demo?: bool
   return { ok: true, push, devices: list.length };
 }
 
-const DEMO_ITEMS = (): InAppNotification[] => {
+const DEMO_ITEMS = async (): Promise<InAppNotification[]> => {
   const t = Date.now();
+  const v = await getViewer();
+  const d = dashboard(await getAthlete(v!));
+  const today = d.plan.tpl ? { title: `Hoy te toca ${d.plan.name}`, body: `Unos ${d.plan.mins ?? 45} min y listo. Tus cargas ya están calculadas.` } : { title: "Hoy toca descanso activo", body: "Camina y estira. Mañana volvemos con todo." };
   return [
-    { id: 2, kind: "recordatorio", title: "Hoy te toca Empuje A 💪", body: "Unos 55 min y listo. Tus cargas ya están calculadas.", url: "/app/entreno", read_at: null, created_at: new Date(t - 2 * 3600e3).toISOString() },
+    { id: 2, kind: "recordatorio", ...today, url: d.plan.tpl ? "/app/entreno" : "/app", read_at: null, created_at: new Date(t - 2 * 3600e3).toISOString() },
     { id: 1, kind: "semanal", title: "Tu semana en Banana Burn 📊", body: "5 entrenos · −0.6 kg. Mira lo que viene esta semana.", url: "/app/progreso", read_at: new Date(t - 20 * 3600e3).toISOString(), created_at: new Date(t - 26 * 3600e3).toISOString() },
   ];
 };
@@ -61,7 +65,7 @@ const DEMO_ITEMS = (): InAppNotification[] => {
 export async function listNotifications(): Promise<{ items: InAppNotification[]; unread: number; demo?: boolean }> {
   const v = await getViewer();
   if (!v) return { items: [], unread: 0 };
-  if (v.demo) { const items = DEMO_ITEMS(); return { items, unread: items.filter((i) => !i.read_at).length, demo: true }; }
+  if (v.demo) { const items = await DEMO_ITEMS(); return { items, unread: items.filter((i) => !i.read_at).length, demo: true }; }
   const sb = await createClient();
   const [{ data }, { count }] = await Promise.all([
     sb.from("notifications").select("id,kind,title,body,url,read_at,created_at").eq("user_id", v.id).order("created_at", { ascending: false }).limit(20),

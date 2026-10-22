@@ -22,7 +22,7 @@ export function TrainingSettings({ days: d0, equipment: e0, mode: m0, level: l0,
   return (
     <div className="space-y-5">
       <div><p className="text-sm font-bold text-ink mb-2">Días por semana</p><div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} onClick={() => setDays(n)} className={seg(days === n)}>{n}</button>)}</div></div>
-      <div><p className="text-sm font-bold text-ink mb-2">Minutos por sesión</p><div className="grid grid-cols-4 gap-2">{[20, 30, 45, 60].map((n) => <button key={n} onClick={() => setMins(n)} className={seg(mins === n)}>{n}</button>)}</div></div>
+      <div><p className="text-sm font-bold text-ink mb-2">Minutos por sesión</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} onClick={() => setMins(n)} className={seg(mins === n)}>{n}</button>)}</div></div>
       <div><p className="text-sm font-bold text-ink mb-2">Nivel</p><div className="grid grid-cols-3 gap-2">{([["principiante", "🌱 Inicio"], ["intermedio", "🍌 Medio"], ["avanzado", "🦍 Avanzado"]] as const).map(([k, l]) => <button key={k} onClick={() => setLevel(k)} className={seg(level === k)}>{l}</button>)}</div></div>
       <div><p className="text-sm font-bold text-ink mb-2">Dónde entrenas</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{([["gym", "🏋️ Gym"], ["mixto", "🔀 Ambos"], ["casa", "🏠 Casa"], ["ninguno", "🛏️ Sin equipo"]] as const).map(([k, l]) => <button key={k} onClick={() => setEq(k)} className={seg(eq === k)}>{l}</button>)}</div>
         {eq === "ninguno" && <p className="mt-2 text-xs text-muted">Solo peso corporal en un espacio de 2 × 2 m: búlgaras, flexiones pica, remo invertido en una mesa…</p>}

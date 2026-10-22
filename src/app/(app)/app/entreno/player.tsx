@@ -330,7 +330,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
             })}
           </section>
 
-          <p className="mt-3 text-center text-xs text-faint">Tempo 3-1-1 · 1–2 reps en reserva · descanso {ex.cfg.rest >= 120 ? `${ex.cfg.rest / 60} min` : `${ex.cfg.rest} s`}</p>
+          <p className="mt-3 text-center text-xs text-faint">{ex.cfg.unit === "s" && ex.cfg.rest <= 30 ? `${ex.cfg.hi} s de trabajo, ${ex.cfg.rest} s de descanso` : ex.cfg.unit ? `Técnica limpia, descanso ${ex.cfg.rest} s` : `Tempo 3-1-1, 1 a 2 reps en reserva, descanso ${ex.cfg.rest >= 120 ? `${ex.cfg.rest / 60} min` : `${ex.cfg.rest} s`}`}</p>
           {idx === exercises.length - 1 && cardio && <p className="mt-3 card p-4 text-sm font-semibold text-ink">🚶 Al final: {cardio}</p>}
         </div>
       </div>

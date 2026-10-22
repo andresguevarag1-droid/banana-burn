@@ -1,6 +1,7 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { e1rm, EX } from "@/lib/engine";
 import { crToday } from "@/lib/today";
+import { DEMO_DAYS, DEMO_NOW_KG, DEMO_START_KG, demoWorkouts } from "@/lib/demo-story";
 
 export type Point = { d: string; v: number };
 export const MAIN_LIFTS = ["squat", "bench", "deadlift", "ohp", "row"] as const;
@@ -10,22 +11,19 @@ const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:0
 function demo() {
   const t = crToday().iso;
   const weights: Point[] = [];
-  for (let i = 42; i >= 0; i--) {
+  for (let i = DEMO_DAYS; i >= 0; i--) {
     if (i % 3 === 1 && i > 6) continue; // no todos los días se pesa
-    const noise = Math.sin(i * 1.7) * 0.35 + Math.cos(i * 0.9) * 0.15;
-    weights.push({ d: addDays(t, -i), v: Math.round((93.1 + i * 0.085 + noise) * 10) / 10 });
+    const noise = i === 0 || i === DEMO_DAYS ? 0 : Math.sin(i * 1.7) * 0.25 + Math.cos(i * 0.9) * 0.1;
+    weights.push({ d: addDays(t, -i), v: Math.round((DEMO_NOW_KG + (i * (DEMO_START_KG - DEMO_NOW_KG)) / DEMO_DAYS + noise) * 10) / 10 });
   }
   const base: Record<string, [number, number]> = { squat: [96, 0.09], bench: [88, 0.045], deadlift: [130, 0.07], ohp: [50, 0.02], row: [64, 0.055] };
   const lifts: Record<string, Point[]> = {};
   for (const k of MAIN_LIFTS) {
     const [b, g] = base[k];
-    lifts[k] = [-37, -30, -23, -16, -9, -2].map((o, i) => ({ d: addDays(t, o), v: Math.round(b * (1 + (g * i) / 5 + Math.sin(i * 2 + b) * 0.008) * 10) / 10 }));
+    lifts[k] = [-20, -16, -12, -9, -5, -2].map((o, i) => ({ d: addDays(t, o), v: Math.round(b * (1 + (g * i) / 5 + Math.sin(i * 2 + b) * 0.008) * 10) / 10 }));
   }
-  const workouts = [
-    { d: addDays(t, -2), tpl: "Tracción A", sets: 12, vol: 6840, fun: 5 },
-    { d: addDays(t, -3), tpl: "Empuje A", sets: 13, vol: 7420, fun: 4 },
-    { d: addDays(t, -5), tpl: "Bombeo + Reto", sets: 9, vol: 1980, fun: 5 },
-  ];
+  const vol: Record<string, [number, number]> = { pushA: [13, 7420], pullA: [12, 6840], core: [9, 0], pushB: [13, 5980], pullB: [11, 6120], pump: [9, 1980] };
+  const workouts = demoWorkouts(t).slice(0, 10).map((w, i) => ({ d: w.d, tpl: w.tpl, sets: vol[w.tplId][0], vol: Math.round(vol[w.tplId][1] * (1 - i * 0.012)), fun: 4 + (i % 2) }));
   return { weights, lifts, workouts };
 }
 
