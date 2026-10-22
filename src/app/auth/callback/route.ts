@@ -2,12 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email";
 import { safeNext as toSafePath } from "@/lib/security/redirect";
+import { isSupabaseConfigured } from "@/lib/env";
 
 /** Tipos de enlace de correo aceptados (lista cerrada) → tipo de verifyOtp. */
 const OTP_TYPES = { email: "email", magiclink: "email", signup: "signup" } as const;
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
+  if (!isSupabaseConfigured) return NextResponse.redirect(`${origin}/entrar`);
   const code = searchParams.get("code");
   // Solo rutas relativas del mismo sitio (sin //, \, esquemas ni caracteres de control).
   const safeNext = toSafePath(searchParams.get("next"), "/app");
