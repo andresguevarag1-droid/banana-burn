@@ -2,7 +2,8 @@
 export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup };
 export type FoodGroup = "tica" | "prot" | "carb" | "fruta" | "bebida" | "rapida" | "extra";
 
-export const FOOD_GROUPS: [FoodGroup, string][] = [["tica", "🇨🇷 Ticos"], ["prot", "🥩 Proteína"], ["carb", "🍚 Carbos"], ["fruta", "🍍 Frutas"], ["bebida", "🥤 Bebidas"], ["rapida", "🍔 Rápida"], ["extra", "🥑 Extras"]];
+export const FOOD_GROUPS: [FoodGroup, string][] = [["tica", "Ticos"], ["prot", "Proteína"], ["carb", "Carbos"], ["fruta", "Frutas"], ["bebida", "Bebidas"], ["rapida", "Rápida"], ["extra", "Extras"]];
+export const FOOD_GROUP_ICON: Record<FoodGroup, string> = { tica: "bowl", prot: "meat", carb: "grains", fruta: "fruit", bebida: "coffee", rapida: "fastfood", extra: "avocado" };
 
 export const FOODS: Food[] = [{"id":"pollo","n":"Pechuga de pollo","p":"150 g","k":248,"pr":46,"c":0,"f":5,"g":"prot"},
   {"id":"tilapia","n":"Tilapia o corvina","p":"180 g","k":230,"pr":46,"c":0,"f":5,"g":"prot"},

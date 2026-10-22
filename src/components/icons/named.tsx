@@ -1,12 +1,19 @@
 // Íconos por nombre: para datos (recetas, retos, logros, plantillas) que guardan un string en vez de un componente.
 import type { SVGProps } from "react";
 import {
-  Barbell, BowlFood, Coffee, Cookie, Drop, Egg, Fish, Footprints, ForkKnife, Leaf, Lightning, PersonSimpleRun, Scales, Target, Timer, TrendDown, Carrot, Moon, Sun,
+  Avocado, Barbell, Bed, BowlFood, BowlSteam, Bread, Carrot, ChartBar, Coffee, Cookie, Cow, Drop, Egg, Fish, Flag, Footprints, ForkKnife, Grains, Hamburger,
+  HandsClapping, Leaf, Lightning, Moon, OrangeSlice, PersonSimpleRun, PersonSimpleWalk, Plant, Scales, Shield, Sneaker, Sun, SunHorizon, Target, Timer,
+  TreePalm, TrendDown, Waves, ArrowsClockwise, Sparkle, Syringe, Hourglass,
 } from "@phosphor-icons/react/dist/ssr";
 import { BRAND_ICONS, type BrandWeight } from "./brand";
 import { LEVELS } from "@/lib/gamify";
 
-const UTIL = { barbell: Barbell, bowl: BowlFood, coffee: Coffee, cookie: Cookie, drop: Drop, egg: Egg, fish: Fish, steps: Footprints, fork: ForkKnife, leaf: Leaf, bolt: Lightning, run: PersonSimpleRun, scale: Scales, target: Target, timer: Timer, trendDown: TrendDown, carrot: Carrot, moon: Moon, sun: Sun } as const;
+const UTIL = {
+  barbell: Barbell, bowl: BowlFood, soup: BowlSteam, bread: Bread, coffee: Coffee, cookie: Cookie, drop: Drop, egg: Egg, fish: Fish, meat: Cow, grains: Grains, fruit: OrangeSlice,
+  avocado: Avocado, fastfood: Hamburger, steps: Footprints, walk: PersonSimpleWalk, sneaker: Sneaker, fork: ForkKnife, leaf: Leaf, plant: Plant, bolt: Lightning, run: PersonSimpleRun,
+  scale: Scales, target: Target, timer: Timer, hourglass: Hourglass, trendDown: TrendDown, carrot: Carrot, moon: Moon, sun: Sun, sunrise: SunHorizon, palm: TreePalm, bed: Bed,
+  clap: HandsClapping, flag: Flag, shield: Shield, waves: Waves, cycle: ArrowsClockwise, sparkle: Sparkle, syringe: Syringe, chart: ChartBar,
+} as const;
 
 export const ICON_NAMES = [...Object.keys(BRAND_ICONS), ...Object.keys(UTIL)] as (keyof typeof BRAND_ICONS | keyof typeof UTIL)[];
 export type IconName = (typeof ICON_NAMES)[number];
