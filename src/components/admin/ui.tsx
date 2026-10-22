@@ -1,18 +1,29 @@
 // Piezas de UI del panel (server-safe).
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Info, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Info, TriangleAlert } from "lucide-react";
 import { ROLE_LABEL } from "@/lib/admin-perms";
+import { EMPTY, fmtNum } from "@/lib/admin-format";
 import type { Role } from "@/lib/supabase/server";
 
-export function PageHeader({ title, desc, children }: { title: string; desc?: string; children?: ReactNode }) {
+export { EMPTY, fmtDate, fmtDateTime, fmtDay, fmtNum, fmtPct, money } from "@/lib/admin-format";
+
+/**
+ * Encabezado único de cada sección del panel: título, una línea de descripción y acciones opcionales.
+ * `back` agrega un enlace de regreso arriba del título; `meta` muestra chips (rol, estado) bajo la descripción.
+ */
+export function PageHeader({ title, desc, children, back, meta }: { title: string; desc?: ReactNode; children?: ReactNode; back?: { href: string; label: string }; meta?: ReactNode }) {
   return (
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">{title}</h1>
-        {desc && <p className="mt-1 text-sm text-muted max-w-2xl">{desc}</p>}
+    <header className="space-y-2">
+      {back && <Link href={back.href} className="inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold text-muted hover:text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50"><ArrowLeft className="size-4" aria-hidden />{back.label}</Link>}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink break-words">{title}</h1>
+          {desc && <p className="mt-1 text-sm text-muted max-w-2xl break-words">{desc}</p>}
+          {meta && <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div>}
+        </div>
+        {children && <div className="flex flex-wrap gap-2 sm:justify-end">{children}</div>}
       </div>
-      {children && <div className="flex flex-wrap gap-2">{children}</div>}
     </header>
   );
 }
@@ -21,7 +32,7 @@ export function Kpi({ label, value, hint, tone }: { label: string; value: ReactN
   return (
     <div className="card p-4 sm:p-5">
       <p className="text-[13px] font-semibold text-muted">{label}</p>
-      <p className="mt-1.5 text-2xl sm:text-[28px] leading-none font-extrabold text-ink tabular-nums">{value}</p>
+      <p className="mt-1.5 text-xl sm:text-[28px] leading-none font-extrabold text-ink tabular-nums break-words">{value}</p>
       {hint && <p className={`mt-1.5 text-xs ${tone === "good" ? "text-peel font-semibold" : tone === "bad" ? "text-bad font-semibold" : "text-muted"}`}>{hint}</p>}
     </div>
   );
@@ -29,10 +40,12 @@ export function Kpi({ label, value, hint, tone }: { label: string; value: ReactN
 
 const ROLE_STYLE: Record<string, string> = {
   superadmin: "bg-ink text-white", admin: "bg-[#3A3220] text-white", coach: "bg-[#E6EEFD] text-[#1D4FBF]",
-  support: "bg-[#E8F6EE] text-[#17703A]", pro: "bg-banana text-ink", free: "bg-line text-[#4F4636]",
+  support: "bg-[#E8F6EE] text-[#17703A]", pro: "bg-line text-[#4F4636]", free: "bg-line text-[#4F4636]",
 };
+/** Rol de acceso (no el plan): usuarios finales se muestran como "Usuario"; el plan va en su propia columna. */
 export function RoleBadge({ role }: { role: Role | string }) {
-  return <span className={`chip h-6 ${ROLE_STYLE[role] ?? "bg-line text-ink"}`}>{ROLE_LABEL[role as Role] ?? role}</span>;
+  const label = role === "free" || role === "pro" ? "Usuario" : ROLE_LABEL[role as Role] ?? role;
+  return <span className={`chip h-6 ${ROLE_STYLE[role] ?? "bg-line text-ink"}`}>{label}</span>;
 }
 
 const TONE: Record<string, string> = {
@@ -44,10 +57,11 @@ export function Badge({ tone = "muted", children }: { tone?: keyof typeof TONE; 
 
 export const SUB_STATUS: Record<string, [string, keyof typeof TONE]> = {
   active: ["Activa", "good"], trialing: ["Prueba", "info"], past_due: ["Pago pendiente", "bad"], unpaid: ["Impaga", "bad"],
-  incomplete: ["Incompleta", "warn"], canceled: ["Cancelada", "muted"], cancelled: ["Cancelada", "muted"], failed: ["Fallida", "bad"],
+  incomplete: ["Incompleta", "warn"], canceled: ["Cancelada", "muted"], cancelled: ["Cancelada", "muted"], failed: ["Fallida", "bad"], expired: ["Vencida", "muted"],
 };
 export function SubStatus({ status }: { status?: string | null }) {
-  const [l, t] = SUB_STATUS[status ?? ""] ?? [status ?? "—", "muted"];
+  if (!status) return <span className="text-sm text-muted">Sin suscripción</span>;
+  const [l, t] = SUB_STATUS[status] ?? [status, "muted"];
   return <Badge tone={t}>{l}</Badge>;
 }
 
@@ -68,9 +82,19 @@ export const MigrationNotice = () => (
   <Notice tone="warn" title="Falta la migración 0005_admin.sql">Ejecútala en el SQL Editor de Supabase para habilitar esta sección.</Notice>
 );
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="p-10 text-center text-sm text-muted">{children}</p>;
+/** Estado vacío: título corto, explicación opcional y una acción para salir del vacío. */
+export function Empty({ children, title, action }: { children?: ReactNode; title?: string; action?: ReactNode }) {
+  return (
+    <div className="px-6 py-10 text-center" role="status">
+      {title && <p className="font-bold text-ink">{title}</p>}
+      {children && <p className={`text-sm text-muted ${title ? "mt-1" : ""}`}>{children}</p>}
+      {action && <div className="mt-4 flex justify-center">{action}</div>}
+    </div>
+  );
 }
+
+/** Celda vacía legible para lectores de pantalla. */
+export const Nil = () => <span className="text-faint"><span aria-hidden>{EMPTY}</span><span className="sr-only">Sin dato</span></span>;
 
 /** Tabla con caption accesible (visible u oculto) y scroll horizontal en móvil. */
 export function Table({ caption, captionHidden, children, minWidth = 720 }: { caption: string; captionHidden?: boolean; children: ReactNode; minWidth?: number }) {
@@ -83,13 +107,13 @@ export function Table({ caption, captionHidden, children, minWidth = 720 }: { ca
     </div>
   );
 }
-export const Th = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <th scope="col" className={`px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-muted ${className}`}>{children}</th>;
+export const Th = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <th scope="col" className={`px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted whitespace-nowrap ${className}`}>{children}</th>;
 export const Td = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
 
 /** Paginación por querystring, conservando los filtros. */
 export function Pagination({ page, total, pageSize, basePath, params }: { page: number; total: number; pageSize: number; basePath: string; params: Record<string, string | undefined> }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (pages <= 1) return <p className="text-xs text-muted">{total} resultado{total === 1 ? "" : "s"}</p>;
+  if (pages <= 1) return <p className="text-xs text-muted">{fmtNum(total)} resultado{total === 1 ? "" : "s"}</p>;
   const href = (p: number) => {
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v) sp.set(k, v);
@@ -99,8 +123,8 @@ export function Pagination({ page, total, pageSize, basePath, params }: { page: 
   };
   const cls = "inline-flex items-center gap-1 h-9 px-3 rounded-full border border-line bg-white text-sm font-semibold text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50 hover:bg-paper";
   return (
-    <nav aria-label="Paginación" className="flex items-center justify-between gap-3 text-sm">
-      <p className="text-xs text-muted">Página {page} de {pages} · {total} resultados</p>
+    <nav aria-label="Paginación" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      <p className="text-xs text-muted">Página {page} de {pages} · {fmtNum(total)} resultados</p>
       <div className="flex gap-2">
         {page > 1 ? <Link className={cls} href={href(page - 1)} rel="prev"><ChevronLeft className="size-4" aria-hidden />Anterior</Link> : <span className={`${cls} opacity-40`} aria-disabled="true"><ChevronLeft className="size-4" aria-hidden />Anterior</span>}
         {page < pages ? <Link className={cls} href={href(page + 1)} rel="next">Siguiente<ChevronRight className="size-4" aria-hidden /></Link> : <span className={`${cls} opacity-40`} aria-disabled="true">Siguiente<ChevronRight className="size-4" aria-hidden /></span>}
@@ -115,7 +139,7 @@ export function Field({ label, htmlFor, hint, children, className = "" }: { labe
     <div className={className}>
       <label htmlFor={htmlFor} className="block text-xs font-bold text-ink mb-1">{label}</label>
       {children}
-      {hint && <p id={`${htmlFor}-hint`} className="mt-1 text-[11px] text-muted">{hint}</p>}
+      {hint && <p id={`${htmlFor}-hint`} className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
   );
 }
@@ -123,8 +147,6 @@ export function Field({ label, htmlFor, hint, children, className = "" }: { labe
 /** Variante compacta del input de marca para tablas y filtros. */
 export const inputSm = "input h-10! rounded-xl! text-sm!";
 
-export const fmtDate = (s?: string | null) => (s ? new Date(s.length === 10 ? s + "T12:00:00-06:00" : s).toLocaleDateString("es-CR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Costa_Rica" }) : "—");
-export const fmtDateTime = (s?: string | null) => (s ? new Date(s).toLocaleString("es-CR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Costa_Rica" }) : "—");
 export function ago(day: string | null, today: string): string {
   if (!day) return "Nunca";
   const d = Math.round((Date.parse(today + "T00:00:00Z") - Date.parse(day.slice(0, 10) + "T00:00:00Z")) / 864e5);

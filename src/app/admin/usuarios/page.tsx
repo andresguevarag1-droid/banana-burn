@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
-import { listUsers, PAGE_SIZE, statusOf, USER_STATUS } from "@/lib/admin";
+import { ACTIVITY_LABEL, BILLING_LABEL, listUsers, PAGE_SIZE, PLAN_LABEL, statusOf, USER_STATUS } from "@/lib/admin";
 import { ROLE_LABEL, ROLES } from "@/lib/admin-perms";
 import { crToday } from "@/lib/today";
-import { Badge, DemoNotice, Empty, Field, Notice, PageHeader, Pagination, RoleBadge, Table, Td, Th, ago, fmtDate, inputSm } from "@/components/admin/ui";
+import { Badge, DemoNotice, Empty, Field, Nil, Notice, PageHeader, Pagination, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtNum, inputSm } from "@/components/admin/ui";
 
 export const metadata = { title: "Usuarios" };
 
 type SP = { q?: string; plan?: string; role?: string; status?: string; from?: string; to?: string; page?: string };
-const PLAN_OPTS = [["free", "Gratis"], ["entreno", "Entreno"], ["completo", "Entreno + Nutrición"], ["pro", "Pro (legado)"]] as const;
+const PLAN_OPTS = (["free", "entreno", "completo", "pro"] as const).map((k) => [k, PLAN_LABEL[k]] as const);
 const STATUS_TONE = { activo: "good", inactivo: "muted", pendiente: "warn" } as const;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -27,7 +27,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Usuarios" desc="Busca por nombre, correo o ID. Abre una ficha para ver detalle y acciones." />
+      <PageHeader title="Usuarios" desc="Busca por nombre, correo o ID y abre la ficha para ver detalle y acciones." />
       {v.demo && <DemoNotice what="los usuarios" />}
       {limited && <Notice tone="warn" title="Búsqueda limitada">Sin 0005_admin.sql no se puede buscar por correo ni filtrar por actividad.</Notice>}
 
@@ -41,7 +41,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
         <Field label="Rol" htmlFor="f-role">
           <select id="f-role" name="role" defaultValue={f.role ?? ""} className={inputSm}><option value="">Todos</option>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select>
         </Field>
-        <Field label="Estado" htmlFor="f-status">
+        <Field label="Actividad" htmlFor="f-status">
           <select id="f-status" name="status" defaultValue={f.status ?? ""} className={inputSm}><option value="">Todos</option>{USER_STATUS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         </Field>
         <Field label="Alta desde" htmlFor="f-from"><input id="f-from" name="from" type="date" defaultValue={f.from} className={inputSm} /></Field>
@@ -52,9 +52,10 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
         </div>
       </form>
 
-      <Table caption={`Usuarios${filtered ? " (filtrados)" : ""}: ${total}`} captionHidden minWidth={860}>
+      {rows.length > 0 && (
+      <Table caption={`Usuarios${filtered ? " (filtrados)" : ""}: ${fmtNum(total)}`} captionHidden minWidth={960}>
         <thead className="border-b border-line">
-          <tr><Th>Usuario</Th><Th>Rol</Th><Th>Plan</Th><Th>Estado</Th><Th>Última actividad</Th><Th>Alta</Th><Th><span className="sr-only">Acciones</span></Th></tr>
+          <tr><Th>Usuario</Th><Th>Rol</Th><Th>Plan</Th><Th>Suscripción</Th><Th>Actividad</Th><Th>Última actividad</Th><Th>Alta</Th><Th><span className="sr-only">Acciones</span></Th></tr>
         </thead>
         <tbody>
           {rows.map((u) => {
@@ -66,9 +67,14 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                   {u.email && <p className="text-xs text-muted">{u.email}</p>}
                 </Td>
                 <Td><RoleBadge role={u.role} /></Td>
-                <Td><span className="text-ink">{PLAN_OPTS.find(([k]) => k === u.plan)?.[1] ?? u.plan}</span>{u.comp_until && <p className="text-[11px] text-[#6E4E00] font-semibold">Cortesía hasta {fmtDate(u.comp_until)}</p>}</Td>
-                <Td><Badge tone={STATUS_TONE[st]}>{USER_STATUS.find(([k]) => k === st)?.[1].replace(" (7 d)", "")}</Badge></Td>
-                <Td className="text-muted tabular-nums">{limited ? "—" : ago(u.last_active, today)}</Td>
+                <Td>
+                  <span className="text-ink whitespace-nowrap">{PLAN_LABEL[u.plan] ?? u.plan}</span>
+                  {u.plan !== "free" && u.billing && !u.comp_until && <p className="text-xs text-muted">{BILLING_LABEL[u.billing] ?? u.billing}</p>}
+                  {u.comp_until && <p className="text-xs text-[#6E4E00] font-semibold whitespace-nowrap">Cortesía hasta {fmtDate(u.comp_until)}</p>}
+                </Td>
+                <Td><SubStatus status={u.sub_status} /></Td>
+                <Td><Badge tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge></Td>
+                <Td className="text-muted tabular-nums whitespace-nowrap">{limited ? <Nil /> : ago(u.last_active, today)}</Td>
                 <Td className="text-muted tabular-nums whitespace-nowrap">{fmtDate(u.created_at)}</Td>
                 <Td className="text-right"><Link href={`/admin/usuarios/${u.id}`} className="text-sm font-semibold text-ink underline underline-offset-2" aria-label={`Ver ficha de ${u.full_name || "usuario"}`}>Ver</Link></Td>
               </tr>
@@ -76,7 +82,14 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
           })}
         </tbody>
       </Table>
-      {!rows.length && <div className="card"><Empty>Sin resultados para estos filtros.</Empty></div>}
+      )}
+      {!rows.length && (
+        <div className="card">
+          {filtered
+            ? <Empty title="Sin resultados" action={<Link href="/admin/usuarios" className="btn-ghost h-10! px-4! text-sm!">Limpiar filtros</Link>}>Ningún usuario coincide con estos filtros.</Empty>
+            : <Empty title="Todavía no hay usuarios">Las cuentas nuevas aparecen aquí apenas se registran.</Empty>}
+        </div>
+      )}
       <Pagination page={f.page} total={total} pageSize={PAGE_SIZE} basePath="/admin/usuarios" params={{ q: f.q, plan: f.plan, role: f.role, status: f.status, from: f.from, to: f.to }} />
     </div>
   );

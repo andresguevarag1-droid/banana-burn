@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activeCounts, activityMap, addDays, churn, cohortRetention, crDay, dailySeries, dayDiff, delta, monthlyValue, mrr, pct, resolvePlan, signupsWithin, weekOf,
+  activeCounts, activityMap, addDays, addMonths, nextRenewal, cellRate, churn, cohortRetention, crDay, dailySeries, dayDiff, delta, monthlyValue, mrr, pct, resolvePlan, signupsWithin, weekOf,
 } from "./admin-kpis";
 
 describe("fechas", () => {
@@ -18,7 +18,22 @@ describe("fechas", () => {
   });
 });
 
+describe("renovaciones", () => {
+  it("mensual = +1 mes calendario, anual = +1 año", () => {
+    expect(addMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(addMonths("2026-10-21", 1)).toBe("2026-11-21");
+    expect(addMonths("2026-12-15", 1)).toBe("2027-01-15");
+    expect(nextRenewal("2026-09-30", "mes")).toBe("2026-10-30");
+    expect(nextRenewal("2026-02-10", "anual")).toBe("2027-02-10");
+  });
+});
+
 describe("tasas", () => {
+  it("celda de cohorte solo con cohorte completa", () => {
+    expect(cellRate(3, 8, 8)).toBe(37.5);
+    expect(cellRate(3, 7, 8)).toBeNull();
+    expect(cellRate(0, 0, 0)).toBeNull();
+  });
   it("pct con un decimal y sin dividir entre 0", () => {
     expect(pct(1, 3)).toBe(33.3);
     expect(pct(5, 0)).toBe(0);
@@ -104,7 +119,7 @@ describe("actividad y retención", () => {
     expect(aug.d30).toEqual({ n: 1, eligible: 2, rate: 50 }); // u1 activo el día 31; u2 el día 57 (fuera de ventana)
     const now = rows.find((r) => r.cohort === "2026-10-19")!;
     expect(now.size).toBe(2);
-    expect(now.d1).toEqual({ n: 1, eligible: 1, rate: 100 });
+    expect(now.d1).toEqual({ n: 1, eligible: 1, rate: null }); // u4 aún no cumple D1: cohorte en curso
     expect(now.d7.rate).toBeNull();
     expect(rows[0].cohort).toBe("2026-10-19"); // más reciente primero
     expect(rows).toHaveLength(12);

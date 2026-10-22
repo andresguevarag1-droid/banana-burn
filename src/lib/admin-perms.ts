@@ -7,7 +7,7 @@ export const STAFF_ROLES: Role[] = ["coach", "support", "admin", "superadmin"];
 export const PRIVILEGED: Role[] = ["admin", "superadmin"];
 
 export const ROLE_LABEL: Record<Role, string> = {
-  free: "Gratis", pro: "Pro", coach: "Coach", support: "Soporte", admin: "Admin", superadmin: "Superadmin",
+  free: "Usuario", pro: "Usuario con plan", coach: "Coach", support: "Soporte", admin: "Admin", superadmin: "Superadmin",
 };
 
 export type Capability =

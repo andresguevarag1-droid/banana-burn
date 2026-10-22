@@ -1,22 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Gift, Lock, RotateCcw, UserCog } from "lucide-react";
+import { Gift, Lock, RotateCcw, UserCog } from "lucide-react";
 import { requireSection } from "@/lib/admin-auth";
-import { getUserDetail, statusOf, USER_STATUS } from "@/lib/admin";
+import { ACTIVITY_LABEL, getUserDetail, PLAN_LABEL, statusOf } from "@/lib/admin";
 import { assignableRoles, can, PRIVILEGED, ROLE_LABEL } from "@/lib/admin-perms";
 import { isUuid } from "@/lib/admin-validate";
-import { addDays, money } from "@/lib/admin-kpis";
+import { addDays } from "@/lib/admin-kpis";
 import { crToday } from "@/lib/today";
 import { ActivityStrip, Sparkline } from "@/components/admin/charts";
 import { ConfirmAction } from "@/components/admin/action-form";
-import { Badge, DemoNotice, Notice, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, inputSm } from "@/components/admin/ui";
+import { Badge, DemoNotice, EMPTY, Nil, Notice, PageHeader, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, fmtNum, inputSm, money } from "@/components/admin/ui";
 import { changeRole, grantComp, resetOnboarding, revokeComp } from "../../actions";
 
 export const metadata = { title: "Ficha de usuario" };
 
 const GOAL: Record<string, string> = { grasa: "Bajar grasa", recomp: "Recomposición", fuerza: "Fuerza" };
 const EQUIP: Record<string, string> = { gym: "Gimnasio", casa: "Casa", mixto: "Mixto" };
-const PLAN: Record<string, string> = { free: "Gratis", entreno: "Entreno", completo: "Entreno + Nutrición", pro: "Pro (legado)" };
+const PLAN = PLAN_LABEL;
+const COUNTRY: Record<string, string> = { CR: "Costa Rica", PA: "Panamá", NI: "Nicaragua", GT: "Guatemala", MX: "México", CO: "Colombia", SV: "El Salvador", HN: "Honduras", US: "Estados Unidos" };
 
 function Section({ title, children, id }: { title: string; children: React.ReactNode; id: string }) {
   return (
@@ -27,7 +28,7 @@ function Section({ title, children, id }: { title: string; children: React.React
   );
 }
 function Row({ k, children }: { k: string; children: React.ReactNode }) {
-  return <div className="flex justify-between gap-4 py-2 border-b border-line last:border-0 text-sm"><dt className="text-muted">{k}</dt><dd className="text-ink font-semibold text-right">{children}</dd></div>;
+  return <div className="flex justify-between gap-4 py-2 border-b border-line last:border-0 text-sm"><dt className="text-muted shrink-0">{k}</dt><dd className="min-w-0 text-ink font-semibold text-right break-words">{children}</dd></div>;
 }
 function Restricted({ what }: { what: string }) {
   return <p className="flex items-center gap-2 text-sm text-muted"><Lock className="size-4" aria-hidden />Tu rol no tiene acceso a {what}.</p>;
@@ -51,28 +52,23 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/usuarios" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden />Usuarios</Link>
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">{a.full_name || "Sin nombre"}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-            {a.email ?? "correo no disponible"} <RoleBadge role={a.role} />
-            <Badge tone={status === "activo" ? "good" : status === "pendiente" ? "warn" : "muted"}>{USER_STATUS.find(([k]) => k === status)?.[1]}</Badge>
-            {isSelf && <Badge tone="info">Eres tú</Badge>}
-          </p>
-        </div>
-      </header>
+      <PageHeader back={{ href: "/admin/usuarios", label: "Usuarios" }} title={a.full_name || "Sin nombre"} desc={a.email ?? "Correo no disponible"}
+        meta={<>
+          <RoleBadge role={a.role} />
+          <Badge tone={status === "activo" ? "good" : status === "pendiente" ? "warn" : "muted"}>{ACTIVITY_LABEL[status]}</Badge>
+          {isSelf && <Badge tone="info">Eres tú</Badge>}
+        </>} />
       {v.demo && <DemoNotice what="los datos de esta ficha" />}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Section title="Cuenta" id="s-cuenta">
             <dl>
-              <Row k="ID"><code className="text-xs font-mono">{a.id}</code></Row>
+              <Row k="ID"><code className="text-xs font-mono break-all">{a.id}</code></Row>
               <Row k="Alta">{fmtDate(a.created_at)}</Row>
               <Row k="Último ingreso">{fmtDateTime(a.last_sign_in_at)}</Row>
               <Row k="Última actividad">{ago(a.last_active, today)}</Row>
-              <Row k="País">{a.country ?? "—"}</Row>
+              <Row k="País">{a.country ? COUNTRY[a.country] ?? a.country : <Nil />}</Row>
               <Row k="Plan">{PLAN[a.plan] ?? a.plan}{activeComp && <span className="block text-xs text-[#6E4E00]">cortesía hasta {fmtDate(activeComp.expires_at)}</span>}</Row>
               <Row k="Bienvenida">{a.onboarded ? "Completada" : "Pendiente"}</Row>
             </dl>
@@ -82,9 +78,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             {health ? (
               <>
                 <dl className="grid sm:grid-cols-2 gap-x-6">
-                  <Row k="Objetivo">{GOAL[health.goal_type ?? ""] ?? "—"}</Row>
-                  <Row k="Equipo · días">{EQUIP[health.equipment ?? ""] ?? "—"} · {health.train_days ?? "—"} d/sem</Row>
-                  {health.goal && <><Row k="Peso inicial → meta">{health.goal.start_weight} → {health.goal.goal_weight} kg</Row><Row k="Fecha meta">{fmtDate(health.goal.goal_date)}</Row></>}
+                  <Row k="Objetivo">{GOAL[health.goal_type ?? ""] ?? <Nil />}</Row>
+                  <Row k="Equipo y días">{EQUIP[health.equipment ?? ""] ?? EMPTY} · {health.train_days ?? EMPTY} d/sem</Row>
+                  {health.goal && <><Row k="Peso inicial y meta">{fmtNum(health.goal.start_weight)} kg a {fmtNum(health.goal.goal_weight)} kg</Row><Row k="Fecha meta">{fmtDate(health.goal.goal_date)}</Row></>}
                 </dl>
                 <div>
                   <h3 className="text-sm font-bold text-ink mb-2">Tendencia de peso ({health.weights.length} pesajes)</h3>
@@ -99,11 +95,11 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             {d.activity ? (
               <>
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  {[["Entrenos totales", d.activity.workouts_total], ["Entrenos 30 d", d.activity.workouts_30], ["Días activos 28 d", d.activity.active_days_30]].map(([l, n]) => (
-                    <div key={l} className="rounded-2xl bg-paper/70 p-3"><p className="text-2xl font-extrabold text-ink tabular-nums">{n}</p><p className="text-xs text-muted">{l}</p></div>
+                  {([["Entrenos totales", d.activity.workouts_total], ["Entrenos 30 d", d.activity.workouts_30], ["Días activos 30 d", d.activity.active_days_30]] as const).map(([l, n]) => (
+                    <div key={l} className="rounded-2xl bg-paper/70 p-3"><p className="text-2xl font-extrabold text-ink tabular-nums">{fmtNum(n)}</p><p className="text-xs text-muted">{l}</p></div>
                   ))}
                 </div>
-                <div><h3 className="text-sm font-bold text-ink mb-2">Últimos 28 días</h3><ActivityStrip days={d.activity.recent} today={today} label="Días con entreno" /></div>
+                <div><h3 className="text-sm font-bold text-ink mb-2">Entrenos de los últimos 28 días</h3><ActivityStrip days={d.activity.recent} today={today} label="Días con entreno en los últimos 28 días" /></div>
               </>
             ) : <Restricted what="la actividad de entrenamiento" />}
           </Section>
@@ -112,16 +108,19 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             {d.billing ? (
               <>
                 {d.billing.subs.length ? (
-                  <Table caption="Suscripciones del usuario" captionHidden minWidth={520}>
-                    <thead className="border-b border-line"><tr><Th>Plan</Th><Th>Estado</Th><Th>Proveedor</Th><Th>Renueva / termina</Th><Th className="text-right">MRR</Th></tr></thead>
+                  <Table caption="Suscripciones del usuario" captionHidden minWidth={600}>
+                    <thead className="border-b border-line"><tr><Th>Plan</Th><Th>Estado</Th><Th>Último cobro</Th><Th>Renueva o termina</Th><Th className="text-right">MRR</Th></tr></thead>
                     <tbody>{d.billing.subs.map((s, i) => (
                       <tr key={String(s.id ?? i)} className="border-b border-line last:border-0">
-                        <Td className="text-ink">{s.planLabel}</Td><Td><SubStatus status={s.status} /></Td><Td className="text-muted">{s.provider ?? "—"}</Td>
-                        <Td className="tabular-nums text-muted">{fmtDate(s.current_period_end)}</Td><Td className="text-right tabular-nums">{s.status === "active" ? money(s.monthly) : "—"}</Td>
+                        <Td className="text-ink">{s.planLabel}</Td><Td><SubStatus status={s.status} /></Td>
+                        <Td className="tabular-nums text-muted whitespace-nowrap">{s.current_period_start ? fmtDate(s.current_period_start) : <Nil />}</Td>
+                        <Td className="tabular-nums text-muted whitespace-nowrap">{s.status === "trialing" ? `Prueba hasta ${fmtDate(s.current_period_end)}` : s.status === "canceled" ? `Acceso hasta ${fmtDate(s.current_period_end)}` : fmtDate(s.current_period_end)}</Td>
+                        <Td className="text-right tabular-nums">{s.status === "active" ? money(s.monthly) : <Nil />}</Td>
                       </tr>))}
                     </tbody>
                   </Table>
                 ) : <p className="text-sm text-muted">Sin suscripciones registradas.</p>}
+                {d.billing.subs.length > 0 && can(v.role, "payments.view") && a.full_name && <Link href={`/admin/pagos?q=${encodeURIComponent(a.full_name)}`} className="inline-block text-sm font-semibold text-ink underline underline-offset-2">Ver en Pagos</Link>}
                 <div>
                   <h3 className="text-sm font-bold text-ink mb-2">Cortesías</h3>
                   {d.billing.comps.length ? (
@@ -198,7 +197,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   <li key={x.id} className="text-sm"><p className="font-semibold text-ink">{x.action}</p><p className="text-xs text-muted">{x.actor_name ?? "Sistema"} · {fmtDateTime(x.created_at)}</p></li>
                 ))}</ol>
               ) : <p className="text-sm text-muted">Sin acciones registradas.</p>}
-              <Link href={`/admin/auditoria?target=${a.id}`} className="text-sm font-semibold text-ink underline underline-offset-2">Ver en auditoría</Link>
+              <Link href={`/admin/auditoria?target=${a.id}`}  className="text-sm font-semibold text-ink underline underline-offset-2">Ver en auditoría</Link>
             </Section>
           )}
           {!health && !d.billing && <Notice title="Vista limitada">Tu rol ve solo datos de cuenta.</Notice>}
