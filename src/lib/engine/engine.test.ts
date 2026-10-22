@@ -23,6 +23,14 @@ describe("progresión", () => {
     const p = prescribe("bench", cfg, [[{ kg: 80, reps: 10 }, { kg: 80, reps: 10 }, { kg: 80, reps: 10 }, { kg: 80, reps: 10 }]]);
     expect(p).toMatchObject({ type: "up", kg: 82.5 });
   });
+  it("al límite (RIR 0) consolida: mismo peso y mismas reps", () => {
+    const p = prescribe("bench", cfg, [[{ kg: 80, reps: 7, rir: 0 }, { kg: 80, reps: 7, rir: 0 }, { kg: 80, reps: 6, rir: 0 }, { kg: 80, reps: 6, rir: 0 }]]);
+    expect(p).toMatchObject({ type: "hold", kg: 80, reps: [7, 7, 6, 6] });
+  });
+  it("RIR 0 en algunas series no frena la progresión; RIR 4 cuenta como fácil", () => {
+    expect(prescribe("bench", cfg, [[{ kg: 80, reps: 7, rir: 0 }, { kg: 80, reps: 7, rir: 2 }, { kg: 80, reps: 6, rir: null }, { kg: 80, reps: 6 }]]).type).toBe("reps");
+    expect(prescribe("bench", cfg, [[{ kg: 80, reps: 7, rir: 4 }, { kg: 80, reps: 7, rir: 2 }, { kg: 80, reps: 6 }, { kg: 80, reps: 6 }]]).type).toBe("up");
+  });
   it("suma reps dentro del rango", () => {
     const p = prescribe("bench", cfg, [[{ kg: 80, reps: 7 }, { kg: 80, reps: 7 }, { kg: 80, reps: 6 }, { kg: 80, reps: 6 }]]);
     expect(p.type).toBe("reps");

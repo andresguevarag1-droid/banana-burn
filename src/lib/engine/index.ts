@@ -33,9 +33,12 @@ export const e1rm = (kg: number, reps: number) => Math.round(kg * (1 + reps / 30
 
 const roundTo = (kg: number, step: number) => Math.round(kg / step) * step;
 
-export type Prescription = { sets: number; kg: number | null; reps: number[]; type: "cal" | "up" | "reps" | "reset" | "deload"; note: string };
+export type Prescription = { sets: number; kg: number | null; reps: number[]; type: "cal" | "up" | "reps" | "hold" | "reset" | "deload"; note: string };
 
-/** Doble progresión + reinicio −10 % tras 2 sesiones flojas + descarga. `history` = sesiones previas (de antigua a reciente). */
+/**
+ * Doble progresión + reinicio −10 % tras 2 sesiones flojas + descarga. `history` = sesiones previas (de antigua a reciente).
+ * RIR por serie: 4 = fácil, 2 = justo, 0 = al límite (null = sin respuesta, se asume 2).
+ */
 export function prescribe(id: ExerciseId | string, cfg: SlotCfg, history: SetLog[][], opts: { deload?: boolean; inc?: number } = {}): Prescription {
   const ex = { inc: opts.inc ?? EX[id as ExerciseId]?.inc ?? 0 };
   const step = ex.inc >= 2.5 ? 2.5 : ex.inc || 1;
@@ -55,6 +58,11 @@ export function prescribe(id: ExerciseId | string, cfg: SlotCfg, history: SetLog
   if ((allTop || easy) && !ex.inc) { const r = Math.round(cfg.hi * 1.1); return { sets, kg, reps: Array(sets).fill(r), type: "up", note: `Dominaste el rango: busca ${r} reps hoy.` }; }
   if (allTop || easy) { const nk = roundTo(kg + ex.inc, step); return { sets, kg: nk, reps: Array(sets).fill(cfg.lo), type: "up", note: `Llegaste a ${cfg.hi} reps: sube a ${nk} kg y vuelve a ${cfg.lo}.` }; }
   if (lowN >= 2 && prevLow) { const nk = roundTo(kg * 0.9, step); return { sets, kg: nk, reps: Array(sets).fill(cfg.lo + 1), type: "reset", note: `Dos sesiones bajo ${cfg.lo} reps: reinicia a ${nk} kg (−10 %).` }; }
+  // Al límite (RIR 0) en todas las series de trabajo: consolidar antes de pedir más.
+  if (work.length && work.every((s) => s.rir === 0)) {
+    const reps = Array.from({ length: sets }, (_, i) => { const s = last[i] || last[last.length - 1]; return Math.min(cfg.hi, Math.max(cfg.lo, s.reps || cfg.lo)); });
+    return { sets, kg, reps, type: "hold", note: "La vez pasada llegaste al límite: mismo peso y mismas reps, con técnica más limpia." };
+  }
   const reps = Array.from({ length: sets }, (_, i) => { const s = last[i] || last[last.length - 1]; return Math.min(cfg.hi, Math.max(cfg.lo, (s.reps || cfg.lo) + 1)); });
   return { sets, kg, reps, type: "reps", note: "Mismo peso, +1 rep por serie." };
 }
