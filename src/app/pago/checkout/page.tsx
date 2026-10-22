@@ -14,7 +14,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (v.demo || !s) {
     return (
-      <Notice title={v.demo ? "Modo demo 🧪" : "Falta el pago"} body={v.demo ? "En la demo no se hacen cobros. Conecta Supabase y ONVO para activar los pagos." : "No encontramos el pago que intentas completar."} />
+      <Notice title={v.demo ? "Modo demo 🧪" : "Falta el pago"} body={v.demo ? "Esta es una vista previa: aquí no se hace ningún cobro." : "No encontramos el pago que intentas completar."} />
     );
   }
 

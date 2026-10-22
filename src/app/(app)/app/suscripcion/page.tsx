@@ -66,7 +66,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
       </header>
 
-      {v.demo && <p className="rounded-2xl bg-ink text-white/90 p-4 text-sm">🧪 <b>Modo demo:</b> los pagos están desactivados. Aquí verás tu plan, renovación e historial cuando conectes Supabase y ONVO.</p>}
+      {v.demo && <p className="rounded-2xl bg-ink text-white/90 p-4 text-sm">🧪 <b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</p>}
       {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos se activan muy pronto. Mientras tanto disfrutas la beta sin costo.</p>}
 
       <section className="card p-5 sm:p-6" aria-labelledby="plan-actual">

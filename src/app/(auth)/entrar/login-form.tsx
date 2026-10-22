@@ -23,7 +23,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
     return (
       <div className="space-y-5">
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Modo demo 🧪</h1>
-        <p className="text-muted">Las cuentas se activan cuando conectes Supabase (ver README). Mientras tanto puedes explorar la app con datos de ejemplo.</p>
+        <p className="text-muted">Estamos abriendo cuentas por invitación muy pronto. Mientras tanto, explora la app completa con datos de ejemplo. 🍌</p>
         <Link href="/app" className="btn-primary w-full">Explorar la app</Link>
       </div>
     );

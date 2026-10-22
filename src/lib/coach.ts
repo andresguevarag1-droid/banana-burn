@@ -45,11 +45,28 @@ DATOS DEL ATLETA (JSON):
 ${JSON.stringify(ctx)}`;
 }
 
-export function demoReply(q: string) {
-  const t = q.toLowerCase();
-  if (/(cambi|reemplaz|sustitu)/.test(t)) return "¡Claro! 🔄 Si no hay rack libre, cambia la **sentadilla trasera** por **sentadilla goblet** o **prensa**: mismas series (4×5–8), tempo 3-1-1. Anota el peso nuevo; el motor recalibra solo la próxima vez.";
-  if (/(cen|comer|com[ií]|prote)/.test(t)) return "🥩 Te faltan unos 40 g de proteína. Opciones ticas para cenar:\n- **Tilapia 200 g + yuca + ensalada** (~45 g P)\n- **Casado con pechuga 180 g**, mitad de arroz (~50 g P)\n- **3 huevos + 100 g de queso tierno + tortilla** (~40 g P)";
-  if (/(dol|lesi|molest)/.test(t)) return "⚠️ Si es dolor agudo o punzante, **para ese ejercicio hoy** y consulta a un fisio o médico. Si es solo agujeta (dolor muscular difuso), entrena igual pero baja 10 % la carga. ¿Dónde lo sientes?";
-  if (/(estanc|no bajo|no baj)/.test(t)) return "📉 Vas a −0,70 kg/sem y necesitas −0,80. Pequeño ajuste:\n- **−100 kcal** (quita media taza de arroz en la cena)\n- **+2.000 pasos** al día\n- Pésate 4 mañanas esta semana para confirmar la tendencia.";
-  return "🍌 ¡Pura vida, Andrés! Hoy te toca la rutina del día. Concéntrate en el **tempo 3-1-1** y deja 1–2 reps en reserva. Después, proteína en la próxima hora. (Modo demo: conecta tu llave de Claude para respuestas reales.)";
+/**
+ * Revisión de seguridad ANTES de llamar al modelo: si el mensaje describe una urgencia,
+ * respondemos con un mensaje fijo y verificado (no dependemos del modelo para esto).
+ */
+export function safetyCheck(q: string): string | null {
+  const t = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/(suicid|matarme|quitarme la vida|hacerme dano|no quiero vivir|autolesi|cortarme)/.test(t))
+    return "💛 Gracias por contármelo. No estás solo/a. Si estás en peligro ahora, llama al **911**. En Costa Rica también puedes llamar gratis a la **Línea Aquí Estoy (1322)** del Colegio de Psicólogos, para hablar con alguien ya. Si quieres, también te escucho aquí.";
+  if (/(dolor (de|en el) pecho|pecho apretado|me desmay|desmayo|no puedo respirar|me falta el aire|brazo izquierdo|palpitaciones fuertes)/.test(t))
+    return "🚨 **Para de entrenar ahora.** Dolor de pecho, falta de aire o desmayo pueden ser una urgencia. Siéntate, no sigas y llama al **911** si no se pasa en unos minutos o empeora. Antes de volver a entrenar, consúltalo con un médico.";
+  if (/(dolor abdominal fuerte|dolor de panza fuerte|vomit(o|ando) (sin parar|todo)|no retengo|ojos amarillos|piel amarilla)/.test(t))
+    return "🚨 Eso no es algo para manejar en casa. Dolor abdominal fuerte o persistente, vómitos que no paran o piel/ojos amarillos necesitan **atención médica hoy** (si es intenso, ve a emergencias o llama al **911**). Avísale también al médico que te receta el medicamento.";
+  return null;
+}
+
+export function demoReply(q: string, name = "") {
+  const t = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const safe = safetyCheck(q);
+  if (safe) return safe;
+  if (/(cambi|reemplaz|sustitu)/.test(t)) return "¡Claro! 🔄 En el entreno toca el botón **Cambiar** del ejercicio: te muestro opciones que trabajan el mismo músculo con tu equipo. Mantén las mismas series y anota el peso nuevo; el motor recalibra solo la próxima vez.";
+  if (/(cen|comer|comi|prote)/.test(t)) return "🥩 Para cerrar la proteína del día, opciones ticas:\n- **Tilapia 200 g + yuca + ensalada** (~45 g P)\n- **Casado con pechuga 180 g**, mitad de arroz (~50 g P)\n- **3 huevos + 100 g de queso tierno + tortilla** (~40 g P)";
+  if (/(duel|dol|lesi|molest|punz|tiron|pincha)/.test(t)) return "⚠️ Si es dolor agudo, punzante o en una articulación, **para ese ejercicio hoy** y consulta a un fisio o médico. Si es solo agujeta (dolor muscular difuso de 1–3 días), puedes entrenar con **modo suave**. ¿Dónde lo sientes y desde cuándo?";
+  if (/(estanc|no bajo|no baj)/.test(t)) return "📉 Primero confirmemos la tendencia: pésate 4 mañanas esta semana, en ayunas. Si en 2 semanas no se mueve:\n- **−100 kcal** al día (media taza de arroz menos en la cena)\n- **+2.000 pasos** al día\n- Mantén la proteína alta para no perder músculo.";
+  return `🍌 ¡Pura vida${name ? `, ${name}` : ""}! Hoy te toca la rutina del día. Concéntrate en la técnica, controla la bajada y termina cada serie con 1–2 reps en reserva. Después, proteína en la próxima hora. (Vista previa: respuestas de ejemplo.)`;
 }

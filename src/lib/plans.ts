@@ -6,7 +6,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
   {
     id: "entreno", name: "Entreno", tagline: "Tu entrenador personal con IA", nutrition: false,
     price: { mes: 9.99, anual: 59.99 },
-    feats: ["Rutina distinta cada día, sin repetir", "Reproductor con animaciones de técnica", "Progresión automática de cargas", "Coach IA 24/7 para tu entreno", "Progreso de peso y fuerza", "Rachas, niveles y logros"],
+    feats: ["Rutina hecha a tu nivel, tiempo y equipo", "Reproductor con animaciones de técnica", "Progresión automática de cargas", "Coach IA 24/7 para tu entreno", "Progreso de peso y fuerza", "Rachas, niveles y logros"],
   },
   {
     id: "completo", name: "Entreno + Nutrición", tagline: "El plan completo para bajar de peso", nutrition: true,
@@ -18,7 +18,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
 export const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 /** Ahorro del plan anual vs. pagar 12 meses. */
 export const annualSavingPct = (p: (typeof PLANS)[number]) => Math.round((1 - p.price.anual / (p.price.mes * 12)) * 100);
-export const perMonthAnnual = (p: (typeof PLANS)[number]) => Math.floor((p.price.anual / 12) * 100) / 100;
+export const perMonthAnnual = (p: (typeof PLANS)[number]) => Math.round((p.price.anual / 12) * 100) / 100;
 
 /** ¿El plan del usuario incluye nutrición? (`pro`/`completo` sí; `entreno` no). Sin plan de pago aún = acceso libre en beta. */
 export function hasNutrition(plan: string | null | undefined) {

@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getViewer, createClient } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { getProgress } from "@/lib/progress";
-import { coachSystem, demoReply } from "@/lib/coach";
+import { coachSystem, demoReply, safetyCheck } from "@/lib/coach";
 import { crToday } from "@/lib/today";
 
 export const runtime = "nodejs";
@@ -36,7 +36,12 @@ export async function POST(req: Request) {
 
   const key = process.env.ANTHROPIC_API_KEY;
   const headers = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" };
-  if (!key) return new Response(textStream(fake(demoReply(last.content))), { headers });
+  const urgent = safetyCheck(last.content);
+  if (urgent) return new Response(textStream(fake(urgent)), { headers });
+  if (!key) {
+    const a0 = await getAthlete(v);
+    return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? ""))), { headers });
+  }
 
   const sb = v.demo ? null : await createClient();
   if (sb) {
