@@ -53,7 +53,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
 
   const nutrition = PLANS.find((p) => p.name === planName)?.nutrition;
   return (
-    <Card icon={<MonkeyBanana className="size-10" />} tone="ok" title={`Listo: ${planName ?? "tu plan"} está activo`} body={renews ? `Tu próxima renovación es el ${renews}. Tus pagos quedan en Mi suscripción.` : "Tus pagos quedan en Mi suscripción."}>
+    <Card icon={<MonkeyBanana className="size-10" />} tone="ok" title={`${planName ?? "Tu plan"} ya está activo`} body={renews ? `Tu próxima renovación es el ${renews}. Tus pagos quedan en Mi suscripción.` : "Tus pagos quedan en Mi suscripción."}>
       <ol className="text-left space-y-3 text-[15px]">
         <Step n={1}>Abre <b>Hoy</b> y haz tu rutina del día.</Step>
         {nutrition ? <Step n={2}>Ve a <b>Nutrición</b>: ya tienes tus calorías y macros.</Step> : <Step n={2}>Pregúntale al <b>Coach IA</b> cualquier duda de técnica.</Step>}
@@ -72,8 +72,8 @@ function Card({ icon, title, body, children, tone }: { icon: React.ReactNode; ti
   return (
     <div className="card p-6 sm:p-8 text-center space-y-5 animate-rise">
       <span className={`mx-auto grid place-items-center size-16 rounded-3xl ${tone === "ok" ? "bg-peel/10 text-peel" : "bg-banana-soft text-banana-ink"}`}>{icon}</span>
-      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">{title}</h1>
-      <p className="text-muted">{body}</p>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink text-balance">{title}</h1>
+      <p className="text-muted text-pretty">{body}</p>
       {children}
     </div>
   );

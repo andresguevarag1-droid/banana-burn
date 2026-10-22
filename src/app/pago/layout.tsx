@@ -15,8 +15,9 @@ export default function PagoLayout({ children }: { children: React.ReactNode }) 
         </nav>
       </header>
       <main className="flex-1 mx-auto w-full max-w-xl px-4 py-8 sm:py-12">{children}</main>
-      <footer className="pb-8 text-center text-xs text-faint">
-        ¿Dudas con tu pago? <a href="mailto:hola@bananaburn.app" className="underline">hola@bananaburn.app</a> · <Link href="/terminos" className="underline">Términos</Link>
+      <footer className="pb-8 px-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
+        <span>¿Dudas con tu pago? <a href="mailto:hola@bananaburn.app" className="underline">hola@bananaburn.app</a></span>
+        <Link href="/terminos" className="underline">Términos</Link>
       </footer>
     </div>
   );
