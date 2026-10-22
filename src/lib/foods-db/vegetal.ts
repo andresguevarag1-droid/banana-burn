@@ -1,0 +1,48 @@
+// Proteína vegetal, productos veganos y bebidas vegetales. Macros por 100 g (etiquetas comunes del mercado).
+import { per100 } from "./make";
+
+export const VEGANO = per100("vegano", [
+  ["vg-salchicha", "Salchicha vegana", "1 unid. (75 g)", 75, 250, 20, 7, 16, 2, 1, { al: "salchicha vegetal veggie plant based vegetariana" }],
+  ["vg-salchichahotdog", "Salchicha vegana tipo hot dog", "1 unid. (45 g)", 45, 119, 21, 5, 1.2, 1, 1, { al: "salchicha vegetal vegetariana veggie" }],
+  ["vg-chorizo", "Chorizo vegano", "1 unid. (75 g)", 75, 230, 13, 9, 16, 4, 1, { al: "chorizo vegetal soyrizo" }],
+  ["vg-hamburguesa", "Hamburguesa vegana", "1 unid. (113 g)", 113, 204, 18.6, 6.2, 12.4, 1.8, 0, { al: "hamburguesa vegetal plant based beyond" }],
+  ["vg-hamburguesalenteja", "Hamburguesa de lentejas o garbanzo", "1 unid. (100 g)", 100, 180, 9, 22, 6, 6, 2, { al: "hamburguesa vegetal casera" }],
+  ["vg-molida", "Carne molida vegetal", "100 g", 100, 212, 16.8, 8, 12.4, 3, 0, { al: "picada vegana plant based" }],
+  ["vg-nuggets", "Nuggets veganos", "5 unid. (90 g)", 90, 220, 14, 18, 10, 3, 1, { al: "nuggets vegetales" }],
+  ["vg-pollovegano", "Filete vegano tipo pollo", "1 unid. (90 g)", 90, 190, 17, 9, 9, 3, 1, { al: "pollo vegetal" }],
+  ["vg-albondigas", "Albóndigas veganas", "4 unid. (100 g)", 100, 200, 15, 10, 11, 3, 1],
+  ["vg-tofufirme", "Tofu firme", "100 g", 100, 144, 17.3, 2.8, 8.7, 2.3, 0.6],
+  ["vg-tofusuave", "Tofu suave (sedoso)", "100 g", 100, 55, 4.8, 2.9, 2.7, 0.1, 1.3],
+  ["vg-tempeh", "Tempeh", "100 g", 100, 192, 20.3, 7.6, 10.8, 4, 0],
+  ["vg-seitan", "Seitán", "100 g", 100, 120, 21, 4, 2, 1, 0, { al: "gluten de trigo" }],
+  ["vg-texturizada", "Proteína de soya texturizada (seca)", "¼ taza (25 g)", 25, 330, 52, 30, 1, 18, 7, { al: "soya texturizada carne de soya pts" }],
+  ["vg-falafel", "Falafel", "4 unid. (68 g)", 68, 333, 13.3, 31.8, 17.8, 4.9, 1.5],
+  ["vg-levadura", "Levadura nutricional", "2 cdas (10 g)", 10, 325, 50, 36, 4, 20, 0],
+  ["vg-quesovegano", "Queso vegano", "1 rebanada (20 g)", 20, 280, 0.5, 20, 22, 0, 0, { al: "queso vegetal" }],
+  ["vg-quesocrema", "Queso crema vegano", "2 cdas (30 g)", 30, 270, 3, 10, 25, 1, 1, { al: "queso crema vegetal untable" }],
+  ["vg-yogur", "Yogur vegano de coco", "1 envase (150 g)", 150, 95, 1, 9, 6, 0.5, 5, { al: "yogurt vegetal" }],
+  ["vg-lalmendra", "Leche de almendras sin azúcar", "1 vaso (250 ml)", 250, 15, 0.6, 0.3, 1.2, 0.2, 0, { al: "bebida de almendra" }],
+  ["vg-lalmendradulce", "Leche de almendras original", "1 vaso (250 ml)", 250, 24, 0.4, 3.2, 1.1, 0.2, 2.9, { al: "bebida de almendra" }],
+  ["vg-lsoya", "Leche de soya sin azúcar", "1 vaso (250 ml)", 250, 33, 2.9, 1.2, 1.8, 0.4, 0.4, { al: "bebida de soja leche de soja" }],
+  ["vg-lsoyadulce", "Leche de soya original", "1 vaso (250 ml)", 250, 54, 3.3, 6.3, 1.8, 0.6, 4, { al: "bebida de soja leche de soja" }],
+  ["vg-lavena", "Leche de avena", "1 vaso (250 ml)", 250, 50, 1, 6.7, 2.1, 0.8, 3, { al: "bebida de avena" }],
+  ["vg-lcoco", "Leche de coco (bebida)", "1 vaso (250 ml)", 250, 19, 0.2, 0.8, 1.9, 0, 0.5, { al: "bebida de coco" }],
+  ["vg-larroz", "Leche de arroz", "1 vaso (250 ml)", 250, 47, 0.3, 9.2, 1, 0.3, 5.3, { al: "bebida de arroz" }],
+]);
+
+export const LEGUMBRES = per100("legumbres", [
+  ["lg-rojos", "Frijoles rojos cocidos", "1 taza (177 g)", 177, 127, 8.7, 22.8, 0.5, 7.4, 0.3, { al: "habichuelas rojas caraotas rojas" }],
+  ["lg-pintos", "Frijoles pintos cocidos", "1 taza (171 g)", 171, 143, 9, 26, 0.7, 9, 0.3],
+  ["lg-negroslata", "Frijoles negros de lata (escurridos)", "½ taza (120 g)", 120, 91, 6, 16.6, 0.3, 6.9, 0.3],
+  ["lg-refritos", "Frijoles refritos", "½ taza (120 g)", 120, 120, 5.5, 15, 4.3, 5, 0.5, { al: "volteados molidos" }],
+  ["lg-blancos", "Frijoles blancos cocidos", "1 taza (179 g)", 179, 139, 9.7, 25, 0.4, 6.3, 0.3, { al: "alubias" }],
+  ["lg-lentejas", "Lentejas cocidas", "1 taza (198 g)", 198, 116, 9, 20, 0.4, 7.9, 1.8],
+  ["lg-garbanzos", "Garbanzos cocidos", "1 taza (164 g)", 164, 164, 8.9, 27.4, 2.6, 7.6, 4.8],
+  ["lg-arvejas", "Arvejas cocidas", "1 taza (160 g)", 160, 84, 5.4, 15.6, 0.2, 5.5, 5.9, { al: "guisantes chicharos petit pois" }],
+  ["lg-habas", "Habas cocidas", "1 taza (170 g)", 170, 110, 7.6, 19.6, 0.4, 5.4, 1.8],
+  ["lg-soya", "Soya en grano cocida", "½ taza (86 g)", 86, 172, 18.2, 8.4, 9, 6, 3, { al: "soja" }],
+  ["lg-edamame", "Edamame", "1 taza (155 g)", 155, 121, 11.9, 8.9, 5.2, 5.2, 2.2],
+  ["lg-caraotas", "Caraotas negras guisadas", "1 taza (200 g)", 200, 120, 6.5, 18, 2.5, 6, 1, { cc: ["VE"] }],
+  ["lg-chochos", "Chochos (lupinos)", "½ taza (83 g)", 83, 119, 15.6, 9.9, 2.9, 2.8, 0, { cc: ["EC", "PE"], al: "tarwi altramuz" }],
+  ["lg-gandules", "Gandules cocidos", "1 taza (168 g)", 168, 121, 6.8, 23.3, 0.4, 6.7, 0, { cc: ["PR", "DO", "PA"], al: "guandu guandules" }],
+]);

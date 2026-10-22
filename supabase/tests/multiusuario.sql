@@ -97,7 +97,7 @@ begin
     ('public.push_subscriptions','user_id'), ('public.notification_log','user_id'), ('public.notifications','user_id'),
     ('public.progress_photos','user_id'), ('public.user_challenges','user_id'), ('public.challenge_checkins','user_id'),
     ('public.device_interest','user_id'), ('public.posts','user_id'), ('public.comments','user_id'), ('public.kudos','user_id'),
-    ('public.follows','follower'), ('public.reports','reporter')
+    ('public.follows','follower'), ('public.reports','reporter'), ('public.saved_foods','user_id'), ('public.user_recipes','user_id')
   ) v(t, c) loop
     execute format('select count(*) from %s where %I = $1', r.t, r.c) into n using ot;
     perform bbtest.ok(format('%s no lee %s de %s [%s filas]', me, r.t, other, n), n = 0);
@@ -158,6 +158,8 @@ begin
   insert into public.user_challenges (user_id, challenge_id, started_on) values (u, 'flexiones-30', old) returning id into uc;
   insert into public.challenge_checkins (user_challenge_id, user_id, day) values (uc, u, old);
   insert into public.device_interest (user_id, device) values (u, 'garmin');
+  insert into public.saved_foods (user_id, name, kcal) values (u, 'Sopa de ' || n, 300);
+  insert into public.user_recipes (user_id, name, servings, ingredients, kcal, protein) values (u, 'Plato de ' || n, 1, '[{"name":"Bagel","qty":1,"kcal":260}]', 260, 10);
   -- Comunidad: todo PRIVADO para el aislamiento genérico (lo visible se prueba aparte)
   insert into public.posts (user_id, kind, body, visibility) values (u, 'text', 'privado de ' || n, 'privado') returning id into p;
   insert into public.comments (post_id, user_id, body) values (p, u, 'comentario de ' || n);
@@ -407,6 +409,14 @@ select bbtest.ok('avisos: A marca los suyos', bbtest.affected($q$ update public.
 select bbtest.fails('avisos: A no se crea avisos de sistema', $q$ insert into public.notifications (user_id, kind, title) values (auth.uid(), 'pago', 'Pago aprobado') $q$, '42501');
 -- Metas con modo fuerza (bienvenida y perfil)
 select bbtest.ok('metas: modo fuerza se guarda', bbtest.affected($q$ insert into public.goals (user_id, start_weight, goal_weight, goal_date, mode) values (auth.uid(), 80, 85, current_date + 120, 'fuerza') $q$) = 1);
+-- Mis recetas: no cambia de dueño, valida ingredientes y tope de 100
+select bbtest.ok('recetas: A edita la suya', bbtest.affected($q$ update public.user_recipes set name = 'Bagel del domingo' where user_id = auth.uid() $q$) = 1);
+select bbtest.passes($q$ update public.user_recipes set user_id = 'b2b2b2b2-0000-4000-8000-0000000000b2' where user_id = auth.uid() $q$, 1);
+select bbtest.ok('recetas: A no le pasa su receta a B', (select count(*) = 1 from public.user_recipes where user_id = auth.uid()));
+select bbtest.fails('recetas: sin ingredientes no se guarda', $q$ insert into public.user_recipes (name, ingredients, kcal) values ('Vacía', '[]', 0) $q$, '23514');
+select bbtest.fails('recetas: ingredientes deben ser lista', $q$ insert into public.user_recipes (name, ingredients, kcal) values ('Mala', '{"a":1}', 0) $q$, '23514');
+select bbtest.fails('recetas: kcal fuera de rango', $q$ insert into public.user_recipes (name, ingredients, kcal) values ('Mucha', '[{"name":"x"}]', 9000) $q$, '23514');
+select bbtest.ok('recetas: tope de 100 por persona', bbtest.passes($q$ insert into public.user_recipes (name, ingredients, kcal) values ('Receta', '[{"name":"x"}]', 100) $q$, 105) = 99);
 -- Límites de frecuencia
 select bbtest.fails('largo: mensaje del coach > 8000', $q$ insert into public.coach_messages (user_id, role, content) values (auth.uid(), 'user', repeat('x', 8001)) $q$, '23514');
 select bbtest.ok('límite: coach_messages 200/24 h', bbtest.passes($q$ insert into public.coach_messages (user_id, role, content) values (auth.uid(), 'user', 'hola') $q$, 210) = 199);

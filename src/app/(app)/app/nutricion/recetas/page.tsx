@@ -4,9 +4,11 @@ import { getEntitlements } from "@/lib/entitlements";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getMeals } from "@/lib/meals";
 import { getDaily } from "@/lib/daily";
-import { RECIPES } from "@/lib/recipes";
+import { RECIPES, localHour } from "@/lib/recipes";
 import { SLOTS_MEAL } from "@/lib/meals-shared";
 import { MenuToday, RecipeCard } from "./recipe-card";
+import { MyRecipes } from "./my-recipes";
+import { listRecipes } from "@/app/actions/meals";
 import { ArrowLeft, BananaBunch, BrandIcon } from "@/components/icons";
 
 export const metadata = { title: "Recetas y plan de comidas" };
@@ -18,7 +20,7 @@ export default async function Recetas() {
   const v = (await getViewer())!;
   if (!(await getEntitlements(v)).nutrition) return <div className="text-center py-16"><span className="mx-auto grid place-items-center size-20 rounded-3xl bg-banana-soft text-banana-ink"><BananaBunch className="size-11" /></span><h1 className="mt-3 text-2xl font-extrabold text-ink">Recetas y plan de comidas</h1><p className="mt-2 text-muted">Incluido en Entreno + Nutrición.</p><Link href="/precios" className="btn-banana mt-6">Ver planes</Link></div>;
   const d = dashboard(await getAthlete(v));
-  const [meals, daily] = await Promise.all([getMeals(v), getDaily(v, 0, 0)]);
+  const [meals, daily, mine] = await Promise.all([getMeals(v), getDaily(v, 0, 0), listRecipes().catch(() => [])]);
   const dateKey = d.today.iso;
   const base = v.demo ? meals.today : undefined;
   return (
@@ -28,7 +30,8 @@ export default async function Recetas() {
         <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Recetas latinas fit</h1>
         <p className="mt-1 text-muted">Fáciles, con ingredientes de cualquier supermercado. Macros aproximados.</p>
       </header>
-      <MenuToday target={{ kcal: d.t.kcal, protein: d.t.protein }} eaten={meals.today} quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} dateKey={dateKey} demo={v.demo} seed={d.today.dow} />
+      <MenuToday target={{ kcal: d.t.kcal, protein: d.t.protein }} eaten={meals.today} quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} dateKey={dateKey} demo={v.demo} hour={localHour(new Date(), v.tz)} />
+      <MyRecipes initial={mine} demo={v.demo} />
       {(["desayuno", "almuerzo", "merienda", "cena"] as const).map((s) => (
         <section key={s}><h2 className="flex items-center gap-2.5 font-extrabold text-ink mb-2"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BrandIcon name={SLOT_ICON[s]} className="size-5" /></span>{SLOT_N[s]}</h2><div className="space-y-2">{RECIPES.filter((r) => r.slot === s).map((r) => <RecipeCard key={r.id} r={r} dateKey={dateKey} demo={v.demo} base={base} />)}</div></section>
       ))}

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const BY_USER = [
   "goals", "weights", "measurements", "daily_logs", "meals", "workouts", "workout_sets", "coach_messages", "xp_events", "coach_usage",
   "subscriptions", "billing_customers", "payment_events", "comp_grants",
-  "notification_prefs", "notification_log", "saved_foods", "notifications", "progress_photos",
+  "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
   "user_challenges", "challenge_checkins", "posts", "comments", "kudos",
 ] as const;
 

@@ -124,14 +124,15 @@ export function portionOf(r: Recipe, portions: number): MenuItem {
  * Menú para lo que FALTA hoy: una receta por cada tiempo de comida que aún no se registró, con porciones
  * (en cuartos) que cuadren con las calorías restantes, priorizando no quedarse corto de proteína.
  */
-export function planMenu(left: { kcal: number; protein: number }, open: Slot[] = SLOTS, seed = 0): Menu {
+export function planMenu(left: { kcal: number; protein: number }, open: Slot[] = SLOTS, seed = 0, opts: { extra?: boolean; pick?: number } = {}): Menu {
   let slots = SLOTS.filter((s) => open.includes(s));
   // Si falta mucho para pocos tiempos de comida, suma una merienda extra en vez de servir porciones dobles.
-  if (slots.length && left.kcal / slots.length > 750 && !slots.includes("merienda")) slots = SLOTS.filter((s) => s === "merienda" || slots.includes(s));
+  if ((opts.extra ?? true) && slots.length && left.kcal / slots.length > 750 && !slots.includes("merienda")) slots = SLOTS.filter((s) => s === "merienda" || slots.includes(s));
   const empty: Menu = { items: [], kcal: 0, p: 0, c: 0, f: 0 };
   if (!slots.length || left.kcal < 150) return empty;
   const rot = <T,>(a: T[], k: number) => a.map((_, i) => a[(i + k) % a.length]);
-  const pools = slots.map((s, i) => rot(RECIPES.filter((r) => r.slot === s), seed + i));
+  // `pick`: solo las primeras N recetas de cada tiempo tras rotar con la semilla (así cambia el menú de un día a otro).
+  const pools = slots.map((s, i) => { const all = rot(RECIPES.filter((r) => r.slot === s), seed + i); return opts.pick ? all.slice(0, opts.pick) : all; });
   let best: Menu = empty, bestScore = Infinity;
   const tryCombo = (combo: Recipe[]) => {
     const k = combo.reduce((a, r) => a + r.kcal, 0);
@@ -145,4 +146,65 @@ export function planMenu(left: { kcal: number; protein: number }, open: Slot[] =
   const walk = (i: number, acc: Recipe[]) => { if (i === pools.length) return tryCombo(acc); for (const r of pools[i]) walk(i + 1, [...acc, r]); };
   walk(0, []);
   return best;
+}
+
+// ---------- Menú flash según la hora ----------
+
+/** Hasta qué hora (local, 0-24) tiene sentido sugerir cada tiempo de comida hoy. */
+export const MEAL_END: Record<Slot, number> = { desayuno: 11, almuerzo: 15, merienda: 18, cena: 22 };
+/** Desde esta hora el menú principal pasa a ser el de mañana completo. */
+export const TOMORROW_FROM = 20;
+/** Reparto de la meta diaria por tiempo de comida (para armar el menú de mañana). */
+export const MEAL_SHARE: Record<Slot, number> = { desayuno: 0.25, almuerzo: 0.35, merienda: 0.15, cena: 0.25 };
+
+/** Hora local con decimales (14:30 = 14.5) en la zona `tz`; sin zona válida, la del dispositivo. */
+export function localHour(now = new Date(), tz?: string) {
+  if (tz) {
+    try {
+      const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", hour: "2-digit", minute: "2-digit" }).formatToParts(now).map((x) => [x.type, x.value]));
+      const h = (Number(p.hour) % 24) + Number(p.minute) / 60;
+      if (Number.isFinite(h)) return h;
+    } catch { /* zona inválida: usa la del dispositivo */ }
+  }
+  return now.getHours() + now.getMinutes() / 60;
+}
+
+export const nextDay = (iso: string) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+
+/** Semilla estable por fecha: el mismo día siempre da el mismo menú (no cambia al recargar). */
+export function dateSeed(iso: string) {
+  let h = 2166136261;
+  for (const ch of iso) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return (h >>> 0) % 997;
+}
+
+/** Tiempos de comida que todavía se pueden sugerir hoy: no registrados y con su horario aún abierto. */
+export function slotsLeftToday(hour: number, logged: Slot[]): Slot[] {
+  if (hour >= TOMORROW_FROM) return [];
+  return SLOTS.filter((s) => hour < MEAL_END[s] && !logged.includes(s));
+}
+
+export type FlashPlan = {
+  /** "hoy": el menú principal es para lo que falta hoy; "manana": ya es tarde y el principal es mañana completo. */
+  mode: "hoy" | "manana";
+  /** Tiempos que quedan hoy y su menú (vacío en modo "manana" o si ya no queda ninguno). */
+  today: { slots: Slot[]; menu: Menu };
+  /** Mañana: tiempos que hoy ya no cubre (siempre incluye el desayuno pasadas las 11:00) con su meta proporcional. */
+  tomorrow: { iso: string; slots: Slot[]; menu: Menu };
+};
+
+/**
+ * Menú flash según la hora local: lo que falta hoy se reparte solo entre los tiempos que quedan,
+ * y los que ya pasaron se proponen para mañana (para comprar o dejar listo). Determinista por fecha.
+ */
+export function flashPlan(a: { hour: number; todayIso: string; logged: Slot[]; left: { kcal: number; protein: number }; target: { kcal: number; protein: number } }): FlashPlan {
+  const mode = a.hour >= TOMORROW_FROM ? "manana" : "hoy";
+  const todaySlots = slotsLeftToday(a.hour, a.logged);
+  const extra = a.hour < MEAL_END.merienda;
+  const todayMenu = todaySlots.length ? planMenu(a.left, todaySlots, dateSeed(a.todayIso), { extra, pick: 3 }) : { items: [], kcal: 0, p: 0, c: 0, f: 0 };
+  const tSlots = mode === "manana" ? SLOTS : SLOTS.filter((s) => !todaySlots.includes(s));
+  const share = tSlots.reduce((x, s) => x + MEAL_SHARE[s], 0);
+  const iso = nextDay(a.todayIso);
+  const tMenu = tSlots.length ? planMenu({ kcal: Math.round(a.target.kcal * share), protein: Math.round(a.target.protein * share) }, tSlots, dateSeed(iso), { extra: false, pick: 3 }) : { items: [], kcal: 0, p: 0, c: 0, f: 0 };
+  return { mode, today: { slots: todaySlots, menu: todayMenu }, tomorrow: { iso, slots: tSlots, menu: tMenu } };
 }
