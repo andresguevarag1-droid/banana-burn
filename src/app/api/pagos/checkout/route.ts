@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getViewer } from "@/lib/supabase/server";
-import { isSameOrigin } from "@/lib/security";
+import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError, startCheckout } from "@/lib/billing";
 
@@ -16,8 +16,10 @@ export async function POST(req: Request) {
   if (!pb) return NextResponse.json({ ok: false, error: "Plan o periodo inválido." }, { status: 400 });
   if (v.demo) return NextResponse.json({ ok: false, demo: true, error: "Modo demo: los pagos no están activos." }, { status: 409 });
   if (!isOnvoConfigured()) return NextResponse.json({ ok: false, error: "Los pagos aún no están activos. Te avisaremos muy pronto." }, { status: 503 });
+  // Cada intento puede crear un cliente y una suscripción en ONVO: tope por persona y doble clic unido en uno.
+  if (!memoryRateLimit(`checkout:${v.id}`, 10, 10 * 60_000)) return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
   try {
-    const { url } = await startCheckout(v, pb.plan, pb.billing);
+    const { url } = await singleFlight(`checkout:${v.id}:${pb.plan}:${pb.billing}`, () => startCheckout(v, pb.plan, pb.billing));
     return NextResponse.json({ ok: true, url });
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });

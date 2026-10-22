@@ -8,7 +8,7 @@ create or replace function pg_temp.as_user(u text) returns void language plpgsql
 -- A data
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a'); set role authenticated;
 insert into weights (user_id, day, kg) values ('00000000-0000-0000-0000-00000000000a', current_date, 90);
-insert into posts (user_id, kind, data, visibility) values ('00000000-0000-0000-0000-00000000000a','workout','{}','seguidores');
+insert into posts (user_id, kind, data, visibility) values ('00000000-0000-0000-0000-00000000000a','text','{}','seguidores');
 \echo T1 A no puede subirse de plan (debe ERROR):
 update profiles set plan='completo' where id='00000000-0000-0000-0000-00000000000a';
 \echo T2 A no puede escribir pesos de B (debe ERROR):
@@ -88,7 +88,8 @@ insert into xp_events (user_id, kind, xp) values ('00000000-0000-0000-0000-00000
 update xp_events set xp=5000 where user_id='00000000-0000-0000-0000-00000000000a';
 delete from xp_events where user_id='00000000-0000-0000-0000-00000000000a';
 \echo T26 tope diario de XP: de 4 entrenos de 430 XP pasan 3 (debe 3):
-do $$ declare ok int := 0; begin for i in 1..4 loop begin insert into xp_events (user_id, kind, xp) values (auth.uid(),'workout',430); ok := ok + 1; exception when others then null; end; end loop; raise notice 'insertados=%', ok; end $$;
+insert into workouts (user_id, day, template, started_at) select auth.uid(), current_date, 'plantilla-' || i, now() from generate_series(1,4) i;
+do $$ declare ok int := 0; n int; begin for i in 1..4 loop begin insert into xp_events (user_id, kind, xp) values (auth.uid(),'workout',430); get diagnostics n = row_count; ok := ok + n; exception when others then null; end; end loop; raise notice 'insertados=%', ok; end $$;
 \echo T27 push a un endpoint arbitrario (debe ERROR):
 insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('00000000-0000-0000-0000-00000000000a','https://169.254.169.254.nip.io/x','k','a');
 \echo T28 push a FCM (debe INSERT):
@@ -104,10 +105,10 @@ update coach_usage set n=0;
 delete from coach_usage;
 \echo T33 A no puede crear avisos con enlace externo (debe ERROR):
 insert into notifications (user_id, kind, title, url) values ('00000000-0000-0000-0000-00000000000a','test','x','https://evil.example');
-\echo T34 límite de frecuencia: de 25 posts nuevos pasan menos de 20 (debe <=19):
+\echo T34 límite de frecuencia: de 25 posts nuevos pasan menos de 20 (debe 19):
 do $$ declare ok int := 0; begin for i in 1..25 loop begin insert into posts (user_id, kind, data) values (auth.uid(),'text','{}'); ok := ok + 1; exception when others then null; end; end loop; raise notice 'insertados=%', ok; end $$;
 \echo T35 reporte con status oculto queda abierto (debe abierto):
-insert into reports (target_type, target_id, reporter, reason, status) values ('user','x','00000000-0000-0000-0000-00000000000a','spam','oculto');
+insert into reports (target_type, target_id, reporter, reason, status) values ('user','00000000-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000000a','spam','oculto');
 select status from reports where reporter='00000000-0000-0000-0000-00000000000a';
 \echo T36 comentario insertado como oculto queda visible (debe f):
 insert into comments (post_id, user_id, body, hidden) select id, auth.uid(), 'hola', true from posts where user_id=auth.uid() and kind='text' limit 1;
