@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, House, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
-import { BananaMedal, Monkey } from "@/components/icons/brand";
+import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
 import { Sheet, SheetTitle } from "./sheet";
@@ -20,7 +20,8 @@ const MAIN: Item[] = [
 ];
 const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador con IA" },
-  { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Desafíos de 21 y 30 días" },
+  { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Tienda: gratis y Premium" },
+  { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1" },
 ];

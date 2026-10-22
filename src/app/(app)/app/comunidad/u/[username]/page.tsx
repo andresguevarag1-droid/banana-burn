@@ -9,6 +9,8 @@ import { Avatar, LevelBadge } from "@/components/community/avatar";
 import { ArrowLeft, Banana, BananaTrophy, BrandIcon, Globe, Lock, MonkeyBanana, PencilSimple, Users } from "@/components/icons";
 import { FollowButton } from "../../follow";
 import { ReportUser } from "./report-user";
+import { levelOf, perksAt } from "@/lib/gamify";
+import { FRAME_RING } from "@/components/levels/level-badge";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -22,6 +24,7 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
   if (!p) notFound();
   const [a, stats] = await Promise.all([getAthlete(v), getProfileStats(v, p.id, p.me)]);
   const xp = stats?.xp ?? null;
+  const frame = xp !== null ? perksAt(levelOf(xp).idx).frame : null;
   const canSee = p.visibility === "publico" || p.iFollow || p.me;
   const workouts = p.posts.filter((x) => x.kind === "workout").slice(0, 4);
   const allBadges = stats ? publicBadges({ workouts: stats.workoutsTotal, prs: stats.prs, streak: p.me ? stats.streak : undefined }) : [];
@@ -49,7 +52,7 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
         </div>
         <div className="px-5 pb-5">
           <div className="flex items-end justify-between gap-3">
-            <Avatar name={p.name} xp={xp} size="xl" className="relative z-10 -mt-12 ring-4 !ring-white !ring-offset-0 shadow-lift" frame="" />
+            <Avatar name={p.name} xp={xp} size="xl" className={`relative z-10 -mt-12 !ring-offset-0 shadow-lift ${frame ? "" : "ring-4 !ring-white"}`} frame={frame ? FRAME_RING[frame] : ""} />
             <div className="flex items-center gap-2 pt-3">
               {p.me ? <Link href="/app/perfil#comunidad" className="btn-ghost h-11 px-4 text-sm"><PencilSimple weight="bold" className="size-4" />Editar perfil</Link> : <><ReportUser userId={p.id} /><FollowButton userId={p.id} name={p.name} initial={p.iFollow} refresh /></>}
             </div>

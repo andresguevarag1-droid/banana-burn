@@ -1,5 +1,6 @@
 -- Banana Burn · suite multiusuario (aislamiento entre cuentas, comunidad, escalamiento, XP, RPC y carreras)
--- Uso (BD desechable con stub.sql + migraciones 0001→0014, ver README.md):
+-- Uso (BD desechable con stub.sql + migraciones 0001→0018, ver README.md). La sección 5b cubre la tienda de retos (0018).
+-- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
 -- Usuarios: A (ana, seguidores), B (beto, público), D (dani, público), S (admin), P (soporte), E (prueba vencida, sin plan).
@@ -425,6 +426,104 @@ select bbtest.ok('límite: metas 30/24 h', bbtest.passes($q$ insert into public.
 select bbtest.ok('límite: subidas de fotos 40/24 h', bbtest.passes($q$ insert into storage.objects (bucket_id, name) values ('progreso', auth.uid() || '/' || gen_random_uuid() || '.jpg') $q$, 45) = 39);
 select bbtest.ok('límite: entrenos 12/24 h (ya hay 4 hoy: semilla, pierna x2, torso)', bbtest.passes($q$ insert into public.workouts (user_id, day, template, started_at) values (auth.uid(), current_date, 'x', clock_timestamp()) $q$, 15) = 8);
 reset role;
+
+-- ───────────── 5b. Tienda de retos (0018) ─────────────
+-- F: cuenta nueva (prueba vigente) para unirse sin chocar con el cupo de A. G: otra cuenta para aislamiento.
+reset role;
+select bbtest.login(null);
+insert into auth.users (id, email) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'f@prueba.test'), ('0a0a0a0a-0000-4000-8000-00000000000a', 'g@prueba.test');
+create function bbtest.as_user(id uuid) returns void language plpgsql as $$
+begin perform set_config('request.jwt.claims', json_build_object('sub', id, 'role', 'authenticated')::text, false); end $$;
+-- Estados de catálogo para probar la visibilidad (como servidor).
+update public.challenges_catalog set status = 'oculto' where slug = 'movilidad-14';
+update public.challenges_catalog set status = 'borrador' where slug = 'sin-azucar-7';
+update public.challenges_catalog set status = 'archivado' where slug = 'pasos-14';
+-- Una compra y un acceso de G (escritos por el servidor, como el webhook).
+insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor, provider_payment_intent_id) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'pagado', 699, 699, 'pi_test_g');
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
+
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 11);
+select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
+select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
+select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
+select bbtest.zero('tienda: el usuario no oculta retos', $q$ update public.challenges_catalog set status = 'oculto' where slug = 'banana-30' $q$);
+select bbtest.zero('tienda: el usuario no borra retos', $q$ delete from public.challenges_catalog where slug = 'banana-30' $q$);
+select bbtest.ok('plan: el usuario no lee la tabla de planes directo', bbtest.num($q$ select 1 from public.challenge_plans $q$) = 0);
+select bbtest.ok('plan: reto gratis completo', (select (public.challenge_plan('flexiones-30')->>'locked')::boolean = false and jsonb_array_length(public.challenge_plan('flexiones-30')->'days') = 30));
+select bbtest.ok('plan: reto de pago sin comprar = 3 días y bloqueado', (select (public.challenge_plan('abdomen-21')->>'locked')::boolean and jsonb_array_length(public.challenge_plan('abdomen-21')->'days') = 3));
+select bbtest.ok('plan: nada de un reto oculto en el que no está', public.challenge_plan('movilidad-14') is null);
+select bbtest.fails('compras: el usuario no se crea una compra', $q$ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor) values (auth.uid(), 'abdomen-21', 'pagado', 499, 499) $q$, '42501');
+select bbtest.fails('compras: el usuario no se da acceso a un reto de pago', $q$ insert into public.challenge_entitlements (user_id, challenge_slug, source) values (auth.uid(), 'abdomen-21', 'compra') $q$, '42501');
+select bbtest.ok('compras: no ve compras ni accesos de otros', bbtest.num($q$ select 1 from public.challenge_purchases $q$) = 0 and bbtest.num($q$ select 1 from public.challenge_entitlements $q$) = 0);
+select bbtest.zero('compras: no marca pagada una compra ajena', $q$ update public.challenge_purchases set status = 'reembolsado' $q$);
+select bbtest.fails('unirse: reto de pago sin comprarlo', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'abdomen-21') $q$, '42501');
+select bbtest.fails('unirse: reto oculto', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'movilidad-14') $q$, '22023');
+select bbtest.fails('unirse: reto en borrador', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'sin-azucar-7') $q$, '22023');
+select bbtest.fails('unirse: reto con fecha que aún no abre', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'sprint-verano-28') $q$, 'P0001');
+select bbtest.ok('unirse: reto gratis abierto', bbtest.affected($q$ insert into public.user_challenges (user_id, challenge_id, bonus_grace) values (auth.uid(), 'flexiones-30', 5) $q$) = 1);
+select bbtest.ok('unirse: no se regala comodines extra (pidió 5, su nivel da 0)', (select bonus_grace = 0 from public.user_challenges where user_id = auth.uid() and challenge_id = 'flexiones-30'));
+select bbtest.fails('unirse: no cambia sus comodines después', $q$ update public.user_challenges set bonus_grace = 3 where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('XP: el usuario no se da bono de racha', $q$ insert into public.xp_events (user_id, kind, xp) values (auth.uid(), 'streak_bonus', 50) $q$, '22023');
+select bbtest.fails('XP: el usuario no se da hitos de reto', $q$ insert into public.xp_events (user_id, kind, xp) values (auth.uid(), 'challenge_milestone', 25) $q$, '22023');
+select bbtest.fails('XP: el usuario no llama a grant_streak_bonus', $q$ select public.grant_streak_bonus(auth.uid(), current_date, 100) $q$, '42501');
+select bbtest.fails('hitos: el usuario no se marca hitos', $q$ insert into public.challenge_milestones (user_challenge_id, user_id, milestone) select id, auth.uid(), 7 from public.user_challenges where user_id = auth.uid() limit 1 $q$, '42501');
+select bbtest.fails('panel: el usuario no regala retos', $q$ select public.admin_grant_challenge(auth.uid(), 'abdomen-21', 'me lo regalo') $q$, '42501');
+select bbtest.fails('panel: el usuario no ve ventas', $q$ select * from public.admin_challenge_stats() $q$, '42501');
+select bbtest.ok('personas en el reto: solo conteos de retos publicados', (select n >= 1 from public.challenge_participants() where slug = 'flexiones-30') and bbtest.num($q$ select 1 from public.challenge_participants() where slug = 'movilidad-14' $q$) = 0);
+select bbtest.ok('nivel público: el propio sí', public.community_xp(auth.uid()) = 0);
+reset role;
+
+-- Bono de racha y comodines por nivel (servidor)
+select bbtest.login(null);
+select bbtest.ok('bono: el servidor lo otorga', public.grant_streak_bonus('0f0f0f0f-0000-4000-8000-00000000000f', current_date, 40) = 40);
+select bbtest.ok('bono: idempotente (30 < 40 no agrega)', public.grant_streak_bonus('0f0f0f0f-0000-4000-8000-00000000000f', current_date, 30) = 0);
+select bbtest.ok('bono: solo sube (55 agrega 15)', public.grant_streak_bonus('0f0f0f0f-0000-4000-8000-00000000000f', current_date, 55) = 15);
+select bbtest.ok('bono: total del día = 55', (select sum(xp) = 55 from public.xp_events where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' and kind = 'streak_bonus'));
+select bbtest.fails('bono: tope de 150 por día', $q$ select public.grant_streak_bonus('0f0f0f0f-0000-4000-8000-00000000000f', current_date, 151) $q$, '22023');
+insert into public.xp_events (user_id, kind, xp) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'workout', 900);
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'plancha-30');
+select bbtest.ok('nivel: con 955 XP (Banana madura) el reto nuevo trae +1 comodín', (select bonus_grace = 1 from public.user_challenges where user_id = auth.uid() and challenge_id = 'plancha-30'));
+reset role;
+
+-- Compra confirmada por el webhook (servidor): ahora sí se une al reto de pago
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'abdomen-21', 'compra');
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('unirse: reto de pago comprado', bbtest.affected($q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'abdomen-21') $q$) = 1);
+select bbtest.ok('plan: reto comprado se ve completo', (select (public.challenge_plan('abdomen-21')->>'locked')::boolean = false and jsonb_array_length(public.challenge_plan('abdomen-21')->'days') = 21));
+select bbtest.ok('acceso: ve su propio acceso', bbtest.num($q$ select 1 from public.challenge_entitlements where user_id = auth.uid() $q$) = 1);
+reset role;
+-- Un reto ya en curso que el admin oculta: quien está inscrito sigue viendo su definición y su plan
+update public.challenges_catalog set status = 'oculto' where slug = 'abdomen-21';
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('oculto: el inscrito conserva su reto (my_challenge_defs)', bbtest.num($q$ select 1 from public.my_challenge_defs() where slug = 'abdomen-21' and jsonb_array_length(plan) = 21 $q$) = 1);
+select bbtest.ok('oculto: ya no está en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'abdomen-21' $q$) = 0);
+reset role;
+update public.challenges_catalog set status = 'publicado' where slug = 'abdomen-21';
+
+-- Staff: admin (S) edita y regala; soporte (P) regala pero no edita el catálogo
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 14);
+select bbtest.ok('panel: admin cambia el estado', bbtest.affected($q$ update public.challenges_catalog set status = 'publicado' where slug = 'movilidad-14' $q$) = 1);
+select bbtest.ok('panel: active queda sincronizado con publicado', (select active from public.challenges_catalog where slug = 'movilidad-14') and not (select active from public.challenges_catalog where slug = 'sin-azucar-7'));
+select bbtest.ok('panel: admin edita el plan', bbtest.affected($q$ update public.challenge_plans set days = days where slug = 'movilidad-14' $q$) = 1);
+select bbtest.fails('panel: precio de pago bajo el mínimo de ONVO', $q$ update public.challenges_catalog set price_usd = 0.3 where slug = 'abdomen-21' $q$, '23514');
+select bbtest.ok('panel: admin regala un reto (cortesía)', bbtest.affected($q$ select public.admin_grant_challenge('d4d4d4d4-0000-4000-8000-0000000000d4', 'gluteos-30', 'Ganadora del sorteo de octubre') $q$) = 1);
+select bbtest.ok('panel: la cortesía queda en auditoría', (select count(*) = 1 from public.audit_log where action = 'challenge.grant' and target = 'd4d4d4d4-0000-4000-8000-0000000000d4'));
+select bbtest.fails('panel: no regala dos veces el mismo reto', $q$ select public.admin_grant_challenge('d4d4d4d4-0000-4000-8000-0000000000d4', 'gluteos-30', 'Otra vez') $q$, 'P0001');
+select bbtest.fails('panel: la cortesía exige motivo', $q$ select public.admin_grant_challenge('d4d4d4d4-0000-4000-8000-0000000000d4', 'abdomen-21', '') $q$, 'P0001');
+select bbtest.ok('panel: admin ve compradores e ingresos', (select purchases = 1 and revenue_minor = 699 and comps = 1 from public.admin_challenge_stats() where slug = 'gluteos-30'));
+select bbtest.fails('panel: admin tampoco escribe compras a mano', $q$ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor) values (auth.uid(), 'abdomen-21', 'pagado', 499, 499) $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.zero('soporte no edita el catálogo de retos', $q$ update public.challenges_catalog set price_usd = 1 where slug = 'abdomen-21' $q$);
+select bbtest.ok('soporte regala retos (staff de cuentas)', bbtest.affected($q$ select public.admin_grant_challenge('d4d4d4d4-0000-4000-8000-0000000000d4', 'abdomen-21', 'Compensación por error de cobro') $q$) = 1);
+reset role;
+-- Borrar una cuenta con compras no falla y conserva la venta (sin dueño)
+delete from auth.users where id = '0a0a0a0a-0000-4000-8000-00000000000a';
+select bbtest.ok('cuenta borrada: la venta queda registrada sin dueño y el acceso se va', (select user_id is null from public.challenge_purchases where provider_payment_intent_id = 'pi_test_g')
+  and not exists (select 1 from public.challenge_entitlements where user_id = '0a0a0a0a-0000-4000-8000-00000000000a'));
 
 -- ───────────── 6. Registro ─────────────
 insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'largo@prueba.test', jsonb_build_object('full_name', repeat('Nombre ', 40)));

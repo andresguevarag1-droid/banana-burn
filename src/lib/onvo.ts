@@ -50,6 +50,11 @@ export function isOnvoConfigured(env: NodeJS.ProcessEnv = process.env) {
   return Boolean(env.ONVO_SECRET_KEY && env.NEXT_PUBLIC_ONVO_PUBLISHABLE_KEY && env.ONVO_WEBHOOK_SECRET && prices);
 }
 
+/** ¿Se pueden cobrar pagos únicos (retos Premium)? No necesita los precios de los planes, solo las llaves y el webhook. */
+export function isOnvoOneTimeReady(env: NodeJS.ProcessEnv = process.env) {
+  return Boolean(env.ONVO_SECRET_KEY && env.NEXT_PUBLIC_ONVO_PUBLISHABLE_KEY && env.ONVO_WEBHOOK_SECRET);
+}
+
 /** Valida plan/periodo que llegan del cliente contra plans.ts (nunca confiamos en precios del cliente). */
 export const parsePlanBilling = parseIntent;
 
@@ -166,6 +171,32 @@ export async function fetchSubscriptionState(id: string): Promise<{ active: bool
   };
 }
 
+// ───────────────────────── Pagos únicos (retos de la tienda) ─────────────────────────
+
+/** PaymentIntent de ONVO (esquema parcial publicado en openapi.yaml; leemos de forma defensiva). */
+export type OnvoPaymentIntent = { id: string; status?: string; amount?: number; currency?: string; customerId?: string; [k: string]: unknown };
+
+/**
+ * Crea un cobro único en USD. El monto lo calcula el servidor (precio del reto en la BD menos el descuento por nivel),
+ * nunca el cliente. El comprador lo confirma con el SDK web (`paymentType: "one_time"` + `paymentIntentId`).
+ * Doc: https://docs.onvopay.com/en/integrations/sdk.md (POST /v1/payment-intents con amount en centavos, currency, description).
+ */
+export function createPaymentIntent(input: { amountMinor: number; customerId: string; description: string; metadata?: Record<string, string> }) {
+  if (!Number.isInteger(input.amountMinor) || input.amountMinor < 50) throw new OnvoError("Monto inválido para ONVO (mínimo 50 centavos de USD)", 400);
+  return onvo<OnvoPaymentIntent>("POST", "/v1/payment-intents", {
+    amount: input.amountMinor,
+    currency: "USD",
+    customerId: input.customerId,
+    description: input.description.slice(0, 200),
+    metadata: input.metadata,
+  });
+}
+
+/** GET /v1/payment-intents/{id}: fuente de verdad cuando el webhook no trae el monto. */
+export function getPaymentIntent(id: string) {
+  return onvo<OnvoPaymentIntent>("GET", `/v1/payment-intents/${encodeURIComponent(id)}`);
+}
+
 // ───────────────────────── Webhooks ─────────────────────────
 
 export const WEBHOOK_HEADER = "x-webhook-secret";
@@ -238,6 +269,8 @@ export type WebhookAction =
   | { kind: "activate"; subscriptionId: string; customerId: string | null; periodStart: string | null; periodEnd: string | null; amountMinor: number | null; currency: string | null; paymentIntentId: string | null }
   | { kind: "renewal_failed"; subscriptionId: string; terminal: boolean; subscriptionStatus: string | null; paymentIntentId: string | null; periodEnd: string | null }
   | { kind: "verify_customer"; customerId: string; paymentIntentId: string | null; amountMinor: number | null; currency: string | null }
+  /** Pago único sin cliente en el evento: solo puede ser la compra de un reto (se busca por el ID del PaymentIntent). */
+  | { kind: "payment_intent"; paymentIntentId: string; amountMinor: number | null; currency: string | null }
   | { kind: "ignore"; reason: string };
 
 /** Estados de suscripción que significan "ya no se va a cobrar más". */
@@ -266,7 +299,7 @@ export function actionForEvent(evt: OnvoEvent): WebhookAction {
       // El primer cobro de una suscripción confirmada con el SDK podría llegar solo como payment-intent.succeeded.
       // No otorgamos con este evento a ciegas: el webhook consulta el estado de la suscripción en ONVO.
       const cust = customerIdOf(d);
-      if (!cust) return { kind: "ignore", reason: "payment intent sin cliente" };
+      if (!cust) return s(d.id) ? { kind: "payment_intent", paymentIntentId: s(d.id)!, amountMinor: n(d.amount), currency: s(d.currency) } : { kind: "ignore", reason: "payment intent sin cliente ni id" };
       return { kind: "verify_customer", customerId: cust, paymentIntentId: s(d.id), amountMinor: n(d.amount), currency: s(d.currency) };
     }
     case "payment-intent.failed":

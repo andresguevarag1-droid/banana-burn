@@ -11,6 +11,10 @@ import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
 import { ArrowRight, BananaFlame, Barbell, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { perksAt } from "@/lib/gamify";
+import { getCompletedChallenges } from "@/lib/challenges-server";
+import { Certificates } from "@/components/retos/certificates";
+import { FRAME_RING } from "@/components/levels/level-badge";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -30,7 +34,8 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
     const { data } = await (await createClient()).from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle();
     cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
   }
-  const [ent, prefs] = await Promise.all([getEntitlements(v), getNotificationPrefs().catch(() => null)]);
+  const [ent, prefs, certs] = await Promise.all([getEntitlements(v), getNotificationPrefs().catch(() => null), getCompletedChallenges(v).catch(() => [])]);
+  const frame = perksAt(g.level.idx).frame;
   const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
   const planTitle = plan ? plan.name : ent.trial ? "Prueba gratis" : "Sin plan";
   const planText = ent.access === "demo" ? "Modo demo: acceso completo, sin cobros." : ent.access === "comp" ? `Plan de cortesía${ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt, v.tz)}` : ""}, sin cobros.`
@@ -42,16 +47,18 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   return (
     <div className="space-y-5 animate-enter max-w-2xl">
       <header className="flex items-center gap-4">
-        <span className="grid place-items-center size-16 rounded-3xl bg-banana text-2xl font-extrabold text-ink">{a.name[0]?.toUpperCase()}</span>
+        <span className={`grid place-items-center size-16 shrink-0 rounded-3xl bg-banana text-2xl font-extrabold text-ink ${frame ? FRAME_RING[frame] : ""}`} title={frame ? "Marco desbloqueado por tu nivel" : undefined}>{a.name[0]?.toUpperCase()}</span>
         <div className="min-w-0">
           <h1 className="text-2xl font-extrabold tracking-tight text-ink truncate">{a.name}</h1>
           <p className="text-sm text-muted truncate">{v.email}</p>
           <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-bold">
-            <span className="inline-flex items-center gap-1 rounded-full bg-banana-soft px-2 py-0.5 text-banana-ink"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</span>
+            <Link href="/app/niveles" className="inline-flex items-center gap-1 rounded-full bg-banana-soft px-2 py-0.5 text-banana-ink hover:bg-banana"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</Link>
             <span className="inline-flex items-center gap-1 rounded-full bg-ember/10 px-2 py-0.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} {g.streak.days === 1 ? "día" : "días"} de racha</span>
           </p>
         </div>
       </header>
+
+      <Certificates done={certs} />
 
       <section className="card p-5">
         <div className="flex items-center justify-between">

@@ -4,16 +4,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { todayFor, todayIn } from "@/lib/today";
-import { DEMO_CHALLENGES } from "@/lib/admin-demo";
-import { addDaysIso, challengeState, mergeCatalog, type CatalogRow, type Challenge, type Outcome } from "@/lib/challenges";
+import { MILESTONE_DAYS, MILESTONE_XP, levelOf, perksAt } from "@/lib/gamify";
+import { addDaysIso, challengeState, fromCatalogRow, mergeCatalog, parsePlan, SEED_CHALLENGES, type CatalogRow, type Challenge, type DayTask, type Outcome } from "@/lib/challenges";
 
 export type Metrics = { workout: boolean; steps: number; water: number; protein: number; proteinGoal: number };
 export type MyChallenge = { ucId: string; c: Challenge; startedOn: string; state: ReturnType<typeof challengeState>; autoOk: boolean;
+  /** Comodines extra por nivel guardados al unirse (0018). */
+  bonusGrace: number;
   /** Hoy se cumple automáticamente pero aún no está guardado (la tarjeta pide guardarlo con `syncChallenges`). */
   pendingSync?: boolean };
 export type EndedChallenge = { ucId: string; c: Challenge; startedOn: string; outcome: Exclude<Outcome, "activo" | "completado">; completed: number; canRetry: boolean };
 
-type UcRow = { id: number; challenge_id: string; started_on: string; status: string; completed_at: string | null };
+type UcRow = { id: number; challenge_id: string; started_on: string; status: string; completed_at: string | null; bonus_grace?: number | null };
+const graceOf = (c: Challenge, r: Pick<UcRow, "bonus_grace">) => ({ days: c.days, grace: Math.min(Math.max(0, c.days - 1), c.grace + Math.max(0, Number(r.bonus_grace ?? 0))) });
 
 /** ¿Las métricas de hoy cumplen el reto automático? */
 export function metAuto(c: Challenge, m: Metrics) {
@@ -28,16 +31,67 @@ export function metAuto(c: Challenge, m: Metrics) {
 
 // ───────────── Catálogo ─────────────
 
-/** Catálogo efectivo (base + panel). Una lectura por request; si la tabla no existe o falla, queda el base. */
+/** Columnas de la tienda (0018). */
+export const STORE_COLS = "slug,title,description,days,rules,status,price_usd,difficulty,minutes,cover,icon,verify,grace,xp,steps_goal,badge,reward_title,start_mode,start_date,featured,coming_soon,safety_note,sort";
+type DefRow = CatalogRow & { plan?: unknown };
+
+/**
+ * Catálogo efectivo: lo publicado (RLS) más los retos en los que el usuario está o estuvo (my_challenge_defs, con su plan),
+ * aunque luego se ocultaran. Una lectura por request. Sin la migración 0018 cae al catálogo de 0005 + el base.
+ */
 export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Challenge>> => {
-  let rows: CatalogRow[] = [];
-  if (demo) rows = DEMO_CHALLENGES.filter((c) => c.active);
-  else {
-    const { data, error } = await (await createClient()).from("challenges_catalog").select("slug,title,description,days,rules").eq("active", true).order("sort");
-    if (!error) rows = (data ?? []) as CatalogRow[];
+  if (demo) return new Map(SEED_CHALLENGES.map((c) => [c.id, c]));
+  const sb = await createClient();
+  const [{ data, error }, mine] = await Promise.all([
+    sb.from("challenges_catalog").select(STORE_COLS).order("sort").order("created_at"),
+    sb.rpc("my_challenge_defs"),
+  ]);
+  if (error) {
+    // Base sin 0018: catálogo de 0005 (solo activos) sobre el base.
+    const { data: old, error: e2 } = await sb.from("challenges_catalog").select("slug,title,description,days,rules").eq("active", true).order("sort");
+    return new Map(mergeCatalog(e2 ? [] : ((old ?? []) as CatalogRow[])).map((c) => [c.id, c]));
   }
-  return new Map(mergeCatalog(rows).map((c) => [c.id, c]));
+  const out = new Map<string, Challenge>();
+  for (const row of (data ?? []) as CatalogRow[]) { const c = fromCatalogRow(row); if (c) out.set(c.id, c); }
+  for (const row of ((mine.data ?? []) as DefRow[])) { const c = fromCatalogRow(row, parsePlan(row.plan, row.days)); if (c) out.set(c.id, c); }
+  return out;
 });
+
+/** Retos de pago que el usuario tiene (compra o cortesía). */
+export const getOwned = cache(async (v: Viewer): Promise<Set<string>> => {
+  if (v.demo) return new Set(["abdomen-21"]);
+  const { data } = await (await createClient()).from("challenge_entitlements").select("challenge_slug").eq("user_id", v.id);
+  return new Set(((data ?? []) as { challenge_slug: string }[]).map((r) => r.challenge_slug));
+});
+
+/** Personas con cada reto en curso (dato real; en demo no se inventa: queda vacío). */
+export const getParticipants = cache(async (v: Viewer): Promise<Map<string, number>> => {
+  if (v.demo) return new Map();
+  const { data, error } = await (await createClient()).rpc("challenge_participants");
+  if (error) return new Map();
+  return new Map(((data ?? []) as { slug: string; n: number }[]).map((r) => [r.slug, Number(r.n)]));
+});
+
+/** Plan de un reto para quien mira (completo, o los primeros días si es de pago y no lo tiene). */
+export async function getPlan(v: Viewer, c: Challenge, owned: boolean): Promise<{ days: DayTask[]; locked: boolean }> {
+  if (v.demo || c.plan) {
+    const all = c.plan ?? [];
+    const locked = c.priceUsd > 0 && !owned;
+    return { days: locked ? all.slice(0, 3) : all, locked };
+  }
+  const { data, error } = await (await createClient()).rpc("challenge_plan", { p_slug: c.id });
+  if (error || !data) return { days: [], locked: c.priceUsd > 0 && !owned };
+  const j = data as { days?: unknown; locked?: boolean };
+  return { days: parsePlan(j.days, c.days), locked: !!j.locked };
+}
+
+/** XP total y beneficios del nivel (descuento en la tienda, comodines extra). */
+export async function levelPerks(v: Viewer) {
+  const { getXpTotal } = await import("@/lib/xp-server");
+  const xp = await getXpTotal(v);
+  const lv = levelOf(xp);
+  return { xp, level: lv, ...perksAt(lv.idx) };
+}
 
 // ───────────── Lectura (sin escrituras: el render no modifica la base) ─────────────
 
@@ -55,7 +109,7 @@ export async function getMyChallenges(v: Viewer, m: Metrics): Promise<{ active: 
       const c = catalog.get(id)!; const startedOn = addDaysIso(today, -start);
       const autoOk = metAuto(c, m);
       const days = done.map((i) => addDaysIso(startedOn, i));
-      return { ucId: `demo-${id}`, c, startedOn, state: challengeState(c, startedOn, autoOk ? [...days, today] : days, today), autoOk };
+      return { ucId: `demo-${id}`, c, startedOn, state: challengeState(c, startedOn, autoOk ? [...days, today] : days, today), autoOk, bonusGrace: 0 };
     };
     const failedStart = addDaysIso(today, -12);
     const plancha = catalog.get("plancha-30")!;
@@ -67,7 +121,7 @@ export async function getMyChallenges(v: Viewer, m: Metrics): Promise<{ active: 
   }
   const sb = await createClient();
   const since = addDaysIso(today, -45);
-  const { data: rows } = await sb.from("user_challenges").select("id,challenge_id,started_on,status,completed_at").eq("user_id", v.id)
+  const { data: rows } = await sb.from("user_challenges").select("*").eq("user_id", v.id)
     .or(`status.eq.activo,status.eq.completado,and(status.in.(fallido,vencido),started_on.gte.${since})`).order("created_at");
   const list = (rows ?? []) as UcRow[];
   const ids = list.filter((r) => r.status !== "completado").map((r) => r.id);
@@ -84,16 +138,27 @@ export async function getMyChallenges(v: Viewer, m: Metrics): Promise<{ active: 
     if (r.status === "fallido" || r.status === "vencido") { ended.push({ ucId: String(r.id), c, startedOn: r.started_on, outcome: r.status, completed: (daysOf.get(r.id) ?? []).length, canRetry: true }); continue; }
     const autoOk = metAuto(c, m);
     const saved = daysOf.get(r.id) ?? [];
-    const state = challengeState(c, r.started_on, autoOk && !saved.includes(today) ? [...saved, today] : saved, today);
+    const state = challengeState(graceOf(c, r), r.started_on, autoOk && !saved.includes(today) ? [...saved, today] : saved, today);
     if (state.outcome === "completado") { done.push({ c, at: today }); continue; }
     if (state.outcome !== "activo") { ended.push({ ucId: String(r.id), c, startedOn: r.started_on, outcome: state.outcome, completed: state.completed, canRetry: true }); continue; }
     activeIds.add(c.id);
-    active.push({ ucId: String(r.id), c, startedOn: r.started_on, state, autoOk, pendingSync: autoOk && !saved.includes(today) });
+    active.push({ ucId: String(r.id), c, startedOn: r.started_on, state, autoOk, bonusGrace: Number(r.bonus_grace ?? 0), pendingSync: autoOk && !saved.includes(today) });
   }
   // Reintentar solo si no estás ya en ese reto; un reto terminado se muestra una sola vez (el más reciente).
   const seen = new Set<string>();
   const endedOut = ended.reverse().filter((e) => (seen.has(e.c.id) || activeIds.has(e.c.id) ? false : (seen.add(e.c.id), true)));
   return { active, done, ended: endedOut };
+}
+
+/** Retos completados (medallas y certificados del perfil), del más reciente al más viejo. */
+export async function getCompletedChallenges(v: Viewer): Promise<{ c: Challenge; at: string }[]> {
+  const today = todayFor(v).iso;
+  const catalog = await getCatalog(v.demo);
+  if (v.demo) return DEMO_DONE(today).map((d) => ({ c: catalog.get(d.c)!, at: d.at }));
+  const { data } = await (await createClient()).from("user_challenges").select("challenge_id,completed_at,started_on").eq("user_id", v.id).eq("status", "completado").order("completed_at", { ascending: false }).limit(50);
+  return ((data ?? []) as { challenge_id: string; completed_at: string | null; started_on: string }[])
+    .map((r) => ({ c: catalog.get(r.challenge_id), at: String(r.completed_at ?? r.started_on).slice(0, 10) }))
+    .filter((x): x is { c: Challenge; at: string } => !!x.c);
 }
 
 // ───────────── Escrituras (acciones de servidor y cron) ─────────────
@@ -103,7 +168,8 @@ export async function getMyChallenges(v: Viewer, m: Metrics): Promise<{ active: 
  * garantiza que solo una corrida gana: el XP del reto completado se otorga una sola vez.
  */
 async function finalize(db: SupabaseClient, userId: string, r: UcRow, c: Challenge, days: string[], today: string): Promise<Outcome> {
-  const state = challengeState(c, r.started_on, days, today);
+  const state = challengeState(graceOf(c, r), r.started_on, days, today);
+  if (state.outcome === "activo" || state.outcome === "completado") await milestones(db, userId, r, state.completed, c.days);
   if (state.outcome === "activo") return "activo";
   const { data: won, error } = await db.from("user_challenges")
     .update({ status: state.outcome, completed_at: state.outcome === "completado" ? new Date().toISOString() : null })
@@ -114,6 +180,15 @@ async function finalize(db: SupabaseClient, userId: string, r: UcRow, c: Challen
     await postCompletion(db, userId, c);
   }
   return state.outcome;
+}
+
+/** Hitos de los días 7 y 14 cumplidos: +25 XP una sola vez por reto (la clave primaria de challenge_milestones lo garantiza). */
+async function milestones(db: SupabaseClient, userId: string, r: UcRow, completed: number, days: number) {
+  for (const m of MILESTONE_DAYS) {
+    if (completed < m || m >= days) continue;
+    const { data, error } = await db.from("challenge_milestones").upsert({ user_challenge_id: r.id, user_id: userId, milestone: m }, { onConflict: "user_challenge_id,milestone", ignoreDuplicates: true }).select("milestone");
+    if (!error && data?.length) await db.from("xp_events").insert({ user_id: userId, kind: "challenge_milestone", xp: MILESTONE_XP });
+  }
 }
 
 /** Publicación "Completó el reto" en la comunidad, con la privacidad del perfil. */
@@ -141,9 +216,9 @@ export async function creditChallenges(v: Viewer, m?: Metrics): Promise<{ credit
   const db = writer();
   if (!db) return out;
   const today = todayFor(v).iso;
-  const { data: rows } = await db.from("user_challenges").select("id,challenge_id,started_on,status,completed_at").eq("user_id", v.id).eq("status", "activo");
+  const { data: rows } = await db.from("user_challenges").select("*").eq("user_id", v.id).eq("status", "activo");
   const list = (rows ?? []) as UcRow[];
-  if (!list.length) return out;
+  if (!list.length) { await settle(v); return out; }
   const catalog = await getCatalog(false);
   const auto = list.some((r) => { const c = catalog.get(r.challenge_id); return c && c.verify !== "manual"; });
   const metrics = m ?? (auto ? await (await import("@/lib/metrics")).todayMetrics(v) : null);
@@ -158,7 +233,13 @@ export async function creditChallenges(v: Viewer, m?: Metrics): Promise<{ credit
     const res = await finalize(db, v.id, r, c, (ck ?? []).map((x) => x.day as string), today);
     if (res !== "activo") out.closed.push(res);
   }
+  await settle(v);
   return out;
+}
+
+/** Bono de racha del día (nunca bloquea la acción que lo dispara). */
+async function settle(v: Viewer) {
+  try { const { settleStreakBonus } = await import("@/lib/xp-server"); await settleStreakBonus(v); } catch (e) { console.warn("[xp] bono de racha", e); }
 }
 
 /** Solo cierra retos decididos (antes de contar el cupo de activos al unirse). No acredita nada. */
@@ -167,7 +248,7 @@ export async function closeDecidedChallenges(v: Viewer) {
   const db = writer();
   if (!db) return;
   const today = todayFor(v).iso;
-  const { data: rows } = await db.from("user_challenges").select("id,challenge_id,started_on,status,completed_at").eq("user_id", v.id).eq("status", "activo");
+  const { data: rows } = await db.from("user_challenges").select("*").eq("user_id", v.id).eq("status", "activo");
   const catalog = await getCatalog(false);
   for (const r of (rows ?? []) as UcRow[]) {
     const c = catalog.get(r.challenge_id);
@@ -188,7 +269,7 @@ export async function sweepChallenges(now = new Date()): Promise<{ users: number
   if (!db) return stats;
   const catalog = await catalogForCron(db);
   for (let from = 0; ; from += 500) {
-    const { data, error } = await db.from("user_challenges").select("id,user_id,challenge_id,started_on,status,completed_at").eq("status", "activo").order("id").range(from, from + 499);
+    const { data, error } = await db.from("user_challenges").select("*").eq("status", "activo").order("id").range(from, from + 499);
     if (error || !data?.length) break;
     const rows = data as (UcRow & { user_id: string })[];
     const users = [...new Set(rows.map((r) => r.user_id))];
@@ -215,9 +296,16 @@ export async function sweepChallenges(now = new Date()): Promise<{ users: number
   return stats;
 }
 
+/** Todo el catálogo (también ocultos y archivados: quien ya está inscrito debe poder terminar). */
 async function catalogForCron(db: SupabaseClient) {
-  const { data, error } = await db.from("challenges_catalog").select("slug,title,description,days,rules").eq("active", true);
-  return new Map(mergeCatalog(error ? [] : ((data ?? []) as CatalogRow[])).map((c) => [c.id, c]));
+  const { data, error } = await db.from("challenges_catalog").select(STORE_COLS);
+  if (error) {
+    const { data: old, error: e2 } = await db.from("challenges_catalog").select("slug,title,description,days,rules").eq("active", true);
+    return new Map(mergeCatalog(e2 ? [] : ((old ?? []) as CatalogRow[])).map((c) => [c.id, c]));
+  }
+  const out = new Map<string, Challenge>();
+  for (const row of (data ?? []) as CatalogRow[]) { const c = fromCatalogRow(row); if (c) out.set(c.id, c); }
+  return out;
 }
 
 /** ¿Los registros del usuario cumplen el reto ese día? (entreno, pasos o agua). */

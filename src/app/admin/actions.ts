@@ -218,48 +218,6 @@ export async function seedFoods(_: ActionState, fd: FormData): Promise<ActionSta
   });
 }
 
-// ─────────── Contenido: retos ───────────
-
-export async function saveChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
-  return run("content.challenges", fd, async ({ v, sb }) => {
-    const idRaw = val.text(fd, "id");
-    if (idRaw && sb && !val.isUuid(idRaw)) return fail("Reto inválido.");
-    const title = val.text(fd, "title", { label: "Título", required: true, min: 3, max: 80 });
-    const slug = val.slugify(val.text(fd, "slug", { max: 60 }) || title);
-    if (slug.length < 2) return fail("El identificador (slug) es muy corto.");
-    const row = {
-      slug, title,
-      description: val.text(fd, "description", { label: "Descripción", max: 600 }) || null,
-      days: val.int(fd, "days", { label: "Días", required: true, min: 1, max: 365 })!,
-      rules: val.json(fd, "rules", { label: "Reglas" }),
-      active: val.bool(fd, "active"),
-      sort: val.int(fd, "sort", { label: "Orden", min: 0, max: 999 }) ?? 0,
-      updated_at: new Date().toISOString(),
-    };
-    if (!sb) return ok(`Reto ${idRaw ? "actualizado" : "creado"}${DEMO_MSG}`);
-    const res = idRaw ? await sb.from("challenges_catalog").update(row).eq("id", idRaw).select("id").single()
-                      : await sb.from("challenges_catalog").insert({ ...row, created_by: v.id }).select("id").single();
-    if (res.error) return fail(pgMessage(res.error)!);
-    await audit(sb, v, idRaw ? "challenge.update" : "challenge.create", `challenge:${res.data.id}`, { title, slug, active: row.active, days: row.days });
-    revalidatePath("/admin/contenido");
-    return ok(idRaw ? "Reto actualizado." : "Reto creado.");
-  });
-}
-
-export async function deleteChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
-  return run("content.challenges", fd, async ({ v, sb }) => {
-    const id = val.text(fd, "id", { required: true, max: 64, label: "Reto" });
-    confirmed(fd);
-    if (!sb) return ok(`Reto eliminado${DEMO_MSG}`);
-    if (!val.isUuid(id)) return fail("Reto inválido.");
-    const { data, error } = await sb.from("challenges_catalog").delete().eq("id", id).select("title").maybeSingle();
-    if (error) return fail(pgMessage(error)!);
-    await audit(sb, v, "challenge.delete", `challenge:${id}`, { title: data?.title });
-    revalidatePath("/admin/contenido");
-    return ok("Reto eliminado.");
-  });
-}
-
 // ─────────── Contenido: anuncios ───────────
 
 export async function saveAnnouncement(_: ActionState, fd: FormData): Promise<ActionState> {

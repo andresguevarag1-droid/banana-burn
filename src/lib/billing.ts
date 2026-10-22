@@ -28,7 +28,7 @@ const log = (msg: string, meta?: Record<string, unknown>) => console.info(JSON.s
 
 // ───────────────────────── Checkout ─────────────────────────
 
-async function getOrCreateCustomer(db: SupabaseClient, v: Viewer): Promise<string> {
+export async function getOrCreateCustomer(db: SupabaseClient, v: Viewer): Promise<string> {
   const { data } = await db.from("billing_customers").select("provider_customer_id").eq("user_id", v.id).maybeSingle();
   if (data?.provider_customer_id) return data.provider_customer_id as string;
   const c = await createCustomer({ email: v.email, name: v.name, userId: v.id });
@@ -223,6 +223,14 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
 
   try {
     if (action.kind === "ignore") return finish("ignored", action.reason);
+
+    // Pago único: primero vemos si es la compra de un reto de la tienda (se identifica por el ID del PaymentIntent).
+    if ((action.kind === "verify_customer" || action.kind === "payment_intent") && action.paymentIntentId) {
+      const { grantChallengePurchase } = await import("@/lib/challenge-purchase");
+      const g = await grantChallengePurchase(db, action.paymentIntentId, action.amountMinor, action.currency);
+      if (g) return finish(g.status, g.note, g.userId);
+    }
+    if (action.kind === "payment_intent") return finish("ignored", "payment intent sin cliente y sin compra de reto");
 
     if (action.kind === "activate") {
       const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", action.subscriptionId).maybeSingle();

@@ -22,7 +22,8 @@ function errorText(d: OnvoErrorData | undefined) {
   return d?.message || "No se pudo completar el pago. Intenta de nuevo.";
 }
 
-export function OnvoPayForm({ publicKey, subscriptionId, customerId }: { publicKey: string; subscriptionId: string; customerId?: string }) {
+/** Formulario de ONVO: suscripción (planes) o pago único (`paymentIntentId`, retos de la tienda). */
+export function OnvoPayForm({ publicKey, subscriptionId, paymentIntentId, customerId, successHref }: { publicKey: string; subscriptionId?: string; paymentIntentId?: string; customerId?: string; successHref?: string }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -39,15 +40,14 @@ export function OnvoPayForm({ publicKey, subscriptionId, customerId }: { publicK
     window.onvo
       .pay({
         publicKey,
-        paymentType: "subscription",
-        subscriptionId,
+        ...(paymentIntentId ? { paymentType: "one_time", paymentIntentId } : { paymentType: "subscription", subscriptionId }),
         customerId,
         locale: "es",
-        onSuccess: () => router.replace(`/pago/exito?s=${encodeURIComponent(subscriptionId)}`),
+        onSuccess: () => router.replace(successHref ?? `/pago/exito?s=${encodeURIComponent(subscriptionId ?? "")}`),
         onError: (d: OnvoErrorData) => setError(errorText(d)),
       })
       .render("#onvo-pay");
-  }, [ready, publicKey, subscriptionId, customerId, router]);
+  }, [ready, publicKey, subscriptionId, paymentIntentId, customerId, successHref, router]);
 
   return (
     <div>

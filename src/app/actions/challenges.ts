@@ -3,8 +3,8 @@ import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { getEntitlements } from "@/lib/entitlements";
-import { MAX_ACTIVE } from "@/lib/challenges";
-import { closeDecidedChallenges, creditChallenges, getCatalog } from "@/lib/challenges-server";
+import { MAX_ACTIVE, openState } from "@/lib/challenges";
+import { closeDecidedChallenges, creditChallenges, getCatalog, getOwned } from "@/lib/challenges-server";
 
 export type JoinResult = { ok: boolean; demo?: boolean; error?: string };
 
@@ -14,6 +14,8 @@ function joinError(e: { code?: string; message?: string } | null): string {
   if (e.code === "23505") return "Ya estás en este reto.";
   if (e.code === "P0001" && /máximo|maximo/i.test(e.message ?? "")) return `Máximo ${MAX_ACTIVE} retos a la vez. Termina o abandona uno para empezar otro.`;
   if (e.code === "P0001" && /suspendid/i.test(e.message ?? "")) return "Tu cuenta tiene la comunidad pausada. Escríbenos si crees que es un error.";
+  if (e.code === "42501" && /compra/i.test(e.message ?? "")) return "Compra este reto para empezarlo.";
+  if (e.code === "P0001" && /abre|cerr/i.test(e.message ?? "")) return "Este reto todavía no abre o ya cerró inscripciones.";
   if (e.code === "42501") return "Tu plan no incluye retos ahora mismo. Revisa tu suscripción.";
   if (e.code === "22023") return "Ese reto ya no está disponible.";
   return "No pudimos unirte. Intenta de nuevo.";
@@ -24,9 +26,14 @@ export async function joinChallenge(id: string): Promise<JoinResult> {
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
   if (typeof id !== "string" || id.length > 60) return { ok: false, error: "Ese reto ya no está disponible." };
   const catalog = await getCatalog(v.demo);
-  if (!catalog.has(id)) return { ok: false, error: "Ese reto ya no está disponible." };
+  const c = catalog.get(id);
+  if (!c || c.status !== "publicado") return { ok: false, error: "Ese reto ya no está disponible." };
+  const open = openState(c, todayFor(v).iso);
+  if (open !== "abierto") return { ok: false, error: open === "pronto" ? "Este reto todavía no abre inscripciones." : "Este reto ya cerró inscripciones." };
+  // Retos de pago: solo con compra confirmada por el webhook o cortesía (la base lo vuelve a exigir).
+  if (c.priceUsd > 0 && !(await getOwned(v)).has(id)) return { ok: false, error: "Compra este reto para empezarlo." };
   if (v.demo) return { ok: true, demo: true };
-  if (!(await getEntitlements(v)).app) return { ok: false, error: "Tu plan no incluye retos ahora mismo. Revisa tu suscripción." };
+  if (c.priceUsd === 0 && !(await getEntitlements(v)).app) return { ok: false, error: "Tu plan no incluye retos ahora mismo. Revisa tu suscripción." };
   // Los retos ya decididos (completados, fallidos o vencidos) liberan su lugar antes de contar.
   await closeDecidedChallenges(v);
   const sb = await createClient();
