@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowCounterClockwise, ArrowRight, Banana, BananaFlame, Barbell, BowlFood, Check, Clock, Lock, Minus, MonkeyBanana, Scales, ShieldCheck, Syringe, Target, X,
@@ -97,6 +98,17 @@ const FAQ = [
   ["¿Tengo que descargarla de una tienda?", "No. Es una app web: la abres en el navegador y la instalas en tu pantalla de inicio, en iPhone o Android."],
 ] as const;
 
+const UGC_BASE = "https://d8j0ntlcm91z4.cloudfront.net/user_3KlOTMXim7g88SAyF4A03SG6JZ6/";
+/** Escenas ilustrativas (persona real + Coach Banana en caricatura). No son clientes ni testimonios. */
+const SCENES: [string, string][] = [
+  ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te corrige la técnica en cada serie."],
+  ["hf_20261022_155001_e82f1d0e-5f20-4eba-9039-6f62a9d79152", "En la casa: sin equipo y sin excusas."],
+  ["hf_20261022_155041_f2cc4028-cb3a-48a8-ade4-3d6edcbbf98f", "En la cocina: comida latina que cuadra con tu meta."],
+  ["hf_20261022_155041_44c51456-065c-44b4-95dc-135b1585a69a", "En el parque: te marca el ritmo."],
+  ["hf_20261022_155042_171fc15e-6a39-489f-a615-de397a0bcec2", "A cualquier edad: cargas a tu nivel."],
+  ["hf_20261022_155003_11f3b250-6cbe-4354-ab64-49e1d65832ec", "Cada récord se celebra."],
+];
+
 const H2 = "text-4xl sm:text-5xl font-extrabold tracking-tight text-ink text-balance";
 const LEAD = "mt-4 text-lg text-muted leading-relaxed text-pretty max-w-[60ch]";
 
@@ -177,6 +189,23 @@ export default function Landing() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* 3b. COACH EN ACCIÓN: escenas con el mono entrenando a gente real (ilustrativas) */}
+      <section aria-labelledby="coach-accion" className="pt-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-4 lg:grid-cols-[1.2fr_1fr] lg:items-end">
+          <h2 id="coach-accion" className={H2}>Un coach que no te quita el ojo de encima.</h2>
+          <p className="text-lg text-muted leading-relaxed text-pretty max-w-[52ch]">Coach Banana te cuenta el tempo, te corrige la técnica y te avisa cuándo volver a la barra. En el gym, en la casa o en el parque.</p>
+        </div>
+        <ul className="mt-10 flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-2 [scrollbar-width:none] sm:mx-auto sm:max-w-6xl sm:px-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
+          {SCENES.map(([id, t], i) => (
+            <li key={id} className={`relative shrink-0 w-[78%] snap-center overflow-hidden rounded-[1.5rem] bg-cream aspect-[4/5] sm:w-auto ${i === 0 ? "lg:col-span-2 lg:row-span-2 lg:aspect-auto" : ""}`}>
+              <Image src={`${UGC_BASE}${id}.png`} alt={t} fill sizes={i === 0 ? "(min-width: 1024px) 760px, 80vw" : "(min-width: 1024px) 380px, 80vw"} className="object-cover" />
+              <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pb-4 pt-12 text-[15px] font-bold leading-snug text-white text-balance">{t}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="mx-auto max-w-6xl px-4 sm:px-6 mt-3 text-xs text-faint">Escenas ilustrativas creadas para mostrar cómo te acompaña el coach.</p>
       </section>
 
       {/* 4. CÓMO FUNCIONA: 3 pasos concretos con pantallas reales */}
