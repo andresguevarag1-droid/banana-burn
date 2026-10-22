@@ -31,7 +31,7 @@ export type Anim = {
 const L = { shin: 38, thigh: 40, torso: 50, neck: 15, ua: 28, fa: 26, foot: 12 };
 const FLOOR = 181.5;
 /** Radios de las articulaciones: muslo más grueso que pantorrilla, brazo más grueso que antebrazo. */
-const R = { hip: 8.8, knee: 5.9, ankle: 3.7, sh: 6.2, el: 4.4, wr: 3.2 };
+const R = { hip: 10.2, knee: 6.4, ankle: 3.9, sh: 7.6, el: 5.1, wr: 3.7 };
 /** Desplazamiento en pantalla de una unidad de profundidad (lado lejano del cuerpo). */
 const D: Pt = [-2.6, -1.6];
 const rad = (a: number) => (a * Math.PI) / 180;
@@ -206,6 +206,20 @@ function capsule(p1: Pt, r1: number, p2: Pt, r2: number) {
   const big2 = r2 > r1 ? 1 : 0, big1 = r1 > r2 ? 1 : 0;
   return `M${xy(add(p1, a, r1))}L${xy(add(p2, a, r2))}A${f1(r2)} ${f1(r2)} 0 ${big2} 0 ${xy(add(p2, b, r2))}L${xy(add(p1, b, r1))}A${f1(r1)} ${f1(r1)} 0 ${big1} 0 ${xy(add(p1, a, r1))}Z`;
 }
+/** Extremidad musculosa: como capsule pero con un vientre muscular (bíceps, cuádriceps, pantorrilla) que se ensancha en `peak`. */
+function muscle(p1: Pt, r1: number, p2: Pt, r2: number, bulge: number, peak = 0.42, cap = 0) {
+  const u = unit(sub(p2, p1)), n = perp(u);
+  const ts = [0, 0.1, 0.24, peak, Math.min(0.9, peak + 0.22), 1];
+  // vientre muscular + "cap" opcional junto a la articulación de arriba (deltoide en el brazo)
+  const r = (t: number) => lerp(r1, r2, t) + bulge * Math.exp(-((t - peak) ** 2) / 0.04) + cap * Math.exp(-((t - 0.06) ** 2) / 0.012);
+  const at2 = (t: number, side: number): Pt => add(add(p1, sub(p2, p1), t), n, side * r(t));
+  const ps: Pt[] = [];
+  for (const t of ts) ps.push(at2(t, 1));
+  ps.push(add(p2, u, r2 * 0.95));
+  for (const t of [...ts].reverse()) ps.push(at2(t, -1));
+  ps.push(add(p1, u, -r1 * 0.95));
+  return closed(ps);
+}
 /** Curva cerrada suave (Catmull-Rom) por los puntos. */
 function closed(ps: Pt[]) {
   const n = ps.length; let d = `M${xy(ps[0])}`;
@@ -216,8 +230,8 @@ function closed(ps: Pt[]) {
   return d + "Z";
 }
 // Perfil del torso de lado: [t a lo largo de cadera→hombro, grosor]. Frente = pecho/abdomen, espalda = dorsales/glúteo.
-const FRONT: Pt[] = [[-0.1, 6], [0.06, 7.4], [0.3, 6.9], [0.5, 7], [0.7, 9.4], [0.86, 9.6], [0.98, 7.4], [1.07, 3.6]];
-const BACK: Pt[] = [[1.08, 4.6], [0.98, 8], [0.82, 9.2], [0.62, 7.8], [0.42, 7], [0.22, 8.4], [0.04, 10.4], [-0.12, 8]];
+const FRONT: Pt[] = [[-0.1, 6], [0.06, 7.4], [0.3, 6.8], [0.5, 7.6], [0.68, 11.6], [0.84, 12.4], [0.97, 9.6], [1.07, 4.4]];
+const BACK: Pt[] = [[1.08, 6.6], [0.98, 11], [0.82, 12], [0.62, 9.6], [0.42, 7.6], [0.22, 8.8], [0.04, 11], [-0.12, 8]];
 function prof(tbl: Pt[], t: number) {
   const s = [...tbl].sort((a, b) => a[0] - b[0]);
   if (t <= s[0][0]) return s[0][1];
@@ -298,7 +312,7 @@ function buildRig(parent: Element, an: Anim, layers: { farBehind: Element; mid: 
     ua: limb(farG, false, ghost, true), fa: limb(farG, false, ghost, true),
     cuff: mk("path", { fill: C.banana }, farG), hand: mk("circle", { r: 3.7, fill: C.ink }, farG),
   };
-  const tail = mk("path", { fill: "none", stroke: C.ink, "stroke-width": 2.4, "stroke-linecap": "round", opacity: (an.face ?? 1) < 0 ? 0 : 1 }, g);
+  const tail = mk("path", { fill: "none", stroke: C.ink, "stroke-width": 2.8, "stroke-linecap": "round", opacity: (an.face ?? 1) < 0 ? 0 : 1 }, g);
   const thigh = limb(g, hi.has("thigh"), ghost);
   const stripe = mk("path", { fill: "none", stroke: C.banana, "stroke-width": 1.5, "stroke-linecap": "round" }, g);
   const torso = mk("path", { fill: C.ink }, g);
@@ -328,9 +342,9 @@ type FarJ = { hip: Pt; knee: Pt; ankle: Pt; toe: Pt; sh: Pt; el: Pt; wr: Pt };
 function drawRig(r: Rig, j: Joints, fj: FarJ, face: number, neckAng: number) {
   const F = frame(j.hip, j.sh, face);
   // lado lejano
-  setD(r.far.thigh.seg, capsule(fj.hip, R.hip, fj.knee, R.knee)); setD(r.far.shin.seg, capsule(fj.knee, R.knee - 0.1, fj.ankle, R.ankle));
+  setD(r.far.thigh.seg, muscle(fj.hip, R.hip, fj.knee, R.knee, 3.2, 0.45)); setD(r.far.shin.seg, muscle(fj.knee, R.knee - 0.1, fj.ankle, R.ankle, 2.4, 0.28));
   setD(r.far.shoe, shoe(fj.ankle, fj.toe));
-  setD(r.far.ua.seg, capsule(fj.sh, R.sh, fj.el, R.el)); setD(r.far.fa.seg, capsule(fj.el, R.el, fj.wr, R.wr));
+  setD(r.far.ua.seg, muscle(fj.sh, R.sh, fj.el, R.el, 3.4, 0.55, 2.2)); setD(r.far.fa.seg, muscle(fj.el, R.el, fj.wr, R.wr, 2.1, 0.26));
   const fdir = unit(sub(fj.wr, fj.el));
   setD(r.far.cuff, capsule(add(fj.wr, fdir, -6.4), 3.8, add(fj.wr, fdir, -2.8), 3.5));
   r.far.hand.setAttribute("cx", f1(fj.wr[0] + fdir[0] * 2)); r.far.hand.setAttribute("cy", f1(fj.wr[1] + fdir[1] * 2));
@@ -339,11 +353,11 @@ function drawRig(r: Rig, j: Joints, fj: FarJ, face: number, neckAng: number) {
   for (const [el, z] of r.zones) setD(el, zonePath(F, z));
   setD(r.waist, `M${xy(at(F, 0.17, prof(FRONT, 0.17) - 0.2))}L${xy(at(F, 0.17, -prof(BACK, 0.17) + 0.2))}`);
   const tb = at(F, 0.02, -9.6);
-  setD(r.tail, `M${xy(tb)}C${xy(add(add(tb, F.f, -9), F.u, -3))} ${xy(add(add(tb, F.f, -15), F.u, 6))} ${xy(add(add(tb, F.f, -11), F.u, 11))}`);
-  setD(r.thigh.seg, capsule(j.hip, R.hip, j.knee, R.knee));
+  setD(r.tail, `M${xy(tb)}C${xy(add(add(tb, F.f, -12), F.u, -6))} ${xy(add(add(tb, F.f, -26), F.u, -2))} ${xy(add(add(tb, F.f, -28), F.u, 10))}S${xy(add(add(tb, F.f, -22), F.u, 24))} ${xy(add(add(tb, F.f, -15), F.u, 19))}`);
+  setD(r.thigh.seg, muscle(j.hip, R.hip, j.knee, R.knee, 3.2, 0.45));
   const td = unit(sub(j.knee, j.hip));
   setD(r.stripe, `M${xy(add(j.hip, td, 2))}L${xy(add(j.hip, td, 17))}`);
-  setD(r.shin.seg, capsule(j.knee, R.knee - 0.1, j.ankle, R.ankle));
+  setD(r.shin.seg, muscle(j.knee, R.knee - 0.1, j.ankle, R.ankle, 2.4, 0.28));
   setD(r.shoe, shoe(j.ankle, j.toe));
   const sd = unit(sub(j.toe, j.ankle)); const sn = perp(sd); const sol: Pt = [sn[0] * face, sn[1] * face];
   setD(r.sole, `M${xy(add(add(j.ankle, sd, -3.2), sol, 3.7))}L${xy(add(add(j.toe, sd, 1.6), sol, 2.7))}`);
@@ -360,7 +374,7 @@ function drawRig(r: Rig, j: Joints, fj: FarJ, face: number, neckAng: number) {
   r.eye.setAttribute("cx", f1(ey[0])); r.eye.setAttribute("cy", f1(ey[1]));
   setD(r.band, closed([add(add(H, hf, -8.4), ha, 2.4), add(add(H, hf, -2), ha, 6.6), add(add(H, hf, 4.4), ha, 8), add(add(H, hf, 4.8), ha, 6), add(add(H, hf, -1.6), ha, 4.4), add(add(H, hf, -8.2), ha, 0.2)]));
   // brazo cercano
-  setD(r.ua.seg, capsule(j.sh, R.sh, j.el, R.el)); setD(r.fa.seg, capsule(j.el, R.el, j.wr, R.wr));
+  setD(r.ua.seg, muscle(j.sh, R.sh, j.el, R.el, 3.4, 0.55, 2.2)); setD(r.fa.seg, muscle(j.el, R.el, j.wr, R.wr, 2.1, 0.26));
   const wd = unit(sub(j.wr, j.el));
   setD(r.cuff, capsule(add(j.wr, wd, -6.4), 3.8, add(j.wr, wd, -2.8), 3.5));
   r.hand.setAttribute("cx", f1(j.wr[0] + wd[0] * 2.2)); r.hand.setAttribute("cy", f1(j.wr[1] + wd[1] * 2.2));
@@ -375,8 +389,8 @@ type FrontRig = { uaL: SVGPathElement; faL: SVGPathElement; uaR: SVGPathElement;
 function buildFront(parent: Element, hot: boolean, ghost: boolean, withDb: boolean): FrontRig {
   const g = mk("g", {}, parent);
   for (const s of [-1, 1]) {
-    mk("path", { fill: C.ink, d: capsule([100 + s * 7.8, 104], 8.4, [100 + s * 9, 140], 5.7) }, g);
-    mk("path", { fill: C.ink, d: capsule([100 + s * 9, 140], 5.6, [100 + s * 9.6, 175], 3.7) }, g);
+    mk("path", { fill: C.ink, d: muscle([100 + s * 7.8, 104], 9.4, [100 + s * 9, 140], 6.2, 2.6, 0.42) }, g);
+    mk("path", { fill: C.ink, d: muscle([100 + s * 9, 140], 6, [100 + s * 9.6, 175], 3.9, 2.2, 0.28) }, g);
     mk("path", { fill: C.ink, d: capsule([100 + s * 9.6, 178], 3.6, [100 + s * 12.6, 178.6], 3) }, g);
     mk("path", { fill: "none", stroke: C.paper, "stroke-width": 1.4, "stroke-linecap": "round", d: `M${100 + s * 7} 181.4L${100 + s * 14.4} 181.4` }, g);
     mk("path", { fill: "none", stroke: C.banana, "stroke-width": 1.5, "stroke-linecap": "round", d: `M${100 + s * 14.2} 107L${100 + s * 15.4} 122` }, g);
@@ -401,7 +415,7 @@ function drawFront(r: FrontRig, a: number) {
   const eR = P(sR, L.ua, a), wR = P(eR, L.fa - 2, a - 8);
   const eL: Pt = [200 - eR[0], eR[1]], wL: Pt = [200 - wR[0], wR[1]];
   for (const [ua, fa, cf, h, s, e, w, dbs, dl] of [[r.uaR, r.faR, r.cR, r.hR, sR, eR, wR, r.dR, r.delts[0]], [r.uaL, r.faL, r.cL, r.hL, sL, eL, wL, r.dL, r.delts[1]]] as const) {
-    setD(ua, capsule(s, R.sh, e, R.el)); setD(fa, capsule(e, R.el, w, R.wr));
+    setD(ua, muscle(s, R.sh, e, R.el, 3.4, 0.55, 2.2)); setD(fa, muscle(e, R.el, w, R.wr, 2.1, 0.26));
     const d = unit(sub(w, e));
     setD(cf, capsule(add(w, d, -6.4), 3.8, add(w, d, -2.8), 3.5));
     const hc = add(w, d, 2.2); h.setAttribute("cx", f1(hc[0])); h.setAttribute("cy", f1(hc[1]));
