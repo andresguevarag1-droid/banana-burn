@@ -24,6 +24,7 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
   const [gone, setGone] = useState(false);
   const [reported, setReported] = useState(false);
   const [pop, setPop] = useState(false);
+  const [openReport, setOpenReport] = useState(false);
   const [, start] = useTransition();
   if (gone) return null;
   const d = p.data;
@@ -54,10 +55,21 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
         {p.mine ? (
           <button onClick={() => { setGone(true); start(() => { deletePost(p.id); }); }} className="grid place-items-center size-9 rounded-full text-faint hover:bg-cream" aria-label="Borrar publicación"><Trash2 className="size-4" /></button>
         ) : (
-          <button disabled={reported} onClick={() => { setReported(true); start(() => { report("post", p.id, "Reportado desde el feed"); }); }} className="grid place-items-center size-9 rounded-full text-faint hover:bg-cream disabled:text-peel" aria-label={reported ? "Reportado" : "Reportar publicación"}><Flag className="size-4" /></button>
+          <button disabled={reported} onClick={() => setOpenReport((o) => !o)} className="grid place-items-center size-9 rounded-full text-faint hover:bg-cream disabled:text-peel" aria-label={reported ? "Reportado" : "Reportar publicación"}><Flag className="size-4" /></button>
         )}
       </header>
 
+      {openReport && !reported && (
+        <div className="mx-4 mb-2 rounded-2xl bg-cream p-3" role="group" aria-label="Motivo del reporte">
+          <p className="text-sm font-bold text-ink">¿Por qué lo reportas?</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {([["spam", "Spam"], ["acoso", "Acoso"], ["contenido_inapropiado", "Inapropiado"], ["desinformacion_salud", "Info de salud falsa"], ["otro", "Otro"]] as const).map(([k, l]) => (
+              <button key={k} onClick={() => { setReported(true); setOpenReport(false); start(() => { report("post", p.id, k, `${d.title ?? ""} ${p.body ?? ""}`); }); }} className="chip h-8 bg-white border border-line text-ink">{l}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {reported && <p className="mx-4 mb-2 text-xs font-semibold text-peel" role="status">Gracias, lo revisaremos.</p>}
       <div className="px-4">
         <p className="text-lg font-extrabold text-ink">{d.emoji} {d.title ?? (p.kind === "workout" ? "Entreno" : "")}</p>
         {p.body && <p className="mt-1 text-[15px] text-body">{p.body}</p>}

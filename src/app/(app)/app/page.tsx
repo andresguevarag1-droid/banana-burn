@@ -11,6 +11,7 @@ import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
 import { EnablePush } from "@/components/notifications/enable-push";
+import { AnnouncementBanner } from "@/components/admin/announcement-banner";
 import { ChallengeCard } from "@/components/challenge-card";
 import { getMyChallenges } from "@/lib/challenges-server";
 import { toView } from "@/lib/challenge-view";
@@ -58,6 +59,7 @@ export default async function Hoy() {
         </div>
       </header>
 
+      <AnnouncementBanner />
       <EnablePush hideWhenSnoozed />
 
       <Link href="/app/progreso#logros" className="block card p-3.5">

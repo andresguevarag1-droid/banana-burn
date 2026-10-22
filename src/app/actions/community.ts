@@ -43,13 +43,15 @@ export async function setFollow(userId: string, on: boolean) {
   return { ok: !r.error };
 }
 
-export async function report(targetType: "post" | "comment" | "user", targetId: string, reason: string) {
+export type ReportReason = "spam" | "acoso" | "contenido_inapropiado" | "desinformacion_salud" | "otro";
+export async function report(targetType: "post" | "comment" | "user", targetId: string, reason: ReportReason = "otro", excerpt = "") {
   const v = await getViewer();
   if (!v) return { ok: false };
   if (v.demo) return { ok: true };
   const sb = await createClient();
   // tabla `reports` (creada por el módulo de administración)
-  const { error } = await sb.from("reports").insert({ reporter: v.id, target_type: targetType, target_id: targetId, reason: clean(reason, 300) });
+  const ok = ["spam", "acoso", "contenido_inapropiado", "desinformacion_salud", "otro"].includes(reason) ? reason : "otro";
+  const { error } = await sb.from("reports").insert({ reporter: v.id, target_type: targetType, target_id: targetId, reason: ok, excerpt: clean(excerpt, 280) || null });
   return { ok: !error };
 }
 
