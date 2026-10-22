@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
 import { listAudit, PAGE_SIZE } from "@/lib/admin";
-import { DemoNotice, Empty, Field, Nil, PageHeader, Pagination, Table, Td, Th, fmtDateTime, fmtNum, inputSm } from "@/components/admin/ui";
+import { DemoNotice, Empty, Field, FilterBar, MetaList, Nil, PageHeader, Pagination, Table, Td, Th, btnGhost, fmtDateTime, fmtNum, fw, inputSm, panel, tr } from "@/components/admin/ui";
 
 export const metadata = { title: "Auditoría" };
 
@@ -33,37 +33,47 @@ export default async function Auditoria({ searchParams }: { searchParams: Promis
   const filtered = !!(f.action || f.actor || f.target || f.from || f.to);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader title="Auditoría" desc="Registro inmutable de lo que hace el staff: quién, qué, sobre qué y cuándo." />
       {v.demo && <DemoNotice what="los eventos" />}
-      <form className="card p-4 grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6 items-end" aria-label="Filtros de auditoría">
-        <Field label="Acción" htmlFor="a-action">
+      <FilterBar label="Filtros de auditoría" filtered={filtered} clearHref="/admin/auditoria">
+        <Field label="Acción" htmlFor="a-action" className={fw.select}>
           <select id="a-action" name="action" defaultValue={f.action ?? ""} className={inputSm}>
             <option value="">Todas</option>
             {prefixes.map((p) => <optgroup key={p} label={p}><option value={`${p}.`}>{p}: todas</option>{actions.filter((a) => a.startsWith(p + ".")).map((a) => <option key={a} value={a}>{a}</option>)}</optgroup>)}
           </select>
         </Field>
-        <Field label="Actor (ID)" htmlFor="a-actor" hint={v.demo ? "ID o nombre" : "UUID del staff"}><input id="a-actor" name="actor" defaultValue={f.actor} className={inputSm} /></Field>
-        <Field label="Objetivo contiene" htmlFor="a-target"><input id="a-target" name="target" defaultValue={f.target} placeholder="ID de usuario, food:12…" className={inputSm} /></Field>
-        <Field label="Desde" htmlFor="a-from"><input id="a-from" name="from" type="date" defaultValue={f.from} className={inputSm} /></Field>
-        <Field label="Hasta" htmlFor="a-to"><input id="a-to" name="to" type="date" defaultValue={f.to} className={inputSm} /></Field>
-        <div className="flex flex-wrap gap-2 justify-end col-span-2 md:col-span-1">
-          {filtered && <Link href="/admin/auditoria" className="btn-ghost h-10! px-4! text-sm!">Limpiar</Link>}
-          <button className="btn-primary h-10! px-4! text-sm!">Filtrar</button>
-        </div>
-      </form>
-      {rows.length > 0 && <Table caption={`Eventos de auditoría (${fmtNum(total)})`} captionHidden minWidth={860}>
+        <Field label={v.demo ? "Actor (ID o nombre)" : "Actor (UUID del staff)"} htmlFor="a-actor" className={fw.select}><input id="a-actor" name="actor" defaultValue={f.actor} className={inputSm} /></Field>
+        <Field label="Objetivo contiene" htmlFor="a-target" className={fw.select}><input id="a-target" name="target" defaultValue={f.target} placeholder="ID de usuario, food:12" className={inputSm} /></Field>
+        <Field label="Desde" htmlFor="a-from" className={fw.date}><input id="a-from" name="from" type="date" defaultValue={f.from} className={inputSm} /></Field>
+        <Field label="Hasta" htmlFor="a-to" className={fw.date}><input id="a-to" name="to" type="date" defaultValue={f.to} className={inputSm} /></Field>
+      </FilterBar>
+      {rows.length > 0 && <>
+      <ol className={`${panel} divide-y divide-line md:hidden`} aria-label={`Eventos de auditoría (${fmtNum(total)})`}>
+        {rows.map((r) => (
+          <li key={r.id} className="space-y-1.5 px-4 py-3">
+            <p className="flex flex-wrap items-center justify-between gap-2"><code className="rounded-md bg-paper px-1.5 py-0.5 text-xs text-ink break-all">{r.action}</code><span className="text-xs text-muted tabular-nums">{fmtDateTime(r.created_at)}</span></p>
+            <MetaList className="text-sm!" items={[
+              r.actor ? <Link key="a" href={`/admin/auditoria?actor=${r.actor}`} className="font-semibold text-ink underline-offset-2 hover:underline">{r.actor_name ?? r.actor.slice(0, 8)}</Link> : "Sistema",
+              r.target && (UUID.test(r.target) ? <Link key="t" href={`/admin/usuarios/${r.target}`} className="font-mono text-xs underline underline-offset-2">{r.target.slice(0, 8)}…</Link> : <span key="t" className="font-mono text-xs break-all">{r.target}</span>),
+            ]} />
+            <Meta meta={r.meta} />
+          </li>
+        ))}
+      </ol>
+      <Table caption={`Eventos de auditoría (${fmtNum(total)})`} captionHidden minWidth={820} className="hidden md:block">
         <thead className="border-b border-line"><tr><Th>Fecha</Th><Th>Actor</Th><Th>Acción</Th><Th>Objetivo</Th><Th>Detalle</Th></tr></thead>
         <tbody>{rows.map((r) => (
-          <tr key={r.id} className="border-b border-line last:border-0 align-top">
-            <Td className="tabular-nums whitespace-nowrap text-muted">{fmtDateTime(r.created_at)}</Td>
-            <Td>{r.actor ? <Link href={`/admin/auditoria?actor=${r.actor}`} className="font-semibold text-ink hover:underline underline-offset-2">{r.actor_name ?? r.actor.slice(0, 8)}</Link> : <span className="text-muted">Sistema</span>}</Td>
-            <Td><code className="rounded-md bg-paper px-1.5 py-0.5 text-xs text-ink">{r.action}</code></Td>
+          <tr key={r.id} className={`${tr} align-top`}>
+            <Td className="whitespace-nowrap text-muted">{fmtDateTime(r.created_at)}</Td>
+            <Td className="whitespace-nowrap">{r.actor ? <Link href={`/admin/auditoria?actor=${r.actor}`} className="font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{r.actor_name ?? r.actor.slice(0, 8)}</Link> : <span className="text-muted">Sistema</span>}</Td>
+            <Td><code className="whitespace-nowrap rounded-md bg-paper px-1.5 py-0.5 text-xs text-ink">{r.action}</code></Td>
             <Td className="text-xs">{r.target && UUID.test(r.target) ? <Link href={`/admin/usuarios/${r.target}`} className="font-mono underline underline-offset-2">{r.target.slice(0, 8)}…</Link> : <span className="font-mono">{r.target ?? <Nil />}</span>}</Td>
             <Td><Meta meta={r.meta} /></Td>
           </tr>))}</tbody>
-      </Table>}
-      {!rows.length && <div className="card">{filtered ? <Empty title="Sin eventos" action={<Link href="/admin/auditoria" className="btn-ghost h-10! px-4! text-sm!">Limpiar filtros</Link>}>Ningún evento coincide con estos filtros.</Empty> : <Empty title="Sin eventos todavía">Cada acción del staff queda registrada aquí.</Empty>}</div>}
+      </Table>
+      </>}
+      {!rows.length && (filtered ? <Empty title="Sin eventos" action={<Link href="/admin/auditoria" className={btnGhost}>Limpiar filtros</Link>}>Ningún evento coincide con estos filtros.</Empty> : <Empty title="Sin eventos todavía">Cada acción del staff queda registrada aquí.</Empty>)}
       <Pagination page={f.page} total={total} pageSize={PAGE_SIZE} basePath="/admin/auditoria" params={{ action: f.action, actor: f.actor, target: f.target, from: f.from, to: f.to }} />
     </div>
   );

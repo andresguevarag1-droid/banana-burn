@@ -10,7 +10,7 @@ import type { Entitlements } from "@/lib/entitlements";
 type Current = { plan: PlanId | "free"; billing: Billing | null; status: Entitlements["status"]; endsAt: string | null; cancellable: boolean };
 
 const planOf = (id: PlanId) => PLANS.find((p) => p.id === id)!;
-const label = (id: PlanId, b: Billing) => `${planOf(id).name} · ${b === "anual" ? "Anual" : "Mensual"}`;
+const label = (id: PlanId, b: Billing) => `${planOf(id).name}, ${b === "anual" ? "anual" : "mensual"}`;
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long" }) : null);
 const REASONS = ["Es muy caro para mí", "No lo estoy usando", "No veo resultados", "Problemas técnicos", "Otro motivo"];
 
@@ -34,7 +34,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
         <section className="rounded-[1.5rem] bg-ink text-white p-5 sm:p-6 shadow-lift" aria-labelledby="intent-title">
           <p className="eyebrow text-banana">Estás a un paso</p>
           <h2 id="intent-title" className="mt-1 text-xl font-extrabold">{label(intent.plan, intent.billing)}</h2>
-          <p className="text-white/70"><b className="text-white tabular-nums">{usd(planOf(intent.plan).price[intent.billing])}</b> {intent.billing === "anual" ? "/año" : "/mes"} · cancela cuando quieras</p>
+          <p className="text-white/70"><b className="text-white tabular-nums">{usd(planOf(intent.plan).price[intent.billing])}</b> {intent.billing === "anual" ? "/año" : "/mes"}. Cancela cuando quieras.</p>
           {paid && <p className="mt-2 text-sm text-white/70">Reemplaza tu plan actual en cuanto se confirme el pago (sin prorrateo).</p>}
           <button type="button" disabled={disabled} onClick={() => checkout.start(intent.plan, intent.billing)} className="btn-banana mt-4 w-full h-13" aria-busy={checkout.busy === `${intent.plan}.${intent.billing}`}>
             {checkout.busy === `${intent.plan}.${intent.billing}` ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Preparando tu pago…</> : <>Continuar al pago<ArrowRight weight="bold" className="size-5" /></>}
@@ -56,7 +56,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
             return (
               <li key={key}>
                 <button type="button" disabled={disabled} onClick={() => checkout.start(p.id, b)} aria-busy={checkout.busy === key}
-                  className="w-full text-left rounded-2xl border-2 border-line bg-white p-4 transition hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/50 disabled:opacity-50">
+                  className="pressable w-full text-left rounded-2xl border-2 border-line bg-white p-4 hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/50 disabled:opacity-50">
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-bold text-ink">{p.name}</span>
                     {up && <span className="chip h-6 bg-peel/10 text-peel">Mejorar</span>}
@@ -64,7 +64,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
                     {b === "anual" && !up && !down && <span className="chip h-6 bg-banana-soft text-banana-ink">−{annualSavingPct(p)} %</span>}
                   </span>
                   <span className="mt-1 flex items-center justify-between text-sm text-muted">
-                    <span>{b === "anual" ? "Anual" : "Mensual"} · <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}</span>
+                    <span>{b === "anual" ? "Anual" : "Mensual"}: <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}</span>
                     {checkout.busy === key ? <CircleNotch weight="bold" className="size-4 animate-spin" /> : <ArrowRight weight="bold" className="size-4" />}
                   </span>
                 </button>

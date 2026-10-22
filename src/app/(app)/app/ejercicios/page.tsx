@@ -4,6 +4,8 @@ import { getViewer } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { BODY, EQUIP, LIB_COUNT, MUSCLE, es, searchLibrary } from "@/lib/library";
 
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
 export const metadata = { title: "Biblioteca de ejercicios" };
 
 // Ícono por zona del cuerpo: marca (gorila, racimo) donde hay identidad, Phosphor para lo demás.
@@ -23,10 +25,9 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
   const r = searchLibrary({ q: sp.q, bp: sp.zona, eq: sp.equipo, mine, page: Number(sp.p) || 1 });
   const qs = (patch: Record<string, string | undefined>) => { const u = new URLSearchParams(Object.entries({ ...sp, ...patch }).filter(([, x]) => x) as [string, string][]); return `/app/ejercicios?${u}`; };
   return (
-    <div className="space-y-5 animate-rise">
+    <div className="space-y-5 animate-enter">
       <header>
-        <p className="eyebrow">Biblioteca</p>
-        <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{LIB_COUNT.toLocaleString("es-CR")} ejercicios</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{LIB_COUNT.toLocaleString("es-CR")} ejercicios</h1>
         <p className="mt-1 text-muted">Con pasos en español, músculos que trabajan y equipo necesario.</p>
       </header>
       <form className="flex gap-2" role="search">
@@ -44,17 +45,25 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
       {(a.equipment === "casa" || a.equipment === "ninguno") && (
         <Link href={qs({ mio: sp.mio === "1" ? undefined : "1", p: undefined })} className={`chip h-9 px-4 ${sp.mio === "1" ? "bg-banana text-ink" : "bg-cream text-ink"}`}>{sp.mio === "1" && <Check weight="bold" className="size-4" />}Solo lo que puedo hacer {a.equipment === "ninguno" ? "sin equipo" : "en casa"}</Link>
       )}
-      <p className="text-sm text-muted" aria-live="polite">{r.total.toLocaleString("es-CR")} resultados</p>
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <p className={`text-sm text-muted ${sp.q || sp.zona || sp.mio ? "" : "sr-only"}`} aria-live="polite">{r.total.toLocaleString("es-CR")} {r.total === 1 ? "resultado" : "resultados"}</p>
+      {r.items.length > 0 && <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {r.items.map((e) => (
           <li key={e.id}>
-            <Link href={`/app/ejercicios/${e.id}`} className="card p-3 flex items-center gap-3 hover:shadow-lift transition">
+            <Link href={`/app/ejercicios/${e.id}`} className="card p-3 flex items-center gap-3">
               <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-cream text-banana-ink" aria-hidden><BodyIcon bp={e.bp} /></span>
-              <span className="min-w-0"><span className="block font-bold text-ink leading-tight line-clamp-2">{e.n}</span><span className="block text-xs text-muted truncate">{es(MUSCLE, e.t)} · {es(EQUIP, e.eq)}</span></span>
+              <span className="min-w-0"><span className="block font-bold text-ink leading-tight line-clamp-2">{e.n}</span><span className="block text-xs text-muted truncate">{cap(es(MUSCLE, e.t))}, {es(EQUIP, e.eq).toLowerCase()}</span></span>
             </Link>
           </li>
         ))}
-      </ul>
+      </ul>}
+      {!r.items.length && (
+        <div className="card p-6 text-center">
+          <span className="mx-auto grid place-items-center size-12 rounded-2xl bg-banana-soft text-banana-ink" aria-hidden><MagnifyingGlass weight="bold" className="size-6" /></span>
+          <p className="mt-3 font-extrabold text-ink">No encontramos {sp.q ? `“${sp.q}”` : "ejercicios con ese filtro"}</p>
+          <p className="text-sm text-muted">Prueba con el músculo (glúteos, pecho) o con el equipo (banda, mancuernas).</p>
+          <Link href="/app/ejercicios" className="btn-ghost h-10 px-4 mt-4 text-sm">Ver todos</Link>
+        </div>
+      )}
       {r.pages > 1 && (
         <nav aria-label="Páginas" className="flex items-center justify-center gap-2">
           {r.page > 1 && <Link href={qs({ p: String(r.page - 1) })} className="btn-ghost h-10 px-4 text-sm"><ArrowLeft weight="bold" className="size-4" />Anterior</Link>}

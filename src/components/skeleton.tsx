@@ -16,8 +16,8 @@ export function SkeletonScreen({ className = "space-y-5", children }: { classNam
   );
 }
 
-/** Encabezado típico: eyebrow, título grande y una línea de apoyo. */
-export function SkHeader({ sub = true, eyebrow = true }: { sub?: boolean; eyebrow?: boolean }) {
+/** Encabezado típico: título grande y una línea de apoyo (la etiqueta superior es opcional). */
+export function SkHeader({ sub = true, eyebrow = false }: { sub?: boolean; eyebrow?: boolean }) {
   return (
     <div aria-hidden>
       {eyebrow && <Bone className="h-3 w-24 rounded-full bg-banana/40" />}

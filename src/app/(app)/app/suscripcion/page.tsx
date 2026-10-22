@@ -59,11 +59,10 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   const price = plan && ent.billing ? plan.price[ent.billing] : null;
 
   return (
-    <div className="space-y-5 animate-rise max-w-2xl">
+    <div className="space-y-5 animate-enter max-w-2xl">
       <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Perfil</Link>
       <header>
-        <p className="eyebrow">Suscripción</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
       </header>
 
       {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}
@@ -72,7 +71,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       <section className="card p-5 sm:p-6" aria-labelledby="plan-actual">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Plan actual</p>
+            <p className="text-sm font-semibold text-muted">Tu plan actual</p>
             <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : "Beta sin costo"}</h2>
             {price !== null && <p className="text-muted"><b className="text-ink tabular-nums">{usd(price)}</b> {ent.billing === "anual" ? "/año" : "/mes"}</p>}
           </div>

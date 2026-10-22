@@ -9,6 +9,9 @@ import { ExerciseMotion } from "@/components/exercise-motion";
 import { RichTip } from "@/components/rich-tip";
 import { Confetti } from "@/components/confetti";
 import { Sheet as BottomSheet, SheetTitle } from "@/components/sheet";
+import { Toast } from "@/components/toast";
+import { ProgressBar } from "@/components/progress-bar";
+import { usePresence, useSticky } from "@/components/use-presence";
 import { saveWorkout } from "./actions";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; rx: Prescription; best: number; lastSets: SetLog[] | null };
@@ -30,6 +33,7 @@ const unitLbl = (u?: string) => (u === "s" ? "seg" : u === "m" ? "m" : "reps");
 const num = (s: string) => Number(String(s).replace(",", ".")) || 0;
 const kgFmt = (n: number) => n.toLocaleString("es-CR", { maximumFractionDigits: 2 });
 const e1 = (kg: number, r: number) => kg * (1 + r / 30);
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const store = {
   get<T>(k: string): T | null { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : null; } catch { return null; } },
@@ -73,6 +77,10 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
   const [justDone, setJustDone] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const loaded = useRef(false);
+  // Hojas y panel de descanso: el contenido sigue visible mientras salen
+  const shownSheet = useSticky(sheet);
+  const restP = usePresence(!!rest, 200);
+  const shownRest = useSticky(rest);
 
   // Restaurar sesión en curso
   useEffect(() => {
@@ -178,21 +186,28 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
       <Shell>
         <Confetti />
         <div className="flex-1 overflow-y-auto px-6 py-10 grid place-items-center text-center">
-          <div className="w-full max-w-sm animate-rise">
-            <span className="mx-auto grid place-items-center size-28 rounded-[2.25rem] bg-banana shadow-lift animate-[pop_.6s_cubic-bezier(.2,1.6,.4,1)_both]">
+          <div className="w-full max-w-sm stagger">
+            <div><span className="mx-auto grid place-items-center size-28 rounded-[2.25rem] bg-banana shadow-lift animate-pop">
               {leveled ? <LevelIcon idx={after.idx} className="size-16" title={after.n} /> : <BananaFlame weight="fill" className="size-16 text-ember-ink" />}
-            </span>
+            </span></div>
             <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-ink">{leveled ? `Subiste a ${after.n}` : "Entreno completado"}</h1>
             <p className="mt-2 flex items-center justify-center gap-1.5 text-lg font-semibold text-muted"><BrandIcon name={icon} className="size-5 text-banana-ink" />{title}, {fmt(elapsed)}</p>
-            <div className="mt-8 grid grid-cols-3 gap-2">
-              <Stat icon={<BananaCoin className="size-5 text-banana-ink" />} big={`+${summary.xp}`} small="XP" />
-              <Stat icon={<BananaFlame className="size-5 text-ember-ink" />} big={`${streak}`} small={streak === 1 ? "día de racha" : "días de racha"} />
-              <Stat icon={<Barbell weight="duotone" className="size-5 text-ink/70" />} big={summary.vol >= 1000 ? `${kgFmt(Math.round(summary.vol / 100) / 10)} t` : `${summary.vol} kg`} small="movidos" />
-            </div>
-            <div className="mt-4 card p-4 text-left">
-              <p className="flex items-center gap-2 text-sm font-extrabold text-ink"><LevelIcon idx={after.idx} className="size-5" />Nivel {after.idx} · {after.n}</p>
-              <p className="text-xs font-semibold text-muted">{after.next ? `${after.toNext} XP para ${after.next.n}` : "Nivel máximo"}</p>
-              <div className="mt-2 h-3 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember transition-all duration-1000" style={{ width: `${Math.max(4, after.progress * 100)}%` }} /></div>
+            <div className="mt-8 card text-left">
+              <dl className="grid grid-cols-3 divide-x divide-line">
+                <Stat icon={<BananaCoin className="size-5 text-banana-ink" />} big={`+${summary.xp}`} small="XP ganados" />
+                <Stat icon={<BananaFlame className="size-5 text-ember-ink" />} big={`${streak}`} small={streak === 1 ? "día de racha" : "días de racha"} />
+                <Stat icon={<Barbell weight="duotone" className="size-5 text-ink/70" />} big={summary.vol >= 1000 ? `${kgFmt(Math.round(summary.vol / 100) / 10)} t` : `${summary.vol} kg`} small="movidos" />
+              </dl>
+              <div className="border-t border-line p-4">
+                <div className="flex items-center gap-2.5">
+                  <LevelIcon idx={after.idx} className="size-7 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-extrabold leading-tight text-ink">{after.n}</p>
+                    <p className="text-xs font-semibold text-muted tabular-nums">Nivel {after.idx}{after.next ? `, ${after.toNext} XP para ${after.next.n}` : ", el máximo"}</p>
+                  </div>
+                </div>
+                <ProgressBar value={after.progress} min={0.04} className="mt-3 h-2.5" fill="bg-ember" label={`Progreso del nivel ${after.idx}`} />
+              </div>
             </div>
             {summary.rushed && <p className="mt-3 flex gap-2.5 rounded-2xl bg-cream p-3 text-left text-sm text-ink"><Timer weight="duotone" className="size-5 shrink-0 text-ink/70" /><span>Registraste las series muy rápido. El día cuenta para tu racha, pero los XP y los récords se ganan cuando cada serie lleva su tiempo real.</span></p>}
             {prs.length > 0 && !summary.rushed && (
@@ -203,8 +218,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
             )}
             {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
             <div className="mt-4 card p-4 text-left" aria-live="polite">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted"><Monkey className="size-4 text-banana-ink" />Coach Banana</p>
-              {feedback ? <p className="mt-1 text-[15px] text-ink leading-relaxed animate-rise">{feedback}</p> : <p className="mt-2 flex gap-1" aria-label="Analizando tu entreno">{[0, 1, 2].map((d) => <span key={d} className="size-2 rounded-full bg-faint animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />)}</p>}
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink"><Monkey className="size-5 text-banana-ink" />Coach Banana</p>
+              {feedback ? <p className="mt-1 text-[15px] text-ink leading-relaxed animate-enter">{feedback}</p> : <p className="mt-2 flex gap-1" aria-label="Analizando tu entreno">{[0, 1, 2].map((d) => <span key={d} className="size-2 rounded-full bg-faint animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />)}</p>}
             </div>
             <Link href="/app" className="btn-primary w-full h-14 mt-6 text-base">Listo</Link>
           </div>
@@ -216,18 +231,18 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
   if (phase === "summary") {
     return (
       <Shell>
-        <div className="flex-1 overflow-y-auto px-5 py-6 animate-rise">
+        <div className="flex-1 overflow-y-auto px-5 py-6 animate-enter">
           <div className="mx-auto max-w-md">
             <button onClick={() => setPhase("play")} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver al entreno</button>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink">¿Terminamos?</h1>
-            <p className="text-muted">{doneSets} de {totalSets} series · {fmt(elapsed)}</p>
+            <p className="text-muted tabular-nums">{doneSets} de {totalSets} series en {fmt(elapsed)}</p>
             {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} series. Puedes terminar igual; el motor lo toma en cuenta.</p>}
             <div className="mt-6 card p-5">
               <p className="font-bold text-ink">¿Qué tan divertido estuvo?</p>
               <p className="text-sm text-muted">Si se pone aburrido, metemos más variedad y retos.</p>
               <div className="mt-4 grid grid-cols-5 gap-2">
                 {FUN.map((F, i) => (
-                  <button key={i} onClick={() => { setFun(i + 1); buzz(15); }} className={`pressable grid place-items-center h-14 rounded-2xl transition ${fun === i + 1 ? "bg-banana text-ink scale-110 shadow-soft" : "bg-cream text-ink/60"}`} aria-pressed={fun === i + 1} aria-label={`Diversión ${i + 1} de 5`}><F weight={fun === i + 1 ? "fill" : "duotone"} className="size-7" /></button>
+                  <button key={i} onClick={() => { setFun(i + 1); buzz(15); }} className={`pressable grid place-items-center h-14 rounded-2xl ${fun === i + 1 ? "bg-banana text-ink shadow-soft" : "bg-cream text-ink/60 hover:bg-banana-soft"}`} aria-pressed={fun === i + 1} aria-label={`Diversión ${i + 1} de 5`}><F weight={fun === i + 1 ? "fill" : "duotone"} className="size-7" /></button>
                 ))}
               </div>
             </div>
@@ -253,7 +268,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
           <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-10 rounded-full bg-white border border-line hover:bg-cream" aria-label="Salir del entreno"><X weight="bold" className="size-5" /></button>
           <div className="text-center min-w-0">
             <p className="flex items-center justify-center gap-1.5 font-extrabold text-ink min-w-0"><BrandIcon name={icon} className="size-5 shrink-0 text-banana-ink" /><span className="truncate">{title}</span></p>
-            <p className="text-xs font-semibold text-muted tabular-nums">{fmt(elapsed)} · {doneSets}/{totalSets} series</p>
+            <p className="flex items-center justify-center gap-3 text-xs font-semibold text-muted tabular-nums"><span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{fmt(elapsed)}</span><span>{doneSets} de {totalSets} series</span></p>
           </div>
           <span className="grid place-items-center h-10 min-w-10 px-2 rounded-full bg-banana text-sm font-extrabold text-ink tabular-nums" aria-label="Ejercicio actual">{idx + 1}/{exercises.length}</span>
         </div>
@@ -262,7 +277,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
             const d = rows[i].filter((s) => s.done).length / rows[i].length;
             return (
               <button key={i} onClick={() => setIdx(i)} className="group flex-1 -mt-2 pt-2 -mb-2.5 pb-2.5 cursor-pointer focus-visible:outline-none" aria-label={`Ir a ${e.name}`}>
-                <span className={`block h-2 rounded-full overflow-hidden group-focus-visible:ring-4 group-focus-visible:ring-banana/60 ${i === idx ? "ring-2 ring-ink/20 ring-offset-1 ring-offset-paper bg-line" : "bg-line"}`}><span className="block h-full bg-ink transition-all duration-300" style={{ width: `${d * 100}%` }} /></span>
+                <span className={`block h-2 rounded-full overflow-hidden group-focus-visible:ring-4 group-focus-visible:ring-banana/60 ${i === idx ? "ring-2 ring-ink/20 ring-offset-1 ring-offset-paper bg-line" : "bg-line"}`}><span className="bar-fill block h-full w-full rounded-full bg-ink" style={{ transform: `translateX(${(d - 1) * 100}%)` }} /></span>
               </button>
             );
           })}
@@ -272,15 +287,15 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
       <div className="flex-1 overflow-y-auto overflow-x-hidden" role="region" aria-label="Series del ejercicio">
         <div className={`mx-auto max-w-xl px-4 pt-4 ${rest ? "pb-44" : "pb-6"}`}>
           {/* Encabezado del ejercicio: compacto para que las series quepan sin scroll */}
-          <section key={ex.id} className="flex gap-3 items-stretch animate-rise">
-            <button onClick={() => setSheet("tech")} className="relative shrink-0 w-[96px] rounded-3xl bg-banana overflow-hidden" aria-label="Ver técnica">
+          <section key={ex.id} className="flex gap-3 items-stretch animate-enter">
+            <button onClick={() => setSheet("tech")} className="pressable relative shrink-0 w-[96px] rounded-3xl bg-banana overflow-hidden" aria-label="Ver técnica">
               {ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-12 text-ink/80" />}
               <span className="absolute bottom-1.5 inset-x-0 text-[10px] font-bold text-ink/70">Técnica</span>
             </button>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-muted min-w-0"><span className="truncate">{ex.muscle}</span><span aria-hidden>·</span><span className={`inline-flex shrink-0 items-center gap-0.5 ${badgeCls}`}><BadgeIcon weight="bold" className="size-3" />{badge}</span></p>
+              <p className="flex items-center gap-2 text-xs font-semibold text-muted min-w-0"><span className="truncate">{cap(ex.muscle)}</span><span className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 h-5 text-[11px] font-bold ring-1 ring-line ${badgeCls}`}><BadgeIcon weight="bold" className="size-3" />{badge}</span></p>
               <h1 className="mt-0.5 text-[22px] leading-tight font-extrabold tracking-tight text-ink line-clamp-2">{ex.name}</h1>
-              <p className="mt-0.5 text-sm font-bold text-ink tabular-nums">{ex.rx.sets} × {ex.rx.reps[0]}{ex.rx.reps.some((r) => r !== ex.rx.reps[0]) ? "+" : ""} {unit}{ex.rx.kg != null ? ` · ${kgFmt(ex.rx.kg)} kg` : ""}</p>
+              <p className="mt-0.5 text-sm font-bold text-ink tabular-nums">{ex.rx.sets} × {ex.rx.reps[0]}{ex.rx.reps.some((r) => r !== ex.rx.reps[0]) ? "+" : ""} {unit}{ex.rx.kg != null ? ` con ${kgFmt(ex.rx.kg)} kg` : ""}</p>
               <div className="mt-1.5 flex gap-1.5">
                 <button onClick={() => setSheet("tech")} className="chip h-7 bg-white border border-line text-ink"><GraduationCap weight="duotone" className="size-3.5" />Técnica</button>
                 {alts > 0 && <button onClick={() => setSheet("swap")} className="chip h-7 bg-white border border-line text-ink"><ArrowsLeftRight weight="bold" className="size-3.5" />Cambiar</button>}
@@ -296,7 +311,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
               const prev = ex.lastSets?.[si];
               const pop = justDone === `${idx}-${si}`;
               return (
-                <div key={si} className={`rounded-3xl border transition-all duration-300 ${r.done ? "bg-peel/10 border-peel/30" : active ? "bg-white border-ink shadow-lift" : "bg-white/70 border-line"} ${pop ? "scale-[1.02]" : ""}`}>
+                <div key={si} className={`rounded-3xl border transition-[background-color,border-color,box-shadow,scale] duration-(--dur-base) ease-out ${r.done ? "bg-peel/10 border-peel/30" : active ? "bg-white border-ink shadow-lift" : "bg-white/70 border-line"} ${pop ? "scale-[1.02]" : ""}`}>
                   <div className="flex items-center gap-2 p-2 pl-3">
                     <div className="w-9 shrink-0 text-center">
                       <p className={`text-lg font-extrabold leading-none ${r.done ? "text-peel" : "text-ink"}`}>{si + 1}</p>
@@ -306,7 +321,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
                       onMinus={() => step(si, "kg", -1)} onPlus={() => step(si, "kg", 1)} onChange={(v) => update(si, { kg: v })} />}
                     <Stepper label={unit} value={r.reps} inputMode="numeric" disabled={r.done}
                       onMinus={() => step(si, "reps", -1)} onPlus={() => step(si, "reps", 1)} onChange={(v) => update(si, { reps: v.replace(/\D/g, "") })} />
-                    <button onClick={() => toggleDone(si)} className={`pressable grid place-items-center size-14 shrink-0 rounded-2xl transition active:scale-90 ${r.done ? "bg-peel text-white" : active ? "bg-ink text-white" : "bg-line text-muted"}`} aria-label={r.done ? `Desmarcar serie ${si + 1}` : `Completar serie ${si + 1}`}>
+                    <button onClick={() => toggleDone(si)} className={`pressable grid place-items-center size-14 shrink-0 rounded-2xl active:scale-[.94] ${r.done ? "bg-peel text-white" : active ? "bg-ink text-white" : "bg-line text-muted"}`} aria-label={r.done ? `Desmarcar serie ${si + 1}` : `Completar serie ${si + 1}`}>
                       <Check weight="bold" className="size-7" />
                     </button>
                   </div>
@@ -315,11 +330,11 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
                       {work && work.si === si && work.ex === idx ? (
                         <div className="flex items-center gap-3 rounded-2xl bg-peel text-white p-3" aria-live="polite">
                           <span className="text-3xl font-extrabold tabular-nums w-20 text-center">{Math.ceil(workLeft)}</span>
-                          <div className="flex-1 h-2 rounded-full bg-white/30 overflow-hidden"><div className="h-full bg-white" style={{ width: `${(1 - workLeft / work.total) * 100}%`, transition: "width .25s linear" }} /></div>
+                          <div aria-hidden className="flex-1 h-2 rounded-full bg-white/30 overflow-hidden"><div className="h-full w-full rounded-full bg-white" style={{ transform: `translateX(${-(workLeft / work.total) * 100}%)`, transition: "transform .25s linear" }} /></div>
                           <button onClick={() => setWork(null)} className="tap pressable h-9 px-3 rounded-full bg-white/20 text-sm font-bold">Parar</button>
                         </div>
                       ) : (
-                        <button onClick={() => { const n = num(r.reps) || ex.cfg.hi; setWork({ end: Date.now() + n * 1000 + 3000, total: n + 3, si, ex: idx }); buzz(20); }} className="w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-peel text-white font-extrabold"><Play weight="fill" className="size-4" />Iniciar {num(r.reps) || ex.cfg.hi} s <span className="font-semibold opacity-80">(3 s para prepararte)</span></button>
+                        <button onClick={() => { const n = num(r.reps) || ex.cfg.hi; setWork({ end: Date.now() + n * 1000 + 3000, total: n + 3, si, ex: idx }); buzz(20); }} className="pressable w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-peel text-white font-extrabold"><Play weight="fill" className="size-4" />Iniciar {num(r.reps) || ex.cfg.hi} s <span className="font-semibold opacity-80">(3 s para prepararte)</span></button>
                       )}
                     </div>
                   )}
@@ -334,7 +349,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
             })}
           </section>
 
-          <p className="mt-3 text-center text-xs text-faint">{ex.cfg.unit === "s" && ex.cfg.rest <= 30 ? `${ex.cfg.hi} s de trabajo, ${ex.cfg.rest} s de descanso` : ex.cfg.unit ? `Técnica limpia, descanso ${ex.cfg.rest} s` : `Tempo 3-1-1, 1 a 2 reps en reserva, descanso ${ex.cfg.rest >= 120 ? `${ex.cfg.rest / 60} min` : `${ex.cfg.rest} s`}`}</p>
+          <p className="mt-3 text-center text-xs text-faint">{ex.cfg.unit === "s" && ex.cfg.rest <= 30 ? `${ex.cfg.hi} s de trabajo, ${ex.cfg.rest} s de descanso` : ex.cfg.unit ? `Técnica limpia, descanso ${ex.cfg.rest} s` : `Tempo 3-1-1, 1 a 2 reps en reserva, descanso ${ex.cfg.rest >= 120 ? `${(ex.cfg.rest / 60).toLocaleString("es-CR")} min` : `${ex.cfg.rest} s`}`}</p>
           {idx === exercises.length - 1 && cardio && <p className="mt-3 card p-4 flex items-center gap-2.5 text-sm font-semibold text-ink"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 text-banana-ink" />Al final: {cardio}</p>}
         </div>
       </div>
@@ -350,14 +365,14 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
       </footer>
 
       {/* Descanso */}
-      {rest && (
-        <div className="fixed inset-x-0 bottom-0 z-[60] p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] animate-rise">
+      {restP.mounted && shownRest && (
+        <div data-side="bottom" data-closing={restP.closing || undefined} className="toast fixed inset-x-0 bottom-0 z-[60] p-3 pb-[max(.75rem,env(safe-area-inset-bottom))]">
           <div className="mx-auto max-w-xl rounded-[1.75rem] bg-ink text-white p-5 shadow-lift">
             <div className="flex items-center gap-5">
-              <RestRing left={restLeft} total={rest.total} />
+              <RestRing left={rest ? restLeft : 0} total={shownRest.total} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white/60">Descansa y respira hondo</p>
-                <p className="font-bold truncate">Sigue: {activeSet >= 0 ? `serie ${activeSet + 1}: ${here[activeSet].kg || "PC"} kg × ${here[activeSet].reps}` : exercises[Math.min(idx + 1, exercises.length - 1)].name}</p>
+                <p className="font-bold truncate">Sigue: {activeSet >= 0 ? `serie ${activeSet + 1}, ${num(here[activeSet].kg) > 0 ? `${here[activeSet].kg} kg × ` : ""}${here[activeSet].reps} ${unit}` : exercises[Math.min(idx + 1, exercises.length - 1)].name}</p>
                 <div className="mt-3 flex gap-2">
                   <button onClick={() => setRest((r) => r && { ...r, end: r.end - 15000 })} className="tap pressable h-10 px-3 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">−15</button>
                   <button onClick={() => setRest((r) => r && { end: r.end + 15000, total: r.total + 15 })} className="tap pressable h-10 px-3 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">+15</button>
@@ -370,9 +385,9 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
       )}
 
       {/* Hojas */}
-      <BottomSheet open={!!sheet} onClose={() => setSheet(null)} label={sheet === "tech" && !ex.tech ? "Técnica" : undefined} className="max-h-[88dvh] overflow-y-auto">
+      <BottomSheet open={!!sheet} onClose={() => setSheet(null)} label={shownSheet === "tech" && !ex.tech ? "Técnica" : undefined} className="max-h-[88dvh] overflow-y-auto">
           <div className="px-5">
-            {sheet === "tech" && ex.tech && (
+            {shownSheet === "tech" && ex.tech && (
               <div className="space-y-4">
                 {ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} className="mx-auto h-56 max-w-[300px]" /></div>}
                 <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
@@ -384,15 +399,15 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
                 <button onClick={() => setSheet(null)} className="btn-primary w-full">Entendido</button>
               </div>
             )}
-            {sheet === "swap" && (
+            {shownSheet === "swap" && (
               <div>
                 <SheetTitle className="text-2xl font-extrabold text-ink">Cambiar ejercicio</SheetTitle>
                 <p className="text-sm text-muted">¿Máquina ocupada o sin equipo? Mismo patrón, mismas series.</p>
                 <div className="mt-4 space-y-2">
                   {options[idx].map((o, i) => (
-                    <button key={o.id} onClick={() => swap(i)} className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition ${choice[idx] === i ? "bg-banana border-banana" : "bg-white border-line hover:border-ink"}`}>
+                    <button key={o.id} onClick={() => swap(i)} className={`pressable w-full flex items-center gap-3 rounded-2xl border p-3 text-left ${choice[idx] === i ? "bg-banana border-banana" : "bg-white border-line hover:border-ink"}`}>
                       <span className="grid place-items-center size-12 shrink-0 rounded-xl bg-cream text-ink/80">{o.barbell ? <Barbell weight="duotone" className="size-6" /> : o.bw ? <PersonArmsSpread weight="duotone" className="size-6" /> : <BrandIcon name="gorilla" className="size-6" />}</span>
-                      <span className="flex-1 min-w-0"><span className="block font-bold text-ink">{o.name}</span><span className="flex items-center gap-1 text-xs text-muted">{o.muscle}{i === 0 ? ", plan original" : ""}{o.id.startsWith("ds:") && <><span>,</span><Books weight="duotone" className="size-3.5" /><span>biblioteca</span></>}{o.rx.kg != null ? `, sugerido ${kgFmt(o.rx.kg)} kg` : ""}</span></span>
+                      <span className="flex-1 min-w-0"><span className="block font-bold text-ink">{o.name}</span><span className={`flex flex-wrap items-center gap-x-1 text-xs ${choice[idx] === i ? "text-ink/80" : "text-muted"}`}><span>{[cap(o.muscle), i === 0 ? "plan original" : "", o.rx.kg != null ? `sugerido ${kgFmt(o.rx.kg)} kg` : ""].filter(Boolean).join(", ")}</span>{o.id.startsWith("ds:") && <span className="inline-flex items-center gap-1"><Books weight="duotone" className="size-3.5" />De la biblioteca</span>}</span></span>
                       {choice[idx] === i && <Check weight="bold" className="size-5 text-ink" />}
                     </button>
                   ))}
@@ -400,7 +415,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
                 {here.some((r) => r.done) && <p className="mt-3 text-xs text-ember-ink">Al cambiar se reinician las series de este ejercicio.</p>}
               </div>
             )}
-            {sheet === "exit" && (
+            {shownSheet === "exit" && (
               <div className="space-y-3">
                 <SheetTitle className="text-2xl font-extrabold text-ink">¿Salir del entreno?</SheetTitle>
                 <p className="text-muted">Llevas {doneSets} de {totalSets} series. Tu progreso queda guardado en este teléfono.</p>
@@ -412,27 +427,27 @@ export function Player({ template, title, icon, cardio, options, dateKey, gam }:
           </div>
       </BottomSheet>
 
-      {toast && <div role="status" className="fixed top-24 inset-x-0 z-[90] flex justify-center px-4 animate-rise"><p className="flex items-center gap-2 rounded-full bg-ink text-white font-bold px-5 py-3 shadow-lift">{toast.kind === "pr" ? <BananaTrophy weight="fill" className="size-5 text-banana" /> : <ArrowsLeftRight weight="bold" className="size-5 text-banana" />}{toast.t}</p></div>}
+      <Toast side="top">{toast && <>{toast.kind === "pr" ? <BananaTrophy weight="fill" className="size-5 shrink-0 text-banana" /> : <ArrowsLeftRight weight="bold" className="size-5 shrink-0 text-banana" />}{toast.t}</>}</Toast>
     </Shell>
   );
 }
 
 function Stepper({ label, value, placeholder, inputMode, disabled, onMinus, onPlus, onChange }: { label: string; value: string; placeholder?: string; inputMode: "decimal" | "numeric"; disabled?: boolean; onMinus: () => void; onPlus: () => void; onChange: (v: string) => void }) {
   return (
-    <div className={`flex-1 min-w-0 rounded-2xl bg-cream ${disabled ? "opacity-70" : ""}`}>
+    <div className={`flex-1 min-w-0 rounded-2xl ${disabled ? "bg-white/60" : "bg-cream"}`}>
       <div className="flex items-center h-12">
-        <button type="button" disabled={disabled} onClick={onMinus} className="tap grid place-items-center w-9 h-full text-muted hover:text-ink active:text-ink disabled:opacity-0" aria-label={`Menos ${label}`}><Minus weight="bold" className="size-4" /></button>
+        <button type="button" disabled={disabled} onClick={onMinus} className="tap pressable grid place-items-center w-9 h-full text-muted hover:text-ink active:text-ink disabled:invisible" aria-label={`Menos ${label}`}><Minus weight="bold" className="size-4" /></button>
         <input value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} inputMode={inputMode} placeholder={placeholder} onFocus={(e) => e.target.select()}
-          className="w-full min-w-0 bg-transparent text-center text-xl font-extrabold text-ink outline-none tabular-nums placeholder:text-faint" aria-label={label} />
-        <button type="button" disabled={disabled} onClick={onPlus} className="tap grid place-items-center w-9 h-full text-muted hover:text-ink active:text-ink disabled:opacity-0" aria-label={`Más ${label}`}><Plus weight="bold" className="size-4" /></button>
+          className="w-full min-w-0 bg-transparent text-center text-xl font-extrabold text-ink outline-none tabular-nums placeholder:text-faint disabled:text-ink/70" aria-label={label} />
+        <button type="button" disabled={disabled} onClick={onPlus} className="tap pressable grid place-items-center w-9 h-full text-muted hover:text-ink active:text-ink disabled:invisible" aria-label={`Más ${label}`}><Plus weight="bold" className="size-4" /></button>
       </div>
-      <p className="-mt-1.5 pb-1 text-center text-[9px] font-bold uppercase tracking-wider text-faint">{label}</p>
+      <p className="-mt-1.5 pb-1 text-center text-[10px] font-bold text-muted">{label}</p>
     </div>
   );
 }
 
 function Stat({ icon, big, small }: { icon: React.ReactNode; big: string; small: string }) {
-  return <div className="card p-3"><span className="flex justify-center">{icon}</span><p className="mt-1 text-xl font-extrabold text-ink tabular-nums">{big}</p><p className="text-[11px] font-semibold text-muted">{small}</p></div>;
+  return <div className="flex flex-col items-center px-2 py-4 text-center"><span aria-hidden>{icon}</span><dt className="order-last text-[11px] font-semibold text-muted">{small}</dt><dd className="mt-1 text-xl font-extrabold text-ink tabular-nums">{big}</dd></div>;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
