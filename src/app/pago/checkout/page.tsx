@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Banana, MonkeyBanana } from "@/components/icons";
+import { ArrowLeft, MonkeyBanana } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { PLANS, perMonthAnnual, usd } from "@/lib/plans";
 import { OnvoPayForm } from "./onvo-pay-form";
@@ -32,21 +32,21 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6 animate-rise">
-      <Link href="/app/suscripcion" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver</Link>
+      <Link href="/app/suscripcion" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver</Link>
       <header>
-        <p className="eyebrow">Último paso</p>
-        <h1 className="mt-2 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink">Activa tu plan <Banana weight="fill" className="size-8 text-banana-ink" /></h1>
+        <p className="text-sm font-semibold text-muted">Último paso</p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink text-balance">Activa tu plan</h1>
       </header>
 
       <section className="card p-5" aria-label="Resumen">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="font-extrabold text-ink">{plan.name}</p>
-            <p className="text-sm text-muted">{annual ? "Pago anual" : "Pago mensual"} · se renueva solo, cancela cuando quieras</p>
+            <p className="text-sm text-muted">{annual ? "Pago anual" : "Pago mensual"}. Se renueva solo y cancelas cuando quieras.</p>
           </div>
           <p className="text-right shrink-0">
             <span className="block text-2xl font-extrabold tabular-nums text-ink">{usd(price)}</span>
-            <span className="text-xs text-muted">{annual ? `/año · ${usd(perMonthAnnual(plan))}/mes` : "/mes"}</span>
+            <span className="text-xs text-muted">{annual ? `al año (${usd(perMonthAnnual(plan))} al mes)` : "al mes"}</span>
           </p>
         </div>
         <p className="mt-4 text-xs text-muted">Los métodos disponibles para pagos recurrentes aparecen en el formulario de abajo.</p>
@@ -67,7 +67,7 @@ function Notice({ title, body, demo }: { title: string; body: string; demo?: boo
   return (
     <div className="card p-6 text-center space-y-4 animate-rise">
       {demo && <span className="mx-auto grid place-items-center size-16 rounded-3xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>}
-      <h1 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">{title}</h1>
       <p className="text-muted">{body}</p>
       <div className="flex flex-col sm:flex-row gap-2 justify-center">
         <Link href="/app/suscripcion" className="btn-primary">Ver mi suscripción</Link>

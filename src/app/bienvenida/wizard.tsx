@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Warning } from "@/components/icons";
+import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Warning } from "@/components/icons";
 import { ageOn, DAY_NAMES, planWeek, scheduleFor, targets } from "@/lib/engine";
 import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
@@ -24,19 +24,19 @@ function Num({ value, onChange, step, unit, min, max, d = 1 }: { value: number; 
   const set = (n: number) => { onChange(Math.min(max, Math.max(min, Math.round(n * 10) / 10))); try { navigator.vibrate?.(8); } catch { /* */ } };
   return (
     <div className="flex items-center rounded-3xl bg-white border border-line h-20">
-      <button type="button" onClick={() => set(value - step)} className="grid place-items-center w-16 h-full text-muted active:text-ink" aria-label="Menos"><Minus weight="bold" className="size-6" /></button>
+      <button type="button" onClick={() => set(value - step)} className="pressable grid place-items-center w-16 h-full rounded-l-3xl text-muted active:text-ink active:bg-cream" aria-label="Menos"><Minus weight="bold" className="size-6" /></button>
       <p className="flex-1 text-center text-4xl font-extrabold text-ink tabular-nums">{nf(value, d)}<span className="ml-1 text-lg text-faint">{unit}</span></p>
-      <button type="button" onClick={() => set(value + step)} className="grid place-items-center w-16 h-full text-muted active:text-ink" aria-label="Más"><Plus weight="bold" className="size-6" /></button>
+      <button type="button" onClick={() => set(value + step)} className="pressable grid place-items-center w-16 h-full rounded-r-3xl text-muted active:text-ink active:bg-cream" aria-label="Más"><Plus weight="bold" className="size-6" /></button>
     </div>
   );
 }
 
 function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void; icon: React.ReactNode; t: string; d?: string }) {
   return (
-    <button type="button" onClick={onClick} className={`w-full flex items-center gap-4 rounded-3xl border-2 p-4 text-left transition active:scale-[.98] ${on ? "border-ink bg-banana" : "border-line bg-white hover:border-ink/40"}`} aria-pressed={on}>
+    <button type="button" onClick={onClick} className={`pressable w-full flex items-center gap-4 rounded-3xl border-2 p-4 text-left transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(.23,1,.32,1)] active:scale-[.98] ${on ? "border-ink bg-banana" : "border-line bg-white hover:border-ink/40"}`} aria-pressed={on}>
       <span className={`grid place-items-center size-12 shrink-0 rounded-2xl [&>svg]:size-7 ${on ? "bg-white/70 text-ink" : "bg-banana-soft text-banana-ink"}`}>{icon}</span>
       <span className="flex-1 min-w-0"><span className="block font-extrabold text-ink">{t}</span>{d && <span className="block text-sm text-ink/70">{d}</span>}</span>
-      <span className={`grid place-items-center size-6 rounded-full border-2 ${on ? "bg-ink border-ink text-white" : "border-line"}`}>{on && <Check weight="bold" className="size-4" />}</span>
+      <span aria-hidden className={`grid place-items-center size-6 shrink-0 rounded-full border-2 transition-colors duration-150 ${on ? "bg-ink border-ink text-white" : "border-line"}`}><Check weight="bold" className={`size-4 transition-[opacity,transform] duration-200 ease-[cubic-bezier(.23,1,.32,1)] ${on ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} /></span>
     </button>
   );
 }
@@ -44,6 +44,8 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 export function Wizard({ name: initialName, demo }: { name: string; demo: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [dir, setDir] = useState(1);
+  const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
   const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1 }));
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -92,8 +94,8 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-ink">¡Tu plan está listo, {o.name.split(" ")[0]}!</h1>
           <p className="mt-2 text-muted">Calculado para ti. Se ajusta solo cada semana con tu peso real.</p>
           <div className="mt-8 grid grid-cols-2 gap-3 text-left">
-            {([[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-CR"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína"], [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${o.days} días`, "de gym por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(o.goalWeight)} kg`, new Date(o.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l]) => (
-              <div key={l} className="card p-4"><span className="grid place-items-center size-9 rounded-xl bg-cream">{e}</span><p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{v}</p><p className="text-xs font-semibold text-muted">{l}</p></div>
+            {([[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-CR"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína"], [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${o.days} días`, "de gym por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(o.goalWeight)} kg`, new Date(o.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
+              <div key={l} className="card p-4 transition-[opacity,translate] duration-300 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:translate-y-2" style={{ transitionDelay: `${150 + i * 60}ms` }}><span className="grid place-items-center size-9 rounded-xl bg-cream">{e}</span><p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{v}</p><p className="text-xs font-semibold text-muted">{l}</p></div>
             ))}
           </div>
           {demo && <p className="mt-4 text-sm text-banana-ink">Modo demo: no se guardó nada.</p>}
@@ -112,19 +114,19 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
     <main className="min-h-dvh bg-paper flex flex-col">
       <header className="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto max-w-md flex items-center justify-between h-12">
-          {step > 0 ? <button onClick={() => setStep(step - 1)} className="grid place-items-center size-10 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
+          {step > 0 ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-10 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
           <span className="text-sm font-bold text-muted tabular-nums">{step + 1} de {STEPS}</span>
         </div>
-        <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden"><div className="h-full bg-ink rounded-full transition-all duration-500" style={{ width: `${((step + 1) / STEPS) * 100}%` }} /></div>
+        <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-label="Progreso" aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step + 1}><div className="h-full w-full bg-ink rounded-full origin-left transition-transform duration-300 ease-[cubic-bezier(.23,1,.32,1)]" style={{ transform: `scaleX(${(step + 1) / STEPS})` }} /></div>
       </header>
 
-      <section key={step} className="flex-1 px-5 py-8 animate-rise">
+      <section key={step} className={`flex-1 px-5 py-8 transition-[opacity,translate] duration-250 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 ${dir > 0 ? "starting:translate-x-6" : "starting:-translate-x-6"} motion-reduce:starting:translate-x-0`}>
         <div className="mx-auto max-w-md space-y-6">
           {step === 0 && (<>
             <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Qué quieres lograr?</h1><p className="mt-2 text-muted">Tu plan de entreno y comida cambia según tu meta.</p></div>
             <div className="space-y-3">
-              <Choice on={o.goal === "grasa"} onClick={() => up({ goal: "grasa" })} icon={<BananaFlame />} t="Bajar grasa rápido" d="Déficit de 500 kcal · resultados visibles en 4 semanas" />
-              <Choice on={o.goal === "recomp"} onClick={() => up({ goal: "recomp" })} icon={<Scales weight="duotone" />} t="Recomposición" d="Bajar grasa y ganar músculo a la vez · déficit suave" />
+              <Choice on={o.goal === "grasa"} onClick={() => up({ goal: "grasa" })} icon={<BananaFlame />} t="Bajar grasa rápido" d="Déficit de 500 kcal, resultados visibles en 4 semanas" />
+              <Choice on={o.goal === "recomp"} onClick={() => up({ goal: "recomp" })} icon={<Scales weight="duotone" />} t="Recomposición" d="Bajar grasa y ganar músculo a la vez, con déficit suave" />
               <Choice on={o.goal === "fuerza"} onClick={() => up({ goal: "fuerza" })} icon={<Barbell weight="duotone" />} t="Ganar fuerza" d="Más kilos en la barra sin subir grasa" />
             </div>
             <div className={`rounded-3xl border-2 p-4 ${o.glp1 ? "border-ink bg-white" : "border-dashed border-line"}`}>
@@ -133,7 +135,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
                 <span><span className="flex items-center gap-1.5 font-extrabold text-ink"><Syringe weight="duotone" className="size-5 text-banana-ink" />Estoy en tratamiento con GLP-1</span><span className="block text-sm text-muted">Ozempic, Wegovy, Mounjaro, Zepbound, Saxenda… recetado por tu médico</span></span>
               </label>
               {o.glp1 && (
-                <div className="mt-4 space-y-3 animate-rise">
+                <div className="mt-4 space-y-3 transition-[opacity,translate] duration-200 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:-translate-y-1">
                   <p className="text-sm text-body">Activamos <b>Banana Shield</b>: más proteína, fuerza como prioridad y modo suave en días de náusea, para que pierdas grasa y no músculo.</p>
                   <label className="block"><span className="text-sm font-bold text-ink">Medicamento</span>
                     <select value={o.glp1Med} onChange={(e) => up({ glp1Med: e.target.value as Onboard["glp1Med"] })} className="input h-12 mt-1">{MEDS.map((m) => <option key={m.id} value={m.id}>{m.n} ({m.ex})</option>)}</select></label>
@@ -148,7 +150,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
           {step === 1 && (<>
             <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Cuéntame de ti</h1><p className="mt-2 text-muted">Con esto estimamos cuánta energía gastas al día.</p></div>
             <label className="block"><span className="text-sm font-bold text-ink">¿Cómo te llamas?</span><input value={o.name} onChange={(e) => up({ name: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="given-name" /></label>
-            <div><span className="text-sm font-bold text-ink">Sexo biológico</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["m", "Hombre"], ["f", "Mujer"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => up({ sex: k })} className={`h-14 rounded-2xl border-2 font-bold ${o.sex === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{l}</button>)}</div></div>
+            <div><span className="text-sm font-bold text-ink">Sexo biológico</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["m", "Hombre"], ["f", "Mujer"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => up({ sex: k })} className={`pressable h-14 rounded-2xl border-2 font-bold transition-[background-color,border-color,color,transform] ${o.sex === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.sex === k}>{l}</button>)}</div></div>
             <label className="block"><span className="text-sm font-bold text-ink">Fecha de nacimiento</span><input type="date" value={o.dob} max={iso(new Date())} onChange={(e) => up({ dob: e.target.value })} className="input mt-1.5 h-14 text-lg" /><span className={`mt-1 block text-xs ${age < 18 ? "font-semibold text-bad" : "text-muted"}`} role={age < 18 ? "alert" : undefined}>{age < 18 ? "Banana Burn es para personas mayores de 18 años." : `${age} años`}</span></label>
             <div><span className="text-sm font-bold text-ink">Estatura</span><div className="mt-1.5"><Num value={o.heightCm} onChange={(n) => up({ heightCm: n })} step={1} unit="cm" min={130} max={220} d={0} /></div></div>
           </>)}
@@ -162,7 +164,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
             <div className={`rounded-3xl p-4 ${paceWarn ? "bg-ember/10" : "bg-peel/10"}`}>
               <p className={`flex items-center gap-1.5 font-extrabold ${paceWarn ? "text-ember-ink" : "text-peel"}`}>{paceWarn ? <Warning weight="duotone" className="size-5 shrink-0" /> : <CheckCircle weight="duotone" className="size-5 shrink-0" />}{paceWarn ? "Muy agresivo" : "Ritmo sano"}: {nf(Math.max(0, pace), 2)} kg por semana</p>
               <p className="mt-1 text-sm text-body">{paceWarn ? `Más de 1 % por semana suele costar músculo. Te recomiendo el ${new Date(sug.date + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}.` : "Perderás grasa y conservarás tu músculo."}</p>
-              {paceWarn && <button type="button" onClick={() => { setTouchedDate(false); up({ goalDate: sug.date }); }} className="mt-2 chip h-8 bg-white text-ink">Usar fecha recomendada</button>}
+              {paceWarn && <button type="button" onClick={() => { setTouchedDate(false); up({ goalDate: sug.date }); }} className="mt-3 chip h-8 bg-white text-ink">Usar fecha recomendada</button>}
             </div>}
           </>)}
 
@@ -177,8 +179,8 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
 
           {step === 4 && (<>
             <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuántos días puedes entrenar?</h1><p className="mt-2 text-muted">Sé realista: es mejor 4 días siempre que 6 a veces.</p></div>
-            <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`h-20 rounded-3xl border-2 text-3xl font-extrabold ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}</button>)}</div>
-            <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`h-14 rounded-2xl border-2 font-extrabold ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
+            <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`pressable h-20 rounded-3xl border-2 text-3xl font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.days === n}>{n}</button>)}</div>
+            <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`pressable h-14 rounded-2xl border-2 font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.minutes === n}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
               <p className="mt-2 text-xs text-muted">¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.</p></div>
             <div className="card p-4">
               <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
@@ -231,9 +233,9 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
       <footer className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-md">
           {step < STEPS - 1 ? (
-            <button disabled={!canNext} onClick={() => setStep(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>
+            <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>
           ) : (
-            <button disabled={!canNext || pending} onClick={finish} className="btn-banana w-full h-14 text-base">{pending ? "Calculando tu plan…" : <>Crear mi plan <Banana weight="fill" className="size-5" /></>}</button>
+            <button disabled={!canNext || pending} onClick={finish} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>Crear mi plan <ArrowRight className="size-5" /></>}</button>
           )}
         </div>
       </footer>
