@@ -10,6 +10,8 @@ import { LevelWatcher } from "@/components/levels/level-up";
 import { getXpTotal } from "@/lib/xp-server";
 import { levelOf } from "@/lib/gamify";
 import { TrialBanner } from "./suscripcion/trial-banner";
+import { BetaBanner } from "@/components/beta-notice";
+import { betaLive } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TzSync current={v.tz} />
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
-        {ent.trial && <TrialBanner daysLeft={ent.trial.daysLeft} />}
+        {betaLive() && !ent.fromSubscription ? <BetaBanner /> : ent.trial && <TrialBanner daysLeft={ent.trial.daysLeft} />}
         <PlanGate locked={ent.locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null}>{children}</PlanGate>
       </main>
     </div>

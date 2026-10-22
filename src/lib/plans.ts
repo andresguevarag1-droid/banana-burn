@@ -23,6 +23,15 @@ export const perMonthAnnual = (p: (typeof PLANS)[number]) => Math.round((p.price
 /** Días de prueba gratis con todo incluido, contados desde la creación de la cuenta (profiles.created_at). */
 export const TRIAL_DAYS = 7;
 
+/**
+ * Período de prueba del servicio (beta): hasta esta fecha todas las cuentas tienen acceso completo y gratis.
+ * Desde aquí se aplican las reglas normales (prueba de 7 días desde el registro y luego plan de pago).
+ * Medianoche del 1 de noviembre de 2026 en Costa Rica. Se puede mover con NEXT_PUBLIC_BETA_ENDS_AT (ISO).
+ * La base de datos repite la fecha en public._has_app_access() (0021): si la cambias, cámbiala también allí.
+ */
+export const BETA_ENDS_AT = process.env.NEXT_PUBLIC_BETA_ENDS_AT || "2026-11-01T06:00:00.000Z";
+export const betaLive = (now = new Date()) => now.getTime() < Date.parse(BETA_ENDS_AT);
+
 /** ¿El plan incluye nutrición y Banana Shield? Solo `completo` (y el histórico `pro`). La prueba gratis se resuelve en entitlements.ts. */
 export function hasNutrition(plan: string | null | undefined) {
   return plan === "completo" || plan === "pro";

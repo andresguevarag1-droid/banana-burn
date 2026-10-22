@@ -80,7 +80,7 @@ export default async function Niveles() {
           <section className="card p-5" aria-labelledby="racha-t">
             <div className="flex items-center justify-between gap-3">
               <h2 id="racha-t" className="flex items-center gap-2 font-extrabold text-ink"><BananaFlame weight={s.streak.todayDone ? "fill" : "duotone"} className="size-6 text-ember-ink" />Racha de {s.streak.days} {s.streak.days === 1 ? "día" : "días"}</h2>
-              <span className="rounded-full bg-ember px-3 py-1 text-sm font-extrabold text-white tabular-nums">{mult(s.multiplier)}</span>
+              <span className="rounded-full bg-ink px-3 py-1 text-sm font-extrabold text-banana tabular-nums">{mult(s.multiplier)}</span>
             </div>
             <p className="mt-1 text-sm text-muted">{s.nextTier ? `${s.nextTier.left === 1 ? "1 día más" : `${s.nextTier.left} días más`} y tu XP diario sube a ${mult(s.nextTier.mult)}.` : "Estás en el multiplicador máximo."} El bono se suma aparte en tu historial, con un tope de {STREAK_BONUS_MAX} XP al día. Cuenta cualquier día con entreno, registro o pesaje.</p>
             <ol className="mt-3 grid grid-cols-4 gap-2 text-center">
@@ -129,10 +129,10 @@ export default async function Niveles() {
               <li key={lv.n} className={`flex items-center gap-3 rounded-2xl border p-3 ${cur ? "border-ember bg-ember/5 ring-2 ring-ember/20" : got ? "border-line bg-white" : "border-line bg-white/60"}`} aria-current={cur ? "step" : undefined}>
                 <LevelBadge idx={idx} locked={!got && !cur} />
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold text-ink">{lv.n}<span className="text-xs font-semibold text-muted tabular-nums">{n(lv.xp)} XP</span>{cur && <span className="rounded-full bg-ember px-2 py-0.5 text-[11px] font-extrabold text-white">Estás aquí</span>}</p>
+                  <p className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold text-ink">{lv.n}<span className="text-xs font-semibold text-muted tabular-nums">{n(lv.xp)} XP</span>{cur && <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-extrabold text-banana">Estás aquí</span>}</p>
                   <p className="text-xs text-muted">{LEVEL_PERKS[i].text}</p>
                 </div>
-                <span className="shrink-0" aria-label={got || cur ? "Desbloqueado" : "Bloqueado"}>{got || cur ? <Check weight="bold" className="size-5 text-peel" /> : <Lock weight="duotone" className="size-5 text-faint" />}</span>
+                <span className="shrink-0" role="img" aria-label={got || cur ? "Desbloqueado" : "Bloqueado"}>{got || cur ? <Check weight="bold" className="size-5 text-peel" /> : <Lock weight="duotone" className="size-5 text-faint" />}</span>
               </li>
             );
           })}

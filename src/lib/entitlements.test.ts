@@ -11,7 +11,8 @@ const sub = (o: Partial<SubscriptionRow>): SubscriptionRow => ({
   cancel_at_period_end: false, canceled_at: null, current_period_start: daysAgo(5), current_period_end: inDays(25), created_at: daysAgo(5), ...o,
 });
 const comp = (o: Partial<CompRow>): CompRow => ({ plan: "entreno", previous_plan: "free", starts_at: daysAgo(2), expires_at: inDays(20), revoked_at: null, created_at: daysAgo(2), ...o });
-const base = { profilePlan: "free", role: "free", now: NOW, subs: [] as SubscriptionRow[] };
+// Estas pruebas cubren las reglas normales (después de la beta); la beta tiene su propio bloque abajo.
+const base = { profilePlan: "free", role: "free", now: NOW, subs: [] as SubscriptionRow[], betaEndsAt: "2000-01-01T00:00:00Z" };
 
 describe("acceso: prueba gratis de 7 días", () => {
   it("cuenta nueva: todo incluido y días restantes", () => {
@@ -88,5 +89,29 @@ describe("hasNutrition", () => {
     expect(hasNutrition("entreno")).toBe(false);
     expect(hasNutrition("free")).toBe(false);
     expect(hasNutrition(null)).toBe(false);
+  });
+});
+
+describe("período de prueba del servicio (beta)", () => {
+  const beta = { ...base, betaEndsAt: "2026-11-01T06:00:00.000Z" };
+  it("antes de noviembre nadie se bloquea, aunque su prueba de 7 días haya pasado", () => {
+    const e = entitlementsFrom({ ...beta, createdAt: daysAgo(30) });
+    expect(e.locked).toBe(false);
+    expect(e.nutrition).toBe(true);
+    expect(e.trial?.beta).toBe(true);
+    expect(e.trial?.endsAt).toBe("2026-11-01T06:00:00.000Z");
+  });
+  it("si su prueba propia termina después de la beta, vale la prueba propia", () => {
+    const e = entitlementsFrom({ ...beta, now: new Date("2026-10-30T12:00:00Z"), createdAt: "2026-10-29T12:00:00Z" });
+    expect(e.trial?.beta).toBeUndefined();
+    expect(e.trial?.endsAt).toBe("2026-11-05T12:00:00.000Z");
+  });
+  it("desde el 1 de noviembre aplican las reglas normales", () => {
+    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-02T12:00:00Z"), createdAt: "2026-10-01T12:00:00Z" });
+    expect(e.locked).toBe(true);
+  });
+  it("con plan pagado no se muestra la beta", () => {
+    const e = entitlementsFrom({ ...beta, createdAt: daysAgo(30), profilePlan: "completo" });
+    expect(e.trial).toBeNull();
   });
 });

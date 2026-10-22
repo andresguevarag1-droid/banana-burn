@@ -224,10 +224,12 @@ reset role;
 
 -- Prueba vencida, sin plan: no publica, no comenta, no usa el coach ni se une a retos
 set role authenticated; select bbtest.login('E');
-select bbtest.ok('has_app_access: E con prueba vencida = false', not (select public.has_app_access()));
-select bbtest.fails('E sin plan no publica', $q$ insert into public.posts (user_id, kind, body) values (auth.uid(), 'text', 'hola') $q$, '42501');
-select bbtest.fails('E sin plan no usa el coach', $q$ select public.coach_consume('chat') $q$, '42501');
-select bbtest.fails('E sin plan no se une a retos', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'banana-30') $q$, '42501');
+-- Período de prueba del servicio (0021): hasta el 1 de noviembre de 2026 todos tienen acceso; después, la regla normal.
+select bbtest.ok('beta: E con prueba vencida tiene acceso hasta noviembre', (select public.has_app_access())) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
+select bbtest.ok('has_app_access: E con prueba vencida = false', not (select public.has_app_access())) where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('E sin plan no publica', $q$ insert into public.posts (user_id, kind, body) values (auth.uid(), 'text', 'hola') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('E sin plan no usa el coach', $q$ select public.coach_consume('chat') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('E sin plan no se une a retos', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'banana-30') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
 reset role;
 
 -- Anónimo (sin sesión): no lee nada personal ni llama RPC

@@ -1,0 +1,39 @@
+import Link from "next/link";
+import { ArrowRight, Flask } from "@/components/icons";
+import { BETA_ENDS_AT, betaLive } from "@/lib/plans";
+
+const TZ = "America/Costa_Rica";
+const day = (ms: number) => new Date(ms).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: TZ });
+
+/** "31 de octubre" (último día gratis) y "1 de noviembre" (primer día con cobro), según BETA_ENDS_AT. */
+export function betaDates() {
+  const end = Date.parse(BETA_ENDS_AT);
+  return { lastFree: day(end - 1), firstPaid: day(end) };
+}
+
+/** Aviso del período de prueba dentro de la app (reemplaza al de la prueba de 7 días mientras dure la beta). */
+export function BetaBanner() {
+  const { lastFree, firstPaid } = betaDates();
+  return (
+    <aside aria-label="Versión de prueba" className="mb-5 flex items-start gap-3 rounded-2xl border border-sky/30 bg-sky/5 px-3.5 py-3 text-sm">
+      <Flask weight="duotone" className="mt-0.5 size-5 shrink-0 text-sky" aria-hidden />
+      <div className="min-w-0 flex-1 text-pretty">
+        <p className="font-bold text-ink">Estás usando una versión de prueba</p>
+        <p className="mt-0.5 text-body">Todo está incluido y es gratis hasta el {lastFree}. A partir del {firstPaid} empezaremos a cobrar los planes a todas las cuentas. Si algo falla o se puede mejorar, cuéntanos.</p>
+        <Link href="/app/suscripcion" className="tap mt-1 inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Ver planes y precios<ArrowRight weight="bold" className="size-4" /></Link>
+      </div>
+    </aside>
+  );
+}
+
+/** Franja superior del sitio público durante la beta. */
+export function BetaStrip() {
+  if (!betaLive()) return null;
+  const { lastFree, firstPaid } = betaDates();
+  return (
+    <aside aria-label="Versión de prueba" className="bg-ink px-4 py-1.5 text-center text-xs font-semibold text-white/90 text-pretty">
+      <Flask weight="fill" className="mr-1.5 inline size-3.5 -translate-y-px text-banana" aria-hidden />
+      Versión de prueba: gratis para todos hasta el {lastFree}. Desde el {firstPaid} se cobran los planes.
+    </aside>
+  );
+}

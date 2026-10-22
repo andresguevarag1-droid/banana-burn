@@ -21,11 +21,17 @@ const NAV = [
   ["/#faq", "Preguntas"],
 ] as const;
 
+import { BetaStrip } from "@/components/beta-notice";
+
+// Las páginas públicas se regeneran cada hora: la franja de la versión de prueba se quita sola al terminar.
+export const revalidate = 3600;
+
 const LINK = "transition-colors duration-150 hover:text-ink";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <BetaStrip />
       <header className="sticky top-0 z-40 bg-paper/85 backdrop-blur-xl border-b border-line/60">
         <nav aria-label="Principal" className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center justify-between gap-3">
           <Logo compact />

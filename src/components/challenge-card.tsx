@@ -104,12 +104,12 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
       <div className="p-4">
         <ProgressBar value={completed / v.c.days} className="h-2" fill="bg-ink" label={`${completed} de ${v.c.days} días cumplidos`} />
         <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-ember/10 px-1 py-2"><dt className="sr-only">Racha</dt><dd className="flex items-center justify-center gap-1 text-base font-extrabold tabular-nums text-ember-ink"><BananaFlame weight={streak > 0 ? "fill" : "duotone"} className="size-4" />{streak}</dd><p className="text-[11px] font-semibold text-muted">{streak === 1 ? "día seguido" : "días seguidos"}</p></div>
+          <div className="rounded-2xl bg-ember/10 px-1 py-2"><dt className="sr-only">Racha</dt><dd className="flex items-center justify-center gap-1 text-base font-extrabold tabular-nums text-ember-ink"><BananaFlame weight={streak > 0 ? "fill" : "duotone"} className="size-4" />{streak}</dd><dd aria-hidden className="text-[11px] font-semibold text-muted">{streak === 1 ? "día seguido" : "días seguidos"}</dd></div>
           <div className="rounded-2xl bg-sky/10 px-1 py-2"><dt className="sr-only">Comodines</dt>
-            <dd className="flex h-6 items-center justify-center gap-0.5" aria-label={`${v.graceLeft} de ${v.grace} comodines`}>
+            <dd className="flex h-6 items-center justify-center gap-0.5"><span className="sr-only">{`${v.graceLeft} de ${v.grace} comodines`}</span>
               {v.grace === 0 ? <span className="text-sm font-extrabold text-sky">0</span> : v.grace <= 5 ? Array.from({ length: v.grace }, (_, i) => <Shield key={i} weight={i < v.graceLeft ? "fill" : "regular"} className={`size-4 ${i < v.graceLeft ? "text-sky" : "text-sky/35"}`} aria-hidden />) : <span className="text-base font-extrabold tabular-nums text-sky">{v.graceLeft}/{v.grace}</span>}
-            </dd><p className="text-[11px] font-semibold text-muted">comodines</p></div>
-          <div className="rounded-2xl bg-banana-soft px-1 py-2"><dt className="sr-only">Meta</dt><dd className="text-base font-extrabold tabular-nums text-banana-ink">{completed}/{v.need}</dd><p className="text-[11px] font-semibold text-muted">para la medalla</p></div>
+            </dd><dd aria-hidden className="text-[11px] font-semibold text-muted">comodines</dd></div>
+          <div className="rounded-2xl bg-banana-soft px-1 py-2"><dt className="sr-only">Meta</dt><dd className="text-base font-extrabold tabular-nums text-banana-ink">{completed}/{v.need}</dd><dd aria-hidden className="text-[11px] font-semibold text-muted">para la medalla</dd></div>
         </dl>
 
         <div className="mt-3 flex items-center gap-3 rounded-2xl bg-cream p-3">

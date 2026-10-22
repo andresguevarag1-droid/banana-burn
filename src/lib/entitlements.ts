@@ -9,7 +9,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient, STAFF, type Role, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { TRIAL_DAYS, type Billing, type PlanId } from "@/lib/plans";
+import { BETA_ENDS_AT, TRIAL_DAYS, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
@@ -28,8 +28,8 @@ export type Entitlements = {
   nutrition: boolean;
   /** Sin plan ni prueba vigente: la app muestra el muro de planes. */
   locked: boolean;
-  /** Prueba gratis vigente. */
-  trial: { endsAt: string; daysLeft: number } | null;
+  /** Prueba gratis vigente. `beta`: el acceso viene del período de prueba del servicio (todos gratis hasta BETA_ENDS_AT). */
+  trial: { endsAt: string; daysLeft: number; beta?: boolean } | null;
   /** Fin de la prueba gratis (vigente o pasada). */
   trialEndsAt?: string;
   /** Estado de la suscripción de pago (o `none` si nunca pagó). */
@@ -93,6 +93,8 @@ export type AccessInput = {
   subs: SubscriptionRow[];
   comps?: CompRow[];
   now?: Date;
+  /** Fin del período de prueba del servicio (por defecto BETA_ENDS_AT). */
+  betaEndsAt?: string;
 };
 
 /** Regla de acceso, pura y testeada. */
@@ -135,14 +137,18 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const [plan, source] = candidates.reduce((best, c) => (rank(c[0]) > rank(best[0]) ? c : best), ["free", "none"] as [PlanId | "free", AccessSource]);
 
   const created = i.createdAt ? Date.parse(i.createdAt) : NaN;
-  const trialEnd = Number.isFinite(created) ? new Date(created + TRIAL_DAYS * DAY) : null;
+  const ownEnd = Number.isFinite(created) ? created + TRIAL_DAYS * DAY : NaN;
+  const betaEnd = Date.parse(i.betaEndsAt ?? BETA_ENDS_AT);
+  // Durante la beta nadie se bloquea: la prueba dura al menos hasta que termina la beta.
+  const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime() && !(ownEnd > betaEnd);
+  const trialEnd = beta ? new Date(betaEnd) : Number.isFinite(ownEnd) ? new Date(ownEnd) : null;
   const trialLive = !!trialEnd && trialEnd.getTime() > now.getTime();
   const base = { status, billing, renewsAt, endsAt, compEndsAt: comp?.expires_at, trialEndsAt: trialEnd?.toISOString(), fromSubscription: source === "subscription" };
 
   if (plan !== "free") return { ...base, plan, access: source, app: true, nutrition: plan === "completo", locked: false, trial: null };
   if (trialLive) {
     const daysLeft = Math.max(1, Math.ceil((trialEnd!.getTime() - now.getTime()) / DAY));
-    return { ...base, plan: "free", access: "trial", app: true, nutrition: true, locked: false, trial: { endsAt: trialEnd!.toISOString(), daysLeft } };
+    return { ...base, plan: "free", access: "trial", app: true, nutrition: true, locked: false, trial: { endsAt: trialEnd!.toISOString(), daysLeft, ...(beta ? { beta: true } : {}) } };
   }
   return { ...base, plan: "free", access: "none", app: false, nutrition: false, locked: true, trial: null };
 }
