@@ -36,7 +36,7 @@ export default async function Perfil() {
           <p className="text-sm text-muted truncate">{v.email}</p>
           <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-bold">
             <span className="inline-flex items-center gap-1 rounded-full bg-banana-soft px-2 py-0.5 text-banana-ink"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-ember/10 px-2 py-0.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} días de racha</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-ember/10 px-2 py-0.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} {g.streak.days === 1 ? "día" : "días"} de racha</span>
           </p>
         </div>
       </header>

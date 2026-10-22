@@ -27,7 +27,7 @@ function RecipeCard({ r, factor = 1, showSlot = false }: { r: Recipe; factor?: n
         <CaretDown weight="bold" className="size-5 shrink-0 text-faint transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" />
       </summary>
       <div className="px-4 pb-4 grid gap-4 sm:grid-cols-2">
-        <div><p className="text-sm font-bold text-ink">Ingredientes{r.serves > 1 ? ` (rinde ${r.serves})` : ""}</p><ul className="mt-1 space-y-1 text-sm text-body">{r.ing.map((i) => <li key={i} className="flex gap-2"><span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-banana-ink" />{i}</li>)}</ul></div>
+        <div><p className="text-sm font-bold text-ink">Ingredientes{r.serves > 1 ? ` (rinde ${r.serves})` : ""}</p>{f !== 1 && <p className="text-xs text-muted">Para tu porción, multiplica las cantidades por {f.toLocaleString("es-CR")}.</p>}<ul className="mt-1 space-y-1 text-sm text-body">{r.ing.map((i) => <li key={i} className="flex gap-2"><span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-banana-ink" />{i}</li>)}</ul></div>
         <div><p className="text-sm font-bold text-ink">Preparación</p><ol className="mt-1 space-y-1 text-sm text-body">{r.steps.map((s, i) => <li key={i}>{i + 1}. {s}</li>)}</ol></div>
         <div className="sm:col-span-2 flex flex-wrap items-center gap-2">{r.tags.map((t) => <span key={t} className="chip bg-cream text-ink">{t}</span>)}<span className="ml-auto"><AddRecipe name={r.t + (f !== 1 ? ` ×${f}` : "")} kcal={k} protein={p} slot={r.slot} /></span></div>
       </div>

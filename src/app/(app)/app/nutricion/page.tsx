@@ -4,6 +4,7 @@ import { dashboard, getAthlete } from "@/lib/athlete";
 import { getMeals } from "@/lib/meals";
 import Link from "next/link";
 import { FoodLog } from "./food-log";
+import { getDaily } from "@/lib/daily";
 import { PLANS, usd } from "@/lib/plans";
 import { ArrowRight, BananaBunch, BrandIcon, CaretDown, CheckCircle, Egg, Grains, Leaf, Lightbulb, Wine } from "@/components/icons";
 
@@ -20,7 +21,7 @@ const IDEAS = [
 export default async function Nutricion() {
   const v = (await getViewer())!;
   const d = dashboard(await getAthlete(v));
-  const meals = await getMeals(v);
+  const [meals, daily] = await Promise.all([getMeals(v), getDaily(v, 0, 0)]);
   const { t } = d;
   if (!(await getEntitlements(v)).nutrition) {
     const p = PLANS.find((x) => x.nutrition)!;
@@ -42,7 +43,7 @@ export default async function Nutricion() {
         <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-CR")} kcal y {t.protein} g de proteína. Se ajusta cada semana con tu peso real.</p>
       </header>
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] items-start [&>*]:min-w-0">
-        <FoodLog initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} />
+        <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} />
         <aside className="space-y-3 lg:sticky lg:top-6">
           <Link href="/app/nutricion/recetas" className="pressable flex items-center gap-3 rounded-[1.5rem] bg-banana p-4 hover:shadow-lift">
             <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><BananaBunch className="size-7" /></span>
@@ -53,7 +54,7 @@ export default async function Nutricion() {
             <ArrowRight weight="bold" className="size-5 shrink-0 text-ink" />
           </Link>
           <details className="card group" open>
-            <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3 font-bold text-ink"><span className="flex items-center gap-2"><Lightbulb weight="duotone" className="size-5 shrink-0 text-banana-ink" />Ideas: un día tico de {IDEAS.reduce((a, m) => a + m.k, 0).toLocaleString("es-CR")} kcal</span><CaretDown weight="bold" className="size-5 shrink-0 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
+            <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3 font-bold text-ink"><span className="flex items-center gap-2"><Lightbulb weight="duotone" className="size-5 shrink-0 text-banana-ink" />Ideas para un día tico</span><CaretDown weight="bold" className="size-5 shrink-0 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
             <ul className="px-4 pb-4 space-y-2">
               {IDEAS.map((m) => (
                 <li key={m.t} className="flex gap-3 items-start"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><BrandIcon name={m.icon} className="size-4.5" /></span><div className="flex-1 min-w-0"><p className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm font-bold text-ink">{m.t} <span className="text-xs font-semibold text-muted tabular-nums">{m.k} kcal, {m.p} g prot.</span></p><p className="text-sm text-muted">{m.m}</p></div></li>

@@ -18,7 +18,7 @@ export default async function Entrenar() {
   return (
     <div className="space-y-5 animate-enter">
       <header>
-        <p className="text-sm font-semibold text-muted">Programa Recomposición Banana</p>
+        <p className="text-sm font-semibold text-muted">{a.mode === "recomp" ? "Programa Recomposición Banana" : "Programa Quema Banana"}{a.glp1.on ? " con Banana Shield" : ""}</p>
         <h1 className="mt-0.5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Semana {block} de 6{d.deload && <span className="whitespace-nowrap">, descarga <TreePalm weight="duotone" className="inline size-7 align-[-0.15em] text-sky" aria-hidden /></span>}</h1>
         <div className="mt-3 flex gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={6} aria-valuenow={block} aria-label={`Semana ${block} de 6`}>
           {[1, 2, 3, 4, 5, 6].map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < block ? "bg-ink" : w === block ? "bg-ember" : w === 6 ? "bg-sky/30" : "bg-line"}`} />)}

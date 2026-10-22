@@ -23,7 +23,8 @@ export const metadata = { title: "Hoy" };
 const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
 
-function tipFor(dow: number, training: boolean, proteinLeft: number) {
+function tipFor(dow: number, training: boolean, proteinLeft: number, trained: boolean) {
+  if (trained) return proteinLeft > 30 ? `Ya entrenaste. Ahora cierra la proteína: te faltan unos ${Math.round(proteinLeft)} g (pechuga, atún, yogur griego o huevos).` : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
   if (!training) return "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo.";
   if (proteinLeft > 100) return "Come tus carbos de 60 a 90 min antes de entrenar: gallo pinto con huevo o plátano con yogurt griego.";
   if (dow === 5) return "Viernes: después del gym, casado con pechuga y doble ensalada. Guarda el fresco para el finde.";
@@ -141,7 +142,7 @@ export default async function Hoy() {
           <p className="mt-1 text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
           <div className="mt-3"><WeighIn last={a.currentWeight} /></div>
           <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
-            <div><p className="text-lg font-extrabold text-peel tabular-nums">−{nf(Math.max(0, kgLost))}</p><p className="text-[11px] font-semibold text-muted">kg perdidos</p></div>
+            <div><p className={`text-lg font-extrabold tabular-nums ${kgLost >= 0.05 ? "text-peel" : "text-ink"}`}>{kgLost >= 0.05 ? `−${nf(kgLost)}` : kgLost <= -0.05 ? `+${nf(-kgLost)}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{kgLost <= -0.05 ? "kg desde el inicio" : "kg perdidos"}</p></div>
             <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(d.toGo)}</p><p className="text-[11px] font-semibold text-muted">kg a la meta</p></div>
             <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">días</p></div>
           </div>
@@ -172,7 +173,7 @@ export default async function Hoy() {
       {/* Coach */}
       <Link href="/app/coach" className="card p-4 flex gap-3 items-center">
         <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
-        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{tipFor(d.today.dow, training, t.protein - g.log.protein - eaten.protein)}</p></div>
+        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{tipFor(d.today.dow, training, t.protein - g.log.protein - eaten.protein, g.trainedToday)}</p></div>
         <CaretRight weight="bold" className="size-5 text-faint shrink-0" />
       </Link>
     </div>

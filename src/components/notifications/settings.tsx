@@ -5,6 +5,9 @@ import { getNotificationPrefs, saveNotificationPrefs, sendTestNotification } fro
 import type { Prefs } from "@/lib/notify";
 import { EnablePush } from "./enable-push";
 
+// Sin llave VAPID no hay push: no mostramos opciones que no funcionan.
+const PUSH_READY = Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+
 const HOURS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
 const label = (hhmm: string) => {
   const h = Number(hhmm.slice(0, 2));
@@ -77,14 +80,14 @@ function Form({ data }: { data: Initial }) {
       </div>
 
       <div className="divide-y divide-line">
-        <Toggle on={p.push_reminders} onChange={(v) => set("push_reminders", v)} title="Recordatorios push" hint="Entreno del día y racha en peligro (8 p. m.)" />
+        {PUSH_READY && <Toggle on={p.push_reminders} onChange={(v) => set("push_reminders", v)} title="Recordatorios push" hint="Entreno del día y racha en peligro (8 p. m.)" />}
         <Toggle on={p.email_reminders} onChange={(v) => set("email_reminders", v)} title="Recordatorios por correo" hint="Los mismos avisos, en tu bandeja" />
         <Toggle on={p.weekly_summary} onChange={(v) => set("weekly_summary", v)} title="Resumen semanal" hint="Lunes 7 a. m.: entrenos, peso, récords y tu semana" />
         <Toggle on={p.marketing} onChange={(v) => set("marketing", v)} title="Novedades y promociones" hint="Funciones nuevas y ofertas, pocas veces al mes" />
-        <Toggle on={quietOn} onChange={(v) => { set("quiet_start", v ? "22:00" : null); set("quiet_end", v ? "07:00" : null); }} title="Horas de silencio" hint="Sin pushes a estas horas" />
+        {PUSH_READY && <Toggle on={quietOn} onChange={(v) => { set("quiet_start", v ? "22:00" : null); set("quiet_end", v ? "07:00" : null); }} title="Horas de silencio" hint="Sin pushes a estas horas" />}
       </div>
 
-      {quietOn && (
+      {PUSH_READY && quietOn && (
         <div role="radiogroup" aria-label="Horario de silencio" className="flex flex-wrap gap-2">
           {([["21:00", "06:00"], ["22:00", "07:00"], ["23:00", "08:00"], ["00:00", "09:00"]] as const).map(([from, to]) => {
             const on = p.quiet_start === from && p.quiet_end === to;

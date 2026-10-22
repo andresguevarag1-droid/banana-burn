@@ -49,7 +49,12 @@ const BW_EQ = new Set(["body weight"]);
 export function searchLibrary(o: { q?: string; bp?: string; eq?: string; mine?: "gym" | "casa" | "mixto" | "ninguno"; page?: number; per?: number }) {
   const q = o.q ? norm(o.q) : "";
   let list = ALL;
-  if (q) list = list.filter((e) => norm(e.n).includes(q) || norm(e.en).includes(q) || norm(es(MUSCLE, e.t)).includes(q));
+  if (q) {
+    // Primero los ejercicios de nuestras rutinas, luego los que empiezan con la búsqueda y los nombres más simples.
+    const core = new Set(Object.values(DS_ID));
+    const score = (e: LibEx) => (core.has(e.id) ? 0 : 1000) + (norm(e.n).startsWith(q) ? 0 : norm(e.n).includes(q) ? 300 : 600) + e.n.length;
+    list = list.filter((e) => norm(e.n).includes(q) || norm(e.en).includes(q) || norm(es(MUSCLE, e.t)).includes(q)).sort((a, b) => score(a) - score(b));
+  }
   if (o.bp) list = list.filter((e) => e.bp === o.bp);
   if (o.eq) list = list.filter((e) => e.eq === o.eq);
   if (o.mine === "casa") list = list.filter((e) => HOME_EQ.has(e.eq));

@@ -72,7 +72,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
             );
           })}
         </ul>
-        {!payments && <p className="mt-3 text-sm text-muted">{demo ? "Modo demo: los botones de pago están desactivados." : "Los pagos se activan muy pronto."}</p>}
+        {!payments && demo && <p className="mt-3 text-sm text-muted">Modo demo: los botones de pago están desactivados.</p>}
       </section>
 
       {current.cancellable && current.plan !== "free" && current.billing && (

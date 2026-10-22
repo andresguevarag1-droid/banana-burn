@@ -72,7 +72,7 @@ export default async function Progreso() {
       <dl className="card grid grid-cols-3 divide-x divide-line">
         {([
           [<Barbell key="i" weight="duotone" className="size-5" />, "bg-banana-soft text-banana-ink", g.workoutsTotal, "entrenos completados"],
-          [<BananaFlame key="i" weight="fill" className="size-5" />, "bg-ember/10 text-ember-ink", g.streak.days, "días de racha"],
+          [<BananaFlame key="i" weight="fill" className="size-5" />, "bg-ember/10 text-ember-ink", g.streak.days, g.streak.days === 1 ? "día de racha" : "días de racha"],
           [<BananaCoin key="i" className="size-5" />, "bg-banana-soft text-banana-ink", g.xp.toLocaleString("es-CR"), "XP total"],
         ] as const).map(([icon, tile, v2, l]) => (
           <div key={l} className="px-2 py-4 flex flex-col items-center text-center"><span aria-hidden className={`grid place-items-center size-9 rounded-xl ${tile}`}>{icon}</span><dt className="order-last text-[11px] font-semibold text-muted">{l}</dt><dd className="mt-1.5 text-2xl font-extrabold text-ink tabular-nums">{v2}</dd></div>

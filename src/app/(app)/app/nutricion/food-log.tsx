@@ -19,7 +19,7 @@ function defaultSlot(): Slot {
   return h < 10 ? "desayuno" : h < 14 ? "almuerzo" : h < 18 ? "merienda" : "cena";
 }
 
-export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initial: MealItem[]; yesterday: MealItem[]; targets: Targets; dateKey: string; demo: boolean }) {
+export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { kcal: 0, protein: 0 } }: { initial: MealItem[]; yesterday: MealItem[]; targets: Targets; dateKey: string; demo: boolean; quick?: { kcal: number; protein: number } }) {
   const key = `bb.meals.${dateKey}`;
   const [items, setItems] = useState<MealItem[]>(initial);
   const [sheet, setSheet] = useState<Slot | null>(null);
@@ -42,7 +42,11 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
   useEffect(() => { if (demo) try { localStorage.setItem(key, JSON.stringify(items)); } catch { /* */ } }, [demo, key, items]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 2200); return () => clearTimeout(t); }, [toast]);
 
-  const tot = sumMeals(items);
+  const [fine, setFine] = useState(false);
+  useEffect(() => { try { setFine(window.matchMedia("(pointer: fine)").matches); } catch { /* */ } }, []);
+  const meal = sumMeals(items);
+  // Lo anotado rápido en Hoy (+20 g de proteína, +250 kcal) también cuenta aquí.
+  const tot = { ...meal, kcal: meal.kcal + quick.kcal, protein: meal.protein + quick.protein };
   const left = targets.kcal - tot.kcal;
   const list = useMemo(() => {
     if (q.trim()) return FOODS.filter((f) => norm(f.n).includes(norm(q.trim())));
@@ -109,6 +113,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
           <p className="text-right text-sm text-muted tabular-nums"><b className="text-ink">{n0(tot.kcal)}</b> consumidas<br />de {n0(targets.kcal)} kcal</p>
         </div>
         <ProgressBar value={tot.kcal / targets.kcal} className="mt-3 h-3" fill={left >= 0 ? "bg-ink" : "bg-ember"} />
+        {(quick.kcal > 0 || quick.protein > 0) && <p className="mt-2 text-xs text-muted">Incluye lo que anotaste rápido en Hoy: {[quick.protein > 0 && `${n0(quick.protein)} g de proteína`, quick.kcal > 0 && `${n0(quick.kcal)} kcal`].filter(Boolean).join(" y ")}.</p>}
         <div className="mt-4 grid grid-cols-3 gap-3">
           {bars.map(([n, v, g, u, c]) => (
             <div key={n}>
@@ -155,7 +160,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
             <div className="px-4 pb-2">
               <SheetTitle className="text-xl font-extrabold text-ink">Agregar a {SLOTS_MEAL.find((s) => s.id === shownSlot)?.n.toLowerCase()}</SheetTitle>
               <label className="mt-3 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 transition-[border-color,box-shadow] focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40">
-                <MagnifyingGlass weight="bold" className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Busca: pinto, pollo, casado…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
+                <MagnifyingGlass weight="bold" className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} data-autofocus={fine || undefined} placeholder="Busca: pinto, pollo, casado…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
               </label>
               {!q && (
                 <div className="mt-3 -mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
