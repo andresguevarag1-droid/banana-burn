@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, MonkeyBanana } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
-import { PLANS, perMonthAnnual, usd } from "@/lib/plans";
+import { PLANS, perMonthAnnual } from "@/lib/plans";
+import { money } from "@/lib/copy";
 import { OnvoPayForm } from "./onvo-pay-form";
 
 export const metadata = { title: "Completa tu pago" };
@@ -29,27 +30,32 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   if (!plan || (row.billing !== "mes" && row.billing !== "anual") || !publicKey) return <Notice title="Pagos no disponibles" body="Estamos terminando de activar los pagos. Intenta más tarde." />;
   const price = plan.price[row.billing as "mes" | "anual"];
   const annual = row.billing === "anual";
+  // Próxima renovación: un mes o un año desde hoy, en la zona horaria de la persona.
+  const next = new Date();
+  if (annual) next.setFullYear(next.getFullYear() + 1); else next.setMonth(next.getMonth() + 1);
+  const renews = next.toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric", timeZone: v.tz });
 
   return (
     <div className="space-y-6 animate-rise">
-      <Link href="/app/suscripcion" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver</Link>
-      <header>
-        <p className="text-sm font-semibold text-muted">Último paso</p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink text-balance">Activa tu plan</h1>
-      </header>
+      <Link href="/app/suscripcion" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver a Mi suscripción</Link>
+      <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Activa {plan.name}</h1>
 
       <section className="card p-5" aria-label="Resumen">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="font-extrabold text-ink">{plan.name}</p>
-            <p className="text-sm text-muted">{annual ? "Pago anual" : "Pago mensual"}. Se renueva solo y cancelas cuando quieras.</p>
+            <p className="text-sm text-muted">{annual ? `Pago anual, equivale a ${money(perMonthAnnual(plan))} al mes.` : "Pago mensual, sin permanencia."}</p>
           </div>
           <p className="text-right shrink-0">
-            <span className="block text-2xl font-extrabold tabular-nums text-ink">{usd(price)}</span>
-            <span className="text-xs text-muted">{annual ? `al año (${usd(perMonthAnnual(plan))} al mes)` : "al mes"}</span>
+            <span className="block text-2xl font-extrabold tabular-nums text-ink">{money(price)}</span>
+            <span className="text-xs text-muted">{annual ? "al año" : "al mes"}</span>
           </p>
         </div>
-        <p className="mt-4 text-xs text-muted">Los métodos disponibles para pagos recurrentes aparecen en el formulario de abajo.</p>
+        <dl className="mt-4 border-t border-line pt-4 space-y-2 text-sm">
+          <div className="flex items-baseline justify-between gap-4"><dt className="font-extrabold text-ink">Hoy pagas</dt><dd className="text-lg font-extrabold tabular-nums text-ink">{money(price)} USD</dd></div>
+          <div className="flex items-baseline justify-between gap-4"><dt className="text-muted">Se renueva el</dt><dd className="font-semibold text-ink text-right">{renews}, por {money(price)}</dd></div>
+        </dl>
+        <p className="mt-4 text-xs text-muted text-pretty">Pagas con tarjeta de crédito o débito. Cancelas cuando quieras desde Mi suscripción y tienes 8 días hábiles de derecho de retracto: lee los <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">Términos</Link> y la sección de <Link href="/terminos#reembolsos" className="tap font-semibold text-ink underline underline-offset-2">reembolsos y retracto</Link>.</p>
       </section>
 
       <section className="card p-5" aria-labelledby="pay-title">
@@ -58,7 +64,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
       </section>
 
       <p className="text-xs text-muted text-center">Tus datos de pago los procesa ONVO Pay; Banana Burn no ve ni guarda tu tarjeta. El cobro es en dólares (USD).</p>
-      <p className="text-center"><Link href={`/pago/cancelado?s=${encodeURIComponent(s)}`} className="text-sm font-semibold text-muted underline hover:text-ink">No quiero pagar ahora</Link></p>
+      <p className="text-center"><Link href={`/pago/cancelado?s=${encodeURIComponent(s)}`} className="tap text-sm font-semibold text-muted underline hover:text-ink">No quiero pagar ahora</Link></p>
     </div>
   );
 }

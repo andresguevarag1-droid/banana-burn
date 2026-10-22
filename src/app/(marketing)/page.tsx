@@ -2,22 +2,21 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Banana, BananaFlame, Barbell, BowlFood, Check, Clock, Lock, Minus, MonkeyBanana, Scales, ShieldCheck, Syringe, Target, X,
+  ArrowCounterClockwise, ArrowRight, Banana, BananaFlame, Barbell, BowlFood, Check, Clock, CreditCard, MonkeyBanana, Scales, ShieldCheck, Syringe, Target, X,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
-import { PLANS, annualSavingPct, perMonthAnnual, usd } from "@/lib/plans";
+import { PLANS, annualSavingPct } from "@/lib/plans";
+import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
 import { appJsonLd, social } from "./seo";
+import { COMPLETO, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_CTA, TRIAL_NOTE } from "./content";
 
-const [ENTRENO, COMPLETO] = PLANS;
-const FROM = usd(perMonthAnnual(ENTRENO));
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
-const SIGNUP = "/entrar?modo=registro";
 
 const TITLE = "Banana Burn: entrenador personal con IA para bajar grasa";
-const DESCRIPTION = `Rutina de gym o casa, el peso exacto de cada serie y comida latina de verdad, ajustados cada semana a tu peso real. Tu coach IA en español, desde ${FROM} al mes.`;
+const DESCRIPTION = `Rutina de gym o casa, el peso exacto de cada serie y comida latina de verdad, ajustados cada semana a tu peso real. Prueba ${TRIAL_DAYS} días gratis, sin tarjeta.`;
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -25,13 +24,12 @@ export const metadata: Metadata = {
   ...social({ title: TITLE, description: DESCRIPTION, path: "/" }),
 };
 
-/* Entrada tipo quiz. El onboarding hoy solo lee `programa=glp1` (cookie en /entrar);
-   `objetivo` viaja en la URL para cuando el wizard de /bienvenida lo preseleccione. */
+/* Entrada tipo quiz: /entrar guarda `objetivo` y `programa` en cookies y /bienvenida arranca con esa meta elegida. */
 const GOALS: { label: string; href: string; cta: string; icon: React.ComponentType<{ weight?: "duotone"; className?: string; "aria-hidden"?: boolean }> }[] = [
   { label: "Bajar grasa rápido", href: `${SIGNUP}&objetivo=grasa`, cta: "quiz-grasa", icon: BananaFlame },
   { label: "Bajar grasa y ganar músculo", href: `${SIGNUP}&objetivo=recomp`, cta: "quiz-recomp", icon: Scales },
   { label: "Ganar fuerza", href: `${SIGNUP}&objetivo=fuerza`, cta: "quiz-fuerza", icon: Barbell },
-  { label: "Uso Ozempic o Mounjaro", href: `${SIGNUP}&programa=glp1`, cta: "quiz-glp1", icon: Syringe },
+  { label: "Uso Ozempic o Mounjaro", href: SIGNUP_GLP1, cta: "quiz-glp1", icon: Syringe },
 ];
 
 const PAINS = [
@@ -52,13 +50,13 @@ const FEATURES: Feature[] = [
     src: "/landing/entreno.png", alt: "Pantalla de entrenamiento con el peso y las repeticiones de cada serie",
     title: "Entras al gym sabiendo exactamente qué levantar.",
     body: "Cada serie trae el peso y las repeticiones que te tocan. Si las completas, la próxima vez sube. Si te estancas, el plan ajusta.",
-    points: ["Gym, casa o sin equipo, de 10 a 60 minutos", "Animación de técnica en cada ejercicio", "Rutina distinta cada día y accesorios que rotan cada semana", "Descanso cronometrado y récords personales"],
+    points: ["Gym, casa o sin equipo, de 15 a 60 minutos por sesión", "Animación de técnica en cada ejercicio", "Rutina distinta cada día y accesorios que rotan cada semana", "Descanso cronometrado y récords personales"],
   },
   {
     src: "/landing/nutricion.png", alt: "Pantalla de comida con calorías y proteína restantes del día",
     title: "Bajas de peso comiendo arroz con pollo.",
     body: "Calorías y proteína calculadas para ti, con la comida que ya comes. Registras tu almuerzo en dos toques y ves cuánto te queda del día.",
-    points: ["Comida latina de verdad: arroz con pollo, frijoles, tortillas, ceviche, patacones, gallo pinto", "Recetas e ideas de menú para cada día", "Tus calorías se ajustan cada semana con tu peso real"],
+    points: ["Comida latina de verdad: arroz con pollo, frijoles, tortillas, ceviche, patacones, arepas", "Recetas e ideas de menú para cada día", "Tus calorías se ajustan cada semana con tu peso real"],
     tag: `Incluido en ${COMPLETO.name}`,
   },
   {
@@ -69,39 +67,11 @@ const FEATURES: Feature[] = [
   },
 ];
 
-type Mark = true | false | string;
-const PAY_ROW = "Cómo se paga";
-const COLS = ["Banana Burn", "Entrenador personal", "Apps extranjeras", "PDF de rutina"] as const;
-/* Comparación cualitativa y honesta, incluida la fila donde el entrenador en persona gana.
-   Sin precios de mercado: la landing es para toda LATAM y las tarifas de entrenadores varían por país;
-   no hay una fuente regional confiable (búsquedas del 22/10/2026), así que no damos cifras. */
-const ROWS: [string, Mark, Mark, Mark, Mark][] = [
-  ["Te dice qué hacer cada día", true, true, true, "Siempre lo mismo"],
-  ["Ajusta tu plan con tus resultados", true, true, "Algunas", false],
-  ["En español latino, con comida latina", true, true, false, "Depende"],
-  ["Te responde a cualquier hora", true, "En su horario", "Algunas, en inglés", false],
-  ["Corrige tu técnica en persona", "Animaciones", true, false, false],
-  [PAY_ROW, `Desde ${FROM} al mes`, "Por sesión o paquete", "Suscripción", "Pago único"],
-];
-
-const FAQ = [
-  ["¿Por qué pagar si hay rutinas gratis en internet?", `Una rutina gratis no sabe cuánto levantaste ayer, cuánto tiempo tienes hoy ni qué comiste. Banana Burn ajusta tu plan en cada sesión y cada semana. Con el plan anual son ${FROM} al mes.`],
-  ["No tengo tiempo. ¿Me sirve?", "Sí. Eliges cuántos minutos tienes, de 15 a 60, y en los días apretados hay entrenos exprés de 10, 20 o 30 minutos sin equipo."],
-  ["¿Sirve si entreno en casa o sin equipo?", "Sí. Eliges gym, casa (mancuernas o bandas) o sin equipo, y el plan cambia los ejercicios por variantes que puedes hacer con lo que tienes."],
-  ["¿Necesito experiencia en el gym?", "No. Cada ejercicio trae animación y guía de técnica. La primera semana es de calibración: la app aprende tus pesos."],
-  ["Uso Ozempic o Mounjaro. ¿Es para mí?", `Sí. Banana Shield, incluido en ${COMPLETO.name}, prioriza fuerza y proteína para que lo que bajes sea grasa y no músculo, y baja la intensidad en tu día de inyección. No damos indicaciones sobre tu medicamento: eso lo ves con tu médico.`],
-  ["¿Cuánto peso voy a bajar?", "Depende de ti y de tu punto de partida, así que no prometemos un número. Un ritmo sano es de 0,5 a 1 % de tu peso por semana, y la app mide tu tendencia real para mantenerte en ese rango sin perder músculo."],
-  ["¿Cómo cancelo? ¿Hay reembolso?", "Cancelas cuando quieras desde Mi plan y conservas el acceso hasta el final del periodo pagado. Además tienes 8 días hábiles de derecho de retracto desde la compra, según la Ley 7472."],
-  ["¿Cómo pago?", "Con tarjeta de crédito o débito, procesado por ONVO Pay. Los precios están en dólares (USD)."],
-  ["¿Mis datos están seguros?", "Tus datos de salud son privados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras, conforme a la Ley 8968 de protección de datos."],
-  ["¿Es en español de verdad?", "Sí. Banana Burn está en español latino desde el primer día y pensada para Latinoamérica: los ejercicios, el coach y las comidas. No es una app traducida."],
-  ["¿Tengo que descargarla de una tienda?", "No. Es una app web: la abres en el navegador y la instalas en tu pantalla de inicio, en iPhone o Android."],
-] as const;
-
 const UGC_BASE = "https://d8j0ntlcm91z4.cloudfront.net/user_3KlOTMXim7g88SAyF4A03SG6JZ6/";
+const MASCOT = `${UGC_BASE}hf_20261022_085342_da17b2e2-18ea-4b15-9242-6fbc69476315.png`;
 /** Escenas ilustrativas (persona real + Coach Banana en caricatura). No son clientes ni testimonios. */
 const SCENES: [string, string][] = [
-  ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te corrige la técnica en cada serie."],
+  ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te muestra la técnica de cada ejercicio con animación."],
   ["hf_20261022_155001_e82f1d0e-5f20-4eba-9039-6f62a9d79152", "En la casa: sin equipo y sin excusas."],
   ["hf_20261022_155041_f2cc4028-cb3a-48a8-ade4-3d6edcbbf98f", "En la cocina: comida latina que cuadra con tu meta."],
   ["hf_20261022_155041_44c51456-065c-44b4-95dc-135b1585a69a", "En el parque: te marca el ritmo."],
@@ -111,12 +81,6 @@ const SCENES: [string, string][] = [
 
 const H2 = "text-4xl sm:text-5xl font-extrabold tracking-tight text-ink text-balance";
 const LEAD = "mt-4 text-lg text-muted leading-relaxed text-pretty max-w-[60ch]";
-
-function MarkCell({ v, strong }: { v: Mark; strong?: boolean }) {
-  if (v === true) return <><Check weight="bold" aria-hidden className={`size-5 ${strong ? "text-ink" : "text-peel"}`} /><span className="sr-only">Sí</span></>;
-  if (v === false) return <><X weight="bold" aria-hidden className="size-5 text-faint" /><span className="sr-only">No</span></>;
-  return <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted"><Minus weight="bold" aria-hidden className="size-4 shrink-0 text-faint" />{v}</span>;
-}
 
 export default function Landing() {
   return (
@@ -133,12 +97,12 @@ export default function Landing() {
             Para quien quiere resultados en el gym sin adivinar: <b className="text-ink">el peso exacto de cada serie</b>, rutina a tu nivel y comida latina de verdad. Se ajusta cada semana a tu peso real.
           </p>
           <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <Link href={SIGNUP} data-cta="hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">Crear mi plan <ArrowRight className="size-5" /></Link>
+            <Link href={SIGNUP} data-cta="hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
             <a href="#como-funciona" data-cta="hero-secundario" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver cómo funciona</a>
           </div>
-          <p className="mt-5 text-sm font-semibold text-ink">Desde {FROM} al mes con el plan anual.</p>
+          <p className="mt-5 text-sm font-semibold text-ink">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
           <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-            {([[Clock, "Listo en 2 minutos"], [ArrowCounterClockwise, "Cancela cuando quieras"], [Lock, "Pago seguro con ONVO Pay"]] as const).map(([I, t]) => (
+            {([[CreditCard, "Sin tarjeta para probar"], [Clock, "Tu plan listo en 2 minutos"], [ArrowCounterClockwise, "Cancela cuando quieras"]] as const).map(([I, t]) => (
               <li key={t} className="inline-flex items-center gap-1.5"><I weight="duotone" aria-hidden className="size-4 text-banana-ink" />{t}</li>
             ))}
           </ul>
@@ -157,7 +121,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-10">
           <div>
             <h2 id="objetivo" className="text-2xl font-extrabold tracking-tight text-ink">¿Qué quieres lograr?</h2>
-            <p className="mt-1 text-sm text-muted">Elige uno y empieza tu plan en 2 minutos.</p>
+            <p className="mt-1 text-sm text-muted">Elige uno y empieza tu prueba gratis de {TRIAL_DAYS} días.</p>
           </div>
           <ul className="mt-5 flex flex-wrap gap-3">
             {GOALS.map(({ label, href, cta, icon: I }) => (
@@ -195,7 +159,7 @@ export default function Landing() {
       <section aria-labelledby="coach-accion" className="pt-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-4 lg:grid-cols-[1.2fr_1fr] lg:items-end">
           <h2 id="coach-accion" className={H2}>Un coach que no te quita el ojo de encima.</h2>
-          <p className="text-lg text-muted leading-relaxed text-pretty max-w-[52ch]">Coach Banana te cuenta el tempo, te corrige la técnica y te avisa cuándo volver a la barra. En el gym, en la casa o en el parque.</p>
+          <p className="text-lg text-muted leading-relaxed text-pretty max-w-[52ch]">Coach Banana te muestra la técnica de cada ejercicio con animación, te marca el tempo y te avisa cuándo volver a la barra. En el gym, en la casa o en el parque.</p>
         </div>
         <ul tabIndex={0} aria-label="Escenas de Coach Banana entrenando" className="mt-10 flex gap-3 overflow-x-auto outline-none focus-visible:ring-2 focus-visible:ring-ink snap-x snap-mandatory px-4 pb-2 [scrollbar-width:none] sm:mx-auto sm:max-w-6xl sm:px-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
           {SCENES.map(([id, t], i) => (
@@ -272,36 +236,7 @@ export default function Landing() {
       </section>
 
       {/* 6. COMPARACIÓN honesta */}
-      <section id="comparar" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
-        <div className="max-w-3xl">
-          <h2 className={H2}>Lo que te da cada opción, sin adornos.</h2>
-          <p className={LEAD}>Un entrenador en persona es lo mejor para corregir tu técnica. Banana Burn te da casi todo lo demás todos los días, en español y con tu comida, por mucho menos de lo que cuesta un entrenador cada mes.</p>
-        </div>
-        <p aria-hidden className="mt-8 flex items-center gap-1.5 text-sm font-semibold text-muted md:hidden">Desliza la tabla para ver las otras opciones <ArrowRight weight="bold" className="size-4" /></p>
-        <div tabIndex={0} role="region" aria-label="Tabla comparativa" className="relative mt-3 md:mt-10 overflow-x-auto rounded-3xl border border-line bg-white focus:outline-none focus-visible:ring-4 focus-visible:ring-banana">
-          <table className="w-full min-w-[680px] border-collapse text-left">
-            <caption className="sr-only">Comparación de Banana Burn con un entrenador personal, apps extranjeras y un PDF de rutina</caption>
-            <thead>
-              <tr className="border-b border-line text-sm font-bold text-ink">
-                <td className="sticky left-0 z-10 bg-white p-4 w-[34%]" />
-                {COLS.map((c, i) => <th key={c} scope="col" className={`p-4 text-center leading-tight ${i === 0 ? "bg-banana" : "text-muted"}`}>{c}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {ROWS.map(([f, ...vals]) => (
-                <tr key={f} className="border-b border-line last:border-0">
-                  <th scope="row" className="sticky left-0 z-10 bg-white p-4 text-[15px] font-semibold text-ink text-pretty">{f}</th>
-                  {vals.map((v, i) => (
-                    <td key={i} className={`p-4 text-center ${i === 0 ? "bg-banana/15" : ""}`}>
-                      <span className="inline-flex justify-center">{f === PAY_ROW ? <span className={`text-sm ${i === 0 ? "font-extrabold text-ink" : "font-semibold text-muted"}`}>{v}</span> : <MarkCell v={v} strong={i === 0} />}</span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <Compare />
 
       {/* 7. SEGMENTO GLP-1 */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
@@ -309,55 +244,61 @@ export default function Landing() {
           <span className="grid place-items-center size-16 rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" aria-hidden className="size-9" /></span>
           <div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">¿Usas Ozempic o Mounjaro? Protege tu músculo.</h2>
-            <p className="mt-3 text-lg text-muted max-w-2xl text-pretty">Banana Shield: fuerza y proteína pensadas para personas en GLP-1, con modo suave en tu día de inyección y porciones que sí te entran.</p>
+            <p className="mt-3 text-lg text-muted max-w-2xl text-pretty">Banana Shield: fuerza y proteína pensadas para personas en {GLP1}, con modo suave en tu día de inyección y porciones que sí te entran.</p>
           </div>
           <span className="inline-flex items-center gap-2 font-bold text-ink sm:col-start-2 lg:col-start-auto">Conocer Banana Shield <ArrowRight weight="bold" className="size-5 transition-transform duration-200 ease-[cubic-bezier(.23,1,.32,1)] group-hover:translate-x-1" /></span>
         </Link>
       </section>
 
-      {/* 8. FUNDADOR: autoridad y cercanía, sin testimonios inventados */}
+      {/* 8. FUNDADOR: autoridad y cercanía, sin testimonios inventados ni fotos de stock (no hay foto del fundador: va la mascota) */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
-        <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-end rounded-[2rem] bg-ink text-white p-8 sm:p-12">
+        <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr] lg:gap-14 items-center rounded-[2rem] bg-ink text-white p-7 sm:p-12">
           <div>
-            <MonkeyBanana aria-hidden className="size-12 text-banana" />
-            <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">De 94 a 85 kg antes del 31 de diciembre. En público.</h2>
-            <p className="mt-4 text-lg text-white/80 leading-relaxed text-pretty max-w-[60ch]">Soy Andrés, de San José, Costa Rica, y soy el usuario #1 de Banana Burn. La construí porque ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
-            <p className="mt-4 text-white/80 leading-relaxed text-pretty max-w-[60ch]">Banana Burn está en beta: la estamos puliendo con sus primeros usuarios. Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="font-semibold text-banana underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">De 94 a 85 kg antes del 31 de diciembre.</h2>
+            <p className="mt-4 text-lg text-white/80 leading-relaxed text-pretty max-w-[60ch]">Soy Andrés, el fundador, y soy el usuario #1 de Banana Burn. La construí porque ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
+            <p className="mt-4 text-white/80 leading-relaxed text-pretty max-w-[60ch]">Banana Burn está en beta: la estamos puliendo con sus primeros usuarios. Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-semibold text-banana underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
+            <dl className="mt-8 grid grid-cols-3 divide-x divide-white/15 border-t border-white/15 pt-6 max-w-lg">
+              {[["−9 kg", "mi meta"], ["4 días", "de gym por semana"], ["185 g", "de proteína al día"]].map(([v, l]) => (
+                <div key={l} className="px-4 first:pl-0 last:pr-0 flex flex-col-reverse">
+                  <dt className="mt-1 text-sm text-white/75 text-pretty">{l}</dt>
+                  <dd className="text-2xl sm:text-3xl font-extrabold text-banana tabular-nums"><span className="whitespace-nowrap">{v}</span></dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <dl className="grid grid-cols-3 divide-x divide-white/15 border-t border-white/15 pt-6">
-            {[["−9 kg", "meta"], ["4 días", "de gym"], ["185 g", "proteína al día"]].map(([v, l]) => (
-              <div key={l} className="px-4 first:pl-0 last:pr-0 flex flex-col-reverse">
-                <dt className="mt-1 text-sm text-white/75">{l}</dt>
-                <dd className="text-2xl sm:text-3xl font-extrabold text-banana tabular-nums"><span className="whitespace-nowrap">{v}</span></dd>
-              </div>
-            ))}
-          </dl>
+          <figure className="order-first lg:order-none flex items-center gap-4 lg:flex-col lg:items-stretch">
+            <div className="relative isolate w-24 sm:w-32 lg:w-full lg:max-w-[340px] lg:mx-auto aspect-square shrink-0 overflow-hidden rounded-[1.5rem] lg:rounded-[1.75rem] bg-banana">
+              <MonkeyBanana aria-hidden className="absolute inset-0 m-auto size-1/2 text-ink/25 -z-10" />
+              <Image src={MASCOT} alt="Coach Banana, el chimpancé mascota de Banana Burn" fill sizes="(min-width: 1024px) 340px, 128px" className="object-cover" />
+            </div>
+            <figcaption className="text-sm text-white/70 text-pretty lg:text-center">Coach Banana, el entrenador que te acompaña en la app.</figcaption>
+          </figure>
         </div>
       </section>
 
       {/* 9. PRECIOS con anual anclado + reversión de riesgo */}
       <section id="precios" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
         <div className="text-center max-w-3xl mx-auto mb-10">
-          <h2 className={H2}>Elige tu plan. El anual sale a mitad de precio.</h2>
-          <p className="mt-4 text-lg text-muted text-pretty">Los dos incluyen tu rutina diaria, la progresión automática y el coach IA. Con el pago anual ahorras {SAVE} %.</p>
+          <h2 className={H2}>Pruébalo {TRIAL_DAYS} días gratis. Después, elige tu plan.</h2>
+          <p className="mt-4 text-lg text-muted text-pretty">En la prueba tienes todo incluido y no pedimos tarjeta. Los dos planes traen tu rutina diaria, la progresión automática y el coach IA; con el pago anual ahorras {SAVE} %.</p>
         </div>
         <Pricing />
       </section>
 
       {/* 10. OBJECIONES */}
-      <Faq id="faq" items={FAQ} />
+      <Faq id="faq" items={FAQ} aside={<FaqCta cta="faq" />} />
 
       {/* 11. CTA FINAL */}
       <section data-sticky-hide className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
         <div className="rounded-[2rem] bg-banana px-6 py-14 sm:p-16 text-center">
           <Target weight="duotone" aria-hidden className="mx-auto size-12 text-ink" />
           <h2 className={`${H2} mt-4 max-w-3xl mx-auto`}>Mañana entras al gym sabiendo exactamente qué hacer.</h2>
-          <Link href={SIGNUP} data-cta="final" className="mt-8 btn-primary h-14 px-8 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
-          <p className="mt-4 text-sm font-semibold text-ink/80">Desde {FROM} al mes con el plan anual. Cancela cuando quieras.</p>
+          <Link href={SIGNUP} data-cta="final" className="mt-8 btn-primary h-14 px-8 text-base">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
+          <p className="mt-4 text-sm font-semibold text-ink/80">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
         </div>
       </section>
 
-      <StickyCta note={`Tu plan en 2 minutos. Desde ${FROM} al mes.`}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 px-5 shrink-0">Crear mi plan <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={TRIAL_NOTE}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }

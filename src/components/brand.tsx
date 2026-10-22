@@ -2,11 +2,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { Banana } from "@/components/icons";
 
-export function Logo({ href = "/", small = false }: { href?: string; small?: boolean }) {
+/** Logo con nombre. `compact`: más chico bajo sm y solo el ícono bajo 360 px, para que el encabezado quepa en 320 px. */
+export function Logo({ href = "/", small = false, compact = false }: { href?: string; small?: boolean; compact?: boolean }) {
+  const icon = small ? "size-8" : compact ? "size-8 sm:size-9" : "size-9";
+  const text = small ? "text-[17px]" : compact ? "text-[17px] sm:text-[19px] max-[359px]:sr-only" : "text-[19px]";
   return (
-    <Link href={href} className="inline-flex items-center gap-2 font-extrabold tracking-tight text-ink" aria-label="Banana Burn, inicio">
-      <Image src="/icons/logo.svg" alt="" width={36} height={36} unoptimized priority className={`rounded-[10px] ${small ? "size-8" : "size-9"}`} />
-      <span className={small ? "text-[17px]" : "text-[19px]"}>Banana<span className="text-ember-ink">Burn</span></span>
+    <Link href={href} className="inline-flex shrink-0 items-center gap-2 font-extrabold tracking-tight text-ink" aria-label="Banana Burn, inicio">
+      <Image src="/icons/logo.svg" alt="" width={36} height={36} unoptimized priority className={`rounded-[10px] ${icon}`} />
+      <span className={`whitespace-nowrap ${text}`}>Banana<span className="text-ember-ink">Burn</span></span>
     </Link>
   );
 }

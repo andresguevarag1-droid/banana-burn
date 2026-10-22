@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Clock, MonkeyBanana } from "@/components/icons";
+import { Clock, MagnifyingGlass, MonkeyBanana } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
@@ -16,6 +16,8 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
   if (!v) redirect(`/entrar?next=${encodeURIComponent(`/pago/exito${s ? `?s=${s}` : ""}`)}`);
 
   let confirmed = false;
+  // ¿Hay un pago que esperar? Solo si el enlace trae una suscripción de esta cuenta.
+  let pending = false;
   let planName: string | null = null;
   let renews: string | null = null;
   if (!v.demo) {
@@ -24,6 +26,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
     if (s) {
       const { data: row } = await (await createClient()).from("subscriptions").select("status, plan").eq("provider_subscription_id", s).eq("user_id", v.id).maybeSingle();
       confirmed = row?.status === "active";
+      pending = row?.status === "incomplete"; // el webhook de ONVO aún no la activa
       target = (row?.plan as typeof target) ?? target;
     } else confirmed = ent.fromSubscription && ent.plan !== "free";
     planName = PLANS.find((p) => p.id === target)?.name ?? null;
@@ -38,6 +41,18 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
     );
   }
 
+  if (!confirmed && !pending) {
+    return (
+      <Card icon={<MagnifyingGlass weight="duotone" className="size-8" />} title="No encontramos un pago" body="No vemos un pago reciente en tu cuenta. Si acabas de pagar, revisa Mi suscripción en unos minutos; si no, elige tu plan cuando quieras.">
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          <Link href="/app/suscripcion" className="btn-primary">Ver mi suscripción</Link>
+          <Link href="/precios" className="btn-ghost">Ver planes</Link>
+        </div>
+        <Link href="/app" className="tap inline-block text-sm font-semibold text-muted underline underline-offset-2 transition-colors duration-150 hover:text-ink">Ir a la app</Link>
+      </Card>
+    );
+  }
+
   if (!confirmed) {
     return (
       <Card icon={<Clock weight="duotone" className="size-8" />} title="Estamos confirmando tu pago…" body="Suele tardar unos segundos. No cierres esta página; se actualiza sola.">
@@ -46,7 +61,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
           <Link href="/app" className="btn-primary">Ir a la app mientras tanto</Link>
           <Link href="/app/suscripcion" className="btn-ghost">Ver mi suscripción</Link>
         </div>
-        <p className="text-xs text-muted">Si en 15 minutos no ves tu plan activo, escríbenos a <a className="underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a> con el correo de tu cuenta. No vuelvas a pagar.</p>
+        <p className="text-xs text-muted text-pretty">Si en 15 minutos no ves tu plan activo, escríbenos a <a className="tap underline underline-offset-2" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a> con el correo de tu cuenta. No vuelvas a pagar.</p>
       </Card>
     );
   }

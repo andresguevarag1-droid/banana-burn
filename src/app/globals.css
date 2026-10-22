@@ -102,9 +102,9 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 @keyframes pop { from { transform: scale(.6); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 @keyframes confetti { from { transform: translate3d(0,0,0) rotate(var(--r, 0deg)) } to { transform: translate3d(var(--dx, 30px),110dvh,0) rotate(calc(var(--r, 0deg) + 540deg)) } }
 
-/* Marketing y pantallas sueltas: entrada única de 320 ms. En la app se usa animate-enter (240 ms, menos recorrido). */
+/* Marketing y pantallas sueltas: entrada única de 250 ms. En la app se usa animate-enter (240 ms, menos recorrido). */
 .animate-floaty { animation: floaty 6s ease-in-out infinite; }
-.animate-rise { animation: rise 320ms var(--ease-out) both; }
+.animate-rise { animation: rise 250ms var(--ease-out) both; }
 /* App: entrada corta (se ve decenas de veces al día) */
 .animate-enter { animation: enter var(--dur-base) var(--ease-out) both; }
 .animate-fade { animation: fade var(--dur-fast) var(--ease-out) both; }
