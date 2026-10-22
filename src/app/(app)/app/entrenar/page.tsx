@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { DAY_NAMES } from "@/lib/engine";
@@ -32,11 +33,12 @@ export default async function Entrenar() {
                 </ul>
               ) : null}
               {p.cardio && <p className="mt-3 text-sm text-ink/70">🚶 {p.cardio}</p>}
+              {p.tpl && <Link href={today ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-4 w-full h-11 text-sm ${today ? "btn-primary" : "btn-ghost"}`}>{today ? "Empezar entreno de hoy" : "Hacer esta rutina"}</Link>}
             </section>
           );
         })}
       </div>
-      <p className="text-sm text-faint text-center">🏗️ Próximo: reproductor de entreno con animaciones, cronómetro de descanso y registro de series (Fase 1).</p>
+      <p className="text-sm text-faint text-center">¿Te perdiste un día? Puedes hacer cualquier rutina de la semana; el motor ajusta tus cargas igual.</p>
     </div>
   );
 }

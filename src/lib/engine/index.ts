@@ -40,7 +40,7 @@ export function prescribe(id: ExerciseId, cfg: SlotCfg, history: SetLog[][], opt
   const ex = EX[id];
   const step = ex.inc >= 2.5 ? 2.5 : ex.inc || 1;
   const sets = opts.deload ? Math.max(2, cfg.sets - 1) : cfg.sets;
-  if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: `Calibración: elige un peso con el que llegues a ${cfg.lo}–${cfg.hi} reps dejando 2 en reserva.` };
+  if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: ex.inc ? `Calibración: elige un peso con el que llegues a ${cfg.lo}–${cfg.hi} reps dejando 2 en reserva.` : `Calibración: haz ${cfg.lo}–${cfg.hi} ${cfg.unit === "s" ? "segundos" : cfg.unit === "m" ? "metros" : "reps"} limpias dejando 1–2 en reserva. Anota lo que logres.` };
   const last = history[history.length - 1];
   const prev = history.length > 1 ? history[history.length - 2] : null;
   const kg = Math.max(...last.map((s) => s.kg || 0));

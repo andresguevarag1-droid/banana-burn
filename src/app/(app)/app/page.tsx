@@ -64,7 +64,7 @@ export default async function Hoy() {
           )}
 
           <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-            {training && <Link href="/app/entrenar" className="btn-primary h-13 px-6">Empezar entreno <ArrowRight className="size-5" /></Link>}
+            {training && <Link href="/app/entreno" className="btn-primary h-13 px-6">Empezar entreno <ArrowRight className="size-5" /></Link>}
             <p className="text-sm font-semibold text-ink/70">Ayer: {d.yesterday.emoji} {d.yesterday.name} · Mañana: {d.tomorrow.emoji} {d.tomorrow.name}</p>
           </div>
         </section>
