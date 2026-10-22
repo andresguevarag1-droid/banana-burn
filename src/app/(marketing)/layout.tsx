@@ -31,9 +31,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="hidden lg:flex items-center gap-8 text-[15px] font-medium text-muted whitespace-nowrap">
             {NAV.map(([href, label]) => <Link key={href} href={href} className={LINK}>{label}</Link>)}
           </div>
-          {/* Bajo sm, "Entrar" vive en el menú: así el logo, el CTA y el menú caben desde 320 px sin desbordar. */}
+          {/* "Entrar" siempre visible; bajo 400 px el logo queda solo en ícono para que todo quepa desde 320 px. */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <Link href="/entrar" data-cta="nav-entrar" className="btn hidden sm:inline-flex h-10 px-4 text-[15px] text-ink hover:bg-white/70">Entrar</Link>
+            <Link href="/entrar" data-cta="nav-entrar" className="btn inline-flex h-10 px-2.5 sm:px-4 text-sm sm:text-[15px] text-ink hover:bg-white/70">Entrar</Link>
             <Link href="/entrar?modo=registro" data-cta="nav" className="btn-primary h-10 px-3.5 sm:px-4 text-sm whitespace-nowrap">Empezar gratis<span className="sr-only"> {TRIAL_DAYS} días</span></Link>
             <MobileMenu items={NAV} />
           </div>

@@ -103,6 +103,7 @@ export default function Landing() {
             <a href="#como-funciona" data-cta="hero-secundario" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver cómo funciona</a>
           </div>
           <p className="mt-5 text-sm font-semibold text-ink">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
+          <p className="mt-1 text-sm text-muted">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-semibold text-ink underline underline-offset-4">Entrar</Link></p>
           <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
             {([[CreditCard, "Sin tarjeta para probar"], [Clock, "Tu plan listo en 2 minutos"], [ArrowCounterClockwise, "Cancela cuando quieras"]] as const).map(([I, t]) => (
               <li key={t} className="inline-flex items-center gap-1.5"><I weight="duotone" aria-hidden className="size-4 text-banana-ink" />{t}</li>
