@@ -11,7 +11,7 @@ export {
   Egg, Envelope, Fish, Flag, Footprints, ForkKnife, Gear, Gift, GraduationCap, Handshake, Heart, Heartbeat, House, Info, Lightning, Lock, MagnifyingGlass,
   Megaphone, Minus, Moon, PaperPlaneTilt, Plus, PlusSquare, Receipt, Repeat, Ruler, Scales, Scroll, ShareNetwork, Shield, ShieldCheck,
   ShieldWarning, SignOut, Sparkle, SquaresFour, Target, Timer, Trash, TrendDown, TrendUp, User, UserGear, Users, Warning, WarningCircle,
-  Watch, X, Sun, PersonSimpleWalk, TreePalm, Globe, Grains, Lightbulb, SunHorizon, Wine, Moon as Night, Medal, Play, Pause, SkipForward, SpeakerHigh, SpeakerSlash, Calendar, CalendarCheck, PersonSimpleRun,
+  Watch, X, Sun, Globe, Grains, Lightbulb, SunHorizon, Wine, Moon as Night, Medal, Play, Pause, SkipForward, SpeakerHigh, SpeakerSlash, Calendar, CalendarCheck, PersonSimpleRun,
   Carrot, Cookie, Leaf, Coffee, Pill, Syringe, Smiley, SmileyMeh, SmileySad, Star, Eye, EyeSlash, PencilSimple, DotsThree, Link, Export,
   ArrowSquareOut, ArrowUUpLeft, CookingPot, OrangeSlice, Bed, Books, Confetti, FlagCheckered, PersonArmsSpread, PersonSimpleWalk, PushPin, TreePalm,
 } from "@phosphor-icons/react/dist/ssr";
