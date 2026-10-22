@@ -194,7 +194,7 @@ function draw(g,time){
     if(e.db){e.db.setAttribute('x',b[0]-9);e.db.setAttribute('y',b[1]-4.5)}
     if(e.handle){e.handle.setAttribute('cx',b[0]);e.handle.setAttribute('cy',b[1]);setL(e.cable,b,[190,36])}
   }
-  if(e.lab){e.lab.textContent=(st.k==='ecc'?'▼ ':st.k==='con'?'▲ ':'• ')+st.label.toUpperCase();e.bar.setAttribute('width',(188*st.prog).toFixed(1));
+  if(e.lab){e.lab.textContent=st.label.toUpperCase();e.bar.setAttribute('width',(188*st.prog).toFixed(1));
     e.bar.setAttribute('fill',st.k==='ecc'?'var(--banana)':st.k==='con'?'var(--ember)':'var(--faint)')}
 }
 function loop(now){

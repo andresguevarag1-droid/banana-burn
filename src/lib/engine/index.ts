@@ -91,7 +91,7 @@ export function weekIndex(startMonday: string, on: Date): number {
 export const isDeloadWeek = (week: number) => week > 0 && (week + 1) % 6 === 0;
 
 export type PlannedExercise = { id: ExerciseId; name: string; muscle: string; cfg: SlotCfg };
-export type PlannedDay = { dow: number; tpl: TemplateId | null; name: string; tag: string; emoji: string; icon: string; exercises: PlannedExercise[]; cardio?: string; mins?: number };
+export type PlannedDay = { dow: number; tpl: TemplateId | null; name: string; tag: string; icon: string; exercises: PlannedExercise[]; cardio?: string; mins?: number };
 
 /** Rutina de un día: las variantes rotan cada semana, así nada se repite. */
 export type PlanOpts = { equipment?: Equipment; level?: Level; minutes?: number };
@@ -127,7 +127,7 @@ export function personalize(exs: PlannedExercise[], level: Level = "intermedio",
 export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay {
   const o: PlanOpts = typeof opts === "string" ? { equipment: opts } : opts;
   const tplId = schedule[dow];
-  if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", emoji: "🌴", icon: "palm", exercises: [], cardio: "Camina 8-12k pasos y estira 10 min" };
+  if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", icon: "palm", exercises: [], cardio: "Camina 8-12k pasos y estira 10 min" };
   const t = TPL[tplId];
   const raw = t.ex.map((cfg) => {
     const base = (cfg.id ?? SLOTS[cfg.slot!][week % SLOTS[cfg.slot!].length]) as ExerciseId;
@@ -138,7 +138,7 @@ export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts
   const seen = new Set<string>();
   const exercises = personalize(raw.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))), o.level, o.minutes);
   const mins = estimateMinutes(exercises) + (t.cardio ? 10 : 0);
-  return { dow, tpl: tplId, name: t.n, tag: t.tag, emoji: t.emoji, icon: t.icon, exercises, cardio: t.cardio, mins };
+  return { dow, tpl: tplId, name: t.n, tag: t.tag, icon: t.icon, exercises, cardio: t.cardio, mins };
 }
 
 /** Entreno exprés de 10/20/30 min sin equipo: series por tiempo, descansos cortos, cuerpo completo. */
@@ -155,7 +155,7 @@ export function expressDay(minutes: number, seed = 0): PlannedDay {
   const work = 40, rest = 20;
   const sets = Math.max(2, Math.floor(((m - 2) * 60) / (nEx * (work + rest))));
   const exercises = picked.map((id) => ({ id, name: EX[id].n, muscle: EX[id].m, cfg: { id, sets, lo: work - 10, hi: work, rest, unit: "s" as const } }));
-  return { dow: -1, tpl: null, name: `Exprés ${m} min`, tag: "Sin equipo", emoji: "⚡", icon: "bolt", exercises, mins: m, cardio: undefined };
+  return { dow: -1, tpl: null, name: `Exprés ${m} min`, tag: "Sin equipo", icon: "bolt", exercises, mins: m, cardio: undefined };
 }
 
 export function planWeek(week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay[] {

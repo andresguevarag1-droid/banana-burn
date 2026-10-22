@@ -1,7 +1,7 @@
 // Tipos y utilidades de comidas (seguros para el cliente).
 export type Slot = "desayuno" | "almuerzo" | "merienda" | "cena";
-export const SLOTS_MEAL: { id: Slot; n: string; e: string; icon: string }[] = [
-  { id: "desayuno", n: "Desayuno", e: "🍳", icon: "sunrise" }, { id: "almuerzo", n: "Almuerzo", e: "🍛", icon: "fork" }, { id: "merienda", n: "Merienda / pre-entreno", e: "🍌", icon: "banana" }, { id: "cena", n: "Cena", e: "🌙", icon: "moon" },
+export const SLOTS_MEAL: { id: Slot; n: string; icon: string }[] = [
+  { id: "desayuno", n: "Desayuno", icon: "sunrise" }, { id: "almuerzo", n: "Almuerzo", icon: "fork" }, { id: "merienda", n: "Merienda / pre-entreno", icon: "banana" }, { id: "cena", n: "Cena", icon: "moon" },
 ];
 export type MealItem = { id: string; slot: Slot; name: string; qty: number; kcal: number; protein: number; carbs: number; fat: number; foodId?: string | null };
 

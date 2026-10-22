@@ -1,14 +1,14 @@
 // Gamificación Banana Burn: XP, niveles, rachas y logros.
 
 export const LEVELS = [
-  { xp: 0, n: "Banana verde", e: "🍏", icon: "banana" },
-  { xp: 300, n: "Banana pintona", e: "🍌", icon: "banana" },
-  { xp: 800, n: "Banana madura", e: "🍌", icon: "peeled" },
-  { xp: 1600, n: "Plátano macho", e: "💪", icon: "bunch" },
-  { xp: 3000, n: "Mono fuerte", e: "🐒", icon: "monkey" },
-  { xp: 5000, n: "Gorila", e: "🦍", icon: "gorilla" },
-  { xp: 8000, n: "Rey de la selva", e: "👑", icon: "monkeyCrown" },
-  { xp: 12000, n: "King Kong", e: "🔥", icon: "monkeyCrown" },
+  { xp: 0, n: "Banana verde", icon: "banana" },
+  { xp: 300, n: "Banana pintona", icon: "banana" },
+  { xp: 800, n: "Banana madura", icon: "peeled" },
+  { xp: 1600, n: "Plátano macho", icon: "bunch" },
+  { xp: 3000, n: "Mono fuerte", icon: "monkey" },
+  { xp: 5000, n: "Gorila", icon: "gorilla" },
+  { xp: 8000, n: "Rey de la selva", icon: "monkeyCrown" },
+  { xp: 12000, n: "King Kong", icon: "monkeyCrown" },
 ];
 
 export function levelOf(xp: number) {
@@ -30,18 +30,18 @@ export function streakOf(activeDays: Set<string>, today: string) {
   return { days: n, todayDone: activeDays.has(today) };
 }
 
-export type Badge = { id: string; e: string; icon: string; n: string; d: string; got: boolean };
+export type Badge = { id: string; icon: string; n: string; d: string; got: boolean };
 
 export function badges(s: { workouts: number; streak: number; prs: number; weighIns: number; lostKg: number }): Badge[] {
   return [
-    { id: "first", e: "🥇", icon: "medal", n: "Primer entreno", d: "Completa tu primera sesión", got: s.workouts >= 1 },
-    { id: "w10", e: "🏋️", icon: "barbell", n: "10 entrenos", d: "La constancia gana", got: s.workouts >= 10 },
-    { id: "s7", e: "🔥", icon: "streak", n: "Racha de 7", d: "7 días seguidos activo", got: s.streak >= 7 },
-    { id: "s30", e: "🌋", icon: "streak", n: "Racha de 30", d: "Un mes sin fallar", got: s.streak >= 30 },
-    { id: "pr", e: "🏆", icon: "trophy", n: "Récord personal", d: "Supera tu mejor marca", got: s.prs >= 1 },
-    { id: "scale", e: "⚖️", icon: "scale", n: "Báscula fiel", d: "10 pesajes registrados", got: s.weighIns >= 10 },
-    { id: "kg2", e: "📉", icon: "trendDown", n: "−2 kg", d: "Primeros 2 kg fuera", got: s.lostKg >= 2 },
-    { id: "kg5", e: "🎯", icon: "target", n: "−5 kg", d: "Medio camino a la meta", got: s.lostKg >= 5 },
+    { id: "first", icon: "medal", n: "Primer entreno", d: "Completa tu primera sesión", got: s.workouts >= 1 },
+    { id: "w10", icon: "barbell", n: "10 entrenos", d: "La constancia gana", got: s.workouts >= 10 },
+    { id: "s7", icon: "streak", n: "Racha de 7", d: "7 días seguidos activo", got: s.streak >= 7 },
+    { id: "s30", icon: "streak", n: "Racha de 30", d: "Un mes sin fallar", got: s.streak >= 30 },
+    { id: "pr", icon: "trophy", n: "Récord personal", d: "Supera tu mejor marca", got: s.prs >= 1 },
+    { id: "scale", icon: "scale", n: "Báscula fiel", d: "10 pesajes registrados", got: s.weighIns >= 10 },
+    { id: "kg2", icon: "trendDown", n: "−2 kg", d: "Primeros 2 kg fuera", got: s.lostKg >= 2 },
+    { id: "kg5", icon: "target", n: "−5 kg", d: "Medio camino a la meta", got: s.lostKg >= 5 },
   ];
 }
 

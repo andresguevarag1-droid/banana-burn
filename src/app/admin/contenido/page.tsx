@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { OrangeSlice as Apple, BookOpen, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, Flag as Trophy } from "@/components/icons";
+import { OrangeSlice as Apple, BookOpen, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, Flag as Trophy, BrandIcon } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { getAnnouncements, getChallenges, getExercises, getFoods, PAGE_SIZE, type AnnouncementRow, type ChallengeRow, type FoodRow } from "@/lib/admin";
 import { can, type Capability } from "@/lib/admin-perms";
@@ -187,7 +187,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
                 <Td>
                   <details className="group">
                     <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
-                      <span className="font-semibold text-ink"><span aria-hidden>{r.e} </span>{r.t}</span>
+                      <span className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={r.icon} className="size-5 text-banana-ink" />{r.t}</span>
                       <span className="block text-xs text-muted underline underline-offset-2"><span className="group-open:hidden">ver ingredientes y pasos</span><span className="hidden group-open:inline">ocultar</span></span>
                     </summary>
                     <div className="mt-2 grid gap-3 sm:grid-cols-2 text-sm text-body max-w-2xl">
@@ -267,7 +267,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
             <thead className="border-b border-line"><tr><Th>Reto</Th><Th className="text-right">Días</Th><Th>Cómo se verifica</Th><Th>Tarea del día 1</Th><Th className="text-right">XP</Th></tr></thead>
             <tbody>{CHALLENGES.map((c) => (
               <tr key={c.id} className="border-b border-line last:border-0 align-top">
-                <Td><p className="font-semibold text-ink"><span aria-hidden>{c.emoji} </span>{c.title}</p><p className="text-xs text-muted max-w-md">{c.desc}</p></Td>
+                <Td><p className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={c.icon} className="size-5 text-banana-ink" />{c.title}</p><p className="text-xs text-muted max-w-md">{c.desc}</p></Td>
                 <Td className="text-right tabular-nums">{c.days}</Td><Td>{VERIFY[c.verify] ?? c.verify}</Td><Td className="text-muted">{c.task(1)}</Td><Td className="text-right tabular-nums">{fmtNum(c.xp)}</Td>
               </tr>))}</tbody>
           </Table>
