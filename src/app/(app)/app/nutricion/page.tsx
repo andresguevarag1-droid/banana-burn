@@ -43,6 +43,10 @@ export default async function Nutricion() {
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] items-start [&>*]:min-w-0">
         <FoodLog initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} />
         <aside className="space-y-3 lg:sticky lg:top-6">
+          <Link href="/app/nutricion/recetas" className="block rounded-[1.5rem] bg-banana p-4 hover:shadow-lift transition">
+            <p className="font-extrabold text-ink">🍛 Plan de comidas y recetas</p>
+            <p className="text-sm text-ink/70">Tu menú de hoy calculado a tus macros, con recetas ticas fáciles →</p>
+          </Link>
           <details className="card group" open>
             <summary className="cursor-pointer list-none p-4 flex items-center justify-between font-bold text-ink">💡 Ideas: un día tico de {IDEAS.reduce((a, m) => a + m.k, 0).toLocaleString("es-CR")} kcal<span className="text-xl transition-transform group-open:rotate-45">+</span></summary>
             <ul className="px-4 pb-4 space-y-2">

@@ -9,6 +9,9 @@ import { DayTracker } from "@/components/day-tracker";
 import { WeighIn } from "@/components/weigh-in";
 import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
+import { ChallengeCard } from "@/components/challenge-card";
+import { getMyChallenges } from "@/lib/challenges-server";
+import { toView } from "@/lib/challenge-view";
 
 export const metadata = { title: "Hoy" };
 
@@ -28,6 +31,7 @@ export default async function Hoy() {
   const d = dashboard(a);
   const [g, meals] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v)]);
   const eaten = sumMeals(meals.today);
+  const ch = await getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein });
   const { plan, t } = d;
   const training = !!plan.tpl;
   const dateLabel = d.today.date.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
@@ -129,6 +133,16 @@ export default async function Hoy() {
           <Link href="/app/nutricion" className="text-sm font-semibold text-muted">Registrar comida →</Link>
         </div>
         <DayTracker initial={g.log} base={{ kcal: eaten.kcal, protein: eaten.protein }} target={{ kcal: t.kcal, protein: t.protein, steps: t.steps, sleep: t.sleep, water: 8 }} dateKey={d.today.iso} demo={v.demo} />
+      </section>
+
+      {/* Retos */}
+      <section>
+        <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="text-sm font-semibold text-muted">{ch.active.length ? "Ver todos →" : "Explorar retos →"}</Link></div>
+        {ch.active.length ? (
+          <div className="grid gap-3 lg:grid-cols-2">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
+        ) : (
+          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="text-3xl">🏆</span><span className="flex-1"><span className="block font-extrabold text-ink">Únete a un reto de 30 días</span><span className="block text-sm text-muted">Flexiones, plancha, 10.000 pasos… y gana tu medalla.</span></span><ChevronRight className="size-5 text-faint" /></Link>
+        )}
       </section>
 
       {/* Coach */}
