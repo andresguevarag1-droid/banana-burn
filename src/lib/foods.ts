@@ -1,11 +1,16 @@
 // Base de alimentos de Latinoamérica (macros aproximados por porción típica, valores de referencia tipo USDA).
 // `cc`: países (ISO 2 letras) donde el plato es típico; sin `cc`, es común en toda la región.
-export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup; cc?: string[] };
+// Restaurantes: `cad` (cadena), `src` (dato oficial o aproximado) y `best` (opción ligera de esa cadena).
+export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup; cc?: string[]; cad?: string; src?: "oficial" | "aprox"; best?: boolean };
 // La clave "tica" se conserva por compatibilidad con datos guardados; en pantalla el grupo se llama "Típicos".
-export type FoodGroup = "tica" | "prot" | "carb" | "fruta" | "bebida" | "rapida" | "extra";
+// "rapida" se muestra como "Antojos" (comida rápida casera, postres, bebidas con alcohol...); "resto" = cadenas.
+export type FoodGroup = "tica" | "prot" | "carb" | "fruta" | "bebida" | "resto" | "rapida" | "extra";
 
-export const FOOD_GROUPS: [FoodGroup, string][] = [["tica", "Típicos"], ["prot", "Proteína"], ["carb", "Carbos"], ["fruta", "Frutas"], ["bebida", "Bebidas"], ["rapida", "Rápida"], ["extra", "Extras"]];
-export const FOOD_GROUP_ICON: Record<FoodGroup, string> = { tica: "bowl", prot: "meat", carb: "grains", fruta: "fruit", bebida: "coffee", rapida: "fastfood", extra: "avocado" };
+/** Grupos de la base editable (también los usa el panel). */
+export const FOOD_GROUPS: [Exclude<FoodGroup, "resto">, string][] = [["tica", "Típicos"], ["prot", "Proteína"], ["carb", "Carbos"], ["fruta", "Frutas"], ["bebida", "Bebidas"], ["rapida", "Antojos"], ["extra", "Extras"]];
+/** Pestañas del buscador de Nutrición: incluye Restaurantes (cadenas). */
+export const FOOD_TABS: [FoodGroup, string][] = [["tica", "Típicos"], ["resto", "Restaurantes"], ["rapida", "Antojos"], ["prot", "Proteína"], ["carb", "Carbos"], ["fruta", "Frutas"], ["bebida", "Bebidas"], ["extra", "Extras"]];
+export const FOOD_GROUP_ICON: Record<FoodGroup, string> = { tica: "bowl", prot: "meat", carb: "grains", fruta: "fruit", bebida: "coffee", resto: "fork", rapida: "fastfood", extra: "avocado" };
 
 export const FOODS: Food[] = [{"id":"pollo","n":"Pechuga de pollo","p":"150 g","k":248,"pr":46,"c":0,"f":5,"g":"prot"},
   {"id":"tilapia","n":"Tilapia o corvina","p":"180 g","k":230,"pr":46,"c":0,"f":5,"g":"prot"},

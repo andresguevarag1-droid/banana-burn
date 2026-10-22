@@ -56,7 +56,8 @@ export function DayTracker({ initial, base: base0, target, dateKey, demo }: { in
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       {items.map((it) => {
         const pct = it.val / it.goal;
-        const done = pct >= 1;
+        // Calorías: llegar a la meta no es un logro ni pasarse un fracaso; el anillo solo muestra cuánto va.
+        const done = it.f !== "kcal" && pct >= 1;
         return (
           <div key={it.f} className={`card p-3.5 ${it.f === "protein" ? "col-span-2 lg:col-span-1" : ""}`}>
             <div className="flex items-center gap-3">

@@ -61,3 +61,14 @@ export function workoutXp(o: { doneSets: number; totalSets: number; prs: number;
   const full = o.totalSets > 0 && done >= o.totalSets;
   return { xp: done * 10 + prs * 50 + (full ? 30 : 0), prs, rushed: false };
 }
+
+// ───────────── XP por registrar comida ─────────────
+/** Registrar cualquier comida (fit o no) suma XP: lo que cuenta es registrar. */
+export const MEAL_XP = 10;
+/** Registros con XP por día local; después se sigue registrando, pero sin XP (anti-farmeo). */
+export const MEAL_XP_DAILY_MAX = 5;
+
+/** XP que corresponde al siguiente registro de comida, según cuántos ya dieron XP hoy. */
+export function mealXpFor(alreadyToday: number) {
+  return Math.max(0, Math.floor(alreadyToday)) < MEAL_XP_DAILY_MAX ? MEAL_XP : 0;
+}
