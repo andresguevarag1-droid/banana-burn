@@ -5,6 +5,7 @@ import { FOODS, FOOD_GROUPS, type Food, type FoodGroup } from "@/lib/foods";
 import { SLOTS_MEAL, sumMeals, type MealItem, type Slot } from "@/lib/meals-shared";
 import { addMeal, copyMeals, removeMeal } from "@/app/actions/meals";
 import { Portal } from "@/components/portal";
+import { Sheet, SheetTitle } from "@/components/sheet";
 
 type Targets = { kcal: number; protein: number; carbs: number; fat: number };
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -136,23 +137,20 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
                 {its.map((i) => (
                   <li key={i.id} className="py-2.5 flex items-center gap-3 animate-rise">
                     <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-CR")}</span>}</p><p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal · {n0(i.protein)} g P</p></div>
-                    <button onClick={() => remove(i.id)} className="grid place-items-center size-8 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label={`Quitar ${i.name}`}><X className="size-4" /></button>
+                    <button onClick={() => remove(i.id)} className="tap pressable grid place-items-center size-8 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label={`Quitar ${i.name}`}><X className="size-4" /></button>
                   </li>
                 ))}
               </ul>
             )}
-            <button onClick={() => open(s.id)} className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-banana-ink hover:bg-cream"><Plus className="size-4" strokeWidth={3} />Agregar a {s.n.split(" ")[0].toLowerCase()}</button>
+            <button onClick={() => open(s.id)} className="pressable w-full flex items-center gap-2 px-4 py-3 min-h-11 text-sm font-bold text-banana-ink hover:bg-cream active:scale-100"><Plus className="size-4" strokeWidth={3} />Agregar a {s.n.split(" ")[0].toLowerCase()}</button>
           </section>
         );
       })}
 
       {/* Hoja para agregar */}
-      {sheet && (<Portal>
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-sm animate-[fade_.2s_both]" onClick={() => setSheet(null)}>
-          <div className="w-full sm:max-w-lg h-[85dvh] sm:h-[75vh] flex flex-col rounded-t-[2rem] sm:rounded-[2rem] bg-paper animate-[sheet_.3s_cubic-bezier(.2,.9,.3,1)_both]" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Agregar alimento">
-            <div className="p-4 pb-2">
-              <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
-              <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold text-ink">Agregar a {SLOTS_MEAL.find((s) => s.id === sheet)?.n.toLowerCase()}</h2><button onClick={() => setSheet(null)} className="grid place-items-center size-9 rounded-full bg-white border border-line" aria-label="Cerrar"><X className="size-4" /></button></div>
+      <Sheet open={!!sheet} onClose={() => setSheet(null)} className="h-[85dvh] sm:h-[75vh] flex flex-col">
+            <div className="px-4 pb-2">
+              <SheetTitle className="text-xl font-extrabold text-ink">Agregar a {SLOTS_MEAL.find((s) => s.id === sheet)?.n.toLowerCase()}</SheetTitle>
               <label className="mt-3 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 focus-within:border-ink">
                 <Search className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Busca: pinto, pollo, casado…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
               </label>
@@ -172,14 +170,14 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
                         <div className="flex justify-between gap-2"><p className="font-bold text-ink">{f.n}</p><p className="text-sm font-bold text-ink tabular-nums">{n0(f.k * qty)} kcal</p></div>
                         <p className="text-xs text-muted">{f.p} × {qty.toLocaleString("es-CR")} · {n0(f.pr * qty)} g proteína</p>
                         <div className="mt-3 flex gap-1.5">
-                          {QTY.map(([l, n]) => <button key={l} onClick={() => setQty(n)} className={`flex-1 h-10 rounded-xl text-sm font-bold ${qty === n ? "bg-banana text-ink" : "bg-cream text-muted"}`}>{l}</button>)}
-                          <button onClick={() => add(f, qty)} className="flex-[1.4] h-10 rounded-xl bg-ink text-white text-sm font-bold">Agregar</button>
+                          {QTY.map(([l, n]) => <button key={l} onClick={() => setQty(n)} className={`tap pressable flex-1 h-10 rounded-xl text-sm font-bold ${qty === n ? "bg-banana text-ink" : "bg-cream text-muted"}`}>{l}</button>)}
+                          <button onClick={() => add(f, qty)} className="tap pressable flex-[1.4] h-10 rounded-xl bg-ink text-white text-sm font-bold hover:bg-black">Agregar</button>
                         </div>
                       </div>
                     ) : (
                       <button onClick={() => { setPick(f); setQty(1); }} className="w-full flex items-center gap-3 rounded-2xl bg-white border border-line p-3 text-left hover:border-ink transition">
                         <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{f.n}</p><p className="text-xs text-muted">{f.p} · {f.k} kcal · {f.pr} g P</p></div>
-                        <span onClick={(e) => { e.stopPropagation(); add(f, 1); }} role="button" aria-label={`Agregar ${f.n}`} className="grid place-items-center size-9 rounded-full bg-banana text-ink"><Plus className="size-4" strokeWidth={3} /></span>
+                        <span onClick={(e) => { e.stopPropagation(); add(f, 1); }} role="button" aria-label={`Agregar ${f.n}`} className="tap pressable grid place-items-center size-9 rounded-full bg-banana text-ink hover:brightness-95"><Plus className="size-4" strokeWidth={3} /></span>
                       </button>
                     )}
                   </li>
@@ -193,13 +191,11 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo }: { initia
                   <button className="btn-primary w-full h-11">Agregar</button>
                 </form>
               ) : (
-                <button onClick={() => setCustom(true)} className="mt-3 w-full h-11 rounded-2xl border border-dashed border-line text-sm font-bold text-muted">+ Alimento personalizado</button>
+                <button onClick={() => setCustom(true)} className="pressable mt-3 w-full h-11 rounded-2xl border border-dashed border-line text-sm font-bold text-muted hover:border-ink/40 hover:text-ink">+ Alimento personalizado</button>
               )}
               <p className="mt-3 text-center text-[11px] text-faint">Valores aproximados por porción típica.</p>
             </div>
-          </div>
-        </div>
-      </Portal>)}
+      </Sheet>
       {toast && <Portal><div role="status" className="fixed bottom-28 lg:bottom-8 inset-x-0 z-[90] flex justify-center px-4 animate-rise pointer-events-none"><p className="rounded-full bg-ink text-white font-bold px-5 py-3 shadow-lift">{toast}</p></div></Portal>}
     </div>
   );

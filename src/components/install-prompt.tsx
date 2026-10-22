@@ -31,8 +31,8 @@ export function InstallPrompt() {
           <p className="font-bold">Instala Banana Burn 🍌</p>
           <p className="text-white/70 text-xs">{ios ? <>Toca <Share className="inline size-3.5 -mt-0.5" /> y luego “Agregar a inicio”</> : "Ábrela como app, a pantalla completa."}</p>
         </div>
-        {!ios && evt && <button onClick={async () => { await evt.prompt(); close(); }} className="h-9 px-4 rounded-full bg-banana text-ink text-sm font-bold">Instalar</button>}
-        <button onClick={close} className="grid place-items-center size-8 rounded-full text-white/60" aria-label="Cerrar"><X className="size-4" /></button>
+        {!ios && evt && <button onClick={async () => { await evt.prompt(); close(); }} className="tap pressable h-9 px-4 rounded-full bg-banana text-ink text-sm font-bold">Instalar</button>}
+        <button onClick={close} className="tap pressable grid place-items-center size-8 rounded-full text-white/60 hover:text-white" aria-label="Cerrar"><X className="size-4" /></button>
       </div>
     </aside>
   );

@@ -41,12 +41,12 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
         {done ? (
           <span className="chip h-9 bg-peel text-white"><Check className="size-4" strokeWidth={3} />Hecho</span>
         ) : manual ? (
-          <button onClick={check} className="h-10 px-4 rounded-full bg-ink text-white text-sm font-bold active:scale-95 transition">Hecho ✓</button>
+          <button onClick={check} className="tap pressable h-10 px-4 rounded-full bg-ink text-white text-sm font-bold hover:bg-black">Hecho ✓</button>
         ) : (
           <span className="text-[11px] font-semibold text-muted max-w-28 text-right">{v.hint}</span>
         )}
       </div>
-      {compact && <button onClick={() => setShowCal((s) => !s)} className="mt-2 text-xs font-bold text-ink/75" aria-expanded={showCal}>{showCal ? "Ocultar calendario" : "Ver calendario"}</button>}
+      {compact && <button onClick={() => setShowCal((s) => !s)} className="tap mt-2 text-xs font-bold text-ink/75 hover:text-ink" aria-expanded={showCal}>{showCal ? "Ocultar calendario" : "Ver calendario"}</button>}
       {showCal && (
         <ol className="mt-3 grid grid-cols-10 gap-1" aria-label="Calendario del reto">
           {cells.map((c) => (
@@ -58,9 +58,9 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
       )}
       {!compact && (leaving ? (
         <div className="mt-3 flex items-center gap-2 text-xs"><span className="font-semibold text-ink">¿Seguro? Pierdes tu progreso.</span>
-          <button onClick={() => start(async () => { await leaveChallenge(v.ucId); location.reload(); })} className="font-bold text-bad underline">Sí, abandonar</button>
-          <button onClick={() => setLeaving(false)} className="font-bold text-ink underline">No</button></div>
-      ) : <button onClick={() => setLeaving(true)} className="mt-3 text-xs font-semibold text-muted underline">Abandonar reto</button>)}
+          <button onClick={() => start(async () => { await leaveChallenge(v.ucId); location.reload(); })} className="tap px-1 font-bold text-bad underline">Sí, abandonar</button>
+          <button onClick={() => setLeaving(false)} className="tap px-2 font-bold text-ink underline">No</button></div>
+      ) : <button onClick={() => setLeaving(true)} className="tap mt-3 text-xs font-semibold text-muted underline hover:text-ink">Abandonar reto</button>)}
     </div>
   );
 }

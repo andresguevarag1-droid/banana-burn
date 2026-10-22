@@ -47,7 +47,7 @@ export default async function Perfil() {
       </section>
 
       <section id="glp1" className="card p-5 scroll-mt-6">
-        <div className="flex items-baseline justify-between mb-4"><h2 className="font-extrabold text-ink">🛡️ Banana Shield · GLP-1</h2><Link href="/app/glp1" className="text-sm font-bold text-banana-ink">Ver guía →</Link></div>
+        <div className="flex items-baseline justify-between mb-4"><h2 className="font-extrabold text-ink">🛡️ Banana Shield · GLP-1</h2><Link href="/app/glp1" className="tap text-sm font-bold text-banana-ink hover:text-ink">Ver guía →</Link></div>
         <Glp1Settings on={a.glp1.on} med={a.glp1.med} dow={a.glp1.injectionDow} />
       </section>
 
@@ -61,7 +61,7 @@ export default async function Perfil() {
       <section className="card p-5">
         <h2 className="font-extrabold text-ink">🎯 Meta</h2>
         <p className="mt-1 text-muted">{a.startWeight} kg → <b className="text-ink">{a.goalWeight} kg</b> el {new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric" })}</p>
-        <Link href="/app/progreso#meta" className="mt-3 inline-flex text-sm font-bold text-banana-ink">Editar meta y datos →</Link>
+        <Link href="/app/progreso#meta" className="tap mt-3 inline-flex text-sm font-bold text-banana-ink hover:text-ink">Editar meta y datos →</Link>
       </section>
 
       <section className="card p-5">

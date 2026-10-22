@@ -19,7 +19,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
   const alts = similar(e, a.equipment);
   return (
     <article className="space-y-5 animate-rise max-w-3xl">
-      <Link href="/app/ejercicios" className="text-sm font-semibold text-muted">← Biblioteca</Link>
+      <Link href="/app/ejercicios" className="tap text-sm font-semibold text-muted hover:text-ink">← Biblioteca</Link>
       <header>
         <p className="eyebrow">{es(BODY, e.bp)} · {es(EQUIP, e.eq)}</p>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">{e.n}</h1>

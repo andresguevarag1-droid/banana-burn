@@ -131,7 +131,7 @@ export function Photos({ photos, userId, demo }: { photos: Photo[]; userId: stri
             <li key={p.id} className="relative aspect-[3/4] overflow-hidden rounded-xl bg-cream">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {p.url && <img src={p.url} alt={`${p.pose}, ${p.d}`} className="size-full object-cover" />}
-              <button onClick={async () => { await deletePhoto(p.id); router.refresh(); }} className="absolute top-1 right-1 grid place-items-center size-7 rounded-full bg-ink/60 text-white" aria-label={`Borrar foto del ${p.d}`}><Trash2 className="size-3.5" /></button>
+              <button onClick={async () => { await deletePhoto(p.id); router.refresh(); }} className="tap pressable absolute top-1 right-1 grid place-items-center size-7 rounded-full bg-ink/60 text-white hover:bg-ink/80" aria-label={`Borrar foto del ${p.d}`}><Trash2 className="size-3.5" /></button>
             </li>
           ))}
         </ul>

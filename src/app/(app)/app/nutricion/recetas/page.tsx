@@ -43,7 +43,7 @@ export default async function Recetas() {
   return (
     <div className="space-y-6 animate-rise">
       <header>
-        <Link href="/app/nutricion" className="text-sm font-semibold text-muted">← Nutrición</Link>
+        <Link href="/app/nutricion" className="tap text-sm font-semibold text-muted hover:text-ink">← Nutrición</Link>
         <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Recetas ticas fit 🍛</h1>
         <p className="mt-1 text-muted">Fáciles, con lo que hay en cualquier súper de Costa Rica. Macros aproximados.</p>
       </header>

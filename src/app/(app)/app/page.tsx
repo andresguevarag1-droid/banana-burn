@@ -52,11 +52,11 @@ export default async function Hoy() {
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <NotificationBell className="lg:hidden" />
-          <Link href="/app/progreso#logros" className="flex flex-col items-center rounded-2xl bg-white border border-line px-3 py-1.5" aria-label={`Racha de ${g.streak.days} días`}>
+          <Link href="/app/progreso#logros" className="pressable flex flex-col items-center rounded-2xl bg-white border border-line px-3 py-1.5 hover:border-ink/25" aria-label={`Racha de ${g.streak.days} días`}>
             <span className={`text-2xl leading-none ${g.streak.todayDone ? "" : "grayscale-[.6] opacity-80"}`}>🔥</span>
             <span className="text-sm font-extrabold text-ink tabular-nums">{g.streak.days}</span>
           </Link>
-          <Link href="/app/perfil" className="lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
+          <Link href="/app/perfil" className="pressable lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink hover:brightness-95" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
         </div>
       </header>
 
@@ -122,7 +122,7 @@ export default async function Hoy() {
         <section className="card p-5 flex flex-col">
           <div className="flex items-baseline justify-between">
             <p className="font-bold text-ink">⚖️ {g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?"}</p>
-            <Link href="/app/progreso" className="text-xs font-semibold text-muted">Ver curva →</Link>
+            <Link href="/app/progreso" className="tap text-xs font-semibold text-muted hover:text-ink">Ver curva →</Link>
           </div>
           <p className="text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
           <div className="mt-3"><WeighIn last={a.currentWeight} /></div>
@@ -140,14 +140,14 @@ export default async function Hoy() {
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="text-lg font-extrabold text-ink">Tu día</h3>
-          <Link href="/app/nutricion" className="text-sm font-semibold text-muted">Registrar comida →</Link>
+          <Link href="/app/nutricion" className="tap text-sm font-semibold text-muted hover:text-ink">Registrar comida →</Link>
         </div>
         <DayTracker initial={g.log} base={{ kcal: eaten.kcal, protein: eaten.protein }} target={{ kcal: t.kcal, protein: t.protein, steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
       </section>
 
       {/* Retos */}
       <section>
-        <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="text-sm font-semibold text-muted">{ch.active.length ? "Ver todos →" : "Explorar retos →"}</Link></div>
+        <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Ver todos →" : "Explorar retos →"}</Link></div>
         {ch.active.length ? (
           <div className="grid gap-3 lg:grid-cols-2">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
         ) : (

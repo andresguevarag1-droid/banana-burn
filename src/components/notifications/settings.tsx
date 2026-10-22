@@ -95,7 +95,7 @@ function Form({ data }: { data: Initial }) {
 
       <p className="text-xs text-muted">
         Zona horaria: <b className="text-ink">{p.timezone.replace(/_/g, " ")}</b>
-        {browserTz && browserTz !== p.timezone && <> · <button type="button" onClick={() => set("timezone", browserTz)} className="font-bold text-banana-ink underline">Usar {browserTz.replace(/_/g, " ")}</button></>}
+        {browserTz && browserTz !== p.timezone && <> · <button type="button" onClick={() => set("timezone", browserTz)} className="tap font-bold text-banana-ink underline">Usar {browserTz.replace(/_/g, " ")}</button></>}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

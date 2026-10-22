@@ -60,7 +60,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-5 animate-rise max-w-2xl">
-      <Link href="/app/perfil" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden />Perfil</Link>
+      <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft className="size-4" aria-hidden />Perfil</Link>
       <header>
         <p className="eyebrow">Suscripción</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
