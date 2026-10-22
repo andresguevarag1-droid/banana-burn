@@ -12,6 +12,7 @@ import { ExpressChips } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
 import { EnablePush } from "@/components/notifications/enable-push";
 import { AnnouncementBanner } from "@/components/admin/announcement-banner";
+import { Glp1Card } from "@/components/glp1-card";
 import { ChallengeCard } from "@/components/challenge-card";
 import { getMyChallenges } from "@/lib/challenges-server";
 import { toView } from "@/lib/challenge-view";
@@ -107,7 +108,7 @@ export default async function Hoy() {
               {g.trainedToday ? (
                 <p className="relative mt-5 font-extrabold text-peel">✅ ¡Entreno de hoy completado! Descansa y come bien.</p>
               ) : (
-                <div className="relative mt-5"><Readiness initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
+                <div className="relative mt-5"><Readiness suggestSoft={d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post"} initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
               )}
             </>
           ) : (
@@ -133,13 +134,15 @@ export default async function Hoy() {
         </section>
       </div>
 
+      {d.glp1 && <Glp1Card g={d.glp1} nausea0={g.log.nausea ?? 0} demo={v.demo} />}
+
       {/* Tu día */}
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="text-lg font-extrabold text-ink">Tu día</h3>
           <Link href="/app/nutricion" className="text-sm font-semibold text-muted">Registrar comida →</Link>
         </div>
-        <DayTracker initial={g.log} base={{ kcal: eaten.kcal, protein: eaten.protein }} target={{ kcal: t.kcal, protein: t.protein, steps: t.steps, sleep: t.sleep, water: 8 }} dateKey={d.today.iso} demo={v.demo} />
+        <DayTracker initial={g.log} base={{ kcal: eaten.kcal, protein: eaten.protein }} target={{ kcal: t.kcal, protein: t.protein, steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
       </section>
 
       {/* Retos */}

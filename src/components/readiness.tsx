@@ -11,7 +11,7 @@ const OPTS = [
 ];
 
 /** Check-in de energía (estilo "readiness") que ajusta el entreno de hoy. */
-export function Readiness({ initial, dateKey, demo, mins }: { initial: number; dateKey: string; demo: boolean; mins: number }) {
+export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean }) {
   const key = `bb.ready.${dateKey}`;
   const [v, setV] = useState(initial);
   const [, start] = useTransition();
@@ -24,7 +24,8 @@ export function Readiness({ initial, dateKey, demo, mins }: { initial: number; d
   const sel = OPTS.find((o) => o.v === v);
   return (
     <div className="relative">
-      <p className="text-sm font-bold text-ink/70">¿Cómo te sientes hoy?</p>
+      <p className="text-sm font-bold text-ink/75">¿Cómo te sientes hoy?</p>
+      {suggestSoft && !v && <p className="mt-1 text-xs font-semibold text-ink/75">💉 Cerca de tu inyección: si hay náusea o poca energía, elige “Cansado” para el modo suave.</p>}
       <div className="mt-2 grid grid-cols-3 gap-2">
         {OPTS.map((o) => (
           <button key={o.v} onClick={() => pick(o.v)} className={`h-14 rounded-2xl font-bold text-sm transition active:scale-95 ${v === o.v ? "bg-ink text-white shadow-lift" : "bg-white/70 text-ink"}`} aria-pressed={v === o.v}>

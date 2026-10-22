@@ -3,6 +3,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Minus, Plus } from "lucide-react";
 import { ageOn, DAY_NAMES, planWeek, scheduleFor, targets } from "@/lib/engine";
+import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
 import { completeOnboarding, type Onboard } from "./actions";
@@ -43,7 +44,7 @@ function Choice({ on, onClick, e, t, d }: { on: boolean; onClick: () => void; e:
 export function Wizard({ name: initialName, demo }: { name: string; demo: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false }));
+  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: "grasa", sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1 }));
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -54,7 +55,12 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
   });
 
   const age = ageOn(o.dob);
-  const t = useMemo(() => targets({ kg: o.weight, heightCm: o.heightCm, age, sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : "recomp" }), [o, age]);
+  const t = useMemo(() => {
+    const base = targets({ kg: o.weight, heightCm: o.heightCm, age, sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : "recomp" });
+    if (!o.glp1) return base;
+    const g = glp1Targets({ kg: o.weight, goalKg: o.goalWeight, heightCm: o.heightCm, age, sex: o.sex });
+    return { ...base, kcal: g.kcal, protein: g.protein };
+  }, [o, age]);
   const sug = suggestDate(o.weight, o.goalWeight);
   const weeksTo = Math.max(1, (new Date(o.goalDate + "T12:00:00").getTime() - Date.now()) / (7 * 864e5));
   const pace = (o.weight - o.goalWeight) / weeksTo;
@@ -115,6 +121,22 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
               <Choice on={o.goal === "grasa"} onClick={() => up({ goal: "grasa" })} e="🔥" t="Bajar grasa rápido" d="Déficit de 500 kcal · resultados visibles en 4 semanas" />
               <Choice on={o.goal === "recomp"} onClick={() => up({ goal: "recomp" })} e="⚖️" t="Recomposición" d="Bajar grasa y ganar músculo a la vez · déficit suave" />
               <Choice on={o.goal === "fuerza"} onClick={() => up({ goal: "fuerza" })} e="💪" t="Ganar fuerza" d="Más kilos en la barra sin subir grasa" />
+            </div>
+            <div className={`rounded-3xl border-2 p-4 ${o.glp1 ? "border-ink bg-white" : "border-dashed border-line"}`}>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={o.glp1} onChange={(e) => up({ glp1: e.target.checked })} className="size-5 accent-ink" />
+                <span><span className="block font-extrabold text-ink">💉 Estoy en tratamiento con GLP-1</span><span className="block text-sm text-muted">Ozempic, Wegovy, Mounjaro, Zepbound, Saxenda… recetado por tu médico</span></span>
+              </label>
+              {o.glp1 && (
+                <div className="mt-4 space-y-3 animate-rise">
+                  <p className="text-sm text-body">Activamos <b>Banana Shield</b>: más proteína, fuerza como prioridad y modo suave en días de náusea, para que pierdas grasa y no músculo.</p>
+                  <label className="block"><span className="text-sm font-bold text-ink">Medicamento</span>
+                    <select value={o.glp1Med} onChange={(e) => up({ glp1Med: e.target.value as Onboard["glp1Med"] })} className="input h-12 mt-1">{MEDS.map((m) => <option key={m.id} value={m.id}>{m.n} ({m.ex})</option>)}</select></label>
+                  <label className="block"><span className="text-sm font-bold text-ink">Día de inyección</span>
+                    <select value={o.glp1Dow ?? -1} onChange={(e) => up({ glp1Dow: Number(e.target.value) < 0 ? null : Number(e.target.value) })} className="input h-12 mt-1">
+                      <option value={-1}>No es semanal (diario u oral)</option>{[1, 2, 3, 4, 5, 6, 0].map((d) => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}</select></label>
+                </div>
+              )}
             </div>
           </>)}
 

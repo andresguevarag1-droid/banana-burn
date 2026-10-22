@@ -10,6 +10,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="hidden md:flex items-center gap-8 text-[15px] font-medium text-muted">
             <Link href="/#metodo" className="hover:text-ink">Método</Link>
             <Link href="/#app" className="hover:text-ink">La app</Link>
+            <Link href="/glp1" className="hover:text-ink">GLP-1 🛡️</Link>
             <Link href="/precios" className="hover:text-ink">Precios</Link>
             <Link href="/#faq" className="hover:text-ink">Preguntas</Link>
           </div>

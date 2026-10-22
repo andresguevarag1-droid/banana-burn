@@ -12,6 +12,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
   const router = useRouter();
   const isSignup = params.get("modo") === "registro";
   const next = params.get("next") || "/app";
+  if (typeof document !== "undefined" && params.get("programa") === "glp1") document.cookie = "bb_programa=glp1; path=/; max-age=86400; samesite=lax";
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");

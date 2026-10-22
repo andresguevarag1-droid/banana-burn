@@ -2,7 +2,7 @@ import { createClient, type Viewer } from "@/lib/supabase/server";
 import { crToday } from "@/lib/today";
 import { badges, levelOf, streakOf } from "@/lib/gamify";
 
-export type DailyLog = { water: number; steps: number; sleep: number; protein: number; kcal: number; energy?: number };
+export type DailyLog = { water: number; steps: number; sleep: number; protein: number; kcal: number; energy?: number; nausea?: number; fiber?: number };
 export const EMPTY: DailyLog = { water: 0, steps: 0, sleep: 0, protein: 0, kcal: 0 };
 
 const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -23,7 +23,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
   const sb = await createClient();
   const since = addDays(today, -90);
   const [{ data: log }, { data: wk }, { data: dl }, { data: ws }, { data: xpRows }, { count: prs }] = await Promise.all([
-    sb.from("daily_logs").select("water_glasses,steps,sleep_h,protein_g,kcal,energy").eq("user_id", v.id).eq("day", today).maybeSingle(),
+    sb.from("daily_logs").select("water_glasses,steps,sleep_h,protein_g,kcal,energy,nausea,fiber_g").eq("user_id", v.id).eq("day", today).maybeSingle(),
     sb.from("workouts").select("day").eq("user_id", v.id).gte("day", since),
     sb.from("daily_logs").select("day").eq("user_id", v.id).gte("day", since),
     sb.from("weights").select("day").eq("user_id", v.id),
@@ -35,7 +35,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
   const streak = streakOf(active, today);
   const workoutsTotal = (await sb.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", v.id)).count ?? 0;
   return {
-    log: { water: log?.water_glasses ?? 0, steps: log?.steps ?? 0, sleep: Number(log?.sleep_h ?? 0), protein: log?.protein_g ?? 0, kcal: log?.kcal ?? 0, energy: log?.energy ?? 0 },
+    log: { water: log?.water_glasses ?? 0, steps: log?.steps ?? 0, sleep: Number(log?.sleep_h ?? 0), protein: log?.protein_g ?? 0, kcal: log?.kcal ?? 0, energy: log?.energy ?? 0, nausea: log?.nausea ?? 0, fiber: log?.fiber_g ?? 0 },
     xp, level: levelOf(xp), streak, workoutsTotal,
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),

@@ -11,7 +11,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
   {
     id: "completo", name: "Entreno + Nutrición", tagline: "El plan completo para bajar de peso", nutrition: true,
     price: { mes: 14.99, anual: 89.99 },
-    feats: ["Todo lo de Entreno", "Calorías y macros calculados para ti", "Registro de comidas con alimentos ticos", "Ajuste semanal según tu peso real", "Coach IA también para tu comida", "Ideas de menú tico día a día"],
+    feats: ["Todo lo de Entreno", "🛡️ Banana Shield para personas en GLP-1", "Calorías y macros calculados para ti", "Registro de comidas con alimentos ticos", "Ajuste semanal según tu peso real", "Coach IA también para tu comida", "Ideas de menú tico día a día"],
   },
 ];
 

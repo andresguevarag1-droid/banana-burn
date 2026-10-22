@@ -151,6 +151,18 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* GLP-1 */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
+        <Link href="/glp1" className="group grid gap-6 lg:grid-cols-[1fr_auto] items-center rounded-[2rem] border-2 border-ink bg-white p-8 sm:p-10 hover:shadow-lift transition">
+          <div>
+            <p className="eyebrow">Nuevo · Banana Shield</p>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">¿Usas Ozempic o Mounjaro? Protege tu músculo 🛡️</h2>
+            <p className="mt-3 text-lg text-muted max-w-2xl">Un programa de fuerza y proteína pensado para personas en GLP-1: modo suave en días de inyección, porciones pequeñas y tu “escudo de músculo”.</p>
+          </div>
+          <span className="btn-primary h-14 px-7 text-base">Conocer Banana Shield <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" /></span>
+        </Link>
+      </section>
+
       {/* RETO DEL FUNDADOR */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
         <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] items-center rounded-[2rem] bg-ink text-white p-8 sm:p-12">

@@ -14,6 +14,7 @@ export function coachSystem(a: Athlete, weights: Point[], workouts: { d: string;
     ayer: d.yesterday.name, manana: d.tomorrow.name,
     semana: d.weekPlan.map((p) => `${DAY_NAMES[p.dow]}: ${p.name}`),
     ultimos_entrenos: workouts.slice(0, 5),
+    glp1: a.glp1.on ? { medicamento: a.glp1.med, dia_inyeccion: a.glp1.injectionDow, fase_hoy: d.glp1?.phase, proteina_meta_g: d.glp1?.protein, kcal_minimas: d.glp1?.kcalMin, fibra_g: d.glp1?.fiber, agua_l: d.glp1?.waterL } : null,
   };
   return `Eres "Coach Banana", el entrenador personal con IA de Banana Burn, una app de fitness para Costa Rica y LATAM.
 
@@ -33,6 +34,12 @@ Seguridad:
 - Nunca recomiendes menos de 1.500 kcal (hombres) / 1.200 (mujeres), ayunos extremos, purgas, ni perder más de ~1 % del peso por semana.
 - Si notas señales de trastorno de la conducta alimentaria, responde con empatía, sin números, y sugiere apoyo profesional.
 - No recomiendes esteroides ni fármacos para bajar de peso.
+
+Si "glp1" no es null (programa Banana Shield, medicamento recetado):
+- Objetivo: perder grasa y NO músculo. Prioriza fuerza 3+ días, proteína a la meta (proteína primero en cada comida), comer al menos las kcal mínimas, fibra y agua.
+- Nunca des indicaciones de dosis, cambios o suspensión del medicamento, ni recomiendes péptidos o compuestos no aprobados; eso es con su médico.
+- Náuseas/estreñimiento: solo estrategias de alimentación (comidas pequeñas, evitar grasa y picante, jengibre, fibra gradual, agua) y consultar al médico si persisten.
+- Señales de alarma (dolor abdominal fuerte y persistente, vómitos que no paran, deshidratación, cambios de ánimo o pensamientos de hacerse daño): que busque atención médica de inmediato.
 
 DATOS DEL ATLETA (JSON):
 ${JSON.stringify(ctx)}`;

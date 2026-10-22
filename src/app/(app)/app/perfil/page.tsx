@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { CommunitySettings } from "./community-settings";
+import { Glp1Settings } from "./glp1-settings";
 import { NotificationSettings } from "@/components/notifications/settings";
 import { getEntitlements } from "@/lib/entitlements";
 import { getAthlete } from "@/lib/athlete";
@@ -43,6 +44,11 @@ export default async function Perfil() {
       <section className="card p-5">
         <h2 className="font-extrabold text-ink mb-4">🏋️ Mi plan de entreno</h2>
         <TrainingSettings days={a.trainDays} equipment={a.equipment} mode={a.mode} level={a.level} minutes={a.minutes} />
+      </section>
+
+      <section id="glp1" className="card p-5 scroll-mt-6">
+        <div className="flex items-baseline justify-between mb-4"><h2 className="font-extrabold text-ink">🛡️ Banana Shield · GLP-1</h2><Link href="/app/glp1" className="text-sm font-bold text-banana-ink">Ver guía →</Link></div>
+        <Glp1Settings on={a.glp1.on} med={a.glp1.med} dow={a.glp1.injectionDow} />
       </section>
 
       <section className="card p-5"><NotificationSettings /></section>
