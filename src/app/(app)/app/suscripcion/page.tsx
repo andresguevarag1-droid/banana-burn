@@ -14,7 +14,7 @@ const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString
 
 const STATUS: Record<Entitlements["status"], { label: string; cls: string }> = {
   demo: { label: "Demo", cls: "bg-ink text-white" },
-  none: { label: "Beta sin costo", cls: "bg-banana-soft text-banana-ink" },
+  none: { label: "Sin suscripción", cls: "bg-line text-muted" },
   incomplete: { label: "Pago pendiente", cls: "bg-banana-soft text-banana-ink" },
   active: { label: "Activa", cls: "bg-peel/10 text-peel" },
   trialing: { label: "Prueba", cls: "bg-sky/10 text-sky" },
@@ -55,8 +55,16 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   }
 
   const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
-  const st = STATUS[ent.status];
-  const price = plan && ent.billing ? plan.price[ent.billing] : null;
+  const fmtDay = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: v.tz }) : null);
+  // Chip de estado: la suscripción si existe; si no, de dónde sale el acceso.
+  const st = ent.fromSubscription || (ent.access === "none" && ent.status !== "none") ? STATUS[ent.status]
+    : ent.access === "trial" ? { label: "Prueba gratis", cls: "bg-sky/10 text-sky" }
+    : ent.access === "comp" ? { label: "Cortesía", cls: "bg-peel/10 text-peel" }
+    : ent.access === "staff" ? { label: "Equipo", cls: "bg-ink text-white" }
+    : ent.access === "manual" ? { label: "Asignado", cls: "bg-peel/10 text-peel" }
+    : ent.access === "demo" ? STATUS.demo
+    : { label: "Sin plan", cls: "bg-line text-muted" };
+  const price = plan && ent.fromSubscription && ent.billing ? plan.price[ent.billing] : null;
 
   return (
     <div className="space-y-5 animate-enter max-w-2xl">
@@ -66,13 +74,15 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       </header>
 
       {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}
-      {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos se activan muy pronto. Mientras tanto disfrutas la beta sin costo.</p>}
+      {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos todavía no están activos. Si necesitas activar tu plan, escríbenos a <a className="underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>.</p>}
+      {ent.trial && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Tu prueba gratis termina el {fmtDay(ent.trial.endsAt)}.</b> Tienes todo incluido hasta entonces, sin tarjeta. Elige tu plan para seguir sin interrupciones.</p>}
+      {ent.locked && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
       <section className="card p-5 sm:p-6" aria-labelledby="plan-actual">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-muted">Tu plan actual</p>
-            <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : "Beta sin costo"}</h2>
+            <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : ent.trial ? "Prueba gratis (todo incluido)" : "Sin plan"}</h2>
             {price !== null && <p className="text-muted"><b className="text-ink tabular-nums">{usd(price)}</b> {ent.billing === "anual" ? "/año" : "/mes"}</p>}
           </div>
           <span className={`chip shrink-0 ${st.cls}`}>{st.label}</span>
@@ -80,16 +90,17 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
           {ent.renewsAt && <Item k="Próxima renovación" v={fmtDate(ent.renewsAt)} />}
           {ent.endsAt && <Item k={ent.status === "past_due" ? "Acceso hasta (aprox.)" : ent.status === "canceling" ? "Acceso hasta" : "Terminó"} v={fmtDate(ent.endsAt)} />}
-          <Item k="Nutrición" v={ent.nutrition ? "Incluida" : "No incluida"} />
-          {ent.billing && <Item k="Periodo" v={ent.billing === "anual" ? "Anual" : "Mensual"} />}
+          <Item k="Nutrición y Banana Shield" v={ent.nutrition ? (ent.trial ? "Incluidas en la prueba" : "Incluidas") : "No incluidas"} />
+          {ent.fromSubscription && ent.billing && <Item k="Periodo" v={ent.billing === "anual" ? "Anual" : "Mensual"} />}
         </dl>
         {ent.status === "past_due" && <p role="alert" className="mt-4 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm text-bad font-semibold">No pudimos cobrar tu renovación. ONVO reintentará; revisa que tu tarjeta tenga fondos o elige un plan de nuevo para pagar con otro método.</p>}
         {ent.status === "canceling" && <p className="mt-4 text-sm text-muted">Cancelaste la renovación. Sigues con acceso completo hasta el {fmtDate(ent.endsAt)}; no habrá más cobros.</p>}
-        {!ent.fromSubscription && plan && !v.demo && <p className="mt-4 text-sm text-muted">Este plan fue asignado por el equipo de Banana Burn; no tiene cobros automáticos.</p>}
+        {ent.access === "comp" && <p className="mt-4 text-sm text-muted">Es un plan de cortesía{ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt)}` : ""}; no tiene cobros automáticos.</p>}
+        {(ent.access === "manual" || ent.access === "staff") && !v.demo && <p className="mt-4 text-sm text-muted">Este plan fue asignado por el equipo de Banana Burn; no tiene cobros automáticos.</p>}
       </section>
 
       <SubscriptionManager
-        current={{ plan: ent.plan, billing: ent.billing ?? null, status: ent.status, endsAt: ent.endsAt ?? ent.renewsAt ?? null, cancellable: ent.fromSubscription && (ent.status === "active" || ent.status === "past_due" || ent.status === "trialing") }}
+        current={{ plan: ent.plan, billing: ent.fromSubscription ? ent.billing ?? null : null, status: ent.status, endsAt: ent.endsAt ?? ent.renewsAt ?? null, renewsAt: ent.renewsAt ?? null, fromSubscription: ent.fromSubscription, cancellable: ent.fromSubscription && (ent.status === "active" || ent.status === "past_due" || ent.status === "trialing") }}
         intent={intent}
         payments={payments}
         demo={v.demo}

@@ -9,7 +9,7 @@ import { RECIPES } from "@/lib/recipes";
 import { CHALLENGES } from "@/lib/challenges";
 import { ActionForm, ConfirmAction, Submit } from "@/components/admin/action-form";
 import { AnnouncementCard } from "@/components/admin/announcement-banner";
-import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, MigrationNotice, Nil, PageHeader, Pagination, SectionHeading, SubTabs, Table, Td, Th, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, rowAction, rowActionDanger, textareaSm, tr, trHover } from "@/components/admin/ui";
+import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, MigrationNotice, Nil, Notice, PageHeader, Pagination, SectionHeading, SubTabs, Table, Td, Th, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, rowAction, rowActionDanger, textareaSm, tr, trHover } from "@/components/admin/ui";
 import { deleteAnnouncement, deleteChallenge, deleteFood, resetExercise, saveAnnouncement, saveChallenge, saveExercise, saveFood, seedFoods } from "../actions";
 
 export const metadata = { title: "Contenido" };
@@ -68,7 +68,8 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
       <section aria-labelledby="t-ej" className="space-y-4">
         <h2 id="t-ej" className="sr-only">Ejercicios</h2>
         {needsMigration && <MigrationNotice />}
-        <p className="max-w-prose text-sm text-muted text-pretty">Los {fmtNum(items.length)} ejercicios con los que el motor arma las rutinas. Lo que edites aquí lo lee la app desde la base de datos. Un ejercicio deshabilitado se reemplaza por su alternativa.</p>
+        <p className="max-w-prose text-sm text-muted text-pretty">Los {fmtNum(items.length)} ejercicios con los que el motor arma las rutinas.</p>
+        <Notice title="Se aplica en la próxima versión">Los cambios se guardan, pero el motor todavía arma las rutinas con su catálogo incluido. Cuando se conecte, un ejercicio deshabilitado se reemplazará por su alternativa.</Notice>
         <FilterBar label="Buscar ejercicios" search submitLabel="Buscar" filtered={!!q} clearHref="/admin/contenido?tab=ejercicios">
           <input type="hidden" name="tab" value="ejercicios" />
           <Field label="Buscar ejercicio" htmlFor="ej-q" className={fw.search}><input id="ej-q" name="q" type="search" defaultValue={q} className={inputSm} placeholder="Nombre, músculo o id" /></Field>
@@ -164,7 +165,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
     return (
       <section aria-labelledby="t-rec" className="space-y-4">
         <h2 id="t-rec" className="sr-only">Recetas</h2>
-        <p className="max-w-prose text-sm text-muted text-pretty">{fmtNum(RECIPES.length)} recetas ticas que la app usa para armar los menús. Macros por porción. Solo lectura.</p>
+        <p className="max-w-prose text-sm text-muted text-pretty">{fmtNum(RECIPES.length)} recetas que la app usa para armar los menús. Macros por porción. Solo lectura.</p>
         <FilterBar label="Buscar recetas" search filtered={filtered} clearHref="/admin/contenido?tab=recetas">
           <input type="hidden" name="tab" value="recetas" />
           <Field label="Buscar" htmlFor="rc-q" className={fw.search}><input id="rc-q" name="q" type="search" defaultValue={q} placeholder="Nombre, ingrediente o etiqueta" className={inputSm} /></Field>
@@ -207,9 +208,10 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
     return (
       <section aria-labelledby="t-al" className="space-y-4">
         <h2 id="t-al" className="sr-only">Alimentos</h2>
+        <Notice title="Se aplica en la próxima versión">El registro de comidas todavía usa la base de alimentos incluida en la app. Lo que edites aquí queda guardado para cuando se conecte.</Notice>
         {empty && (
           <div className={`${panel} flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center`}>
-            <p className="text-sm text-ink"><b>La tabla public.foods está vacía.</b> Puedes cargar la base local de alimentos ticos como punto de partida.</p>
+            <p className="text-sm text-ink"><b>Aún no hay alimentos guardados.</b> Puedes cargar la base de alimentos de la app como punto de partida.</p>
             <ActionForm action={seedFoods}><Submit pendingText="Cargando…">Cargar base inicial</Submit></ActionForm>
           </div>
         )}
@@ -251,7 +253,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
       <section aria-labelledby="t-re" className="space-y-4">
         <h2 id="t-re" className="sr-only">Retos</h2>
         <div className="space-y-2.5">
-          <SectionHeading id="re-base" title="Retos incluidos en la app" desc="Catálogo base que trae la app (solo lectura). Para cambiarlo, crea un reto editable abajo." />
+          <SectionHeading id="re-base" title="Retos incluidos en la app" desc="Catálogo base (solo lectura). Para reemplazar uno, crea un reto editable con el mismo identificador." />
           <Table caption="Retos incluidos en la app" captionHidden minWidth={720}>
             <thead className="border-b border-line"><tr><Th>Reto</Th><Th className="text-right">Días</Th><Th>Cómo se verifica</Th><Th>Tarea del día 1</Th><Th className="text-right">XP</Th></tr></thead>
             <tbody>{CHALLENGES.map((c) => (
@@ -261,7 +263,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
               </tr>))}</tbody>
           </Table>
         </div>
-        <div className="pt-3"><SectionHeading id="re-edit" title="Retos editables" /></div>
+        <div className="pt-3"><SectionHeading id="re-edit" title="Retos editables" desc="Los activos aparecen en la app de inmediato, junto a los incluidos. Los borradores no se muestran." /></div>
         {needsMigration && <MigrationNotice />}
         <div className={`${panel} divide-y divide-line`}>
         <details className="group p-4">
@@ -274,7 +276,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
               <span className="font-semibold text-ink">{c.title}</span><Badge tone={c.active ? "good" : "muted"}>{c.active ? "Activo" : "Borrador"}</Badge><MetaList items={[`${c.days} días`, <code key="s">{c.slug}</code>]} /></span><Chevron />
             </summary>
             <ChallengeForm c={c} />
-            <div className="mt-2 flex justify-end"><ConfirmAction action={deleteChallenge} danger trigger="Eliminar reto" title={`Eliminar “${c.title}”`} description="Los usuarios inscritos dejarán de verlo en el catálogo." hidden={{ id: c.id }} confirmLabel="Eliminar" /></div>
+            <div className="mt-2 flex justify-end"><ConfirmAction action={deleteChallenge} danger trigger="Eliminar reto" title={`Eliminar “${c.title}”`} description="Desaparece del catálogo y los usuarios inscritos dejan de verlo en sus retos en curso." hidden={{ id: c.id }} confirmLabel="Eliminar" /></div>
           </details>
         ))}
         {!rows.length && !needsMigration && <Empty boxed={false} title="Aún no hay retos editables">Crea uno con &quot;Nuevo reto&quot;.</Empty>}
@@ -349,7 +351,7 @@ function ChallengeForm({ c }: { c?: ChallengeRow }) {
       <Field label="Identificador (slug)" htmlFor={`ch-s-${k}`} hint="Vacío = se genera del título"><input id={`ch-s-${k}`} name="slug" maxLength={60} defaultValue={c?.slug} pattern="[a-z0-9\-]*" className={inputSm} /></Field>
       <Field label="Duración (días)" htmlFor={`ch-d-${k}`}><input id={`ch-d-${k}`} name="days" type="number" required min={1} max={365} defaultValue={c?.days ?? 21} className={inputSm} /></Field>
       <Field label="Descripción" htmlFor={`ch-de-${k}`} className="md:col-span-2"><textarea id={`ch-de-${k}`} name="description" rows={3} maxLength={600} defaultValue={c?.description ?? ""} className={textarea} /></Field>
-      <Field label="Reglas (JSON)" htmlFor={`ch-r-${k}`} className="md:col-span-2" hint='Objeto libre que interpreta la app, p. ej. {"minSesiones": 18, "comodines": 1}'>
+      <Field label="Reglas (JSON)" htmlFor={`ch-r-${k}`} className="md:col-span-2" hint='Claves que lee la app: verify (manual, workout, steps, protein o water), tarea, comodines, xp (máx. 400), pasosMin e icono. Ej.: {"verify": "workout", "comodines": 2}'>
         <textarea id={`ch-r-${k}`} name="rules" rows={3} defaultValue={c ? JSON.stringify(c.rules, null, 2) : "{}"} className={`${textarea} font-mono text-xs!`} spellCheck={false} />
       </Field>
       <Field label="Orden" htmlFor={`ch-o-${k}`}><input id={`ch-o-${k}`} name="sort" type="number" min={0} max={999} defaultValue={c?.sort ?? 0} className={inputSm} /></Field>

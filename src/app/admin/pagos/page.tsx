@@ -8,7 +8,7 @@ import { DemoNotice, Empty, Field, FilterBar, Kpi, MetaList, Nil, Notice, PageHe
 
 export const metadata = { title: "Pagos" };
 
-const PLAN_KEY: Record<string, string> = { "entreno·mes": "Entreno mensual", "entreno·anual": "Entreno anual", "completo·mes": "Entreno + Nutrición mensual", "completo·anual": "Entreno + Nutrición anual", "desconocido·mes": "Sin plan identificado", "desconocido·anual": "Sin plan identificado (anual)" };
+const PLAN_KEY: Record<string, string> = { "entreno:mes": "Entreno mensual", "entreno:anual": "Entreno anual", "completo:mes": "Entreno + Nutrición mensual", "completo:anual": "Entreno + Nutrición anual", "desconocido:mes": "Sin plan identificado", "desconocido:anual": "Sin plan identificado (anual)" };
 const ONVO_DASHBOARD = "https://dashboard.onvopay.com";
 
 export default async function Pagos({ searchParams }: { searchParams: Promise<SubFilterInput> }) {
@@ -86,7 +86,7 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
               const inner = (<>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center justify-between gap-3"><span className="truncate font-semibold text-ink">{x.name ?? "Usuario"}</span><span className="shrink-0 text-sm font-semibold text-ink tabular-nums">{x.status === "active" ? money(x.monthly) : null}</span></p>
-                  <p className="truncate text-xs text-muted">{x.planLabel.replace(/\s*·\s*/, ", ")}</p>
+                  <p className="truncate text-xs text-muted">{x.planLabel}</p>
                   <MetaList className="mt-1.5" items={[<SubStatus key="s" status={x.status} />, x.status === "trialing" ? `Prueba hasta ${fmtDate(x.current_period_end)}` : x.status === "canceled" || x.status === "cancelled" ? `Acceso hasta ${fmtDate(x.current_period_end)}` : `Renueva ${fmtDate(x.current_period_end)}`]} />
                 </div>
                 {x.user_id && <CaretRight className="size-4 shrink-0 text-faint" aria-hidden />}
@@ -113,8 +113,8 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
                     : fmtDate(x.current_period_end)}
                 </Td>
                 <Td className="text-right">{x.status === "active" ? money(x.monthly) : <Nil />}</Td>
-                <Td>
-                  <div className="-my-1 space-y-0.5">
+                <Td className="w-48 max-w-48">
+                  <div className="-my-1 flex flex-col items-start gap-0.5 min-w-0">
                     {x.provider_customer_id ? <CopyButton value={x.provider_customer_id} label="ID de cliente ONVO" /> : null}
                     {x.provider_subscription_id ? <CopyButton value={x.provider_subscription_id} label="ID de suscripción ONVO" /> : null}
                     {!x.provider_customer_id && !x.provider_subscription_id && <Nil />}

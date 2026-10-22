@@ -46,6 +46,11 @@ export async function POST(req: Request) {
   const urgent = safetyCheck(last.content, v.country);
   if (urgent) return new Response(textStream(fake(urgent)), { headers });
 
+  // Sin llave de Anthropic: con cuentas reales el coach aún no está listo (no se gasta cupo ni se responden frases de ejemplo);
+  // en modo demo se mantienen las respuestas de ejemplo.
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key && !v.demo) return new Response("El coach se está configurando. Vuelve en un rato.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Coach-State": "setup" } });
+
   // Cupo diario en el servidor: con Supabase, contador atómico que el usuario no puede editar (coach_consume, 0012);
   // en modo demo, límite en memoria por IP. Aplica también al camino sin llave de Anthropic.
   const sb = v.demo ? null : await createClient();
@@ -62,7 +67,6 @@ export async function POST(req: Request) {
     return new Response(textStream(fake(LIMIT_TEXT)), { headers });
   }
 
-  const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     const a0 = await getAthlete(v);
     return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? "", v.country))), { headers });

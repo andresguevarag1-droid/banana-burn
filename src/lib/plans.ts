@@ -11,7 +11,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
   {
     id: "completo", name: "Entreno + Nutrición", tagline: "El plan completo para bajar de peso", nutrition: true,
     price: { mes: 14.99, anual: 89.99 },
-    feats: ["Todo lo de Entreno", "Banana Shield para personas en GLP-1", "Calorías y macros calculados para ti", "Registro de comidas con alimentos ticos", "Ajuste semanal según tu peso real", "Coach IA también para tu comida", "Ideas de menú tico día a día"],
+    feats: ["Todo lo de Entreno", "Banana Shield para personas en GLP-1", "Calorías y macros calculados para ti", "Registro de comidas con alimentos latinos", "Ajuste semanal según tu peso real", "Coach IA también para tu comida", "Ideas de menú latino día a día"],
   },
 ];
 
@@ -20,7 +20,10 @@ export const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractio
 export const annualSavingPct = (p: (typeof PLANS)[number]) => Math.round((1 - p.price.anual / (p.price.mes * 12)) * 100);
 export const perMonthAnnual = (p: (typeof PLANS)[number]) => Math.round((p.price.anual / 12) * 100) / 100;
 
-/** ¿El plan del usuario incluye nutrición? (`pro`/`completo` sí; `entreno` no). Sin plan de pago aún = acceso libre en beta. */
+/** Días de prueba gratis con todo incluido, contados desde la creación de la cuenta (profiles.created_at). */
+export const TRIAL_DAYS = 7;
+
+/** ¿El plan incluye nutrición y Banana Shield? Solo `completo` (y el histórico `pro`). La prueba gratis se resuelve en entitlements.ts. */
 export function hasNutrition(plan: string | null | undefined) {
-  return plan !== "entreno";
+  return plan === "completo" || plan === "pro";
 }

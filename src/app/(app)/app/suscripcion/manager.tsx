@@ -7,7 +7,7 @@ import { INTENT_COOKIE, type CheckoutIntent } from "@/lib/checkout-intent";
 import { useCheckout } from "@/components/pagos/use-checkout";
 import type { Entitlements } from "@/lib/entitlements";
 
-type Current = { plan: PlanId | "free"; billing: Billing | null; status: Entitlements["status"]; endsAt: string | null; cancellable: boolean };
+type Current = { plan: PlanId | "free"; billing: Billing | null; status: Entitlements["status"]; endsAt: string | null; renewsAt?: string | null; fromSubscription?: boolean; cancellable: boolean };
 
 const planOf = (id: PlanId) => PLANS.find((p) => p.id === id)!;
 const label = (id: PlanId, b: Billing) => `${planOf(id).name}, ${b === "anual" ? "anual" : "mensual"}`;
@@ -16,7 +16,14 @@ const REASONS = ["Es muy caro para mí", "No lo estoy usando", "No veo resultado
 
 export function SubscriptionManager({ current, intent, payments, demo }: { current: Current; intent: CheckoutIntent | null; payments: boolean; demo: boolean }) {
   const checkout = useCheckout();
-  const isCurrent = (p: PlanId, b: Billing) => current.plan === p && current.billing === b && current.status !== "canceling";
+  // Un plan sin periodicidad (cortesía, equipo o asignado a mano) cuenta como "actual" en mensual y anual.
+  const isCurrent = (p: PlanId, b: Billing) => current.plan === p && (current.billing === b || current.billing === null) && current.status !== "canceling";
+  // Cambiar desde un plan anual pagado: no hay prorrateo. Lo explicamos ANTES de mandar a pagar.
+  const [confirm, setConfirm] = useState<{ plan: PlanId; billing: Billing } | null>(null);
+  const annualPaid = current.fromSubscription === true && current.billing === "anual" && current.plan !== "free" && (current.status === "active" || current.status === "trialing" || current.status === "past_due");
+  const choose = (p: PlanId, b: Billing) => { if (annualPaid) setConfirm({ plan: p, billing: b }); else checkout.start(p, b); };
+  const confirmRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (confirm) { confirmRef.current?.focus(); confirmRef.current?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); } }, [confirm]);
   const showIntent = intent && !isCurrent(intent.plan, intent.billing);
 
   // La intención ya se mostró: limpiamos la cookie para no insistir en cada visita.
@@ -32,22 +39,34 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
     <>
       {showIntent && (
         <section className="rounded-[1.5rem] bg-ink text-white p-5 sm:p-6 shadow-lift" aria-labelledby="intent-title">
-          <p className="eyebrow text-banana">Estás a un paso</p>
-          <h2 id="intent-title" className="mt-1 text-xl font-extrabold">{label(intent.plan, intent.billing)}</h2>
+          <h2 id="intent-title" className="text-xl font-extrabold">Estás a un paso: {label(intent.plan, intent.billing)}</h2>
           <p className="text-white/70"><b className="text-white tabular-nums">{usd(planOf(intent.plan).price[intent.billing])}</b> {intent.billing === "anual" ? "/año" : "/mes"}. Cancela cuando quieras.</p>
           {paid && <p className="mt-2 text-sm text-white/70">Reemplaza tu plan actual en cuanto se confirme el pago (sin prorrateo).</p>}
-          <button type="button" disabled={disabled} onClick={() => checkout.start(intent.plan, intent.billing)} className="btn-banana mt-4 w-full h-13" aria-busy={checkout.busy === `${intent.plan}.${intent.billing}`}>
+          <button type="button" disabled={disabled} onClick={() => choose(intent.plan, intent.billing)} className="btn-banana mt-4 w-full h-13" aria-busy={checkout.busy === `${intent.plan}.${intent.billing}`}>
             {checkout.busy === `${intent.plan}.${intent.billing}` ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Preparando tu pago…</> : <>Continuar al pago<ArrowRight weight="bold" className="size-5" /></>}
           </button>
           {!payments && <p className="mt-2 text-sm text-white/70">{demo ? "Modo demo: no se procesan pagos." : "Los pagos aún no están activos."}</p>}
         </section>
       )}
 
+      {confirm && (
+        <div ref={confirmRef} tabIndex={-1} role="alertdialog" aria-labelledby="sin-prorrateo" className="outline-none rounded-2xl border-2 border-ember/40 bg-ember/5 p-4 space-y-3 animate-fade">
+            <p id="sin-prorrateo" className="font-extrabold text-ink">Antes de cambiar tu plan anual</p>
+            <p className="text-sm text-body">Ya pagaste tu año{fmtDate(current.renewsAt ?? current.endsAt) ? <> hasta el <b>{fmtDate(current.renewsAt ?? current.endsAt)}</b></> : null}. Si cambias a <b>{label(confirm.plan, confirm.billing)}</b>, el nuevo plan empieza hoy con su propio cobro y lo que queda del año <b>no se reembolsa ni se descuenta</b> (no hay prorrateo).</p>
+            <p className="text-sm text-muted">Si prefieres no perder ese tiempo, cancela la renovación abajo y elige el nuevo plan cuando termine tu año.</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button type="button" onClick={() => setConfirm(null)} className="btn-primary h-11 flex-1">Mejor espero</button>
+              <button type="button" disabled={disabled} onClick={() => { const c = confirm; setConfirm(null); checkout.start(c.plan, c.billing); }} className="btn-ghost h-11 flex-1">Cambiar de todas formas</button>
+            </div>
+          </div>
+        )}
       {checkout.error && <p role="alert" className="rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm font-semibold text-bad">{checkout.error}</p>}
 
       <section className="card p-5 sm:p-6" aria-labelledby="cambiar">
         <h2 id="cambiar" className="font-extrabold text-ink">{paid ? "Cambiar de plan" : "Elige tu plan"}</h2>
-        {paid && <p className="mt-1 text-sm text-muted">El nuevo plan empieza al confirmar el pago y reemplaza al actual (sin prorrateo).</p>}
+        {paid && current.fromSubscription && <p className="mt-1 text-sm text-muted">El nuevo plan empieza al confirmar el pago y reemplaza al actual (sin prorrateo).</p>}
+        {paid && !current.fromSubscription && <p className="mt-1 text-sm text-muted">Tu plan actual no tiene cobros. Si eliges un plan de pago, empieza al confirmar el pago.</p>}
+
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {options.map(({ p, b }) => {
             const key = `${p.id}.${b}`;
@@ -55,7 +74,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
             const down = current.plan === "completo" && p.id === "entreno";
             return (
               <li key={key}>
-                <button type="button" disabled={disabled} onClick={() => checkout.start(p.id, b)} aria-busy={checkout.busy === key}
+                <button type="button" disabled={disabled} onClick={() => choose(p.id, b)} aria-busy={checkout.busy === key}
                   className="pressable w-full text-left rounded-2xl border-2 border-line bg-white p-4 hover:border-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/50 disabled:opacity-50">
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-bold text-ink">{p.name}</span>
@@ -76,7 +95,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
       </section>
 
       {current.cancellable && current.plan !== "free" && current.billing && (
-        <CancelFlow plan={current.plan} billing={current.billing} endsAt={current.endsAt} onOffer={checkout.start} offerBusy={checkout.busy} payments={payments} />
+        <CancelFlow plan={current.plan} billing={current.billing} endsAt={current.endsAt} onOffer={choose} offerBusy={checkout.busy} payments={payments} />
       )}
     </>
   );

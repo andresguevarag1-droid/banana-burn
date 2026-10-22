@@ -92,7 +92,7 @@ export function mrr(subs: SubRow[], planOf: (userId?: string) => string | null |
     if (s.status !== "active") continue;
     const v = monthlyValue(s, planOf(s.user_id));
     const { plan, billing } = resolvePlan(s, planOf(s.user_id));
-    const k = `${plan ?? "desconocido"}·${billing}`;
+    const k = `${plan ?? "desconocido"}:${billing}`;
     byPlan[k] ??= { n: 0, mrr: 0 };
     byPlan[k].n++;
     byPlan[k].mrr += v;

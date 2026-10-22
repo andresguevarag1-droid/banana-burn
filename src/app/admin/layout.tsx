@@ -66,6 +66,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   className="h-10 w-full rounded-full border border-line bg-paper/60 pl-9 pr-4 text-sm text-ink placeholder:text-faint outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-ink focus:bg-white focus:ring-4 focus:ring-banana/40" />
               </form>
               <div className="ml-auto flex shrink-0 items-center gap-2 text-sm">
+                <Link href="/app" className="md:hidden inline-flex h-11 items-center gap-1 rounded-full px-2 font-semibold text-muted outline-none hover:bg-paper hover:text-ink focus-visible:ring-4 focus-visible:ring-banana/50"><ArrowLeft className="size-4" aria-hidden />App<span className="sr-only"> (volver)</span></Link>
                 <span className="hidden max-w-48 truncate text-muted lg:inline" title={v.email}>{v.email}</span>
                 <RoleBadge role={v.role} />
               </div>

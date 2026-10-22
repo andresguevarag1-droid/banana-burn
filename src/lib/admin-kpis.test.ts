@@ -63,7 +63,7 @@ describe("suscripciones", () => {
       { status: "canceled", plan: "entreno", billing: "mes" },
     ]);
     expect(m.total).toBe(Math.round((9.99 + 89.99 / 12) * 100) / 100);
-    expect(m.byPlan["entreno·mes"]).toEqual({ n: 1, mrr: 9.99 });
+    expect(m.byPlan["entreno:mes"]).toEqual({ n: 1, mrr: 9.99 });
   });
   it("churn 30 d = cancelaciones en la ventana / base al inicio", () => {
     const now = new Date("2026-10-21T12:00:00Z");

@@ -13,6 +13,11 @@ export const MEDS: { id: Glp1Med; n: string; ex: string }[] = [
   { id: "otro", n: "Otro recetado", ex: "Indicado por tu médico" },
 ];
 
+/** Piso de calorías diario (kcal) que la app y el coach nunca recomiendan bajar. Fuente única: glp1Targets y el prompt del coach. */
+export const KCAL_FLOOR = { f: 1300, m: 1600 } as const;
+/** Piso según sexo (sin dato se usa el de hombre, igual que energy()). */
+export const kcalFloor = (sex?: Sex | null) => (sex === "f" ? KCAL_FLOOR.f : KCAL_FLOOR.m);
+
 /**
  * Metas diarias en GLP-1: la prioridad es comer suficiente proteína y NO quedarse corto de energía
  * (el apetito baja mucho). Proteína 1,6 g/kg del peso de referencia (dentro de 1,2–1,6, sin pasar 2,0 sostenido),
@@ -23,7 +28,7 @@ export function glp1Targets(p: { kg: number; goalKg: number; heightCm: number; a
   // Peso de referencia: punto medio entre actual y meta (evita metas exageradas con mucho sobrepeso)
   const refKg = Math.round(((p.kg + p.goalKg) / 2) * 10) / 10;
   const protein = Math.min(Math.round((1.6 * refKg) / 5) * 5, Math.round(2.0 * p.kg));
-  const floor = p.sex === "f" ? 1300 : 1600;
+  const floor = kcalFloor(p.sex);
   const kcalMin = Math.max(floor, Math.round((bmr * 1.1) / 50) * 50);
   const kcal = Math.max(kcalMin, Math.round((tdee - 500) / 50) * 50);
   const fat = Math.round((kcal * 0.25) / 9); // 19–30 % de grasa (protege la vesícula)
@@ -63,4 +68,19 @@ export function muscleShield(o: { startKg: number; nowKg: number; startBf: numbe
   const strengthOk = o.strengthChangePct == null ? null : o.strengthChangePct >= -3;
   const grade = fatShare == null && strengthOk == null ? null : (fatShare ?? 0.75) >= 0.75 && strengthOk !== false ? "A" : (fatShare ?? 0.75) >= 0.6 ? "B" : "C";
   return { lost, fatShare, strengthOk, grade };
+}
+
+/**
+ * Peso registrado más cercano a una fecha (para emparejar cada medición con su peso).
+ * Prefiere pesajes dentro de `maxDays`; si no hay ninguno tan cerca, devuelve null.
+ */
+export function weightNear(weights: { d: string; v: number }[], iso: string, maxDays = 10): number | null {
+  const t = Date.parse(iso + "T12:00:00Z");
+  let best: { v: number; dist: number } | null = null;
+  for (const w of weights) {
+    const dist = Math.abs(Date.parse(w.d + "T12:00:00Z") - t) / 864e5;
+    if (!Number.isFinite(dist) || !(w.v > 0)) continue;
+    if (!best || dist < best.dist || (dist === best.dist && w.d <= iso)) best = { v: w.v, dist };
+  }
+  return best && best.dist <= maxDays ? best.v : null;
 }

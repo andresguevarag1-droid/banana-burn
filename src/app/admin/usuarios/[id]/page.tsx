@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Gift, Lock, ArrowCounterClockwise as RotateCcw, UserGear as UserCog } from "@/components/icons";
+import { Gift, Lock, ArrowCounterClockwise as RotateCcw, Trash, UserGear as UserCog, ShieldWarning } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { ACTIVITY_LABEL, getUserDetail, PLAN_LABEL, statusOf } from "@/lib/admin";
 import { assignableRoles, can, PRIVILEGED, ROLE_LABEL } from "@/lib/admin-perms";
 import { isUuid } from "@/lib/admin-validate";
 import { addDays } from "@/lib/admin-kpis";
 import { crToday } from "@/lib/today";
+import { actionLabel } from "@/lib/admin-format";
 import { ActivityStrip, Sparkline } from "@/components/admin/charts";
 import { ConfirmAction } from "@/components/admin/action-form";
 import { Badge, DemoNotice, MetaList, Nil, Notice, PageHeader, PlanText, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, fmtNum, inputSm, link, money, panel, rowActionDanger, textareaSm, tr } from "@/components/admin/ui";
-import { changeRole, grantComp, resetOnboarding, revokeComp } from "../../actions";
+import { changeRole, deleteUserAccount, grantComp, resetOnboarding, revokeComp, setSuspended } from "../../actions";
 
 export const metadata = { title: "Ficha de usuario" };
 
@@ -57,6 +58,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <RoleBadge role={a.role} />
           <Badge tone={status === "activo" ? "good" : status === "pendiente" ? "warn" : "muted"}>{ACTIVITY_LABEL[status]}</Badge>
           {isSelf && <Badge tone="info">Eres tú</Badge>}
+          {a.suspended_at && <Badge tone="bad">Suspendido</Badge>}
         </>} />
       {v.demo && <DemoNotice what="los datos de esta ficha" />}
 
@@ -71,6 +73,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <Row k="País">{a.country ? COUNTRY[a.country] ?? a.country : <Nil />}</Row>
               <Row k="Plan">{PLAN[a.plan] ?? a.plan}{activeComp && <span className="block text-xs text-[#6E4E00]">cortesía hasta {fmtDate(activeComp.expires_at)}</span>}</Row>
               <Row k="Bienvenida">{a.onboarded ? "Completada" : "Pendiente"}</Row>
+              <Row k="Perfil en la comunidad">{a.username ? <Link href={`/app/comunidad/u/${a.username}`} className={link}>@{a.username}</Link> : <Nil />}</Row>
+              <Row k="Comunidad">{a.suspended_at ? <span className="text-[#A3261A]">Suspendido desde {fmtDate(a.suspended_at)}{a.suspended_reason && <span className="block text-xs font-normal text-muted">{a.suspended_reason}</span>}</span> : "Activo"}</Row>
             </dl>
           </Section>
 
@@ -179,6 +183,21 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               </div>
 
               <div className="space-y-2 border-t border-line pt-4">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><ShieldWarning className="size-4" aria-hidden />Comunidad</h3>
+                {can(v.role, "users.suspend") && !isSelf ? (a.suspended_at ? (
+                  <ConfirmAction action={setSuspended} trigger="Reactivar en la comunidad" title={`Reactivar a ${a.full_name || "usuario"}`} hidden={{ target: a.id, suspend: "no" }} confirmLabel="Reactivar"
+                    description="Podrá volver a publicar y comentar.">
+                    <div><label htmlFor="su-reason-no" className="block text-xs font-bold text-ink mb-1">Nota (opcional)</label><input id="su-reason-no" name="reason" maxLength={300} className={inputSm} /></div>
+                  </ConfirmAction>
+                ) : (
+                  <ConfirmAction action={setSuspended} danger trigger="Suspender en la comunidad" title={`Suspender a ${a.full_name || "usuario"}`} hidden={{ target: a.id, suspend: "si" }} confirmLabel="Suspender"
+                    description="No podrá publicar ni comentar. Puede seguir usando su plan de entreno. Se puede revertir.">
+                    <div><label htmlFor="su-reason" className="block text-xs font-bold text-ink mb-1">Motivo</label><input id="su-reason" name="reason" required minLength={4} maxLength={300} placeholder="p. ej. acoso reiterado (reporte 12)" className={inputSm} /></div>
+                  </ConfirmAction>
+                )) : <p className="text-sm text-muted">{isSelf ? "No puedes suspenderte a ti mismo." : "Solo soporte y admin suspenden usuarios."}</p>}
+              </div>
+
+              <div className="space-y-2 border-t border-line pt-4">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><RotateCcw className="size-4" aria-hidden />Bienvenida</h3>
                 {can(v.role, "users.onboarding") ? (
                   <ConfirmAction action={resetOnboarding} trigger="Reiniciar bienvenida" title="Reiniciar bienvenida" hidden={{ target: a.id }} confirmLabel="Reiniciar"
@@ -188,6 +207,16 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   </ConfirmAction>
                 ) : <p className="text-sm text-muted">Solo soporte y admin reinician la bienvenida.</p>}
               </div>
+              {can(v.role, "users.delete") && !isSelf && (
+                <div className="space-y-2 border-t border-line pt-4">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><Trash className="size-4" aria-hidden />Borrar cuenta</h3>
+                  <ConfirmAction action={deleteUserAccount} danger trigger="Borrar cuenta" title={`Borrar la cuenta de ${a.full_name || "usuario"}`} hidden={{ target: a.id }} confirmLabel="Borrar para siempre"
+                    description="Igual que cuando la persona borra su cuenta: cancela sus cobros en ONVO, borra sus fotos y elimina todos sus datos. No se puede deshacer. Queda en auditoría.">
+                    <div><label htmlFor="del-reason" className="block text-xs font-bold text-ink mb-1">Motivo</label><input id="del-reason" name="reason" required minLength={4} maxLength={300} placeholder="p. ej. lo pidió por correo el 21 de octubre" className={inputSm} /></div>
+                    <div><label htmlFor="del-typed" className="block text-xs font-bold text-ink mb-1">Escribe BORRAR</label><input id="del-typed" name="typed" required pattern="[Bb][Oo][Rr][Rr][Aa][Rr]" autoComplete="off" className={inputSm} /></div>
+                  </ConfirmAction>
+                </div>
+              )}
             </div>
           </Section>
 
@@ -195,7 +224,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <Section title="Historial de staff" id="s-audit">
               {d.audit.length ? (
                 <ol className="space-y-3">{d.audit.map((x) => (
-                  <li key={x.id} className="text-sm"><p className="font-semibold text-ink"><code className="font-mono text-xs">{x.action}</code></p><MetaList items={[x.actor_name ?? "Sistema", fmtDateTime(x.created_at)]} /></li>
+                  <li key={x.id} className="text-sm"><p className="font-semibold text-ink">{actionLabel(x.action)}</p><MetaList items={[x.actor_name ?? "Sistema", fmtDateTime(x.created_at)]} /></li>
                 ))}</ol>
               ) : <p className="text-sm text-muted">Sin acciones registradas.</p>}
               <Link href={`/admin/auditoria?target=${a.id}`} className={`inline-block text-sm ${link}`}>Ver en auditoría</Link>

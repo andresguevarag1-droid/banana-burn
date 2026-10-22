@@ -22,8 +22,9 @@ const EXTRA: Item[] = [
   { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Desafíos de 21 y 30 días" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1" },
-  { href: "/app/conexiones", label: "Relojes", icon: Watch, hint: "Pasos y ritmo cardíaco" },
 ];
+/** Fuera del menú principal: solo en "Más" (todavía no conecta relojes). */
+const SOON: Item = { href: "/app/conexiones", label: "Relojes", icon: Watch, hint: "Próximamente" };
 /** Barra inferior en móvil: 4 secciones + Coach al centro + "Más". */
 const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
 
@@ -37,6 +38,13 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
 
   return (
     <>
+      {/* Móvil: encabezado con la campana en todas las secciones (Hoy ya tiene la suya en su encabezado). */}
+      {path !== "/app" && (
+        <header className="lg:hidden flex items-center justify-between px-4 pt-3 -mb-3">
+          <Logo href="/app" />
+          <NotificationBell />
+        </header>
+      )}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
         <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
         <nav aria-label="Menú principal" className="mt-10 space-y-1">
@@ -84,7 +92,7 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
       <Sheet open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-4 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }].map(({ href, label, icon: Icon, hint }) => (
+          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map(({ href, label, icon: Icon, hint }) => (
             <li key={href}>
               <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />

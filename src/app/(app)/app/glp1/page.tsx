@@ -1,26 +1,54 @@
 import Link from "next/link";
 import { BananaFlame, Banana, Barbell, BrandIcon, CheckCircle, Egg, Leaf, ShieldCheck, Syringe, Warning, WarningCircle } from "@/components/icons";
-import { getViewer } from "@/lib/supabase/server";
+import { createClient, getViewer } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/entitlements";
+import { PLANS, usd } from "@/lib/plans";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getMeasures } from "@/lib/measures";
 import { getProgress, MAIN_LIFTS } from "@/lib/progress";
 import { navyBodyFat } from "@/lib/body";
-import { MEDS, RED_FLAGS, glp1Targets, muscleShield } from "@/lib/glp1";
+import { MEDS, RED_FLAGS, glp1Targets, muscleShield, weightNear } from "@/lib/glp1";
 import { ageOn } from "@/lib/engine";
 
 export const metadata = { title: "Banana Shield para GLP-1" };
 
 const nf = (n: number, d = 0) => n.toLocaleString("es-419", { maximumFractionDigits: d });
 
+/** Pesajes alrededor de una fecha (±10 días), para emparejar cada medición con su peso aunque sea antigua. */
+async function weightsAround(userId: string, iso: string) {
+  const d = new Date(iso + "T12:00:00Z");
+  const from = new Date(d.getTime() - 10 * 864e5).toISOString().slice(0, 10), to = new Date(d.getTime() + 10 * 864e5).toISOString().slice(0, 10);
+  const { data } = await (await createClient()).from("weights").select("day,kg").eq("user_id", userId).gte("day", from).lte("day", to);
+  return (data ?? []).map((r) => ({ d: r.day as string, v: Number(r.kg) }));
+}
+
 export default async function Glp1Guide() {
   const v = (await getViewer())!;
+  if (!(await getEntitlements(v)).nutrition) {
+    const p = PLANS.find((x) => x.nutrition)!;
+    return (
+      <div className="max-w-xl mx-auto text-center py-8 animate-enter">
+        <span className="mx-auto grid place-items-center size-20 rounded-3xl bg-ink text-banana"><ShieldCheck weight="duotone" className="size-11" /></span>
+        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink text-balance">Banana Shield está incluido en {p.name}</h1>
+        <p className="mt-3 text-muted text-pretty">Si estás en tratamiento con GLP-1, Banana Shield cuida que lo que bajes sea grasa y no músculo: proteína, calorías mínimas, fuerza y seguimiento de tus medidas.</p>
+        <Link href="/app/suscripcion" className="btn-banana w-full h-14 mt-6 text-base">Mejorar a {p.name} por {usd(p.price.mes)}/mes</Link>
+        <p className="mt-2 text-xs text-faint">Cancela cuando quieras.</p>
+      </div>
+    );
+  }
   const a = await getAthlete(v);
   const d = dashboard(a);
   const g = d.glp1 ?? glp1Targets({ kg: a.currentWeight, goalKg: a.goalWeight, heightCm: a.heightCm, age: ageOn(a.dob), sex: a.sex });
   const [ms, prog] = await Promise.all([getMeasures(v), getProgress(v)]);
   const bf = (m?: (typeof ms)[number]) => (m ? navyBodyFat({ sex: a.sex, heightCm: a.heightCm, waist: m.waist, neck: m.neck, hip: m.hip }) : null);
   const changes = MAIN_LIFTS.map((k) => { const p = prog.lifts[k] ?? []; return p.length > 1 ? (p.at(-1)!.v - p[0].v) / p[0].v * 100 : null; }).filter((x): x is number => x != null);
-  const sh = muscleShield({ startKg: ms[0] ? a.startWeight : a.startWeight, nowKg: a.currentWeight, startBf: bf(ms[0]), nowBf: bf(ms.at(-1)), strengthChangePct: changes.length ? changes.reduce((x, y) => x + y, 0) / changes.length : null });
+  // Cada medición se compara con el peso registrado más cercano a SU fecha (no con el peso inicial de la meta ni el de hoy).
+  const first = ms[0], last = ms.at(-1);
+  const near = !v.demo && first && last && ms.length > 1 ? [...prog.weights, ...(await weightsAround(v.id, first.d)), ...(await weightsAround(v.id, last.d))] : prog.weights;
+  const startKg = first ? weightNear(near, first.d) : null;
+  const nowKg = last ? weightNear(near, last.d) : null;
+  const paired = startKg != null && nowKg != null;
+  const sh = muscleShield({ startKg: startKg ?? 0, nowKg: nowKg ?? 0, startBf: paired ? bf(first) : null, nowBf: paired ? bf(last) : null, strengthChangePct: changes.length ? changes.reduce((x, y) => x + y, 0) / changes.length : null });
   const med = MEDS.find((m) => m.id === a.glp1.med);
   // La calificación solo es confiable con el programa activo, 2+ mediciones y 4+ semanas entre ellas.
   const spanDays = ms.length > 1 ? (new Date(ms.at(-1)!.d + "T12:00:00").getTime() - new Date(ms[0].d + "T12:00:00").getTime()) / 864e5 : 0;
@@ -29,10 +57,9 @@ export default async function Glp1Guide() {
   return (
     <div className="space-y-6 animate-enter max-w-3xl">
       <header>
-        <p className="eyebrow">Programa para GLP-1</p>
-        <h1 className="mt-1 flex items-center gap-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
+        <h1 className="flex items-center gap-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
           <span className="relative grid place-items-center size-12 sm:size-14 shrink-0 rounded-2xl bg-ink text-banana"><ShieldCheck weight="duotone" className="size-7 sm:size-8" /><Banana weight="fill" className="absolute -bottom-1 -right-1 size-5 text-banana drop-shadow" /></span>
-          Banana Shield
+          <span>Banana Shield <span className="block text-base sm:text-lg font-bold text-muted">Programa para GLP-1</span></span>
         </h1>
         <p className="mt-2 max-w-[60ch] text-lg text-muted">El medicamento te ayuda a comer menos. Nosotros nos aseguramos de que lo que pierdas sea <b className="text-ink">grasa, no músculo</b>.</p>
         {!a.glp1.on && <Link href="/app/perfil#glp1" className="btn-banana h-11 mt-4">Activar Banana Shield en mi plan</Link>}
@@ -48,6 +75,7 @@ export default async function Glp1Guide() {
             <div className="rounded-2xl bg-white/10 p-4"><p className="grid place-items-center h-9">{sh.strengthOk == null ? <span className="text-sm font-bold text-white/50">Sin dato</span> : sh.strengthOk ? <CheckCircle weight="fill" className="size-9 text-banana" /> : <Warning weight="fill" className="size-9 text-ember" />}</p><p className="text-xs text-white/70">{sh.strengthOk === false ? "fuerza bajando" : "fuerza se mantiene"}</p></div>
           </div>
         ) : <p className="mt-3 text-white/80">{!a.glp1.on ? "Activa Banana Shield y anota tus medidas (cintura y cuello) cada 2 semanas. En 4 semanas te mostramos cuánto de lo que bajas es grasa." : `Anota tus medidas (cintura y cuello) cada 2 semanas y registra tus entrenos. Tu primera calificación aparece cuando tengamos 4 semanas de datos${ms.length ? ` (llevas ${Math.max(0, Math.round(spanDays / 7))} de 4)` : ""}.`}</p>}
+        {enough && !paired && <p className="mt-3 text-sm text-white/80">Para calcular cuánto de lo perdido fue grasa, pésate el mismo día (o la misma semana) en que anotas tus medidas.</p>}
         <p className="mt-4 text-sm text-white/70">Meta: que al menos 3 de cada 4 kg perdidos sean grasa y que tu fuerza no baje. Estudios con GLP-1 muestran que, sin fuerza ni proteína, cerca de 1 de cada 4 kg perdidos puede ser masa magra.</p>
       </section>
 

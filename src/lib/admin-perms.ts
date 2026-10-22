@@ -18,6 +18,8 @@ export type Capability =
   | "users.role"          // cambiar rol (con reglas extra, ver checkRoleChange)
   | "users.comp"          // regalar plan de cortesía con vencimiento
   | "users.onboarding"    // reiniciar la bienvenida
+  | "users.suspend"       // pausar a un usuario en la comunidad (no puede publicar ni comentar)
+  | "users.delete"        // borrar una cuenta (misma secuencia que el borrado por el usuario)
   | "metrics.revenue"     // MRR, conversión y churn en el resumen
   | "payments.view"
   | "content.exercises"
@@ -39,6 +41,8 @@ export const MATRIX: Record<Capability, Role[]> = {
   "users.role": PRIVILEGED,
   "users.comp": SUPPORT_ADMIN,
   "users.onboarding": SUPPORT_ADMIN,
+  "users.suspend": SUPPORT_ADMIN,
+  "users.delete": PRIVILEGED,
   "metrics.revenue": PRIVILEGED,
   "payments.view": SUPPORT_ADMIN,
   "content.exercises": COACH_ADMIN,

@@ -33,6 +33,13 @@ describe("matriz de permisos", () => {
     expect(vis("admin")).toHaveLength(6);
     expect(vis("free")).toEqual([]);
   });
+  it("suspender: soporte y admin; borrar cuentas: solo admin", () => {
+    expect(can("support", "users.suspend")).toBe(true);
+    expect(can("coach", "users.suspend")).toBe(false);
+    expect(can("support", "users.delete")).toBe(false);
+    expect(can("coach", "users.delete")).toBe(false);
+    expect(can("admin", "users.delete")).toBe(true);
+  });
   it("anuncios y auditoría solo admin", () => {
     expect(can("coach", "content.announcements")).toBe(false);
     expect(can("coach", "content.challenges")).toBe(true);

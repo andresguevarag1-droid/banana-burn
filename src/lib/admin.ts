@@ -1,13 +1,14 @@
 // Capa de datos del panel de staff (solo servidor). Lee con el cliente del usuario: RLS y las funciones
 import "server-only";
 // SECURITY DEFINER de 0005_admin.sql repiten los permisos. En modo demo devuelve datos de ejemplo.
+import { adminClient } from "@/lib/supabase/admin";
 import { createClient, type Role, type Viewer } from "@/lib/supabase/server";
 import { can } from "@/lib/admin-perms";
 import {
   activeCounts, activityMap, addDays, cellRate, churn, cohortRetention, crDay, dailySeries, FAILED, mrr, pct, resolvePlan, monthlyValue,
   signupsWithin, weekOf, type CohortRow, type SubRow,
 } from "@/lib/admin-kpis";
-import { DEMO_ANNOUNCEMENTS, DEMO_CHALLENGES, DEMO_OVERRIDES, DEMO_REPORTS, demoAudit, demoCompLive, demoWorld, type DemoUser } from "@/lib/admin-demo";
+import { DEMO_ANNOUNCEMENTS, DEMO_CHALLENGES, DEMO_OVERRIDES, DEMO_REPORTS, demoAudit, demoCompLive, demoUuid, demoWorld, type DemoUser } from "@/lib/admin-demo";
 import { crToday } from "@/lib/today";
 import { EX } from "@/lib/engine/data";
 import { FOODS } from "@/lib/foods";
@@ -242,10 +243,11 @@ async function withSubs<T extends { id: string }>(sb: SB, rows: T[]): Promise<(T
 }
 
 export type CompGrant = { id: number | string; plan: string; reason: string | null; starts_at: string; expires_at: string; revoked_at: string | null; granted_by_name?: string };
-export type AuditRow = { id: number; actor: string | null; actor_name?: string; action: string; target: string | null; meta: Record<string, unknown> | null; created_at: string };
+export type AuditRow = { id: number; actor: string | null; actor_name?: string; action: string; target: string | null; target_name?: string; meta: Record<string, unknown> | null; created_at: string };
 
 export type UserDetail = {
-  account: { id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; country: string | null; last_sign_in_at: string | null; last_active: string | null };
+  account: { id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; country: string | null; last_sign_in_at: string | null; last_active: string | null;
+    username?: string | null; suspended_at?: string | null; suspended_reason?: string | null };
   health?: { goal_type: string | null; equipment: string | null; train_days: number | null; goal: { start_weight: number; goal_weight: number; goal_date: string; mode: string } | null; weights: { day: string; kg: number }[] };
   activity?: { workouts_total: number; workouts_30: number; active_days_30: number; recent: string[] };
   billing?: { subs: (SubRow & { planLabel: string; monthly: number; period: number })[]; comps: CompGrant[] };
@@ -280,7 +282,8 @@ export async function getUserDetail(v: Viewer, id: string): Promise<UserDetail |
   if (!p) return null;
   const acc = await sb.rpc("admin_user_account", { p_target: id });
   const a0 = (acc.data as { email: string; last_sign_in_at: string | null; last_active: string | null }[] | null)?.[0];
-  const d: UserDetail = { account: { id, full_name: p.full_name, email: a0?.email ?? null, role: p.role, plan: p.plan, onboarded: p.onboarded, created_at: p.created_at, country: p.country ?? null, last_sign_in_at: a0?.last_sign_in_at ?? null, last_active: a0?.last_active ? String(a0.last_active).slice(0, 10) : null } };
+  const d: UserDetail = { account: { id, full_name: p.full_name, email: a0?.email ?? null, role: p.role, plan: p.plan, onboarded: p.onboarded, created_at: p.created_at, country: p.country ?? null, last_sign_in_at: a0?.last_sign_in_at ?? null, last_active: a0?.last_active ? String(a0.last_active).slice(0, 10) : null,
+    username: p.username ?? null, suspended_at: p.suspended_at ?? null, suspended_reason: p.suspended_reason ?? null } };
 
   const jobs: Promise<void>[] = [];
   if (can(v.role, "users.health")) jobs.push((async () => {
@@ -323,7 +326,7 @@ export const BILLING_LABEL: Record<string, string> = { mes: "mensual", anual: "a
 function decorateSub(s: SubRow, fallbackPlan?: string | null) {
   const { plan, billing } = resolvePlan(s, fallbackPlan);
   const period = typeof s.amount === "number" && s.amount > 0 ? s.amount : plan ? PLANS.find((x) => x.id === plan)!.price[billing] : 0;
-  return { ...s, planLabel: `${plan ? PLAN_LABEL[plan] : "Plan sin identificar"} · ${BILLING_LABEL[billing]}`, monthly: Math.round(monthlyValue(s, fallbackPlan) * 100) / 100, period };
+  return { ...s, planLabel: `${plan ? PLAN_LABEL[plan] : "Plan sin identificar"} (${BILLING_LABEL[billing]})`, monthly: Math.round(monthlyValue(s, fallbackPlan) * 100) / 100, period };
 }
 
 // ─────────── Pagos ───────────
@@ -450,11 +453,15 @@ export async function getAnnouncements(v: Viewer): Promise<{ rows: AnnouncementR
 
 // ─────────── Comunidad ───────────
 
-export type ReportRow = { id: number; target_type: string; target_id: string; reporter: string | null; reporter_name?: string; reason: string; details: string | null; excerpt: string | null; status: string; created_at: string; resolved_at: string | null; resolution_note: string | null };
+export type ReportRow = { id: number; target_type: string; target_id: string; reporter: string | null; reporter_name?: string; reason: string; details: string | null; excerpt: string | null; status: string; created_at: string; resolved_at: string | null; resolution_note: string | null;
+  /** Autor del contenido reportado (o el perfil reportado), para enlazar a su ficha y a su perfil en la app. */
+  author_id?: string | null; author_name?: string | null; author_username?: string | null; author_suspended?: boolean };
 export async function listReports(v: Viewer, status = "abierto"): Promise<{ rows: ReportRow[]; counts: Record<string, number>; needsMigration: boolean }> {
   if (v.demo) {
     const counts = DEMO_REPORTS.reduce<Record<string, number>>((a, r) => ({ ...a, [r.status]: (a[r.status] ?? 0) + 1 }), {});
-    return { rows: DEMO_REPORTS.filter((r) => status === "todos" || r.status === status).map((r) => ({ ...r, reporter_name: "Usuario demo" })), counts, needsMigration: false };
+    const us = demoWorld().users;
+    const authors = [7, 9, 11].map((n) => { const u = us.find((x) => x.id === demoUuid(n)); return { id: demoUuid(n), name: u?.full_name ?? "Usuario demo", username: null as string | null }; });
+    return { rows: DEMO_REPORTS.filter((r) => status === "todos" || r.status === status).map((r, i) => ({ ...r, reporter_name: "Usuario demo", author_id: authors[i % 3].id, author_name: authors[i % 3].name, author_username: authors[i % 3].username, author_suspended: false })), counts, needsMigration: false };
   }
   const sb = await createClient();
   let q = sb.from("reports").select("*").order("created_at", { ascending: false }).limit(100);
@@ -462,7 +469,38 @@ export async function listReports(v: Viewer, status = "abierto"): Promise<{ rows
   const [{ data, error }, open] = await Promise.all([q, sb.from("reports").select("*", { count: "exact", head: true }).eq("status", "abierto")]);
   const rows = (data ?? []) as ReportRow[];
   const names = await profileNames(sb, rows.map((r) => r.reporter!).filter(Boolean));
-  return { rows: rows.map((r) => ({ ...r, reporter_name: r.reporter ? names.get(r.reporter) : undefined })), counts: { abierto: open.count ?? 0 }, needsMigration: isMissing(error) };
+  const authorOf = await reportAuthors(rows);
+  return { rows: rows.map((r) => ({ ...r, reporter_name: r.reporter ? names.get(r.reporter) : undefined, ...authorOf.get(r.id) })), counts: { abierto: open.count ?? 0 }, needsMigration: isMissing(error) };
+}
+
+/**
+ * Autor de cada contenido reportado. Con service_role: el staff no siempre puede leer publicaciones "solo seguidores"
+ * por RLS, y el moderador necesita saber de quién es lo que modera. Solo se leen ids, nombre y usuario.
+ */
+async function reportAuthors(rows: ReportRow[]) {
+  const out = new Map<number, Pick<ReportRow, "author_id" | "author_name" | "author_username" | "author_suspended">>();
+  const db = adminClient();
+  if (!db || !rows.length) return out;
+  const num = (t: string) => rows.filter((r) => r.target_type === t && /^[0-9]{1,18}$/.test(r.target_id)).map((r) => Number(r.target_id));
+  const [posts, comments] = await Promise.all([
+    num("post").length ? db.from("posts").select("id,user_id").in("id", num("post")) : Promise.resolve({ data: [] }),
+    num("comment").length ? db.from("comments").select("id,user_id").in("id", num("comment")) : Promise.resolve({ data: [] }),
+  ]);
+  const ownerOf = new Map<string, string>();
+  for (const p of (posts.data ?? []) as { id: number; user_id: string }[]) ownerOf.set(`post:${p.id}`, p.user_id);
+  for (const c of (comments.data ?? []) as { id: number; user_id: string }[]) ownerOf.set(`comment:${c.id}`, c.user_id);
+  for (const r of rows) if (r.target_type === "user" && /^[0-9a-f-]{36}$/i.test(r.target_id)) ownerOf.set(`user:${r.target_id}`, r.target_id);
+  const ids = [...new Set(ownerOf.values())];
+  if (!ids.length) return out;
+  let profs = await db.from("profiles").select("id,full_name,username,suspended_at").in("id", ids);
+  if (profs.error) profs = await db.from("profiles").select("id,full_name,username").in("id", ids) as typeof profs; // 0013 sin aplicar
+  const pm = new Map(((profs.data ?? []) as { id: string; full_name: string | null; username: string | null; suspended_at?: string | null }[]).map((p) => [p.id, p]));
+  for (const r of rows) {
+    const uid = ownerOf.get(`${r.target_type}:${r.target_id}`);
+    const p = uid ? pm.get(uid) : undefined;
+    if (uid) out.set(r.id, { author_id: uid, author_name: p?.full_name ?? (p ? "Sin nombre" : "Cuenta borrada"), author_username: p?.username ?? null, author_suspended: Boolean(p?.suspended_at) });
+  }
+  return out;
 }
 
 // ─────────── Auditoría ───────────
@@ -474,7 +512,8 @@ export async function listAudit(v: Viewer, f: AuditFilters): Promise<{ rows: Aud
     const all: AuditRow[] = demoAudit();
     let rows = all;
     rows = rows.filter((r) => (!f.action || r.action.startsWith(f.action)) && (!f.actor || r.actor === f.actor || r.actor_name?.toLowerCase().includes(f.actor.toLowerCase())) && (!f.target || r.target?.includes(f.target)) && (!f.from || crDay(r.created_at) >= f.from) && (!f.to || crDay(r.created_at) <= f.to));
-    return { rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: rows.length, actions: [...new Set(all.map((r) => r.action))].sort() };
+    const names = new Map(demoWorld().users.map((u) => [u.id, u.full_name ?? "Sin nombre"]));
+    return { rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => ({ ...r, target_name: r.target ? names.get(r.target) : undefined })), total: rows.length, actions: [...new Set(all.map((r) => r.action))].sort() };
   }
   const sb = await createClient();
   let q = sb.from("audit_log").select("*", { count: "exact" }).order("created_at", { ascending: false });
@@ -485,8 +524,9 @@ export async function listAudit(v: Viewer, f: AuditFilters): Promise<{ rows: Aud
   if (f.to) q = q.lte("created_at", `${f.to}T23:59:59-06:00`);
   const [{ data, count }, acts] = await Promise.all([q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1), sb.from("audit_log").select("action").order("created_at", { ascending: false }).limit(500)]);
   const rows = (data ?? []) as AuditRow[];
-  const names = await profileNames(sb, rows.map((r) => r.actor!).filter(Boolean));
-  return { rows: rows.map((r) => ({ ...r, actor_name: r.actor ? names.get(r.actor) : undefined })), total: count ?? rows.length, actions: [...new Set(((acts.data ?? []) as { action: string }[]).map((x) => x.action))].sort() };
+  const names = await profileNames(sb, [...rows.map((r) => r.actor!), ...rows.map((r) => r.target!)].filter(Boolean));
+  const deletedName = (r: AuditRow) => (typeof r.meta?.name === "string" ? `${r.meta.name} (borrada)` : undefined);
+  return { rows: rows.map((r) => ({ ...r, actor_name: r.actor ? names.get(r.actor) : undefined, target_name: r.target ? names.get(r.target) ?? (r.action === "user.delete" ? deletedName(r) : undefined) : undefined })), total: count ?? rows.length, actions: [...new Set(((acts.data ?? []) as { action: string }[]).map((x) => x.action))].sort() };
 }
 
 // ─────────── Búsqueda del topbar ───────────

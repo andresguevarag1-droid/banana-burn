@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { csvCell, subFiltersFrom, subsCsv } from "./admin-csv";
+import { actionLabel, metaKey, metaValue } from "./admin-format";
 
 describe("filtros de pagos", () => {
   it("ignora valores inválidos", () => {
@@ -15,9 +16,21 @@ describe("CSV", () => {
     expect(csvCell(null)).toBe("");
   });
   it("una fila por suscripción con fechas ISO y montos con punto", () => {
-    const csv = subsCsv([{ name: "María Mora", email: "maria@gmail.com", user_id: "u1", planLabel: "Entreno · mensual", status: "active", created_at: "2026-09-21T10:00:00-06:00", current_period_start: "2026-10-21T06:00:00-06:00", current_period_end: "2026-11-21T06:00:00-06:00", monthly: 9.99, provider_customer_id: "cus_1", provider_subscription_id: "sub_1" }]);
+    const csv = subsCsv([{ name: "María Mora", email: "maria@gmail.com", user_id: "u1", planLabel: "Entreno (mensual)", status: "active", created_at: "2026-09-21T10:00:00-06:00", current_period_start: "2026-10-21T06:00:00-06:00", current_period_end: "2026-11-21T06:00:00-06:00", monthly: 9.99, provider_customer_id: "cus_1", provider_subscription_id: "sub_1" }]);
     const lines = csv.replace("﻿", "").trim().split("\r\n");
     expect(lines).toHaveLength(2);
-    expect(lines[1]).toBe("María Mora,maria@gmail.com,u1,Entreno · mensual,Activa,2026-09-21,2026-10-21,2026-11-21,,9.99,cus_1,sub_1");
+    expect(lines[1]).toBe("María Mora,maria@gmail.com,u1,Entreno (mensual),Activa,2026-09-21,2026-10-21,2026-11-21,,9.99,cus_1,sub_1");
+  });
+});
+
+describe("auditoría legible", () => {
+  it("acciones, claves y valores en español", () => {
+    expect(actionLabel("user.comp_grant")).toBe("Cortesía otorgada");
+    expect(actionLabel("algo.nuevo")).toBe("algo nuevo");
+    expect(metaKey("previous_plan")).toBe("Plan anterior");
+    expect(metaValue(true)).toBe("Sí");
+    expect(metaValue(false)).toBe("No");
+    expect(metaValue("completo")).toBe("Entreno + Nutrición");
+    expect(metaValue(null)).toBe("-");
   });
 });

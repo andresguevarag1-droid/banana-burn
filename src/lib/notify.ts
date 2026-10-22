@@ -1,4 +1,4 @@
-// Banana Burn · lógica pura de notificaciones: quién recibe qué, a qué hora local y por qué canal.
+// Banana Burn: lógica pura de notificaciones: quién recibe qué, a qué hora local y por qué canal.
 // Sin dependencias de servidor (solo imports relativos) para poder testearla con Vitest.
 
 export type Kind = "recordatorio" | "racha" | "semanal" | "reactivacion_3" | "reactivacion_7";
@@ -46,6 +46,18 @@ export const toMinutes = (s: string) => { const m = HHMM.exec(s); return m ? Num
 
 export function isValidTimeZone(tz: string): boolean {
   try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; }
+}
+
+/** Modo del cron de avisos: "daily" (Vercel Hobby, una corrida al día) u "hourly" (Pro). Fuente: NOTIFY_CRON_MODE. */
+export const cronModeFrom = (v: string | undefined): "hourly" | "daily" => (v === "hourly" ? "hourly" : "daily");
+
+/** Nombre amigable de una zona horaria: "Costa Rica (GMT-6)" en vez de "America/Costa_Rica". */
+export function tzLabel(tz: string, now = new Date()): string {
+  const zone = tz && isValidTimeZone(tz) ? tz : DEFAULT_TZ;
+  const city = zone.split("/").pop()!.replace(/_/g, " ");
+  let off = "";
+  try { off = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "shortOffset" }).formatToParts(now).find((p) => p.type === "timeZoneName")?.value ?? ""; } catch { /* */ }
+  return off && off !== city ? `${city} (${off})` : city;
 }
 
 export type LocalClock = { iso: string; hour: number; minute: number; dow: number };
@@ -186,7 +198,7 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
       };
     case "semanal": {
       const f = (n: number) => n.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` · ${f(x.kgDelta)} kg` : x.kgDelta > 0 ? ` · +${f(x.kgDelta)} kg` : " · peso estable";
+      const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` y ${f(x.kgDelta)} kg` : x.kgDelta > 0 ? ` y +${f(x.kgDelta)} kg` : " y peso estable";
       return { title: "Tu semana en Banana Burn", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
     }
     case "reactivacion_3":
