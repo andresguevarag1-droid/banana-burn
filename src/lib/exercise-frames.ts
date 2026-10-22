@@ -31,6 +31,17 @@ const SHEETS: Record<string, string> = {
 };
 
 /** Hojas 3x3 (9 fotogramas, movimiento más suave). Si un ejercicio está aquí, tiene prioridad sobre la 2x2. */
+/**
+ * Celdas de cada hoja 3x3 en orden A -> B, revisadas a mano. La IA no dibuja las 9 poses en orden ni con el mismo
+ * encuadre, así que solo usamos las que avanzan en una sola dirección y casi siempre de la misma fila (mismo encuadre).
+ */
+const CELLS9: Record<string, number[]> = {
+  squat: [0, 1, 2, 4], bench: [0, 2, 4, 5], incline: [0, 1, 2], ohp: [0, 2, 5], dbpress: [0, 3, 5],
+  deadlift: [0, 2, 4, 7], rdl: [0, 2, 4, 7], pullup: [0, 4, 7], dips: [0, 1, 2], row: [3, 4, 5],
+  dbrow: [0, 1, 2], curl: [0, 2, 5], facepull: [0, 1, 2], kneeraise: [0, 2, 3], lateral: [0, 1, 2, 5],
+  rdl_bw: [0, 3, 4, 7], curl_bw: [0, 2, 5, 7], squat_bw: [0, 1, 2, 4],
+};
+
 const SHEETS9: Record<string, string> = {
   squat: "hf_20261022_193500_134951fd-cb17-4d70-b863-8a2bb4b64a42",
   bench: "hf_20261022_193952_63fa76be-2863-45c5-ad81-469f9f437277",
@@ -53,8 +64,8 @@ const SHEETS9: Record<string, string> = {
 };
 
 /** Hoja de fotogramas de una animación (URL y lado de la cuadrícula), o null si no hay ilustración. */
-export function sheetFor(anim: string): { url: string; grid: 2 | 3 } | null {
-  if (SHEETS9[anim]) return { url: `${BASE}${SHEETS9[anim]}.png`, grid: 3 };
+export function sheetFor(anim: string): { url: string; grid: 2 | 3; cells?: number[] } | null {
+  if (SHEETS9[anim]) return { url: `${BASE}${SHEETS9[anim]}.png`, grid: 3, cells: CELLS9[anim] };
   const s = SHEETS[anim];
   return s ? { url: `${BASE}${s}.png`, grid: 2 } : null;
 }

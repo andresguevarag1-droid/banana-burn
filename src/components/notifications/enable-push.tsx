@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Banana, BananaFlame, Barbell, Bell, BellSlash, Export, Moon, PlusSquare } from "@/components/icons";
+import { BananaFlame, Barbell, Bell, BellSlash, Check, Export, Moon, PlusSquare } from "@/components/icons";
 
 type State = "checking" | "unsupported" | "ios-install" | "not-configured" | "default" | "denied" | "subscribed" | "working";
 
 const SNOOZE_KEY = "bb.pushSnoozedAt";
+const INSTALL_DONE_KEY = "bb.iosInstallDone";
 
 function b64ToBytes(b64: string) {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);
@@ -38,6 +39,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
   const [state, setState] = useState<State>("checking");
   const [err, setErr] = useState<string | null>(null);
   const [snoozed, setSnoozed] = useState(false);
+  const [installDone, setInstallDone] = useState(false);
 
   const refresh = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -55,7 +57,10 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
 
   useEffect(() => {
     void refresh();
-    try { const t = Number(localStorage.getItem(SNOOZE_KEY) || 0); setSnoozed(Date.now() - t < 7 * 864e5); } catch { /* */ }
+    try {
+      const t = Number(localStorage.getItem(SNOOZE_KEY) || 0); setSnoozed(Date.now() - t < 7 * 864e5);
+      setInstallDone(localStorage.getItem(INSTALL_DONE_KEY) === "1");
+    } catch { /* */ }
   }, [refresh]);
 
   const enable = async () => {
@@ -87,6 +92,8 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
     } catch { setErr("No pudimos desactivar los avisos. Intenta de nuevo."); void refresh(); }
   };
 
+  /** "Ya lo hice": este dispositivo ya instaló la app; no volvemos a mostrar los pasos aquí. */
+  const markInstalled = () => { setInstallDone(true); try { localStorage.setItem(INSTALL_DONE_KEY, "1"); } catch { /* */ } };
   const snooze = () => { setSnoozed(true); try { localStorage.setItem(SNOOZE_KEY, String(Date.now())); } catch { /* */ } };
 
   if (state === "checking") return null;
@@ -102,6 +109,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
     );
   }
 
+  if (state === "ios-install" && hideWhenSnoozed && installDone) return null;
   if (state === "ios-install") {
     return (
       <div className="rounded-3xl border border-line bg-cream p-4">
@@ -110,9 +118,14 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
         <ol className="mt-3 space-y-2 text-sm text-body">
           <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">1</span>Abre esta página en Safari y toca <Export weight="bold" className="inline size-4" /> <b>Compartir</b></li>
           <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">2</span>Elige <PlusSquare weight="bold" className="inline size-4" /> <b>Agregar a inicio</b></li>
-          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span>Abre la app desde el ícono <Banana weight="fill" className="inline size-4 text-banana-ink" /> y activa los avisos aquí</li>
+          <li className="flex items-start gap-2"><span className="grid shrink-0 place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span><span className="pt-0.5">Abre la app desde el ícono de Banana Burn y activa los avisos aquí</span></li>
         </ol>
-        {hideWhenSnoozed && <button onClick={snooze} className="tap mt-3 text-xs font-bold text-muted underline hover:text-ink">Ahora no</button>}
+        {hideWhenSnoozed && (
+          <div className="mt-4 flex items-center gap-4">
+            <button onClick={markInstalled} className="pressable inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-5 text-sm font-bold text-white"><Check weight="bold" className="size-4" />Ya lo hice</button>
+            <button onClick={snooze} className="tap h-11 text-xs font-bold text-muted underline hover:text-ink">Ahora no</button>
+          </div>
+        )}
       </div>
     );
   }

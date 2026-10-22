@@ -69,11 +69,10 @@ function Frame({ src, n, grid = 2, sizes, onFail, refCb, className = "" }: { src
 }
 
 function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
-  anim: string; sheet: { url: string; grid: 2 | 3 }; label: boolean; className: string; mus?: string; cues?: string[]; onFail: () => void;
+  anim: string; sheet: { url: string; grid: 2 | 3; cells?: number[] }; label: boolean; className: string; mus?: string; cues?: string[]; onFail: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const layers = useRef<(HTMLDivElement | null)[]>([]);
-  const ghostRef = useRef<HTMLDivElement | null>(null);
   const fills = useRef<(HTMLElement | null)[]>([]);
   const custom = SHEET_PHASES[anim];
   const loop = !!custom?.loop;
@@ -81,7 +80,9 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
   const [live, setLive] = useState<Live>({ i: -1, left: 0, cycle: 0 });
   const [still, setStill] = useState(false);
   const conDir = CON_DIR[anim] ?? "none";
-  const grid = sheet.grid, last = grid * grid - 1, src = sheet.url;
+  const grid = sheet.grid, src = sheet.url;
+  const cells = sheet.cells ?? Array.from({ length: grid * grid }, (_, n) => n);
+  const last = cells.length - 1;
   const sizes = label ? (grid === 3 ? "1080px" : "720px") : (grid === 3 ? "336px" : "224px");
 
   useEffect(() => {
@@ -102,18 +103,15 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
     const from = (i: number) => frameOf(phases[(i - 1 + phases.length) % phases.length][0], last);
     let raf = 0, visible = true, start = performance.now(), paused = 0, lastI = -1, lastLeft = -1;
     const paint = (f: number, a: number, b: number) => {
-      // Fotograma base opaco + el siguiente encima con opacidad = avance: así el paso entre poses se ve continuo.
-      const lo = loop ? a : Math.floor(f), hi = loop ? b : Math.ceil(f), w = loop ? f : f - lo;
+      // Un solo fotograma visible a la vez (como stop motion). El cambio al siguiente se funde solo en el último
+      // 18 % del paso, así nunca se ven dos poses superpuestas el tiempo suficiente para notarse.
+      const lo = loop ? a : Math.floor(f), hi = loop ? b : Math.ceil(f), frac = loop ? f : f - lo;
+      const w = hi === lo ? 0 : Math.min(1, Math.max(0, (frac - 0.82) / 0.18));
       layers.current.forEach((l, n) => {
         if (!l) return;
         l.style.zIndex = n === hi ? "2" : n === lo ? "1" : "0";
         l.style.opacity = n === lo ? "1" : n === hi ? String(w) : "0";
       });
-      if (ghostRef.current) {
-        const g = f >= last / 2 ? 0 : last;
-        ghostRef.current.dataset.frame = String(g);
-        ghostRef.current.style.opacity = loop ? "0" : String(Math.min(1, Math.abs(f - g) / (last * 0.66)) * 0.28);
-      }
     };
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
@@ -140,14 +138,14 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
     io.observe(el);
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); io.disconnect(); };
-  }, [phases, still, loop]);
+  }, [phases, still, loop, last]);
 
   if (still) {
     return (
       <div role="img" aria-label="Posición inicial y final del ejercicio" className={`motion ${className}`}>
         <div className="relative flex-1 min-h-0 grid grid-cols-2 gap-1">
-          <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={0} grid={grid} sizes={sizes} onFail={onFail} /></div>
-          {label ? <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={last} grid={grid} sizes={sizes} onFail={onFail} /></div> : null}
+          <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={cells[0]} grid={grid} sizes={sizes} onFail={onFail} /></div>
+          {label ? <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={cells[last]} grid={grid} sizes={sizes} onFail={onFail} /></div> : null}
         </div>
       </div>
     );
@@ -174,10 +172,9 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
       ) : null}
       <div className="relative flex-1 min-h-0 flex justify-center">
         <div className="relative h-full aspect-square max-w-full overflow-hidden rounded-2xl bg-banana">
-          {Array.from({ length: grid * grid }, (_, n) => n).map((n) => (
-            <Frame key={n} src={src} n={n} grid={grid} sizes={sizes} onFail={onFail} refCb={(l) => { layers.current[n] = l; }} className={n === 0 ? "" : "opacity-0"} />
+          {cells.map((cell, n) => (
+            <Frame key={cell} src={src} n={cell} grid={grid} sizes={sizes} onFail={onFail} refCb={(l) => { layers.current[n] = l; }} className={n === 0 ? "" : "opacity-0"} />
           ))}
-          {label && !loop ? <GhostFrame sheet={src} grid={grid} sizes={sizes} onFail={onFail} refCb={(g) => { ghostRef.current = g; }} /> : null}
           {label && ph ? (
             <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden="true">
               {moving && dir !== "none" ? <Arrow key={`a${live.i}-${live.cycle}`} dir={dir} strong={kind === "con"} dur={Math.min(ph[1], 0.9)} /> : null}
@@ -197,24 +194,6 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
           ) : null}
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Silueta del extremo opuesto del movimiento: deja ver el rango completo mientras el mono se mueve. */
-function GhostFrame({ sheet, grid, sizes, onFail, refCb }: { sheet: string; grid: 2 | 3; sizes: string; onFail: () => void; refCb: (el: HTMLDivElement | null) => void }) {
-  const [frame, setFrame] = useState(grid * grid - 1);
-  const box = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const mo = new MutationObserver(() => { const f = Number(el.dataset.frame ?? 3); setFrame((cur) => (cur === f ? cur : f)); });
-    mo.observe(el, { attributes: true, attributeFilter: ["data-frame"] });
-    return () => mo.disconnect();
-  }, []);
-  return (
-    <div ref={(el) => { box.current = el; refCb(el); }} data-frame={String(grid * grid - 1)} className="absolute inset-0 z-[3] mix-blend-darken opacity-0">
-      <Frame src={sheet} n={frame} grid={grid} sizes={sizes} onFail={onFail} />
     </div>
   );
 }
