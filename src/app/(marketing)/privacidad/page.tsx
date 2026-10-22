@@ -1,10 +1,13 @@
 import { LegalPage, type LegalSection } from "../legal";
+import { social } from "../seo";
 
-export const metadata = { title: "Política de privacidad", description: "Cómo Banana Burn trata tus datos personales y de salud conforme a la Ley 8968 de Costa Rica." };
+const DESCRIPTION = "Cómo Banana Burn trata tus datos personales y de salud: qué recopilamos, para qué, con quién los compartimos y cómo ejercer tus derechos.";
+export const metadata = { title: "Política de privacidad", description: DESCRIPTION, ...social({ title: "Política de privacidad de Banana Burn", description: DESCRIPTION, path: "/privacidad" }) };
 
 const S: LegalSection[] = [
   { id: "responsable", t: "Quién es responsable de tus datos", p: [
-    "El responsable de la base de datos es [razón social y cédula jurídica], con domicilio en San José, Costa Rica, que opera la aplicación Banana Burn. Para cualquier asunto de privacidad escríbenos a hola@bananaburn.app.",
+    // TODO(dueño): agregar la cédula jurídica de Atlas Resources SRL cuando esté confirmada (p. ej. "cédula jurídica 3-102-…").
+    "El responsable de la base de datos es Atlas Resources SRL, sociedad costarricense con domicilio en San José, Costa Rica, que opera la aplicación Banana Burn. Para cualquier asunto de privacidad escríbenos a hola@bananaburn.app.",
   ] },
   { id: "datos", t: "Qué datos recopilamos", p: [
     "Solo pedimos lo necesario para crear tu plan y acompañarte:",
@@ -21,7 +24,7 @@ const S: LegalSection[] = [
   { id: "terceros", t: "Con quién los compartimos", p: [
     "Trabajamos con proveedores que procesan datos por cuenta nuestra y bajo contrato:",
     ["Supabase: base de datos, autenticación y almacenamiento de fotos.", "Vercel: alojamiento de la aplicación.", "Anthropic: genera las respuestas del Coach Banana. Le enviamos tu mensaje y un resumen de tu plan, sin tu correo.", "Resend: envío de correos.", "ONVO Pay: procesamiento de pagos en Costa Rica."],
-    "Algunos de estos proveedores almacenan datos fuera de Costa Rica (principalmente en Estados Unidos). Al aceptar esta política autorizas esa transferencia, que hacemos con medidas de seguridad equivalentes a las exigidas por la ley costarricense.",
+    "Algunos de estos proveedores almacenan datos fuera de tu país y de Costa Rica (principalmente en Estados Unidos). Al aceptar esta política autorizas esa transferencia, que hacemos con medidas de seguridad equivalentes a las exigidas por la ley costarricense.",
   ] },
   { id: "derechos", t: "Tus derechos", p: [
     "Puedes ejercer en cualquier momento tus derechos de acceso, rectificación, cancelación (eliminación) y oposición, y retirar tu consentimiento:",
@@ -46,5 +49,5 @@ const S: LegalSection[] = [
 ];
 
 export default function Page() {
-  return <LegalPage title="Política de privacidad" updated="22 de octubre de 2026" intro="Tus datos de salud son tuyos. Esta política explica qué datos usamos, para qué, con quién los compartimos y cómo ejercer tus derechos, conforme a la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales de Costa Rica y su reglamento." sections={S} />;
+  return <LegalPage title="Política de privacidad" updated="22 de octubre de 2026" intro="Tus datos de salud son tuyos. Esta política explica qué datos usamos, para qué, con quién los compartimos y cómo ejercer tus derechos. Como la empresa está en Costa Rica, se rige por la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales y su reglamento, sin perjuicio de los derechos que te dé la ley de tu país." sections={S} />;
 }

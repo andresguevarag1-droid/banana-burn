@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowCounterClockwise, Check, CircleNotch, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
-import { PLANS, annualSavingPct, perMonthAnnual, usd, type Billing, type PlanId } from "@/lib/plans";
+import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
+import { PLANS, annualSavingPct, perMonthAnnual, type Billing, type PlanId } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/client";
-import { INTENT_COOKIE, INTENT_MAX_AGE, encodeIntent, intentPath } from "@/lib/checkout-intent";
+import { intentPath } from "@/lib/checkout-intent";
+import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
 import { useCheckout } from "@/components/pagos/use-checkout";
 
 /** ¿Hay sesión? (lectura local de la sesión de Supabase, sin red). En demo no hay cuentas. */
@@ -18,15 +19,8 @@ function useLoggedIn() {
   return loggedIn;
 }
 
-/** Copy regional (LATAM) para los textos de `plans.ts` que aún dicen "tico". Quitar cuando plans.ts se actualice. */
-const NEUTRAL: Record<string, string> = {
-  "Registro de comidas con alimentos ticos": "Registro de comidas con alimentos latinos",
-  "Ideas de menú tico día a día": "Ideas de menú latino día a día",
-};
-const neutral = (f: string) => NEUTRAL[f] ?? f;
-
-/** Etiqueta única del CTA principal en todo el sitio. */
-export const CTA_LABEL = "Crear mi plan";
+/** Etiqueta del CTA de los planes para quien aún no tiene cuenta: primero la prueba gratis. */
+export const CTA_LABEL = `Empezar ${TRIAL_DAYS} días gratis`;
 
 function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanId; billing: Billing; name: string; hot: boolean; loggedIn: boolean; checkout: ReturnType<typeof useCheckout> }) {
   const cls = `mt-8 h-14 w-full text-base ${hot ? "btn-banana shadow-none" : "btn-primary"}`;
@@ -35,10 +29,10 @@ function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanI
   // Demo: sin cuentas ni cobros, mostramos la pantalla de suscripción con el aviso de demo.
   if (!isSupabaseConfigured) return <Link href={intentPath(intent)} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only"> con {name}</span></Link>;
   if (!loggedIn) {
-    // Sin sesión: registro. La intención viaja en `next` y en una cookie (sobrevive al onboarding).
-    const href = `/entrar?modo=registro&plan=${plan}&pago=${billing}&next=${encodeURIComponent(intentPath(intent))}`;
-    const remember = () => { try { document.cookie = `${INTENT_COOKIE}=${encodeIntent(intent)}; path=/; max-age=${INTENT_MAX_AGE}; samesite=lax`; } catch { /* sin cookies */ } };
-    return <Link href={href} onClick={remember} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only"> con {name}</span></Link>;
+    // Sin sesión: registro con la prueba gratis. /entrar guarda el plan elegido en una cookie de intención
+    // (sobrevive al onboarding) y la bienvenida ofrece activarlo; la prueba no pide tarjeta.
+    const href = `/entrar?modo=registro&plan=${plan}&pago=${billing}`;
+    return <Link href={href} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only">, luego {name}</span></Link>;
   }
   // Con sesión ya tiene plan de entreno: aquí solo activa el pago.
   const busy = checkout.busy === `${plan}.${billing}`;
@@ -50,7 +44,8 @@ function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanI
 }
 
 const GUARANTEES = [
-  [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi plan, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
+  [Gift, `${TRIAL_DAYS} días gratis, sin tarjeta`, "Pruebas todo antes de pagar, incluida la nutrición y Banana Shield. Como no pedimos tarjeta, no hay cobros sorpresa cuando termina."],
+  [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi suscripción, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
   [Scroll, "8 días hábiles de retracto", "Si compraste y cambias de opinión, escríbenos dentro de los 8 días hábiles siguientes a la compra (Ley 7472)."],
   [Lock, "Pago seguro con ONVO Pay", "Los datos de tu tarjeta van directo a ONVO Pay, nuestro procesador de pagos, y nunca pasan por nuestros servidores."],
 ] as const;
@@ -83,15 +78,15 @@ export function Pricing() {
               <h3 className={`text-lg font-extrabold ${hot ? "text-banana" : "text-ink"}`}>{p.name}</h3>
               <p className={`text-sm ${hot ? "text-white/75" : "text-muted"}`}>{p.tagline}</p>
               <p className="mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                {annual && <s className={`text-xl font-bold ${hot ? "text-white/60" : "text-faint"}`}><span className="sr-only">Antes </span>{usd(p.price.mes)}</s>}
-                <span className={`text-5xl font-extrabold tracking-tight ${hot ? "" : "text-ink"}`}>{usd(annual ? perMonthAnnual(p) : p.price.mes)}</span>
+                {annual && <s className={`text-xl font-bold ${hot ? "text-white/60" : "text-faint"}`}><span className="sr-only">Antes </span>{money(p.price.mes)}</s>}
+                <span className={`text-5xl font-extrabold tracking-tight tabular-nums ${hot ? "" : "text-ink"}`}>{money(annual ? perMonthAnnual(p) : p.price.mes)}</span>
                 <span className={hot ? "text-white/75" : "text-muted"}>al mes</span>
               </p>
               <p className={`mt-2 min-h-10 text-sm font-semibold tabular-nums text-pretty ${annual ? (hot ? "text-banana" : "text-peel") : hot ? "text-white/75" : "text-muted"}`}>
-                {annual ? `Un solo pago de ${usd(p.price.anual)} al año. Ahorras ${usd(saved)}.` : "Sin permanencia. Cancela cuando quieras."}
+                {annual ? `Un solo pago de ${money(p.price.anual)} al año. Ahorras ${money(saved)}.` : "Sin permanencia. Cancela cuando quieras."}
               </p>
               <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] flex-1 ${hot ? "border-white/15" : "border-line"}`}>
-                {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{neutral(f)}</li>)}
+                {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{noBreakGlp1(f)}</li>)}
                 {!p.nutrition && <li className="flex gap-2.5 text-faint"><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span>Plan de nutrición, registro de comidas y Banana Shield</span></li>}
               </ul>
               <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} />
@@ -100,12 +95,12 @@ export function Pricing() {
         })}
       </div>
       {checkout.error && <p role="alert" className="mt-6 text-center text-sm font-semibold text-bad">{checkout.error}</p>}
-      <p className="mt-6 text-center text-sm text-muted text-pretty">Precios en dólares (USD). Pagas con tarjeta de crédito o débito.</p>
+      <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido. Precios en dólares (USD); pagas con tarjeta de crédito o débito cuando eliges tu plan.</p>
 
       <div className="mt-14 max-w-4xl mx-auto grid gap-6 rounded-[1.75rem] border border-line bg-cream p-6 sm:p-8 lg:grid-cols-[1fr_1.7fr] lg:gap-10">
         <div>
           <h3 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Sin riesgo y sin letra pequeña</h3>
-          <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="font-semibold text-ink underline underline-offset-2">términos</Link>, escrito para leerse en cinco minutos.</p>
+          <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">términos</Link>, escritos para leerse en cinco minutos.</p>
         </div>
         <ul className="divide-y divide-line">
           {GUARANTEES.map(([I, t, d]) => (

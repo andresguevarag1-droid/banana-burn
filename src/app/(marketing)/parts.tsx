@@ -9,16 +9,17 @@ export function Marker({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Preguntas frecuentes: título a la izquierda y lista sin tarjetas a la derecha. */
-export function Faq({ items, id }: { items: readonly (readonly [string, string])[]; id?: string }) {
+/** Preguntas frecuentes: título fijo a la izquierda (acompaña la lista en escritorio) y lista sin tarjetas a la derecha. */
+export function Faq({ items, id, aside }: { items: readonly (readonly [string, string])[]; id?: string; aside?: React.ReactNode }) {
   return (
-    <section id={id} className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20 grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
-      <div>
-        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Preguntas frecuentes</h2>
+    <section id={id} aria-labelledby={id ? `${id}-titulo` : undefined} className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20 grid gap-8 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
+      <div className="lg:sticky lg:top-24 lg:self-start">
+        <h2 id={id ? `${id}-titulo` : undefined} className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Preguntas frecuentes</h2>
         <p className="mt-3 text-muted text-pretty max-w-sm">
           ¿Algo más? Escríbenos a{" "}
-          <a href="mailto:hola@bananaburn.app" className="font-semibold text-ink underline underline-offset-2">hola@bananaburn.app</a>.
+          <a href="mailto:hola@bananaburn.app" className="tap font-semibold text-ink underline underline-offset-2">hola@bananaburn.app</a>.
         </p>
+        {aside}
       </div>
       <div className="border-t border-line">
         {items.map(([q, a]) => (
