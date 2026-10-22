@@ -25,7 +25,7 @@ const S: LegalSection[] = [
   ] },
   { id: "derechos", t: "Tus derechos", p: [
     "Puedes ejercer en cualquier momento tus derechos de acceso, rectificación, cancelación (eliminación) y oposición, y retirar tu consentimiento:",
-    ["Descargar todos tus datos desde Perfil, en la sección Tu cuenta.", "Corregir tus datos desde Perfil.", "Borrar tu cuenta desde Perfil: eliminamos tus datos y fotos de forma definitiva.", "Escribir a hola@bananaburn.app; respondemos en un máximo de 5 días hábiles."],
+    ["Descargar todos tus datos desde Perfil (Descargar mis datos).", "Corregir tus datos desde Perfil.", "Borrar tu cuenta desde Perfil (Borrar mi cuenta): eliminamos tus datos y fotos de forma definitiva.", "Escribir a hola@bananaburn.app; respondemos en un máximo de 5 días hábiles."],
     "Si consideras que no atendimos tu solicitud, puedes acudir a la Agencia de Protección de Datos de los Habitantes (PRODHAB).",
   ] },
   { id: "conservacion", t: "Cuánto tiempo los guardamos", p: [
