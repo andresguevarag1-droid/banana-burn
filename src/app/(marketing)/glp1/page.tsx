@@ -3,17 +3,20 @@ import { ArrowRight, Barbell, Drop, Egg, Monkey, ShieldCheck, Sun, Syringe } fro
 import { Phone } from "@/components/phone";
 import { PLANS, perMonthAnnual, usd } from "@/lib/plans";
 import { Faq, Marker } from "../parts";
+import { StickyCta } from "../sticky-cta";
+import { social } from "../seo";
 
 const COMPLETO = PLANS[1];
 
-export const metadata = {
-  title: "Banana Shield, el programa para personas en GLP-1",
-  description: "¿Usas Ozempic, Wegovy o Mounjaro? Entreno de fuerza, proteína y hábitos para que lo que bajes sea grasa, no músculo. En español, hecho en Costa Rica.",
-};
+const TITLE = "Banana Shield, el programa para personas en GLP-1";
+const DESCRIPTION = "¿Usas Ozempic, Wegovy o Mounjaro? Entreno de fuerza, proteína y hábitos para que lo que bajes sea grasa, no músculo. En español, para Latinoamérica.";
+const SIGNUP = "/entrar?modo=registro&programa=glp1";
+
+export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ title: `${TITLE} | Banana Burn`, description: DESCRIPTION, path: "/glp1" }) };
 
 const PILLARS = [
   [Barbell, "Fuerza que protege", "Rutinas de fuerza de 3 a 4 días adaptadas a tu nivel y tiempo. Si hoy hay náusea, modo suave: lo importante es no soltar el músculo."],
-  [Egg, "Proteína primero", "Tu meta diaria y por comida, en porciones pequeñas que sí te entran. Recetas ticas suaves para días difíciles."],
+  [Egg, "Proteína primero", "Tu meta diaria y por comida, en porciones pequeñas que sí te entran. Recetas latinas suaves para días difíciles."],
   [Syringe, "Sabe tu día de inyección", "El día de la inyección y el siguiente bajamos la intensidad y te recordamos agua, fibra y comidas pequeñas."],
   [ShieldCheck, "Músculo protegido", "Con tus medidas y tu fuerza calculamos cuánto de lo que bajas es grasa. Meta: al menos 3 de cada 4 kg."],
 ] as const;
@@ -30,21 +33,21 @@ export default function Glp1Landing() {
   const from = usd(perMonthAnnual(COMPLETO));
   return (
     <>
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 lg:pt-0 pb-16 lg:pb-0 grid lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-10 items-center lg:min-h-[min(calc(100dvh-4rem),760px)]">
+      <section id="hero" className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 lg:pt-0 pb-16 lg:pb-0 grid lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-10 items-center lg:min-h-[min(calc(100dvh-4rem),760px)]">
         <div className="animate-rise lg:py-10">
           <span className="chip bg-ink text-white"><ShieldCheck weight="duotone" className="size-4 text-banana" />Banana Shield para personas en GLP-1</span>
           <h1 className="mt-6 text-[2.6rem] leading-[1.03] sm:text-6xl lg:text-[3.4rem] font-extrabold tracking-[-0.035em] text-ink text-balance">¿Usas Ozempic o Mounjaro?<br /> <Marker>Baja grasa, no músculo.</Marker></h1>
           <p className="mt-6 text-lg sm:text-xl text-muted leading-relaxed max-w-[34rem] text-pretty">El medicamento te quita el hambre. <b className="text-ink">Banana Shield</b> se encarga de que lo que pierdas sea grasa: fuerza a tu medida, proteína que sí te entra y un plan que sabe cuál es tu día de inyección.</p>
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <Link href="/entrar?modo=registro&programa=glp1" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">Crear mi plan <ArrowRight className="size-5" /></Link>
+          <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <Link href={SIGNUP} data-cta="glp1-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">Crear mi plan <ArrowRight className="size-5" /></Link>
             <a href="#como" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Cómo funciona</a>
           </div>
-          <p className="mt-5 text-sm text-muted">Incluido en {COMPLETO.name}, desde {from} al mes.</p>
+          <p className="mt-5 text-sm text-muted text-pretty">Incluido en {COMPLETO.name}, desde {from} al mes con el plan anual. Cancela cuando quieras y paga seguro con ONVO Pay.</p>
         </div>
         <div className="relative isolate grid place-items-center py-10 sm:py-12 lg:py-0 lg:h-[min(calc(100dvh-8rem),680px)]">
           <div aria-hidden className="absolute inset-0 sm:inset-x-8 lg:inset-x-0 lg:inset-y-6 -z-10 rounded-[2rem] bg-ink" />
           <ShieldCheck aria-hidden weight="fill" className="absolute right-6 bottom-6 -z-10 size-40 text-banana opacity-[.12]" />
-          <Phone src="/landing/hoy.png" alt="Pantalla Hoy de Banana Burn" className="relative w-[240px] sm:w-[260px] lg:w-[clamp(220px,calc((100dvh-12rem)*0.44),280px)]" priority />
+          <Phone src="/landing/hoy2.png" alt="Pantalla Hoy de Banana Burn" className="relative w-[240px] sm:w-[260px] lg:w-[clamp(220px,calc((100dvh-12rem)*0.44),280px)]" priority />
         </div>
       </section>
 
@@ -97,19 +100,21 @@ export default function Glp1Landing() {
 
       <Faq items={FAQ} />
 
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-20">
+      <section data-sticky-hide className="mx-auto max-w-6xl px-4 sm:px-6 pt-20">
         <div className="rounded-[2rem] bg-ink text-white px-6 py-14 sm:p-16 text-center">
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-balance">Que cada kilo que bajes valga la pena.</h2>
-          <Link href="/entrar?modo=registro&programa=glp1" className="mt-8 btn-banana shadow-none h-14 px-8 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
-          <p className="mt-4 text-sm text-white/75">Incluido en {COMPLETO.name}, desde {from} al mes. Cancelas cuando quieras.</p>
+          <Link href={SIGNUP} data-cta="glp1-final" className="mt-8 btn-banana shadow-none h-14 px-8 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
+          <p className="mt-4 text-sm text-white/75">Incluido en {COMPLETO.name}, desde {from} al mes con el plan anual. Cancela cuando quieras.</p>
         </div>
       </section>
 
       <aside aria-label="Fuentes" className="mx-auto max-w-6xl px-4 sm:px-6 pt-12 text-xs text-muted space-y-1 [&>p]:max-w-[80ch]">
         <p>¹ Noronha JC et al. <i>Optimizing GLP-1 therapies for obesity and diabetes management.</i> Obesity Pillars, 2025 (meta-análisis citado: ~25 % del peso perdido fue masa magra).</p>
         <p>² Mozaffarian D et al. <i>Nutritional priorities to support GLP-1 therapy for obesity.</i> Obesity, 2025. ACLM, ASN, OMA y The Obesity Society.</p>
+        <p>Las capturas de la app muestran datos de ejemplo.</p>
         <p>Banana Burn no vende ni receta medicamentos y no reemplaza la atención médica. Ozempic®, Wegovy®, Mounjaro®, Zepbound® y Saxenda® son marcas de sus respectivos dueños; Banana Burn no está afiliado a ellos.</p>
       </aside>
+      <StickyCta note={`Banana Shield, desde ${from} al mes.`}><Link href={SIGNUP} data-cta="glp1-sticky" className="btn-primary h-12 px-5 shrink-0">Crear mi plan <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }

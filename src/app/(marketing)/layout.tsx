@@ -1,11 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand";
+import { SITE_URL } from "@/lib/env";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  openGraph: { siteName: "Banana Burn", locale: "es_LA", type: "website", images: [{ url: "/landing/og.png", width: 1200, height: 630, alt: "Banana Burn, tu entrenador personal con IA" }] },
+  twitter: { card: "summary_large_image", images: ["/landing/og.png"] },
+};
 
 const NAV = [
-  ["/#metodo", "Método"],
-  ["/#app", "La app"],
+  ["/#como-funciona", "Cómo funciona"],
+  ["/#comparar", "Comparar"],
   ["/glp1", "GLP-1"],
-  ["/precios", "Precios"],
+  ["/#precios", "Precios"],
   ["/#faq", "Preguntas"],
 ] as const;
 
@@ -17,12 +25,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-40 bg-paper/85 backdrop-blur-xl border-b border-line/60">
         <nav aria-label="Principal" className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
           <Logo />
-          <div className="hidden md:flex items-center gap-8 text-[15px] font-medium text-muted">
+          <div className="hidden lg:flex items-center gap-8 text-[15px] font-medium text-muted whitespace-nowrap">
             {NAV.map(([href, label]) => <Link key={href} href={href} className={LINK}>{label}</Link>)}
           </div>
           <div className="flex items-center gap-2">
             <Link href="/entrar" className="hidden sm:inline-flex btn h-10 px-4 text-ink hover:bg-white/70">Entrar</Link>
-            <Link href="/entrar?modo=registro" className="btn-primary h-10 px-4 text-sm">Crear mi plan</Link>
+            <Link href="/entrar?modo=registro" data-cta="nav" className="btn-primary h-10 px-4 text-sm whitespace-nowrap">Crear mi plan</Link>
           </div>
         </nav>
       </header>
