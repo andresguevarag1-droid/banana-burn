@@ -4,10 +4,10 @@ import { createClient, getViewer } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/env";
 import { getEntitlements } from "@/lib/entitlements";
 
-export async function updateTraining(input: { days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; mode: "acelerada" | "recomp"; level: "principiante" | "intermedio" | "avanzado"; minutes: number | null }) {
+export async function updateTraining(input: { days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; mode: "acelerada" | "recomp" | "fuerza"; level: "principiante" | "intermedio" | "avanzado"; minutes: number | null }) {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
-  if (![3, 4, 5, 6].includes(input.days) || !["gym", "casa", "mixto", "ninguno"].includes(input.equipment) || !["acelerada", "recomp"].includes(input.mode) || !["principiante", "intermedio", "avanzado"].includes(input.level) || (input.minutes != null && ![15, 20, 30, 45, 60].includes(input.minutes))) return { ok: false, error: "Datos inválidos." };
+  if (![3, 4, 5, 6].includes(input.days) || !["gym", "casa", "mixto", "ninguno"].includes(input.equipment) || !["acelerada", "recomp", "fuerza"].includes(input.mode) || !["principiante", "intermedio", "avanzado"].includes(input.level) || (input.minutes != null && ![15, 20, 30, 45, 60].includes(input.minutes))) return { ok: false, error: "Datos inválidos." };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const a = await sb.from("profiles").update({ train_days: input.days, equipment: input.equipment, level: input.level, session_minutes: input.minutes }).eq("id", v.id);

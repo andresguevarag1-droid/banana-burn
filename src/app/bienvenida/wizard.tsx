@@ -125,7 +125,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const t = (() => {
     if (!full) return null;
     const a = ageOn(full.dob);
-    const base = targets({ kg: full.weight, heightCm: full.heightCm, age: a, sex: full.sex, mode: full.goal === "grasa" ? "acelerada" : "recomp" });
+    const base = targets({ kg: full.weight, heightCm: full.heightCm, age: a, sex: full.sex, mode: full.goal === "grasa" ? "acelerada" : full.goal === "fuerza" ? "fuerza" : "recomp" });
     if (!full.glp1) return base;
     const g = glp1Targets({ kg: full.weight, goalKg: full.goalWeight, heightCm: full.heightCm, age: a, sex: full.sex });
     return { ...base, kcal: g.kcal, protein: g.protein };

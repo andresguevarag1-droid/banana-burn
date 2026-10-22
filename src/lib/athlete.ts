@@ -44,7 +44,7 @@ export function dashboard(a: Athlete) {
   const sched = scheduleFor(a.trainDays);
   const opts = { equipment: a.equipment, level: a.level, minutes: a.minutes ?? undefined };
   const daysLeft = Math.max(1, Math.round((new Date(a.goalDate + "T12:00:00").getTime() - today.date.getTime()) / 864e5));
-  const toGo = Math.max(0, a.currentWeight - a.goalWeight);
+  const toGo = a.mode === "fuerza" ? Math.max(0, a.goalWeight - a.currentWeight) : Math.max(0, a.currentWeight - a.goalWeight);
   const total = Math.max(0.1, a.startWeight - a.goalWeight);
   return {
     glp1: g ? { ...g, phase: injectionPhase(a.glp1.injectionDow, today.dow) } : null,

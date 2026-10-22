@@ -11,8 +11,8 @@ import { templatesDoneToday } from "./done-today";
 
 export const metadata = { title: "Entreno" };
 
-export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string }> }) {
-  const { dia, modo, expres, repetir } = await searchParams;
+export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string }> }) {
+  const { dia, modo, expres, repetir, cambiar, por } = await searchParams;
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
@@ -45,8 +45,21 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       tech: { anim: TECH[slot.id]?.anim ?? "", mus: cap([x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(", ")), how: x.s, cues: [], err: [], mono: "" } };
   };
   const options = plan.exercises.map((e, i) => [...optionIds[i].map((id) => build(id, e.cfg)), ...libAlts[i].map((x) => buildLib(x, e))]);
+  // "Cambiar por este" desde la biblioteca: ubica el ejercicio del plan y agrega la variante si no estaba entre las opciones.
+  let preswap: { slot: number; option: number } | null = null;
+  if (cambiar && por && cambiar.length <= 40 && por.length <= 40) {
+    const slot = plan.exercises.findIndex((e, i) => e.id === cambiar || optionIds[i].includes(cambiar as ExerciseId));
+    if (slot >= 0) {
+      let option = options[slot].findIndex((o) => o.id === por);
+      if (option < 0 && por.startsWith("ds:")) {
+        const x = getLibEx(por.slice(3));
+        if (x) { options[slot].push(buildLib(x, plan.exercises[slot])); option = options[slot].length - 1; }
+      }
+      if (option > 0) preswap = { slot, option };
+    }
+  }
   const template = plan.tpl ?? (expres ? `expres${expres}` : "descanso");
   const doneToday = options.length > 0 && (await templatesDoneToday(v)).includes(template);
   return <Player template={template} title={plan.name} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
-    doneToday={doneToday} repeat={repetir === "1"} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
+    doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
 }

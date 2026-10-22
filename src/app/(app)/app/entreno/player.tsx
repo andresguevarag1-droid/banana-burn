@@ -55,8 +55,10 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam }: {
+export function Player({ template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap }: {
   template: string; title: string; icon: string; cardio?: string; options: PlayerExercise[][]; dateKey: string; mode?: Mode; doneToday?: boolean; repeat?: boolean; gam: Gam;
+  /** Cambio pedido desde la biblioteca ("Cambiar por este"): ejercicio `slot` pasa a la opción `option`. */
+  preswap?: { slot: number; option: number } | null;
 }) {
   // Una sesión por día y plantilla; el modo (suave/fuerte) va dentro, así cambiar de modo no esconde lo que llevas.
   const key = `bb.session.v2.${dateKey}.${template}`;
@@ -119,9 +121,18 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       if (s.mode === "suave" || s.mode === "fuerte" || s.mode === "normal") setSessMode(s.mode);
       if (started || s.repeat) setGate(false);
     }
+    // Cambio pedido desde la biblioteca: se aplica si ese ejercicio aún no tiene series hechas.
+    if (preswap && options[preswap.slot]?.[preswap.option]) {
+      const base = s?.rows ?? options.map((o) => rowsFor(o[0]));
+      if (!base[preswap.slot]?.some((r) => r.done)) {
+        setChoice((c) => c.map((v, i) => (i === preswap.slot ? preswap.option : v)));
+        setRows(base.map((r, i) => (i === preswap.slot ? rowsFor(options[preswap.slot][preswap.option]) : r)));
+        setToast({ t: `Cambiado a ${options[preswap.slot][preswap.option].name}`, kind: "swap" });
+      }
+    }
     loaded.current = true;
     if (!started && !store.get(TOUR_KEY) && !isIntervalPlan(options.map((o) => o[0]))) setTour(true);
-  }, [key, options]);
+  }, [key, options]); // eslint-disable-line react-hooks/exhaustive-deps -- preswap se aplica solo al cargar
   useEffect(() => {
     if (loaded.current && phase === "play" && !gate) store.set(key, { rows, idx, startedAt, choice, combo, best: bestCombo, lastAt, warm: warmDone, mode: sessMode, ...(doneToday ? { repeat: true } : {}) });
   }, [key, rows, idx, startedAt, choice, combo, bestCombo, lastAt, warmDone, phase, sessMode, gate, doneToday]);

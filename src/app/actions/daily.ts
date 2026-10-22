@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { creditChallenges } from "@/lib/challenges-server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 
@@ -20,6 +21,7 @@ export async function setDaily(field: DailyField, value: number) {
   const { error } = await sb.from("daily_logs").upsert({ user_id: v.id, day, [COL[field]]: val }, { onConflict: "user_id,day" });
   if (error) return { ok: false };
   if (!existing) await sb.from("xp_events").insert({ user_id: v.id, kind: "checkin", xp: 15 });
+  await creditChallenges(v).catch(() => null);
   revalidatePath("/app");
   return { ok: true };
 }

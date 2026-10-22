@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { creditChallenges } from "@/lib/challenges-server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { workoutXp } from "@/lib/gamify";
@@ -60,6 +61,7 @@ export async function saveWorkout(input: Finished): Promise<SaveResult> {
     }).select("id").single();
     postId = post ? String(post.id) : undefined;
   }
+  await creditChallenges(v).catch(() => null);
   revalidatePath("/app", "layout");
   return { ok: true, postId, xp, prNames, repeat };
 }

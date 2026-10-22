@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { creditChallenges } from "@/lib/challenges-server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { FOOD_BY_ID } from "@/lib/foods";
@@ -25,6 +26,7 @@ export async function addMeal(input: { slot: Slot; foodId?: string; qty?: number
   const sb = await createClient();
   const { data, error } = await sb.from("meals").insert({ user_id: v.id, day: todayFor(v).iso, name: row.name, qty: row.qty, kcal: row.kcal, protein: row.protein, carbs: row.carbs, fat: row.fat, slot: row.slot }).select("id").single();
   if (error || !data) return { ok: false };
+  await creditChallenges(v).catch(() => null);
   revalidatePath("/app");
   return { ok: true, item: { ...row, id: String(data.id) } };
 }
@@ -35,6 +37,7 @@ export async function removeMeal(id: string): Promise<{ ok: boolean }> {
   if (v.demo) return { ok: true };
   const sb = await createClient();
   const { error } = await sb.from("meals").delete().eq("id", Number(id)).eq("user_id", v.id);
+  await creditChallenges(v).catch(() => null);
   revalidatePath("/app");
   return { ok: !error };
 }
@@ -47,6 +50,7 @@ export async function copyMeals(items: { slot: Slot; name: string; qty: number; 
   const sb = await createClient();
   const { data, error } = await sb.from("meals").insert(clean.map((c) => ({ ...c, user_id: v.id, day: todayFor(v).iso }))).select("id");
   if (error || !data) return { ok: false };
+  await creditChallenges(v).catch(() => null);
   revalidatePath("/app");
   return { ok: true, items: clean.map((c, n) => ({ ...c, id: String(data[n].id) })) };
 }

@@ -3,7 +3,7 @@ import { DEFAULT_WEEK, EX, EXPRESS_POOL, SLOTS, TPL, forEquipment, type Equipmen
 export * from "./data";
 
 export type Sex = "m" | "f";
-export type Mode = "acelerada" | "recomp";
+export type Mode = "acelerada" | "recomp" | "fuerza";
 export type SetLog = { kg: number | null; reps: number; rir?: number | null };
 
 export function ageOn(dob: string, on = new Date()): number {
@@ -21,9 +21,10 @@ export function energy({ kg, heightCm, age, sex = "m" }: { kg: number; heightCm:
 
 export function targets(p: { kg: number; heightCm: number; age: number; sex?: Sex; mode?: Mode }) {
   const { bmr, tdee } = energy(p);
-  const deficit = p.mode === "recomp" ? 200 : 500;
-  const kcal = Math.round((tdee - deficit) / 50) * 50;
-  const protein = Math.round((2.0 * p.kg) / 5) * 5; // 1.6-2.2 g/kg, 2.0 al centro
+  // Bajar grasa: −500; recomposición: −200; ganar fuerza/músculo: superávit pequeño (+250) para subir ~0.25 % por semana.
+  const delta = p.mode === "fuerza" ? 250 : p.mode === "recomp" ? -200 : -500;
+  const kcal = Math.round((tdee + delta) / 50) * 50;
+  const protein = Math.round(((p.mode === "fuerza" ? 1.8 : 2.0) * p.kg) / 5) * 5; // 1.6-2.2 g/kg
   const fat = Math.round((0.75 * p.kg) / 5) * 5;
   const carbs = Math.round((kcal - protein * 4 - fat * 9) / 4);
   return { kcal, protein, fat, carbs, steps: 10000, sleep: 8, bmr, tdee };

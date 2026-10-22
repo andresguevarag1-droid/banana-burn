@@ -6,7 +6,7 @@ import { updateTraining } from "./actions";
 
 type Eq = "gym" | "casa" | "mixto" | "ninguno";
 type Lv = "principiante" | "intermedio" | "avanzado";
-type Mode = "acelerada" | "recomp";
+type Mode = "acelerada" | "recomp" | "fuerza";
 
 export function TrainingSettings({ days: d0, equipment: e0, mode: m0, level: l0, minutes: n0 }: { days: number; equipment: Eq; mode: Mode; level: Lv; minutes: number | null }) {
   const [level, setLevel] = useState<Lv>(l0);
@@ -27,7 +27,7 @@ export function TrainingSettings({ days: d0, equipment: e0, mode: m0, level: l0,
       <div><p className="text-sm font-bold text-ink mb-2">Dónde entrenas</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{([["gym", <Barbell key="i" weight="duotone" className="size-5 shrink-0" />, "Gym"], ["mixto", <ArrowsLeftRight key="i" weight="duotone" className="size-5 shrink-0" />, "Ambos"], ["casa", <House key="i" weight="duotone" className="size-5 shrink-0" />, "Casa"], ["ninguno", <PersonSimpleRun key="i" weight="duotone" className="size-5 shrink-0" />, "Sin equipo"]] as const).map(([k, icon, l]) => <button key={k} onClick={() => setEq(k)} aria-pressed={eq === k} className={seg(eq === k)}>{icon}{l}</button>)}</div>
         {eq === "ninguno" && <p className="mt-2 text-xs text-muted">Solo peso corporal en un espacio de 2 × 2 m: búlgaras, flexiones pica, remo invertido en una mesa…</p>}
         {eq === "casa" && <p className="mt-2 text-xs text-muted">Usamos mancuernas, bandas y peso corporal: goblet en vez de sentadilla con barra, remo invertido en vez de dominadas…</p>}</div>
-      <div><p className="text-sm font-bold text-ink mb-2">Ritmo</p><div className="grid grid-cols-2 gap-2">{([["acelerada", <BananaFlame key="i" className="size-5 shrink-0" />, "Acelerado (−500)"], ["recomp", <Scales key="i" weight="duotone" className="size-5 shrink-0" />, "Recomposición (−200)"]] as const).map(([k, icon, l]) => <button key={k} onClick={() => setMode(k)} aria-pressed={mode === k} className={seg(mode === k)}>{icon}{l}</button>)}</div></div>
+      <div><p className="text-sm font-bold text-ink mb-2">Ritmo</p><div className="grid grid-cols-1 sm:grid-cols-3 gap-2">{([["acelerada", <BananaFlame key="i" className="size-5 shrink-0" />, "Bajar grasa (−500)"], ["recomp", <Scales key="i" weight="duotone" className="size-5 shrink-0" />, "Recomposición (−200)"], ["fuerza", <Barbell key="i" weight="duotone" className="size-5 shrink-0" />, "Ganar fuerza (+250)"]] as const).map(([k, icon, l]) => <button key={k} onClick={() => setMode(k)} aria-pressed={mode === k} className={seg(mode === k)}>{icon}{l}</button>)}</div></div>
       <div className="flex items-center gap-3">
         <button disabled={!dirty || pending} onClick={() => start(async () => { const r = await updateTraining({ days, equipment: eq, mode, level, minutes: mins }); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Plan actualizado" } : { ok: false, t: r.error ?? "No pudimos guardar tu plan. Intenta de nuevo." }); router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar cambios"}</button>
         {msg && <p role={msg.ok ? "status" : "alert"} className={`flex items-center gap-1.5 text-sm font-semibold ${msg.ok ? "text-peel" : "text-bad"}`}>{msg.ok ? <CheckCircle weight="fill" className="size-4 shrink-0" /> : <WarningCircle weight="fill" className="size-4 shrink-0" />}{msg.t}</p>}
