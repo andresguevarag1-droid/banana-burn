@@ -1,5 +1,5 @@
 import { adminClient } from "@/lib/supabase/admin";
-import { unsubSecret, verifyUnsubToken, type UnsubScope } from "@/lib/email/token";
+import { RESUB_MAX_AGE_MS, UNSUB_MAX_AGE_MS, unsubSecret, verifyUnsubToken, type UnsubScope } from "@/lib/email/token";
 import { esc } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
@@ -44,22 +44,23 @@ const invalid = () => page("Enlace no válido", `<p style="line-height:1.6;">Est
 /** Baja con un clic desde el enlace del correo: ?token=… firmado con EMAIL_UNSUB_SECRET. */
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
-  const t = verifyUnsubToken(token, unsubSecret());
+  const t = verifyUnsubToken(token, unsubSecret(), { maxAgeMs: UNSUB_MAX_AGE_MS });
   if (!t) return invalid();
   const ok = await apply(t.userId, t.scope, false);
   if (!ok) return page("No pudimos guardar el cambio", `<p style="line-height:1.6;">Intenta de nuevo en un momento o escríbenos a hola@bananaburn.app y lo hacemos por ti.</p>`, 503);
   return page("Listo, te dimos de baja", `<p style="line-height:1.6;">Ya no recibirás ${LABEL[t.scope]}. Los correos de tu cuenta y pagos seguirán llegando.</p>
-<form method="post" action="/api/email/baja?token=${encodeURIComponent(token!)}" style="margin-top:18px;"><input type="hidden" name="accion" value="volver">
-<button style="background:#1B1505;color:#fff;border:0;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;cursor:pointer;">¿Fue un error? Volver a suscribirme</button></form>`);
+${t.issuedAt !== null && Date.now() - t.issuedAt <= RESUB_MAX_AGE_MS ? `<form method="post" action="/api/email/baja?token=${encodeURIComponent(token!)}" style="margin-top:18px;"><input type="hidden" name="accion" value="volver">
+<button style="background:#1B1505;color:#fff;border:0;border-radius:999px;padding:13px 22px;font-size:15px;font-weight:700;cursor:pointer;">¿Fue un error? Volver a suscribirme</button></form>` : ""}`);
 }
 
 /** RFC 8058 (List-Unsubscribe-Post: One-Click) y botón "volver a suscribirme". */
 export async function POST(req: Request) {
   const token = new URL(req.url).searchParams.get("token");
-  const t = verifyUnsubToken(token, unsubSecret());
-  if (!t) return invalid();
   const form = await req.formData().catch(() => null);
   const resubscribe = form?.get("accion") === "volver";
+  // Volver a suscribirse (consentimiento) exige un enlace reciente y con fecha; darse de baja acepta enlaces viejos.
+  const t = verifyUnsubToken(token, unsubSecret(), resubscribe ? { maxAgeMs: RESUB_MAX_AGE_MS, requireIssuedAt: true } : { maxAgeMs: UNSUB_MAX_AGE_MS });
+  if (!t) return invalid();
   const ok = await apply(t.userId, t.scope, resubscribe);
   if (!ok) return page("No pudimos guardar el cambio", `<p>Intenta de nuevo en un momento.</p>`, 503);
   return resubscribe

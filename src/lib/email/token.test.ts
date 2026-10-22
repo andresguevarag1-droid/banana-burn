@@ -8,7 +8,7 @@ const SECRET = "test-secret-123";
 describe("token de baja (HMAC)", () => {
   it("firma y verifica", () => {
     const t = signUnsubToken(UID, "semanal", SECRET);
-    expect(verifyUnsubToken(t, SECRET)).toEqual({ userId: UID, scope: "semanal" });
+    expect(verifyUnsubToken(t, SECRET)).toMatchObject({ userId: UID, scope: "semanal" });
   });
   it("rechaza otro secreto, firma alterada o payload alterado", () => {
     const t = signUnsubToken(UID, "recordatorios", SECRET);

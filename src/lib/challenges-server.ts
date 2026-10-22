@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { crToday } from "@/lib/today";
 import { CHALLENGE_BY_ID, challengeState, type Challenge } from "@/lib/challenges";

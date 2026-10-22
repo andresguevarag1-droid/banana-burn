@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getViewer } from "@/lib/supabase/server";
+import { isSameOrigin } from "@/lib/security";
 import { BillingError, cancelAtPeriodEnd } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
 /** Cancela al final del periodo. Body opcional: { reason } */
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return NextResponse.json({ ok: false, error: "Origen no permitido." }, { status: 403 });
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { reason?: unknown };

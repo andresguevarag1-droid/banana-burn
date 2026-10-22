@@ -1,4 +1,5 @@
 // Qué puede usar cada usuario según su suscripción. Úsalo SOLO en código de servidor.
+import "server-only";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { hasNutrition, type Billing, type PlanId } from "@/lib/plans";

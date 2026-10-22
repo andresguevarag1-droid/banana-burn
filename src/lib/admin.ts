@@ -1,4 +1,5 @@
 // Capa de datos del panel de staff (solo servidor). Lee con el cliente del usuario: RLS y las funciones
+import "server-only";
 // SECURITY DEFINER de 0005_admin.sql repiten los permisos. En modo demo devuelve datos de ejemplo.
 import { createClient, type Role, type Viewer } from "@/lib/supabase/server";
 import { can } from "@/lib/admin-perms";

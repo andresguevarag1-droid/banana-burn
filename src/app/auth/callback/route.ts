@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email";
+import { safeNext as toSafePath } from "@/lib/security/redirect";
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next");
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+  const safeNext = toSafePath(searchParams.get("next"), "/app");
   if (code) {
     const sb = await createClient();
     const { data, error } = await sb.auth.exchangeCodeForSession(code);

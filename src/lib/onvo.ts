@@ -1,4 +1,5 @@
 // Cliente REST mínimo de ONVO Pay. SOLO SERVIDOR: usa ONVO_SECRET_KEY.
+import "server-only";
 // Nunca importes este archivo desde un componente "use client".
 //
 // Referencias (verificado contra la documentación pública, oct 2026):

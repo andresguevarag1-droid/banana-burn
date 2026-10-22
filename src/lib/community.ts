@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { crToday } from "@/lib/today";
 import { demoWorkouts } from "@/lib/demo-story";

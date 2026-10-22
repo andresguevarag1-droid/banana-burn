@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env";
+import { safeNext } from "@/lib/security/redirect";
 
 export async function middleware(req: NextRequest) {
   if (!isSupabaseConfigured) return NextResponse.next(); // modo demo
@@ -21,7 +22,8 @@ export async function middleware(req: NextRequest) {
   if (isPrivate && !user) {
     const url = req.nextUrl.clone();
     url.pathname = "/entrar";
-    url.searchParams.set("next", path);
+    url.search = "";
+    url.searchParams.set("next", safeNext(`${path}${req.nextUrl.search}`, "/app"));
     return NextResponse.redirect(url);
   }
   if (user && (path === "/entrar" || path === "/registro")) {
