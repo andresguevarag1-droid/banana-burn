@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BrandIcon, Check, PersonSimpleWalk, TreePalm } from "@/components/icons";
 import { DAY_NAMES, type PlannedDay } from "@/lib/engine";
 
-const fmtRest = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-CR")} min` : `${s} s`);
+const fmtRest = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-419")} min` : `${s} s`);
 
 export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDow: number; done: number[] }) {
   const [sel, setSel] = useState(todayDow);

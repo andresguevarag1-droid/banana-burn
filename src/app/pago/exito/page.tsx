@@ -8,7 +8,7 @@ import { AutoRefresh } from "./auto-refresh";
 
 export const metadata = { title: "Pago recibido" };
 
-const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric" }) : null);
+const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" }) : null);
 
 export default async function Exito({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
   const { s } = await searchParams;

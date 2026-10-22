@@ -11,7 +11,7 @@ type Current = { plan: PlanId | "free"; billing: Billing | null; status: Entitle
 
 const planOf = (id: PlanId) => PLANS.find((p) => p.id === id)!;
 const label = (id: PlanId, b: Billing) => `${planOf(id).name}, ${b === "anual" ? "anual" : "mensual"}`;
-const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long" }) : null);
+const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long" }) : null);
 const REASONS = ["Es muy caro para mí", "No lo estoy usando", "No veo resultados", "Problemas técnicos", "Otro motivo"];
 
 export function SubscriptionManager({ current, intent, payments, demo }: { current: Current; intent: CheckoutIntent | null; payments: boolean; demo: boolean }) {

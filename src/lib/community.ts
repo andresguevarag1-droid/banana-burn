@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type Viewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 import { demoWorkouts } from "@/lib/demo-story";
 
 export type Author = { id: string; username: string | null; name: string };
@@ -16,7 +16,7 @@ const DEMO_SUGGEST: Author[] = [
   { id: "d4", username: "fabi.rojas", name: "Fabián Rojas" }, { id: "d5", username: "mariela.q", name: "Mariela Quesada" }, { id: "d6", username: "jp.vargas", name: "José Pablo Vargas" },
 ];
 const weekDemo = (v: Viewer) => {
-  const t = crToday().iso, from = new Date(t + "T12:00:00"); from.setDate(from.getDate() - 7);
+  const t = todayFor(v).iso, from = new Date(t + "T12:00:00"); from.setDate(from.getDate() - 7);
   const all = demoWorkouts(t);
   return { all, week: all.filter((w) => w.d >= from.toISOString().slice(0, 10)).length, me: { id: v.id, username: "andres", name: "Andrés" } as Author };
 };

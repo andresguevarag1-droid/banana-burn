@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 import { workoutXp } from "@/lib/gamify";
 
 export type DoneSet = { kg: number | null; reps: number; rir: number | null };
@@ -47,7 +47,7 @@ export async function saveWorkout(input: Finished): Promise<{ ok: boolean; demo?
   const calc = workoutXp({ doneSets, totalSets: Math.max(doneSets, Math.min(w.total ?? doneSets, 60)), prs: w.prs, seconds: (now - started) / 1000 });
   w = { ...w, xp: calc.xp, prs: calc.prs, prNames: calc.rushed ? [] : (w.prNames ?? []).slice(0, calc.prs) };
   const { data: wk, error } = await sb.from("workouts").insert({
-    user_id: v.id, day: crToday().iso, template: w.template, started_at: new Date(started).toISOString(), finished_at: new Date().toISOString(), fun: Math.min(5, Math.max(1, Math.round(w.fun))), xp: w.xp,
+    user_id: v.id, day: todayFor(v).iso, template: w.template, started_at: new Date(started).toISOString(), finished_at: new Date().toISOString(), fun: Math.min(5, Math.max(1, Math.round(w.fun))), xp: w.xp,
   }).select("id").single();
   if (error || !wk) return { ok: false, error: "No pudimos guardar el entreno. Intenta de nuevo." };
   const rows = w.exercises.flatMap((e) => e.sets.map((s, i) => ({ workout_id: wk.id, user_id: v.id, exercise: e.id, set_no: i + 1, kg: s.kg, reps: s.reps, rir: s.rir })));

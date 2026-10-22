@@ -1,5 +1,5 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 
 export type Measure = { d: string; waist: number | null; neck: number | null; chest: number | null; arm: number | null; thigh: number | null; hip: number | null };
 export type Photo = { id: string; d: string; pose: string; url: string | null };
@@ -8,7 +8,7 @@ const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:0
 
 export async function getMeasures(v: Viewer): Promise<Measure[]> {
   if (v.demo) {
-    const t = crToday().iso;
+    const t = todayFor(v).iso;
     return [-21, -14, -7, 0].map((o, i) => ({ d: addDays(t, o), waist: 99.6 - i * 0.7, neck: 40.3 - i * 0.1, chest: 107.4 - i * 0.3, arm: 37 + (i % 2) * 0.2, thigh: 61.4 - i * 0.3, hip: null }));
   }
   const sb = await createClient();

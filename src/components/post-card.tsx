@@ -77,7 +77,7 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
           <dl className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-cream p-3 text-center">
             <div><dt className="text-[11px] font-semibold text-muted">Tiempo</dt><dd className="font-extrabold text-ink tabular-nums">{d.mins != null ? `${d.mins} min` : "Sin dato"}</dd></div>
             <div><dt className="text-[11px] font-semibold text-muted">Series</dt><dd className="font-extrabold text-ink tabular-nums">{d.sets ?? "Sin dato"}</dd></div>
-            <div><dt className="text-[11px] font-semibold text-muted">Volumen</dt><dd className="font-extrabold text-ink tabular-nums">{d.volume ? `${(d.volume / 1000).toLocaleString("es-CR", { maximumFractionDigits: 1 })} t` : "Sin dato"}</dd></div>
+            <div><dt className="text-[11px] font-semibold text-muted">Volumen</dt><dd className="font-extrabold text-ink tabular-nums">{d.volume ? `${(d.volume / 1000).toLocaleString("es-419", { maximumFractionDigits: 1 })} t` : "Sin dato"}</dd></div>
           </dl>
         )}
         {d.prs && d.prs.length > 0 && <p className="mt-2 flex items-center gap-2 rounded-xl bg-banana-soft px-3 py-2 text-sm font-bold text-banana-ink"><BananaTrophy className="size-5 shrink-0" />Récord en {d.prs.join(", ")}</p>}

@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
   const headers = { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" };
   // Las respuestas de seguridad (urgencias) nunca se bloquean ni gastan cupo.
-  const urgent = safetyCheck(last.content);
+  const urgent = safetyCheck(last.content, v.country);
   if (urgent) return new Response(textStream(fake(urgent)), { headers });
 
   // Cupo diario en el servidor: con Supabase, contador atómico que el usuario no puede editar (coach_consume, 0012);
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     const a0 = await getAthlete(v);
-    return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? ""))), { headers });
+    return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? "", v.country))), { headers });
   }
 
   const a = await getAthlete(v);

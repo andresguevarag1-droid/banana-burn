@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type Viewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 import { CHALLENGE_BY_ID, challengeState, type Challenge } from "@/lib/challenges";
 
 export type Metrics = { workout: boolean; steps: number; water: number; protein: number; proteinGoal: number };
@@ -19,7 +19,7 @@ export function metAuto(c: Challenge, m: Metrics) {
 }
 
 export async function getMyChallenges(v: Viewer, m: Metrics): Promise<{ active: MyChallenge[]; done: { c: Challenge; at: string }[] }> {
-  const today = crToday().iso;
+  const today = todayFor(v).iso;
   if (v.demo) {
     const mk = (id: string, start: number, done: number[]) => {
       const c = CHALLENGE_BY_ID[id]; const startedOn = addDays(today, -start);

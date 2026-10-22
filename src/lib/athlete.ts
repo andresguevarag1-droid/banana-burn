@@ -1,17 +1,21 @@
 import { ageOn, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
-import { crToday, mondayOf } from "@/lib/today";
+import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 
 export type Athlete = {
   name: string; dob: string; heightCm: number; startWeight: number; currentWeight: number; goalWeight: number; goalDate: string; startDate: string; mode: Mode; complete: boolean; trainDays: number; sex: Sex; equipment: Equipment; level: Level; minutes: number | null; glp1: Glp1;
+  /** Zona horaria del usuario para calcular "hoy". */
+  tz?: string;
+  /** País del usuario (ISO 2 letras). */
+  country?: string | null;
 };
 
 const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 94.9, currentWeight: 93.1, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true, trainDays: 6, sex: "m", equipment: "gym", level: "intermedio", minutes: null, glp1: { on: false, med: "semaglutida", injectionDow: null, since: null } };
 
 export async function getAthlete(v: Viewer): Promise<Athlete> {
-  if (v.demo) return { ...DEMO, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(crToday().iso) };
+  if (v.demo) return { ...DEMO, tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) };
   const sb = await createClient();
   const [{ data: p }, { data: g }, { data: w }] = await Promise.all([
     sb.from("profiles").select("full_name,dob,height_cm,train_days,sex,onboarded,equipment,level,session_minutes,glp1,glp1_med,glp1_injection_dow,glp1_since").eq("id", v.id).maybeSingle(),
@@ -24,13 +28,14 @@ export async function getAthlete(v: Viewer): Promise<Athlete> {
     dob: p?.dob ?? "1995-01-01", heightCm: Number(p?.height_cm ?? 170),
     startWeight: Number(g?.start_weight ?? 80), currentWeight: Number(w?.kg ?? g?.start_weight ?? 80),
     goalWeight: Number(g?.goal_weight ?? 75), goalDate: g?.goal_date ?? "2026-12-31",
-    startDate: g?.start_date ?? mondayOf(crToday().iso), mode: (g?.mode as Mode) ?? "acelerada", complete, trainDays: Number(p?.train_days ?? 6), sex: (p?.sex as Sex) ?? "m", equipment: (p?.equipment as Equipment) ?? "gym", level: (p?.level as Level) ?? "intermedio", minutes: p?.session_minutes ?? null,
+    startDate: g?.start_date ?? mondayOf(todayFor(v).iso), mode: (g?.mode as Mode) ?? "acelerada", complete, trainDays: Number(p?.train_days ?? 6), sex: (p?.sex as Sex) ?? "m", equipment: (p?.equipment as Equipment) ?? "gym", level: (p?.level as Level) ?? "intermedio", minutes: p?.session_minutes ?? null,
+    tz: v.tz, country: v.country,
     glp1: { on: Boolean(p?.glp1), med: ((p?.glp1_med as Glp1Med) ?? "otro"), injectionDow: p?.glp1_injection_dow ?? null, since: p?.glp1_since ?? null },
   };
 }
 
 export function dashboard(a: Athlete) {
-  const today = crToday();
+  const today = todayFor(a);
   const week = weekIndex(mondayOf(a.startDate), today.date);
   const age = ageOn(a.dob, today.date);
   const base = targets({ kg: a.currentWeight, heightCm: a.heightCm, age, mode: a.mode, sex: a.sex });

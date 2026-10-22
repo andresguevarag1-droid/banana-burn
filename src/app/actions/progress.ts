@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 
 const PHOTO_PATH = /^[0-9a-f-]{36}\/[A-Za-z0-9_-][A-Za-z0-9._-]{0,119}$/;
 const FIELDS = ["waist", "neck", "chest", "arm", "thigh", "hip"] as const;
@@ -19,7 +19,7 @@ export async function saveMeasures(input: Partial<Record<(typeof FIELDS)[number]
   if (!Object.keys(row).length) return { ok: false, error: "Anota al menos una medida." };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
-  const day = crToday().iso;
+  const day = todayFor(v).iso;
   const { data: had } = await sb.from("measurements").select("day").eq("user_id", v.id).eq("day", day).maybeSingle();
   const { error } = await sb.from("measurements").upsert({ user_id: v.id, day, ...row }, { onConflict: "user_id,day" });
   if (error) return { ok: false, error: "No pudimos guardar tus medidas. Intenta de nuevo." };
@@ -34,7 +34,7 @@ export async function addPhoto(path: string, pose: string) {
   // Ruta dentro de la carpeta del usuario, sin subcarpetas ni "..": igual que el CHECK de 0012.
   if (typeof path !== "string" || !PHOTO_PATH.test(path) || path.includes("..") || !path.startsWith(`${v.id}/`) || !["frente", "lado", "espalda"].includes(pose)) return { ok: false };
   const sb = await createClient();
-  const day = crToday().iso;
+  const day = todayFor(v).iso;
   const { count: before } = await sb.from("progress_photos").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("day", day);
   const { error } = await sb.from("progress_photos").insert({ user_id: v.id, day, pose, path });
   if (!error && !before) await sb.from("xp_events").insert({ user_id: v.id, kind: "photo", xp: 20 }); // XP con la primera foto del día

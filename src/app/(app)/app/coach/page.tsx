@@ -23,7 +23,7 @@ export default async function Coach() {
     d.plan.tpl ? (g.trainedToday ? `Ya hiciste **${d.plan.name}** hoy. Bien ahí.` : `Hoy te toca **${d.plan.name}** (${d.plan.exercises.length} ejercicios). Ayer fue ${d.yesterday.name}, así que vas fresco.`) : `Hoy es **descanso activo**: camina y estira.`,
     protLeft > 0 ? `- Te faltan **${protLeft} g de proteína** hoy.` : `- Proteína del día completa.`,
     g.streak.days > 0 ? `- Llevas **${g.streak.days} ${g.streak.days === 1 ? "día" : "días"} de racha**${g.streak.todayDone ? "" : " (regístrate hoy para no perderla)"}.` : `- Hoy empieza tu racha.`,
-    d.toGo > 0 ? `- Te faltan **${d.toGo.toLocaleString("es-CR", { maximumFractionDigits: 1 })} kg** para tu meta.` : `- Ya llegaste a tu meta de peso.`,
+    d.toGo > 0 ? `- Te faltan **${d.toGo.toLocaleString("es-419", { maximumFractionDigits: 1 })} kg** para tu meta.` : `- Ya llegaste a tu meta de peso.`,
     "¿En qué te ayudo?",
   ];
   const suggest = [

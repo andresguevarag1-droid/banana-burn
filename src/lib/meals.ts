@@ -1,5 +1,5 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 
 import type { MealItem, Slot } from "@/lib/meals-shared";
 export * from "@/lib/meals-shared";
@@ -19,7 +19,7 @@ const DEMO_YESTERDAY: MealItem[] = [
 ];
 
 export async function getMeals(v: Viewer) {
-  const today = crToday().iso;
+  const today = todayFor(v).iso;
   if (v.demo) return { today: DEMO_TODAY, yesterday: DEMO_YESTERDAY, demo: true };
   const sb = await createClient();
   const { data } = await sb.from("meals").select("id,day,name,qty,kcal,protein,carbs,fat,slot").eq("user_id", v.id).in("day", [today, prevDay(today)]).order("id");

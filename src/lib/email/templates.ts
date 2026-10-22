@@ -10,15 +10,15 @@ const FONT = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI'
 
 export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const abs = (path: string) => (path.startsWith("http") ? path : `${SITE_URL}${path}`);
-const kg = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const kg = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 const firstName = (n: string) => (n || "").trim().split(/\s+/)[0] || "crack";
 
 export const money = (amount: number, currency = "USD") => {
-  try { return new Intl.NumberFormat("es-CR", { style: "currency", currency }).format(amount); } catch { return `${currency} ${amount.toFixed(2)}`; }
+  try { return new Intl.NumberFormat("es-419", { style: "currency", currency }).format(amount); } catch { return `${currency} ${amount.toFixed(2)}`; }
 };
 export const longDate = (iso: string) => {
   const d = new Date(iso.length === 10 ? iso + "T12:00:00" : iso);
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Costa_Rica" });
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Costa_Rica" });
 };
 
 // ───────────── Bloques ─────────────
@@ -91,14 +91,14 @@ export function planListo(d: { name: string; trainDays: number; todayRoutine: st
   const preheader = `Hoy arrancas con ${d.todayRoutine}. Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}.`;
   const body = badge("Plan listo", C.banana) + h1("Tu plan está listo") +
     p(`${esc(n)}, armamos tu programa con base en tus datos. Esto es lo que viene:`) +
-    stats([[`${d.trainDays}`, "días/semana"], [d.kcal.toLocaleString("es-CR"), "kcal/día"], [`${d.protein} g`, "proteína"]]) +
+    stats([[`${d.trainDays}`, "días/semana"], [d.kcal.toLocaleString("es-419"), "kcal/día"], [`${d.protein} g`, "proteína"]]) +
     rows([["Hoy te toca", d.todayRoutine], ...(d.startWeight ? [["Peso inicial", `${kg(d.startWeight)} kg`] as [string, string]] : []), ["Meta", `${kg(d.goalWeight)} kg`], ["Fecha meta", longDate(d.goalDate)]]) +
     p("Las cargas se calibran en tu primera sesión y suben solas cuando dominas el rango. Tú solo llega y dale.") +
     button("Ver mi entreno de hoy", "/app/entreno");
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque completaste tu perfil en Banana Burn." }),
-    text: textLayout([`Tu plan está listo, ${n}.`, "", `• ${d.trainDays} días por semana`, `• ${d.kcal.toLocaleString("es-CR")} kcal/día y ${d.protein} g de proteína`, `• Hoy te toca: ${d.todayRoutine}`, `• Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}`, "", `Ver mi entreno de hoy: ${abs("/app/entreno")}`]),
+    text: textLayout([`Tu plan está listo, ${n}.`, "", `• ${d.trainDays} días por semana`, `• ${d.kcal.toLocaleString("es-419")} kcal/día y ${d.protein} g de proteína`, `• Hoy te toca: ${d.todayRoutine}`, `• Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}`, "", `Ver mi entreno de hoy: ${abs("/app/entreno")}`]),
   };
 }
 
@@ -200,7 +200,7 @@ export type WeeklyData = {
 export function resumenSemanal(d: WeeklyData): Email {
   const n = firstName(d.name);
   const delta = d.kgStart != null && d.kgEnd != null ? Math.round((d.kgEnd - d.kgStart) * 10) / 10 : null;
-  const kgLabel = delta == null ? "Sin pesaje" : delta === 0 ? "0,0 kg" : `${delta > 0 ? "+" : ""}${kg(delta)} kg`;
+  const kgLabel = delta == null ? "Sin pesaje" : delta === 0 ? "0.0 kg" : `${delta > 0 ? "+" : ""}${kg(delta)} kg`;
   const headline = d.workouts >= d.planned && d.planned > 0 ? `Semana completa: ${d.workouts}/${d.planned} entrenos` : d.workouts > 0 ? `${d.workouts} entrenos esta semana` : "Una semana nueva para arrancar";
   const subject = `Tu semana: ${d.workouts} entrenos${delta != null ? ` · ${kgLabel}` : ""}`;
   const preheader = d.prs.length ? `${d.prs.length} récord${d.prs.length > 1 ? "s" : ""} personal${d.prs.length > 1 ? "es" : ""} y tu plan para esta semana.` : "Tu progreso y lo que viene esta semana.";

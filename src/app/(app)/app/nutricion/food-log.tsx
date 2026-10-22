@@ -11,7 +11,7 @@ import { Sheet, SheetTitle } from "@/components/sheet";
 
 type Targets = { kcal: number; protein: number; carbs: number; fat: number };
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-const n0 = (n: number) => Math.round(n).toLocaleString("es-CR");
+const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
 const QTY: [string, number][] = [["½", 0.5], ["1", 1], ["1½", 1.5], ["2", 2]];
 
 function defaultSlot(): Slot {
@@ -144,7 +144,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
               <ul className="px-4 divide-y divide-line">
                 {its.map((i) => (
                   <li key={i.id} className="py-2.5 flex items-center gap-3 animate-enter">
-                    <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-CR")}</span>}</p><p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal, {n0(i.protein)} g de proteína</p></div>
+                    <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-419")}</span>}</p><p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal, {n0(i.protein)} g de proteína</p></div>
                     <button onClick={() => remove(i.id)} className="tap pressable grid place-items-center size-8 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label={`Quitar ${i.name}`}><X weight="bold" className="size-4" /></button>
                   </li>
                 ))}
@@ -176,7 +176,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
                     {pick?.id === f.id ? (
                       <div className="rounded-2xl bg-white border-2 border-ink p-3">
                         <div className="flex justify-between gap-2"><p className="font-bold text-ink">{f.n}</p><p className="text-sm font-bold text-ink tabular-nums">{n0(f.k * qty)} kcal</p></div>
-                        <p className="text-xs text-muted tabular-nums">{f.p} × {qty.toLocaleString("es-CR")}, {n0(f.pr * qty)} g de proteína</p>
+                        <p className="text-xs text-muted tabular-nums">{f.p} × {qty.toLocaleString("es-419")}, {n0(f.pr * qty)} g de proteína</p>
                         <div className="mt-3 flex gap-1.5">
                           {QTY.map(([l, n]) => <button key={l} onClick={() => setQty(n)} className={`tap pressable flex-1 h-10 rounded-xl text-sm font-bold ${qty === n ? "bg-banana text-ink" : "bg-cream text-muted"}`}>{l}</button>)}
                           <button onClick={() => add(f, qty)} className="tap pressable flex-[1.4] h-10 rounded-xl bg-ink text-white text-sm font-bold hover:bg-black">Agregar</button>

@@ -58,7 +58,7 @@ const DEMO_ITEMS = async (): Promise<InAppNotification[]> => {
   const today = d.plan.tpl ? { title: `Hoy te toca ${d.plan.name}`, body: `Unos ${d.plan.mins ?? 45} min y listo. Tus cargas ya están calculadas.` } : { title: "Hoy toca descanso activo", body: "Camina y estira. Mañana volvemos con todo." };
   return [
     { id: 2, kind: "recordatorio", ...today, url: d.plan.tpl ? "/app/entreno" : "/app", read_at: null, created_at: new Date(t - 2 * 3600e3).toISOString() },
-    { id: 1, kind: "semanal", title: "Tu semana en Banana Burn", body: "5 entrenos y −0,6 kg. Mira lo que viene esta semana.", url: "/app/progreso", read_at: new Date(t - 20 * 3600e3).toISOString(), created_at: new Date(t - 26 * 3600e3).toISOString() },
+    { id: 1, kind: "semanal", title: "Tu semana en Banana Burn", body: "5 entrenos y −0.6 kg. Mira lo que viene esta semana.", url: "/app/progreso", read_at: new Date(t - 20 * 3600e3).toISOString(), created_at: new Date(t - 26 * 3600e3).toISOString() },
   ];
 };
 

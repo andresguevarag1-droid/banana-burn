@@ -40,7 +40,7 @@ export default async function Nutricion() {
     <div className="space-y-5 animate-enter">
       <header>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Comida de hoy</h1>
-        <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-CR")} kcal y {t.protein} g de proteína. Se ajusta cada semana con tu peso real.</p>
+        <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-419")} kcal y {t.protein} g de proteína. Se ajusta cada semana con tu peso real.</p>
       </header>
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] items-start [&>*]:min-w-0">
         <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} />

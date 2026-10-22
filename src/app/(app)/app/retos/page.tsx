@@ -44,7 +44,7 @@ export default async function Retos() {
       <section className="card p-5">
         <h2 className="flex items-center gap-2 font-extrabold text-ink"><BananaMedal className="size-6 text-banana-ink" />Medallas de retos</h2>
         {done.length ? (
-          <ul className="mt-3 flex flex-wrap gap-3">{done.map((d, i) => <li key={i} className="flex items-center gap-2 rounded-2xl bg-banana-soft px-3 py-2"><span className="grid place-items-center size-10 shrink-0 rounded-xl bg-white text-banana-ink"><BrandIcon name={d.c.icon} className="size-6" /></span><span><span className="block text-sm font-extrabold text-ink">{d.c.title}</span><span className="block text-[11px] text-muted">{new Date(d.at + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short", year: "numeric" })}</span></span></li>)}</ul>
+          <ul className="mt-3 flex flex-wrap gap-3">{done.map((d, i) => <li key={i} className="flex items-center gap-2 rounded-2xl bg-banana-soft px-3 py-2"><span className="grid place-items-center size-10 shrink-0 rounded-xl bg-white text-banana-ink"><BrandIcon name={d.c.icon} className="size-6" /></span><span><span className="block text-sm font-extrabold text-ink">{d.c.title}</span><span className="block text-[11px] text-muted">{new Date(d.at + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })}</span></span></li>)}</ul>
         ) : <p className="mt-2 text-sm text-muted">Termina tu primer reto para ganar tu medalla.</p>}
       </section>
     </div>

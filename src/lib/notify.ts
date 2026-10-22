@@ -185,7 +185,7 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
         url: "/app",
       };
     case "semanal": {
-      const f = (n: number) => n.toLocaleString("es-CR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const f = (n: number) => n.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` · ${f(x.kgDelta)} kg` : x.kgDelta > 0 ? ` · +${f(x.kgDelta)} kg` : " · peso estable";
       return { title: "Tu semana en Banana Burn", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
     }

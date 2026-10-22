@@ -45,7 +45,7 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
                     <span className={`grid place-items-center size-8 rounded-full text-sm font-extrabold ${i === 0 ? "bg-banana text-ink" : i < 3 ? "bg-cream text-ink" : "text-muted"}`}>{i < 3 ? <><BananaMedal weight={i === 0 ? "fill" : "duotone"} className={`size-5 ${i === 0 ? "text-ink" : "text-banana-ink"}`} /><span className="sr-only">{i + 1}</span></> : i + 1}</span>
                     <span className="flex-1 min-w-0 font-bold text-ink truncate">{r.name}{r.me && " (tú)"}</span>
                     <span className="text-sm text-muted tabular-nums">{r.workouts} entrenos</span>
-                    <span className="w-20 text-right font-extrabold text-ink tabular-nums">{r.xp.toLocaleString("es-CR")} XP</span>
+                    <span className="w-20 text-right font-extrabold text-ink tabular-nums">{r.xp.toLocaleString("es-419")} XP</span>
                   </li>
                 ))}
               </ol>

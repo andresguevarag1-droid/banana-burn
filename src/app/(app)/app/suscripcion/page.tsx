@@ -10,7 +10,7 @@ import { SubscriptionManager } from "./manager";
 
 export const metadata = { title: "Mi suscripción" };
 
-const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric" }) : "Sin fecha");
+const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" }) : "Sin fecha");
 
 const STATUS: Record<Entitlements["status"], { label: string; cls: string }> = {
   demo: { label: "Demo", cls: "bg-ink text-white" },

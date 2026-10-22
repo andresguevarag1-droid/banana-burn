@@ -20,7 +20,7 @@ import { toView } from "@/lib/challenge-view";
 
 export const metadata = { title: "Hoy" };
 
-const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
 
 function tipFor(dow: number, training: boolean, proteinLeft: number, trained: boolean) {
@@ -40,7 +40,7 @@ export default async function Hoy() {
   const ch = await getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein });
   const { plan, t } = d;
   const training = !!plan.tpl;
-  const dateLabel = d.today.date.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long" });
+  const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = plan.mins ?? (training ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;
 
@@ -69,7 +69,7 @@ export default async function Hoy() {
         <div className="flex items-center gap-3">
           <span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft ring-1 ring-banana/40"><LevelIcon idx={g.level.idx} className="size-6" /></span>
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline justify-between gap-2 text-xs font-bold"><span className="text-ink">{g.level.n} <span className="font-semibold text-muted">nivel {g.level.idx}</span></span><span className="text-muted tabular-nums">{g.xp.toLocaleString("es-CR")} XP</span></div>
+            <div className="flex items-baseline justify-between gap-2 text-xs font-bold"><span className="text-ink">{g.level.n} <span className="font-semibold text-muted">nivel {g.level.idx}</span></span><span className="text-muted tabular-nums">{g.xp.toLocaleString("es-419")} XP</span></div>
             <ProgressBar value={g.level.progress} min={0.04} className="mt-1.5 h-2" fill="bg-ember" />
           </div>
           <div className="hidden sm:flex gap-1.5 pl-3 border-l border-line">
@@ -166,7 +166,7 @@ export default async function Hoy() {
         {ch.active.length ? (
           <div className="grid gap-3 lg:grid-cols-2">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
         ) : (
-          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Únete a un reto de 30 días</span><span className="block text-sm text-muted">Flexiones, plancha o {(10000).toLocaleString("es-CR")} pasos al día, y gana tu medalla.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
+          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Únete a un reto de 30 días</span><span className="block text-sm text-muted">Flexiones, plancha o {(10000).toLocaleString("es-419")} pasos al día, y gana tu medalla.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
         )}
       </section>
 

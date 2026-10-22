@@ -1,6 +1,6 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { demoActiveDays, demoWorkouts, demoXp } from "@/lib/demo-story";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 import { badges, levelOf, streakOf } from "@/lib/gamify";
 
 export type DailyLog = { water: number; steps: number; sleep: number; protein: number; kcal: number; energy?: number; nausea?: number; fiber?: number };
@@ -9,7 +9,7 @@ export const EMPTY: DailyLog = { water: 0, steps: 0, sleep: 0, protein: 0, kcal:
 const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
 export async function getDaily(v: Viewer, startWeight: number, currentWeight: number) {
-  const today = crToday().iso;
+  const today = todayFor(v).iso;
   if (v.demo) {
     const days = demoActiveDays(today);
     const xp = demoXp(today);

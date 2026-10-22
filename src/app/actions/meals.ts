@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 import { FOOD_BY_ID } from "@/lib/foods";
 import type { MealItem, Slot } from "@/lib/meals-shared";
 
@@ -23,7 +23,7 @@ export async function addMeal(input: { slot: Slot; foodId?: string; qty?: number
   } else return { ok: false };
   if (v.demo) return { ok: true, item: { ...row, id: `demo-${Date.now()}` } };
   const sb = await createClient();
-  const { data, error } = await sb.from("meals").insert({ user_id: v.id, day: crToday().iso, name: row.name, qty: row.qty, kcal: row.kcal, protein: row.protein, carbs: row.carbs, fat: row.fat, slot: row.slot }).select("id").single();
+  const { data, error } = await sb.from("meals").insert({ user_id: v.id, day: todayFor(v).iso, name: row.name, qty: row.qty, kcal: row.kcal, protein: row.protein, carbs: row.carbs, fat: row.fat, slot: row.slot }).select("id").single();
   if (error || !data) return { ok: false };
   revalidatePath("/app");
   return { ok: true, item: { ...row, id: String(data.id) } };
@@ -45,7 +45,7 @@ export async function copyMeals(items: { slot: Slot; name: string; qty: number; 
   const clean = items.slice(0, 40).filter((i) => SLOTS.includes(i.slot)).map((i) => ({ slot: i.slot, name: String(i.name).slice(0, 80), qty: Number(i.qty) || 1, kcal: Math.max(0, Math.min(5000, Math.round(i.kcal))), protein: Math.max(0, Math.min(400, r1(i.protein))), carbs: Math.max(0, r1(i.carbs)), fat: Math.max(0, r1(i.fat)) }));
   if (v.demo) return { ok: true, items: clean.map((c, n) => ({ ...c, id: `demo-${Date.now()}-${n}` })) };
   const sb = await createClient();
-  const { data, error } = await sb.from("meals").insert(clean.map((c) => ({ ...c, user_id: v.id, day: crToday().iso }))).select("id");
+  const { data, error } = await sb.from("meals").insert(clean.map((c) => ({ ...c, user_id: v.id, day: todayFor(v).iso }))).select("id");
   if (error || !data) return { ok: false };
   revalidatePath("/app");
   return { ok: true, items: clean.map((c, n) => ({ ...c, id: String(data[n].id) })) };

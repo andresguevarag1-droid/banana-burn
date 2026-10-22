@@ -7,7 +7,7 @@ import type { Viewer } from "@/lib/supabase/server";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => { throw new Error("sin Supabase en pruebas"); } }));
 
-const viewer: Viewer = { demo: true, id: "demo", email: "demo@bananaburn.app", name: "Andrés", role: "superadmin", plan: "completo", onboarded: true };
+const viewer: Viewer = { demo: true, id: "demo", email: "demo@bananaburn.app", name: "Andrés", role: "superadmin", plan: "completo", onboarded: true, tz: "America/Costa_Rica", country: "CR" };
 const DATES = ["2026-10-22T15:00:00Z", "2026-03-01T15:00:00Z", "2027-01-31T15:00:00Z"];
 
 afterEach(() => vi.useRealTimers());

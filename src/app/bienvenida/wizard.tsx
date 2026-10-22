@@ -7,10 +7,11 @@ import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
 import { completeOnboarding, type Onboard } from "./actions";
+import { COUNTRIES, countryFromTz } from "@/lib/countries";
 import { INTENT_COOKIE, decodeIntent, intentPath } from "@/lib/checkout-intent";
 
 const STEPS = 7;
-const nf = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 function suggestDate(w: number, g: number) {
@@ -46,7 +47,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
-  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: (() => { const m = typeof document !== "undefined" ? document.cookie.match(/bb_objetivo=(grasa|recomp|fuerza)/) : null; return (m?.[1] ?? "grasa") as Onboard["goal"]; })(), sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1 }));
+  const [o, setO] = useState<Onboard>(() => ({ name: initialName, goal: (() => { const m = typeof document !== "undefined" ? document.cookie.match(/bb_objetivo=(grasa|recomp|fuerza)/) : null; return (m?.[1] ?? "grasa") as Onboard["goal"]; })(), sex: "m", dob: "1995-01-01", heightCm: 175, weight: 85, goalWeight: 78, goalDate: suggestDate(85, 78).date, days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1: typeof document !== "undefined" && document.cookie.includes("bb_programa=glp1"), glp1Med: "semaglutida", glp1Dow: 1, country: (() => { try { return countryFromTz(Intl.DateTimeFormat().resolvedOptions().timeZone); } catch { return "OT"; } })() }));
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [parq, setParq] = useState<boolean[]>([false, false, false, false]);
@@ -94,7 +95,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-ink">¡Tu plan está listo, {o.name.split(" ")[0]}!</h1>
           <p className="mt-2 text-muted">Calculado para ti. Se ajusta solo cada semana con tu peso real.</p>
           <div className="mt-8 grid grid-cols-2 gap-3 text-left">
-            {([[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-CR"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína"], [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${o.days} días`, "de gym por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(o.goalWeight)} kg`, new Date(o.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
+            {([[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-419"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína"], [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${o.days} días`, "de gym por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(o.goalWeight)} kg`, new Date(o.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
               <div key={l} className="card p-4 transition-[opacity,translate] duration-300 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:translate-y-2" style={{ transitionDelay: `${150 + i * 60}ms` }}><span className="grid place-items-center size-9 rounded-xl bg-cream">{e}</span><p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{v}</p><p className="text-xs font-semibold text-muted">{l}</p></div>
             ))}
           </div>
@@ -152,6 +153,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
             <label className="block"><span className="text-sm font-bold text-ink">¿Cómo te llamas?</span><input value={o.name} onChange={(e) => up({ name: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="given-name" /></label>
             <div><span className="text-sm font-bold text-ink">Sexo biológico</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["m", "Hombre"], ["f", "Mujer"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => up({ sex: k })} className={`pressable h-14 rounded-2xl border-2 font-bold transition-[background-color,border-color,color,transform] ${o.sex === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.sex === k}>{l}</button>)}</div></div>
             <label className="block"><span className="text-sm font-bold text-ink">Fecha de nacimiento</span><input type="date" value={o.dob} max={iso(new Date())} onChange={(e) => up({ dob: e.target.value })} className="input mt-1.5 h-14 text-lg" /><span className={`mt-1 block text-xs ${age < 18 ? "font-semibold text-bad" : "text-muted"}`} role={age < 18 ? "alert" : undefined}>{age < 18 ? "Banana Burn es para personas mayores de 18 años." : `${age} años`}</span></label>
+            <label className="block"><span className="text-sm font-bold text-ink">¿Dónde vives?</span><select value={o.country ?? "OT"} onChange={(e) => up({ country: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="country">{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select><span className="mt-1 block text-xs text-muted">Para tu horario, tus recordatorios y comidas de tu país.</span></label>
             <div><span className="text-sm font-bold text-ink">Estatura</span><div className="mt-1.5"><Num value={o.heightCm} onChange={(n) => up({ heightCm: n })} step={1} unit="cm" min={130} max={220} d={0} /></div></div>
           </>)}
 
@@ -163,7 +165,7 @@ export function Wizard({ name: initialName, demo }: { name: string; demo: boolea
             {goalErr ? <p role="alert" className="rounded-3xl bg-bad/10 p-4 text-sm font-semibold text-bad">{goalErr}</p> :
             <div className={`rounded-3xl p-4 ${paceWarn ? "bg-ember/10" : "bg-peel/10"}`}>
               <p className={`flex items-center gap-1.5 font-extrabold ${paceWarn ? "text-ember-ink" : "text-peel"}`}>{paceWarn ? <Warning weight="duotone" className="size-5 shrink-0" /> : <CheckCircle weight="duotone" className="size-5 shrink-0" />}{paceWarn ? "Muy agresivo" : "Ritmo sano"}: {nf(Math.max(0, pace), 2)} kg por semana</p>
-              <p className="mt-1 text-sm text-body">{paceWarn ? `Más de 1 % por semana suele costar músculo. Te recomiendo el ${new Date(sug.date + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}.` : "Perderás grasa y conservarás tu músculo."}</p>
+              <p className="mt-1 text-sm text-body">{paceWarn ? `Más de 1 % por semana suele costar músculo. Te recomiendo el ${new Date(sug.date + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long" })}.` : "Perderás grasa y conservarás tu músculo."}</p>
               {paceWarn && <button type="button" onClick={() => { setTouchedDate(false); up({ goalDate: sug.date }); }} className="mt-3 chip h-8 bg-white text-ink">Usar fecha recomendada</button>}
             </div>}
           </>)}

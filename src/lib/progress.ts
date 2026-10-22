@@ -1,6 +1,6 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { e1rm, EX } from "@/lib/engine";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
 import { DEMO_DAYS, DEMO_NOW_KG, DEMO_START_KG, demoWorkouts } from "@/lib/demo-story";
 
 export type Point = { d: string; v: number };
@@ -8,8 +8,8 @@ export const MAIN_LIFTS = ["squat", "bench", "deadlift", "ohp", "row"] as const;
 
 const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
-function demo() {
-  const t = crToday().iso;
+function demo(v: Viewer) {
+  const t = todayFor(v).iso;
   const weights: Point[] = [];
   for (let i = DEMO_DAYS; i >= 0; i--) {
     if (i % 3 === 1 && i > 6) continue; // no todos los días se pesa
@@ -28,9 +28,9 @@ function demo() {
 }
 
 export async function getProgress(v: Viewer) {
-  if (v.demo) return demo();
+  if (v.demo) return demo(v);
   const sb = await createClient();
-  const since = addDays(crToday().iso, -120);
+  const since = addDays(todayFor(v).iso, -120);
   const [{ data: w }, { data: sets }, { data: wk }] = await Promise.all([
     sb.from("weights").select("day,kg").eq("user_id", v.id).gte("day", since).order("day"),
     sb.from("workout_sets").select("exercise,kg,reps,workouts!inner(day)").eq("user_id", v.id).in("exercise", [...MAIN_LIFTS]).gte("workouts.day", since).limit(2000),

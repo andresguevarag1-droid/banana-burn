@@ -10,7 +10,7 @@ import { ageOn } from "@/lib/engine";
 
 export const metadata = { title: "Banana Shield para GLP-1" };
 
-const nf = (n: number, d = 0) => n.toLocaleString("es-CR", { maximumFractionDigits: d });
+const nf = (n: number, d = 0) => n.toLocaleString("es-419", { maximumFractionDigits: d });
 
 export default async function Glp1Guide() {
   const v = (await getViewer())!;

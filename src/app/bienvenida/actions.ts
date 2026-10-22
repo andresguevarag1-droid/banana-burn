@@ -1,10 +1,11 @@
 "use server";
 import { createClient, getViewer } from "@/lib/supabase/server";
-import { crToday } from "@/lib/today";
+import { todayFor } from "@/lib/today";
+import { isCountry } from "@/lib/countries";
 import { sendPlanReadyEmail } from "@/lib/email";
 import { ageOn, planDay, scheduleFor, targets } from "@/lib/engine";
 
-export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null };
+export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string };
 
 export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
@@ -17,17 +18,17 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   const sb = await createClient();
   const { data: before } = await sb.from("profiles").select("onboarded").eq("id", v.id).maybeSingle();
   const p = await sb.from("profiles").update({
-    full_name: o.name.slice(0, 60) || null, dob: o.dob, sex: o.sex, height_cm: o.heightCm, train_days: o.days, equipment: o.equipment, goal_type: o.goal, level: o.level, session_minutes: o.minutes, glp1: o.glp1, glp1_med: o.glp1 ? o.glp1Med : null, glp1_injection_dow: o.glp1 ? o.glp1Dow : null, glp1_since: o.glp1 ? crToday().iso : null,
+    full_name: o.name.slice(0, 60) || null, country: isCountry(o.country) ? o.country : null, dob: o.dob, sex: o.sex, height_cm: o.heightCm, train_days: o.days, equipment: o.equipment, goal_type: o.goal, level: o.level, session_minutes: o.minutes, glp1: o.glp1, glp1_med: o.glp1 ? o.glp1Med : null, glp1_injection_dow: o.glp1 ? o.glp1Dow : null, glp1_since: o.glp1 ? todayFor(v).iso : null,
     onboarded: true, health_consent_at: new Date().toISOString(),
   }).eq("id", v.id);
   if (p.error) return { ok: false, error: "No se pudo guardar tu perfil." };
   await sb.from("goals").update({ active: false }).eq("user_id", v.id).eq("active", true);
   const g = await sb.from("goals").insert({ user_id: v.id, start_weight: o.weight, goal_weight: o.goalWeight, goal_date: o.goalDate, mode: o.goal === "grasa" ? "acelerada" : "recomp" });
   if (g.error) return { ok: false, error: "No se pudo guardar tu meta." };
-  await sb.from("weights").upsert({ user_id: v.id, day: crToday().iso, kg: o.weight }, { onConflict: "user_id,day" });
+  await sb.from("weights").upsert({ user_id: v.id, day: todayFor(v).iso, kg: o.weight }, { onConflict: "user_id,day" });
   if (!before?.onboarded) await sb.from("xp_events").insert({ user_id: v.id, kind: "onboard", xp: 50 }); // una sola vez
   const t = targets({ kg: o.weight, heightCm: o.heightCm, age: ageOn(o.dob), sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : "recomp" });
-  const today = planDay(new Date(crToday().iso + "T12:00:00").getDay(), 0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
+  const today = planDay(new Date(todayFor(v).iso + "T12:00:00").getDay(), 0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
   await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, kcal: t.kcal, protein: t.protein, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
   return { ok: true };
 }

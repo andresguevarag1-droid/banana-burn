@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
 import { DemoBanner } from "@/components/brand";
 import { InstallPrompt } from "@/components/install-prompt";
+import { TzSync } from "@/components/tz-sync";
 import { getViewer, STAFF } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {v.demo && <DemoBanner />}
       <AppNav name={v.name} staff={STAFF.includes(v.role)} />
       <InstallPrompt />
+      <TzSync current={v.tz} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">{children}</main>
     </div>
   );

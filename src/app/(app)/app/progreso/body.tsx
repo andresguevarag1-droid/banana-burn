@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Measure, Photo } from "@/lib/measures";
 
 const FIELDS = [["waist", "Cintura", "a la altura del ombligo"], ["neck", "Cuello", "bajo la manzana de Adán"], ["chest", "Pecho", "a la altura de los pezones"], ["arm", "Brazo", "parte más ancha, relajado"], ["thigh", "Muslo", "parte más ancha"], ["hip", "Cadera", "parte más ancha de glúteos"]] as const;
-const nf = (n: number) => n.toLocaleString("es-CR", { maximumFractionDigits: 1 });
+const nf = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 1 });
 
 export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyFat: number | null; demo: boolean }) {
   const last = history.at(-1), first = history[0];
@@ -22,7 +22,7 @@ export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyF
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">Cintura</p><p className="text-xl font-extrabold text-ink tabular-nums whitespace-nowrap">{last?.waist ? <>{nf(last.waist)}<span className="text-sm font-bold text-muted"> cm</span></> : <span className="text-faint">Sin dato</span>}</p>{waistDelta != null && <p className={`inline-flex items-center gap-1 text-xs font-bold ${waistDelta <= 0 ? "text-peel" : "text-ember-ink"}`}>{waistDelta <= 0 ? <TrendDown weight="bold" className="size-3.5" /> : <TrendUp weight="bold" className="size-3.5" />}<span className="sr-only">{waistDelta <= 0 ? "Bajó" : "Subió"}</span>{nf(Math.abs(waistDelta))} cm</p>}</div>
         <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">% grasa (aprox.)</p><p className="text-xl font-extrabold text-ink tabular-nums whitespace-nowrap">{bodyFat != null ? <>{nf(bodyFat)}<span className="text-sm font-bold text-muted"> %</span></> : <span className="text-faint">Sin dato</span>}</p><p className="text-[11px] text-muted">fórmula Marina EE. UU.</p></div>
-        <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">Última</p><p className="text-sm font-extrabold text-ink">{last ? new Date(last.d + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short" }) : "Nunca"}</p><p className="text-[11px] text-muted">mide cada 1 o 2 semanas</p></div>
+        <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">Última</p><p className="text-sm font-extrabold text-ink">{last ? new Date(last.d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" }) : "Nunca"}</p><p className="text-[11px] text-muted">mide cada 1 o 2 semanas</p></div>
       </div>
       {history.length > 1 && (
         <div className="mt-3 relative overflow-x-auto">
@@ -30,7 +30,7 @@ export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyF
             <caption className="sr-only">Historial de medidas en centímetros</caption>
             <thead><tr className="text-xs text-muted"><th className="py-1.5 pr-2 text-left font-semibold">Fecha</th>{FIELDS.map(([k, l]) => <th key={k} className="py-1.5 pl-2 text-right font-semibold">{l}</th>)}</tr></thead>
             <tbody>{[...history].reverse().slice(0, 5).map((m) => (
-              <tr key={m.d} className="border-t border-line"><td className="py-1.5 pr-2 whitespace-nowrap text-muted">{new Date(m.d + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short" })}</td>{FIELDS.map(([k]) => <td key={k} className="py-1.5 pl-2 text-right text-ink">{m[k] != null ? nf(m[k]!) : <><span aria-hidden className="inline-block h-px w-2.5 bg-faint align-middle" /><span className="sr-only">sin dato</span></>}</td>)}</tr>
+              <tr key={m.d} className="border-t border-line"><td className="py-1.5 pr-2 whitespace-nowrap text-muted">{new Date(m.d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" })}</td>{FIELDS.map(([k]) => <td key={k} className="py-1.5 pl-2 text-right text-ink">{m[k] != null ? nf(m[k]!) : <><span aria-hidden className="inline-block h-px w-2.5 bg-faint align-middle" /><span className="sr-only">sin dato</span></>}</td>)}</tr>
             ))}</tbody>
           </table>
         </div>
@@ -103,7 +103,7 @@ export function Photos({ photos, userId, demo }: { photos: Photo[]; userId: stri
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={before.url!} alt={`Antes, ${before.d}`} className="absolute inset-0 size-full object-cover" style={{ clipPath: `inset(0 ${100 - cmp}% 0 0)` }} />
             <div aria-hidden className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-white shadow" style={{ left: `${cmp}%` }} />
-            <span className="absolute top-3 left-3 chip bg-ink/70 text-white">Antes: {new Date(before.d + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short" })}</span>
+            <span className="absolute top-3 left-3 chip bg-ink/70 text-white">Antes: {new Date(before.d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" })}</span>
             <span className="absolute top-3 right-3 chip bg-banana text-ink">Ahora</span>
           </div>
           <input type="range" min={5} max={95} value={cmp} onChange={(e) => setCmp(Number(e.target.value))} className="mt-3 w-full max-w-sm mx-auto block accent-ink" aria-label="Comparar antes y después" />
