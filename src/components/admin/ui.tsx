@@ -75,7 +75,7 @@ export function Empty({ children }: { children: ReactNode }) {
 /** Tabla con caption accesible (visible u oculto) y scroll horizontal en móvil. */
 export function Table({ caption, captionHidden, children, minWidth = 720 }: { caption: string; captionHidden?: boolean; children: ReactNode; minWidth?: number }) {
   return (
-    <div className="card overflow-x-auto" tabIndex={0} role="region" aria-label={caption}>
+    <div className="card relative overflow-x-auto" tabIndex={0} role="region" aria-label={caption}>
       <table className="w-full text-sm" style={{ minWidth }}>
         <caption className={captionHidden ? "sr-only" : "text-left px-4 pt-4 pb-1 text-sm font-bold text-ink"}>{caption}</caption>
         {children}

@@ -25,7 +25,7 @@ export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyF
         <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">Última</p><p className="text-sm font-extrabold text-ink">{last ? new Date(last.d + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "short" }) : "Nunca"}</p><p className="text-[10px] text-faint">mide cada 2 semanas</p></div>
       </div>
       {history.length > 1 && (
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3 relative overflow-x-auto">
           <table className="w-full text-sm tabular-nums">
             <caption className="sr-only">Historial de medidas en centímetros</caption>
             <thead><tr className="text-left text-xs text-muted"><th className="py-1.5 font-semibold">Fecha</th>{FIELDS.map(([k, l]) => <th key={k} className="py-1.5 font-semibold">{l}</th>)}</tr></thead>

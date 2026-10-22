@@ -39,7 +39,7 @@ export function AdminSidebarNav({ items }: { items: NavItem[] }) {
 export function AdminTabsNav({ items }: { items: NavItem[] }) {
   const path = usePathname();
   return (
-    <nav aria-label="Secciones del panel" className="md:hidden -mx-4 px-4 overflow-x-auto border-b border-line bg-white">
+    <nav aria-label="Secciones del panel" className="md:hidden relative -mx-4 px-4 overflow-x-auto border-b border-line bg-white">
       <ul className="flex gap-1 py-2 text-sm w-max">
         {items.map(({ key, href, label, badge }) => {
           const Icon = ICONS[key];

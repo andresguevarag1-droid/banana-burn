@@ -52,7 +52,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </aside>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-x-clip">
           <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur px-4 sm:px-8">
             <div className="flex h-16 items-center gap-3">
               <div className="md:hidden"><Logo href="/admin" small /></div>
