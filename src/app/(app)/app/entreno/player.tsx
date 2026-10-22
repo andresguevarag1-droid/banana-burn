@@ -371,7 +371,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-line" />
             {sheet === "tech" && ex.tech && (
               <div className="space-y-4">
-                <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} className="mx-auto h-56 max-w-[300px]" /></div>
+                {ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} className="mx-auto h-56 max-w-[300px]" /></div>}
                 <h2 className="text-2xl font-extrabold text-ink">{ex.name}</h2>
                 <p className="text-sm text-muted">{ex.tech.mus}</p>
                 <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>
@@ -389,7 +389,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
                   {options[idx].map((o, i) => (
                     <button key={o.id} onClick={() => swap(i)} className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition ${choice[idx] === i ? "bg-banana border-banana" : "bg-white border-line hover:border-ink"}`}>
                       <span className="grid place-items-center size-12 shrink-0 rounded-xl bg-cream text-xl">{o.barbell ? "🏋️" : o.bw ? "🤸" : "💪"}</span>
-                      <span className="flex-1 min-w-0"><span className="block font-bold text-ink">{o.name}</span><span className="block text-xs text-muted">{o.muscle}{i === 0 ? " · plan original" : ""}{o.rx.kg != null ? ` · sugerido ${kgFmt(o.rx.kg)} kg` : ""}</span></span>
+                      <span className="flex-1 min-w-0"><span className="block font-bold text-ink">{o.name}</span><span className="block text-xs text-muted">{o.muscle}{i === 0 ? " · plan original" : o.id.startsWith("ds:") ? " · 📚 biblioteca" : ""}{o.rx.kg != null ? ` · sugerido ${kgFmt(o.rx.kg)} kg` : ""}</span></span>
                       {choice[idx] === i && <Check className="size-5 text-ink" />}
                     </button>
                   ))}

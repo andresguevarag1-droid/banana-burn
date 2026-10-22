@@ -4,6 +4,7 @@ import { getHistory } from "@/lib/history";
 import { getDaily } from "@/lib/daily";
 import { ALTS, BARBELL, EX, HOME, SLOTS, e1rm, expressDay, forEquipment, planDay, prescribe, type ExerciseId, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
+import { MUSCLE, es as esLib, getLibEx, incFor, libraryAlternatives } from "@/lib/library";
 import { Player, type PlayerExercise } from "./player";
 
 export const metadata = { title: "Entreno" };
@@ -31,6 +32,14 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     if (modo === "fuerte" && rx.type !== "cal") rx = { ...rx, note: `🔥 Día fuerte: busca 1 rep extra en la última serie. ${rx.note}` };
     return { id, name: EX[id].n, muscle: EX[id].m, cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), rx, best, lastSets: h.at(-1) ?? null };
   };
-  const options = plan.exercises.map((e, i) => optionIds[i].map((id) => build(id, e.cfg)));
+  const libAlts = plan.exercises.map((e) => libraryAlternatives(e.id, d.equipment));
+  const libHist = await getHistory(v, libAlts.flat().map((x) => `ds:${x.id}`));
+  const buildLib = (x: NonNullable<ReturnType<typeof getLibEx>>, cfg: SlotCfg): PlayerExercise => {
+    const id = `ds:${x.id}`, h = libHist[id] ?? [], inc = incFor(x.eq);
+    const best = Math.max(0, ...h.flat().map((s) => (s.kg ? e1rm(s.kg, s.reps) : 0)));
+    return { id, name: x.n, muscle: esLib(MUSCLE, x.t), cfg, bw: inc === 0, barbell: x.eq === "barbell", rx: prescribe(id, cfg, h, { deload: d.deload, inc }), best, lastSets: h.at(-1) ?? null,
+      tech: { anim: "", mus: [x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(" · "), how: x.s, cues: [], err: [], mono: "" } };
+  };
+  const options = plan.exercises.map((e, i) => [...optionIds[i].map((id) => build(id, e.cfg)), ...libAlts[i].map((x) => buildLib(x, e.cfg))]);
   return <Player template={plan.tpl ?? (expres ? `expres${expres}` : "descanso")} title={plan.name} emoji={plan.emoji} cardio={plan.cardio} options={options} dateKey={`${d.today.iso}${modo === "suave" ? "-suave" : ""}`} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
 }

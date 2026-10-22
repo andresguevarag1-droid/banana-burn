@@ -3,7 +3,10 @@ import data from "@/data/exercise-library.json";
 
 // Biblioteca de 1.324 ejercicios (datos MIT de hasaneyldrm/exercises-dataset).
 export type LibEx = { id: string; n: string; en: string; bp: string; eq: string; t: string; m2: string[]; s: string[]; media: string; gif: string };
-const ALL = data as LibEx[];
+const CORE = new Set(["0043", "0042", "1760", "0025", "0030", "0314", "1457", "0426", "0251", "0032", "0085", "0652", "1326", "2330", "0027", "0292", "0031", "0313", "0334", "0178", "0203", "0378", "0662", "0283", "0279", "0472", "0475", "2133", "1160", "0630", "0514", "0499", "3360", "0410", "1757", "1459", "0620"]);
+const EQ_RANK: Record<string, number> = { barbell: 0, dumbbell: 0, "body weight": 0, cable: 1, "leverage machine": 1, kettlebell: 2, band: 2, "smith machine": 2 };
+const rank = (e: LibEx) => (CORE.has(e.id) ? 0 : 10) + (EQ_RANK[e.eq] ?? 3) + (/stretch/i.test(e.en) ? 5 : 0);
+const ALL = (data as LibEx[]).slice().sort((a, b) => rank(a) - rank(b) || a.n.localeCompare(b.n, "es"));
 const BY_ID = new Map(ALL.map((e) => [e.id, e]));
 
 export const BODY: Record<string, string> = { back: "Espalda", cardio: "Cardio", chest: "Pecho", "lower arms": "Antebrazos", "lower legs": "Pantorrillas", neck: "Cuello", shoulders: "Hombros", "upper arms": "Brazos", "upper legs": "Piernas", waist: "Abdomen" };
@@ -63,3 +66,19 @@ export function similar(e: LibEx, eq?: "gym" | "casa" | "mixto" | "ninguno", n =
 }
 
 export const LIB_COUNT = ALL.length;
+
+/** Incremento de carga sugerido según el equipo (para progresión de ejercicios de la biblioteca). */
+export function incFor(eq: string) {
+  if (eq === "barbell" || eq === "ez barbell" || eq === "olympic barbell" || eq === "trap bar" || eq === "cable" || eq === "smith machine") return 2.5;
+  if (eq === "dumbbell" || eq === "kettlebell") return 2;
+  if (eq === "leverage machine" || eq === "sled machine") return 5;
+  return 0;
+}
+
+/** Variantes de la biblioteca para un ejercicio del motor (mismo músculo objetivo y equipo disponible). */
+export function libraryAlternatives(ourId: string, eqUser: "gym" | "casa" | "mixto" | "ninguno", n = 3) {
+  const d = DS_ID[ourId] ? BY_ID.get(DS_ID[ourId]) : null;
+  if (!d) return [];
+  const used = new Set(Object.values(DS_ID));
+  return ALL.filter((x) => x.t === d.t && x.id !== d.id && !used.has(x.id) && !/stretch/i.test(x.en) && (eqUser === "casa" ? HOME_EQ.has(x.eq) : eqUser === "ninguno" ? BW_EQ.has(x.eq) : true)).slice(0, n);
+}

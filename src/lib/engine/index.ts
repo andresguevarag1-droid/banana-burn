@@ -36,8 +36,8 @@ const roundTo = (kg: number, step: number) => Math.round(kg / step) * step;
 export type Prescription = { sets: number; kg: number | null; reps: number[]; type: "cal" | "up" | "reps" | "reset" | "deload"; note: string };
 
 /** Doble progresión + reinicio −10 % tras 2 sesiones flojas + descarga. `history` = sesiones previas (antigua→reciente). */
-export function prescribe(id: ExerciseId, cfg: SlotCfg, history: SetLog[][], opts: { deload?: boolean } = {}): Prescription {
-  const ex = EX[id];
+export function prescribe(id: ExerciseId | string, cfg: SlotCfg, history: SetLog[][], opts: { deload?: boolean; inc?: number } = {}): Prescription {
+  const ex = { inc: opts.inc ?? EX[id as ExerciseId]?.inc ?? 0 };
   const step = ex.inc >= 2.5 ? 2.5 : ex.inc || 1;
   const sets = opts.deload ? Math.max(2, cfg.sets - 1) : cfg.sets;
   if (!history.length) return { sets, kg: null, reps: Array(sets).fill(cfg.lo), type: "cal", note: ex.inc ? `Calibración: elige un peso con el que llegues a ${cfg.lo}–${cfg.hi} reps dejando 2 en reserva.` : `Calibración: haz ${cfg.lo}–${cfg.hi} ${cfg.unit === "s" ? "segundos" : cfg.unit === "m" ? "metros" : "reps"} limpias dejando 1–2 en reserva. Anota lo que logres.` };
