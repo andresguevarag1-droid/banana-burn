@@ -27,7 +27,7 @@ const FAQ = [
   ["¿Cuánto peso voy a bajar?", "Un ritmo sano es 0,5–1 % de tu peso por semana. Banana Burn mide tu tendencia real y ajusta para que llegues a tu meta sin perder músculo."],
   ["¿Sirve si entreno en casa?", "Sí. Puedes elegir equipo disponible y el plan cambia variantes con mancuernas, bandas o peso corporal."],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados, cifrados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras (Ley 8968)."],
-  ["¿Cuánto cuesta?", "Entreno: $9.99/mes o $99/año. Entreno + Nutrición: $14.99/mes o $149.99/año. Con el plan anual ahorras 17 %."],
+  ["¿Cuánto cuesta?", "Entreno: $9.99/mes o $59.99/año. Entreno + Nutrición: $14.99/mes o $89.99/año. Con el plan anual pagas la mitad."],
   ["¿Cómo pago?", "Tarjeta, SINPE Móvil o Apple Pay. Cancelas con un toque, sin letra pequeña."],
 ];
 
@@ -52,7 +52,7 @@ export default function Landing() {
               <Link href="/entrar?modo=registro" className="btn-primary h-14 px-7 text-base">Crear mi plan <ArrowRight className="size-5" /></Link>
               <a href="#app" className="btn-ghost h-14 px-7 text-base">Ver cómo funciona</a>
             </div>
-            <p className="mt-4 text-sm text-faint">Desde $8.25/mes · Listo en 2 minutos · Cancela cuando quieras</p>
+            <p className="mt-4 text-sm text-faint">Desde $4.99/mes · Listo en 2 minutos · Cancela cuando quieras</p>
           </div>
           <div className="relative"><PhoneMock /></div>
         </div>

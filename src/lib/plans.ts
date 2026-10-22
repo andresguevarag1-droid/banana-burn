@@ -5,12 +5,12 @@ export type Billing = "mes" | "anual";
 export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: boolean; price: Record<Billing, number>; feats: string[] }[] = [
   {
     id: "entreno", name: "Entreno", tagline: "Tu entrenador personal con IA", nutrition: false,
-    price: { mes: 9.99, anual: 99 },
+    price: { mes: 9.99, anual: 59.99 },
     feats: ["Rutina distinta cada día, sin repetir", "Reproductor con animaciones de técnica", "Progresión automática de cargas", "Coach IA 24/7 para tu entreno", "Progreso de peso y fuerza", "Rachas, niveles y logros"],
   },
   {
     id: "completo", name: "Entreno + Nutrición", tagline: "El plan completo para bajar de peso", nutrition: true,
-    price: { mes: 14.99, anual: 149.99 },
+    price: { mes: 14.99, anual: 89.99 },
     feats: ["Todo lo de Entreno", "Calorías y macros calculados para ti", "Registro de comidas con alimentos ticos", "Ajuste semanal según tu peso real", "Coach IA también para tu comida", "Ideas de menú tico día a día"],
   },
 ];
