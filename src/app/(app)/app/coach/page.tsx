@@ -1,15 +1,17 @@
-import { Sparkles } from "lucide-react";
+import { createClient, getViewer } from "@/lib/supabase/server";
+import { getAthlete } from "@/lib/athlete";
+import { Chat } from "./chat";
 
 export const metadata = { title: "Coach IA" };
 
-export default function Coach() {
-  return (
-    <div className="min-h-[60vh] grid place-items-center text-center animate-rise">
-      <div className="max-w-md">
-        <span className="mx-auto grid place-items-center size-16 rounded-3xl bg-banana"><Sparkles className="size-8 text-ink" /></span>
-        <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-ink">Tu coach IA llega pronto</h1>
-        <p className="mt-3 text-muted">Pregúntale lo que sea: “¿puedo cambiar sentadilla por prensa?”, “¿qué ceno si me quedan 40 g de proteína?”. Lee tus datos y ajusta tu plan. Disponible en Pro.</p>
-      </div>
-    </div>
-  );
+export default async function Coach() {
+  const v = (await getViewer())!;
+  const a = await getAthlete(v);
+  let initial: { role: "user" | "assistant"; content: string }[] = [];
+  if (!v.demo) {
+    const sb = await createClient();
+    const { data } = await sb.from("coach_messages").select("role,content").eq("user_id", v.id).order("id", { ascending: false }).limit(20);
+    initial = ((data ?? []) as typeof initial).reverse();
+  }
+  return <Chat name={a.name} initial={initial} />;
 }

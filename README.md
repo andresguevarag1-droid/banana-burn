@@ -9,7 +9,8 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
 | `/` · `/precios` | Landing de ventas (tema claro, marca Banana) |
 | `/entrar` | Login multiusuario: código por correo (OTP) + Google |
 | `/app` | **Hoy**: rutina del día (distinta a ayer y mañana), meta, macros, semana |
-| `/app/entrenar` · `/nutricion` · `/progreso` · `/coach` | Plan semanal, macros con comida tica, pesaje + perfil, coach IA (pronto) |
+| `/app/entreno` | Reproductor para el gym: animación de técnica, cargas sugeridas, descanso con alarma, récords, resumen |
+| `/app/entrenar` · `/nutricion` · `/progreso` · `/coach` | Plan semanal, macros con comida tica, gráficas de peso y fuerza con ajuste semanal, Coach IA con Claude (streaming) |
 | `/admin` · `/admin/usuarios` | Panel de staff con KPIs y usuarios (solo roles coach/support/admin/superadmin) |
 
 - `src/lib/engine/` — motor portado del prototipo: calorías (Mifflin-St Jeor), doble progresión con reinicio −10 %, descargas, tendencia de peso, plan semanal anti-aburrimiento. Tests: `npm test`.
@@ -25,8 +26,9 @@ Entrenador personal con IA, en español, para LATAM. Next.js 15 (App Router) + S
 3. Authentication → Email: activa *Email OTP*. En **Email Templates → Magic Link** incluye `{{ .Token }}` para que llegue el código de 6 dígitos.
 4. Authentication → URL Configuration: Site URL = tu dominio de Vercel; Redirect URLs = `https://TU-DOMINIO/auth/callback` y `http://localhost:3000/auth/callback`.
 5. (Opcional) Authentication → Providers → Google con tu Client ID/Secret.
-6. Copia `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a Vercel → Settings → Environment Variables y redepliega.
-7. Regístrate en `/entrar` y hazte superadmin en el SQL Editor:
+6. (Coach IA) agrega `ANTHROPIC_API_KEY` en Vercel.
+7. Copia `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` a Vercel → Settings → Environment Variables y redepliega.
+8. Regístrate en `/entrar` y hazte superadmin en el SQL Editor:
    ```sql
    update public.profiles set role = 'superadmin'
    where id = (select id from auth.users where email = 'TU_CORREO');
