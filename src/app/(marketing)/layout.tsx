@@ -3,12 +3,13 @@ import Link from "next/link";
 import { Logo } from "@/components/brand";
 import { MobileMenu } from "./mobile-menu";
 import { SITE_URL } from "@/lib/env";
+import { ogImage } from "./seo";
 import { GLP1, TRIAL_DAYS } from "@/lib/copy";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  openGraph: { siteName: "Banana Burn", locale: "es_LA", type: "website", images: [{ url: "/landing/og.png", width: 1200, height: 630, alt: "Banana Burn, tu entrenador personal con IA" }] },
-  twitter: { card: "summary_large_image", images: ["/landing/og.png"] },
+  openGraph: { siteName: "Banana Burn", locale: "es_419", type: "website", images: [ogImage("Baja grasa sin perder músculo", "Tu entrenador personal con IA, en español y para toda Latinoamérica.")] },
+  twitter: { card: "summary_large_image", images: [ogImage("Baja grasa sin perder músculo", "Tu entrenador personal con IA, en español y para toda Latinoamérica.").url] },
 };
 
 const NAV = [

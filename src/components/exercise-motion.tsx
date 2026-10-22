@@ -36,22 +36,20 @@ export function ExerciseMotion({ anim, label = true, className = "", mus, cues }
   const sheet = sheetFor(anim);
   const [broken, setBroken] = useState(false);
   if (sheet && !broken) return <ExerciseSheet anim={anim} sheet={sheet} label={label} className={className} mus={mus} cues={cues} onFail={() => setBroken(true)} />;
-  return <ExerciseVector anim={anim} label={label} className={className} />;
+  return <ExerciseMascot label={label} className={className} />;
 }
 
-function ExerciseVector({ anim, label, className }: { anim: string; label: boolean; className: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    let alive = true;
-    let handle: { destroy: () => void } | null = null;
-    const el = ref.current;
-    import("@/lib/motion").then(({ buildFigure }) => {
-      if (!alive || !el) return;
-      handle = buildFigure(el, anim, { label });
-    });
-    return () => { alive = false; handle?.destroy(); };
-  }, [anim, label]);
-  return <div ref={ref} role="img" aria-label="Animación de la técnica" className={`motion ${className}`} />;
+/** Respaldo si la hoja de fotogramas no carga: el mono de la marca, quieto (nunca el dibujo vectorial viejo). */
+function ExerciseMascot({ label, className }: { label: boolean; className: string }) {
+  return (
+    <div role="img" aria-label="Coach Banana" className={`motion ${className}`}>
+      <div className="relative flex-1 min-h-0 flex justify-center">
+        <div className="relative h-full aspect-square max-w-full overflow-hidden rounded-2xl bg-banana">
+          <Image src="/brand/mascota.webp" alt="" fill sizes={label ? "360px" : "112px"} className="object-contain" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 type Live = { i: number; left: number; cycle: number };

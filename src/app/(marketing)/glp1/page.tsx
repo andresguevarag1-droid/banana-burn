@@ -5,7 +5,7 @@ import { perMonthAnnual } from "@/lib/plans";
 import { TRIAL_DAYS, money } from "@/lib/copy";
 import { Faq, Marker } from "../parts";
 import { StickyCta } from "../sticky-cta";
-import { social } from "../seo";
+import { faqJsonLd, ldScript, social } from "../seo";
 import { COMPLETO, FaqCta, GLP1, SIGNUP_GLP1, TRIAL_CTA, TRIAL_NOTE } from "../content";
 
 const TITLE = "Banana Shield, el programa para personas en GLP-1";
@@ -13,7 +13,7 @@ const DESCRIPTION = "¿Usas Ozempic, Wegovy o Mounjaro? Entreno de fuerza, prote
 /* Todas las llamadas a la acción llevan al plan que incluye Banana Shield (plan=completo en la intención de compra). */
 const SIGNUP = SIGNUP_GLP1;
 
-export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ title: `${TITLE} | Banana Burn`, description: DESCRIPTION, path: "/glp1" }) };
+export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ title: `${TITLE} | Banana Burn`, description: DESCRIPTION, path: "/glp1", og: { t: "Banana Shield para GLP-1", s: "Si usas Ozempic, Wegovy o Mounjaro: baja grasa y cuida tu músculo.", v: "edad" } }) };
 
 const PILLARS = [
   [Barbell, "Fuerza que protege", "Rutinas de fuerza de 3 a 6 días por semana, de 15 a 60 minutos, adaptadas a tu nivel. Si hoy hay náusea, modo suave: lo importante es no soltar el músculo."],
@@ -34,6 +34,7 @@ export default function Glp1Landing() {
   const from = money(perMonthAnnual(COMPLETO));
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
       <section id="hero" className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 lg:pt-0 pb-16 lg:pb-0 grid lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-10 items-center lg:min-h-[min(calc(100dvh-4rem),760px)]">
         <div className="animate-rise lg:py-10">
           <h1 className="text-[2.6rem] leading-[1.03] sm:text-6xl lg:text-[3.4rem] font-extrabold tracking-[-0.035em] text-ink text-balance">¿Usas Ozempic o Mounjaro?<br /> <Marker>Baja grasa, no músculo.</Marker></h1>

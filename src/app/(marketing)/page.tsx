@@ -10,7 +10,7 @@ import { PLANS, annualSavingPct } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
-import { appJsonLd, social } from "./seo";
+import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
 import { COMPLETO, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_CTA, TRIAL_NOTE } from "./content";
 
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
@@ -21,7 +21,7 @@ const DESCRIPTION = `Rutina de gym o casa, el peso exacto de cada serie y comida
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
-  ...social({ title: TITLE, description: DESCRIPTION, path: "/" }),
+  ...social({ title: TITLE, description: DESCRIPTION, path: "/", og: { t: "Baja grasa sin perder músculo", s: "Tu coach con IA te dice qué entrenar, cuánto levantar y qué comer.", v: "gym" } }),
 };
 
 /* Entrada tipo quiz: /entrar guarda `objetivo` y `programa` en cookies y /bienvenida arranca con esa meta elegida. */
@@ -85,7 +85,9 @@ const LEAD = "mt-4 text-lg text-muted leading-relaxed text-pretty max-w-[60ch]";
 export default function Landing() {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd()).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(appJsonLd())} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(orgJsonLd())} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
 
       {/* 1. HERO: resultado + mecanismo + para quién, un CTA y confianza inmediata */}
       <section id="hero" className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 lg:pt-0 pb-14 lg:pb-0 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-10 items-center lg:min-h-[min(calc(100dvh-4rem),760px)]">

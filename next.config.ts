@@ -50,6 +50,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // La imagen para compartir (/og) lee fuentes y marca del disco en el servidor.
+  outputFileTracingIncludes: { "/og": ["./src/app/og/*.woff", "./public/icons/logo.svg", "./public/brand/mascota.jpg"] },
   images: {
     formats: ["image/avif", "image/webp"],
     // Ilustraciones de técnica del mono (Higgsfield). Se sirven optimizadas desde /_next/image.
