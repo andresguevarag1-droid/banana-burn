@@ -9,7 +9,7 @@ export function AddRecipe({ name, kcal, protein, slot }: { name: string; kcal: n
   const [pending, start] = useTransition();
   return (
     <button disabled={pending || state === "ok"} onClick={() => start(async () => { const r = await addMeal({ slot, custom: { name, kcal, protein } }); setState(r.ok ? "ok" : "err"); })}
-      className={`inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-bold transition ${state === "ok" ? "bg-peel text-white" : "bg-ink text-white"}`}>
+      className={`tap pressable inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-bold ${state === "ok" ? "bg-peel text-white" : "bg-ink text-white"}`}>
       {state === "ok" ? <><Check weight="bold" className="size-4" />Agregado a hoy</> : state === "err" ? <><ArrowCounterClockwise weight="bold" className="size-4" />Reintentar</> : pending ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Agregando</> : <><Plus weight="bold" className="size-4" />Agregar a mi día</>}
     </button>
   );

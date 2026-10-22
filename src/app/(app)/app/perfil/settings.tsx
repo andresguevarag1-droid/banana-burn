@@ -18,7 +18,7 @@ export function TrainingSettings({ days: d0, equipment: e0, mode: m0, level: l0,
   const [pending, start] = useTransition();
   const router = useRouter();
   const dirty = days !== d0 || eq !== e0 || mode !== m0 || level !== l0 || mins !== n0;
-  const seg = (on: boolean) => `pressable inline-flex items-center justify-center gap-1.5 px-2 h-11 rounded-2xl text-sm font-bold border-2 transition ${on ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`;
+  const seg = (on: boolean) => `pressable inline-flex items-center justify-center gap-1.5 px-2 h-11 rounded-2xl text-sm font-bold border-2 ${on ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`;
   return (
     <div className="space-y-5">
       <div><p className="text-sm font-bold text-ink mb-2">Días por semana</p><div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} onClick={() => setDays(n)} className={seg(days === n)}>{n}</button>)}</div></div>

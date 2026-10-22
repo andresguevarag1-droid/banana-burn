@@ -4,7 +4,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getFeed, getLeaderboard, getSuggestions } from "@/lib/community";
 import { PostCard } from "@/components/post-card";
 import { FollowButton } from "./follow";
-import { ArrowRight, Banana, BananaMedal, BananaTrophy, MonkeyBanana } from "@/components/icons";
+import { ArrowRight, BananaMedal, BananaTrophy, MonkeyBanana } from "@/components/icons";
 
 export const metadata = { title: "Comunidad" };
 
@@ -21,11 +21,10 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
     getSuggestions(v),
   ]);
   return (
-    <div className="space-y-5 animate-rise">
+    <div className="space-y-5 animate-enter">
       <header className="flex items-end justify-between gap-3">
         <div>
-          <p className="eyebrow">Comunidad</p>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">La tropa <Banana className="inline-block size-9 align-[-0.15em] text-banana-ink" /></h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">La tropa</h1>
         </div>
         <Link href="/app/retos" className="btn-ghost h-10 px-4 text-sm"><BananaTrophy className="size-5 text-banana-ink" />Retos</Link>
       </header>

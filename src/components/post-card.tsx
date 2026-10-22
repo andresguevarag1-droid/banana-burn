@@ -85,7 +85,7 @@ export function PostCard({ p, me }: { p: FeedPost; me: string }) {
       </div>
 
       <div className="flex items-center gap-1 px-2 py-2 mt-2 border-t border-line">
-        <button onClick={banana} className={`tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm transition ${kudo ? "bg-banana text-ink" : "text-muted hover:bg-cream"}`} aria-pressed={kudo} aria-label={`${kudo ? "Quitar" : "Dar"} banana. ${count} bananas`}>
+        <button onClick={banana} className={`tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm ${kudo ? "bg-banana text-ink" : "text-muted hover:bg-cream"}`} aria-pressed={kudo} aria-label={`${kudo ? "Quitar" : "Dar"} banana. ${count} bananas`}>
           <Banana weight={kudo ? "fill" : "duotone"} className={`size-5 transition-transform ${kudo ? "text-ink" : "text-banana-ink"} ${pop ? "scale-150" : ""}`} /><span className="hidden sm:inline">Dar banana</span><span className="tabular-nums">{count}</span>
         </button>
         <button onClick={() => setOpen((o) => !o)} className="tap pressable flex items-center gap-1.5 h-10 px-3 rounded-full font-bold text-sm text-muted hover:bg-cream" aria-expanded={open}>

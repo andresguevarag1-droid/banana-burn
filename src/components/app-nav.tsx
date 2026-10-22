@@ -20,7 +20,7 @@ const MAIN: Item[] = [
 const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador con IA" },
   { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Desafíos de 21 y 30 días" },
-  { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: "Más de 1.300 con técnica" },
+  { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-CR")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1" },
   { href: "/app/conexiones", label: "Relojes", icon: Watch, hint: "Pasos y ritmo cardíaco" },
 ];
@@ -33,7 +33,7 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
   useEffect(() => setMore(false), [path]);
   const active = (h: string) => (h === "/app" ? path === "/app" : path.startsWith(h));
   const inMore = ![...MOBILE].some((i) => active(i.href)) && path !== "/app";
-  const sideLink = (on: boolean) => `pressable flex items-center gap-3 rounded-2xl px-3 h-11 font-semibold transition ${on ? "bg-ink text-white" : "text-muted hover:bg-white hover:text-ink"}`;
+  const sideLink = (on: boolean) => `pressable flex items-center gap-3 rounded-2xl px-3 h-11 font-semibold ${on ? "bg-ink text-white" : "text-muted hover:bg-white hover:text-ink"}`;
 
   return (
     <>
@@ -86,7 +86,7 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
         <ul className="mt-4 grid grid-cols-2 gap-2">
           {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }].map(({ href, label, icon: Icon, hint }) => (
             <li key={href}>
-              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 transition ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
+              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />
                 <span className="font-extrabold leading-tight">{label}</span>
                 {hint && <span className={`text-xs ${active(href) ? "text-white/70" : "text-muted"}`}>{hint}</span>}

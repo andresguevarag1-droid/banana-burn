@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useId, useRef } from "react";
 import { X } from "@/components/icons";
 import { Portal } from "@/components/portal";
+import { usePresence } from "@/components/use-presence";
 
 const TitleCtx = createContext<string | undefined>(undefined);
 
@@ -24,11 +25,13 @@ export function SheetTitle({ className = "", children }: { className?: string; c
  * Un elemento con `data-autofocus` recibe el foco inicial; si no, el primer elemento enfocable.
  */
 export function Sheet({ open, onClose, label, className = "", children }: { open: boolean; onClose: () => void; label?: string; className?: string; children: React.ReactNode }) {
-  if (!open) return null;
-  return <SheetPanel onClose={onClose} label={label} className={className}>{children}</SheetPanel>;
+  // Sigue montada 200 ms tras cerrar para la salida (más rápida que la entrada de 300 ms)
+  const { mounted, closing } = usePresence(open, 200);
+  if (!mounted) return null;
+  return <SheetPanel onClose={onClose} label={label} className={className} closing={closing}>{children}</SheetPanel>;
 }
 
-function SheetPanel({ onClose, label, className, children }: { onClose: () => void; label?: string; className: string; children: React.ReactNode }) {
+function SheetPanel({ onClose, label, className, closing, children }: { onClose: () => void; label?: string; className: string; closing: boolean; children: React.ReactNode }) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const downOnBackdrop = useRef(false);
@@ -81,9 +84,10 @@ function SheetPanel({ onClose, label, className, children }: { onClose: () => vo
   return (
     <Portal>
       <div
-        className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-sm animate-fade"
+        data-closing={closing || undefined}
+        className="sheet-backdrop fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-sm"
         onPointerDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
-        onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose(); downOnBackdrop.current = false; }}
+        onClick={(e) => { if (!closing && e.target === e.currentTarget && downOnBackdrop.current) onClose(); downOnBackdrop.current = false; }}
       >
         <div
           ref={panel}
@@ -92,11 +96,12 @@ function SheetPanel({ onClose, label, className, children }: { onClose: () => vo
           aria-labelledby={label ? undefined : titleId}
           aria-label={label}
           tabIndex={-1}
-          className={`relative w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] bg-paper shadow-lift outline-none pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-sheet ${className}`}
+          data-closing={closing || undefined}
+          className={`sheet-panel relative w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] bg-paper shadow-lift outline-none pb-[max(1.25rem,env(safe-area-inset-bottom))] ${className}`}
         >
           <div className="sticky top-0 z-10 flex h-12 shrink-0 items-start justify-center rounded-t-[2rem] bg-paper pt-3">
             <span aria-hidden className="h-1.5 w-10 rounded-full bg-line" />
-            <button type="button" onClick={onClose} aria-label="Cerrar" className="absolute right-2 top-2 grid place-items-center size-11 rounded-full text-muted transition hover:bg-white hover:text-ink active:scale-[.94]">
+            <button type="button" onClick={onClose} aria-label="Cerrar" className="pressable absolute right-2 top-2 grid place-items-center size-11 rounded-full text-muted hover:bg-white hover:text-ink">
               <X weight="bold" className="size-5" aria-hidden />
             </button>
           </div>

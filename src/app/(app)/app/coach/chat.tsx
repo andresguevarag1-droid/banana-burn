@@ -60,21 +60,21 @@ export function Chat({ initial, opener, suggest, name }: { initial: Msg[]; opene
     <div className="flex flex-col min-h-[calc(100dvh-9rem)] lg:min-h-[calc(100dvh-6rem)]">
       <header className="flex items-center gap-3 pb-4 border-b border-line">
         <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey weight="fill" className="size-8 [--bb-icon-bg:var(--color-ink)]" /></span>
-        <div><h1 className="text-xl font-extrabold text-ink">Coach Banana</h1><p className="text-sm text-muted">Conoce tu plan, tu peso y tus entrenos</p><p className="text-[11px] text-faint">Puede equivocarse · no sustituye consejo médico</p></div>
+        <div><h1 className="text-xl font-extrabold text-ink">Coach Banana</h1><p className="text-sm text-muted">Conoce tu plan, tu peso y tus entrenos</p><p className="text-xs text-muted">Puede equivocarse y no sustituye el consejo médico.</p></div>
       </header>
 
       <div className="flex-1 py-5 space-y-4">
-        <div className="flex items-end gap-2 justify-start animate-rise">
+        <div className="flex items-end gap-2 justify-start animate-enter">
           <CoachAvatar />
           <div className="max-w-[85%] rounded-3xl rounded-bl-lg px-4 py-3 text-[15px] leading-relaxed space-y-1 bg-banana-soft/70 border border-banana/40 text-body"><Rich text={opener} /></div>
         </div>
         {!msgs.length && (
-          <div className="flex flex-wrap gap-2 pl-11 animate-rise" aria-label="Preguntas sugeridas">
-            {suggest.map((s) => <button key={s} onClick={() => send(s)} className="pressable min-h-11 inline-flex items-center gap-2 rounded-2xl bg-white border border-line px-3.5 py-2 text-sm font-semibold text-ink hover:border-ink transition text-left"><ChatCircle weight="duotone" className="size-4 shrink-0 text-banana-ink" />{s}</button>)}
+          <div className="flex flex-wrap gap-2 pl-11 stagger" aria-label="Preguntas sugeridas">
+            {suggest.map((s) => <button key={s} onClick={() => send(s)} className="pressable min-h-11 inline-flex items-center gap-2 rounded-2xl bg-white border border-line px-3.5 py-2 text-sm font-semibold text-ink hover:border-ink text-left"><ChatCircle weight="duotone" className="size-4 shrink-0 text-banana-ink" />{s}</button>)}
           </div>
         )}
         {msgs.map((m, i) => (
-          <div key={i} className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div key={i} className={`flex items-end gap-2 animate-enter ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             {m.role === "assistant" && <CoachAvatar />}
             <div className={`max-w-[80%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed space-y-1 ${m.role === "user" ? "bg-ink text-white rounded-br-lg" : "bg-white border border-line text-body rounded-bl-lg"}`}>
               {m.content ? (m.role === "user" ? m.content : m.content === ERR ? <p className="flex items-start gap-2 text-bad"><WarningCircle weight="fill" className="size-5 shrink-0 mt-0.5" />{ERR}</p> : <Rich text={m.content} />) : <span className="inline-flex gap-1 py-1" role="status" aria-label="El coach está escribiendo">{[0, 1, 2].map((d) => <span key={d} className="size-2 rounded-full bg-faint animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />)}</span>}

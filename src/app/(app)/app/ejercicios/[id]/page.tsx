@@ -19,12 +19,12 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
   const gif = mediaUrl(e);
   const alts = similar(e, a.equipment);
   return (
-    <article className="space-y-5 animate-rise max-w-3xl">
+    <article className="space-y-5 animate-enter max-w-3xl">
       <Link href="/app/ejercicios" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Biblioteca</Link>
       <header>
-        <p className="eyebrow">{es(BODY, e.bp)} · {es(EQUIP, e.eq)}</p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink">{e.n}</h1>
-        {e.n !== e.en && <p className="text-sm text-faint">{e.en}</p>}
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink">{e.n}</h1>
+        {e.n !== e.en && <p className="text-sm text-muted">{e.en}</p>}
+        <p className="mt-2 flex flex-wrap gap-1.5"><span className="chip bg-white border border-line text-ink">{es(BODY, e.bp)}</span><span className="chip bg-white border border-line text-ink">{es(EQUIP, e.eq)}</span></p>
       </header>
       <div className="rounded-[1.75rem] bg-banana p-4">
         {gif ? (
@@ -51,7 +51,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
       {alts.length > 0 && (
         <section>
           <h2 className="font-extrabold text-ink mb-2">Alternativas para el mismo músculo</h2>
-          <ul className="grid gap-2 sm:grid-cols-2">{alts.map((x) => <li key={x.id}><Link href={`/app/ejercicios/${x.id}`} className="card p-3 block hover:shadow-lift"><span className="block font-bold text-ink">{x.n}</span><span className="text-xs text-muted">{es(EQUIP, x.eq)}</span></Link></li>)}</ul>
+          <ul className="grid gap-2 sm:grid-cols-2">{alts.map((x) => <li key={x.id}><Link href={`/app/ejercicios/${x.id}`} className="card p-3 block"><span className="block font-bold text-ink">{x.n}</span><span className="text-xs text-muted">{es(EQUIP, x.eq)}</span></Link></li>)}</ul>
         </section>
       )}
     </article>

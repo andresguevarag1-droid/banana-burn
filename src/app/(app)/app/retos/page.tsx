@@ -5,7 +5,7 @@ import { CHALLENGES } from "@/lib/challenges";
 import { toView } from "@/lib/challenge-view";
 import { ChallengeCard } from "@/components/challenge-card";
 import { JoinButton } from "./join";
-import { BananaMedal, BananaTrophy, BrandIcon } from "@/components/icons";
+import { BananaMedal, BrandIcon } from "@/components/icons";
 
 export const metadata = { title: "Retos" };
 
@@ -14,11 +14,10 @@ export default async function Retos() {
   const { active, done } = await getMyChallenges(v, await todayMetrics(v));
   const joined = new Set(active.map((a) => a.c.id));
   return (
-    <div className="space-y-6 animate-rise">
+    <div className="space-y-6 animate-enter">
       <header>
-        <p className="eyebrow">Retos</p>
-        <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Hábitos que se quedan <BananaTrophy className="inline-block size-9 align-[-0.15em] text-banana-ink" /></h1>
-        <p className="mt-1 text-muted">Un pequeño objetivo cada día durante 21 o 30 días. Al terminar ganas una medalla y XP.</p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Hábitos que se quedan</h1>
+        <p className="mt-1 max-w-[65ch] text-muted">Un pequeño objetivo cada día durante 21 o 30 días. Al terminar ganas una medalla y XP.</p>
       </header>
 
       {active.length > 0 && (
@@ -33,8 +32,9 @@ export default async function Retos() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {CHALLENGES.filter((c) => !joined.has(c.id)).map((c) => (
             <article key={c.id} className="card p-5 flex flex-col">
-              <div className="flex items-center gap-3"><span className={`grid place-items-center size-12 shrink-0 rounded-2xl text-ink ${c.color}`}><BrandIcon name={c.icon} className="size-7" /></span><div><h3 className="font-extrabold text-ink">{c.title}</h3><p className="text-xs font-bold text-muted">{c.days} días · +{c.xp} XP, {c.verify === "manual" ? "marcas tú" : "se verifica solo"}</p></div></div>
+              <div className="flex items-center gap-3"><span className={`grid place-items-center size-12 shrink-0 rounded-2xl text-ink ${c.color}`}><BrandIcon name={c.icon} className="size-7" /></span><div><h3 className="font-extrabold text-ink">{c.title}</h3><p className="text-xs font-semibold text-muted tabular-nums">{c.days} días, +{c.xp} XP</p></div></div>
               <p className="mt-3 text-sm text-muted flex-1">{c.desc}</p>
+              <p className="mt-2 text-xs font-semibold text-faint">{c.verify === "manual" ? "Lo marcas tú cada día." : "Se verifica solo con tus registros."}</p>
               <div className="mt-4"><JoinButton id={c.id} title={c.title} /></div>
             </article>
           ))}

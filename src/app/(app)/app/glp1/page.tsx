@@ -8,7 +8,7 @@ import { navyBodyFat } from "@/lib/body";
 import { MEDS, RED_FLAGS, glp1Targets, muscleShield } from "@/lib/glp1";
 import { ageOn } from "@/lib/engine";
 
-export const metadata = { title: "Banana Shield · GLP-1" };
+export const metadata = { title: "Banana Shield para GLP-1" };
 
 const nf = (n: number, d = 0) => n.toLocaleString("es-CR", { maximumFractionDigits: d });
 
@@ -27,16 +27,16 @@ export default async function Glp1Guide() {
   const enough = a.glp1.on && ms.length >= 2 && spanDays >= 28;
 
   return (
-    <div className="space-y-6 animate-rise max-w-3xl">
+    <div className="space-y-6 animate-enter max-w-3xl">
       <header>
         <p className="eyebrow">Programa para GLP-1</p>
         <h1 className="mt-1 flex items-center gap-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
           <span className="relative grid place-items-center size-12 sm:size-14 shrink-0 rounded-2xl bg-ink text-banana"><ShieldCheck weight="duotone" className="size-7 sm:size-8" /><Banana weight="fill" className="absolute -bottom-1 -right-1 size-5 text-banana drop-shadow" /></span>
           Banana Shield
         </h1>
-        <p className="mt-2 text-lg text-muted">El medicamento te ayuda a comer menos. Nosotros nos aseguramos de que lo que pierdas sea <b className="text-ink">grasa, no músculo</b>.</p>
+        <p className="mt-2 max-w-[60ch] text-lg text-muted">El medicamento te ayuda a comer menos. Nosotros nos aseguramos de que lo que pierdas sea <b className="text-ink">grasa, no músculo</b>.</p>
         {!a.glp1.on && <Link href="/app/perfil#glp1" className="btn-banana h-11 mt-4">Activar Banana Shield en mi plan</Link>}
-        {a.glp1.on && med && <p className="mt-3 chip h-8 gap-1.5 bg-ink text-white"><Syringe weight="duotone" className="size-4 text-banana" />{med.n} · {a.glp1.injectionDow != null ? `inyección los ${["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"][a.glp1.injectionDow]}` : "diario/oral"}</p>}
+        {a.glp1.on && med && <p className="mt-3 chip h-8 gap-1.5 bg-ink text-white"><Syringe weight="duotone" className="size-4 text-banana" />{med.n}, {a.glp1.injectionDow != null ? `inyección los ${["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"][a.glp1.injectionDow]}` : "diario/oral"}</p>}
       </header>
 
       <section className="rounded-[1.75rem] bg-ink text-white p-6">
@@ -44,8 +44,8 @@ export default async function Glp1Guide() {
         {enough && sh.grade ? (
           <div className="mt-4 grid grid-cols-3 gap-3 text-center">
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-4xl font-extrabold text-banana">{sh.grade}</p><p className="text-xs text-white/70">calificación</p></div>
-            <div className="rounded-2xl bg-white/10 p-4"><p className="text-3xl font-extrabold tabular-nums">{sh.fatShare != null ? `${nf(sh.fatShare * 100)} %` : <span className="text-white/50">-</span>}</p><p className="text-xs text-white/70">de lo perdido fue grasa</p></div>
-            <div className="rounded-2xl bg-white/10 p-4"><p className="grid place-items-center h-9">{sh.strengthOk == null ? <span className="text-3xl font-extrabold text-white/50">-</span> : sh.strengthOk ? <CheckCircle weight="fill" className="size-9 text-banana" /> : <Warning weight="fill" className="size-9 text-ember" />}</p><p className="text-xs text-white/70">{sh.strengthOk === false ? "fuerza bajando" : "fuerza se mantiene"}</p></div>
+            <div className="rounded-2xl bg-white/10 p-4"><p className="text-3xl font-extrabold tabular-nums">{sh.fatShare != null ? `${nf(sh.fatShare * 100)} %` : <span className="text-white/50">Sin dato</span>}</p><p className="text-xs text-white/70">de lo perdido fue grasa</p></div>
+            <div className="rounded-2xl bg-white/10 p-4"><p className="grid place-items-center h-9">{sh.strengthOk == null ? <span className="text-sm font-bold text-white/50">Sin dato</span> : sh.strengthOk ? <CheckCircle weight="fill" className="size-9 text-banana" /> : <Warning weight="fill" className="size-9 text-ember" />}</p><p className="text-xs text-white/70">{sh.strengthOk === false ? "fuerza bajando" : "fuerza se mantiene"}</p></div>
           </div>
         ) : <p className="mt-3 text-white/80">{!a.glp1.on ? "Activa Banana Shield y anota tus medidas (cintura y cuello) cada 2 semanas. En 4 semanas te mostramos cuánto de lo que bajas es grasa." : `Anota tus medidas (cintura y cuello) cada 2 semanas y registra tus entrenos. Tu primera calificación aparece cuando tengamos 4 semanas de datos${ms.length ? ` (llevas ${Math.max(0, Math.round(spanDays / 7))} de 4)` : ""}.`}</p>}
         <p className="mt-4 text-sm text-white/70">Meta: que al menos 3 de cada 4 kg perdidos sean grasa y que tu fuerza no baje. Estudios con GLP-1 muestran que, sin fuerza ni proteína, cerca de 1 de cada 4 kg perdidos puede ser masa magra.</p>
@@ -53,14 +53,14 @@ export default async function Glp1Guide() {
 
       <section>
         <h2 className="text-xl font-extrabold text-ink">{a.glp1.on ? "Tus 4 pilares de hoy" : "Tus metas si activas Banana Shield"}</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <ul className="mt-3 card divide-y divide-line">
           {[
             [<Barbell key="i" weight="duotone" className="size-6" />, "Fuerza 3+ días por semana", "Es la señal que le dice a tu cuerpo “este músculo se queda”. Básicos, cerca del fallo, sin prisa. En días de náusea, modo suave, pero no la saltes."],
             [<Egg key="i" weight="duotone" className="size-6" />, `${g.protein} g de proteína al día`, `≈ ${g.perMeal} g por comida en ${g.meals} comidas pequeñas. Come la proteína primero: si te llenas rápido, que sea con lo importante.`],
             [<BananaFlame key="i" className="size-6" />, `${nf(g.kcal)} kcal al día`, `Nunca menos de ${nf(g.kcalMin)} kcal. Con poco apetito es fácil comer de menos y perder músculo; si un día no llegas, prioriza batido de proteína o yogur griego.`],
-            [<Leaf key="i" weight="duotone" className="size-6" />, `${g.fiber} g de fibra · ${nf(g.waterL, 1)} L de agua`, "Frijoles, avena, frutas y vegetales poco a poco, y agua durante el día: es lo que más ayuda con el estreñimiento."],
-          ].map(([icon, t, b]) => <div key={String(t)} className="card p-4"><span className="grid place-items-center size-11 rounded-xl bg-banana-soft text-banana-ink">{icon}</span><p className="mt-2.5 font-extrabold text-ink">{t}</p><p className="text-sm text-muted">{b}</p></div>)}
-        </div>
+            [<Leaf key="i" weight="duotone" className="size-6" />, `${g.fiber} g de fibra y ${nf(g.waterL, 1)} L de agua`, "Frijoles, avena, frutas y vegetales poco a poco, y agua durante el día: es lo que más ayuda con el estreñimiento."],
+          ].map(([icon, t, b]) => <li key={String(t)} className="flex gap-3.5 p-4"><span aria-hidden className="grid place-items-center size-10 shrink-0 rounded-xl bg-banana-soft text-banana-ink">{icon}</span><div className="min-w-0"><p className="font-extrabold text-ink">{t}</p><p className="max-w-[60ch] text-sm text-muted">{b}</p></div></li>)}
+        </ul>
       </section>
 
       <section className="card p-5">

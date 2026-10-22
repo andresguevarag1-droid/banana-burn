@@ -22,7 +22,7 @@ export function Glp1Card({ g, nausea0, demo }: { g: G; nausea0: number; demo: bo
     <section className="rounded-[1.75rem] border-2 border-ink bg-white p-5" aria-labelledby="shield-t">
       <div className="flex items-center gap-2">
         <span className="grid place-items-center size-9 rounded-xl bg-ink text-banana"><ShieldCheck weight="duotone" className="size-5" /></span>
-        <h3 id="shield-t" className="font-extrabold text-ink">Banana Shield · GLP-1</h3>
+        <h3 id="shield-t" className="font-extrabold text-ink">Banana Shield <span className="font-semibold text-muted">para GLP-1</span></h3>
         <Link href="/app/glp1" className="tap ml-auto inline-flex items-center gap-1 text-sm font-bold text-banana-ink hover:text-ink">Guía <ArrowRight weight="bold" className="size-3.5" /></Link>
       </div>
       <p className="mt-3 flex items-center gap-2 font-extrabold text-ink"><ph.I weight="duotone" className="size-5 text-banana-ink" />{ph.t}</p>
@@ -36,7 +36,7 @@ export function Glp1Card({ g, nausea0, demo }: { g: G; nausea0: number; demo: bo
         <legend className="text-sm font-bold text-ink">¿Náuseas hoy?</legend>
         <div className="mt-2 grid grid-cols-4 gap-1.5">
           {["Nada", "Leve", "Media", "Fuerte"].map((l, i) => (
-            <button key={l} type="button" onClick={() => pick(i)} aria-pressed={nausea === i} className={`tap pressable h-10 rounded-xl text-sm font-bold transition ${nausea === i ? "bg-ink text-white" : "bg-cream text-ink"}`}>{l}</button>
+            <button key={l} type="button" onClick={() => pick(i)} aria-pressed={nausea === i} className={`tap pressable h-10 rounded-xl text-sm font-bold ${nausea === i ? "bg-ink text-white" : "bg-cream text-ink"}`}>{l}</button>
           ))}
         </div>
         {nausea >= 2 && <p className="mt-2 text-sm text-body" role="status">Prueba comidas pequeñas cada 3 a 4 h, evita frituras y picante, y toma té de jengibre. Si no puedes retener líquidos, <b>llama a tu médico</b>.</p>}

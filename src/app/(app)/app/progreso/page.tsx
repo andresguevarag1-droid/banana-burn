@@ -7,9 +7,10 @@ import { WeighIn } from "@/components/weigh-in";
 import { getDaily } from "@/lib/daily";
 import { ProfileForm } from "./forms";
 import { Measures, Photos } from "./body";
+import { ProgressBar } from "@/components/progress-bar";
 import { getMeasures, getPhotos } from "@/lib/measures";
 import { navyBodyFat } from "@/lib/body";
-import { BananaCoin, BananaFlame, BananaMedal, Barbell, BrandIcon, Calendar, Camera, CheckCircle, Lightning, LevelIcon, Lock, Monkey, MonkeyBanana, Plus, Ruler, Scales, Smiley, SmileyMeh, SmileySad, Target, TrendDown, TrendUp, Timer, type PhosphorIcon } from "@/components/icons";
+import { BananaCoin, BananaFlame, BananaMedal, Barbell, BrandIcon, Calendar, Camera, CheckCircle, Lightning, LevelIcon, Lock, Monkey, MonkeyBanana, CaretDown, Ruler, Scales, Smiley, SmileyMeh, SmileySad, Target, TrendDown, TrendUp, Timer, type PhosphorIcon } from "@/components/icons";
 
 export const metadata = { title: "Progreso" };
 
@@ -42,12 +43,11 @@ export default async function Progreso() {
   else insight = { tone: "bg-peel/10", icon: CheckCircle, ink: "text-peel", t: `En ritmo: ${nf(-rate, 2)} kg/sem`, b: `Necesitas ${nf(d.needPerWeek, 2)} kg/sem para llegar a ${a.goalWeight} kg el ${new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-CR", { day: "numeric", month: "long" })}. No cambies nada.` };
 
   return (
-    <div className="space-y-6 animate-rise">
+    <div className="space-y-6 animate-enter">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <p className="eyebrow">Progreso</p>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{lost > 0 ? `−${nf(lost)} kg desde que empezaste` : "Tu punto de partida"}</h1>
-          <p className="mt-1 text-muted">{nf(a.currentWeight)} kg hoy · meta {a.goalWeight} kg · faltan {d.daysLeft} días</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{lost > 0 ? `−${nf(lost)} kg desde que empezaste` : "Tu punto de partida"}</h1>
+          <p className="mt-1 text-muted tabular-nums">Hoy pesas {nf(a.currentWeight)} kg. Tu meta es {a.goalWeight.toLocaleString("es-CR")} kg y faltan {d.daysLeft} días.</p>
         </div>
       </header>
 
@@ -58,7 +58,7 @@ export default async function Progreso() {
         </section>
         <div className="space-y-4">
           <section className={`rounded-[1.5rem] p-5 ${insight.tone}`}>
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted"><Monkey className="size-4 text-ink" />Coach · ajuste semanal</p>
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-muted"><Monkey className="size-4 text-ink" />Ajuste semanal del coach</p>
             <p className="mt-2 flex items-start gap-2.5 text-lg font-extrabold text-ink"><span className={`grid place-items-center size-9 shrink-0 rounded-xl bg-white/80 ${insight.ink}`}><insight.icon weight="duotone" className="size-5" /></span><span className="pt-1 leading-snug">{insight.t}</span></p>
             <p className="mt-1 text-sm text-body">{insight.b}</p>
           </section>
@@ -69,15 +69,15 @@ export default async function Progreso() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <dl className="card grid grid-cols-3 divide-x divide-line">
         {([
           [<Barbell key="i" weight="duotone" className="size-5" />, "bg-banana-soft text-banana-ink", g.workoutsTotal, "entrenos completados"],
           [<BananaFlame key="i" weight="fill" className="size-5" />, "bg-ember/10 text-ember-ink", g.streak.days, "días de racha"],
           [<BananaCoin key="i" className="size-5" />, "bg-banana-soft text-banana-ink", g.xp.toLocaleString("es-CR"), "XP total"],
         ] as const).map(([icon, tile, v2, l]) => (
-          <div key={l} className="card p-4 flex flex-col items-center text-center"><span className={`grid place-items-center size-9 rounded-xl ${tile}`}>{icon}</span><p className="mt-1.5 text-2xl font-extrabold text-ink tabular-nums">{v2}</p><p className="text-[11px] font-semibold text-muted">{l}</p></div>
+          <div key={l} className="px-2 py-4 flex flex-col items-center text-center"><span aria-hidden className={`grid place-items-center size-9 rounded-xl ${tile}`}>{icon}</span><dt className="order-last text-[11px] font-semibold text-muted">{l}</dt><dd className="mt-1.5 text-2xl font-extrabold text-ink tabular-nums">{v2}</dd></div>
         ))}
-      </div>
+      </dl>
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <section className="card p-5"><div className="mb-3"><H icon={Ruler}>Medidas</H></div><Measures history={measures} bodyFat={bf} demo={v.demo} /></section>
@@ -95,7 +95,7 @@ export default async function Progreso() {
               <div key={k} className="card p-4">
                 <p className="text-sm font-semibold text-muted truncate">{liftName(k)}</p>
                 <p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{cur ? `${nf(cur, 0)} kg` : <span className="text-faint">Sin dato</span>}</p>
-                <p className="text-[10px] text-faint">1RM estimado</p>
+                
                 <p className={`inline-flex items-center gap-1 text-xs font-bold ${pct && pct > 0 ? "text-peel" : "text-faint"}`}>{pct != null ? <>{pct >= 0 ? <TrendUp weight="bold" className="size-3.5" /> : <TrendDown weight="bold" className="size-3.5" />}<span className="sr-only">{pct >= 0 ? "Sube" : "Baja"}</span>{nf(Math.abs(pct))} %</> : "Sin datos aún"}</p>
                 {pts.length > 1 && <div className="mt-2 -mx-1"><Spark data={pts.map((p) => p.v)} /></div>}
               </div>
@@ -108,9 +108,9 @@ export default async function Progreso() {
         <div className="flex items-center gap-4">
           <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-banana-soft ring-1 ring-banana/40"><LevelIcon idx={g.level.idx} className="size-9" /></span>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Nivel {g.level.idx}</p>
+            <p className="text-sm font-semibold text-muted">Nivel {g.level.idx}</p>
             <p className="text-xl font-extrabold text-ink">{g.level.n}</p>
-            <div className="mt-1.5 h-2.5 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember" style={{ width: `${Math.max(4, g.level.progress * 100)}%` }} /></div>
+            <ProgressBar value={g.level.progress} min={0.04} className="mt-1.5 h-2.5" fill="bg-ember" label={`Progreso del nivel ${g.level.idx}`} />
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
               <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{g.xp.toLocaleString("es-CR")} XP{g.level.next ? `, faltan ${g.level.toNext} para ${g.level.next.n}` : ""}</span>
               <span className="inline-flex items-center gap-1"><BananaFlame className="size-3.5 text-ember-ink" />Racha de {g.streak.days} días</span>
@@ -148,7 +148,7 @@ export default async function Progreso() {
       </section>
 
       <details id="meta" className="card group scroll-mt-6" open={!a.complete}>
-        <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><Plus weight="bold" className="size-5 text-muted transition-transform group-open:rotate-45" /></summary>
+        <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><CaretDown weight="bold" className="size-5 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
         <div className="px-5 pb-5"><ProfileForm a={a} /></div>
       </details>
     </div>
