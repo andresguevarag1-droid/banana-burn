@@ -2,20 +2,30 @@
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { DEFAULT_PREFS, isHHMM, isValidTimeZone, type Prefs } from "@/lib/notify";
+import { DEFAULT_PREFS, cronModeFrom, isHHMM, isValidTimeZone, type Prefs } from "@/lib/notify";
+import { isEmailConfigured } from "@/lib/email/send";
 import { isPushConfigured, sendPush, type PushSub } from "@/lib/push";
 
 export type InAppNotification = { id: number; kind: string; title: string; body: string | null; url: string | null; read_at: string | null; created_at: string };
 
 const PREF_KEYS = ["email_reminders", "push_reminders", "reminder_time", "timezone", "weekly_summary", "marketing", "quiet_start", "quiet_end"] as const;
 
-export async function getNotificationPrefs(): Promise<{ prefs: Prefs; demo: boolean; pushConfigured: boolean; vapidPublicKey: string }> {
+export type NotificationPrefsData = {
+  prefs: Prefs; demo: boolean; pushConfigured: boolean; vapidPublicKey: string;
+  /** "hourly" = el cron corre cada hora (hora del recordatorio, racha 8 p. m. y silencio funcionan); "daily" = una vez al día. */
+  cronMode: "hourly" | "daily";
+  /** Hay proveedor de correo (RESEND_API_KEY): si no, no se ofrecen avisos por correo. */
+  emailConfigured: boolean;
+};
+
+export async function getNotificationPrefs(): Promise<NotificationPrefsData> {
   const v = await getViewer();
-  const base = { pushConfigured: isPushConfigured(), vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || "" };
+  const base = { pushConfigured: isPushConfigured(), vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || "", cronMode: cronModeFrom(process.env.NOTIFY_CRON_MODE), emailConfigured: isEmailConfigured() };
   if (!v || v.demo) return { prefs: DEFAULT_PREFS, demo: true, ...base };
   const sb = await createClient();
-  const { data } = await sb.from("notification_prefs").select(PREF_KEYS.join(",")).eq("user_id", v.id).maybeSingle();
-  return { prefs: { ...DEFAULT_PREFS, ...((data as Partial<Prefs> | null) ?? {}) }, demo: false, ...base };
+  const { data, error } = await sb.from("notification_prefs").select(PREF_KEYS.join(",")).eq("user_id", v.id).maybeSingle();
+  if (error) throw new Error("No pudimos cargar tus avisos.");
+  return { prefs: { ...DEFAULT_PREFS, ...(data as Partial<Prefs> | null) }, demo: false, ...base };
 }
 
 export async function saveNotificationPrefs(input: Partial<Prefs>): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
@@ -36,19 +46,26 @@ export async function saveNotificationPrefs(input: Partial<Prefs>): Promise<{ ok
   return error ? { ok: false, error: "No pudimos guardar tus avisos. Intenta de nuevo." } : { ok: true };
 }
 
-/** Botón "Probar aviso": manda un push a tus dispositivos y deja un aviso en la campanita. */
-export async function sendTestNotification(): Promise<{ ok: boolean; demo?: boolean; push: number; devices: number; error?: string }> {
+/** Espera mínima entre avisos de prueba (también hay tope de 10 por hora en la BD). */
+const TEST_COOLDOWN_S = 60;
+
+/** Botón "Probar aviso": manda un push a tus dispositivos y deja un aviso en la campanita. Máximo 1 por minuto. */
+export async function sendTestNotification(): Promise<{ ok: boolean; demo?: boolean; push: number; devices: number; error?: string; retryIn?: number }> {
   const v = await getViewer();
   if (!v) return { ok: false, push: 0, devices: 0, error: "Inicia sesión." };
-  if (v.demo) return { ok: true, demo: true, push: 0, devices: 0 };
+  if (v.demo) return { ok: true, demo: true, push: 0, devices: 0, retryIn: TEST_COOLDOWN_S };
   const sb = await createClient();
+  const { data: last } = await sb.from("notifications").select("created_at").eq("user_id", v.id).eq("kind", "test").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const wait = last ? Math.ceil(TEST_COOLDOWN_S - (Date.now() - Date.parse(last.created_at as string)) / 1000) : 0;
+  if (wait > 0) return { ok: false, push: 0, devices: 0, error: `Espera ${wait} s para probar de nuevo.`, retryIn: wait };
   const title = "Así se ven tus avisos de Banana Burn";
   const body = "Te avisaremos qué te toca entrenar y cuándo tu racha necesita un empujón.";
-  await sb.from("notifications").insert({ user_id: v.id, kind: "test", title, body, url: "/app" });
+  const ins = await sb.from("notifications").insert({ user_id: v.id, kind: "test", title, body, url: "/app" });
+  if (ins.error) return { ok: false, push: 0, devices: 0, error: /Demasiadas/.test(ins.error.message) ? "Ya probaste varias veces. Intenta en una hora." : "No pudimos enviar el aviso de prueba. Intenta de nuevo.", retryIn: TEST_COOLDOWN_S };
   const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", v.id);
   const list = (subs ?? []) as PushSub[];
   const push = await sendPush(adminClient(), list, { title, body, url: "/app", tag: "test" });
-  return { ok: true, push, devices: list.length };
+  return { ok: true, push, devices: list.length, retryIn: TEST_COOLDOWN_S };
 }
 
 const DEMO_ITEMS = async (): Promise<InAppNotification[]> => {

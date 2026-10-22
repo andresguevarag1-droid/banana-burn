@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { streakOf } from "@/lib/gamify";
-import { DEFAULT_PREFS, copyFor, daysBetween, decide, isRelevantHour, localClock, type Decision, type Kind, type Prefs } from "@/lib/notify";
+import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHour, localClock, type Decision, type Kind, type Prefs } from "@/lib/notify";
 import { sendPush, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import * as T from "@/lib/email/templates";
@@ -20,7 +20,7 @@ export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
 
 export function cronMode(): "hourly" | "daily" {
-  return process.env.NOTIFY_CRON_MODE === "hourly" ? "hourly" : "daily";
+  return cronModeFrom(process.env.NOTIFY_CRON_MODE);
 }
 
 export async function runReminders(now = new Date(), mode = cronMode()): Promise<RunStats> {

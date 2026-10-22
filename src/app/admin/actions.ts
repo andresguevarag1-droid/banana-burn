@@ -3,6 +3,9 @@
 // (3) muta con el cliente del usuario (RLS / RPC SECURITY DEFINER vuelven a validar), (4) escribe public.audit_log.
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { adminClient } from "@/lib/supabase/admin";
+import { deleteAccountData } from "@/lib/admin-account";
 import { createClient, type Role, type Viewer } from "@/lib/supabase/server";
 import { authorize, DEMO_ROLE_COOKIE, getAdminViewer } from "@/lib/admin-auth";
 import { checkRoleChange, ROLES, STAFF_ROLES, type Capability } from "@/lib/admin-perms";
@@ -39,7 +42,7 @@ function pgMessage(e: { code?: string; message?: string } | null): string | null
   if (!e) return null;
   if (e.code === "42501") return "La base de datos rechazó la acción: permisos insuficientes.";
   if (e.code === "23505") return "Ya existe un registro con ese identificador.";
-  if (["42P01", "PGRST202", "PGRST205", "42883"].includes(e.code ?? "")) return "Falta aplicar la migración 0005_admin.sql en Supabase.";
+  if (["42P01", "PGRST202", "PGRST205", "42883", "42703"].includes(e.code ?? "")) return "Falta aplicar una migración en Supabase (0005 o 0013).";
   if (e.code === "P0001" && e.message) return e.message; // raise exception de nuestras funciones (mensajes en español)
   if (e.code === "23514") return "Algún valor no cumple las reglas de la base de datos.";
   return "Error de base de datos.";
@@ -313,6 +316,10 @@ export async function moderateReport(_: ActionState, fd: FormData): Promise<Acti
     if (decision === "oculto" && !note) return fail("Para ocultar contenido escribe una nota con el motivo.");
     const label = { resuelto: "resuelto", oculto: "oculto", descartado: "descartado", abierto: "reabierto" }[decision];
     if (!sb) return ok(`Reporte ${label}${DEMO_MSG}`);
+    if (decision === "oculto") {
+      const { data: rep } = await sb.from("reports").select("target_type").eq("id", id).maybeSingle();
+      if (rep?.target_type === "user") return fail("Un perfil no se oculta: resuelve el reporte y, si hace falta, suspende al usuario desde su ficha.");
+    }
     const reopen = decision === "abierto";
     const { data, error } = await sb.from("reports").update({
       status: decision, resolution_note: note, resolved_by: reopen ? null : v.id, resolved_at: reopen ? null : new Date().toISOString(),
@@ -322,6 +329,62 @@ export async function moderateReport(_: ActionState, fd: FormData): Promise<Acti
     revalidatePath("/admin/comunidad");
     return ok(`Reporte ${label}.`);
   });
+}
+
+// ─────────── Usuarios: suspender y borrar ───────────
+
+/** Suspende (o reactiva) a un usuario en la comunidad: no puede publicar ni comentar. RPC admin_set_suspended (0013) valida rol y audita. */
+export async function setSuspended(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run("users.suspend", fd, async ({ v, sb }) => {
+    const target = val.id(fd, "target", { uuid: true, label: "Usuario" });
+    const suspend = val.oneOf(fd, "suspend", ["si", "no"] as const, { label: "Acción" }) === "si";
+    const reason = val.text(fd, "reason", { label: "Motivo", required: suspend, min: suspend ? 4 : 0, max: 300 });
+    confirmed(fd);
+    if (target === v.id) return fail("No puedes suspenderte a ti mismo.");
+    if (!sb) return ok(`${suspend ? "Usuario suspendido" : "Usuario reactivado"}${DEMO_MSG}`);
+    const { error } = await sb.rpc("admin_set_suspended", { p_target: target, p_suspend: suspend, p_reason: reason || null });
+    if (error) return fail(pgMessage(error)!);
+    revalidatePath(`/admin/usuarios/${target}`);
+    revalidatePath("/admin/comunidad");
+    return ok(suspend ? "Usuario suspendido: ya no puede publicar ni comentar. Quedó en auditoría." : "Usuario reactivado. Quedó en auditoría.");
+  });
+}
+
+/**
+ * Borra una cuenta desde el panel con la MISMA secuencia que el borrado del usuario (cancela cobros en ONVO,
+ * borra fotos y luego el usuario en Auth). La auditoría se escribe ANTES de borrar; si no se puede auditar, no se borra.
+ */
+export async function deleteUserAccount(_: ActionState, fd: FormData): Promise<ActionState> {
+  const auth = await authorize("users.delete");
+  if (!auth.ok) return fail(auth.error);
+  const v = auth.v;
+  let target: string;
+  try {
+    target = val.id(fd, "target", { uuid: true, label: "Usuario" });
+    confirmed(fd);
+    if (val.text(fd, "typed", { max: 20 }).trim().toUpperCase() !== "BORRAR") return fail("Escribe BORRAR para confirmar.");
+    const reason = val.text(fd, "reason", { label: "Motivo", required: true, min: 4, max: 300 });
+    if (target === v.id) return fail("No puedes borrar tu propia cuenta desde el panel.");
+    if (v.demo) return ok(`Cuenta borrada${DEMO_MSG}`);
+    const sb = await createClient();
+    const { data: p } = await sb.from("profiles").select("role,full_name").eq("id", target).maybeSingle();
+    if (!p) return fail("Usuario no encontrado.");
+    if (STAFF_ROLES.includes(p.role as Role) && v.role !== "superadmin") return fail("Solo un superadmin puede borrar cuentas del equipo.");
+    const admin = adminClient();
+    if (!admin) return fail("El borrado no está configurado: falta SUPABASE_SERVICE_ROLE_KEY.");
+    if (!(await audit(sb, v, "user.delete", target, { name: p.full_name ?? null, role: p.role, reason }))) return fail("No se pudo registrar en auditoría; no se borró nada.");
+    const r = await deleteAccountData(admin, target, "admin");
+    if (!r.ok) {
+      await audit(sb, v, "user.delete_failed", target, { step: r.step });
+      return fail(r.error);
+    }
+  } catch (e) {
+    if (e instanceof ValidationError) return fail(e.message);
+    console.error("[admin action] borrar cuenta", e);
+    return fail("No se pudo completar la acción. Intenta de nuevo.");
+  }
+  revalidatePath("/admin/usuarios");
+  redirect("/admin/usuarios?borrado=1");
 }
 
 // ─────────── Solo demo: simular rol ───────────

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PREFS, MAX_PUSHES_PER_DAY, copyFor, decide, inQuietHours, isRelevantHour, localClock, type DecideInput, type Prefs } from "./notify";
+import { cronModeFrom, tzLabel, DEFAULT_PREFS, MAX_PUSHES_PER_DAY, copyFor, decide, inQuietHours, isRelevantHour, localClock, type DecideInput, type Prefs } from "./notify";
 
 // Costa Rica = UTC−6 todo el año. 2026-10-19 es lunes, 2026-10-21 miércoles.
 const cr = (isoDay: string, hour: number, minute = 0) => new Date(Date.UTC(+isoDay.slice(0, 4), +isoDay.slice(5, 7) - 1, +isoDay.slice(8, 10), hour + 6, minute));
@@ -163,5 +163,25 @@ describe("copy", () => {
         expect(c.url.startsWith("/app")).toBe(true);
       }
     }
+  });
+  it("sin raya larga ni punto medio en ningún aviso", () => {
+    for (const k of ["recordatorio", "racha", "semanal", "reactivacion_3", "reactivacion_7"] as const) {
+      const c = copyFor(k, { ...ctx, workouts: 3, kgDelta: -0.4 });
+      expect(c.title + c.body).not.toMatch(/[·—]/);
+    }
+    expect(copyFor("semanal", { ...ctx, workouts: 3, kgDelta: -0.4 }).body).toMatch(/^3 entrenos y [-−]0[.,]4 kg/);
+  });
+});
+
+describe("zona horaria y modo del cron", () => {
+  it("nombre amigable", () => {
+    expect(tzLabel("America/Costa_Rica", new Date("2026-10-22T12:00:00Z"))).toBe("Costa Rica (GMT-6)");
+    expect(tzLabel("America/Argentina/Buenos_Aires", new Date("2026-10-22T12:00:00Z"))).toBe("Buenos Aires (GMT-3)");
+    expect(tzLabel("No/Existe")).toMatch(/^Costa Rica/);
+  });
+  it("NOTIFY_CRON_MODE", () => {
+    expect(cronModeFrom("hourly")).toBe("hourly");
+    expect(cronModeFrom(undefined)).toBe("daily");
+    expect(cronModeFrom("cada hora")).toBe("daily");
   });
 });

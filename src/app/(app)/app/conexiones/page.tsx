@@ -1,40 +1,43 @@
 import Link from "next/link";
 import { Footprints, Heart, Heartbeat, Info, Moon, PersonSimpleRun, Watch, type PhosphorIcon } from "@/components/icons";
+import { createClient, getViewer } from "@/lib/supabase/server";
+import { DEVICES, type DeviceId } from "./devices";
+import { InterestButton } from "./interest";
 
-export const metadata = { title: "Relojes y wearables" };
+export const metadata = { title: "Conecta tu reloj" };
 
-const DEVICES: { I: PhosphorIcon; n: string; how: string; eta: string }[] = [
-  { I: Heart, n: "Apple Salud (Apple Watch)", how: "Requiere nuestra app nativa de iPhone (HealthKit no está disponible en la web).", eta: "Con la app iOS" },
-  { I: Heartbeat, n: "Health Connect (Android, Samsung, Pixel Watch)", how: "Requiere la app nativa de Android; lee pasos, ritmo cardíaco y calorías.", eta: "Con la app Android" },
-  { I: Watch, n: "Garmin", how: "Garmin Connect Developer Program (requiere aprobación de Garmin para empresas).", eta: "En evaluación" },
-  { I: Footprints, n: "Fitbit / Google", how: "Fitbit Web API con OAuth: pasos, ritmo cardíaco y sueño.", eta: "Próximamente" },
-  { I: PersonSimpleRun, n: "Strava", how: "API de Strava con OAuth: importa caminatas, carreras y bici como actividad.", eta: "Próximamente" },
-  { I: Moon, n: "Whoop / Oura", how: "APIs de recuperación y sueño para ajustar tu entreno del día.", eta: "Más adelante" },
-];
+const ICON: Record<DeviceId, PhosphorIcon> = { apple: Heart, android: Heartbeat, garmin: Watch, fitbit: Footprints, strava: PersonSimpleRun, whoop_oura: Moon };
 
-export default function Conexiones() {
+export default async function Conexiones() {
+  const v = (await getViewer())!;
+  let mine = new Set<string>();
+  if (!v.demo) {
+    const { data } = await (await createClient()).from("device_interest").select("device").eq("user_id", v.id);
+    mine = new Set((data ?? []).map((r) => r.device as string));
+  }
   return (
     <div className="space-y-5 animate-enter max-w-3xl">
       <header>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Conecta tu reloj</h1>
-        <p className="mt-1 text-muted">Pasos, ritmo cardíaco, calorías quemadas y sueño entrarán solos a tu día, y el coach ajustará tu entreno según tu recuperación.</p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Próximamente: conecta tu reloj</h1>
+        <p className="mt-1 max-w-[60ch] text-muted">Queremos que tus pasos, tu ritmo cardíaco y tu sueño entren solos a tu día. Todavía no está listo: dinos cuál usas y empezamos por el que más pidan.</p>
       </header>
+      <ul className="card divide-y divide-line">
+        {DEVICES.map((d) => {
+          const I = ICON[d.id];
+          return (
+            <li key={d.id} className="p-4 flex items-center gap-4">
+              <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><I weight="duotone" className="size-6" /></span>
+              <div className="flex-1 min-w-0"><p className="font-extrabold text-ink">{d.n}</p><p className="text-sm text-muted">{d.what}</p></div>
+              <InterestButton id={d.id} name={d.n} initial={mine.has(d.id)} />
+            </li>
+          );
+        })}
+      </ul>
       <section className="rounded-[1.5rem] bg-banana p-5">
         <p className="flex items-center gap-2 font-extrabold text-ink"><Info weight="duotone" className="size-5" />Mientras tanto</p>
-        <p className="text-sm text-ink/80">Copia tus pasos y horas de sueño del reloj a <Link href="/app" className="font-bold underline">Hoy</Link> con un toque: cuentan para tus retos y tu racha.</p>
+        <p className="text-sm text-ink/80">Anota tus pasos y horas de sueño en <Link href="/app" className="font-bold underline">Hoy</Link>: cuentan para tus retos y tu racha.</p>
       </section>
-      <ul className="card divide-y divide-line">
-        {DEVICES.map((d) => (
-          <li key={d.n} className="p-4 flex items-start gap-4">
-            <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><d.I weight="duotone" className="size-6" /></span>
-            <div className="flex-1 min-w-0 sm:flex sm:items-start sm:gap-4">
-              <div className="flex-1 min-w-0"><p className="font-extrabold text-ink">{d.n}</p><p className="max-w-[60ch] text-sm text-muted">{d.how}</p></div>
-              <span className="chip mt-2 sm:mt-0.5 shrink-0 bg-cream text-muted">{d.eta}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs text-muted">¿Cuál reloj usas? Escríbenos a hola@bananaburn.app y lo priorizamos.</p>
+      <p className="text-xs text-muted">¿Usas otro? Escríbenos a <a className="underline" href="mailto:hola@bananaburn.app?subject=Quiero%20conectar%20mi%20reloj">hola@bananaburn.app</a>.</p>
     </div>
   );
 }

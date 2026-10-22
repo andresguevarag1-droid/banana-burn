@@ -56,3 +56,25 @@ export async function getExerciseOverrides(): Promise<Record<string, ExerciseMet
   }
   return out;
 }
+
+/**
+ * Aplica los cambios del panel a un ejercicio del motor: nombre visible, claves técnicas y si está habilitado.
+ * Pura: el motor puede usarla al armar la rutina (`enabled: false` = usar la alternativa del ejercicio).
+ */
+export function applyExerciseOverride<T extends { id: string; name: string; cues?: string[] }>(ex: T, meta: Record<string, ExerciseMeta>): T & { enabled: boolean } {
+  const o = meta[ex.id];
+  if (!o) return { ...ex, enabled: true };
+  return { ...ex, name: o.name?.trim() || ex.name, cues: o.cues?.length ? o.cues.slice(0, 8) : ex.cues, enabled: o.enabled !== false };
+}
+
+/** Lista de ejercicios con los cambios del panel; los deshabilitados se reemplazan con `alternative` (o se omiten si no hay). */
+export function applyExerciseOverrides<T extends { id: string; name: string; cues?: string[] }>(list: T[], meta: Record<string, ExerciseMeta>, alternative?: (ex: T) => T | null): T[] {
+  const out: T[] = [];
+  for (const ex of list) {
+    const e = applyExerciseOverride(ex, meta);
+    if (e.enabled) { const { enabled: _e, ...rest } = e; void _e; out.push(rest as unknown as T); continue; }
+    const alt = alternative?.(ex);
+    if (alt && !out.some((x) => x.id === alt.id)) { const a = applyExerciseOverride(alt, meta); if (a.enabled) { const { enabled: _a, ...rest } = a; void _a; out.push(rest as unknown as T); } }
+  }
+  return out;
+}

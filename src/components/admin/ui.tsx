@@ -228,9 +228,10 @@ export function MetaList({ items, className = "" }: { items: ReactNode[]; classN
   return <span className={`inline-flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted tabular-nums ${className}`}>{list.map((x, i) => <span key={i} className="min-w-0 break-words">{x}</span>)}</span>;
 }
 
-/** Plan con periodicidad en segunda línea ("Entreno · mensual" llega así desde los datos). */
+/** Plan con periodicidad en segunda línea ("Entreno (mensual)" llega así desde los datos). */
 export function PlanText({ label }: { label: string }) {
-  const [plan, period] = label.split(/\s*·\s*/);
+  const m = /^(.*?)\s*\(([^()]+)\)$/.exec(label);
+  const [plan, period] = m ? [m[1], m[2]] : [label, ""];
   return <><span className="whitespace-nowrap text-ink">{plan}</span>{period && <span className="block text-xs text-muted">{period.charAt(0).toUpperCase() + period.slice(1)}</span>}</>;
 }
 

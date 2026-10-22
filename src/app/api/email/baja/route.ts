@@ -28,7 +28,7 @@ async function apply(userId: string, scope: UnsubScope, value: boolean) {
 }
 
 function page(title: string, body: string, status = 200) {
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)} · Banana Burn</title></head>
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)} | Banana Burn</title></head>
 <body style="margin:0;background:#FFF8E3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2E2818;">
 <main style="max-width:480px;margin:0 auto;padding:48px 16px;">
 <p style="font-size:20px;font-weight:800;color:#1B1505;"><img src="/icons/icon-192.png" width="32" height="32" alt="" style="width:32px;height:32px;border-radius:10px;vertical-align:middle;margin-right:8px;"><span style="vertical-align:middle;">Banana Burn</span></p>

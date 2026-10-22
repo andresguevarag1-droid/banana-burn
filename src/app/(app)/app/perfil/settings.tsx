@@ -50,15 +50,20 @@ export function DataControls() {
       ) : (
         <div className="rounded-3xl border-2 border-bad/30 bg-bad/5 p-4 space-y-3">
           <p className="font-bold text-bad">¿Borrar tu cuenta para siempre?</p>
-          <p className="text-sm text-body">Se eliminan tu perfil, pesos, entrenos, comidas y conversaciones. No se puede deshacer. Si tienes suscripción, cancélala primero.</p>
-          <input value={text} onChange={(e) => setText(e.target.value.toUpperCase())} placeholder="Escribe BORRAR" className="input h-11" aria-label="Confirmación" />
+          <ul className="list-disc space-y-1 pl-5 text-sm text-body">
+            <li>Se eliminan tu perfil, pesos, medidas, fotos, entrenos, comidas, publicaciones y conversaciones con el coach.</li>
+            <li>Si tienes una suscripción, la cancelamos automáticamente: no habrá más cobros.</li>
+            <li>No se puede deshacer. Si quieres una copia, descarga tus datos primero.</li>
+          </ul>
+          <label htmlFor="confirmar-borrado" className="block text-sm font-bold text-ink">Para confirmar, escribe <b>BORRAR</b></label>
+          <input id="confirmar-borrado" value={text} onChange={(e) => setText(e.target.value.toUpperCase())} autoComplete="off" autoCapitalize="characters" spellCheck={false} className="input h-11 text-[16px]" />
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex gap-2">
             <button onClick={() => { setOpen(false); setText(""); }} className="btn-ghost h-11 flex-1">Cancelar</button>
-            <button disabled={text !== "BORRAR" || pending} onClick={() => start(async () => {
-              const r = await fetch("/api/cuenta/borrar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: text }) }).then((x) => x.json()).catch(() => ({ ok: false }));
+            <button disabled={text.trim() !== "BORRAR" || pending} onClick={() => start(async () => {
+              const r = await fetch("/api/cuenta/borrar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: text.trim() }) }).then((x) => x.json()).catch(() => ({ ok: false }));
               if (r.ok) { window.location.href = r.demo ? "/app" : "/?cuenta=borrada"; } else setErr(r.error ?? "No pudimos borrar tu cuenta. Intenta de nuevo.");
-            })} className="btn h-11 flex-1 bg-bad text-white">{pending ? "Borrando…" : "Borrar"}</button>
+            })} className="btn h-11 flex-1 bg-bad text-white disabled:opacity-40">{pending ? "Borrando…" : "Borrar mi cuenta"}</button>
           </div>
         </div>
       )}

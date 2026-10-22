@@ -237,7 +237,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const note = check.note;
       const plan = await activate(db, row, action);
       await notifyPaid(row, action.amountMinor, action.currency, action.periodEnd, action.paymentIntentId ?? key);
-      return finish("processed", note ? `${note} · plan=${plan}` : `plan=${plan}`, row.user_id);
+      return finish("processed", note ? `${note}, plan=${plan}` : `plan=${plan}`, row.user_id);
     }
 
     if (action.kind === "renewal_failed") {
@@ -250,7 +250,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const pn = planName(row.plan);
       if (action.terminal) await sendSubscriptionCanceled({ userId: row.user_id, plan: pn, accessUntil: row.current_period_end, subscriptionId: row.provider_subscription_id ?? undefined }).catch(() => {});
       else await sendPaymentFailed({ userId: row.user_id, plan: pn, amount: row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0, currency: "USD", reference: key, updateUrl: "/app/suscripcion" }).catch(() => {});
-      return finish("processed", `renovación fallida -> ${status} (ONVO: ${action.subscriptionStatus ?? "?"}) · plan=${plan}`, row.user_id);
+      return finish("processed", `renovación fallida -> ${status} (ONVO: ${action.subscriptionStatus ?? "?"}), plan=${plan}`, row.user_id);
     }
 
     // verify_customer: payment-intent.succeeded de un cliente con suscripción pendiente.
@@ -264,7 +264,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       if (st.active) {
         const plan = await activate(db, row, { periodStart: st.periodStart, periodEnd: st.periodEnd, customerId: action.customerId });
         await notifyPaid(row, null, null, st.periodEnd, piId ?? key);
-        return finish("processed", `activada vía payment intent (ONVO status=${st.status}) · plan=${plan}`, row.user_id);
+        return finish("processed", `activada vía payment intent (ONVO status=${st.status}), plan=${plan}`, row.user_id);
       }
     }
     return finish("ignored", "ninguna suscripción pendiente está activa en ONVO", candidates[0].user_id);

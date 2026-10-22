@@ -31,7 +31,9 @@ async function registration() {
  * no se puede volver a preguntar). En iPhone/iPad el push solo funciona con la app instalada en inicio (iOS 16.4+).
  * `hideWhenSnoozed`: para mostrarla como banner en otras pantallas y respetar el "Ahora no".
  */
-export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { publicKey?: string; hideWhenSnoozed?: boolean; onChange?: (subscribed: boolean) => void }) {
+export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourly = false }: { publicKey?: string; hideWhenSnoozed?: boolean; onChange?: (subscribed: boolean) => void;
+  /** El cron corre cada hora (NOTIFY_CRON_MODE=hourly): se puede prometer hora elegida, racha a las 8 p. m. y horas de silencio. */
+  hourly?: boolean }) {
   const key = publicKey || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
   const [state, setState] = useState<State>("checking");
   const [err, setErr] = useState<string | null>(null);
@@ -94,8 +96,8 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-peel/30 bg-peel/5 p-3">
         <span className="grid place-items-center size-10 rounded-xl bg-peel/15 text-peel"><Bell weight="fill" className="size-5" /></span>
-        <div className="flex-1 min-w-0"><p className="text-sm font-bold text-ink">Avisos activos en este dispositivo</p><p className="text-xs text-muted">Máximo 2 al día, nunca en tus horas de silencio.</p></div>
-        <button onClick={disable} className="tap text-xs font-bold text-muted underline hover:text-ink">Desactivar</button>
+        <div className="flex-1 min-w-0"><p className="text-sm font-bold text-ink">Avisos activos en este dispositivo</p><p className="text-xs text-muted">{hourly ? "Máximo 2 al día, nunca en tus horas de silencio." : "Máximo 2 al día."}</p></div>
+        <button onClick={disable} className="tap px-2 text-xs font-bold text-muted underline hover:text-ink">Desactivar</button>
       </div>
     );
   }
@@ -116,7 +118,8 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
   }
 
   if (state === "unsupported") return <p className="text-sm text-muted">Este navegador no soporta notificaciones push. Prueba con Chrome, Edge, Firefox o Safari actualizado. Los recordatorios por correo siguen funcionando.</p>;
-  if (state === "not-configured") return <p className="text-sm text-muted">Las notificaciones push estarán disponibles muy pronto. Mientras tanto te avisamos por correo.</p>;
+  // Sin llave VAPID no hay push en esta instalación: no mostramos nada (los avisos siguen en la campanita).
+  if (state === "not-configured") return null;
 
   if (state === "denied") {
     return (
@@ -135,9 +138,9 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange }: { p
         <div className="min-w-0">
           <p className="font-extrabold text-ink">Que no se te pase ningún entreno</p>
           <ul className="mt-2 space-y-1 text-sm text-body">
-            <li className="flex items-center gap-2"><Barbell weight="duotone" className="size-4 shrink-0 text-banana-ink" />Qué te toca hoy, a la hora que elijas</li>
-            <li className="flex items-center gap-2"><BananaFlame className="size-4 shrink-0 text-ember-ink" />Un empujón a las 8 p. m. si tu racha está en juego</li>
-            <li className="flex items-center gap-2"><Moon weight="duotone" className="size-4 shrink-0 text-banana-ink" />Máximo 2 al día y nunca en tus horas de silencio</li>
+            <li className="flex items-center gap-2"><Barbell weight="duotone" className="size-4 shrink-0 text-banana-ink" />{hourly ? "Qué te toca hoy, a la hora que elijas" : "Qué te toca hoy, en la mañana"}</li>
+            {hourly && <li className="flex items-center gap-2"><BananaFlame className="size-4 shrink-0 text-ember-ink" />Un empujón a las 8 p. m. si tu racha está en juego</li>}
+            <li className="flex items-center gap-2"><Moon weight="duotone" className="size-4 shrink-0 text-banana-ink" />{hourly ? "Máximo 2 al día y nunca en tus horas de silencio" : "Máximo 2 al día"}</li>
           </ul>
         </div>
       </div>

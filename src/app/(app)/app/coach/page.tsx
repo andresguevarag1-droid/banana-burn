@@ -9,17 +9,19 @@ export const metadata = { title: "Coach IA" };
 export default async function Coach() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
-  let initial: { role: "user" | "assistant"; content: string }[] = [];
+  // Sin llave de Anthropic, con cuentas reales el coach todavía no responde (la demo usa respuestas de ejemplo).
+  const configured = v.demo || Boolean(process.env.ANTHROPIC_API_KEY);
+  let initial: { role: "user" | "assistant"; content: string; at?: string }[] = [];
   if (!v.demo) {
     const sb = await createClient();
-    const { data } = await sb.from("coach_messages").select("role,content").eq("user_id", v.id).order("id", { ascending: false }).limit(20);
-    initial = ((data ?? []) as typeof initial).reverse();
+    const { data } = await sb.from("coach_messages").select("role,content,created_at").eq("user_id", v.id).order("id", { ascending: false }).limit(20);
+    initial = ((data ?? []) as { role: "user" | "assistant"; content: string; created_at: string }[]).reverse().map((m) => ({ role: m.role, content: m.content, at: m.created_at }));
   }
   const d = dashboard(a);
   const [g, meals] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v)]);
   const protLeft = Math.max(0, Math.round(d.t.protein - g.log.protein - sumMeals(meals.today).protein));
   const lines = [
-    `¡Pura vida, ${a.name}!`,
+    `¡Hola, ${a.name.split(" ")[0] || a.name}!`,
     d.plan.tpl ? (g.trainedToday ? `Ya hiciste **${d.plan.name}** hoy. Bien ahí.` : `Hoy te toca **${d.plan.name}** (${d.plan.exercises.length} ejercicios). Ayer fue ${d.yesterday.name}, así que vas fresco.`) : `Hoy es **descanso activo**: camina y estira.`,
     protLeft > 0 ? `- Te faltan **${protLeft} g de proteína** hoy.` : `- Proteína del día completa.`,
     g.streak.days > 0 ? `- Llevas **${g.streak.days} ${g.streak.days === 1 ? "día" : "días"} de racha**${g.streak.todayDone ? "" : " (regístrate hoy para no perderla)"}.` : `- Hoy empieza tu racha.`,
@@ -32,5 +34,5 @@ export default async function Coach() {
     "Siento que me estanqué, ¿qué ajusto?",
     "Me duele el hombro en press banca",
   ];
-  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} />;
+  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} configured={configured} />;
 }
