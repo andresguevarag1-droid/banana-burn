@@ -35,3 +35,6 @@ export function sheetFor(anim: string): string | null {
   const s = SHEETS[anim];
   return s ? `${BASE}${s}.png` : null;
 }
+
+/** Movimientos con técnica animada del mono (para cifras reales en el landing). */
+export const TECHNIQUE_COUNT = Object.keys(SHEETS).length;

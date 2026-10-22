@@ -1,4 +1,5 @@
 // Contenido compartido de las páginas públicas (inicio, precios, GLP-1): oferta, preguntas y comparación.
+import { TECHNIQUE_COUNT } from "@/lib/exercise-frames";
 import Link from "next/link";
 import { ArrowRight, Check, Minus, X } from "@/components/icons";
 import { PLANS, perMonthAnnual } from "@/lib/plans";
@@ -13,7 +14,7 @@ export const SIGNUP_GLP1 = `${SIGNUP}&programa=glp1&plan=${COMPLETO.id}&pago=anu
 /** CTA principal, orientado al resultado; la nota de la prueba va siempre justo debajo. */
 export const TRIAL_CTA = "Crear mi plan gratis";
 /** Técnicas con animación de Coach Banana (hojas de fotogramas en src/lib/exercise-frames.ts). */
-export const ANIMATED_TECHNIQUES = 25;
+export const ANIMATED_TECHNIQUES = TECHNIQUE_COUNT;
 export const TRIAL_NOTE = `${TRIAL_DAYS} días gratis con todo incluido. Sin tarjeta.`;
 
 export const FAQ: (readonly [string, string])[] = [
