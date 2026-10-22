@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#FFD60A"/><path d="M338 118c40 70 42 170-12 236-44 54-112 78-196 70-14-2-16-18-4-24 70-30 128-80 158-148 22-50 26-96 20-128-2-12 26-20 34-6z" fill="#1B1505"/><path d="M322 96l22-8c6-2 12 2 12 8l2 26-30 8z" fill="#1B1505"/><path d="M134 410c-10 2-16 8-14 14" stroke="#1B1505" stroke-width="14" stroke-linecap="round"/><circle cx="398" cy="396" r="34" fill="#FF5A1F"/><path d="M398 372c10 14 14 24 6 34-6 8-18 8-22 0-4-8 2-14 6-18 0 8 4 10 6 8 4-6 0-14 4-24z" fill="#FFD60A"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="116" fill="#1B1505"/>
+  <defs>
+    <linearGradient id="bb-b" x1=".1" y1=".9" x2=".9" y2=".2"><stop offset="0" stop-color="#FFC400"/><stop offset=".55" stop-color="#FFD60A"/><stop offset="1" stop-color="#FFE766"/></linearGradient>
+    <linearGradient id="bb-f" x1=".5" y1="1" x2=".5" y2="0"><stop offset="0" stop-color="#FF3D00"/><stop offset=".6" stop-color="#FF7A00"/><stop offset="1" stop-color="#FFB000"/></linearGradient>
+    <linearGradient id="bb-c" x1=".5" y1="1" x2=".5" y2="0"><stop offset="0" stop-color="#FFD60A"/><stop offset="1" stop-color="#FFF6C8"/></linearGradient>
+  </defs>
+  <g transform="translate(6 10)">
+  <path d="M352 214 C318 196 304 160 318 122 C326 100 342 84 352 64 C362 92 384 104 396 124 C400 108 398 94 392 80 C424 104 436 142 428 176 C422 202 404 218 380 222 Z" fill="url(#bb-f)"/>
+  <path d="M362 210 C344 200 338 180 346 160 C352 146 362 136 366 120 C374 140 392 152 394 174 C396 194 386 206 374 212 Z" fill="url(#bb-c)"/>
+  <path d="M346 238 L354 206 L384 212 L378 244 Z" fill="#8A6200"/>
+  <path d="M382 236 C394 338 324 424 210 438 C164 444 126 436 96 420 C84 413 88 398 102 398 C204 400 302 352 344 240 Z" fill="url(#bb-b)"/>
+  <path d="M352 268 C330 340 262 392 170 404" fill="none" stroke="#FFF3B0" stroke-opacity=".7" stroke-width="7" stroke-linecap="round"/>
+  <path d="M138 410 C226 406 306 362 340 270" fill="none" stroke="#B88700" stroke-opacity=".5" stroke-width="8" stroke-linecap="round"/>
+  <path d="M96 420 C86 414 86 402 98 400" fill="none" stroke="#5C4300" stroke-width="12" stroke-linecap="round"/>
+  </g>
+</svg>
