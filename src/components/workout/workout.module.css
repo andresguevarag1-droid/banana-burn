@@ -1,0 +1,57 @@
+/*
+  Movimiento propio del reproductor de entreno. Cada animación responde a algo que hizo la persona
+  (marcó una serie, ganó XP, terminó un ejercicio, el reloj llegó a 3-2-1). Nada se mueve en bucle.
+*/
+
+/* +10 XP: sube y se desvanece desde el botón que lo ganó */
+@keyframes xp {
+  0% { opacity: 0; transform: translate3d(-50%, 6px, 0) scale(.9); }
+  18% { opacity: 1; transform: translate3d(-50%, -6px, 0) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(-50%, -34px, 0) scale(1); }
+}
+.xp { position: absolute; left: 50%; top: -6px; animation: xp 1000ms cubic-bezier(.23, 1, .32, 1) both; pointer-events: none; }
+
+/* Banana ganada al cerrar un ejercicio: momento raro, se permite un rebote corto */
+@keyframes collect {
+  0% { opacity: 0; transform: scale(.6) rotate(-18deg); }
+  60% { opacity: 1; transform: scale(1.12) rotate(6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.collect { animation: collect 560ms cubic-bezier(.34, 1.56, .64, 1) both; }
+
+/* 3, 2, 1: el número late una vez por segundo */
+@keyframes beat { from { transform: scale(1.12); } to { transform: scale(1); } }
+.beat { animation: beat 260ms cubic-bezier(.23, 1, .32, 1) both; }
+
+/* Cambio de fase en intervalos (trabajo / descanso): el fondo cambia de color con transición, el texto entra corto */
+@keyframes phase { from { opacity: 0; transform: translate3d(0, 10px, 0); } to { opacity: 1; transform: none; } }
+.phase { animation: phase 240ms cubic-bezier(.23, 1, .32, 1) both; }
+
+/* Pantalla de descanso: sube desde abajo como una hoja (misma dirección que el panel minimizado) */
+.rest { transform: none; opacity: 1; transition: transform 300ms cubic-bezier(.32, .72, 0, 1), opacity 240ms cubic-bezier(.23, 1, .32, 1); }
+.rest[data-closing] { transform: translate3d(0, 24px, 0); opacity: 0; transition-duration: 200ms; pointer-events: none; }
+@starting-style { .rest { transform: translate3d(0, 48px, 0); opacity: 0; } }
+
+/* Tarjeta de la serie actual: al pasar a la siguiente serie entra desde la derecha (avanzar = ir hacia la derecha) */
+@keyframes next { from { opacity: 0; transform: translate3d(16px, 0, 0); } to { opacity: 1; transform: none; } }
+.next { animation: next 240ms cubic-bezier(.23, 1, .32, 1) both; }
+
+/* Récord: la cinta dorada entra con un brillo que cruza una sola vez */
+@keyframes shine { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(320%) skewX(-20deg); } }
+.shine { position: relative; overflow: hidden; }
+.shine::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent); animation: shine 900ms cubic-bezier(.77, 0, .175, 1) 200ms both; }
+
+/* Punto del coach-mark: el recorte se mueve entre objetivos con la curva de cajón */
+.spot { transition: top 300ms cubic-bezier(.32, .72, 0, 1), left 300ms cubic-bezier(.32, .72, 0, 1), width 300ms cubic-bezier(.32, .72, 0, 1), height 300ms cubic-bezier(.32, .72, 0, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .xp { animation-name: fadeOut; animation-duration: 1200ms; transform: translate3d(-50%, -14px, 0); }
+  .collect, .beat, .next, .phase { animation-name: fadeIn; animation-duration: 180ms; }
+  .shine::after { display: none; }
+  .rest, .rest[data-closing] { transform: none; }
+  @starting-style { .rest { transform: none; opacity: 0; } }
+  .spot { transition-duration: 0ms; }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
