@@ -75,10 +75,45 @@ export function incFor(eq: string) {
   return 0;
 }
 
-/** Variantes de la biblioteca para un ejercicio del motor (mismo músculo objetivo y equipo disponible). */
+/** Patrón de movimiento a partir del nombre en inglés del dataset (para que un cambio sea un sustituto real). */
+const PATTERNS: [string, RegExp][] = [
+  ["stretch", /stretch|massage|roll(er)? release|mobility|rotation hold|\bcircles?\b|\bsplits\b|yoga|\bpose\b/],
+  ["carry", /carry|farmer|walk(ing)?\b/],
+  ["squat", /squat|leg press|hack|pistol|wall sit|step-?up|box jump/],
+  ["lunge", /lunge|split squat|bulgarian/],
+  ["hinge", /deadlift|good morning|hip thrust|glute bridge|bridge|hyperextension|back extension|swing|pull[- ]through|romanian|rdl/],
+  ["vpull", /pull-?up|chin-?up|pulldown|pull down|muscle up/],
+  ["core", /crunch|sit-?up|plank|leg raise|knee raise|hip raise|twist|v-?up|rollout|hollow|dead bug|bicycle|flutter|jackknife|mountain climber|wiper|tuck/],
+  ["hpull", /\brow\b|rows\b|inverted|face pull|reverse fly|rear delt|rear fly|pullover/],
+  ["vpush", /overhead|military|shoulder press|arnold|push press|pike|handstand|jerk/],
+  ["fly", /\bfly\b|flyes?|cross-?over|pec deck/],
+  ["hpush", /bench press|chest press|push-?up|floor press|dip\b|dips\b|svend|\bpress\b/],
+  ["curl", /curl/],
+  ["ext", /triceps|tricep|kickback|skull|pushdown|push down|extension/],
+  ["raise", /lateral raise|front raise|upright row|shrug|y raise|raise/],
+  ["cardio", /jump|jack|burpee|run|sprint|skip|climber|crawl|shuffle|hop/],
+];
+export function patternOf(en: string) {
+  const t = en.toLowerCase();
+  return PATTERNS.find(([, re]) => re.test(t))?.[0] ?? "other";
+}
+const ODD = /stability ball|exercise ball|bosu|assisted|towel|isometric|\bhold\b|weighted vest|\bpartner\b|sled|\bv\. ?\d|\(male\)|\(female\)|one leg|single leg .*support|stepbox|rocky|side lying|\bdrop\b|to overhead|with twist|twisting|bench squat|jerk|lying on floor|off dumbbell|\bon knees\b|one arm (fly|chin)|korean|clock|muscle up|l-pull|frankenstein|guillotine|potty|wheel run|^run$|jm bench|behind (the )?head|cambered|rear pull-?up|push-up plus|frog|curtsey|drag curl/i;
+/** Menos rarezas primero: nombres cortos y equipos comunes; mismo equipo que el original arriba. */
+function score(x: LibEx, ref: LibEx) {
+  let s = x.en.length;
+  if (x.eq === ref.eq) s -= 25;
+  if (/one arm|alternate|single|reverse grip|close-grip|wide|incline|decline/.test(x.en)) s += 12;
+  return s;
+}
+
+/** Variantes de la biblioteca para un ejercicio del motor: mismo patrón de movimiento y músculo, equipo disponible. */
 export function libraryAlternatives(ourId: string, eqUser: "gym" | "casa" | "mixto" | "ninguno", n = 3) {
   const d = DS_ID[ourId] ? BY_ID.get(DS_ID[ourId]) : null;
   if (!d) return [];
+  const pat = patternOf(d.en);
+  if (pat === "stretch" || pat === "other") return [];
   const used = new Set(Object.values(DS_ID));
-  return ALL.filter((x) => x.t === d.t && x.id !== d.id && !used.has(x.id) && !/stretch/i.test(x.en) && (eqUser === "casa" ? HOME_EQ.has(x.eq) : eqUser === "ninguno" ? BW_EQ.has(x.eq) : true)).slice(0, n);
+  return ALL.filter((x) => x.t === d.t && x.id !== d.id && !used.has(x.id) && patternOf(x.en) === pat && !ODD.test(x.en)
+    && (eqUser === "casa" ? HOME_EQ.has(x.eq) : eqUser === "ninguno" ? BW_EQ.has(x.eq) : true))
+    .sort((a, b) => score(a, d) - score(b, d)).slice(0, n);
 }

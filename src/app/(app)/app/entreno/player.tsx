@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeftRight, Check, ChevronRight, GraduationCap, Minus, Plus, Trophy, X } from "lucide-react";
 import { platesPerSide, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
 import type { Technique } from "@/lib/engine/technique";
-import { levelOf } from "@/lib/gamify";
+import { levelOf, workoutXp } from "@/lib/gamify";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { RichTip } from "@/components/rich-tip";
 import { Confetti } from "@/components/confetti";
@@ -135,14 +135,14 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
   const summary = useMemo(() => {
     let vol = 0;
     rows.forEach((r) => r.forEach((s) => { if (s.done) vol += num(s.kg) * num(s.reps); }));
-    const xp = doneSets * 10 + prs.length * 50 + (doneSets === totalSets && totalSets > 0 ? 30 : 0);
-    return { vol: Math.round(vol), xp };
-  }, [rows, doneSets, totalSets, prs.length]);
+    const r = workoutXp({ doneSets, totalSets, prs: prs.length, seconds: elapsed });
+    return { vol: Math.round(vol), ...r };
+  }, [rows, doneSets, totalSets, prs.length, elapsed]);
 
   function save() {
     start(async () => {
       const res = await saveWorkout({
-        template, startedAt, fun, xp: summary.xp, prs: prs.length, title, emoji, prNames: prs.map((p) => exercises.find((e) => e.id === p)?.name ?? p),
+        template, startedAt, fun, xp: summary.xp, prs: prs.length, total: totalSets, title, emoji, prNames: prs.map((p) => exercises.find((e) => e.id === p)?.name ?? p),
         exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: s.easy ? 4 : 2 })) })).filter((e) => e.sets.length),
       });
       if (!res.ok) return setSaveMsg(res.error ?? "Error al guardar.");
@@ -190,7 +190,8 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
               <p className="text-xs font-semibold text-muted">{after.next ? `${after.toNext} XP para ${after.next.n}` : "Nivel máximo"}</p>
               <div className="mt-2 h-3 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-banana to-ember transition-all duration-1000" style={{ width: `${Math.max(4, after.progress * 100)}%` }} /></div>
             </div>
-            {prs.length > 0 && (
+            {summary.rushed && <p className="mt-3 rounded-2xl bg-cream p-3 text-left text-sm text-ink">⏱️ Registraste las series muy rápido. El día cuenta para tu racha, pero los XP y los récords se ganan cuando cada serie lleva su tiempo real.</p>}
+            {prs.length > 0 && !summary.rushed && (
               <div className="mt-3 rounded-[1.5rem] bg-banana p-4 text-left">
                 <p className="font-extrabold text-ink flex items-center gap-2"><Trophy className="size-5" /> {prs.length === 1 ? "Récord personal" : `${prs.length} récords personales`}</p>
                 <p className="text-sm text-ink/80">{prs.map((p) => exercises.find((e) => e.id === p)?.name).join(" · ")}</p>

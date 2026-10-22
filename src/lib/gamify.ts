@@ -44,3 +44,20 @@ export function badges(s: { workouts: number; streak: number; prs: number; weigh
     { id: "kg5", e: "🎯", n: "−5 kg", d: "Medio camino a la meta", got: s.lostKg >= 5 },
   ];
 }
+
+/** Segundos mínimos razonables por serie (ejecución + algo de descanso). Debajo de eso, no se premia. */
+export const MIN_SET_SECONDS = 25;
+
+/**
+ * XP de un entreno, calculado igual en el cliente y en el servidor.
+ * Anti-trampa: si las series se registraron más rápido de lo físicamente posible, el entreno
+ * cuenta para la racha pero casi no da XP ni récords.
+ */
+export function workoutXp(o: { doneSets: number; totalSets: number; prs: number; seconds: number }) {
+  const done = Math.max(0, Math.min(Math.round(o.doneSets), 40));
+  const rushed = done > 0 && o.seconds < done * MIN_SET_SECONDS;
+  if (rushed) return { xp: Math.min(done, 5) * 2, prs: 0, rushed: true };
+  const prs = Math.max(0, Math.min(Math.round(o.prs), 3));
+  const full = o.totalSets > 0 && done >= o.totalSets;
+  return { xp: done * 10 + prs * 50 + (full ? 30 : 0), prs, rushed: false };
+}
