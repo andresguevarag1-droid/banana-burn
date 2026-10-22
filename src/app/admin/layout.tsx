@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, MagnifyingGlass as Search } from "@/components/icons";
+import { MagnifyingGlass as Search, User } from "@/components/icons";
+import { ViewSwitch } from "@/components/view-switch";
 import { DemoBanner, Logo } from "@/components/brand";
 import { AdminSidebarNav, AdminTabsNav, type NavItem } from "@/components/admin/nav";
 import { RoleBadge } from "@/components/admin/ui";
@@ -49,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 </div>
               </form>
             )}
-            <Link href="/app" className="flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-muted outline-none transition-colors duration-150 hover:text-ink focus-visible:ring-4 focus-visible:ring-banana/50"><ArrowLeft className="size-4" aria-hidden />Volver a la app</Link>
+            <ViewSwitch current="admin" />
           </div>
         </aside>
 
@@ -66,7 +67,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   className="h-10 w-full rounded-full border border-line bg-paper/60 pl-9 pr-4 text-sm text-ink placeholder:text-faint outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-ink focus:bg-white focus:ring-4 focus:ring-banana/40" />
               </form>
               <div className="ml-auto flex shrink-0 items-center gap-2 text-sm">
-                <Link href="/app" className="md:hidden inline-flex h-11 items-center gap-1 rounded-full px-2 font-semibold text-muted outline-none hover:bg-paper hover:text-ink focus-visible:ring-4 focus-visible:ring-banana/50"><ArrowLeft className="size-4" aria-hidden />App<span className="sr-only"> (volver)</span></Link>
+                <Link href="/app" className="md:hidden inline-flex h-11 items-center gap-1.5 rounded-full border border-line px-3 font-bold text-ink outline-none hover:bg-paper focus-visible:ring-4 focus-visible:ring-banana/50"><User weight="duotone" className="size-4" aria-hidden />Vista usuario</Link>
                 <span className="hidden max-w-48 truncate text-muted lg:inline" title={v.email}>{v.email}</span>
                 <RoleBadge role={v.role} />
               </div>

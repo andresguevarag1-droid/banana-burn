@@ -1,8 +1,9 @@
 "use client";
+import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, House, Shield, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, House, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
 import { BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
@@ -59,8 +60,8 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
               <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}
             </Link>
           ))}
-          {staff && <Link href="/admin" className={sideLink(false)}><Shield className="size-5" weight="duotone" />Admin</Link>}
         </nav>
+        {staff && <ViewSwitch current="usuario" className="mt-6" />}
         <div className="mt-auto flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
           <Link href="/app/perfil" className="flex flex-1 min-w-0 items-center gap-3"><span className="grid place-items-center size-9 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
           <span className="flex-1 truncate font-semibold text-ink">{name}</span></Link>
@@ -101,7 +102,7 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
               </Link>
             </li>
           ))}
-          {staff && <li className="col-span-2"><Link href="/admin" className="pressable flex items-center gap-3 rounded-2xl bg-white border border-line/70 p-4 font-extrabold text-ink"><Shield className="size-6 text-banana-ink" weight="duotone" />Panel de administración</Link></li>}
+          {staff && <li className="col-span-2"><p className="mb-2 text-xs font-bold text-muted">Eres parte del equipo</p><ViewSwitch current="usuario" /></li>}
         </ul>
         <form action="/auth/salir" method="post" className="mt-4"><button className="btn-ghost w-full"><SignOut className="size-5" weight="bold" />Cerrar sesión</button></form>
       </Sheet>
