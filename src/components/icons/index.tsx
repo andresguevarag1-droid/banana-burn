@@ -13,6 +13,6 @@ export {
   ShieldWarning, SignOut, Sparkle, SquaresFour, Target, Timer, Trash, TrendDown, TrendUp, User, UserGear, Users, Warning, WarningCircle,
   Watch, X, Sun, Globe, Grains, Lightbulb, SunHorizon, Wine, Moon as Night, Medal, Play, Pause, SkipForward, SpeakerHigh, SpeakerSlash, Calendar, CalendarCheck, PersonSimpleRun,
   Carrot, Cookie, Leaf, Coffee, Pill, Syringe, Smiley, SmileyMeh, SmileySad, Star, Eye, EyeSlash, PencilSimple, DotsThree, Link, Export,
-  ArrowSquareOut, ArrowUUpLeft, CookingPot, OrangeSlice, Bed, Books, Confetti, FlagCheckered, PersonArmsSpread, PersonSimpleWalk, PushPin, TreePalm,
+  ArrowSquareOut, ArrowUUpLeft, CookingPot, OrangeSlice, Bed, Books, Confetti, FlagCheckered, PersonArmsSpread, PersonSimpleWalk, PushPin, TreePalm, List,
 } from "@phosphor-icons/react/dist/ssr";
 export type { Icon as PhosphorIcon, IconWeight } from "@phosphor-icons/react";

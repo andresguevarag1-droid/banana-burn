@@ -197,7 +197,7 @@ export default function Landing() {
           <h2 id="coach-accion" className={H2}>Un coach que no te quita el ojo de encima.</h2>
           <p className="text-lg text-muted leading-relaxed text-pretty max-w-[52ch]">Coach Banana te cuenta el tempo, te corrige la técnica y te avisa cuándo volver a la barra. En el gym, en la casa o en el parque.</p>
         </div>
-        <ul className="mt-10 flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-2 [scrollbar-width:none] sm:mx-auto sm:max-w-6xl sm:px-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
+        <ul tabIndex={0} aria-label="Escenas de Coach Banana entrenando" className="mt-10 flex gap-3 overflow-x-auto outline-none focus-visible:ring-2 focus-visible:ring-ink snap-x snap-mandatory px-4 pb-2 [scrollbar-width:none] sm:mx-auto sm:max-w-6xl sm:px-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
           {SCENES.map(([id, t], i) => (
             <li key={id} className={`relative shrink-0 w-[78%] snap-center overflow-hidden rounded-[1.5rem] bg-cream aspect-[4/5] sm:w-auto ${i === 0 ? "lg:col-span-2 lg:row-span-2 lg:aspect-auto" : ""}`}>
               <Image src={`${UGC_BASE}${id}.png`} alt={t} fill sizes={i === 0 ? "(min-width: 1024px) 760px, 80vw" : "(min-width: 1024px) 380px, 80vw"} className="object-cover" />

@@ -208,3 +208,4 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 @keyframes mg-pop { from { opacity: 0; transform: scale(.86); } }
 @keyframes mg-rise { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .mg-draw, .mg-fade, .mg-head, .mg-pop, .mg-rise { animation: none; stroke-dashoffset: 0; opacity: 1; } }
+@keyframes menu-in { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
