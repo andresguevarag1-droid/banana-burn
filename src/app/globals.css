@@ -151,8 +151,20 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 .bar-fill { transition: transform var(--dur-fill) var(--ease-out); }
 
 /* Variables del motor de animación */
-:root { --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B; }
-.motion svg { width: 100%; height: 100%; display: block; overflow: visible; }
+:root {
+  --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B;
+  --mo-face: #F7DDA6; --mo-paper: #FFF8E3; --mo-steel: rgb(27 21 5 / .3); --mo-pad: rgb(27 21 5 / .62); --mo-floor: rgb(27 21 5 / .16); --mo-far: .4;
+}
+.motion { display: flex; flex-direction: column; gap: 8px; }
+.motion svg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; overflow: hidden; }
+.motion .mo-far { opacity: var(--mo-far); }
+.motion-hud { display: grid; gap: 6px; }
+.motion-label { margin: 0; font-size: 11px; line-height: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.motion-track { display: flex; gap: 3px; height: 4px; }
+.motion-seg { flex-basis: 0; border-radius: 99px; background: rgb(27 21 5 / .13); overflow: hidden; }
+.motion-seg > i { display: block; height: 100%; transform: scaleX(0); transform-origin: left; background: var(--figure); }
+.motion-seg > i[data-k="con"] { background: var(--ember); }
+.motion-seg > i[data-k="hold"], .motion-seg > i[data-k="air"] { background: rgb(27 21 5 / .7); }
 
 /* Foco visible por defecto para todo lo interactivo (las utilidades con anillo propio lo sustituyen). */
 @layer base {
