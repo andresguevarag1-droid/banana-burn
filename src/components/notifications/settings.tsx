@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Send } from "lucide-react";
+import { Bell, CheckCircle, PaperPlaneTilt, WarningCircle } from "@/components/icons";
 import { getNotificationPrefs, saveNotificationPrefs, sendTestNotification } from "@/app/actions/notifications";
 import type { Prefs } from "@/lib/notify";
 import { EnablePush } from "./enable-push";
@@ -39,7 +39,7 @@ export function NotificationSettings({ initial }: { initial?: Initial }) {
 function Form({ data }: { data: Initial }) {
   const [saved, setSaved] = useState<Prefs>(data.prefs);
   const [p, setP] = useState<Prefs>(data.prefs);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [testing, startTest] = useTransition();
@@ -52,17 +52,17 @@ function Form({ data }: { data: Initial }) {
   const save = () => start(async () => {
     const r = await saveNotificationPrefs(p);
     if (r.ok) setSaved(p);
-    setMsg(r.ok ? (r.demo ? "Demo: no se guardó." : "✅ Avisos actualizados") : r.error ?? "Error");
+    setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Avisos actualizados" } : { ok: false, t: r.error ?? "No pudimos guardar tus avisos. Intenta de nuevo." });
   });
   const test = () => startTest(async () => {
     const r = await sendTestNotification();
-    setTestMsg(!r.ok ? r.error ?? "No se pudo enviar." : r.demo ? "Demo: así funcionaría con tu cuenta real." : r.push ? `Enviado a ${r.push} dispositivo${r.push > 1 ? "s" : ""} 🔔 y a tu campanita.` : r.devices ? "Lo dejamos en tu campanita; el push no llegó (revisa permisos del navegador)." : "Lo dejamos en tu campanita. Activa los avisos push para recibirlo también en el celular.");
+    setTestMsg(!r.ok ? r.error ?? "No pudimos enviar el aviso de prueba. Intenta de nuevo." : r.demo ? "Demo: así funcionaría con tu cuenta real." : r.push ? `Enviado a ${r.push} dispositivo${r.push > 1 ? "s" : ""} y a tu campanita.` : r.devices ? "Lo dejamos en tu campanita; el push no llegó (revisa permisos del navegador)." : "Lo dejamos en tu campanita. Activa los avisos push para recibirlo también en el celular.");
   });
 
   return (
     <div id="notificaciones" className="space-y-5 scroll-mt-24">
       <div>
-        <h2 className="font-extrabold text-ink">🔔 Avisos</h2>
+        <h2 className="flex items-center gap-2 font-extrabold text-ink"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><Bell weight="duotone" className="size-5" /></span>Avisos</h2>
         <p className="mt-1 text-sm text-muted">Te recordamos qué te toca, sin spam: máximo 2 avisos al día.</p>
       </div>
 
@@ -100,9 +100,9 @@ function Form({ data }: { data: Initial }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <button disabled={!dirty || pending} onClick={save} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar avisos"}</button>
-        <button onClick={test} disabled={testing} className="btn-ghost h-11 px-5"><Send className="size-4" />{testing ? "Enviando…" : "Probar aviso"}</button>
+        <button onClick={test} disabled={testing} className="btn-ghost h-11 px-5"><PaperPlaneTilt weight="bold" className="size-4" />{testing ? "Enviando…" : "Probar aviso"}</button>
       </div>
-      {msg && <p className="text-sm font-semibold text-peel">{msg}</p>}
+      {msg && <p role={msg.ok ? "status" : "alert"} className={`flex items-center gap-1.5 text-sm font-semibold ${msg.ok ? "text-peel" : "text-bad"}`}>{msg.ok ? <CheckCircle weight="fill" className="size-4 shrink-0" /> : <WarningCircle weight="fill" className="size-4 shrink-0" />}{msg.t}</p>}
       {testMsg && <p className="text-sm text-muted">{testMsg}</p>}
     </div>
   );

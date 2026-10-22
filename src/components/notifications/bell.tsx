@@ -1,10 +1,19 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell as BellIcon, CheckCheck } from "lucide-react";
+import { Banana, BananaFlame, Barbell, Bell as BellIcon, ChartLine, Checks, CreditCard, Heart, MonkeyBanana, type PhosphorIcon } from "@/components/icons";
 import { listNotifications, markNotificationsRead, type InAppNotification } from "@/app/actions/notifications";
 
-const ICON: Record<string, string> = { recordatorio: "💪", racha: "🔥", semanal: "📊", reactivacion_3: "🍌", reactivacion_7: "💛", pago_fallido: "💳", test: "🔔" };
+const ICON: Record<string, { I: PhosphorIcon | typeof Banana; tile: string }> = {
+  recordatorio: { I: Barbell, tile: "bg-banana-soft text-banana-ink" },
+  racha: { I: BananaFlame, tile: "bg-ember/10 text-ember-ink" },
+  semanal: { I: ChartLine, tile: "bg-sky/10 text-sky" },
+  reactivacion_3: { I: Banana, tile: "bg-banana-soft text-banana-ink" },
+  reactivacion_7: { I: Heart, tile: "bg-ember/10 text-ember-ink" },
+  pago_fallido: { I: CreditCard, tile: "bg-bad/10 text-bad" },
+  test: { I: BellIcon, tile: "bg-ink text-banana" },
+};
+const FALLBACK = { I: Banana, tile: "bg-banana-soft text-banana-ink" };
 
 const rtf = typeof Intl !== "undefined" ? new Intl.RelativeTimeFormat("es", { numeric: "auto" }) : null;
 function ago(iso: string) {
@@ -57,22 +66,22 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   return (
     <div ref={box} className={`relative ${className}`}>
       <button onClick={() => { setOpen((o) => !o); if (!open) void load(); }} className="tap pressable relative grid place-items-center size-10 rounded-full bg-white border border-line text-ink hover:bg-cream" aria-label={unread ? `Avisos: ${unread} sin leer` : "Avisos"} aria-expanded={open} aria-haspopup="dialog">
-        <BellIcon className="size-5" />
+        <BellIcon weight="duotone" className="size-5" />
         {unread > 0 && <span className="absolute -top-1 -right-1 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-ember text-white text-[11px] font-bold ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
         <div role="dialog" aria-label="Avisos" className="fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-96 card shadow-lift overflow-hidden" style={{ animation: "sheet .2s ease-out" }}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-line">
             <p className="font-extrabold text-ink">Avisos</p>
-            {unread > 0 && <button onClick={() => markRead()} className="tap inline-flex items-center gap-1 text-xs font-bold text-banana-ink hover:text-ink"><CheckCheck className="size-4" />Marcar todo leído</button>}
+            {unread > 0 && <button onClick={() => markRead()} className="tap inline-flex items-center gap-1 text-xs font-bold text-banana-ink hover:text-ink"><Checks weight="bold" className="size-4" />Marcar todo leído</button>}
           </div>
           <ul className="max-h-[60vh] overflow-y-auto">
             {!loaded && <li className="p-6 text-center text-sm text-muted">Cargando…</li>}
-            {loaded && !items.length && <li className="p-6 text-center text-sm text-muted">Nada nuevo por ahora 🍌<br /><span className="text-xs">Aquí verás tus recordatorios y logros.</span></li>}
+            {loaded && !items.length && <li className="p-6 flex flex-col items-center text-center text-sm text-muted"><span className="grid place-items-center size-12 mb-2 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-7" /></span>Nada nuevo por ahora.<span className="text-xs">Aquí verás tus recordatorios y logros.</span></li>}
             {items.map((n) => {
               const inner = (
                 <div className={`flex gap-3 px-4 py-3 transition hover:bg-cream ${n.read_at ? "" : "bg-banana-soft/30"}`}>
-                  <span className="grid place-items-center size-9 shrink-0 rounded-xl bg-cream text-lg">{ICON[n.kind] ?? "🍌"}</span>
+                  {(() => { const k = ICON[n.kind] ?? FALLBACK; return <span className={`grid place-items-center size-9 shrink-0 rounded-xl ${k.tile}`}><k.I weight="duotone" className="size-5" /></span>; })()}
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-bold text-ink">{n.title}</span>
                     {n.body && <span className="block text-sm text-muted line-clamp-2">{n.body}</span>}

@@ -4,10 +4,13 @@ import { getEntitlements } from "@/lib/entitlements";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { RECIPES, mealPlan, type Recipe } from "@/lib/recipes";
 import { AddRecipe } from "./add";
+import { SLOTS_MEAL } from "@/lib/meals-shared";
+import { ArrowLeft, BananaBunch, BrandIcon, Clock, Plus } from "@/components/icons";
 
 export const metadata = { title: "Recetas y plan de comidas" };
 
 const SLOT_N = { desayuno: "Desayuno", almuerzo: "Almuerzo", merienda: "Merienda", cena: "Cena" } as const;
+const SLOT_ICON = Object.fromEntries(SLOTS_MEAL.map((s) => [s.id, s.icon])) as Record<keyof typeof SLOT_N, string>;
 
 function RecipeCard({ r, factor = 1 }: { r: Recipe; factor?: number }) {
   const f = Math.round(factor * 10) / 10;
@@ -15,16 +18,16 @@ function RecipeCard({ r, factor = 1 }: { r: Recipe; factor?: number }) {
   return (
     <details className="card group overflow-hidden">
       <summary className="cursor-pointer list-none p-4 flex items-center gap-3">
-        <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-cream text-2xl">{r.e}</span>
+        <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><BrandIcon name={r.icon} className="size-7" /></span>
         <span className="flex-1 min-w-0">
-          <span className="block text-[11px] font-bold uppercase tracking-wider text-muted">{SLOT_N[r.slot]} · {r.min} min{f !== 1 ? ` · porción ×${f.toLocaleString("es-CR")}` : ""}</span>
+          <span className="flex flex-wrap items-center gap-x-1.5 text-[11px] font-bold uppercase tracking-wider text-muted"><span>{SLOT_N[r.slot]}</span><span className="inline-flex items-center gap-0.5"><Clock weight="bold" className="size-3" />{r.min} min</span>{f !== 1 && <span className="normal-case tracking-normal">porción ×{f.toLocaleString("es-CR")}</span>}</span>
           <span className="block font-extrabold text-ink leading-tight">{r.t}</span>
-          <span className="block text-xs text-muted tabular-nums">{k} kcal · {p} g proteína · {Math.round(r.c * f)} g carbos · {Math.round(r.f * f)} g grasa</span>
+          <span className="block text-xs text-muted tabular-nums">{k} kcal · {p} g proteína, {Math.round(r.c * f)} g carbos, {Math.round(r.f * f)} g grasa</span>
         </span>
-        <span className="text-xl text-faint transition-transform group-open:rotate-45" aria-hidden>+</span>
+        <Plus weight="bold" className="size-5 shrink-0 text-faint transition-transform group-open:rotate-45" />
       </summary>
       <div className="px-4 pb-4 grid gap-4 sm:grid-cols-2">
-        <div><p className="text-sm font-bold text-ink">Ingredientes{r.serves > 1 ? ` (rinde ${r.serves})` : ""}</p><ul className="mt-1 space-y-1 text-sm text-body">{r.ing.map((i) => <li key={i}>• {i}</li>)}</ul></div>
+        <div><p className="text-sm font-bold text-ink">Ingredientes{r.serves > 1 ? ` (rinde ${r.serves})` : ""}</p><ul className="mt-1 space-y-1 text-sm text-body">{r.ing.map((i) => <li key={i} className="flex gap-2"><span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-banana-ink" />{i}</li>)}</ul></div>
         <div><p className="text-sm font-bold text-ink">Preparación</p><ol className="mt-1 space-y-1 text-sm text-body">{r.steps.map((s, i) => <li key={i}>{i + 1}. {s}</li>)}</ol></div>
         <div className="sm:col-span-2 flex flex-wrap items-center gap-2">{r.tags.map((t) => <span key={t} className="chip bg-cream text-ink">{t}</span>)}<span className="ml-auto"><AddRecipe name={r.t + (f !== 1 ? ` ×${f}` : "")} kcal={k} protein={p} slot={r.slot} /></span></div>
       </div>
@@ -34,7 +37,7 @@ function RecipeCard({ r, factor = 1 }: { r: Recipe; factor?: number }) {
 
 export default async function Recetas() {
   const v = (await getViewer())!;
-  if (!(await getEntitlements(v)).nutrition) return <div className="text-center py-16"><p className="text-5xl">🥗</p><h1 className="mt-3 text-2xl font-extrabold text-ink">Recetas y plan de comidas</h1><p className="mt-2 text-muted">Incluido en Entreno + Nutrición.</p><Link href="/precios" className="btn-banana mt-6">Ver planes</Link></div>;
+  if (!(await getEntitlements(v)).nutrition) return <div className="text-center py-16"><span className="mx-auto grid place-items-center size-20 rounded-3xl bg-banana-soft text-banana-ink"><BananaBunch className="size-11" /></span><h1 className="mt-3 text-2xl font-extrabold text-ink">Recetas y plan de comidas</h1><p className="mt-2 text-muted">Incluido en Entreno + Nutrición.</p><Link href="/precios" className="btn-banana mt-6">Ver planes</Link></div>;
   const d = dashboard(await getAthlete(v));
   const plan = mealPlan({ kcal: d.t.kcal, protein: d.t.protein }, d.today.dow);
   const base = plan.reduce((a, r) => a + r.kcal, 0);
@@ -43,18 +46,18 @@ export default async function Recetas() {
   return (
     <div className="space-y-6 animate-rise">
       <header>
-        <Link href="/app/nutricion" className="tap text-sm font-semibold text-muted hover:text-ink">← Nutrición</Link>
-        <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Recetas ticas fit 🍛</h1>
+        <Link href="/app/nutricion" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Nutrición</Link>
+        <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Recetas ticas fit</h1>
         <p className="mt-1 text-muted">Fáciles, con lo que hay en cualquier súper de Costa Rica. Macros aproximados.</p>
       </header>
       <section className="rounded-[1.75rem] bg-banana p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-ink/75">Plan de comidas de hoy</p>
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-ink/75"><BananaBunch className="size-4 text-ink" />Plan de comidas de hoy</p>
         <p className="mt-1 text-2xl font-extrabold text-ink">{totK.toLocaleString("es-CR")} kcal · {totP} g proteína</p>
         <p className="text-sm text-ink/70">Calculado para tu meta de {d.t.kcal.toLocaleString("es-CR")} kcal y {d.t.protein} g. Cambia cada día.</p>
         <div className="mt-4 space-y-2">{plan.map((r) => <RecipeCard key={r.id} r={r} factor={factor} />)}</div>
       </section>
       {(["desayuno", "almuerzo", "merienda", "cena"] as const).map((s) => (
-        <section key={s}><h2 className="font-extrabold text-ink mb-2">{SLOT_N[s]}</h2><div className="space-y-2">{RECIPES.filter((r) => r.slot === s).map((r) => <RecipeCard key={r.id} r={r} />)}</div></section>
+        <section key={s}><h2 className="flex items-center gap-2.5 font-extrabold text-ink mb-2"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BrandIcon name={SLOT_ICON[s]} className="size-5" /></span>{SLOT_N[s]}</h2><div className="space-y-2">{RECIPES.filter((r) => r.slot === s).map((r) => <RecipeCard key={r.id} r={r} />)}</div></section>
       ))}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Share, X } from "lucide-react";
+import { Export, X } from "@/components/icons";
 
 type BIP = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 
@@ -28,11 +28,11 @@ export function InstallPrompt() {
       <div className="flex items-center gap-3 rounded-3xl bg-ink text-white p-3 pl-4 shadow-lift">
         <Image src="/icons/icon-192.png" alt="" width={40} height={40} className="size-10 rounded-xl" />
         <div className="flex-1 min-w-0 text-sm">
-          <p className="font-bold">Instala Banana Burn 🍌</p>
-          <p className="text-white/70 text-xs">{ios ? <>Toca <Share className="inline size-3.5 -mt-0.5" /> y luego “Agregar a inicio”</> : "Ábrela como app, a pantalla completa."}</p>
+          <p className="font-bold">Instala Banana Burn</p>
+          <p className="text-white/70 text-xs">{ios ? <>Toca <Export weight="bold" className="inline size-3.5 -mt-0.5" aria-label="Compartir" /> y luego “Agregar a inicio”</> : "Ábrela como app, a pantalla completa."}</p>
         </div>
         {!ios && evt && <button onClick={async () => { await evt.prompt(); close(); }} className="tap pressable h-9 px-4 rounded-full bg-banana text-ink text-sm font-bold">Instalar</button>}
-        <button onClick={close} className="tap pressable grid place-items-center size-8 rounded-full text-white/60 hover:text-white" aria-label="Cerrar"><X className="size-4" /></button>
+        <button onClick={close} className="tap pressable grid place-items-center size-8 rounded-full text-white/60 hover:text-white" aria-label="Cerrar"><X weight="bold" className="size-4" /></button>
       </div>
     </aside>
   );

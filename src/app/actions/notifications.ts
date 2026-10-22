@@ -33,7 +33,7 @@ export async function saveNotificationPrefs(input: Partial<Prefs>): Promise<{ ok
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { error } = await sb.from("notification_prefs").upsert({ user_id: v.id, ...row }, { onConflict: "user_id" });
-  return error ? { ok: false, error: "No se pudo guardar." } : { ok: true };
+  return error ? { ok: false, error: "No pudimos guardar tus avisos. Intenta de nuevo." } : { ok: true };
 }
 
 /** Botón "Probar aviso": manda un push a tus dispositivos y deja un aviso en la campanita. */
@@ -42,7 +42,7 @@ export async function sendTestNotification(): Promise<{ ok: boolean; demo?: bool
   if (!v) return { ok: false, push: 0, devices: 0, error: "Inicia sesión." };
   if (v.demo) return { ok: true, demo: true, push: 0, devices: 0 };
   const sb = await createClient();
-  const title = "¡Así se ven tus avisos! 🍌";
+  const title = "Así se ven tus avisos de Banana Burn";
   const body = "Te avisaremos qué te toca entrenar y cuándo tu racha necesita un empujón.";
   await sb.from("notifications").insert({ user_id: v.id, kind: "test", title, body, url: "/app" });
   const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", v.id);
@@ -58,7 +58,7 @@ const DEMO_ITEMS = async (): Promise<InAppNotification[]> => {
   const today = d.plan.tpl ? { title: `Hoy te toca ${d.plan.name}`, body: `Unos ${d.plan.mins ?? 45} min y listo. Tus cargas ya están calculadas.` } : { title: "Hoy toca descanso activo", body: "Camina y estira. Mañana volvemos con todo." };
   return [
     { id: 2, kind: "recordatorio", ...today, url: d.plan.tpl ? "/app/entreno" : "/app", read_at: null, created_at: new Date(t - 2 * 3600e3).toISOString() },
-    { id: 1, kind: "semanal", title: "Tu semana en Banana Burn 📊", body: "5 entrenos · −0.6 kg. Mira lo que viene esta semana.", url: "/app/progreso", read_at: new Date(t - 20 * 3600e3).toISOString(), created_at: new Date(t - 26 * 3600e3).toISOString() },
+    { id: 1, kind: "semanal", title: "Tu semana en Banana Burn", body: "5 entrenos y −0,6 kg. Mira lo que viene esta semana.", url: "/app/progreso", read_at: new Date(t - 20 * 3600e3).toISOString(), created_at: new Date(t - 26 * 3600e3).toISOString() },
   ];
 };
 

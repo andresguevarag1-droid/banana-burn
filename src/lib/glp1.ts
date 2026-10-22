@@ -32,7 +32,7 @@ export function glp1Targets(p: { kg: number; goalKg: number; heightCm: number; a
   return { kcal, kcalMin, protein, perMeal: Math.round(protein / 4 / 5) * 5, fat, carbs, fiber, waterL: p.sex === "f" ? 2.5 : 3, meals: 5, bmr, tdee };
 }
 
-/** ¿Hoy o mañana después de la inyección? → modo suave sugerido (náuseas y poca energía son comunes 24–48 h). */
+/** ¿Hoy o mañana después de la inyección? Si sí, sugerimos modo suave (náuseas y poca energía son comunes 24-48 h). */
 export function injectionPhase(injectionDow: number | null, todayDow: number): "inyeccion" | "post" | "normal" {
   if (injectionDow == null) return "normal";
   if (todayDow === injectionDow) return "inyeccion";

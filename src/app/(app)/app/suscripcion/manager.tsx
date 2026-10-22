@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, HeartHandshake, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, CircleNotch, Handshake, MonkeyBanana } from "@/components/icons";
 import { PLANS, annualSavingPct, usd, type Billing, type PlanId } from "@/lib/plans";
 import { INTENT_COOKIE, type CheckoutIntent } from "@/lib/checkout-intent";
 import { useCheckout } from "@/components/pagos/use-checkout";
@@ -37,7 +37,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
           <p className="text-white/70"><b className="text-white tabular-nums">{usd(planOf(intent.plan).price[intent.billing])}</b> {intent.billing === "anual" ? "/año" : "/mes"} · cancela cuando quieras</p>
           {paid && <p className="mt-2 text-sm text-white/70">Reemplaza tu plan actual en cuanto se confirme el pago (sin prorrateo).</p>}
           <button type="button" disabled={disabled} onClick={() => checkout.start(intent.plan, intent.billing)} className="btn-banana mt-4 w-full h-13" aria-busy={checkout.busy === `${intent.plan}.${intent.billing}`}>
-            {checkout.busy === `${intent.plan}.${intent.billing}` ? <><Loader2 className="size-5 animate-spin" aria-hidden />Preparando tu pago…</> : <>Continuar al pago<ArrowRight className="size-5" aria-hidden /></>}
+            {checkout.busy === `${intent.plan}.${intent.billing}` ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Preparando tu pago…</> : <>Continuar al pago<ArrowRight weight="bold" className="size-5" /></>}
           </button>
           {!payments && <p className="mt-2 text-sm text-white/70">{demo ? "Modo demo: no se procesan pagos." : "Los pagos aún no están activos."}</p>}
         </section>
@@ -65,7 +65,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
                   </span>
                   <span className="mt-1 flex items-center justify-between text-sm text-muted">
                     <span>{b === "anual" ? "Anual" : "Mensual"} · <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}</span>
-                    {checkout.busy === key ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ArrowRight className="size-4" aria-hidden />}
+                    {checkout.busy === key ? <CircleNotch weight="bold" className="size-4 animate-spin" /> : <ArrowRight weight="bold" className="size-4" />}
                   </span>
                 </button>
               </li>
@@ -105,7 +105,7 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
     const r = await fetch("/api/pagos/cancelar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) })
       .then((x) => x.json()).catch(() => ({ ok: false, error: "Sin conexión. Intenta de nuevo." })) as { ok: boolean; error?: string; endsAt?: string | null; demo?: boolean };
     setBusy(false);
-    if (!r.ok) return setErr(r.error ?? "No se pudo cancelar.");
+    if (!r.ok) return setErr(r.error ?? "No pudimos cancelar. Intenta de nuevo.");
     if (r.endsAt) setUntil(r.endsAt);
     setStep("done");
     router.refresh();
@@ -125,15 +125,15 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
     <section className="rounded-[1.5rem] border-2 border-line bg-white p-5 sm:p-6 space-y-4" aria-live="polite">
       {step === "offer" && (
         <>
-          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none flex items-center gap-2"><HeartHandshake className="size-5 text-ember" aria-hidden />Antes de irte…</h2>
+          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none flex items-center gap-2"><Handshake weight="duotone" className="size-5 text-ember" />Antes de irte…</h2>
           <p className="text-sm text-muted">Tu racha y tu progreso se quedan contigo. Quizá esto te sirve más:</p>
           <ul className="space-y-2">
             {offers.map((o) => (
               <li key={o.key} className="rounded-2xl bg-paper p-4">
-                <p className="font-bold text-ink flex items-center gap-2"><Sparkles className="size-4 text-banana-ink" aria-hidden />{o.title}</p>
+                <p className="font-bold text-ink flex items-center gap-2"><MonkeyBanana className="size-5 shrink-0 text-banana-ink" />{o.title}</p>
                 <p className="mt-1 text-sm text-muted">{o.body}</p>
                 <button type="button" disabled={!payments || Boolean(offerBusy)} onClick={() => onOffer(o.plan, o.billing)} className="btn-banana mt-3 h-11 w-full sm:w-auto" aria-busy={offerBusy === o.key}>
-                  {offerBusy === o.key ? <><Loader2 className="size-4 animate-spin" aria-hidden />Preparando…</> : "Quiero esta opción"}
+                  {offerBusy === o.key ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Preparando…</> : "Quiero esta opción"}
                 </button>
               </li>
             ))}
@@ -160,7 +160,7 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
             <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 flex-1">Mejor no</button>
-            <button type="button" disabled={busy} onClick={confirm} className="btn h-11 flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <><Loader2 className="size-4 animate-spin" aria-hidden />Cancelando…</> : "Confirmar cancelación"}</button>
+            <button type="button" disabled={busy} onClick={confirm} className="btn h-11 flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Cancelando…</> : "Confirmar cancelación"}</button>
           </div>
         </>
       )}
