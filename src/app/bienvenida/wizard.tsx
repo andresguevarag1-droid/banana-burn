@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
+import { FunnelTracker } from "@/components/analytics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Warning } from "@/components/icons";
@@ -167,7 +168,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           <p className="mt-2 text-muted text-pretty">Calculado para ti. Se ajusta solo cada semana con tu peso real.</p>
           {trialEnd && (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              Tu prueba gratis de {TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el {trialEnd}, sin tarjeta.
+              Tu prueba gratis de {TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el {trialEnd}. Sin tarjeta, así que no hay cobros automáticos; te avisamos en la app antes de que termine.
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
@@ -176,9 +177,10 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             ))}
           </div>
           {demo && <p className="mt-4 text-sm text-banana-ink">Modo demo: no se guardó nada.</p>}
-          <button onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Ver mi rutina de hoy <ArrowRight className="size-5" /></button>
+          <FunnelTracker view="onboarding_done" props={{ goal: full.goal, trial: Boolean(trialEnd) }} />
+          <button data-cta="bienvenida-hoy" onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Empezar mi entreno de hoy <ArrowRight className="size-5" /></button>
           {intent && intentPlan && (
-            <button onClick={() => router.replace(intentPath(intent))} className="tap mt-4 w-full text-sm font-semibold text-muted underline underline-offset-4 transition-colors duration-150 hover:text-ink">
+            <button data-cta="bienvenida-activar" onClick={() => router.replace(intentPath(intent))} className="tap mt-4 w-full text-sm font-semibold text-muted underline underline-offset-4 transition-colors duration-150 hover:text-ink">
               {trialEnd ? `¿Ya te decidiste? Activa ${intentPlan.name} desde hoy` : `Activar ${intentPlan.name}`}
             </button>
           )}

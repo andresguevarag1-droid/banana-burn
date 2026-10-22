@@ -7,6 +7,7 @@ import { isOnvoConfigured } from "@/lib/onvo";
 import { PLANS, usd } from "@/lib/plans";
 import { INTENT_COOKIE, decodeIntent, parseIntent } from "@/lib/checkout-intent";
 import { SubscriptionManager } from "./manager";
+import { FunnelTracker } from "@/components/analytics";
 
 export const metadata = { title: "Mi suscripción" };
 
@@ -68,6 +69,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-5 animate-enter max-w-2xl">
+      <FunnelTracker view="page_view" props={{ screen: "suscripcion", access: ent.access }} />
       <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Perfil</Link>
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
@@ -75,7 +77,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
       {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}
       {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos todavía no están activos. Si necesitas activar tu plan, escríbenos a <a className="underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>.</p>}
-      {ent.trial && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Tu prueba gratis termina el {fmtDay(ent.trial.endsAt)}.</b> Tienes todo incluido hasta entonces, sin tarjeta. Elige tu plan para seguir sin interrupciones.</p>}
+      {ent.trial && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Tu prueba gratis termina el {fmtDay(ent.trial.endsAt)}.</b> Tienes todo incluido hasta entonces y no hay cobros automáticos, porque no pedimos tarjeta. El plan de pago empieza el día que pagas; si prefieres, elígelo en tu último día y sigues sin cortes.</p>}
       {ent.locked && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
       <section className="card p-5 sm:p-6" aria-labelledby="plan-actual">

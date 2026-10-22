@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/brand";
-import { ArrowRight, Banana, Monkey, MonkeyBanana, SignOut } from "@/components/icons";
+import { ArrowRight, Banana, Check, Monkey, MonkeyBanana, SignOut } from "@/components/icons";
+import { FunnelTracker } from "@/components/analytics";
+import { TRIAL_DAYS } from "@/lib/copy";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getViewer } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
@@ -10,11 +12,21 @@ export const metadata = { title: "Entrar", robots: { index: false, follow: true 
 
 export const dynamic = "force-dynamic";
 
-export default async function Entrar() {
+/** Lo que trae la prueba gratis: se muestra junto al registro en escritorio. Cifras reales del producto. */
+const TRIAL_INCLUDES = [
+  "Rutina diaria con el peso exacto de cada serie",
+  "Coach IA que conoce tu plan, a cualquier hora",
+  "Calorías y macros con comida latina de verdad",
+  "Banana Shield si usas Ozempic o Mounjaro",
+];
+
+export default async function Entrar({ searchParams }: { searchParams: Promise<{ modo?: string }> }) {
+  const signup = (await searchParams).modo === "registro";
   // Con sesión abierta no rebotamos a la app: mostramos con qué cuenta estás y dejamos cambiarla.
   const v = isSupabaseConfigured ? await getViewer() : null;
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
+      <FunnelTracker view="page_view" props={{ screen: signup ? "registro" : "entrar" }} />
       <div className="flex flex-col px-5 sm:px-10 py-6">
         <header><Logo /></header>
         <main className="flex-1 grid place-items-center py-10">
@@ -40,10 +52,20 @@ export default async function Entrar() {
       </div>
       <aside className="hidden lg:flex relative overflow-hidden bg-banana p-14 flex-col justify-end">
         <Banana weight="fill" className="absolute -top-20 -right-20 size-[420px] text-ink opacity-10 rotate-12 select-none" />
-        <blockquote className="relative max-w-md">
-          <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight">“Hoy te toca Empuje A. Ayer fue descanso, mañana Tracción. Sube 2.5 kg en banca.”</p>
-          <p className="mt-6 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Tu coach Banana Burn, cada mañana</p>
-        </blockquote>
+        {signup ? (
+          <div className="relative max-w-md">
+            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight text-balance">Tu prueba de {TRIAL_DAYS} días trae todo incluido.</p>
+            <ul className="mt-8 space-y-3 text-lg font-semibold text-ink">
+              {TRIAL_INCLUDES.map((t) => <li key={t} className="flex gap-3"><Check weight="bold" aria-hidden className="mt-1 size-5 shrink-0" />{t}</li>)}
+            </ul>
+            <p className="mt-8 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Sin tarjeta. Al terminar eliges si sigues.</p>
+          </div>
+        ) : (
+          <blockquote className="relative max-w-md">
+            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight">“Hoy te toca Empuje A. Ayer fue descanso, mañana Tracción. Sube 2.5 kg en banca.”</p>
+            <p className="mt-6 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Tu coach Banana Burn, cada mañana</p>
+          </blockquote>
+        )}
       </aside>
     </div>
   );

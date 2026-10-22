@@ -10,7 +10,10 @@ export const FROM = money(perMonthAnnual(ENTRENO));
 export const SIGNUP = "/entrar?modo=registro";
 /** Registro con intención de Banana Shield: el plan que lo incluye queda elegido para después de la prueba. */
 export const SIGNUP_GLP1 = `${SIGNUP}&programa=glp1&plan=${COMPLETO.id}&pago=anual`;
-export const TRIAL_CTA = `Empieza gratis ${TRIAL_DAYS} días`;
+/** CTA principal, orientado al resultado; la nota de la prueba va siempre justo debajo. */
+export const TRIAL_CTA = "Crear mi plan gratis";
+/** Técnicas con animación de Coach Banana (hojas de fotogramas en src/lib/exercise-frames.ts). */
+export const ANIMATED_TECHNIQUES = 25;
 export const TRIAL_NOTE = `${TRIAL_DAYS} días gratis con todo incluido. Sin tarjeta.`;
 
 export const FAQ: (readonly [string, string])[] = [
@@ -100,7 +103,7 @@ export function FaqCta({ href = SIGNUP, cta }: { href?: string; cta: string }) {
   return (
     <div className="mt-8 hidden lg:block rounded-3xl bg-banana-soft p-6">
       <p className="font-extrabold text-ink text-balance">La mejor respuesta es probarlo.</p>
-      <p className="mt-1 text-sm text-ink/75 text-pretty">{TRIAL_NOTE}</p>
+      <p className="mt-1 text-sm text-ink/75 text-pretty">{TRIAL_NOTE} Sin cobros automáticos al terminar.</p>
       <Link href={href} data-cta={cta} className="mt-4 btn-primary h-12 px-5">{TRIAL_CTA} <ArrowRight className="size-4" /></Link>
     </div>
   );
