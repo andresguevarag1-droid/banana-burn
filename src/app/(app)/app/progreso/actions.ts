@@ -11,7 +11,7 @@ export async function logWeight(_: FormState, fd: FormData): Promise<FormState> 
   const kg = Number(String(fd.get("kg")).replace(",", "."));
   if (!(kg >= 30 && kg <= 300)) return { error: "Peso inválido." };
   const kgTxt = kg.toLocaleString("es-419", { maximumFractionDigits: 1 });
-  if (v.demo) return { ok: `${kgTxt} kg anotado (demo).` };
+  if (v.demo) return { ok: `Anotamos ${kgTxt} kg (demo, no se guarda).` };
   const sb = await createClient();
   const day = todayFor(v).iso;
   const { data: had } = await sb.from("weights").select("day").eq("user_id", v.id).eq("day", day).maybeSingle();
@@ -19,7 +19,7 @@ export async function logWeight(_: FormState, fd: FormData): Promise<FormState> 
   if (error) return { error: "No pudimos guardar tu peso. Intenta de nuevo." };
   if (!had) await sb.from("xp_events").insert({ user_id: v.id, kind: "weigh", xp: 10 });
   revalidatePath("/app", "layout");
-  return { ok: had ? `Actualizado a ${kgTxt} kg.` : `${kgTxt} kg guardado · +10 XP` };
+  return { ok: had ? `Actualizado a ${kgTxt} kg.` : `Guardamos ${kgTxt} kg y ganaste 10 XP.` };
 }
 
 export async function saveProfile(_: FormState, fd: FormData): Promise<FormState> {
@@ -42,5 +42,5 @@ export async function saveProfile(_: FormState, fd: FormData): Promise<FormState
   if (r.error) return { error: "No se pudo guardar la meta." };
   await sb.from("weights").upsert({ user_id: v.id, day: todayFor(v).iso, kg: start }, { onConflict: "user_id,day", ignoreDuplicates: true });
   revalidatePath("/app", "layout");
-  return { ok: "Plan calculado. Pura vida." };
+  return { ok: "Listo, tu plan ya está calculado." };
 }

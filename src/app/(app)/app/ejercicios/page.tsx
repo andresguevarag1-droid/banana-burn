@@ -8,6 +8,9 @@ const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 export const metadata = { title: "Biblioteca de ejercicios" };
 
+/** Equipos más comunes como filtro rápido (searchLibrary filtra por la clave del dataset). */
+const EQ_CHIPS = ["body weight", "dumbbell", "barbell", "cable", "leverage machine", "band", "kettlebell", "smith machine"];
+
 // Ícono por zona del cuerpo: marca (gorila, racimo) donde hay identidad, Phosphor para lo demás.
 const BP_NAME: Record<string, string> = { back: "gorilla", chest: "barbell", "lower arms": "bolt", "lower legs": "sneaker", "upper arms": "bunch", "upper legs": "run", waist: "target" };
 function BodyIcon({ bp }: { bp: string }) {
@@ -36,16 +39,22 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
           <input name="q" defaultValue={sp.q} placeholder="Sentadilla, glúteos, banda…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" />
         </label>
         {sp.zona && <input type="hidden" name="zona" value={sp.zona} />}
+        {sp.equipo && <input type="hidden" name="equipo" value={sp.equipo} />}
+        {sp.mio === "1" && <input type="hidden" name="mio" value="1" />}
         <button className="btn-primary h-12 px-5">Buscar</button>
       </form>
       <nav aria-label="Filtrar por zona" className="-mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1 relative">
         <Link href={qs({ zona: undefined, p: undefined })} aria-current={!sp.zona ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${!sp.zona ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>Todo</Link>
         {Object.entries(BODY).filter(([k]) => k !== "neck").map(([k, l]) => <Link key={k} href={qs({ zona: k, p: undefined })} aria-current={sp.zona === k ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${sp.zona === k ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>{l}</Link>)}
       </nav>
+      <nav aria-label="Filtrar por equipo" className="-mx-4 -mt-2 px-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+        <Link href={qs({ equipo: undefined, p: undefined })} aria-current={!sp.equipo ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${!sp.equipo ? "bg-banana text-ink" : "bg-cream text-ink"}`}>Cualquier equipo</Link>
+        {EQ_CHIPS.map((k) => <Link key={k} href={qs({ equipo: sp.equipo === k ? undefined : k, p: undefined })} aria-current={sp.equipo === k ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${sp.equipo === k ? "bg-banana text-ink" : "bg-cream text-ink"}`}>{sp.equipo === k && <Check weight="bold" className="size-4" />}{EQUIP[k]}</Link>)}
+      </nav>
       {(a.equipment === "casa" || a.equipment === "ninguno") && (
         <Link href={qs({ mio: sp.mio === "1" ? undefined : "1", p: undefined })} className={`chip h-9 px-4 ${sp.mio === "1" ? "bg-banana text-ink" : "bg-cream text-ink"}`}>{sp.mio === "1" && <Check weight="bold" className="size-4" />}Solo lo que puedo hacer {a.equipment === "ninguno" ? "sin equipo" : "en casa"}</Link>
       )}
-      <p className={`text-sm text-muted ${sp.q || sp.zona || sp.mio ? "" : "sr-only"}`} aria-live="polite">{r.total.toLocaleString("es-419")} {r.total === 1 ? "resultado" : "resultados"}</p>
+      <p className={`text-sm text-muted ${sp.q || sp.zona || sp.mio || sp.equipo ? "" : "sr-only"}`} aria-live="polite">{r.total.toLocaleString("es-419")} {r.total === 1 ? "resultado" : "resultados"}</p>
       {r.items.length > 0 && <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {r.items.map((e) => (
           <li key={e.id}>
@@ -60,8 +69,8 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
         <div className="card p-6 text-center">
           <span className="mx-auto grid place-items-center size-12 rounded-2xl bg-banana-soft text-banana-ink" aria-hidden><MagnifyingGlass weight="bold" className="size-6" /></span>
           <p className="mt-3 font-extrabold text-ink">No encontramos {sp.q ? `“${sp.q}”` : "ejercicios con ese filtro"}</p>
-          <p className="text-sm text-muted">Prueba con el músculo (glúteos, pecho) o con el equipo (banda, mancuernas).</p>
-          <Link href="/app/ejercicios" className="btn-ghost h-10 px-4 mt-4 text-sm">Ver todos</Link>
+          <p className="text-sm text-muted">Prueba con el músculo (glúteos, pecho) o cambia de equipo.</p>
+          <Link href="/app/ejercicios" className="btn-ghost h-11 px-4 mt-4 text-sm">Quitar filtros</Link>
         </div>
       )}
       {r.pages > 1 && (

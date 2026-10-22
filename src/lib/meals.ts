@@ -8,12 +8,12 @@ const prevDay = (iso: string) => { const d = new Date(iso + "T12:00:00"); d.setD
 
 // Demo: lo que Andrés ya comió hoy (cuadra con Hoy y con Nutrición).
 const DEMO_TODAY: MealItem[] = [
-  { id: "d1", slot: "desayuno", name: "Gallo pinto fit con huevo", qty: 1, kcal: 430, protein: 28, carbs: 45, fat: 14 },
-  { id: "d2", slot: "almuerzo", name: "Casado inteligente de pollo", qty: 1, kcal: 620, protein: 52, carbs: 70, fat: 12 },
+  { id: "d1", slot: "desayuno", name: "Arroz con frijoles y huevos revueltos", qty: 1, kcal: 430, protein: 28, carbs: 45, fat: 14 },
+  { id: "d2", slot: "almuerzo", name: "Pollo con arroz, frijoles y plátano", qty: 1, kcal: 620, protein: 52, carbs: 70, fat: 12 },
   { id: "d3", slot: "merienda", name: "Yogur griego con papaya", qty: 1, kcal: 210, protein: 21, carbs: 26, fat: 2 },
 ];
 const DEMO_YESTERDAY: MealItem[] = [
-  { id: "y1", slot: "desayuno", name: "Avena proteica con banano", qty: 1, kcal: 420, protein: 32, carbs: 58, fat: 7 },
+  { id: "y1", slot: "desayuno", name: "Avena proteica con banana", qty: 1, kcal: 420, protein: 32, carbs: 58, fat: 7 },
   { id: "y2", slot: "almuerzo", name: "Arroz con pollo fit", qty: 1, kcal: 450, protein: 38, carbs: 52, fat: 9 },
   { id: "y3", slot: "cena", name: "Tilapia al limón con yuca", qty: 1, kcal: 430, protein: 44, carbs: 40, fat: 8 },
 ];

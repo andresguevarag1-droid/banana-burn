@@ -1,5 +1,5 @@
 import { createClient, type Viewer } from "@/lib/supabase/server";
-import { demoActiveDays, demoWorkouts, demoXp } from "@/lib/demo-story";
+import { DEMO_PRS, demoActiveDays, demoWeighIns, demoWorkouts, demoXp } from "@/lib/demo-story";
 import { todayFor } from "@/lib/today";
 import { badges, levelOf, streakOf } from "@/lib/gamify";
 
@@ -7,6 +7,20 @@ export type DailyLog = { water: number; steps: number; sleep: number; protein: n
 export const EMPTY: DailyLog = { water: 0, steps: 0, sleep: 0, protein: 0, kcal: 0 };
 
 const addDays = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+/** Semana local del usuario, de lunes a domingo (igual que Entrenar). */
+export function weekDays(today: string) {
+  const dow = new Date(today + "T12:00:00").getDay();
+  const monday = addDays(today, -((dow + 6) % 7));
+  return [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(monday, i));
+}
+
+/** Saludo según la hora local del usuario (5-11 h, 12-18 h, resto). */
+export function greetingAt(tz: string, now = new Date()) {
+  let h = now.getUTCHours();
+  try { h = Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(now)) % 24; } catch { /* zona inválida: UTC */ }
+  return h >= 5 && h < 12 ? "Buenos días" : h >= 12 && h < 19 ? "Buenas tardes" : "Buenas noches";
+}
 
 export async function getDaily(v: Viewer, startWeight: number, currentWeight: number) {
   const today = todayFor(v).iso;
@@ -18,8 +32,8 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     return {
       log: { water: 5, steps: 4820, sleep: 7.5, protein: 0, kcal: 0 } as DailyLog,
       xp, level: levelOf(xp), streak, workoutsTotal: nW, trainedToday: false, weighedToday: false,
-      week: [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, -6 + i)).map((d) => ({ d, active: days.has(d) })),
-      badges: badges({ workouts: nW, streak: streak.days, prs: 3, weighIns: 14, lostKg: startWeight - currentWeight }),
+      week: weekDays(today).map((d) => ({ d, active: days.has(d) })),
+      badges: badges({ workouts: nW, streak: streak.days, prs: DEMO_PRS, weighIns: demoWeighIns(today), lostKg: startWeight - currentWeight }),
     };
   }
   const sb = await createClient();
@@ -41,7 +55,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     xp, level: levelOf(xp), streak, workoutsTotal,
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),
-    week: [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, -6 + i)).map((d) => ({ d, active: active.has(d) })),
+    week: weekDays(today).map((d) => ({ d, active: active.has(d) })),
     badges: badges({ workouts: workoutsTotal, streak: streak.days, prs: prs ?? 0, weighIns: (ws ?? []).length, lostKg: startWeight - currentWeight }),
   };
 }

@@ -1,6 +1,6 @@
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { getProgress, liftName, MAIN_LIFTS } from "@/lib/progress";
+import { getProgress, LIFTS_WEEKS } from "@/lib/progress";
 import { kcalAdjustment, weeklyTrend } from "@/lib/engine";
 import { WeightChart } from "@/components/weight-chart";
 import { WeighIn } from "@/components/weigh-in";
@@ -28,7 +28,7 @@ export default async function Progreso() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
-  const [{ weights, lifts, workouts }, g, measures, photos] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight), getMeasures(v), getPhotos(v)]);
+  const [{ weights, tracked, workouts }, g, measures, photos] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight), getMeasures(v), getPhotos(v)]);
   const lm = measures.at(-1);
   const bf = lm ? navyBodyFat({ sex: a.sex, heightCm: a.heightCm, waist: lm.waist, neck: lm.neck, hip: lm.hip }) : null;
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
@@ -86,22 +86,25 @@ export default async function Progreso() {
 
       <section>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-3"><H icon={Barbell}>Fuerza (1RM estimado)</H><p className="text-xs text-muted">Si sube mientras bajas de peso, estás quemando grasa y no músculo.</p></div>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-          {MAIN_LIFTS.map((k) => {
-            const pts = lifts[k] ?? [];
-            const cur = pts.at(-1)?.v, first = pts[0]?.v;
-            const pct = cur && first ? ((cur - first) / first) * 100 : null;
-            return (
-              <div key={k} className="card p-4">
-                <p className="text-sm font-semibold text-muted truncate">{liftName(k)}</p>
-                <p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{cur ? `${nf(cur, 0)} kg` : <span className="text-faint">Sin dato</span>}</p>
-                
-                <p className={`inline-flex items-center gap-1 text-xs font-bold ${pct && pct > 0 ? "text-peel" : "text-faint"}`}>{pct != null ? <>{pct >= 0 ? <TrendUp weight="bold" className="size-3.5" /> : <TrendDown weight="bold" className="size-3.5" />}<span className="sr-only">{pct >= 0 ? "Sube" : "Baja"}</span>{nf(Math.abs(pct))} %</> : "Sin datos aún"}</p>
-                {pts.length > 1 && <div className="mt-2 -mx-1"><Spark data={pts.map((p) => p.v)} /></div>}
-              </div>
-            );
-          })}
-        </div>
+        {tracked.length ? (
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+            {tracked.map((l) => {
+              const pts = l.pts;
+              const cur = pts.at(-1)?.v, first = pts[0]?.v;
+              const pct = cur && first && pts.length > 1 ? ((cur - first) / first) * 100 : null;
+              return (
+                <div key={l.id} className="card p-4">
+                  <p className="text-sm font-semibold text-muted line-clamp-2 leading-snug min-h-[2lh]">{l.name}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{cur ? `${nf(cur, 0)} kg` : <span className="text-faint">Sin dato</span>}</p>
+                  <p className={`inline-flex items-center gap-1 text-xs font-bold ${pct && pct > 0 ? "text-peel" : "text-muted"}`}>{pct != null ? <>{pct >= 0 ? <TrendUp weight="bold" className="size-3.5" /> : <TrendDown weight="bold" className="size-3.5" />}<span className="sr-only">{pct >= 0 ? "Sube" : "Baja"}</span>{nf(Math.abs(pct))} %</> : "Un solo registro"}</p>
+                  {pts.length > 1 && <div className="mt-2 -mx-1"><Spark data={pts.map((p) => p.v)} /></div>}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="card p-4 flex items-center gap-3 text-muted"><span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><Barbell weight="duotone" className="size-6" /></span><p>Aquí verás tus ejercicios con carga más frecuentes de las últimas {LIFTS_WEEKS} semanas. Registra el peso de tus series en el entreno.</p></div>
+        )}
       </section>
 
       <section id="logros" className="card p-5 scroll-mt-6">
@@ -140,7 +143,7 @@ export default async function Progreso() {
               <li key={i} className="py-3 flex items-center gap-4">
                 {(() => { const f = FUN[(w.fun ?? 3) - 1]; return f ? <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink" title={`Sensación: ${f.l}`}><f.I weight={f.w} className="size-6" /><span className="sr-only">Sensación: {f.l}</span></span> : <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><Barbell weight="duotone" className="size-6" /></span>; })()}
                 <div className="flex-1 min-w-0"><p className="font-bold text-ink">{w.tpl}</p><p className="text-sm text-muted">{new Date(w.d + "T12:00:00").toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "short" })}</p></div>
-                <div className="text-right text-sm tabular-nums"><p className="font-bold text-ink">{w.vol.toLocaleString("es-419")} kg</p><p className="text-muted">{w.sets} series</p></div>
+                <div className="text-right text-sm tabular-nums">{w.vol > 0 ? <><p className="font-bold text-ink">{w.vol.toLocaleString("es-419")} kg</p><p className="text-muted">{w.sets} series</p></> : <><p className="font-bold text-ink">{w.sets} series</p>{w.mins ? <p className="text-muted">{w.mins} min</p> : null}</>}</div>
               </li>
             ))}
           </ul>

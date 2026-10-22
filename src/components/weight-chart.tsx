@@ -12,10 +12,13 @@ export function WeightChart({ data, goal }: { data: Point[]; goal: number }) {
   const cut = last ? new Date(new Date(last + "T12:00:00").getTime() - r * 864e5).toISOString().slice(0, 10) : "";
   const pts = data.filter((p) => p.d >= cut);
   const delta = pts.length > 1 ? pts.at(-1)!.v - pts[0].v : 0;
+  // Si el historial es más corto que el rango elegido, no decimos "en 30 días": decimos desde cuándo.
+  const since = pts.length > 1 && (r > 900 || data[0].d >= cut) ? new Date(pts[0].d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" }) : null;
+  const span = since ? `desde el ${since}` : `en ${r} días`;
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className={`flex items-center gap-1 text-sm font-extrabold tabular-nums ${delta <= 0 ? "text-peel" : "text-ember-ink"}`}>{pts.length > 1 ? <>{delta <= 0 ? <TrendDown weight="bold" className="size-4" /> : <TrendUp weight="bold" className="size-4" />}<span className="sr-only">{delta <= 0 ? "Bajaste" : "Subiste"}</span>{`${Math.abs(delta).toLocaleString("es-419", { maximumFractionDigits: 1 })} kg en ${r > 900 ? "total" : `${r} días`}`}</> : " "}</p>
+        <p className={`flex items-center gap-1 text-sm font-extrabold tabular-nums ${delta <= 0 ? "text-peel" : "text-ember-ink"}`}>{pts.length > 1 ? <>{delta <= 0 ? <TrendDown weight="bold" className="size-4" /> : <TrendUp weight="bold" className="size-4" />}<span className="sr-only">{delta <= 0 ? "Bajaste" : "Subiste"}</span>{`${Math.abs(delta).toLocaleString("es-419", { maximumFractionDigits: 1 })} kg ${span}`}</> : " "}</p>
         <div className="flex rounded-full bg-cream p-0.5">
           {RANGES.map(([l, n]) => <button key={l} onClick={() => setR(n)} className={`tap pressable h-8 px-3 whitespace-nowrap rounded-full text-xs font-bold ${r === n ? "bg-ink text-white" : "text-muted hover:text-ink"}`} aria-pressed={r === n}>{l}</button>)}
         </div>

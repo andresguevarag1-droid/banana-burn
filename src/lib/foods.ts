@@ -1,8 +1,10 @@
-// Base de alimentos de Costa Rica y LATAM (macros aproximados por porción).
-export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup };
+// Base de alimentos de Latinoamérica (macros aproximados por porción típica, valores de referencia tipo USDA).
+// `cc`: países (ISO 2 letras) donde el plato es típico; sin `cc`, es común en toda la región.
+export type Food = { id: string; n: string; p: string; k: number; pr: number; c: number; f: number; g: FoodGroup; cc?: string[] };
+// La clave "tica" se conserva por compatibilidad con datos guardados; en pantalla el grupo se llama "Típicos".
 export type FoodGroup = "tica" | "prot" | "carb" | "fruta" | "bebida" | "rapida" | "extra";
 
-export const FOOD_GROUPS: [FoodGroup, string][] = [["tica", "Ticos"], ["prot", "Proteína"], ["carb", "Carbos"], ["fruta", "Frutas"], ["bebida", "Bebidas"], ["rapida", "Rápida"], ["extra", "Extras"]];
+export const FOOD_GROUPS: [FoodGroup, string][] = [["tica", "Típicos"], ["prot", "Proteína"], ["carb", "Carbos"], ["fruta", "Frutas"], ["bebida", "Bebidas"], ["rapida", "Rápida"], ["extra", "Extras"]];
 export const FOOD_GROUP_ICON: Record<FoodGroup, string> = { tica: "bowl", prot: "meat", carb: "grains", fruta: "fruit", bebida: "coffee", rapida: "fastfood", extra: "avocado" };
 
 export const FOODS: Food[] = [{"id":"pollo","n":"Pechuga de pollo","p":"150 g","k":248,"pr":46,"c":0,"f":5,"g":"prot"},
@@ -19,41 +21,59 @@ export const FOODS: Food[] = [{"id":"pollo","n":"Pechuga de pollo","p":"150 g","
   {"id":"arroz","n":"Arroz","p":"1 taza","k":205,"pr":4,"c":45,"f":0,"g":"carb"},
   {"id":"frijoles","n":"Frijoles negros","p":"1 taza","k":227,"pr":15,"c":41,"f":1,"g":"carb"},
   {"id":"avena","n":"Avena","p":"50 g","k":190,"pr":7,"c":34,"f":3,"g":"carb"},
-  {"id":"banano","n":"Banano","p":"1 mediano","k":105,"pr":1,"c":27,"f":0,"g":"carb"},
+  {"id":"banano","n":"Banana","p":"1 mediano","k":105,"pr":1,"c":27,"f":0,"g":"carb"},
   {"id":"papa","n":"Papa","p":"200 g","k":154,"pr":4,"c":34,"f":0,"g":"carb"},
   {"id":"pan","n":"Pan integral","p":"2 rebanadas","k":150,"pr":7,"c":26,"f":2,"g":"carb"},
-  {"id":"tortilla","n":"Tortillas de maíz","p":"2 unid.","k":120,"pr":3,"c":24,"f":1,"g":"carb"},
+  {"id":"tortilla","n":"Tortillas de maíz","p":"2 unid.","k":120,"pr":3,"c":24,"f":1,"g":"carb","cc":["MX","GT","SV","HN","NI","CR"]},
   {"id":"platano","n":"Plátano maduro horneado","p":"½ unid.","k":120,"pr":1,"c":30,"f":0,"g":"carb"},
   {"id":"papaya","n":"Papaya","p":"1 taza","k":62,"pr":1,"c":16,"f":0,"g":"carb"},
-  {"id":"casado","n":"Casado inteligente","p":"1 plato","k":700,"pr":58,"c":75,"f":16,"g":"tica"},
-  {"id":"pinto","n":"Gallo pinto","p":"1 taza","k":300,"pr":11,"c":48,"f":7,"g":"tica"},
-  {"id":"picadillo","n":"Picadillo de chayote","p":"1 taza","k":90,"pr":3,"c":12,"f":4,"g":"tica"},
-  {"id":"ensalada","n":"Ensalada o vegetales","p":"1 plato","k":50,"pr":2,"c":10,"f":0,"g":"tica"},
+  {"id":"casado","n":"Casado (arroz, frijoles, pollo y ensalada)","p":"1 plato","k":700,"pr":58,"c":75,"f":16,"g":"tica","cc":["CR"]},
+  {"id":"tacospollo","n":"Tacos de pollo","p":"3 unid.","k":450,"pr":33,"c":45,"f":14,"g":"tica","cc":["MX"]},
+  {"id":"enchiladas","n":"Enchiladas verdes de pollo","p":"2 unid.","k":520,"pr":30,"c":42,"f":26,"g":"tica","cc":["MX"]},
+  {"id":"chilaquiles","n":"Chilaquiles con pollo","p":"1 plato","k":600,"pr":30,"c":55,"f":28,"g":"tica","cc":["MX"]},
+  {"id":"pozole","n":"Pozole","p":"1 tazón","k":380,"pr":25,"c":40,"f":13,"g":"tica","cc":["MX"]},
+  {"id":"rancheros","n":"Huevos rancheros","p":"1 plato","k":450,"pr":20,"c":35,"f":25,"g":"tica","cc":["MX"]},
+  {"id":"arepaqueso","n":"Arepa con queso","p":"1 unid.","k":350,"pr":12,"c":40,"f":15,"g":"tica","cc":["VE","CO"]},
+  {"id":"reinapepiada","n":"Arepa reina pepiada","p":"1 unid.","k":480,"pr":24,"c":42,"f":24,"g":"tica","cc":["VE"]},
+  {"id":"bandeja","n":"Bandeja paisa","p":"1 plato","k":1200,"pr":60,"c":110,"f":58,"g":"tica","cc":["CO"]},
+  {"id":"ajiaco","n":"Ajiaco con pollo","p":"1 plato hondo","k":450,"pr":32,"c":50,"f":12,"g":"tica","cc":["CO"]},
+  {"id":"lomosaltado","n":"Lomo saltado con arroz","p":"1 plato","k":700,"pr":38,"c":80,"f":24,"g":"tica","cc":["PE"]},
+  {"id":"ajigallina","n":"Ají de gallina con arroz","p":"1 plato","k":650,"pr":32,"c":70,"f":26,"g":"tica","cc":["PE"]},
+  {"id":"pollobrasa","n":"Pollo a la brasa (¼) con ensalada","p":"1 plato","k":450,"pr":40,"c":10,"f":28,"g":"tica","cc":["PE"]},
+  {"id":"empanadapino","n":"Empanada chilena de pino","p":"1 unid.","k":470,"pr":18,"c":45,"f":24,"g":"tica","cc":["CL"]},
+  {"id":"milanesa","n":"Milanesa de pollo con ensalada","p":"1 plato","k":480,"pr":38,"c":25,"f":24,"g":"tica","cc":["AR","UY"]},
+  {"id":"pupusas","n":"Pupusas de queso","p":"2 unid.","k":520,"pr":18,"c":60,"f":22,"g":"tica","cc":["SV"]},
+  {"id":"baleada","n":"Baleada sencilla","p":"1 unid.","k":420,"pr":14,"c":50,"f":18,"g":"tica","cc":["HN"]},
+  {"id":"mangu","n":"Mangú con 2 huevos","p":"1 plato","k":560,"pr":16,"c":70,"f":24,"g":"tica","cc":["DO"]},
+  {"id":"habichuelas","n":"Arroz con habichuelas","p":"1 plato","k":420,"pr":14,"c":78,"f":6,"g":"tica","cc":["DO","PR"]},
+  {"id":"pinto","n":"Gallo pinto (arroz con frijoles)","p":"1 taza","k":300,"pr":11,"c":48,"f":7,"g":"tica","cc":["CR","NI"]},
+  {"id":"picadillo","n":"Picadillo de chayote","p":"1 taza","k":90,"pr":3,"c":12,"f":4,"g":"tica","cc":["CR"]},
+  {"id":"ensalada","n":"Ensalada o vegetales","p":"1 plato","k":50,"pr":2,"c":10,"f":0,"g":"extra"},
   {"id":"sopa","n":"Sopa de verduras","p":"1 tazón","k":90,"pr":4,"c":14,"f":2,"g":"tica"},
   {"id":"aceite","n":"Aceite","p":"1 cda","k":120,"pr":0,"c":0,"f":14,"g":"extra"},
-  {"id":"natilla","n":"Natilla","p":"2 cdas","k":60,"pr":1,"c":2,"f":5,"g":"extra"},
+  {"id":"natilla","n":"Crema agria","p":"2 cdas","k":60,"pr":1,"c":2,"f":5,"g":"extra"},
   {"id":"aguacate","n":"Aguacate","p":"½ unid.","k":120,"pr":1,"c":6,"f":11,"g":"extra"},
   {"id":"mani","n":"Maní","p":"30 g","k":175,"pr":7,"c":5,"f":14,"g":"extra"},
-  {"id":"refresco","n":"Refresco natural con azúcar","p":"1 vaso","k":140,"pr":0,"c":35,"f":0,"g":"extra"},
+  {"id":"refresco","n":"Jugo natural con azúcar","p":"1 vaso","k":140,"pr":0,"c":35,"f":0,"g":"extra"},
   {"id":"cerveza","n":"Cerveza","p":"1 lata","k":145,"pr":1,"c":13,"f":0,"g":"extra"},
   {"id":"cafe","n":"Café con leche y azúcar","p":"1 taza","k":120,"pr":4,"c":18,"f":4,"g":"extra"},
-  {"id":"casadopesc","n":"Casado con pescado","p":"1 plato","k":720,"pr":42,"c":85,"f":20,"g":"tica"},
+  {"id":"casadopesc","n":"Casado con pescado","p":"1 plato","k":720,"pr":42,"c":85,"f":20,"g":"tica","cc":["CR"]},
   {"id":"arrozpollo","n":"Arroz con pollo","p":"1 taza y media","k":480,"pr":28,"c":62,"f":12,"g":"tica"},
-  {"id":"olla","n":"Olla de carne","p":"1 plato hondo","k":420,"pr":30,"c":40,"f":14,"g":"tica"},
-  {"id":"chifrijo","n":"Chifrijo","p":"1 bowl","k":650,"pr":28,"c":55,"f":34,"g":"tica"},
-  {"id":"pintohuevo","n":"Gallo pinto + 2 huevos","p":"1 plato","k":470,"pr":22,"c":52,"f":18,"g":"tica"},
+  {"id":"olla","n":"Olla de carne","p":"1 plato hondo","k":420,"pr":30,"c":40,"f":14,"g":"tica","cc":["CR"]},
+  {"id":"chifrijo","n":"Chifrijo","p":"1 tazón","k":650,"pr":28,"c":55,"f":34,"g":"tica","cc":["CR"]},
+  {"id":"pintohuevo","n":"Gallo pinto con 2 huevos","p":"1 plato","k":470,"pr":22,"c":52,"f":18,"g":"tica","cc":["CR","NI"]},
   {"id":"empanada","n":"Empanada de carne","p":"1 unid.","k":290,"pr":10,"c":30,"f":14,"g":"tica"},
-  {"id":"tamal","n":"Tamal tico de cerdo","p":"1 unid.","k":360,"pr":12,"c":38,"f":18,"g":"tica"},
+  {"id":"tamal","n":"Tamal de cerdo","p":"1 unid.","k":360,"pr":12,"c":38,"f":18,"g":"tica"},
   {"id":"patacones","n":"Patacones","p":"4 unid.","k":360,"pr":2,"c":48,"f":18,"g":"tica"},
-  {"id":"sopanegra","n":"Sopa negra con huevo","p":"1 plato","k":280,"pr":16,"c":34,"f":8,"g":"tica"},
+  {"id":"sopanegra","n":"Sopa negra con huevo","p":"1 plato","k":280,"pr":16,"c":34,"f":8,"g":"tica","cc":["CR"]},
   {"id":"arrozcamaron","n":"Arroz con camarones","p":"1 plato","k":520,"pr":26,"c":70,"f":14,"g":"tica"},
   {"id":"ceviche","n":"Ceviche de pescado","p":"1 taza","k":180,"pr":26,"c":10,"f":3,"g":"tica"},
   {"id":"yuca","n":"Yuca cocida","p":"150 g","k":240,"pr":2,"c":57,"f":0,"g":"carb"},
-  {"id":"pejibaye","n":"Pejibaye","p":"3 unid.","k":240,"pr":4,"c":40,"f":8,"g":"carb"},
+  {"id":"pejibaye","n":"Pejibaye (chontaduro)","p":"3 unid.","k":240,"pr":4,"c":40,"f":8,"g":"carb","cc":["CR","CO","EC"]},
   {"id":"pasta","n":"Pasta cocida","p":"1 taza","k":220,"pr":8,"c":43,"f":1,"g":"carb"},
   {"id":"camote","n":"Camote","p":"150 g","k":130,"pr":2,"c":30,"f":0,"g":"carb"},
   {"id":"galletas","n":"Galletas María","p":"6 unid.","k":130,"pr":2,"c":22,"f":4,"g":"carb"},
-  {"id":"queso","n":"Queso tierno / Turrialba","p":"60 g","k":170,"pr":11,"c":1,"f":13,"g":"prot"},
+  {"id":"queso","n":"Queso fresco","p":"60 g","k":170,"pr":11,"c":1,"f":13,"g":"prot"},
   {"id":"jamon","n":"Jamón de pavo","p":"4 lonjas","k":90,"pr":14,"c":2,"f":2,"g":"prot"},
   {"id":"leche","n":"Leche descremada","p":"1 vaso (250 ml)","k":90,"pr":9,"c":12,"f":0,"g":"prot"},
   {"id":"muslo","n":"Muslo de pollo sin piel","p":"1 unid.","k":180,"pr":24,"c":0,"f":9,"g":"prot"},
@@ -66,14 +86,24 @@ export const FOODS: Food[] = [{"id":"pollo","n":"Pechuga de pollo","p":"150 g","
   {"id":"cafenegro","n":"Café negro","p":"1 taza","k":5,"pr":0,"c":1,"f":0,"g":"bebida"},
   {"id":"batido","n":"Batido de fresa en leche","p":"1 vaso","k":220,"pr":8,"c":38,"f":4,"g":"bebida"},
   {"id":"gaseosa","n":"Gaseosa","p":"1 lata","k":140,"pr":0,"c":39,"f":0,"g":"bebida"},
-  {"id":"imperial","n":"Cerveza Imperial","p":"1 lata","k":145,"pr":1,"c":12,"f":0,"g":"bebida"},
+  {"id":"imperial","n":"Cerveza light","p":"1 lata","k":100,"pr":1,"c":5,"f":0,"g":"bebida"},
   {"id":"agua","n":"Agua con limón","p":"1 vaso","k":5,"pr":0,"c":1,"f":0,"g":"bebida"},
   {"id":"pizza","n":"Pizza","p":"1 porción","k":290,"pr":12,"c":36,"f":10,"g":"rapida"},
   {"id":"hamburguesa","n":"Hamburguesa","p":"1 unid.","k":540,"pr":28,"c":42,"f":28,"g":"rapida"},
   {"id":"pollofrito","n":"Pollo frito","p":"2 piezas","k":520,"pr":38,"c":16,"f":34,"g":"rapida"},
-  {"id":"burrito","n":"Burrito de pollo","p":"1 unid.","k":520,"pr":30,"c":58,"f":18,"g":"rapida"},
+  {"id":"burrito","n":"Burrito de pollo y frijoles","p":"1 unid.","k":600,"pr":35,"c":70,"f":18,"g":"tica","cc":["MX"]},
   {"id":"papas","n":"Papas fritas","p":"Mediana","k":360,"pr":4,"c":45,"f":18,"g":"rapida"},
   {"id":"helado","n":"Helado","p":"1 bola","k":140,"pr":2,"c":17,"f":7,"g":"extra"},
   {"id":"chocolate","n":"Chocolate","p":"1 barra (40 g)","k":210,"pr":3,"c":24,"f":12,"g":"extra"}];
 
 export const FOOD_BY_ID = Object.fromEntries(FOODS.map((f) => [f.id, f]));
+
+/**
+ * Orden para mostrar una lista: primero los platos del país del usuario, luego los comunes a toda la región
+ * y al final los típicos de otros países. Estable dentro de cada grupo.
+ */
+export function sortForCountry(list: Food[], country?: string | null) {
+  const cc = country?.toUpperCase();
+  const rank = (f: Food) => (cc && f.cc?.includes(cc) ? 0 : f.cc ? 2 : 1);
+  return list.map((f, i) => [f, i] as const).sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j).map(([f]) => f);
+}

@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CheckCircle, Lock, Ruler, Trash, TrendDown, TrendUp, WarningCircle } from "@/components/icons";
 import { saveMeasures, addPhoto, deletePhoto } from "@/app/actions/progress";
@@ -24,17 +24,7 @@ export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyF
         <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">% grasa (aprox.)</p><p className="text-xl font-extrabold text-ink tabular-nums whitespace-nowrap">{bodyFat != null ? <>{nf(bodyFat)}<span className="text-sm font-bold text-muted"> %</span></> : <span className="text-faint">Sin dato</span>}</p><p className="text-[11px] text-muted">fórmula Marina EE. UU.</p></div>
         <div className="rounded-2xl bg-cream p-3"><p className="text-xs font-bold text-muted">Última</p><p className="text-sm font-extrabold text-ink">{last ? new Date(last.d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" }) : "Nunca"}</p><p className="text-[11px] text-muted">mide cada 1 o 2 semanas</p></div>
       </div>
-      {history.length > 1 && (
-        <div className="mt-3 relative overflow-x-auto">
-          <table className="w-full text-sm tabular-nums">
-            <caption className="sr-only">Historial de medidas en centímetros</caption>
-            <thead><tr className="text-xs text-muted"><th className="py-1.5 pr-2 text-left font-semibold">Fecha</th>{FIELDS.map(([k, l]) => <th key={k} className="py-1.5 pl-2 text-right font-semibold">{l}</th>)}</tr></thead>
-            <tbody>{[...history].reverse().slice(0, 5).map((m) => (
-              <tr key={m.d} className="border-t border-line"><td className="py-1.5 pr-2 whitespace-nowrap text-muted">{new Date(m.d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" })}</td>{FIELDS.map(([k]) => <td key={k} className="py-1.5 pl-2 text-right text-ink">{m[k] != null ? nf(m[k]!) : <><span aria-hidden className="inline-block h-px w-2.5 bg-faint align-middle" /><span className="sr-only">sin dato</span></>}</td>)}</tr>
-            ))}</tbody>
-          </table>
-        </div>
-      )}
+      {history.length > 1 && <MeasureTable history={history} />}
       {!open ? (
         <button onClick={() => setOpen(true)} className="btn-ghost h-11 mt-4 w-full"><Ruler weight="duotone" className="size-5" />Anotar medidas de hoy</button>
       ) : (
@@ -56,6 +46,36 @@ export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyF
       )}
       {msg && <p className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${msg.ok ? "text-peel" : "text-bad"}`} role={msg.ok ? "status" : "alert"}>{msg.ok ? <CheckCircle weight="fill" className="size-4 shrink-0" /> : <WarningCircle weight="fill" className="size-4 shrink-0" />}{msg.t}</p>}
       {demo && <p className="mt-2 text-[11px] text-faint">Datos de ejemplo.</p>}
+    </div>
+  );
+}
+
+/** Historial en tabla: en móvil se desliza de lado, con la fecha fija y un degradado que avisa que hay más columnas. */
+function MeasureTable({ history }: { history: Measure[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
+  }, []);
+  return (
+    <div className="mt-3 relative">
+      <div ref={ref} className="overflow-x-auto overscroll-x-contain [scrollbar-width:thin]" tabIndex={more ? 0 : undefined} role={more ? "region" : undefined} aria-label={more ? "Historial de medidas, desliza para ver más" : undefined}>
+        <table className="w-full min-w-[26rem] text-sm tabular-nums whitespace-nowrap">
+          <caption className="sr-only">Historial de medidas en centímetros</caption>
+          <thead><tr className="text-xs text-muted"><th scope="col" className="sticky left-0 z-[1] bg-card py-1.5 pr-3 text-left font-semibold">Fecha</th>{FIELDS.map(([k, l]) => <th key={k} scope="col" className="py-1.5 pl-3 text-right font-semibold">{l}</th>)}</tr></thead>
+          <tbody>{[...history].reverse().slice(0, 5).map((m) => (
+            <tr key={m.d} className="border-t border-line"><th scope="row" className="sticky left-0 z-[1] bg-card py-1.5 pr-3 text-left font-normal text-muted">{new Date(m.d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" })}</th>{FIELDS.map(([k]) => <td key={k} className="py-1.5 pl-3 text-right text-ink">{m[k] != null ? nf(m[k]!) : <><span aria-hidden className="inline-block h-px w-2.5 bg-faint align-middle" /><span className="sr-only">sin dato</span></>}</td>)}</tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <div aria-hidden className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-card to-transparent transition-opacity duration-200 ease-out ${more ? "opacity-100" : "opacity-0"}`} />
     </div>
   );
 }

@@ -11,11 +11,11 @@ import { ArrowRight, BananaBunch, BrandIcon, CaretDown, CheckCircle, Egg, Grains
 export const metadata = { title: "Nutrición" };
 
 const IDEAS = [
-  { t: "Desayuno", icon: "sunrise", m: "Gallo pinto (1 taza) + 3 huevos + natilla light", k: 560, p: 30 },
-  { t: "Pre-entreno", icon: "banana", m: "Banano + yogur griego + avena", k: 380, p: 25 },
-  { t: "Almuerzo", icon: "fork", m: "Casado: arroz, frijoles, pechuga 180 g, ensalada", k: 720, p: 55 },
-  { t: "Merienda", icon: "drop", m: "Batido de proteína con leche descremada", k: 250, p: 35 },
-  { t: "Cena", icon: "fish", m: "Tilapia 200 g + yuca + vegetales salteados", k: 520, p: 45 },
+  { t: "Desayuno", icon: "sunrise", m: "3 huevos, 2 tortillas de maíz y 1 taza de papaya", k: 400, p: 22 },
+  { t: "Pre-entreno", icon: "banana", m: "Banana, yogur griego 200 g y 50 g de avena", k: 410, p: 28 },
+  { t: "Almuerzo", icon: "fork", m: "1 taza de arroz, ½ de frijoles, pechuga 180 g y ensalada", k: 670, p: 68 },
+  { t: "Merienda", icon: "drop", m: "Batido de proteína con leche descremada", k: 210, p: 33 },
+  { t: "Cena", icon: "fish", m: "Tilapia 200 g, yuca 150 g y vegetales salteados", k: 550, p: 56 },
 ];
 
 export default async function Nutricion() {
@@ -29,7 +29,7 @@ export default async function Nutricion() {
       <div className="max-w-xl mx-auto text-center py-8 animate-enter">
         <span className="mx-auto grid place-items-center size-20 rounded-3xl bg-banana-soft text-banana-ink"><BananaBunch className="size-11" /></span>
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink">Baja de peso más rápido con tu plan de nutrición</h1>
-        <p className="mt-3 text-muted">Tu entreno ya está listo. La nutrición es donde se pierde la grasa: calorías y macros para ti, registro con comida tica y ajuste cada semana según tu peso real.</p>
+        <p className="mt-3 text-muted">Tu entreno ya está listo. La nutrición es donde se pierde la grasa: calorías y macros para ti, registro con comida de toda Latinoamérica y ajuste cada semana según tu peso real.</p>
         <ul className="mt-6 space-y-2 text-left card p-5">{p.feats.slice(1).map((f) => <li key={f} className="flex gap-2.5 text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 mt-0.5 text-peel" />{f}</li>)}</ul>
         <Link href="/precios" className="btn-banana w-full h-14 mt-6 text-base">Mejorar a {p.name} por {usd(p.price.mes)}/mes</Link>
         <p className="mt-2 text-xs text-faint">Cancela cuando quieras.</p>
@@ -43,18 +43,18 @@ export default async function Nutricion() {
         <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-419")} kcal y {t.protein} g de proteína. Se ajusta cada semana con tu peso real.</p>
       </header>
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] items-start [&>*]:min-w-0">
-        <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} />
+        <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} country={v.country} />
         <aside className="space-y-3 lg:sticky lg:top-6">
           <Link href="/app/nutricion/recetas" className="pressable flex items-center gap-3 rounded-[1.5rem] bg-banana p-4 hover:shadow-lift">
             <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><BananaBunch className="size-7" /></span>
             <span className="flex-1 min-w-0">
               <span className="block font-extrabold text-ink">Plan de comidas y recetas</span>
-              <span className="block text-sm text-ink/70">Tu menú de hoy calculado a tus macros, con recetas ticas fáciles.</span>
+              <span className="block text-sm text-ink/70">Tu menú con lo que te falta hoy, con recetas latinas fáciles.</span>
             </span>
             <ArrowRight weight="bold" className="size-5 shrink-0 text-ink" />
           </Link>
           <details className="card group" open>
-            <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3 font-bold text-ink"><span className="flex items-center gap-2"><Lightbulb weight="duotone" className="size-5 shrink-0 text-banana-ink" />Ideas para un día tico</span><CaretDown weight="bold" className="size-5 shrink-0 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
+            <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3 font-bold text-ink"><span className="flex items-center gap-2"><Lightbulb weight="duotone" className="size-5 shrink-0 text-banana-ink" />Ideas para un día completo</span><CaretDown weight="bold" className="size-5 shrink-0 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
             <ul className="px-4 pb-4 space-y-2">
               {IDEAS.map((m) => (
                 <li key={m.t} className="flex gap-3 items-start"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><BrandIcon name={m.icon} className="size-4.5" /></span><div className="flex-1 min-w-0"><p className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm font-bold text-ink">{m.t} <span className="text-xs font-semibold text-muted tabular-nums">{m.k} kcal, {m.p} g prot.</span></p><p className="text-sm text-muted">{m.m}</p></div></li>

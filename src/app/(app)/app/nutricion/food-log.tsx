@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { BrandIcon, CheckCircle, Clock, Copy, Egg, MagnifyingGlass, Plus, WarningCircle, X } from "@/components/icons";
-import { FOODS, FOOD_GROUPS, FOOD_GROUP_ICON, type Food, type FoodGroup } from "@/lib/foods";
+import { BrandIcon, CheckCircle, Clock, Copy, Egg, MagnifyingGlass, PencilSimple, Plus, WarningCircle, X } from "@/components/icons";
+import { FOODS, FOOD_GROUPS, FOOD_GROUP_ICON, sortForCountry, type Food, type FoodGroup } from "@/lib/foods";
 import { SLOTS_MEAL, sumMeals, type MealItem, type Slot } from "@/lib/meals-shared";
 import { addMeal, copyMeals, removeMeal } from "@/app/actions/meals";
 import { Toast } from "@/components/toast";
@@ -19,7 +19,14 @@ function defaultSlot(): Slot {
   return h < 10 ? "desayuno" : h < 14 ? "almuerzo" : h < 18 ? "merienda" : "cena";
 }
 
-export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { kcal: 0, protein: 0 } }: { initial: MealItem[]; yesterday: MealItem[]; targets: Targets; dateKey: string; demo: boolean; quick?: { kcal: number; protein: number } }) {
+type Note = { ok: boolean; t: string; undo?: () => void };
+const scaled = (i: MealItem, q: number): MealItem => {
+  const k = q / (i.qty || 1), r1 = (n: number) => Math.round(n * k * 10) / 10;
+  return { ...i, qty: q, kcal: Math.round(i.kcal * k), protein: r1(i.protein), carbs: r1(i.carbs), fat: r1(i.fat) };
+};
+const row = ({ slot, name, qty, kcal, protein, carbs, fat }: MealItem) => ({ slot, name, qty, kcal, protein, carbs, fat });
+
+export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = null, quick: quick0 = { kcal: 0, protein: 0 } }: { initial: MealItem[]; yesterday: MealItem[]; targets: Targets; dateKey: string; demo: boolean; country?: string | null; quick?: { kcal: number; protein: number } }) {
   const key = `bb.meals.${dateKey}`;
   const [items, setItems] = useState<MealItem[]>(initial);
   const [sheet, setSheet] = useState<Slot | null>(null);
@@ -30,17 +37,23 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
   const [custom, setCustom] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const [, start] = useTransition();
-  const [toast, setToast] = useState<{ ok: boolean; t: string } | null>(null);
+  const [toast, setToast] = useState<Note | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [quick, setQuick] = useState(quick0);
   const shownSlot = useSticky(sheet);
 
   useEffect(() => {
     try {
-      if (demo) { const s = localStorage.getItem(key); if (s) setItems(JSON.parse(s)); }
+      if (demo) {
+        const s = localStorage.getItem(key); if (s) setItems(JSON.parse(s));
+        // Lo anotado rápido en Hoy (demo) vive en este navegador.
+        const d = localStorage.getItem(`bb.daily.${dateKey}`); if (d) { const l = JSON.parse(d); setQuick({ kcal: Number(l.kcal) || 0, protein: Number(l.protein) || 0 }); }
+      }
       const r = localStorage.getItem("bb.recentFoods"); if (r) { const arr = JSON.parse(r); setRecent(arr); if (arr.length) setGroup("recent"); }
     } catch { /* */ }
-  }, [demo, key]);
+  }, [demo, key, dateKey]);
   useEffect(() => { if (demo) try { localStorage.setItem(key, JSON.stringify(items)); } catch { /* */ } }, [demo, key, items]);
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 2200); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), toast.undo ? 5000 : 2200); return () => clearTimeout(t); }, [toast]);
 
   const [fine, setFine] = useState(false);
   useEffect(() => { try { setFine(window.matchMedia("(pointer: fine)").matches); } catch { /* */ } }, []);
@@ -49,10 +62,10 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
   const tot = { ...meal, kcal: meal.kcal + quick.kcal, protein: meal.protein + quick.protein };
   const left = targets.kcal - tot.kcal;
   const list = useMemo(() => {
-    if (q.trim()) return FOODS.filter((f) => norm(f.n).includes(norm(q.trim())));
+    if (q.trim()) return sortForCountry(FOODS.filter((f) => norm(f.n).includes(norm(q.trim()))), country);
     if (group === "recent") return recent.map((id) => FOODS.find((f) => f.id === id)).filter(Boolean) as Food[];
-    return FOODS.filter((f) => f.g === group);
-  }, [q, group, recent]);
+    return sortForCountry(FOODS.filter((f) => f.g === group), country);
+  }, [q, group, recent, country]);
 
   function open(slot: Slot) { setSheet(slot); setQ(""); setPick(null); setQty(1); setCustom(false); }
 
@@ -81,18 +94,55 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
     start(async () => {
       const r = await addMeal({ slot, custom: { name, kcal, protein } });
       if (r.ok && r.item) setItems((x) => x.map((i) => (i.id === temp.id ? r.item! : i)));
+      else { setItems((x) => x.filter((i) => i.id !== temp.id)); setToast({ ok: false, t: "No pudimos guardarlo. Intenta de nuevo." }); }
     });
   }
 
-  function remove(id: string) {
-    const prev = items;
-    setItems((x) => x.filter((i) => i.id !== id));
-    start(async () => { const r = await removeMeal(id); if (!r.ok) setItems(prev); });
+  /** Vuelve a guardar un alimento borrado (nuevo id) en su mismo lugar de la lista. */
+  function restore(item: MealItem, at: number) {
+    const temp = { ...item, id: `tmp-${Date.now()}` };
+    setItems((x) => [...x.slice(0, at), temp, ...x.slice(at)]);
+    setToast(null);
+    start(async () => {
+      const r = await copyMeals([row(item)]);
+      if (r.ok && r.items?.[0]) setItems((x) => x.map((i) => (i.id === temp.id ? r.items![0] : i)));
+      else { setItems((x) => x.filter((i) => i.id !== temp.id)); setToast({ ok: false, t: "No pudimos recuperarlo. Agrégalo de nuevo." }); }
+    });
+  }
+
+  function remove(item: MealItem) {
+    const at = items.findIndex((i) => i.id === item.id);
+    setItems((x) => x.filter((i) => i.id !== item.id));
+    setEditing(null);
+    setToast({ ok: true, t: `Quitaste ${item.name}`, undo: () => restore(item, at) });
+    start(async () => {
+      const r = await removeMeal(item.id);
+      if (!r.ok) { setItems((x) => [...x.slice(0, at), item, ...x.slice(at)]); setToast({ ok: false, t: "No pudimos quitarlo. Intenta de nuevo." }); }
+    });
+  }
+
+  /** Cambiar la porción: guarda el alimento con la nueva cantidad y borra el anterior. */
+  function changeQty(item: MealItem, qn: number) {
+    if (qn === item.qty) return;
+    const next = scaled(item, qn);
+    setItems((x) => x.map((i) => (i.id === item.id ? next : i)));
+    start(async () => {
+      const r = await copyMeals([row(next)]);
+      const created = r.ok ? r.items?.[0] : undefined;
+      if (!created) { setItems((x) => x.map((i) => (i.id === item.id ? item : i))); setToast({ ok: false, t: "No pudimos cambiar la porción. Intenta de nuevo." }); return; }
+      const del = await removeMeal(item.id);
+      if (!del.ok) { await removeMeal(created.id); setItems((x) => x.map((i) => (i.id === item.id ? item : i))); setToast({ ok: false, t: "No pudimos cambiar la porción. Intenta de nuevo." }); return; }
+      setItems((x) => x.map((i) => (i.id === item.id ? created : i)));
+      setEditing((e) => (e === item.id ? created.id : e));
+    });
   }
 
   function copyYesterday() {
-    const src = yesterday.map(({ slot, name, qty, kcal, protein, carbs, fat }) => ({ slot, name, qty, kcal, protein, carbs, fat }));
-    start(async () => { const r = await copyMeals(src); if (r.ok && r.items) { setItems((x) => [...x, ...r.items!]); setToast({ ok: true, t: `Copiado: ${r.items.length} alimentos de ayer` }); } });
+    start(async () => {
+      const r = await copyMeals(yesterday.map(row));
+      if (r.ok && r.items) { setItems((x) => [...x, ...r.items!]); setToast({ ok: true, t: `Copiado: ${r.items.length} alimentos de ayer` }); }
+      else setToast({ ok: false, t: "No pudimos copiar lo de ayer. Intenta de nuevo." });
+    });
   }
 
   const bars: [string, number, number, string, string][] = [
@@ -142,12 +192,26 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
             </div>
             {its.length > 0 && (
               <ul className="px-4 divide-y divide-line">
-                {its.map((i) => (
-                  <li key={i.id} className="py-2.5 flex items-center gap-3 animate-enter">
-                    <div className="flex-1 min-w-0"><p className="font-semibold text-ink truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-419")}</span>}</p><p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal, {n0(i.protein)} g de proteína</p></div>
-                    <button onClick={() => remove(i.id)} className="tap pressable grid place-items-center size-8 rounded-full text-faint hover:bg-cream hover:text-ink" aria-label={`Quitar ${i.name}`}><X weight="bold" className="size-4" /></button>
-                  </li>
-                ))}
+                {its.map((i) => {
+                  const open = editing === i.id, saving = i.id.startsWith("tmp-");
+                  return (
+                    <li key={i.id} className="py-1 animate-enter">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setEditing(open ? null : i.id)} disabled={saving} aria-expanded={open} className="pressable flex-1 min-w-0 min-h-11 rounded-xl -ml-2 px-2 py-1.5 text-left transition-colors hover:bg-cream disabled:opacity-60" aria-label={`${i.name}: cambiar porción`}>
+                          <p className="flex items-center gap-1.5 font-semibold text-ink"><span className="truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-419")}</span>}</span><PencilSimple weight="bold" aria-hidden className="size-3.5 shrink-0 text-faint" /></p>
+                          <p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal, {n0(i.protein)} g de proteína</p>
+                        </button>
+                        <button onClick={() => remove(i)} disabled={saving} className="tap pressable grid place-items-center size-11 shrink-0 rounded-full text-muted hover:bg-cream hover:text-ink disabled:opacity-60" aria-label={`Quitar ${i.name}`}><X weight="bold" className="size-4" /></button>
+                      </div>
+                      {open && (
+                        <div className="mt-1 mb-2 flex items-center gap-1.5 animate-enter" role="group" aria-label={`Porción de ${i.name}`}>
+                          <span className="text-xs font-bold text-muted mr-1">Porción</span>
+                          {QTY.map(([l, n]) => <button key={l} onClick={() => changeQty(i, n)} aria-pressed={i.qty === n} className={`tap pressable flex-1 h-10 rounded-xl text-sm font-bold ${i.qty === n ? "bg-banana text-ink" : "bg-cream text-muted hover:text-ink"}`}>{l}</button>)}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <button onClick={() => open(s.id)} className="w-full flex items-center gap-2 px-4 py-3 min-h-11 text-sm font-bold text-banana-ink transition-colors hover:bg-cream active:bg-cream focus-visible:outline-offset-[-2px]"><Plus weight="bold" className="size-4" />Agregar a {s.n.split(" ")[0].toLowerCase()}</button>
@@ -160,7 +224,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
             <div className="px-4 pb-2">
               <SheetTitle className="text-xl font-extrabold text-ink">Agregar a {SLOTS_MEAL.find((s) => s.id === shownSlot)?.n.toLowerCase()}</SheetTitle>
               <label className="mt-3 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 transition-[border-color,box-shadow] focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40">
-                <MagnifyingGlass weight="bold" className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} data-autofocus={fine || undefined} placeholder="Busca: pinto, pollo, casado…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
+                <MagnifyingGlass weight="bold" className="size-5 text-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} data-autofocus={fine || undefined} placeholder="Busca: pollo, arroz, tacos…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" aria-label="Buscar alimento" />
               </label>
               {!q && (
                 <div className="mt-3 -mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
@@ -196,7 +260,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
               </ul>
               {custom ? (
                 <form action={addCustom} className="mt-3 rounded-2xl bg-white border border-line p-3 space-y-2">
-                  <label className="block text-xs font-bold text-ink">Nombre<input name="name" required placeholder="Pinto de la tía" className="input mt-1 h-11" defaultValue={q} /></label>
+                  <label className="block text-xs font-bold text-ink">Nombre<input name="name" required placeholder="Ej.: sopa de la abuela" className="input mt-1 h-11" defaultValue={q} /></label>
                   <div className="flex gap-2">
                     <label className="block flex-1 text-xs font-bold text-ink">Calorías (kcal)<input name="kcal" required inputMode="numeric" placeholder="350" className="input mt-1 h-11" /></label>
                     <label className="block flex-1 text-xs font-bold text-ink">Proteína (g)<input name="protein" inputMode="decimal" placeholder="20" className="input mt-1 h-11" /></label>
@@ -209,7 +273,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, quick = { 
               <p className="mt-3 text-center text-[11px] text-faint">Valores aproximados por porción típica.</p>
             </div>
       </Sheet>
-      <Toast side="bottom">{toast && <>{toast.ok ? <CheckCircle weight="fill" className="size-5 shrink-0 text-banana" /> : <WarningCircle weight="fill" className="size-5 shrink-0 text-ember" />}<span className="truncate">{toast.t}</span></>}</Toast>
+      <Toast side="bottom" className="[&_button]:pointer-events-auto">{toast && <>{toast.ok ? <CheckCircle weight="fill" className="size-5 shrink-0 text-banana" /> : <WarningCircle weight="fill" className="size-5 shrink-0 text-ember" />}<span className="truncate">{toast.t}</span>{toast.undo && <button onClick={toast.undo} className="tap pressable -my-2 -mr-2 ml-1 h-9 shrink-0 rounded-full bg-white/15 px-3 text-sm font-extrabold text-banana hover:bg-white/25">Deshacer</button>}</>}</Toast>
     </div>
   );
 }

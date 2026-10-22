@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BananaFlame, BananaTrophy, BrandIcon, CaretRight, Check, CheckCircle, LevelIcon, Monkey, PersonSimpleWalk, Scales, TreePalm } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { getDaily } from "@/lib/daily";
+import { getDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { DAY_NAMES } from "@/lib/engine";
 import { DayTracker } from "@/components/day-tracker";
@@ -26,8 +26,8 @@ const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
 function tipFor(dow: number, training: boolean, proteinLeft: number, trained: boolean) {
   if (trained) return proteinLeft > 30 ? `Ya entrenaste. Ahora cierra la proteína: te faltan unos ${Math.round(proteinLeft)} g (pechuga, atún, yogur griego o huevos).` : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
   if (!training) return "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo.";
-  if (proteinLeft > 100) return "Come tus carbos de 60 a 90 min antes de entrenar: gallo pinto con huevo o plátano con yogurt griego.";
-  if (dow === 5) return "Viernes: después del gym, casado con pechuga y doble ensalada. Guarda el fresco para el finde.";
+  if (proteinLeft > 100) return "Come tus carbos de 60 a 90 min antes de entrenar: avena con banana, arroz con huevo o pan integral con yogur griego.";
+  if (dow === 5) return "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el finde hay salida, máximo 2 tragos.";
   return "Tempo 3-1-1 en cada rep. Bajar lento es donde se construye el músculo.";
 }
 
@@ -50,7 +50,7 @@ export default async function Hoy() {
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
-          <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">¡Pura vida, {a.name}!</h1>
+          <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{greetingAt(v.tz)}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <NotificationBell className="lg:hidden" />

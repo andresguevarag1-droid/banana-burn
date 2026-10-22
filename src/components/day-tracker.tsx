@@ -3,6 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import { BananaFlame, Check, Drop, Egg, Footprints, Moon, Plus } from "@/components/icons";
 import { setDaily, type DailyField } from "@/app/actions/daily";
 import type { DailyLog } from "@/lib/daily";
+import { sumMeals, type MealItem } from "@/lib/meals-shared";
 
 type Target = { kcal: number; protein: number; steps: number; sleep: number; water: number };
 
@@ -16,13 +17,22 @@ function MiniRing({ v, color, size = 56 }: { v: number; color: string; size?: nu
   );
 }
 
-export function DayTracker({ initial, base, target, dateKey, demo }: { initial: DailyLog; base: { kcal: number; protein: number }; target: Target; dateKey: string; demo: boolean }) {
+export function DayTracker({ initial, base: base0, target, dateKey, demo }: { initial: DailyLog; base: { kcal: number; protein: number }; target: Target; dateKey: string; demo: boolean }) {
   const key = `bb.daily.${dateKey}`;
   const [log, setLog] = useState<DailyLog>(initial);
   const [edit, setEdit] = useState<DailyField | null>(null);
   const [, start] = useTransition();
 
-  useEffect(() => { if (!demo) return; try { const s = localStorage.getItem(key); if (s) setLog(JSON.parse(s)); } catch { /* */ } }, [demo, key]);
+  // Demo: Nutrición guarda las comidas en este navegador; Hoy suma desde la misma fuente para que ambas cuadren.
+  const [base, setBase] = useState(base0);
+  useEffect(() => {
+    if (!demo) return;
+    try {
+      const s = localStorage.getItem(key); if (s) setLog(JSON.parse(s));
+      const m = localStorage.getItem(`bb.meals.${dateKey}`);
+      if (m) { const t = sumMeals(JSON.parse(m) as MealItem[]); setBase({ kcal: t.kcal, protein: t.protein }); }
+    } catch { /* */ }
+  }, [demo, key, dateKey]);
 
   const b = (f: DailyField) => (f === "kcal" ? base.kcal : f === "protein" ? base.protein : 0);
   function set(field: DailyField, shown: number) {
