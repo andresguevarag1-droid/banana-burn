@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CircleNotch, Envelope, MonkeyBanana } from "@/components/icons";
@@ -17,7 +17,9 @@ export function LoginForm({ configured }: { configured: boolean }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(params.get("error") ? "No pudimos iniciar sesión. Intenta de nuevo." : null);
+  const [err, setErr] = useState<string | null>(params.get("error") ? "Ese enlace ya se usó o venció. Pide un código nuevo." : null);
+  const [wait, setWait] = useState(0);
+  useEffect(() => { if (wait <= 0) return; const t = setTimeout(() => setWait((w) => w - 1), 1000); return () => clearTimeout(t); }, [wait]);
 
   if (!configured) {
     return (
@@ -34,17 +36,24 @@ export function LoginForm({ configured }: { configured: boolean }) {
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
+    if (wait > 0) return;
     setBusy(true); setErr(null);
-    const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
+    const { error } = await sb.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
     setBusy(false);
-    if (error) return setErr(error.status === 429 ? "Demasiados intentos. Espera un minuto." : "No pudimos enviar el código. Revisa tu correo.");
+    if (error) {
+      const rate = error.status === 429 || /rate limit|security purposes/i.test(error.message);
+      const secs = Number(error.message.match(/after (\d+) seconds/)?.[1] ?? 0);
+      if (secs) setWait(secs);
+      return setErr(rate ? `Ya te enviamos un correo hace poco. ${secs ? `Puedes pedir otro en ${secs} segundos.` : "Espera unos minutos antes de pedir otro."} Revisa también Correo no deseado.` : "No pudimos enviar el correo. Revisa que la dirección esté bien e intenta de nuevo.");
+    }
+    setWait(60);
     setStep("code");
   }
 
   async function verify(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setErr(null);
-    const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
+    const { error } = await sb.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: "email" });
     setBusy(false);
     if (error) return setErr("Código incorrecto o vencido.");
     router.replace(next);
@@ -80,12 +89,13 @@ export function LoginForm({ configured }: { configured: boolean }) {
         <>
           <button onClick={() => { setStep("email"); setCode(""); }} className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Cambiar correo</button>
           <h1 className="mt-4 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink"><Envelope weight="duotone" className="size-8 text-banana-ink" />Revisa tu correo</h1>
-          <p className="mt-2 text-muted">Te enviamos un código de 6 dígitos a <b className="text-ink">{email}</b>.</p>
+          <p className="mt-2 text-muted">Te enviamos un código a <b className="text-ink">{email}</b>. Escríbelo aquí o toca el enlace del correo.</p>
+          <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">¿No llega en un minuto? Busca en <b>Correo no deseado</b> o <b>Promociones</b>; Hotmail y Outlook a veces lo mandan ahí. El remitente es Banana Burn.</p>
           <form onSubmit={verify} className="mt-8 space-y-3">
-            <input autoFocus required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,8}" maxLength={8} placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="input h-16 text-center text-3xl font-extrabold tracking-[.5em]" aria-label="Código" />
+            <input autoFocus required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,10}" maxLength={10} placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="input h-16 text-center text-3xl font-extrabold tracking-[.5em]" aria-label="Código" />
             <button disabled={busy || code.length < 6} className="btn-primary w-full h-13">{busy && <CircleNotch weight="bold" className="size-5 animate-spin" />}Entrar</button>
           </form>
-          <button onClick={sendCode} disabled={busy} className="mt-4 w-full text-sm font-semibold text-muted hover:text-ink">Reenviar código</button>
+          <button onClick={sendCode} disabled={busy || wait > 0} className="tap mt-4 w-full text-sm font-semibold text-muted hover:text-ink disabled:opacity-60">{wait > 0 ? `Reenviar código en ${wait} s` : "Reenviar código"}</button>
         </>
       )}
       {err && <p role="alert" className="mt-4 rounded-2xl bg-bad/10 text-bad text-sm font-semibold p-3">{err}</p>}

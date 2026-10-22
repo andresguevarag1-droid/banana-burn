@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<body style="margin:0;background:#FFF8E3;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#2E2818">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8E3;padding:32px 16px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border-radius:24px;padding:32px">
+        <tr><td>
+          <img src="{{ .SiteURL }}/icons/icon-192.png" width="48" height="48" alt="Banana Burn" style="border-radius:12px;display:block">
+          <h1 style="margin:24px 0 8px;font-size:24px;line-height:1.2;color:#1B1505">Tu código para entrar</h1>
+          <p style="margin:0 0 24px;font-size:16px;line-height:1.5;color:#6A604B">Escribe este código en Banana Burn para entrar a tu cuenta.</p>
+          <p style="margin:0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A6200">Tu código</p>
+          <p style="margin:8px 0 24px;font-size:36px;font-weight:800;letter-spacing:.3em;color:#1B1505">{{ .Token }}</p>
+          <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email&next=/app" style="display:inline-block;background:#1B1505;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:999px">O entra con un toque</a>
+          <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#766A52">El código vence en 1 hora. Si no pediste entrar a Banana Burn, ignora este correo: nadie puede entrar a tu cuenta sin este código.</p>
+        </td></tr>
+      </table>
+      <p style="margin:16px 0 0;font-size:12px;color:#766A52">Banana Burn · Hecho en Costa Rica</p>
+    </td></tr>
+  </table>
+</body>
+</html>
