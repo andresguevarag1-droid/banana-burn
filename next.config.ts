@@ -50,6 +50,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    // Ilustraciones de técnica del mono (Higgsfield). Se sirven optimizadas desde /_next/image.
+    remotePatterns: [{ protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net", pathname: "/user_3KlOTMXim7g88SAyF4A03SG6JZ6/**" }],
+    minimumCacheTTL: 2678400,
+  },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
