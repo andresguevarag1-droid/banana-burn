@@ -2,8 +2,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning } from "@/components/icons";
+import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning } from "@/components/icons";
 import { platesPerSide, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
+import { FULL_BONUS, SET_XP, levelCrossed, workoutXp } from "@/lib/gamify";
 import type { Technique } from "@/lib/engine/technique";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { RichTip } from "@/components/rich-tip";
@@ -22,7 +23,8 @@ import { RestPill, RestScreen, type RestInfo } from "@/components/workout/rest-s
 import { IntervalScreen } from "@/components/workout/interval-screen";
 import { Recap } from "@/components/workout/recap";
 import { Tour, type TourStep } from "@/components/workout/tour";
-import { BananaTrail, SessionRing, XpPop } from "@/components/workout/ui";
+import { BananaTrail, LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/components/workout/ui";
+import { MILESTONES, expressRows, finishValue, lastVolume, levelGoal, levelGoalText, nextMilestone, pickFact, reachedMilestones, restFacts, volumeWithHistory, type LevelGoal } from "@/components/workout/motivation";
 import { saveWorkout, type SaveResult } from "./actions";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
@@ -78,7 +80,13 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const [bestCombo, setBestCombo] = useState(0);
   const [lastAt, setLastAt] = useState<number | undefined>();
   const [warmDone, setWarmDone] = useState(false);
-  const [toast, setToast] = useState<{ t: string; kind: "pr" | "swap" | "done" } | null>(null);
+  const [toast, setToast] = useState<{ t: string; kind: "pr" | "swap" | "done" | "level" | "express"; idx?: number } | null>(null);
+  /** Hitos ya mostrados en esta sesión: deshacer y volver a marcar no los repite. */
+  const [seen, setSeen] = useState<string[]>([]);
+  /** Series del plan original si se pasó a modo exprés (el bono de completo se mide contra el plan). */
+  const [plan, setPlan] = useState<number | null>(null);
+  const [levelUp, setLevelUp] = useState<{ idx: number; n: string; k: number } | null>(null);
+  const restCount = useRef(0);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [swapAsk, setSwapAsk] = useState<number | null>(null);
   const [phase, setPhase] = useState<"play" | "summary" | "saved">("play");
@@ -130,6 +138,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       // Sesión empezada: se retoma tal cual (series, modo y cambios).
       setRows(s.rows); setIdx(s.idx); setStartedAt(s.startedAt); setChoice(savedChoice);
       setCombo(s.combo ?? 0); setBestCombo(s.best ?? 0); setLastAt(s.lastAt); setWarmDone(!!s.warm);
+      const doneN = s.rows.flat().filter((r) => r.done).length;
+      setSeen(s.ms ?? reachedMilestones(doneN, s.plan ?? s.rows.flat().length)); setPlan(s.plan ?? null);
       if (s.mode === "suave" || s.mode === "fuerte" || s.mode === "normal") setSessMode(s.mode);
       setGate(false);
     } else if (s && savedChoice) {
@@ -150,8 +160,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     if (!started && !store.get(TOUR_KEY) && !isIntervalPlan(options.map((o) => o[0]))) setTour(true);
   }, [key, options]); // eslint-disable-line react-hooks/exhaustive-deps -- preswap se aplica solo al cargar
   useEffect(() => {
-    if (loaded.current && phase === "play" && !gate) store.set(key, { rows, idx, startedAt, choice, choiceIds: exercises.map((e) => e.id), combo, best: bestCombo, lastAt, warm: warmDone, mode: sessMode, ...(doneToday ? { repeat: true } : {}) });
-  }, [key, rows, idx, startedAt, choice, exercises, combo, bestCombo, lastAt, warmDone, phase, sessMode, gate, doneToday]);
+    if (loaded.current && phase === "play" && !gate) store.set(key, { rows, idx, startedAt, choice, choiceIds: exercises.map((e) => e.id), combo, best: bestCombo, lastAt, warm: warmDone, mode: sessMode, ms: seen, ...(plan ? { plan } : {}), ...(doneToday ? { repeat: true } : {}) });
+  }, [key, rows, idx, startedAt, choice, exercises, combo, bestCombo, lastAt, warmDone, phase, sessMode, gate, doneToday, seen, plan]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 2600); return () => clearTimeout(t); }, [toast]);
   useEffect(() => () => hush(), []);
 
@@ -164,7 +174,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const here = rows[idx] ?? [];
   const activeSet = here.findIndex((r) => !r.done);
   const prs = useMemo(() => prsOf(rows, exercises), [rows, exercises]);
-  const xpNow = noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets, prs: prs.length, seconds: elapsed });
+  // En modo exprés el bono de completo se sigue midiendo contra el plan original (no se gana recortando).
+  const planTotal = Math.max(plan ?? 0, totalSets);
+  const xpNow = noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed });
+  const xpState = (done: number, seconds: number) => ({ doneSets: done, totalSets: planTotal, doable: totalSets, prs: prs.length, seconds });
+  const goal: LevelGoal | null = noXp ? null : levelGoal(gam.xp, xpState(doneSets, elapsed));
+  const streakNext = gam.todayDone ? gam.streak : gam.streak + 1;
   const bananas = { got: rows.filter((r) => r.length && r.every((s) => s.done)).length, total: rows.length };
   const setWord = interval ? "intervalos" : "series";
 
@@ -268,7 +283,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     const seconds = (t - startMs) / 1000;
     const kg = num(row.kg), reps = num(row.reps);
     const isPr = beatsBest(kg, reps, ex.best) && !prs.some((p) => p.id === ex.id);
-    const xp = noXp ? 0 : setXpGain({ doneBefore: doneSets, totalSets, prsBefore: prs.length, prsAfter: prs.length + (isPr ? 1 : 0), seconds });
+    const xp = noXp ? 0 : setXpGain({ doneBefore: doneSets, totalSets: planTotal, prsBefore: prs.length, prsAfter: prs.length + (isPr ? 1 : 0), seconds });
+    // ¿Esta serie sube de nivel? Mismo cálculo que el servidor, antes y después de la serie.
+    const xpBefore = noXp ? 0 : workoutXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds }).xp;
+    const lvUp = xp ? levelCrossed(gam.xp + xpBefore, gam.xp + xpBefore + xp) : null;
+    const ms = nextMilestone(doneSets + 1, totalSets, seen);
+    if (ms.seen.length !== seen.length) setSeen(ms.seen);
     const rushed = isRushed(doneSets + 1, seconds);
     const gap = lastAt ? (t - lastAt) / 1000 : null;
     const c = rushed ? combo : nextCombo(combo, gap, ex.cfg.rest);
@@ -277,14 +297,19 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     buzz(30); ping("done");
     if (xp) { setPop({ ex: idx, si, xp, k: t }); setTimeout(() => setPop((p) => (p?.k === t ? null : p)), 1100); }
     if (isPr && !rushed) { setTimeout(() => ping("pr"), 180); buzz([40, 60, 40, 60, 120]); }
+    if (lvUp) {
+      setLevelUp({ idx: lvUp.idx, n: lvUp.n, k: t }); setTimeout(() => setLevelUp((l) => (l?.k === t ? null : l)), 1150);
+      if (!isPr) { setTimeout(() => ping("pr"), 180); buzz([30, 50, 30, 50, 90]); }
+    }
     const finishedEx = nextRows[idx].every((s) => s.done);
     if (finishedEx) { setFresh(idx); setTimeout(() => setFresh(null), 900); }
     const target = nextPending(nextRows, idx);
     if (!target) {
       // Última serie del día: directo al cierre (ahí se pregunta cómo se sintió)
-      if (isPr && !rushed) setToast({ t: `Récord en ${ex.name}`, kind: "pr" });
-      speak(speechFor("done"), true);
-      announce("Entreno completado");
+      if (lvUp) setToast({ t: `Subiste a ${lvUp.n}`, kind: "level", idx: lvUp.idx });
+      else if (isPr && !rushed) setToast({ t: `Récord en ${ex.name}`, kind: "pr" });
+      speak(lvUp ? `${speechFor("done")} Subiste a ${lvUp.n}.` : speechFor("done"), true);
+      announce(lvUp ? `Entreno completado. Subiste a ${lvUp.n}` : "Entreno completado");
       setTimeout(() => toSummary(ex.cfg.unit ? null : { ex: idx, si }), 900);
       return;
     }
@@ -298,8 +323,26 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     const tipCombo = c >= 2 && !store.get(TIP_COMBO);
     if (tipXp) store.set(TIP_XP, 1);
     if (tipCombo) store.set(TIP_COMBO, 1);
-    setToast(null);
+    setToast(lvUp ? { t: `Logro: subiste a ${lvUp.n}`, kind: "level", idx: lvUp.idx } : null);
+    // Motivación del descanso: meta de nivel, lo que vale terminar y un dato real que rota
+    const after = { doneSets: doneSets + 1, totalSets: planTotal, doable: totalSets, prs: prs.length + (isPr && !rushed ? 1 : 0), seconds };
+    const g = noXp ? null : levelGoal(gam.xp, after);
+    const fin = noXp ? null : finishValue(after);
+    const nextRow = nextRows[target.ex][target.si];
+    const facts = restFacts({
+      next: { name: tex.name, best: tex.best, reps: num(nextRow.reps), step: stepFor("kg", { unit: tex.cfg.unit, barbell: tex.barbell, cur: num(nextRow.kg) }), kg: !tex.bw && !tex.cfg.unit && num(nextRow.kg) > 0,
+        last: isNew || target.si === 0 ? tex.lastSets : null },
+      volToday: volumeWithHistory(nextRows, exercises.map((e) => !!e.lastSets?.length)), volLast: lastVolume(exercises.map((e) => e.lastSets)),
+      doneSets: doneSets + 1, volTotal: volumeOf(nextRows), streak: gam.streak, todayDone: gam.todayDone, streakShown: !noXp,
+    });
+    const fact = pickFact(facts, restCount.current++);
+    const finishLine = fin && fin.left > 0
+      ? `Terminar completo vale +${fin.xp} XP${fin.bonus ? ` (bono de +${fin.bonus} incluido)` : ""} y tu racha ${gam.todayDone ? `de ${streakNext} ${streakNext === 1 ? "día" : "días"} ya está a salvo` : `sube a ${streakNext} ${streakNext === 1 ? "día" : "días"}`}.`
+      : null;
+    const msText = ms.show ? MILESTONES[ms.show].text : null;
     setRestInfo({
+      levelUp: lvUp ? { idx: lvUp.idx, n: lvUp.n } : null, milestone: msText, fact, finish: finishLine,
+      goal: g ? { idx: g.level.idx, progress: g.level.progress, text: levelGoalText(g, setWord) } : null,
       setNo: ex.cfg.unit === "s" ? null : si + 1, effort: null, xp, xpKey: t, combo: c, pr: isPr && !rushed ? ex.name : null,
       rushed: rushed && !noXp, tip: tipCombo ? "combo" : tipXp ? "xp" : null,
       finished: finishedEx ? ex.name : null, bananas: { got: nextRows.filter((r) => r.every((s) => s.done)).length, total: nextRows.length },
@@ -313,8 +356,10 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     setRest({ end: t + ex.cfg.rest * 1000, total: ex.cfg.rest });
     setRestOpen(true);
     tickRef.current = null;
-    speak(speechFor("rest", { rest: ex.cfg.rest }), true);
-    announce(`Serie ${si + 1} hecha${xp ? `, más ${xp} XP` : ""}. Descanso de ${restLabel(ex.cfg.rest)}`);
+    // El hito se dice antes del descanso; la "última serie" la dice el coach al terminar el descanso.
+    const msSay = ms.show && ms.show !== "last" ? `${MILESTONES[ms.show].say} ` : "";
+    speak(`${lvUp ? `Subiste a ${lvUp.n}. ` : ""}${msSay}${speechFor("rest", { rest: ex.cfg.rest })}`, true);
+    announce(`Serie ${si + 1} hecha${xp ? `, más ${xp} XP` : ""}.${lvUp ? ` Subiste a ${lvUp.n}.` : ""}${msText ? ` ${msText}.` : ""} Descanso de ${restLabel(ex.cfg.rest)}`);
   }
 
   function toggle(si: number) {
@@ -336,6 +381,22 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     setSheet(null); setSwapAsk(null);
     setToast({ t: `Cambiado a ${options[idx][to].name}`, kind: "swap" });
     spokeFor.current = null;
+  }
+
+  /** Modo exprés al salir: 1 serie por ejercicio sin empezar. El bono de completo sigue midiéndose contra el plan. */
+  const express = useMemo(() => expressRows(rows), [rows]);
+  function applyExpress() {
+    if (!express) return;
+    const saved = express.flat().filter((r) => !r.done).length;
+    setPlan((p) => p ?? totalSets);
+    setRows(express);
+    const cs = comboState(express);
+    setCombo(cs.combo); setLastAt(cs.lastAt); setBestCombo(cs.best);
+    cancelRest(); setWork(null); setSheet(null);
+    const t = nextPending(express, idx);
+    if (!t) { toSummary(); return; }
+    setIdx(t.ex); spokeFor.current = null;
+    setToast({ t: `Modo exprés: ${saved === 1 ? "queda 1 serie" : `quedan ${saved} series`}`, kind: "express" });
   }
 
   /* ---------- Modo intervalos (exprés) ---------- */
@@ -390,14 +451,14 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   useHiddenAlarm(phase === "play" ? alarm.at : null, alarm.t, alarm.b);
 
   /* ---------- Resumen y guardado ---------- */
-  const summary = useMemo(() => ({ vol: volumeOf(rows), ...(noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets, prs: prs.length, seconds: elapsed })) }), [rows, doneSets, totalSets, prs.length, elapsed, noXp]);
+  const summary = useMemo(() => ({ vol: volumeOf(rows), ...(noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed })) }), [rows, doneSets, planTotal, prs.length, elapsed, noXp]);
   const prNames = prs.map((p) => p.name);
   function save() {
     start(async () => {
       let res: SaveResult;
       try {
         res = await saveWorkout({
-          template, startedAt, fun, total: totalSets, title, icon,
+          template, startedAt, fun, total: planTotal, title, icon,
           exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) })) })).filter((e) => e.sets.length),
         });
       } catch {
@@ -410,7 +471,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       setPhase("saved");
       buzz([60, 40, 60, 40, 200]);
       fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        title, done: doneSets, total: totalSets, prs: res.prNames ?? prNames, volume: summary.vol,
+        title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
         mins: Math.round(elapsed / 60), fun: fun ?? 0, easy: rows.flat().filter((r) => effortOf(r) === "f").length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
       }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino."));
     });
@@ -453,7 +514,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
   if (phase === "saved") {
     return <Recap title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
-      done={doneSets} total={totalSets} unit={setWord} volume={summary.vol} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} />;
+      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} />;
   }
 
   if (phase === "summary") {
@@ -467,7 +528,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           <div className="mx-auto max-w-md">
             <button onClick={backToPlay} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver al entreno</button>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink">{empty ? "Aún no empiezas" : doneSets === totalSets ? "Lo lograste" : "¿Terminamos?"}</h1>
-            <p className="text-muted tabular-nums">{doneSets} de {totalSets} {setWord} en {clock(elapsed)}</p>
+            <p className="text-muted tabular-nums">{doneSets} de {totalSets} {setWord} en {clock(elapsed)}{plan ? ` (modo exprés, plan de ${plan})` : ""}</p>
             {empty ? (
               <p className="mt-4 rounded-2xl bg-cream p-4 text-[15px] text-body">Todavía no marcas {interval ? "ningún intervalo" : "ninguna serie"}, así que no hay nada que guardar. Vuelve al entreno o sal sin guardar.</p>
             ) : (
@@ -565,7 +626,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           onExit={() => { setIv((v) => (v.phase === "ready" || v.paused != null ? v : { ...v, paused: Math.max(0, v.end - Date.now()) })); setSheet("exit"); }}
           onFinish={() => toSummary()} />
         <p aria-live="polite" className="sr-only">{live}</p>
-        <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={() => toSummary()} />
+        <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={() => toSummary()} goal={goal} />
       </>
     );
   }
@@ -616,6 +677,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
         </div>
         <div className="mx-auto mt-2 max-w-xl">
           <BananaTrail items={exercises.map((e, i) => ({ name: e.name, done: rows[i].filter((s) => s.done).length, total: rows[i].length }))} current={idx} fresh={fresh} onPick={(i) => { setIdx(i); setWork(null); }} />
+          {goal && <LevelMeter idx={goal.level.idx} progress={goal.level.progress} text={levelGoalText(goal, setWord)} className="mt-2 px-1" />}
         </div>
       </header>
 
@@ -638,6 +700,16 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
             </div>
           </section>
           <p className="mt-3 text-[13px] leading-snug text-muted">{ex.rx.note}</p>
+
+          {doneSets === 0 && !noXp && (() => {
+            const fin = finishValue(xpState(0, 0));
+            return (
+              <p className="mt-3 flex items-start gap-2.5 rounded-[1.25rem] bg-white border border-line/70 p-3 text-sm text-body">
+                <BananaFlame weight="duotone" className="size-5 shrink-0 text-ember-ink" />
+                <span>Completo, este entreno vale <span className="font-extrabold text-ink tabular-nums">+{fin.xp} XP</span> (bono de +{fin.bonus} por terminarlo) y {gam.todayDone ? `tu racha de ${streakNext} ${streakNext === 1 ? "día" : "días"} ya está a salvo hoy` : `lleva tu racha a ${streakNext} ${streakNext === 1 ? "día" : "días"}`}.</span>
+              </p>
+            );
+          })()}
 
           {warm && (
             <div className="mt-3 flex items-start gap-3 rounded-[1.5rem] bg-banana-soft/70 p-3.5">
@@ -800,10 +872,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           )}
         </div>
       </BottomSheet>
-      <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={finishNow} />
+      <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={finishNow} goal={goal}
+        bonus={!noXp && !plan ? FULL_BONUS : 0} onExpress={express ? applyExpress : undefined} />
 
       {/* El aviso flotante nunca tapa el descanso (ahí está la pregunta de esfuerzo) ni una hoja abierta */}
-      <Toast side="top">{toast && !(rest && restOpen) && !sheet && <>{toast.kind === "pr" ? <BananaTrophy weight="fill" className="size-5 shrink-0 text-banana" /> : <ArrowsLeftRight weight="bold" className="size-5 shrink-0 text-banana" />}{toast.t}</>}</Toast>
+      <Toast side="top">{toast && !(rest && restOpen) && !sheet && <>{toast.kind === "pr" ? <BananaTrophy weight="fill" className="size-5 shrink-0 text-banana" /> : toast.kind === "level" ? <LevelIcon idx={toast.idx ?? 1} className="size-5 shrink-0 text-banana!" /> : toast.kind === "express" ? <Lightning weight="fill" className="size-5 shrink-0 text-banana" /> : <ArrowsLeftRight weight="bold" className="size-5 shrink-0 text-banana" />}{toast.t}</>}</Toast>
+      {levelUp && <LevelUpBurst idx={levelUp.idx} name={levelUp.n} k={levelUp.k} />}
       <p aria-live="polite" className="sr-only">{live}</p>
 
       {tour && phase === "play" && !rest && !sheet && (
@@ -817,15 +891,39 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   );
 }
 
-function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish }: { open: boolean; onClose: () => void; doneSets: number; totalSets: number; unit: string; onFinish: () => void }) {
+/**
+ * Salir a medias: muestra lo que queda en la mesa sin culpa, con seguir como acción principal.
+ * "Salir sin guardar" no borra nada: lo hecho queda en el teléfono por hoy, por si vuelves.
+ */
+function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish, goal, bonus = 0, onExpress }: {
+  open: boolean; onClose: () => void; doneSets: number; totalSets: number; unit: string; onFinish: () => void;
+  goal?: LevelGoal | null; bonus?: number; onExpress?: () => void;
+}) {
+  const left = Math.max(0, totalSets - doneSets);
+  const one = unit === "series" ? "serie" : "intervalo";
+  const word = (n: number) => (n === 1 ? one : unit);
+  const levelUp = goal?.level.next && goal.sets != null && goal.sets <= left ? goal.level.next.n : null;
+  // Lo concreto que falta: el bono, el nivel o ambos
+  const table = left > 0 && (bonus > 0 || levelUp)
+    ? `Te ${left === 1 ? "falta" : "faltan"} ${left} ${word(left)} para ${[bonus > 0 ? `el bono de +${bonus} XP` : "", levelUp ? `subir a ${levelUp}` : ""].filter(Boolean).join(" y ")}.`
+    : null;
+  const keep = goal?.sets != null && goal.sets < left && goal.sets <= 4 ? goal.sets : left > 0 && left <= 4 ? left : null;
   return (
     <BottomSheet open={open} onClose={onClose}>
       <div className="px-5 space-y-3">
         <SheetTitle className="text-2xl font-extrabold text-ink">¿Salir del entreno?</SheetTitle>
-        <p className="text-muted">Llevas {doneSets} de {totalSets} {unit}. Tu progreso queda guardado en este teléfono.</p>
-        <button onClick={onClose} className="btn-primary w-full h-13">Seguir entrenando</button>
-        {doneSets > 0 && <button onClick={onFinish} className="btn-ghost w-full h-13">Terminar y guardar</button>}
-        <Link href="/app" className="btn w-full h-13 text-muted">Salir por ahora</Link>
+        <p className="text-body">Llevas {doneSets} de {totalSets} {unit}.{table ? ` ${table}` : ""}{doneSets > 0 ? " Lo que hiciste ya cuenta para tu racha." : ""}</p>
+        {keep != null && levelUp && keep < left && <p className="flex items-center gap-2 rounded-2xl bg-banana-soft/70 p-3 text-sm font-semibold text-banana-ink"><LevelIcon idx={goal!.level.idx + 1} className="size-5 shrink-0" />Con {keep} {word(keep)} más subes a {levelUp}.</p>}
+        <button onClick={onClose} data-autofocus className="btn-primary w-full h-13">{keep != null ? `Seguir ${keep} ${word(keep)} más` : "Seguir entrenando"}</button>
+        {doneSets > 0 && <button onClick={onFinish} className="btn-ghost w-full h-13">Guardar lo que hice</button>}
+        {onExpress && (
+          <button onClick={onExpress} className="pressable w-full flex items-center gap-3 rounded-2xl bg-white border border-line p-3.5 text-left hover:border-ink/40">
+            <Lightning weight="duotone" className="size-6 shrink-0 text-ember-ink" />
+            <span className="min-w-0"><span className="block font-bold text-ink">Modo exprés</span><span className="block text-sm text-muted">¿Sin tiempo? Termina ahora con 1 serie por ejercicio que falta. Cada serie suma igual{bonus > 0 ? ", sin el bono de completo" : ""}.</span></span>
+          </button>
+        )}
+        <Link href="/app" className="btn w-full h-13 text-muted">Salir sin guardar</Link>
+        {doneSets > 0 && <p className="-mt-1 text-center text-xs text-muted">Lo que llevas queda en este teléfono por hoy, por si vuelves.</p>}
       </div>
     </BottomSheet>
   );

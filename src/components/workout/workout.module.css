@@ -45,7 +45,17 @@
 /* Punto del coach-mark: el recorte se mueve entre objetivos con la curva de cajón */
 .spot { transition: top 300ms cubic-bezier(.32, .72, 0, 1), left 300ms cubic-bezier(.32, .72, 0, 1), width 300ms cubic-bezier(.32, .72, 0, 1), height 300ms cubic-bezier(.32, .72, 0, 1); }
 
+/* Subida de nivel en el entreno: entra rápido, se queda un instante y se va sola (1,1 s en total) */
+@keyframes levelup {
+  0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(.92); }
+  20% { opacity: 1; transform: none; }
+  78% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate3d(0, -10px, 0); }
+}
+.levelup { animation: levelup 1100ms cubic-bezier(.23, 1, .32, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
+  .levelup { animation-name: fadeOut; transform: none; }
   .xp { animation-name: fadeOut; animation-duration: 1200ms; transform: translate3d(-50%, -14px, 0); }
   .collect, .beat, .next, .phase { animation-name: fadeIn; animation-duration: 180ms; }
   .shine::after { display: none; }

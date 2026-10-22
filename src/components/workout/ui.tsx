@@ -1,5 +1,5 @@
 "use client";
-import { Banana, Minus, Plus } from "@/components/icons";
+import { Banana, LevelIcon, Minus, Plus } from "@/components/icons";
 import { clock } from "./logic";
 import css from "./workout.module.css";
 
@@ -117,5 +117,41 @@ export function XpPop({ k, xp }: { k: number; xp: number }) {
     <span key={k} aria-hidden className={`${css.xp} z-10 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-ink px-3 h-8 text-sm font-extrabold text-banana shadow-lift`}>
       +{xp} XP
     </span>
+  );
+}
+
+/**
+ * Meta de nivel compacta: ícono del nivel, frase concreta ("Te faltan 80 XP para Plátano macho: 3 series más")
+ * y una barra que se llena en vivo al marcar series. Solo anima transform.
+ */
+export function LevelMeter({ idx, progress, text, tone = "light", className = "" }: { idx: number; progress: number; text: string; tone?: "light" | "dark"; className?: string }) {
+  const v = Math.max(0.03, Math.min(1, progress));
+  const dark = tone === "dark";
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <span aria-hidden className={`grid place-items-center size-7 shrink-0 rounded-lg ${dark ? "bg-white/10" : "bg-banana-soft ring-1 ring-banana/40"}`}><LevelIcon idx={idx} className={`size-[18px] ${dark ? "text-banana!" : ""}`} /></span>
+      <div className="flex-1 min-w-0">
+        <p className={`line-clamp-2 text-xs leading-tight font-bold tabular-nums ${dark ? "text-white/85" : "text-ink"}`}>{text}</p>
+        <div aria-hidden className={`mt-1 h-1.5 overflow-hidden rounded-full ${dark ? "bg-white/15" : "bg-line"}`}>
+          <div className={`bar-fill h-full w-full rounded-full ${dark ? "bg-banana" : "bg-ember"}`} style={{ transform: `translateX(${(v - 1) * 100}%)` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Subida de nivel en pleno entreno: aparece y se va sola en 1,1 s, sin bloquear toques.
+ * El anuncio para lectores de pantalla lo hace el reproductor (región aria-live).
+ */
+export function LevelUpBurst({ idx, name, k }: { idx: number; name: string; k: number }) {
+  return (
+    <div key={k} aria-hidden className="pointer-events-none fixed inset-0 z-[70] grid place-items-center px-6">
+      <div className={`${css.levelup} flex flex-col items-center rounded-[2rem] bg-ink ring-2 ring-banana/70 px-8 py-6 text-center text-white shadow-lift`}>
+        <span className="grid place-items-center size-20 rounded-[1.5rem] bg-banana"><LevelIcon idx={idx} className="size-12 text-ink!" /></span>
+        <p className="mt-3 text-sm font-bold text-banana">Subiste de nivel</p>
+        <p className="text-2xl font-extrabold tracking-tight">{name}</p>
+      </div>
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BananaCoin, BananaFlame, BananaTrophy, Barbell, BrandIcon, DownloadSimple, LevelIcon, Monkey, ShareNetwork, Timer } from "@/components/icons";
-import { levelOf } from "@/lib/gamify";
+import { levelOf, workoutsToNext } from "@/lib/gamify";
 import { Confetti } from "@/components/confetti";
 import { ProgressBar } from "@/components/progress-bar";
 import { Sheet, SheetTitle } from "@/components/sheet";
@@ -25,8 +25,10 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, prs, bananas, repeat = false, saveMsg, feedback }: {
+export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback }: {
   title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
+  /** XP de un entreno completo como este (para estimar cuántos faltan al próximo nivel) */
+  perWorkout?: number;
   prs: string[]; bananas: { got: number; total: number }; repeat?: boolean; saveMsg: string | null; feedback: string | null;
 }) {
   // La tarjeta y el título no mienten: "completado" solo si hiciste todo.
@@ -35,9 +37,22 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
   const before = levelOf(xpBefore), after = levelOf(xpBefore + xp);
   const leveled = after.idx > before.idx;
   const shownXp = useCountUp(xp);
-  // La barra de nivel arranca donde estabas y avanza con lo ganado hoy
-  const [bar, setBar] = useState(leveled ? 0 : before.progress);
-  useEffect(() => { const t = setTimeout(() => setBar(after.progress), 450); return () => clearTimeout(t); }, [after.progress]);
+  const reduce = useReducedMotion();
+  // La barra de nivel arranca en el XP previo y avanza con lo ganado hoy. Si subiste, primero llena el nivel
+  // anterior, luego cambia al nivel nuevo y avanza desde cero (la barra se vuelve a montar: nunca retrocede).
+  const [view, setView] = useState<{ lv: "before" | "after"; v: number; k: number }>({ lv: "before", v: before.progress, k: 0 });
+  useEffect(() => {
+    if (reduce) { setView({ lv: "after", v: after.progress, k: 1 }); return; }
+    const ts: ReturnType<typeof setTimeout>[] = [];
+    if (leveled) {
+      ts.push(setTimeout(() => setView({ lv: "before", v: 1, k: 0 }), 450));
+      ts.push(setTimeout(() => setView({ lv: "after", v: 0, k: 1 }), 1000));
+      ts.push(setTimeout(() => setView({ lv: "after", v: after.progress, k: 1 }), 1060));
+    } else ts.push(setTimeout(() => setView({ lv: "after", v: after.progress, k: 0 }), 450));
+    return () => ts.forEach(clearTimeout);
+  }, [reduce, leveled, after.progress]);
+  const lv = view.lv === "after" ? after : before;
+  const nextIn = repeat ? null : workoutsToNext(xpBefore + xp, perWorkout);
 
   const [story, setStory] = useState<{ url: string; blob: Blob } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,15 +114,21 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
               </div>
               {volume > 0 && <p className="mt-2 text-sm text-muted">Moviste <span className="font-bold text-ink tabular-nums">{volumeText(volume)}</span> en total.</p>}
             </div>
-            <div className="border-t border-line p-4">
+            <div className={`border-t border-line p-4 ${leveled ? "bg-banana-soft/70" : ""}`}>
+              {leveled && <p className="mb-2 text-xs font-extrabold text-banana-ink">Nivel nuevo desbloqueado</p>}
               <div className="flex items-center gap-2.5">
-                <LevelIcon idx={after.idx} className="size-7 shrink-0" />
+                <span key={view.lv} className={`grid place-items-center shrink-0 rounded-xl ${leveled ? "size-11 bg-banana" : "size-7"} ${view.lv === "after" && leveled ? "animate-pop" : ""}`}>
+                  <LevelIcon idx={lv.idx} className={leveled ? "size-7 text-ink!" : "size-7"} />
+                </span>
                 <div className="min-w-0">
-                  <p className="font-extrabold leading-tight text-ink">{after.n} <span className="font-bold text-muted">(nivel {after.idx})</span></p>
-                  <p className="text-xs font-semibold text-muted tabular-nums">{after.next ? `${after.toNext} XP para ${after.next.n}` : "Nivel máximo"}</p>
+                  <p className="font-extrabold leading-tight text-ink">{lv.n} <span className="font-bold text-muted">(nivel {lv.idx})</span></p>
+                  <p className="text-xs font-semibold text-muted tabular-nums">{view.lv === "before" && leveled ? `Subiendo a ${after.n}` : after.next ? `${after.toNext} XP para ${after.next.n}` : "Nivel máximo"}</p>
                 </div>
               </div>
-              <ProgressBar value={bar} min={0.04} className="mt-3 h-2.5" fill="bg-ember" label={`Progreso del nivel ${after.idx}`} />
+              <ProgressBar key={view.k} value={view.v} min={0.04} className="mt-3 h-2.5" fill="bg-ember" label={`Progreso del nivel ${lv.idx}`} />
+              {after.next && nextIn != null && (
+                <p className="mt-2 text-xs font-semibold text-muted">Con entrenos completos como este, llegas a {after.next.n} {nextIn === 1 ? "en tu próximo entreno" : `en unos ${nextIn} entrenos`}.</p>
+              )}
             </div>
           </div>
 
