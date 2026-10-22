@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { OrangeSlice as Apple, BookOpen, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, Flag as Trophy, BrandIcon } from "@/components/icons";
+import { OrangeSlice as Apple, BookOpen, CaretDown, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, Flag as Trophy, BrandIcon } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { getAnnouncements, getChallenges, getExercises, getFoods, PAGE_SIZE, type AnnouncementRow, type ChallengeRow, type FoodRow } from "@/lib/admin";
 import { can, type Capability } from "@/lib/admin-perms";
@@ -9,7 +9,7 @@ import { RECIPES } from "@/lib/recipes";
 import { CHALLENGES } from "@/lib/challenges";
 import { ActionForm, ConfirmAction, Submit } from "@/components/admin/action-form";
 import { AnnouncementCard } from "@/components/admin/announcement-banner";
-import { Badge, DemoNotice, Empty, Field, MigrationNotice, Nil, PageHeader, Pagination, Table, Td, Th, fmtDate, fmtNum, inputSm } from "@/components/admin/ui";
+import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, MigrationNotice, Nil, PageHeader, Pagination, SectionHeading, SubTabs, Table, Td, Th, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, rowAction, rowActionDanger, textareaSm, tr, trHover } from "@/components/admin/ui";
 import { deleteAnnouncement, deleteChallenge, deleteFood, resetExercise, saveAnnouncement, saveChallenge, saveExercise, saveFood, seedFoods } from "../actions";
 
 export const metadata = { title: "Contenido" };
@@ -28,7 +28,12 @@ const ENGINE_IDS = new Set(Object.values(DS_ID));
 const SLOT: Record<string, string> = { desayuno: "Desayuno", almuerzo: "Almuerzo", merienda: "Merienda", cena: "Cena" };
 const VERIFY: Record<string, string> = { manual: "Manual (el usuario marca)", workout: "Entreno registrado", steps: "Pasos registrados", protein: "Meta de proteína", water: "Vasos de agua" };
 
-const textarea = "input h-auto! py-2 rounded-xl! text-sm!";
+const textarea = textareaSm;
+/** Fila plegable (ejercicio, reto, anuncio): resumen clicable con flecha, sin animación. */
+const summaryRow = "flex cursor-pointer list-none items-center gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden";
+/** Contenido del resumen: se envuelve en varias líneas sin arrastrar la flecha, que queda fija a la derecha. */
+const summaryInner = "flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1";
+const Chevron = () => <CaretDown className="size-4 shrink-0 text-faint group-open:rotate-180" aria-hidden />;
 const check = "size-4 accent-[#1B1505]";
 /** Valor para <input type="datetime-local"> en hora de Costa Rica. */
 const dtLocal = (s: string | null) => (s ? new Date(Date.parse(s) - 6 * 3600e3).toISOString().slice(0, 16) : "");
@@ -40,18 +45,10 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
   const tab = tabs.find((t) => t.key === sp.tab) ?? tabs[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader title="Contenido" desc="Ejercicios, alimentos, recetas, retos y anuncios que ve la app." />
       {v.demo && <DemoNotice what="el contenido" />}
-      <nav aria-label="Tipos de contenido">
-        <ul className="flex flex-wrap gap-2">
-          {tabs.map((t) => (
-            <li key={t.key}><Link href={`/admin/contenido?tab=${t.key}`} aria-current={t.key === tab.key ? "page" : undefined}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-full text-sm font-semibold border outline-none focus-visible:ring-4 focus-visible:ring-banana/50 ${t.key === tab.key ? "bg-ink text-white border-ink" : "bg-white text-ink border-line hover:bg-paper"}`}>
-              <t.icon className="size-4" aria-hidden />{t.label}</Link></li>
-          ))}
-        </ul>
-      </nav>
+      <SubTabs label="Tipos de contenido" items={tabs.map((t) => ({ href: `/admin/contenido?tab=${t.key}`, label: t.label, icon: t.icon, current: t.key === tab.key }))} />
       {tab.key === "ejercicios" && <Exercises q={sp.q} />}
       {tab.key === "biblioteca" && <Library sp={sp} />}
       {tab.key === "alimentos" && <Foods sp={sp} />}
@@ -71,23 +68,23 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
       <section aria-labelledby="t-ej" className="space-y-4">
         <h2 id="t-ej" className="sr-only">Ejercicios</h2>
         {needsMigration && <MigrationNotice />}
-        <p className="text-sm text-muted">Los {fmtNum(items.length)} ejercicios con los que el motor arma las rutinas. Lo que edites aquí lo lee la app desde la base de datos.</p>
-        <form className="flex flex-wrap items-end gap-2" role="search" aria-label="Buscar ejercicios">
+        <p className="max-w-prose text-sm text-muted text-pretty">Los {fmtNum(items.length)} ejercicios con los que el motor arma las rutinas. Lo que edites aquí lo lee la app desde la base de datos. Un ejercicio deshabilitado se reemplaza por su alternativa.</p>
+        <FilterBar label="Buscar ejercicios" search submitLabel="Buscar" filtered={!!q} clearHref="/admin/contenido?tab=ejercicios">
           <input type="hidden" name="tab" value="ejercicios" />
-          <Field label="Buscar ejercicio" htmlFor="ej-q" className="w-full sm:w-72"><input id="ej-q" name="q" type="search" defaultValue={q} className={inputSm} placeholder="Nombre, músculo o id" /></Field>
-          <button className="btn-primary h-10! px-4! text-sm!">Buscar</button>
-        </form>
-        <p className="text-xs text-muted">{items.filter((e) => !e.enabled).length} deshabilitados · {items.filter((e) => e.name || e.cues.length).length} con cambios. Un ejercicio deshabilitado se reemplaza por su alternativa en el motor.</p>
+          <Field label="Buscar ejercicio" htmlFor="ej-q" className={fw.search}><input id="ej-q" name="q" type="search" defaultValue={q} className={inputSm} placeholder="Nombre, músculo o id" /></Field>
+          <MetaList className="self-center sm:pt-5" items={[`Deshabilitados: ${items.filter((e) => !e.enabled).length}`, `Con cambios: ${items.filter((e) => e.name || e.cues.length).length}`]} />
+        </FilterBar>
         {groups.map((g) => (
-          <div key={g} className="card divide-y divide-line">
-            <h3 className="px-5 py-3 text-sm font-extrabold text-ink">{g}</h3>
+          <div key={g} className={`${panel} divide-y divide-line overflow-hidden`}>
+            <h3 className="bg-[#FCFAF3] px-4 py-2.5 text-xs font-semibold text-muted">{g}</h3>
             {list.filter((e) => e.muscle === g).map((e) => (
-              <details key={e.id} className="group px-5 py-3">
-                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
+              <details key={e.id} className="group px-4 py-2.5">
+                <summary className={summaryRow}><span className={summaryInner}>
                   <span className="font-semibold text-ink">{e.name ?? e.base}</span>
-                  {e.name && <span className="text-xs text-muted">(original: {e.base})</span>}
+                  {e.name && <span className="text-xs text-muted">Original: {e.base}</span>}
                   <code className="text-xs text-muted">{e.id}</code>
-                  <span className="ml-auto flex flex-wrap gap-1.5">{!e.enabled && <Badge tone="bad">Deshabilitado</Badge>}{e.cues.length > 0 && <Badge tone="info">{e.cues.length} claves</Badge>}<span className="text-xs font-semibold text-muted group-open:hidden">Editar</span></span>
+                  {!e.enabled && <Badge tone="bad">Deshabilitado</Badge>}{e.cues.length > 0 && <Badge tone="info">{e.cues.length} claves</Badge>}
+                  </span><Chevron />
                 </summary>
                 <ActionForm action={saveExercise} className="mt-3 grid gap-3 sm:grid-cols-2">
                   <input type="hidden" name="exercise_id" value={e.id} />
@@ -99,14 +96,14 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
                 {(e.name || e.cues.length > 0 || !e.enabled) && (
                   <ActionForm action={resetExercise} className="mt-1 flex justify-end">
                     <input type="hidden" name="exercise_id" value={e.id} />
-                    <Submit className="text-xs font-semibold text-muted underline underline-offset-2" pendingText="Restaurando…">Restaurar original</Submit>
+                    <Submit className={rowAction} pendingText="Restaurando…">Restaurar original</Submit>
                   </ActionForm>
                 )}
               </details>
             ))}
           </div>
         ))}
-        {!list.length && <div className="card"><Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=ejercicios" className="btn-ghost h-10! px-4! text-sm!">Ver todos</Link>}>Ningún ejercicio coincide con &quot;{q}&quot;.</Empty></div>}
+        {!list.length && <Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=ejercicios" className={btnGhost}>Ver todos</Link>}>Ningún ejercicio coincide con &quot;{q}&quot;.</Empty>}
       </section>
     );
   }
@@ -122,27 +119,23 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
     return (
       <section aria-labelledby="t-lib" className="space-y-4">
         <h2 id="t-lib" className="sr-only">Biblioteca de ejercicios</h2>
-        <p className="text-sm text-muted">{fmtNum(LIB_COUNT)} ejercicios disponibles como alternativas al cambiar un ejercicio. Solo lectura.</p>
-        <form className="card p-4 grid gap-3 grid-cols-2 md:grid-cols-4 items-end" role="search" aria-label="Buscar en la biblioteca">
+        <p className="max-w-prose text-sm text-muted text-pretty">{fmtNum(LIB_COUNT)} ejercicios disponibles como alternativas al cambiar un ejercicio. Solo lectura.</p>
+        <FilterBar label="Buscar en la biblioteca" search submitLabel="Buscar" filtered={filtered} clearHref="/admin/contenido?tab=biblioteca">
           <input type="hidden" name="tab" value="biblioteca" />
-          <Field label="Buscar" htmlFor="lib-q" className="col-span-2"><input id="lib-q" name="q" type="search" defaultValue={q} placeholder="Nombre en español o inglés, o músculo" className={inputSm} /></Field>
-          <Field label="Zona" htmlFor="lib-bp"><select id="lib-bp" name="bp" defaultValue={bp ?? ""} className={inputSm}><option value="">Todas</option>{Object.entries(BODY).sort((a, b) => a[1].localeCompare(b[1], "es")).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-          <Field label="Equipo" htmlFor="lib-eq"><select id="lib-eq" name="eq" defaultValue={eq ?? ""} className={inputSm}><option value="">Todo</option>{Object.entries(EQUIP).sort((a, b) => a[1].localeCompare(b[1], "es")).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-          <div className="col-span-2 md:col-span-4 flex justify-end gap-2">
-            {filtered && <Link href="/admin/contenido?tab=biblioteca" className="btn-ghost h-10! px-4! text-sm!">Limpiar</Link>}
-            <button className="btn-primary h-10! px-5! text-sm!">Buscar</button>
-          </div>
-        </form>
+          <Field label="Buscar" htmlFor="lib-q" className={fw.search}><input id="lib-q" name="q" type="search" defaultValue={q} placeholder="Nombre en español o inglés, o músculo" className={inputSm} /></Field>
+          <Field label="Zona" htmlFor="lib-bp" className={fw.select}><select id="lib-bp" name="bp" defaultValue={bp ?? ""} className={inputSm}><option value="">Todas</option>{Object.entries(BODY).sort((a, b) => a[1].localeCompare(b[1], "es")).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+          <Field label="Equipo" htmlFor="lib-eq" className={fw.select}><select id="lib-eq" name="eq" defaultValue={eq ?? ""} className={inputSm}><option value="">Todo</option>{Object.entries(EQUIP).sort((a, b) => a[1].localeCompare(b[1], "es")).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+        </FilterBar>
         {res.items.length > 0 ? (
           <Table caption={`Biblioteca de ejercicios (${fmtNum(res.total)})`} captionHidden minWidth={820}>
             <thead className="border-b border-line"><tr><Th>Ejercicio</Th><Th>Zona</Th><Th>Equipo</Th><Th>Músculo objetivo</Th><Th>Secundarios</Th><Th>ID</Th></tr></thead>
             <tbody>{res.items.map((e) => (
-              <tr key={e.id} className="border-b border-line last:border-0 align-top">
+              <tr key={e.id} className={`${tr} align-top`}>
                 <Td>
                   <details className="group">
-                    <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
+                    <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden">
                       <span className="font-semibold text-ink">{e.n}</span>{ENGINE_IDS.has(e.id) && <> <Badge tone="info">En rutinas</Badge></>}
-                      <span className="block text-xs text-muted">{e.en} · <span className="underline underline-offset-2 group-open:hidden">ver pasos</span><span className="hidden group-open:inline">ocultar pasos</span></span>
+                      <span className="flex items-center gap-1 text-xs text-muted">{e.en}<span className="ml-2 font-semibold text-ink group-open:hidden">Ver pasos</span><span className="ml-2 hidden font-semibold text-ink group-open:inline">Ocultar pasos</span></span>
                     </summary>
                     <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-body max-w-xl">{e.s.map((x, i) => <li key={i}>{x}</li>)}</ol>
                   </details>
@@ -152,7 +145,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
                 <Td><code className="text-xs text-muted">{e.id}</code></Td>
               </tr>))}</tbody>
           </Table>
-        ) : <div className="card"><Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=biblioteca" className="btn-ghost h-10! px-4! text-sm!">Limpiar filtros</Link>}>Ningún ejercicio de la biblioteca coincide con estos filtros.</Empty></div>}
+        ) : <Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=biblioteca" className={btnGhost}>Limpiar filtros</Link>}>Ningún ejercicio de la biblioteca coincide con estos filtros.</Empty>}
         <Pagination page={res.page} total={res.total} pageSize={LIB_PER} basePath="/admin/contenido" params={{ tab: "biblioteca", q, bp, eq }} />
       </section>
     );
@@ -171,24 +164,22 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
     return (
       <section aria-labelledby="t-rec" className="space-y-4">
         <h2 id="t-rec" className="sr-only">Recetas</h2>
-        <p className="text-sm text-muted">{fmtNum(RECIPES.length)} recetas ticas que la app usa para armar los menús. Macros por porción. Solo lectura.</p>
-        <form className="flex flex-wrap items-end gap-2" role="search" aria-label="Buscar recetas">
+        <p className="max-w-prose text-sm text-muted text-pretty">{fmtNum(RECIPES.length)} recetas ticas que la app usa para armar los menús. Macros por porción. Solo lectura.</p>
+        <FilterBar label="Buscar recetas" search filtered={filtered} clearHref="/admin/contenido?tab=recetas">
           <input type="hidden" name="tab" value="recetas" />
-          <Field label="Buscar" htmlFor="rc-q" className="w-full sm:w-64"><input id="rc-q" name="q" type="search" defaultValue={q} placeholder="Nombre, ingrediente o etiqueta" className={inputSm} /></Field>
-          <Field label="Momento" htmlFor="rc-s"><select id="rc-s" name="slot" defaultValue={slot ?? ""} className={`${inputSm} w-40`}><option value="">Todos</option>{Object.entries(SLOT).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-          <button className="btn-primary h-10! px-4! text-sm!">Filtrar</button>
-          {filtered && <Link href="/admin/contenido?tab=recetas" className="btn-ghost h-10! px-4! text-sm!">Limpiar</Link>}
-        </form>
+          <Field label="Buscar" htmlFor="rc-q" className={fw.search}><input id="rc-q" name="q" type="search" defaultValue={q} placeholder="Nombre, ingrediente o etiqueta" className={inputSm} /></Field>
+          <Field label="Momento" htmlFor="rc-s" className={fw.select}><select id="rc-s" name="slot" defaultValue={slot ?? ""} className={inputSm}><option value="">Todos</option>{Object.entries(SLOT).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+        </FilterBar>
         {rows.length > 0 ? (
           <Table caption={`Recetas (${fmtNum(list.length)})`} captionHidden minWidth={860}>
             <thead className="border-b border-line"><tr><Th>Receta</Th><Th>Momento</Th><Th className="text-right">Min</Th><Th className="text-right">Porciones</Th><Th className="text-right">Kcal</Th><Th className="text-right"><abbr title="Proteína (g)">P</abbr></Th><Th className="text-right"><abbr title="Carbohidratos (g)">C</abbr></Th><Th className="text-right"><abbr title="Grasa (g)">G</abbr></Th><Th>Etiquetas</Th></tr></thead>
             <tbody>{rows.map((r) => (
-              <tr key={r.id} className="border-b border-line last:border-0 align-top">
+              <tr key={r.id} className={`${tr} align-top`}>
                 <Td>
                   <details className="group">
-                    <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
-                      <span className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={r.icon} className="size-5 text-banana-ink" />{r.t}</span>
-                      <span className="block text-xs text-muted underline underline-offset-2"><span className="group-open:hidden">ver ingredientes y pasos</span><span className="hidden group-open:inline">ocultar</span></span>
+                    <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden">
+                      <span className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={r.icon} className="size-5 shrink-0 text-banana-ink" />{r.t}</span>
+                      <span className="block pl-7 text-xs font-semibold text-muted"><span className="group-open:hidden">Ver ingredientes y pasos</span><span className="hidden group-open:inline">Ocultar</span></span>
                     </summary>
                     <div className="mt-2 grid gap-3 sm:grid-cols-2 text-sm text-body max-w-2xl">
                       <div><p className="text-xs font-bold text-ink">Ingredientes</p><ul className="mt-1 list-disc space-y-0.5 pl-5">{r.ing.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
@@ -196,12 +187,12 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
                     </div>
                   </details>
                 </Td>
-                <Td>{SLOT[r.slot]}</Td><Td className="text-right tabular-nums">{r.min}</Td><Td className="text-right tabular-nums">{r.serves}</Td>
-                <Td className="text-right tabular-nums">{fmtNum(r.kcal)}</Td><Td className="text-right tabular-nums">{fmtNum(r.p)}</Td><Td className="text-right tabular-nums">{fmtNum(r.c)}</Td><Td className="text-right tabular-nums">{fmtNum(r.f)}</Td>
+                <Td>{SLOT[r.slot]}</Td><Td className="text-right">{r.min}</Td><Td className="text-right">{r.serves}</Td>
+                <Td className="text-right">{fmtNum(r.kcal)}</Td><Td className="text-right">{fmtNum(r.p)}</Td><Td className="text-right">{fmtNum(r.c)}</Td><Td className="text-right">{fmtNum(r.f)}</Td>
                 <Td><span className="flex flex-wrap gap-1">{r.tags.map((t) => <Badge key={t}>{t}</Badge>)}</span></Td>
               </tr>))}</tbody>
           </Table>
-        ) : <div className="card"><Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=recetas" className="btn-ghost h-10! px-4! text-sm!">Limpiar filtros</Link>}>Ninguna receta coincide con estos filtros.</Empty></div>}
+        ) : <Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=recetas" className={btnGhost}>Limpiar filtros</Link>}>Ninguna receta coincide con estos filtros.</Empty>}
         <Pagination page={page} total={list.length} pageSize={PAGE_SIZE} basePath="/admin/contenido" params={{ tab: "recetas", q, slot }} />
       </section>
     );
@@ -217,38 +208,37 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
       <section aria-labelledby="t-al" className="space-y-4">
         <h2 id="t-al" className="sr-only">Alimentos</h2>
         {empty && (
-          <div className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className={`${panel} flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center`}>
             <p className="text-sm text-ink"><b>La tabla public.foods está vacía.</b> Puedes cargar la base local de alimentos ticos como punto de partida.</p>
             <ActionForm action={seedFoods}><Submit pendingText="Cargando…">Cargar base inicial</Submit></ActionForm>
           </div>
         )}
-        <details className="card p-5" open={!!editing}>
-          <summary className="flex cursor-pointer list-none items-center gap-2 font-bold text-ink rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50"><Plus className="size-4" aria-hidden />{editing ? `Editar: ${editing.name}` : "Nuevo alimento"}</summary>
+        <details className={`group ${panel} p-4`} open={!!editing}>
+          <summary className={`${summaryRow} font-bold text-ink`}><span className={summaryInner}><Plus className="size-4" aria-hidden />{editing ? `Editar: ${editing.name}` : "Nuevo alimento"}</span><Chevron /></summary>
           <FoodForm f={editing} />
-          {editing && <Link href="/admin/contenido?tab=alimentos" className="mt-2 inline-block text-sm font-semibold text-muted underline">Cancelar edición</Link>}
+          {editing && <Link href="/admin/contenido?tab=alimentos" className={`mt-2 ${rowAction}`}>Cancelar edición</Link>}
         </details>
-        <form className="flex flex-wrap items-end gap-2" role="search" aria-label="Filtrar alimentos">
+        <FilterBar label="Filtrar alimentos" search filtered={!!(sp.q || verified)} clearHref="/admin/contenido?tab=alimentos">
           <input type="hidden" name="tab" value="alimentos" />
-          <Field label="Buscar" htmlFor="fd-q" className="w-full sm:w-64"><input id="fd-q" name="q" type="search" defaultValue={sp.q} className={inputSm} /></Field>
-          <Field label="Verificado" htmlFor="fd-v"><select id="fd-v" name="verified" defaultValue={verified ?? ""} className={`${inputSm} w-36`}><option value="">Todos</option><option value="si">Sí</option><option value="no">No</option></select></Field>
-          <button className="btn-primary h-10! px-4! text-sm!">Filtrar</button>
-        </form>
-        <Table caption={`Alimentos (${total})`} captionHidden minWidth={820}>
+          <Field label="Buscar" htmlFor="fd-q" className={fw.search}><input id="fd-q" name="q" type="search" defaultValue={sp.q} placeholder="Nombre del alimento" className={inputSm} /></Field>
+          <Field label="Verificado" htmlFor="fd-v" className={fw.select}><select id="fd-v" name="verified" defaultValue={verified ?? ""} className={inputSm}><option value="">Todos</option><option value="si">Sí</option><option value="no">No</option></select></Field>
+        </FilterBar>
+        {rows.length > 0 && <Table caption={`Alimentos (${total})`} captionHidden minWidth={760}>
           <thead className="border-b border-line"><tr><Th>Nombre</Th><Th>Porción</Th><Th className="text-right">Kcal</Th><Th className="text-right"><abbr title="Proteína (g)">P</abbr></Th><Th className="text-right"><abbr title="Carbohidratos (g)">C</abbr></Th><Th className="text-right"><abbr title="Grasa (g)">G</abbr></Th><Th>País</Th><Th>Verificado</Th><Th><span className="sr-only">Acciones</span></Th></tr></thead>
           <tbody>{rows.map((f) => (
-            <tr key={String(f.id)} className="border-b border-line last:border-0 hover:bg-paper/60">
-              <Td className="font-semibold text-ink">{f.name}</Td><Td className="text-muted">{f.portion ?? <Nil />}</Td>
-              <Td className="text-right tabular-nums">{f.kcal ?? <Nil />}</Td><Td className="text-right tabular-nums">{f.protein != null ? fmtNum(f.protein) : <Nil />}</Td><Td className="text-right tabular-nums">{f.carbs != null ? fmtNum(f.carbs) : <Nil />}</Td><Td className="text-right tabular-nums">{f.fat != null ? fmtNum(f.fat) : <Nil />}</Td>
+            <tr key={String(f.id)} className={trHover}>
+              <Td className="font-semibold text-ink">{f.name}</Td><Td className="text-muted whitespace-nowrap">{f.portion ?? <Nil />}</Td>
+              <Td className="text-right">{f.kcal ?? <Nil />}</Td><Td className="text-right">{f.protein != null ? fmtNum(f.protein) : <Nil />}</Td><Td className="text-right">{f.carbs != null ? fmtNum(f.carbs) : <Nil />}</Td><Td className="text-right">{f.fat != null ? fmtNum(f.fat) : <Nil />}</Td>
               <Td>{f.country ?? <Nil />}</Td><Td>{f.verified ? <Badge tone="good">Sí</Badge> : <Badge tone="warn">Revisar</Badge>}</Td>
               <Td className="text-right whitespace-nowrap">
-                <span className="inline-flex gap-2">
-                  <Link href={`/admin/contenido?tab=alimentos&edit=${f.id}${page > 1 ? `&page=${page}` : ""}`} className="btn-ghost h-9! px-3! text-xs!" aria-label={`Editar ${f.name}`}>Editar</Link>
-                  <ConfirmAction action={deleteFood} danger triggerClassName="btn h-9! px-3! text-xs! border border-[#F3C2C4] bg-white text-[#B4232A] hover:bg-[#FDECEC]" trigger={<span>Eliminar<span className="sr-only"> {f.name}</span></span>} title={`Eliminar “${f.name}”`} description="Los registros de comidas ya guardados no cambian." hidden={{ id: String(f.id) }} confirmLabel="Eliminar" />
+                <span className="-my-1 inline-flex gap-1">
+                  <Link href={`/admin/contenido?tab=alimentos&edit=${f.id}${page > 1 ? `&page=${page}` : ""}`} className={rowAction} aria-label={`Editar ${f.name}`}>Editar</Link>
+                  <ConfirmAction action={deleteFood} danger triggerClassName={rowActionDanger} trigger={<span>Eliminar<span className="sr-only"> {f.name}</span></span>} title={`Eliminar “${f.name}”`} description="Los registros de comidas ya guardados no cambian." hidden={{ id: String(f.id) }} confirmLabel="Eliminar" />
                 </span>
               </Td>
             </tr>))}</tbody>
-        </Table>
-        {!rows.length && <div className="card">{sp.q || verified ? <Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=alimentos" className="btn-ghost h-10! px-4! text-sm!">Limpiar filtros</Link>}>Ningún alimento coincide con estos filtros.</Empty> : <Empty title="Sin alimentos">Crea el primero con &quot;Nuevo alimento&quot;.</Empty>}</div>}
+        </Table>}
+        {!rows.length && (sp.q || verified ? <Empty title="Sin resultados" action={<Link href="/admin/contenido?tab=alimentos" className={btnGhost}>Limpiar filtros</Link>}>Ningún alimento coincide con estos filtros.</Empty> : <Empty title="Sin alimentos">Crea el primero con &quot;Nuevo alimento&quot;.</Empty>)}
         <Pagination page={page} total={total} pageSize={PAGE_SIZE} basePath="/admin/contenido" params={{ tab: "alimentos", q: sp.q, verified }} />
       </section>
     );
@@ -260,34 +250,35 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
     return (
       <section aria-labelledby="t-re" className="space-y-4">
         <h2 id="t-re" className="sr-only">Retos</h2>
-        <div className="space-y-2">
-          <h3 className="font-extrabold text-ink">Retos incluidos en la app</h3>
-          <p className="text-sm text-muted">Catálogo base que trae la app (solo lectura). Para cambiarlo, crea un reto editable abajo.</p>
+        <div className="space-y-2.5">
+          <SectionHeading id="re-base" title="Retos incluidos en la app" desc="Catálogo base que trae la app (solo lectura). Para cambiarlo, crea un reto editable abajo." />
           <Table caption="Retos incluidos en la app" captionHidden minWidth={720}>
             <thead className="border-b border-line"><tr><Th>Reto</Th><Th className="text-right">Días</Th><Th>Cómo se verifica</Th><Th>Tarea del día 1</Th><Th className="text-right">XP</Th></tr></thead>
             <tbody>{CHALLENGES.map((c) => (
-              <tr key={c.id} className="border-b border-line last:border-0 align-top">
-                <Td><p className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={c.icon} className="size-5 text-banana-ink" />{c.title}</p><p className="text-xs text-muted max-w-md">{c.desc}</p></Td>
-                <Td className="text-right tabular-nums">{c.days}</Td><Td>{VERIFY[c.verify] ?? c.verify}</Td><Td className="text-muted">{c.task(1)}</Td><Td className="text-right tabular-nums">{fmtNum(c.xp)}</Td>
+              <tr key={c.id} className={`${tr} align-top`}>
+                <Td><p className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={c.icon} className="size-5 shrink-0 text-banana-ink" />{c.title}</p><p className="max-w-md pl-7 text-xs text-muted text-pretty">{c.desc}</p></Td>
+                <Td className="text-right">{c.days}</Td><Td>{VERIFY[c.verify] ?? c.verify}</Td><Td className="text-muted text-pretty">{c.task(1)}</Td><Td className="text-right">{fmtNum(c.xp)}</Td>
               </tr>))}</tbody>
           </Table>
         </div>
-        <h3 className="pt-2 font-extrabold text-ink">Retos editables</h3>
+        <div className="pt-3"><SectionHeading id="re-edit" title="Retos editables" /></div>
         {needsMigration && <MigrationNotice />}
-        <details className="card p-5">
-          <summary className="flex cursor-pointer list-none items-center gap-2 font-bold text-ink rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50"><Plus className="size-4" aria-hidden />Nuevo reto</summary>
+        <div className={`${panel} divide-y divide-line`}>
+        <details className="group p-4">
+          <summary className={`${summaryRow} font-bold text-ink`}><span className={summaryInner}><Plus className="size-4" aria-hidden />Nuevo reto</span><Chevron /></summary>
           <ChallengeForm />
         </details>
         {rows.map((c) => (
-          <details key={c.id} className="card p-5">
-            <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
-              <span className="font-bold text-ink">{c.title}</span><Badge tone={c.active ? "good" : "muted"}>{c.active ? "Activo" : "Borrador"}</Badge><span className="text-xs text-muted">{c.days} días · {c.slug}</span>
+          <details key={c.id} className="group p-4">
+            <summary className={summaryRow}><span className={summaryInner}>
+              <span className="font-semibold text-ink">{c.title}</span><Badge tone={c.active ? "good" : "muted"}>{c.active ? "Activo" : "Borrador"}</Badge><MetaList items={[`${c.days} días`, <code key="s">{c.slug}</code>]} /></span><Chevron />
             </summary>
             <ChallengeForm c={c} />
             <div className="mt-2 flex justify-end"><ConfirmAction action={deleteChallenge} danger trigger="Eliminar reto" title={`Eliminar “${c.title}”`} description="Los usuarios inscritos dejarán de verlo en el catálogo." hidden={{ id: c.id }} confirmLabel="Eliminar" /></div>
           </details>
         ))}
-        {!rows.length && !needsMigration && <div className="card"><Empty title="Aún no hay retos editables">Crea uno con &quot;Nuevo reto&quot;.</Empty></div>}
+        {!rows.length && !needsMigration && <Empty boxed={false} title="Aún no hay retos editables">Crea uno con &quot;Nuevo reto&quot;.</Empty>}
+        </div>
       </section>
     );
   }
@@ -301,25 +292,28 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
       <section aria-labelledby="t-an" className="space-y-4">
         <h2 id="t-an" className="sr-only">Anuncios</h2>
         {needsMigration && <MigrationNotice />}
-        <details className="card p-5">
-          <summary className="flex cursor-pointer list-none items-center gap-2 font-bold text-ink rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50"><Plus className="size-4" aria-hidden />Nuevo anuncio</summary>
+        <div className={`${panel} divide-y divide-line`}>
+        <details className="group p-4">
+          <summary className={`${summaryRow} font-bold text-ink`}><span className={summaryInner}><Plus className="size-4" aria-hidden />Nuevo anuncio</span><Chevron /></summary>
           <AnnouncementForm />
         </details>
         {rows.map((a) => {
           const [l, t] = state(a);
           return (
-            <details key={a.id} className="card p-5">
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
-                <span className="font-bold text-ink">{a.title}</span><Badge tone={t}>{l}</Badge>
-                <span className="text-xs text-muted">Audiencia: {AUD[a.audience] ?? a.audience} · del {fmtDate(a.starts_at)} {a.ends_at ? `al ${fmtDate(a.ends_at)}` : "sin fecha de fin"}</span>
+            <details key={a.id} className="group p-4">
+              <summary className={summaryRow}><span className={summaryInner}>
+                <span className="font-semibold text-ink">{a.title}</span><Badge tone={t}>{l}</Badge>
+                <MetaList items={[`Audiencia: ${AUD[a.audience] ?? a.audience}`, `Del ${fmtDate(a.starts_at)} ${a.ends_at ? `al ${fmtDate(a.ends_at)}` : "sin fecha de fin"}`]} />
+                </span><Chevron />
               </summary>
-              <div className="mt-4"><p className="text-xs font-bold text-muted mb-1">Vista previa</p><AnnouncementCard a={a} /></div>
+              <div className="mt-4"><p className="mb-1 text-xs font-semibold text-muted">Vista previa</p><AnnouncementCard a={a} /></div>
               <AnnouncementForm a={a} />
               <div className="mt-2 flex justify-end"><ConfirmAction action={deleteAnnouncement} danger trigger="Eliminar anuncio" title={`Eliminar “${a.title}”`} hidden={{ id: a.id }} confirmLabel="Eliminar" /></div>
             </details>
           );
         })}
-        {!rows.length && !needsMigration && <div className="card"><Empty title="Sin anuncios">Crea uno con &quot;Nuevo anuncio&quot;.</Empty></div>}
+        {!rows.length && !needsMigration && <Empty boxed={false} title="Sin anuncios">Crea uno con &quot;Nuevo anuncio&quot;.</Empty>}
+        </div>
       </section>
     );
   }

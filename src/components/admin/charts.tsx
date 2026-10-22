@@ -9,9 +9,9 @@ type Point = { day: string; n: number };
 function Frame({ label, summary, data, unit = "", max, children }: { label: string; summary: string; data: Point[]; unit?: string; max: number; children: ReactNode }) {
   const allZero = data.every((d) => d.n === 0);
   return (
-    <figure className="m-0">
+    <figure className="relative m-0">
       {allZero ? (
-        <p className="grid h-36 place-items-center rounded-2xl bg-paper/60 text-sm text-muted">Sin registros en este periodo.</p>
+        <p className="grid h-36 place-items-center rounded-xl bg-paper/60 text-sm text-muted">Sin registros en este periodo.</p>
       ) : (
         <>
           <div className="relative pt-5">
@@ -22,11 +22,14 @@ function Frame({ label, summary, data, unit = "", max, children }: { label: stri
         </>
       )}
       <figcaption className="sr-only">{summary}</figcaption>
-      <table className="sr-only">
-        <caption>{label}: datos por día</caption>
-        <thead><tr><th scope="col">Día</th><th scope="col">Valor</th></tr></thead>
-        <tbody>{data.map((d) => <tr key={d.day}><td>{fmtDay(d.day)}</td><td>{fmtNum(d.n)}{unit}</td></tr>)}</tbody>
-      </table>
+      {/* Un <table> con sr-only no colapsa (las filas siguen sumando alto); se oculta el contenedor. */}
+      <div className="sr-only">
+        <table>
+          <caption>{label}: datos por día</caption>
+          <thead><tr><th scope="col">Día</th><th scope="col">Valor</th></tr></thead>
+          <tbody>{data.map((d) => <tr key={d.day}><td>{fmtDay(d.day)}</td><td>{fmtNum(d.n)}{unit}</td></tr>)}</tbody>
+        </table>
+      </div>
     </figure>
   );
 }
@@ -102,9 +105,9 @@ export function Sparkline({ values, label, width = 240, height = 56 }: { values:
         <circle cx={x(values.length - 1)} cy={y(last.kg)} r={3} fill="var(--color-ember)" />
       </svg>
       <figcaption className="mt-1 flex flex-wrap justify-between gap-x-3 text-xs text-muted tabular-nums">
-        <span>{kg(first.kg)} · {fmtDay(first.day)}</span>
+        <span>{kg(first.kg)}, {fmtDay(first.day)}</span>
         <span className={diff <= 0 ? "text-peel font-bold" : "text-bad font-bold"}>{sign}{kg(diff)}</span>
-        <span>{kg(last.kg)} · {fmtDay(last.day)}</span>
+        <span>{kg(last.kg)}, {fmtDay(last.day)}</span>
       </figcaption>
     </figure>
   );
@@ -115,9 +118,9 @@ export function ActivityStrip({ days, today, label }: { days: string[]; today: s
   const set = new Set(days);
   const cells = Array.from({ length: 28 }, (_, i) => { const d = new Date(Date.parse(today + "T00:00:00Z") - (27 - i) * 864e5).toISOString().slice(0, 10); return { d, on: set.has(d) }; });
   return (
-    <div>
+    <div className="max-w-md">
       <div role="img" aria-label={`${label}: ${cells.filter((c) => c.on).length} de 28 días.`} className="grid gap-1" style={{ gridTemplateColumns: "repeat(14, minmax(0, 1fr))" }}>
-        {cells.map((c) => <span key={c.d} title={`${fmtDay(c.d)}${c.on ? ": con entreno" : ""}`} className={`aspect-square rounded-[4px] ${c.on ? "bg-peel" : "bg-line"}`} />)}
+        {cells.map((c) => <span key={c.d} title={`${fmtDay(c.d)}${c.on ? ": con entreno" : ""}`} className={`aspect-square rounded-[3px] ${c.on ? "bg-peel" : "bg-line"}`} />)}
       </div>
       <div className="mt-1 flex justify-between text-xs text-muted" aria-hidden><span>{fmtDay(cells[0].d)}</span><span>Hoy</span></div>
     </div>
