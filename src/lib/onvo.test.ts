@@ -79,7 +79,8 @@ describe("evento → acción", () => {
   it("payment-intent.succeeded pide verificar con ONVO (no otorga a ciegas)", () => {
     const a = actionForEvent({ type: "payment-intent.succeeded", data: { id: "pi_9", amount: 5999, currency: "USD", customer: { id: "cus_2" } } });
     expect(a).toEqual({ kind: "verify_customer", customerId: "cus_2", paymentIntentId: "pi_9", amountMinor: 5999, currency: "USD" });
-    expect(actionForEvent({ type: "payment-intent.succeeded", data: { id: "pi_9" } }).kind).toBe("ignore");
+    expect(actionForEvent({ type: "payment-intent.succeeded", data: { id: "pi_9" } })).toEqual({ kind: "payment_intent", paymentIntentId: "pi_9", amountMinor: null, currency: null });
+    expect(actionForEvent({ type: "payment-intent.succeeded", data: {} }).kind).toBe("ignore");
   });
   it("otros eventos solo se registran", () => {
     for (const type of ["payment-intent.failed", "payment-intent.deferred", "checkout-session.succeeded", "mobile-transfer.received", "algo.nuevo"]) {

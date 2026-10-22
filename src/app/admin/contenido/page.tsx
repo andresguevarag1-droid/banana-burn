@@ -1,16 +1,15 @@
 import Link from "next/link";
-import { OrangeSlice as Apple, BookOpen, CaretDown, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, Flag as Trophy, BrandIcon } from "@/components/icons";
+import { OrangeSlice as Apple, BookOpen, CaretDown, CookingPot as ChefHat, Barbell as Dumbbell, Megaphone, Plus, BrandIcon } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
-import { getAnnouncements, getChallenges, getExercises, getFoods, PAGE_SIZE, type AnnouncementRow, type ChallengeRow, type FoodRow } from "@/lib/admin";
+import { getAnnouncements, getExercises, getFoods, PAGE_SIZE, type AnnouncementRow, type FoodRow } from "@/lib/admin";
 import { can, type Capability } from "@/lib/admin-perms";
 import { FOOD_GROUPS } from "@/lib/foods";
 import { BODY, DS_ID, EQUIP, es, LIB_COUNT, MUSCLE, searchLibrary } from "@/lib/library";
 import { RECIPES } from "@/lib/recipes";
-import { CHALLENGES } from "@/lib/challenges";
 import { ActionForm, ConfirmAction, Submit } from "@/components/admin/action-form";
 import { AnnouncementCard } from "@/components/admin/announcement-banner";
 import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, MigrationNotice, Nil, Notice, PageHeader, Pagination, SectionHeading, SubTabs, Table, Td, Th, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, rowAction, rowActionDanger, textareaSm, tr, trHover } from "@/components/admin/ui";
-import { deleteAnnouncement, deleteChallenge, deleteFood, resetExercise, saveAnnouncement, saveChallenge, saveExercise, saveFood, seedFoods } from "../actions";
+import { deleteAnnouncement, deleteFood, resetExercise, saveAnnouncement, saveExercise, saveFood, seedFoods } from "../actions";
 
 export const metadata = { title: "Contenido" };
 
@@ -19,14 +18,12 @@ const TABS: { key: string; label: string; cap: Capability; icon: typeof Dumbbell
   { key: "biblioteca", label: "Biblioteca", cap: "content.exercises", icon: BookOpen },
   { key: "alimentos", label: "Alimentos", cap: "content.foods", icon: Apple },
   { key: "recetas", label: "Recetas", cap: "content.foods", icon: ChefHat },
-  { key: "retos", label: "Retos", cap: "content.challenges", icon: Trophy },
   { key: "anuncios", label: "Anuncios", cap: "content.announcements", icon: Megaphone },
 ];
 type SP = { tab?: string; q?: string; page?: string; edit?: string; verified?: string; bp?: string; eq?: string; slot?: string };
 const LIB_PER = 25;
 const ENGINE_IDS = new Set(Object.values(DS_ID));
 const SLOT: Record<string, string> = { desayuno: "Desayuno", almuerzo: "Almuerzo", merienda: "Merienda", cena: "Cena" };
-const VERIFY: Record<string, string> = { manual: "Manual (el usuario marca)", workout: "Entreno registrado", steps: "Pasos registrados", protein: "Meta de proteína", water: "Vasos de agua" };
 
 const textarea = textareaSm;
 /** Fila plegable (ejercicio, reto, anuncio): resumen clicable con flecha, sin animación. */
@@ -46,14 +43,13 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Contenido" desc="Ejercicios, alimentos, recetas, retos y anuncios que ve la app." />
+      <PageHeader title="Contenido" desc={<>Ejercicios, alimentos, recetas y anuncios que ve la app. Los retos se administran en <Link href="/admin/retos" className="font-semibold text-ink underline underline-offset-2">Retos</Link>.</>} />
       {v.demo && <DemoNotice what="el contenido" />}
       <SubTabs label="Tipos de contenido" items={tabs.map((t) => ({ href: `/admin/contenido?tab=${t.key}`, label: t.label, icon: t.icon, current: t.key === tab.key }))} />
       {tab.key === "ejercicios" && <Exercises q={sp.q} />}
       {tab.key === "biblioteca" && <Library sp={sp} />}
       {tab.key === "alimentos" && <Foods sp={sp} />}
       {tab.key === "recetas" && <Recipes sp={sp} />}
-      {tab.key === "retos" && <Challenges />}
       {tab.key === "anuncios" && <Announcements />}
     </div>
   );
@@ -246,45 +242,6 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
     );
   }
 
-  // ─────────── Retos ───────────
-  async function Challenges() {
-    const { rows, needsMigration } = await getChallenges(v);
-    return (
-      <section aria-labelledby="t-re" className="space-y-4">
-        <h2 id="t-re" className="sr-only">Retos</h2>
-        <div className="space-y-2.5">
-          <SectionHeading id="re-base" title="Retos incluidos en la app" desc="Catálogo base (solo lectura). Para reemplazar uno, crea un reto editable con el mismo identificador." />
-          <Table caption="Retos incluidos en la app" captionHidden minWidth={720}>
-            <thead className="border-b border-line"><tr><Th>Reto</Th><Th className="text-right">Días</Th><Th>Cómo se verifica</Th><Th>Tarea del día 1</Th><Th className="text-right">XP</Th></tr></thead>
-            <tbody>{CHALLENGES.map((c) => (
-              <tr key={c.id} className={`${tr} align-top`}>
-                <Td><p className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={c.icon} className="size-5 shrink-0 text-banana-ink" />{c.title}</p><p className="max-w-md pl-7 text-xs text-muted text-pretty">{c.desc}</p></Td>
-                <Td className="text-right">{c.days}</Td><Td>{VERIFY[c.verify] ?? c.verify}</Td><Td className="text-muted text-pretty">{c.task(1)}</Td><Td className="text-right">{fmtNum(c.xp)}</Td>
-              </tr>))}</tbody>
-          </Table>
-        </div>
-        <div className="pt-3"><SectionHeading id="re-edit" title="Retos editables" desc="Los activos aparecen en la app de inmediato, junto a los incluidos. Los borradores no se muestran." /></div>
-        {needsMigration && <MigrationNotice />}
-        <div className={`${panel} divide-y divide-line`}>
-        <details className="group p-4">
-          <summary className={`${summaryRow} font-bold text-ink`}><span className={summaryInner}><Plus className="size-4" aria-hidden />Nuevo reto</span><Chevron /></summary>
-          <ChallengeForm />
-        </details>
-        {rows.map((c) => (
-          <details key={c.id} className="group p-4">
-            <summary className={summaryRow}><span className={summaryInner}>
-              <span className="font-semibold text-ink">{c.title}</span><Badge tone={c.active ? "good" : "muted"}>{c.active ? "Activo" : "Borrador"}</Badge><MetaList items={[`${c.days} días`, <code key="s">{c.slug}</code>]} /></span><Chevron />
-            </summary>
-            <ChallengeForm c={c} />
-            <div className="mt-2 flex justify-end"><ConfirmAction action={deleteChallenge} danger trigger="Eliminar reto" title={`Eliminar “${c.title}”`} description="Desaparece del catálogo y los usuarios inscritos dejan de verlo en sus retos en curso." hidden={{ id: c.id }} confirmLabel="Eliminar" /></div>
-          </details>
-        ))}
-        {!rows.length && !needsMigration && <Empty boxed={false} title="Aún no hay retos editables">Crea uno con &quot;Nuevo reto&quot;.</Empty>}
-        </div>
-      </section>
-    );
-  }
-
   // ─────────── Anuncios ───────────
   async function Announcements() {
     const { rows, needsMigration } = await getAnnouncements(v);
@@ -338,25 +295,6 @@ function FoodForm({ f }: { f?: FoodRow }) {
       <Field label="País" htmlFor={`fd-co-${k}`} hint="Código ISO de 2 letras"><input id={`fd-co-${k}`} name="country" maxLength={2} defaultValue={f?.country ?? "CR"} className={`${inputSm} uppercase`} /></Field>
       <label className="flex items-center gap-2 text-sm text-ink self-center"><input type="checkbox" name="verified" defaultChecked={f?.verified ?? false} className={check} />Macros verificados</label>
       <div className="col-span-2 flex items-end justify-end"><Submit>{f ? "Guardar cambios" : "Crear alimento"}</Submit></div>
-    </ActionForm>
-  );
-}
-
-function ChallengeForm({ c }: { c?: ChallengeRow }) {
-  const k = c?.id ?? "new";
-  return (
-    <ActionForm action={saveChallenge} resetOnSuccess={!c} className="mt-4 grid gap-3 md:grid-cols-4">
-      {c && <input type="hidden" name="id" value={c.id} />}
-      <Field label="Título" htmlFor={`ch-t-${k}`} className="md:col-span-2"><input id={`ch-t-${k}`} name="title" required minLength={3} maxLength={80} defaultValue={c?.title} className={inputSm} /></Field>
-      <Field label="Identificador (slug)" htmlFor={`ch-s-${k}`} hint="Vacío = se genera del título"><input id={`ch-s-${k}`} name="slug" maxLength={60} defaultValue={c?.slug} pattern="[a-z0-9\-]*" className={inputSm} /></Field>
-      <Field label="Duración (días)" htmlFor={`ch-d-${k}`}><input id={`ch-d-${k}`} name="days" type="number" required min={1} max={365} defaultValue={c?.days ?? 21} className={inputSm} /></Field>
-      <Field label="Descripción" htmlFor={`ch-de-${k}`} className="md:col-span-2"><textarea id={`ch-de-${k}`} name="description" rows={3} maxLength={600} defaultValue={c?.description ?? ""} className={textarea} /></Field>
-      <Field label="Reglas (JSON)" htmlFor={`ch-r-${k}`} className="md:col-span-2" hint='Claves que lee la app: verify (manual, workout, steps, protein o water), tarea, comodines, xp (máx. 400), pasosMin e icono. Ej.: {"verify": "workout", "comodines": 2}'>
-        <textarea id={`ch-r-${k}`} name="rules" rows={3} defaultValue={c ? JSON.stringify(c.rules, null, 2) : "{}"} className={`${textarea} font-mono text-xs!`} spellCheck={false} />
-      </Field>
-      <Field label="Orden" htmlFor={`ch-o-${k}`}><input id={`ch-o-${k}`} name="sort" type="number" min={0} max={999} defaultValue={c?.sort ?? 0} className={inputSm} /></Field>
-      <label className="flex items-center gap-2 text-sm text-ink self-center"><input type="checkbox" name="active" defaultChecked={c?.active ?? false} className={check} />Activo (visible en la app)</label>
-      <div className="md:col-span-2 flex items-end justify-end"><Submit>{c ? "Guardar reto" : "Crear reto"}</Submit></div>
     </ActionForm>
   );
 }

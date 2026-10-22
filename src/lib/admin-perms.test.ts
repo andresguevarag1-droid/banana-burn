@@ -27,10 +27,11 @@ describe("matriz de permisos", () => {
     expect(can("support", "metrics.revenue")).toBe(false);
   });
   it("secciones visibles por rol", () => {
-    const vis = (r: Role) => (["resumen", "usuarios", "pagos", "contenido", "comunidad", "auditoria"] as Section[]).filter((s) => canSee(r, s));
-    expect(vis("coach")).toEqual(["resumen", "usuarios", "contenido", "comunidad"]);
+    const vis = (r: Role) => (["resumen", "usuarios", "pagos", "contenido", "retos", "comunidad", "auditoria"] as Section[]).filter((s) => canSee(r, s));
+    expect(vis("coach")).toEqual(["resumen", "usuarios", "contenido", "retos", "comunidad"]);
     expect(vis("support")).toEqual(["resumen", "usuarios", "pagos", "comunidad"]);
-    expect(vis("admin")).toHaveLength(6);
+    expect(vis("admin")).toHaveLength(7);
+    expect(vis("superadmin")).toHaveLength(7);
     expect(vis("free")).toEqual([]);
   });
   it("suspender: soporte y admin; borrar cuentas: solo admin", () => {
@@ -106,5 +107,21 @@ describe("validación manual", () => {
     expect(val.bool(fd({}), "c")).toBe(false);
     expect(val.slugify("Reto 21 días ¡sin excusas!")).toBe("reto-21-dias-sin-excusas");
     expect(val.lines(fd({ l: "a\n\n b \nc" }), "l")).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("sección Retos (tienda)", () => {
+  it("la ven superadmin, admin y coach (gestionan contenido); soporte y usuarios no", () => {
+    expect(canSee("superadmin", "retos")).toBe(true);
+    expect(canSee("admin", "retos")).toBe(true);
+    expect(canSee("coach", "retos")).toBe(true);
+    expect(canSee("support", "retos")).toBe(false);
+    expect(canSee("free", "retos")).toBe(false);
+  });
+  it("ventas y cortesías de retos: solo staff de cuentas", () => {
+    expect(can("superadmin", "challenges.sales")).toBe(true);
+    expect(can("coach", "challenges.sales")).toBe(false);
+    expect(can("coach", "challenges.grant")).toBe(false);
+    expect(can("admin", "challenges.grant")).toBe(true);
   });
 });

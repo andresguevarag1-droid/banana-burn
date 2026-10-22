@@ -12,7 +12,7 @@ const hint = (m: Pick<MyChallenge, "c">) => {
 };
 
 export const toView = (m: MyChallenge): ChallengeView => ({
-  ucId: m.ucId, c: { id: m.c.id, title: m.c.title, icon: m.c.icon, days: m.c.days, verify: m.c.verify, color: m.c.color, xp: m.c.xp },
+  ucId: m.ucId, c: { id: m.c.id, title: m.c.title, icon: m.c.icon, days: m.c.days, verify: m.c.verify, color: m.c.color, xp: m.c.xp, cover: m.c.cover, badge: m.c.badge },
   task: m.c.task(m.state.day), day: m.state.day, completed: m.state.completed, todayDone: m.state.todayDone, cells: m.state.cells, autoOk: m.autoOk, hint: hint(m),
   grace: m.state.grace, graceLeft: m.state.graceLeft, need: m.state.need, pendingSync: Boolean(m.pendingSync),
 });

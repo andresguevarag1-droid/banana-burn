@@ -23,7 +23,9 @@ export type Capability =
   | "metrics.revenue"     // MRR, conversión y churn en el resumen
   | "payments.view"
   | "content.exercises"
-  | "content.challenges"
+  | "content.challenges"   // crear, editar, ocultar, ordenar y publicar retos de la tienda
+  | "challenges.sales"     // compras e ingresos por reto, lista de compradores
+  | "challenges.grant"     // regalar un reto de pago (cortesía, auditada)
   | "content.foods"
   | "content.announcements"
   | "community.moderate"
@@ -47,6 +49,8 @@ export const MATRIX: Record<Capability, Role[]> = {
   "payments.view": SUPPORT_ADMIN,
   "content.exercises": COACH_ADMIN,
   "content.challenges": COACH_ADMIN,
+  "challenges.sales": SUPPORT_ADMIN,
+  "challenges.grant": SUPPORT_ADMIN,
   "content.foods": COACH_ADMIN,
   "content.announcements": PRIVILEGED,
   "community.moderate": ALL_STAFF,
@@ -57,14 +61,15 @@ export function can(role: Role | null | undefined, cap: Capability): boolean {
   return !!role && MATRIX[cap].includes(role);
 }
 
-export type Section = "resumen" | "usuarios" | "pagos" | "contenido" | "comunidad" | "auditoria";
+export type Section = "resumen" | "usuarios" | "pagos" | "contenido" | "retos" | "comunidad" | "auditoria";
 
 /** Una sección es visible si el rol tiene al menos una de sus capacidades. */
 export const SECTION_CAPS: Record<Section, Capability[]> = {
   resumen: ["users.view"],
   usuarios: ["users.view"],
   pagos: ["payments.view"],
-  contenido: ["content.exercises", "content.challenges", "content.foods", "content.announcements"],
+  contenido: ["content.exercises", "content.foods", "content.announcements"],
+  retos: ["content.challenges"],
   comunidad: ["community.moderate"],
   auditoria: ["audit.view"],
 };

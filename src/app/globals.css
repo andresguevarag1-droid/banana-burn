@@ -209,3 +209,23 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 @keyframes mg-rise { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .mg-draw, .mg-fade, .mg-head, .mg-pop, .mg-rise { animation: none; stroke-dashoffset: 0; opacity: 1; } }
 @keyframes menu-in { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
+
+/* ---------- Niveles y retos: celebraciones cortas (ease-out, menos de 300 ms, nunca desde scale(0)) ---------- */
+@keyframes bb-celebrate-in { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes bb-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bb-check-pop { from { transform: scale(.85); } to { transform: scale(1); } }
+@keyframes bb-check-draw { to { stroke-dashoffset: 0; } }
+@keyframes bb-ring { from { opacity: .55; transform: scale(.9); } to { opacity: 0; transform: scale(1.35); } }
+.bb-celebrate { animation: bb-celebrate-in 280ms var(--ease-out) both; }
+.bb-backdrop { animation: bb-backdrop-in 200ms var(--ease-out) both; }
+.bb-out { opacity: 0 !important; transform: translate3d(0, 6px, 0) !important; transition: opacity var(--dur-exit) var(--ease-out), transform var(--dur-exit) var(--ease-out); }
+.bb-check-pop { animation: bb-check-pop 220ms var(--ease-out) both; }
+.bb-check-draw path, .bb-check-draw polyline { stroke-dasharray: 24; stroke-dashoffset: 24; animation: bb-check-draw 240ms var(--ease-out) 40ms forwards; }
+.bb-ring { animation: bb-ring 280ms var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .bb-celebrate, .bb-backdrop { animation-name: fade !important; animation-duration: var(--dur-fast) !important; transform: none !important; }
+  .bb-out { transform: none !important; }
+  .bb-check-pop, .bb-ring { animation: none !important; }
+  .bb-ring { opacity: 0; }
+  .bb-check-draw path, .bb-check-draw polyline { animation: none !important; stroke-dashoffset: 0; }
+}

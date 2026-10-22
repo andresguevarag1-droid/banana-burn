@@ -1,0 +1,185 @@
+"use server";
+// Acciones del panel para la tienda de retos. Cada una: autoriza en el servidor (content.challenges o challenges.grant),
+// valida a mano, muta con el cliente del usuario (RLS de 0018 vuelve a validar) y escribe en auditoría.
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import * as val from "@/lib/admin-validate";
+import { ValidationError } from "@/lib/admin-validate";
+import { audit, DEMO_MSG, fail, ok, pgMessage, run } from "@/lib/admin-action-kit";
+import { COVERS, ICONS, MAX_CHALLENGE_XP, MAX_PRICE_USD, MIN_PRICE_USD, parsePlan, type ChallengeStatus } from "@/lib/challenges";
+import type { ActionState } from "../actions";
+
+const STATUSES: ChallengeStatus[] = ["borrador", "publicado", "oculto", "archivado"];
+const VERIFY = ["manual", "workout", "steps", "protein", "water"] as const;
+const DIFF = ["facil", "media", "dificil"] as const;
+
+const refresh = (slug?: string) => {
+  revalidatePath("/admin/retos", "layout");
+  revalidatePath("/app/retos", "layout");
+  if (slug) revalidatePath(`/app/retos/${slug}`);
+};
+
+/** Lee y valida el formulario del editor. Pura respecto a la BD (lanza ValidationError con mensajes en español). */
+function readForm(fd: FormData) {
+  const title = val.text(fd, "title", { label: "Título", required: true, min: 3, max: 80 });
+  const days = val.int(fd, "days", { label: "Duración", required: true, min: 1, max: 365 })!;
+  const verify = val.oneOf(fd, "verify", VERIFY, { label: "Verificación" });
+  const price = val.num(fd, "price_usd", { label: "Precio", min: 0, max: MAX_PRICE_USD }) ?? 0;
+  if (price > 0 && price < MIN_PRICE_USD) throw new ValidationError(`El precio mínimo de un reto de pago es $${MIN_PRICE_USD.toFixed(2)} (mínimo de ONVO).`);
+  const startMode = val.oneOf(fd, "start_mode", ["libre", "fecha"] as const, { fallback: "libre" });
+  const startDate = startMode === "fecha" ? val.date(fd, "start_date", { label: "Fecha de inicio", required: true }) : null;
+  const status = val.oneOf(fd, "status", STATUSES, { label: "Estado" });
+  const grace = val.int(fd, "grace", { label: "Comodines", min: 0, max: 60 }) ?? 0;
+  if (grace >= days) throw new ValidationError("Los comodines deben ser menos que los días del reto.");
+  const icon = val.text(fd, "icon", { max: 24 }) || "medal";
+  if (!ICONS.includes(icon)) throw new ValidationError("Ícono inválido.");
+  const onvo = val.text(fd, "onvo_price_id", { label: "ID de precio de ONVO", max: 80 }) || null;
+  if (onvo && !/^[A-Za-z0-9_\-]+$/.test(onvo)) throw new ValidationError("El ID de precio de ONVO solo lleva letras, números, guiones y guiones bajos.");
+  let plan: ReturnType<typeof parsePlan>;
+  try { plan = parsePlan(JSON.parse(val.text(fd, "plan", { max: 200_000 }) || "[]"), days); } catch { throw new ValidationError("El plan día a día no es válido."); }
+  if (status === "publicado" && plan.length < days) throw new ValidationError(`Para publicar, el plan debe tener los ${days} días (tiene ${plan.length}). Usa los ayudantes para rellenarlo.`);
+  return {
+    row: {
+      title, days, verify, status, icon, grace,
+      description: val.text(fd, "description", { label: "Descripción", max: 600 }) || null,
+      price_usd: Math.round(price * 100) / 100,
+      onvo_price_id: onvo,
+      difficulty: val.oneOf(fd, "difficulty", DIFF, { fallback: "media" }),
+      minutes: val.int(fd, "minutes", { label: "Minutos al día", required: true, min: 1, max: 240 })!,
+      cover: val.oneOf(fd, "cover", COVERS, { fallback: "banana" }),
+      xp: val.int(fd, "xp", { label: "XP al completar", required: true, min: 0, max: MAX_CHALLENGE_XP })!,
+      steps_goal: verify === "steps" ? val.int(fd, "steps_goal", { label: "Meta de pasos", required: true, min: 1000, max: 50000 }) : null,
+      badge: val.text(fd, "badge", { label: "Medalla", required: true, min: 3, max: 60 }),
+      reward_title: val.text(fd, "reward_title", { label: "Título de recompensa", max: 40 }) || null,
+      start_mode: startMode, start_date: startDate ? startDate.slice(0, 10) : null,
+      featured: val.bool(fd, "featured"), coming_soon: val.bool(fd, "coming_soon"),
+      safety_note: val.text(fd, "safety_note", { label: "Nota de seguridad", max: 600 }) || null,
+      sort: val.int(fd, "sort", { label: "Orden", min: 0, max: 9999 }) ?? 0,
+    },
+    plan,
+  };
+}
+
+export async function saveStoreChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
+  let created: string | null = null;
+  const res = await run("content.challenges", fd, async ({ v, sb }) => {
+    const id = val.text(fd, "id", { max: 64 });
+    if (id && sb && !val.isUuid(id)) return fail("Reto inválido.");
+    const { row, plan } = readForm(fd);
+    if (!sb) return ok(`Reto ${id ? "guardado" : "creado"}${DEMO_MSG}`);
+    let slug: string, uuid: string;
+    if (id) {
+      // El identificador no cambia al editar: lo guardan las inscripciones y compras.
+      const { data, error } = await sb.from("challenges_catalog").update({ ...row, updated_by: v.id }).eq("id", id).select("id,slug").single();
+      if (error) return fail(pgMessage(error));
+      slug = data.slug; uuid = data.id;
+    } else {
+      slug = val.slugify(val.text(fd, "slug", { max: 60 }) || row.title);
+      if (slug.length < 2) return fail("El identificador (slug) es muy corto.");
+      const { data, error } = await sb.from("challenges_catalog").insert({ ...row, slug, rules: {}, created_by: v.id, updated_by: v.id }).select("id,slug").single();
+      if (error) return fail(pgMessage(error));
+      slug = data.slug; uuid = data.id;
+    }
+    const { error: pe } = await sb.from("challenge_plans").upsert({ slug, days: plan, updated_by: v.id, updated_at: new Date().toISOString() }, { onConflict: "slug" });
+    if (pe) return fail(pgMessage(pe));
+    await audit(sb, v, id ? "challenge.update" : "challenge.create", `challenge:${slug}`, { title: row.title, status: row.status, price_usd: row.price_usd, days: row.days, plan_days: plan.length });
+    refresh(slug);
+    if (!id) created = uuid;
+    return ok(id ? "Reto guardado. Quedó en auditoría." : "Reto creado. Quedó en auditoría.");
+  });
+  if (created) redirect(`/admin/retos/${created}?nuevo=1`); // fuera de run(): redirect() lanza una excepción de Next
+  return res;
+}
+
+export async function setChallengeStatus(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run("content.challenges", fd, async ({ v, sb }) => {
+    const id = val.text(fd, "id", { required: true, max: 64, label: "Reto" });
+    const status = val.oneOf(fd, "status", STATUSES, { label: "Estado" });
+    if (!sb) return ok(`Estado cambiado a ${status}${DEMO_MSG}`);
+    if (!val.isUuid(id)) return fail("Reto inválido.");
+    if (status === "publicado") {
+      const { data: c } = await sb.from("challenges_catalog").select("slug,days").eq("id", id).maybeSingle();
+      const { data: p } = c ? await sb.from("challenge_plans").select("days").eq("slug", c.slug).maybeSingle() : { data: null };
+      if (!c || parsePlan(p?.days, c.days).length < c.days) return fail("Para publicar, completa el plan de todos los días en el editor.");
+    }
+    const { data, error } = await sb.from("challenges_catalog").update({ status, updated_by: v.id }).eq("id", id).select("slug,title").single();
+    if (error) return fail(pgMessage(error));
+    await audit(sb, v, "challenge.status", `challenge:${data.slug}`, { title: data.title, status });
+    refresh(data.slug);
+    return ok(status === "oculto" ? "Reto oculto: ya no aparece en la tienda. Quien ya está inscrito puede terminarlo." : status === "publicado" ? "Reto publicado en la tienda." : `Estado: ${status}.`);
+  });
+}
+
+export async function duplicateChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
+  let created: string | null = null;
+  const res = await run("content.challenges", fd, async ({ v, sb }) => {
+    const id = val.text(fd, "id", { required: true, max: 64, label: "Reto" });
+    if (!sb) return ok(`Reto duplicado como borrador${DEMO_MSG}`);
+    if (!val.isUuid(id)) return fail("Reto inválido.");
+    const { data: src, error } = await sb.from("challenges_catalog").select("*").eq("id", id).single();
+    if (error || !src) return fail(pgMessage(error));
+    const { data: taken } = await sb.from("challenges_catalog").select("slug").like("slug", `${src.slug}-copia%`);
+    const used = new Set(((taken ?? []) as { slug: string }[]).map((x) => x.slug));
+    let slug = `${src.slug}-copia`.slice(0, 60);
+    for (let i = 2; used.has(slug); i++) slug = `${src.slug}-copia-${i}`.slice(0, 60);
+    const { id: _i, created_at: _c, updated_at: _u, active: _a, ...rest } = src as Record<string, unknown>;
+    void _i; void _c; void _u; void _a;
+    const { data: ins, error: e2 } = await sb.from("challenges_catalog").insert({ ...rest, slug, title: `${String(src.title).slice(0, 72)} (copia)`, status: "borrador", featured: false, created_by: v.id, updated_by: v.id }).select("id").single();
+    if (e2) return fail(pgMessage(e2));
+    const { data: p } = await sb.from("challenge_plans").select("days").eq("slug", src.slug).maybeSingle();
+    if (p) await sb.from("challenge_plans").insert({ slug, days: p.days, updated_by: v.id });
+    await audit(sb, v, "challenge.duplicate", `challenge:${slug}`, { from: src.slug });
+    refresh();
+    created = ins.id as string;
+    return ok("Reto duplicado como borrador.");
+  });
+  if (created) redirect(`/admin/retos/${created}?nuevo=1`);
+  return res;
+}
+
+export async function moveChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run("content.challenges", fd, async ({ v, sb }) => {
+    const id = val.text(fd, "id", { required: true, max: 64, label: "Reto" });
+    const dir = val.oneOf(fd, "dir", ["arriba", "abajo"] as const, { label: "Dirección" });
+    if (!sb) return ok(`Orden cambiado${DEMO_MSG}`);
+    if (!val.isUuid(id)) return fail("Reto inválido.");
+    const { data: all, error } = await sb.from("challenges_catalog").select("id,slug,sort").order("sort").order("created_at");
+    if (error) return fail(pgMessage(error));
+    const list = (all ?? []) as { id: string; slug: string; sort: number }[];
+    const i = list.findIndex((x) => x.id === id), j = dir === "arriba" ? i - 1 : i + 1;
+    if (i < 0 || j < 0 || j >= list.length) return ok("Ya está en el extremo.");
+    [list[i], list[j]] = [list[j], list[i]];
+    // Reescribe el orden en pasos de 10 (estable aunque hubiera empates).
+    for (let k = 0; k < list.length; k++) {
+      if (list[k].sort === (k + 1) * 10) continue;
+      const { error: e } = await sb.from("challenges_catalog").update({ sort: (k + 1) * 10 }).eq("id", list[k].id);
+      if (e) return fail(pgMessage(e));
+    }
+    await audit(sb, v, "challenge.reorder", `challenge:${list[j].slug}`, { dir, position: j + 1 });
+    refresh();
+    return ok("Orden actualizado.");
+  });
+}
+
+/** Cortesía: regala un reto (normalmente de pago) a un usuario por correo o ID. La RPC valida el rol y audita. */
+export async function grantChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run("challenges.grant", fd, async ({ sb }) => {
+    const slug = val.text(fd, "slug", { required: true, max: 60, label: "Reto" });
+    const who = val.text(fd, "who", { required: true, max: 120, label: "Correo o ID del usuario" }).trim();
+    const reason = val.text(fd, "reason", { label: "Motivo", required: true, min: 4, max: 300 });
+    if (!sb) return ok(`Reto regalado a ${who}${DEMO_MSG}`);
+    let target = val.isUuid(who) ? who : null;
+    if (!target) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who)) return fail("Escribe un correo válido o el ID del usuario.");
+      const { data, error } = await sb.rpc("admin_list_users", { p_q: who, p_limit: 5, p_offset: 0 });
+      if (error) return fail(pgMessage(error));
+      const hit = ((data ?? []) as { id: string; email: string | null }[]).find((u) => (u.email ?? "").toLowerCase() === who.toLowerCase());
+      if (!hit) return fail("No encontramos un usuario con ese correo.");
+      target = hit.id;
+    }
+    const { error } = await sb.rpc("admin_grant_challenge", { p_target: target, p_slug: slug, p_reason: reason });
+    if (error) return fail(pgMessage(error));
+    refresh(slug);
+    return ok("Reto regalado. Ya puede empezarlo. Quedó en auditoría.");
+  });
+}

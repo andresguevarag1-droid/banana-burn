@@ -4,9 +4,22 @@ import { getViewer } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { getPublicProfile } from "@/lib/community";
 import { PostCard } from "@/components/post-card";
-import { ArrowLeft, Globe, Lock, MonkeyBanana, Users } from "@/components/icons";
+import { ArrowLeft, Globe, LevelIcon, Lock, MonkeyBanana, Users } from "@/components/icons";
 import { FollowButton } from "../../follow";
 import { ReportUser } from "./report-user";
+import { createClient } from "@/lib/supabase/server";
+import { getXpTotal } from "@/lib/xp-server";
+import { levelOf, perksAt } from "@/lib/gamify";
+import { FRAME_RING } from "@/components/levels/level-badge";
+
+/** XP público (solo total; nada si el perfil es privado). En demo solo se conoce el propio, no se inventa el de otros. */
+async function publicXp(v: Awaited<ReturnType<typeof getViewer>>, id: string, me: boolean): Promise<number | null> {
+  if (!v) return null;
+  if (me) return getXpTotal(v);
+  if (v.demo) return null;
+  const { data, error } = await (await createClient()).rpc("community_xp", { p_user: id });
+  return error || data === null ? null : Number(data);
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -18,17 +31,20 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
   const v = (await getViewer())!;
   const p = await getPublicProfile(v, decodeURIComponent(username));
   if (!p) notFound();
-  const a = await getAthlete(v);
+  const [a, xp] = await Promise.all([getAthlete(v), publicXp(v, p.id, p.me).catch(() => null)]);
+  const lv = xp !== null ? levelOf(xp) : null;
+  const frame = lv ? perksAt(lv.idx).frame : null;
   const fmt = (n: number) => n.toLocaleString("es-419");
   return (
     <div className="space-y-5 animate-enter max-w-2xl">
       <Link href="/app/comunidad" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Comunidad</Link>
       <header className="card p-5">
         <div className="flex items-start gap-4">
-          <span className="grid place-items-center size-16 shrink-0 rounded-3xl bg-banana text-2xl font-extrabold text-ink" aria-hidden>{p.name[0]?.toUpperCase()}</span>
+          <span className={`grid place-items-center size-16 shrink-0 rounded-3xl bg-banana text-2xl font-extrabold text-ink ${frame ? FRAME_RING[frame] : ""}`} aria-hidden>{p.name[0]?.toUpperCase()}</span>
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-extrabold tracking-tight text-ink truncate">{p.name}</h1>
             <p className="text-sm text-faint truncate">@{p.username}</p>
+            {lv && <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-banana-soft px-2 py-0.5 text-xs font-bold text-banana-ink"><LevelIcon idx={lv.idx} className="size-3.5" />{lv.n}, nivel {lv.idx}</p>}
             {p.bio && <p className="mt-2 text-[15px] text-body break-words">{p.bio}</p>}
           </div>
         </div>

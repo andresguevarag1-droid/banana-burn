@@ -19,6 +19,7 @@ const NAV: (Omit<NavItem, "badge"> & { key: Section })[] = [
   { key: "usuarios", href: "/admin/usuarios", label: "Usuarios" },
   { key: "pagos", href: "/admin/pagos", label: "Pagos" },
   { key: "contenido", href: "/admin/contenido", label: "Contenido" },
+  { key: "retos", href: "/admin/retos", label: "Retos" },
   { key: "comunidad", href: "/admin/comunidad", label: "Comunidad" },
   { key: "auditoria", href: "/admin/auditoria", label: "Auditoría" },
 ];

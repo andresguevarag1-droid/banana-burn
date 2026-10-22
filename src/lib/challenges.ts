@@ -1,5 +1,8 @@
-// Retos de 14 a 30 días. Catálogo base en código; el admin agrega o reemplaza retos desde la BD (challenges_catalog).
-export type Verify = "manual" | "workout" | "steps" | "protein" | "water";
+// Retos: tienda (gratis y Premium), plan día a día y estado. El catálogo vive en la BD (challenges_catalog, 0018) y lo edita
+// el admin en /admin/retos; challenge-seed.ts es la siembra inicial y el respaldo si la base aún no tiene la migración.
+import { SEED, type ChallengeStatus, type CoverStyle, type DayTask, type Difficulty, type SeedChallenge, type Verify } from "./challenge-seed";
+export type { ChallengeStatus, CoverStyle, DayTask, Difficulty, TaskType, Verify } from "./challenge-seed";
+
 export type Challenge = {
   id: string; title: string; icon: string; days: number; desc: string; verify: Verify; color: string; task: (day: number) => string; xp: number;
   /** Días que se pueden fallar sin perder el reto (comodines). */
@@ -8,6 +11,12 @@ export type Challenge = {
   stepsGoal?: number;
   /** "app" = catálogo base; "admin" = creado o reemplazado desde el panel. */
   source?: "app" | "admin";
+  // Tienda
+  priceUsd: number; cover: CoverStyle; difficulty: Difficulty; minutes: number; badge: string; rewardTitle: string | null;
+  startMode: "libre" | "fecha"; startDate: string | null; featured: boolean; comingSoon: boolean; safetyNote: string | null;
+  status: ChallengeStatus; sort: number;
+  /** Plan día a día visible para quien mira (null = no cargado o bloqueado). */
+  plan: DayTask[] | null;
 };
 
 /** Estado de un reto. `activo` sigue en curso; los demás son finales. */
@@ -17,74 +26,169 @@ export type Outcome = "activo" | "completado" | "fallido" | "vencido";
 export const MAX_CHALLENGE_XP = 400;
 /** Retos activos a la vez (lo repite el guard de user_challenges en 0013). */
 export const MAX_ACTIVE = 3;
+/** Días de un reto de pago que se ven antes de comprarlo. */
+export const PREVIEW_DAYS = 3;
+/** Un reto con fecha fija acepta inscripciones durante sus primeros 3 días (lo repite public.challenge_open en 0018). */
+export const JOIN_WINDOW_DAYS = 3;
+/** Mínimo que cobra ONVO en USD. */
+export const MIN_PRICE_USD = 0.5;
+export const MAX_PRICE_USD = 200;
 
-export const CHALLENGES: Challenge[] = [
-  { id: "banana-30", title: "30 días Banana", icon: "banana", days: 30, verify: "workout", color: "bg-banana", xp: 400, grace: 3,
-    desc: "Entrena 30 días: tu rutina, modo suave o un exprés de 10 min. Tienes 3 comodines por si un día no puedes.",
-    task: () => "Completa cualquier entreno (aunque sea un exprés de 10 min)" },
-  { id: "flexiones-30", title: "Reto de flexiones", icon: "barbell", days: 30, verify: "manual", color: "bg-ember/15", xp: 300, grace: 3,
-    desc: "De 10 a 100 flexiones al día en 30 días. Divídelas en las series que necesites.",
-    task: (d) => `${Math.round(10 + (d - 1) * (90 / 29))} flexiones en total hoy (en las series que quieras)` },
-  { id: "plancha-30", title: "Plancha de acero", icon: "shield", days: 30, verify: "manual", color: "bg-sky/15", xp: 300, grace: 3,
-    desc: "De 20 segundos a 3 minutos de plancha. Core de acero en un mes.",
-    task: (d) => { const s = Math.round(20 + (d - 1) * (160 / 29)); return `Plancha total de ${s >= 60 ? `${Math.floor(s / 60)} min ${s % 60 ? `${s % 60} s` : ""}` : `${s} s`} (puedes partirla)`; } },
-  { id: "pasos-30", title: "10.000 pasos", icon: "sneaker", days: 30, verify: "steps", color: "bg-peel/15", xp: 300, grace: 3, stepsGoal: 10000,
-    desc: "30 días caminando 10.000 pasos. La forma más fácil de quemar 300-400 kcal extra al día.",
-    task: () => "Llega a 10.000 pasos (regístralos en Hoy)" },
-  { id: "proteina-21", title: "Proteína perfecta", icon: "egg", days: 21, verify: "protein", color: "bg-ember/10", xp: 250, grace: 2,
-    desc: "21 días llegando a tu meta de proteína. El hábito que protege tu músculo mientras bajas de grasa.",
-    task: () => "Llega a tu meta de proteína del día" },
-  { id: "agua-21", title: "Hidratado", icon: "drop", days: 21, verify: "water", color: "bg-sky/10", xp: 200, grace: 2,
-    desc: "21 días tomando 8 vasos de agua. Menos hambre, mejor energía en el gym.",
-    task: () => "Toma 8 vasos de agua" },
-];
-export const CHALLENGE_BY_ID: Record<string, Challenge> = Object.fromEntries(CHALLENGES.map((c) => [c.id, c.source ? c : { ...c, source: "app" as const }]));
+export const COVERS: CoverStyle[] = ["banana", "ember", "sky", "peel", "noche", "selva"];
+export const COVER_LABEL: Record<CoverStyle, string> = { banana: "Banana", ember: "Fuego", sky: "Cielo", peel: "Hoja", noche: "Noche", selva: "Selva" };
+const COVER_COLOR: Record<CoverStyle, string> = { banana: "bg-banana", ember: "bg-ember/15", sky: "bg-sky/15", peel: "bg-peel/15", noche: "bg-ink/10", selva: "bg-peel/10" };
+export const DIFFICULTY_LABEL: Record<Difficulty, string> = { facil: "Fácil", media: "Media", dificil: "Difícil" };
+export const VERIFY_LABEL: Record<Verify, string> = { manual: "Lo marcas tú", workout: "Entreno registrado", steps: "Pasos registrados", protein: "Meta de proteína", water: "Vasos de agua" };
+export const STATUS_LABEL: Record<ChallengeStatus, string> = { borrador: "Borrador", publicado: "Publicado", oculto: "Oculto", archivado: "Archivado" };
+
+const fallbackTask = (verify: Verify, stepsGoal?: number) => ({
+  manual: "Cumple el objetivo de hoy y márcalo",
+  workout: "Completa cualquier entreno",
+  steps: `Llega a ${(stepsGoal ?? 10000).toLocaleString("es-419")} pasos (regístralos en Hoy)`,
+  protein: "Llega a tu meta de proteína del día",
+  water: "Toma 8 vasos de agua",
+}[verify]);
+
+/** Texto del día `day` (1-based). Sin plan, la tarea genérica de su verificación. */
+export function taskFor(plan: DayTask[] | null | undefined, day: number, verify: Verify, stepsGoal?: number, fixed?: string | null) {
+  const t = plan?.[Math.max(0, Math.min(plan.length - 1, day - 1))]?.t;
+  return t || fixed || fallbackTask(verify, stepsGoal);
+}
+
+export function fromSeed(s: SeedChallenge, source: "app" | "admin" = "app"): Challenge {
+  return {
+    id: s.slug, title: s.title, icon: s.icon, days: s.days, desc: s.description, verify: s.verify, color: COVER_COLOR[s.cover], xp: s.xp, grace: s.grace,
+    stepsGoal: s.stepsGoal, source, priceUsd: s.priceUsd, cover: s.cover, difficulty: s.difficulty, minutes: s.minutes, badge: s.badge, rewardTitle: s.rewardTitle,
+    startMode: s.startMode, startDate: s.startDate, featured: s.featured, comingSoon: s.comingSoon, safetyNote: s.safetyNote, status: "publicado", sort: s.sort,
+    plan: s.plan, task: (d) => taskFor(s.plan, d, s.verify, s.stepsGoal),
+  };
+}
+
+/** Los 6 retos con los que nació la app (sus ids se guardan en user_challenges desde 0008). */
+export const BASE_IDS = ["banana-30", "flexiones-30", "plancha-30", "pasos-30", "proteina-21", "agua-21"];
+export const SEED_CHALLENGES: Challenge[] = SEED.map((s) => fromSeed(s));
+export const CHALLENGES: Challenge[] = SEED_CHALLENGES.filter((c) => BASE_IDS.includes(c.id));
+export const CHALLENGE_BY_ID: Record<string, Challenge> = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
 
 // ───────────── Catálogo editable (challenges_catalog) ─────────────
 
-export type CatalogRow = { slug: string; title: string; description: string | null; days: number; rules: Record<string, unknown> | null };
+/** Fila de challenges_catalog. Las columnas de la tienda llegan en 0018; sin ellas se leen las `rules` (JSON) de 0005. */
+export type CatalogRow = {
+  slug: string; title: string; description: string | null; days: number; rules: Record<string, unknown> | null;
+  status?: string | null; price_usd?: number | string | null; difficulty?: string | null; minutes?: number | null; cover?: string | null; icon?: string | null;
+  verify?: string | null; grace?: number | null; xp?: number | null; steps_goal?: number | null; badge?: string | null; reward_title?: string | null;
+  start_mode?: string | null; start_date?: string | null; featured?: boolean | null; coming_soon?: boolean | null; safety_note?: string | null; sort?: number | null;
+};
 const VERIFY: Verify[] = ["manual", "workout", "steps", "protein", "water"];
-const ICONS = ["banana", "barbell", "shield", "sneaker", "steps", "walk", "run", "egg", "drop", "medal", "trophy", "bolt", "leaf", "target", "timer", "moon", "sun", "flag"];
-const COLORS: Record<Verify, string> = { manual: "bg-ember/15", workout: "bg-banana", steps: "bg-peel/15", protein: "bg-ember/10", water: "bg-sky/10" };
+const DIFFS: Difficulty[] = ["facil", "media", "dificil"];
+const STATUSES: ChallengeStatus[] = ["borrador", "publicado", "oculto", "archivado"];
+export const ICONS = ["banana", "peeled", "bunch", "medal", "trophy", "monkey", "gorilla", "barbell", "shield", "sneaker", "steps", "walk", "run", "egg", "drop", "bolt", "leaf", "target", "timer", "moon", "sun", "flag", "sparkle", "trendDown", "fork", "scale"];
+const TASK_TYPES = ["reps", "tiempo", "pasos", "entreno", "habito", "nutricion", "descanso"] as const;
 const int = (x: unknown, d: number) => (typeof x === "number" && Number.isFinite(x) ? Math.round(x) : typeof x === "string" && /^\d+$/.test(x) ? Number(x) : d);
 const clamp = (n: number, a: number, b: number) => Math.min(b, Math.max(a, n));
+const str = (x: unknown, max: number) => (typeof x === "string" && x.trim() ? x.trim().slice(0, max) : null);
+
+/** Plan día a día saneado (texto corto, tipo conocido, meta numérica opcional). */
+export function parsePlan(x: unknown, days: number): DayTask[] {
+  if (!Array.isArray(x)) return [];
+  return x.slice(0, days).map((d) => {
+    const o = (d && typeof d === "object" ? d : {}) as Record<string, unknown>;
+    const type = TASK_TYPES.includes(o.type as (typeof TASK_TYPES)[number]) ? (o.type as DayTask["type"]) : "habito";
+    const target = typeof o.target === "number" && Number.isFinite(o.target) && o.target >= 0 ? Math.min(100000, Math.round(o.target)) : undefined;
+    return { t: str(o.t, 200) ?? "", type, ...(target !== undefined ? { target } : {}) };
+  }).filter((d) => d.t);
+}
 
 /**
- * Convierte una fila del panel en un reto. Reglas reconocidas (JSON):
- * `verify` (manual | workout | steps | protein | water), `tarea` (texto del día), `comodines`, `xp` (o `xpBonus`, máx. 400),
- * `pasosMin` (para steps), `icono`. Cualquier otra clave se ignora.
+ * Convierte una fila del panel en un reto. Las columnas de 0018 mandan; si faltan, se leen las reglas JSON de 0005:
+ * `verify`, `tarea` (texto del día), `comodines`, `xp` (o `xpBonus`, máx. 400), `pasosMin` (para steps), `icono`.
  */
-export function fromCatalogRow(row: CatalogRow): Challenge | null {
+export function fromCatalogRow(row: CatalogRow, plan?: DayTask[] | null): Challenge | null {
   if (!row?.slug || !/^[a-z0-9-]{2,60}$/.test(row.slug) || !row.title) return null;
   const days = clamp(int(row.days, 0), 1, 365);
   if (!days) return null;
   const r = row.rules && typeof row.rules === "object" ? row.rules : {};
-  const verify: Verify = VERIFY.includes(r.verify as Verify) ? (r.verify as Verify) : "manual";
-  const stepsGoal = verify === "steps" ? clamp(int(r.pasosMin, 10000), 1000, 50000) : undefined;
-  const tarea = typeof r.tarea === "string" && r.tarea.trim() ? r.tarea.trim().slice(0, 140) : null;
-  const fallback: Record<Verify, string> = {
-    manual: "Cumple el objetivo de hoy y márcalo",
-    workout: "Completa cualquier entreno",
-    steps: `Llega a ${(stepsGoal ?? 10000).toLocaleString("es-419")} pasos (regístralos en Hoy)`,
-    protein: "Llega a tu meta de proteína del día",
-    water: "Toma 8 vasos de agua",
-  };
-  const icon = typeof r.icono === "string" && ICONS.includes(r.icono) ? r.icono : "medal";
+  const v0 = row.verify ?? r.verify;
+  const verify: Verify = VERIFY.includes(v0 as Verify) ? (v0 as Verify) : "manual";
+  const stepsGoal = verify === "steps" ? clamp(int(row.steps_goal ?? r.pasosMin, 10000), 1000, 50000) : undefined;
+  const tarea = str(r.tarea, 140);
+  const icon0 = row.icon ?? r.icono;
+  const icon = typeof icon0 === "string" && ICONS.includes(icon0) ? icon0 : "medal";
+  const cover: CoverStyle = COVERS.includes(row.cover as CoverStyle) ? (row.cover as CoverStyle) : verify === "workout" ? "banana" : verify === "steps" ? "peel" : verify === "water" ? "sky" : "ember";
+  const price = Number(row.price_usd ?? 0);
+  const pl = plan === undefined ? null : plan;
+  const start = row.start_mode === "fecha" && typeof row.start_date === "string" && /^\d{4}-\d{2}-\d{2}/.test(row.start_date) ? row.start_date.slice(0, 10) : null;
   return {
-    id: row.slug, title: row.title.slice(0, 80), icon, days, verify, color: COLORS[verify],
+    id: row.slug, title: row.title.slice(0, 80), icon, days, verify, color: COVER_COLOR[cover],
     desc: (row.description ?? "").slice(0, 600),
-    task: () => tarea ?? fallback[verify],
-    xp: clamp(int(r.xp ?? r.xpBonus, Math.min(MAX_CHALLENGE_XP, days * 10)), 0, MAX_CHALLENGE_XP),
-    grace: clamp(int(r.comodines, Math.floor(days / 10)), 0, Math.max(0, days - 1)),
+    task: (d) => taskFor(pl, d, verify, stepsGoal, tarea),
+    xp: clamp(int(row.xp ?? r.xp ?? r.xpBonus, Math.min(MAX_CHALLENGE_XP, days * 10)), 0, MAX_CHALLENGE_XP),
+    grace: clamp(int(row.grace ?? r.comodines, Math.floor(days / 10)), 0, Math.max(0, days - 1)),
     stepsGoal, source: "admin",
+    priceUsd: Number.isFinite(price) && price > 0 ? Math.round(price * 100) / 100 : 0,
+    cover, difficulty: DIFFS.includes(row.difficulty as Difficulty) ? (row.difficulty as Difficulty) : "media",
+    minutes: clamp(int(row.minutes, 10), 1, 240), badge: str(row.badge, 60) ?? row.title.slice(0, 60), rewardTitle: str(row.reward_title, 40),
+    startMode: start ? "fecha" : "libre", startDate: start, featured: !!row.featured, comingSoon: !!row.coming_soon, safetyNote: str(row.safety_note, 600),
+    status: STATUSES.includes(row.status as ChallengeStatus) ? (row.status as ChallengeStatus) : "publicado", sort: int(row.sort, 0),
+    plan: pl,
   };
 }
 
-/** Catálogo efectivo: el base, con los retos del panel agregados (o reemplazando al base si usan el mismo identificador). */
+/** Catálogo efectivo sin la migración 0018: el base, con los retos del panel agregados (o reemplazando al base con el mismo id). */
 export function mergeCatalog(rows: CatalogRow[]): Challenge[] {
-  const out = new Map<string, Challenge>(CHALLENGES.map((c) => [c.id, CHALLENGE_BY_ID[c.id]]));
+  const out = new Map<string, Challenge>(CHALLENGES.map((c) => [c.id, c]));
   for (const row of rows) { const c = fromCatalogRow(row); if (c) out.set(c.id, c); }
   return [...out.values()];
+}
+
+// ───────────── Tienda ─────────────
+
+export type StoreSection = "gratis" | "premium" | "proximamente";
+export const isPaid = (c: Pick<Challenge, "priceUsd">) => c.priceUsd > 0;
+
+/** ¿Se puede empezar hoy? Retos con fecha fija: solo en su ventana de inscripción. */
+export function openState(c: Pick<Challenge, "startMode" | "startDate" | "comingSoon">, today: string): "abierto" | "pronto" | "cerrado" {
+  if (c.comingSoon) return "pronto";
+  if (c.startMode !== "fecha" || !c.startDate) return "abierto";
+  if (today < c.startDate) return "pronto";
+  return today <= addDaysIso(c.startDate, JOIN_WINDOW_DAYS - 1) ? "abierto" : "cerrado";
+}
+
+/**
+ * Sección de la tienda en la que aparece un reto, o null si no se muestra.
+ * Solo los publicados se ven (borrador, oculto y archivado nunca); los cerrados solo los ve quien ya está o lo compró.
+ */
+export function storeSection(c: Pick<Challenge, "status" | "priceUsd" | "startMode" | "startDate" | "comingSoon">, today: string): StoreSection | null {
+  if (c.status !== "publicado") return null;
+  const o = openState(c, today);
+  if (o === "pronto") return "proximamente";
+  if (o === "cerrado") return null;
+  return isPaid(c) ? "premium" : "gratis";
+}
+
+/** Precio final en centavos de USD con el descuento por nivel (nunca menos que el mínimo de ONVO). */
+export function priceMinor(priceUsd: number, discountPct = 0) {
+  const base = Math.round(Math.max(0, priceUsd) * 100);
+  if (!base) return 0;
+  const d = clamp(Math.floor(discountPct), 0, 50);
+  return Math.max(Math.round(MIN_PRICE_USD * 100), Math.round((base * (100 - d)) / 100));
+}
+
+export const usd = (minor: number) => `$${(minor / 100).toLocaleString("es-419", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Días del plan que puede ver alguien: todos si es gratis o ya lo tiene; si no, los primeros PREVIEW_DAYS. */
+export function visibleDays(c: Pick<Challenge, "priceUsd" | "days">, owned: boolean) {
+  return !isPaid(c) || owned ? c.days : Math.min(PREVIEW_DAYS, c.days);
+}
+
+/** Hitos de un reto: días 7 y 14 (si caben antes del final) y el día final. */
+export function milestonesFor(days: number) {
+  return [...[7, 14].filter((d) => d < days), days];
+}
+/** Próximo hito según días cumplidos (o null si ya llegó al último). */
+export function nextMilestone(completed: number, days: number) {
+  const m = milestonesFor(days).find((d) => d > completed);
+  return m ? { at: m, left: m - completed, final: m === days } : null;
 }
 
 // ───────────── Estado ─────────────

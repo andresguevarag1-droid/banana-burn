@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BananaFlame, BananaTrophy, BrandIcon, CaretRight, Check, CheckCircle, LevelIcon, Monkey, PersonSimpleWalk, Scales, TreePalm } from "@/components/icons";
+import { ArrowRight, BananaFlame, BananaTrophy, BrandIcon, CaretRight, CheckCircle, Monkey, PersonSimpleWalk, Scales, TreePalm } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily, greetingAt } from "@/lib/daily";
@@ -11,17 +11,17 @@ import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
 import { EnablePush } from "@/components/notifications/enable-push";
-import { ProgressBar } from "@/components/progress-bar";
 import { AnnouncementBanner } from "@/components/admin/announcement-banner";
 import { Glp1Card } from "@/components/glp1-card";
 import { ChallengeCard } from "@/components/challenge-card";
 import { getMyChallenges } from "@/lib/challenges-server";
+import { getXpSummary } from "@/lib/xp-server";
+import { LevelCard } from "@/components/levels/level-card";
 import { toView } from "@/lib/challenge-view";
 
 export const metadata = { title: "Hoy" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
-const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
 
 function tipFor(dow: number, training: boolean, proteinLeft: number, trained: boolean) {
   if (trained) return proteinLeft > 30 ? `Ya entrenaste. Ahora cierra la proteína: te faltan unos ${Math.round(proteinLeft)} g (pechuga, atún, yogur griego o huevos).` : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
@@ -37,7 +37,10 @@ export default async function Hoy() {
   const d = dashboard(a);
   const [g, meals] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v)]);
   const eaten = sumMeals(meals.today);
-  const ch = await getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein });
+  const [ch, xs] = await Promise.all([
+    getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein }),
+    getXpSummary(v),
+  ]);
   const { plan, t } = d;
   const training = !!plan.tpl;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
@@ -65,35 +68,8 @@ export default async function Hoy() {
       <AnnouncementBanner />
       <EnablePush hideWhenSnoozed />
 
-      <Link href="/app/progreso#logros" className="block card p-3.5">
-        <div className="flex items-center gap-3">
-          <span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft ring-1 ring-banana/40"><LevelIcon idx={g.level.idx} className="size-6" /></span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline justify-between gap-2 text-xs font-bold"><span className="text-ink">{g.level.n} <span className="font-semibold text-muted">nivel {g.level.idx}</span></span><span className="text-muted tabular-nums">{g.xp.toLocaleString("es-419")} XP</span></div>
-            <ProgressBar value={g.level.progress} min={0.04} className="mt-1.5 h-2" fill="bg-ember" />
-          </div>
-          <div className="hidden sm:flex gap-1.5 pl-3 border-l border-line">
-            {g.week.map((w) => {
-              const dw = new Date(w.d + "T12:00:00").getDay();
-              const isToday = w.d === d.today.iso;
-              return <span key={w.d} className={`grid place-items-center size-7 rounded-full text-[11px] font-bold ${w.active ? "bg-ember text-white" : isToday ? "border-2 border-dashed border-ember text-ember" : "bg-cream text-faint"}`}>{w.active ? <><Check weight="bold" className="size-3.5" /><span className="sr-only">Activo</span></> : DOW1[dw]}</span>;
-            })}
-          </div>
-        </div>
-        <div className="sm:hidden mt-3 flex justify-between">
-          {g.week.map((w) => {
-            const dw = new Date(w.d + "T12:00:00").getDay();
-            const isToday = w.d === d.today.iso;
-            return (
-              <span key={w.d} className="flex flex-col items-center gap-1">
-                <span className={`grid place-items-center size-8 rounded-full text-xs font-bold ${w.active ? "bg-ember text-white" : isToday ? "border-2 border-dashed border-ember text-ember" : "bg-cream text-faint"}`}>{w.active ? <><Check weight="bold" className="size-4" /><span className="sr-only">Activo</span></> : null}</span>
-                <span className={`text-[10px] font-bold ${isToday ? "text-ink" : "text-faint"}`}>{DOW1[dw]}</span>
-              </span>
-            );
-          })}
-        </div>
-        {!g.streak.todayDone && g.streak.days > 0 && <p className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
-      </Link>
+      <LevelCard s={xs} week={g.week} todayIso={d.today.iso} training={training} weighed={g.weighedToday} />
+      {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         {/* Rutina de hoy */}
@@ -162,11 +138,11 @@ export default async function Hoy() {
 
       {/* Retos */}
       <section>
-        <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Ver todos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
+        <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Tienda de retos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
         {ch.active.length ? (
           <div className="grid gap-3 lg:grid-cols-2">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
         ) : (
-          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Únete a un reto de 30 días</span><span className="block text-sm text-muted">Flexiones, plancha o {(10000).toLocaleString("es-419")} pasos al día, y gana tu medalla.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
+          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Elige tu próximo reto</span><span className="block text-sm text-muted">Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
         )}
       </section>
 

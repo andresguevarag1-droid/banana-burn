@@ -67,3 +67,53 @@ describe("retos del panel (challenges_catalog)", () => {
     expect(metAuto(CHALLENGE_BY_ID["pasos-30"], { workout: false, steps: 5200, water: 0, protein: 0, proteinGoal: 0 })).toBe(false);
   });
 });
+
+import { milestonesFor, nextMilestone, openState, priceMinor, SEED_CHALLENGES, storeSection, visibleDays } from "./challenges";
+describe("tienda de retos: visibilidad", () => {
+  const base = { status: "publicado" as const, priceUsd: 0, startMode: "libre" as const, startDate: null, comingSoon: false };
+  it("solo lo publicado aparece; borrador, oculto y archivado nunca", () => {
+    expect(storeSection(base, "2026-10-22")).toBe("gratis");
+    expect(storeSection({ ...base, priceUsd: 4.99 }, "2026-10-22")).toBe("premium");
+    for (const status of ["borrador", "oculto", "archivado"] as const) expect(storeSection({ ...base, status }, "2026-10-22")).toBeNull();
+  });
+  it("fecha fija: próximamente antes, abierto 3 días, luego cerrado", () => {
+    const f = { ...base, startMode: "fecha" as const, startDate: "2026-12-01" };
+    expect(storeSection(f, "2026-11-30")).toBe("proximamente");
+    expect(openState(f, "2026-12-01")).toBe("abierto");
+    expect(openState(f, "2026-12-03")).toBe("abierto");
+    expect(openState(f, "2026-12-04")).toBe("cerrado");
+    expect(storeSection(f, "2026-12-04")).toBeNull();
+    expect(storeSection({ ...base, comingSoon: true }, "2026-10-22")).toBe("proximamente");
+  });
+  it("plan: gratis o comprado se ve completo; de pago sin comprar, 3 días", () => {
+    expect(visibleDays({ priceUsd: 0, days: 30 }, false)).toBe(30);
+    expect(visibleDays({ priceUsd: 4.99, days: 21 }, false)).toBe(3);
+    expect(visibleDays({ priceUsd: 4.99, days: 21 }, true)).toBe(21);
+  });
+  it("precio con descuento por nivel, en centavos y nunca bajo el mínimo de ONVO", () => {
+    expect(priceMinor(4.99, 0)).toBe(499);
+    expect(priceMinor(4.99, 10)).toBe(449);
+    expect(priceMinor(9.99, 20)).toBe(799);
+    expect(priceMinor(0.5, 20)).toBe(50);
+    expect(priceMinor(0, 20)).toBe(0);
+  });
+  it("hitos en los días 7, 14 y final", () => {
+    expect(milestonesFor(30)).toEqual([7, 14, 30]);
+    expect(milestonesFor(7)).toEqual([7]);
+    expect(milestonesFor(14)).toEqual([7, 14]);
+    expect(nextMilestone(5, 21)).toEqual({ at: 7, left: 2, final: false });
+    expect(nextMilestone(15, 21)).toEqual({ at: 21, left: 6, final: true });
+    expect(nextMilestone(21, 21)).toBeNull();
+  });
+  it("la siembra mezcla gratis y Premium, cada reto con su plan completo", () => {
+    expect(SEED_CHALLENGES.length).toBeGreaterThanOrEqual(14);
+    expect(SEED_CHALLENGES.filter((c) => c.priceUsd > 0).length).toBeGreaterThanOrEqual(4);
+    expect(SEED_CHALLENGES.filter((c) => c.priceUsd === 0).length).toBeGreaterThanOrEqual(6);
+    for (const c of SEED_CHALLENGES) {
+      expect(c.plan).toHaveLength(c.days);
+      for (const d of c.plan!) expect(d.t).not.toMatch(/[—·]/);
+      expect(c.xp).toBeLessThanOrEqual(400);
+    }
+    expect(SEED_CHALLENGES.find((c) => c.id === "pierde-3kg-6-semanas")?.safetyNote).toMatch(/médico/);
+  });
+});
