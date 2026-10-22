@@ -1,12 +1,12 @@
 import { getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { getMeals } from "@/lib/meals";
+import { getMeals, getNutritionExtras } from "@/lib/meals";
 import Link from "next/link";
 import { FoodLog } from "./food-log";
 import { getDaily } from "@/lib/daily";
 import { PLANS, usd } from "@/lib/plans";
-import { ArrowRight, BananaBunch, BrandIcon, CaretDown, CheckCircle, Egg, Grains, Leaf, Lightbulb, Wine } from "@/components/icons";
+import { ArrowRight, BananaBunch, BrandIcon, CaretDown, CheckCircle, Egg, ForkKnife, Grains, Leaf, Lightbulb, Wine } from "@/components/icons";
 
 export const metadata = { title: "Nutrición" };
 
@@ -21,7 +21,7 @@ const IDEAS = [
 export default async function Nutricion() {
   const v = (await getViewer())!;
   const d = dashboard(await getAthlete(v));
-  const [meals, daily] = await Promise.all([getMeals(v), getDaily(v, 0, 0)]);
+  const [meals, daily, extras] = await Promise.all([getMeals(v), getDaily(v, 0, 0), getNutritionExtras(v)]);
   const { t } = d;
   if (!(await getEntitlements(v)).nutrition) {
     const p = PLANS.find((x) => x.nutrition)!;
@@ -43,7 +43,7 @@ export default async function Nutricion() {
         <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-419")} kcal y {t.protein} g de proteína. Se ajusta cada semana con tu peso real.</p>
       </header>
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] items-start [&>*]:min-w-0">
-        <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} country={v.country} />
+        <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} country={v.country} extras={extras} />
         <aside className="space-y-3 lg:sticky lg:top-6">
           <Link href="/app/nutricion/recetas" className="pressable flex items-center gap-3 rounded-[1.5rem] bg-banana p-4 hover:shadow-lift">
             <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><BananaBunch className="size-7" /></span>
@@ -67,6 +67,7 @@ export default async function Nutricion() {
             <p className="flex items-start gap-2"><Grains weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />Carbos alrededor del entreno.</p>
             <p className="flex items-start gap-2"><Leaf weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />Medio plato de vegetales en almuerzo y cena.</p>
             <p className="flex items-start gap-2"><Wine weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />Alcohol: máximo 2 al fin de semana.</p>
+            <p className="flex items-start gap-2"><ForkKnife weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />¿Comiste fuera o algo no tan fit? Regístralo igual: suma XP y tu semana se equilibra.</p>
           </div>
         </aside>
       </div>
