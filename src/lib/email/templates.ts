@@ -10,6 +10,7 @@ const FONT = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI'
 
 export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const abs = (path: string) => (path.startsWith("http") ? path : `${SITE_URL}${path}`);
+const kg = (n: number, d = 1) => n.toLocaleString("es-CR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const firstName = (n: string) => (n || "").trim().split(/\s+/)[0] || "crack";
 
 export const money = (amount: number, currency = "USD") => {
@@ -31,6 +32,11 @@ const stats = (items: [string, string][]) =>
   items.map(([v, l]) => `<td width="${Math.floor(100 / items.length)}%" style="padding:4px;"><div style="background:${C.soft};border-radius:16px;padding:14px 8px;text-align:center;">` +
     `<div style="font-size:22px;font-weight:800;color:${C.ink};">${esc(v)}</div><div style="font-size:12px;color:${C.muted};margin-top:2px;">${esc(l)}</div></div></td>`).join("") +
   `</tr></table>`;
+/** Viñeta de marca: punto de color (los correos no muestran íconos SVG de forma confiable y no usamos emojis). */
+const dot = (color: string = C.banana) => `<span style="display:inline-block;width:10px;height:10px;border-radius:5px;background:${color};margin-right:10px;vertical-align:middle;"></span>`;
+/** Etiqueta de color para destacar racha, récords o logros. */
+const badge = (label: string, bg: string = C.soft, color: string = C.ink) =>
+  `<p style="margin:0 0 12px;"><span style="display:inline-block;background:${bg};color:${color};border-radius:999px;padding:5px 12px;font-size:12px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;">${esc(label)}</span></p>`;
 const list = (items: string[]) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 16px;">` +
   items.map((i) => `<tr><td style="padding:9px 12px;border-bottom:1px solid ${C.line};font-size:15px;color:${C.body};">${i}</td></tr>`).join("") + `</table>`;
@@ -47,16 +53,16 @@ function layout(o: { preheader: string; body: string; unsubscribe?: string; reas
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(o.preheader)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.paper};"><tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
-<tr><td style="padding:0 6px 14px;"><a href="${esc(abs("/app"))}" style="text-decoration:none;font-size:20px;font-weight:800;color:${C.ink};letter-spacing:-0.02em;"><span style="display:inline-block;background:${C.banana};border-radius:12px;padding:4px 8px;margin-right:6px;">🍌</span>Banana Burn</a></td></tr>
+<tr><td style="padding:0 6px 14px;"><a href="${esc(abs("/app"))}" style="text-decoration:none;font-size:20px;font-weight:800;color:${C.ink};letter-spacing:-0.02em;"><img src="${esc(abs("/icons/icon-192.png"))}" width="32" height="32" alt="" style="display:inline-block;width:32px;height:32px;border:0;border-radius:10px;vertical-align:middle;margin-right:8px;"><span style="vertical-align:middle;">Banana Burn</span></a></td></tr>
 <tr><td style="background:${C.card};border:1px solid ${C.line};border-radius:24px;overflow:hidden;">
 <div style="height:6px;background:${C.banana};border-radius:24px 24px 0 0;"></div>
 <div style="padding:28px 24px 22px;">${o.body}</div></td></tr>
-<tr><td style="padding:18px 10px 0;font-size:12px;line-height:1.6;color:${C.faint};text-align:center;">${foot}<br>Banana Burn · Hecho en Costa Rica 🇨🇷 · <a href="mailto:hola@bananaburn.app" style="color:${C.faint};">hola@bananaburn.app</a></td></tr>
+<tr><td style="padding:18px 10px 0;font-size:12px;line-height:1.6;color:${C.faint};text-align:center;">${foot}<br>Banana Burn, hecho en Costa Rica · <a href="mailto:hola@bananaburn.app" style="color:${C.faint};">hola@bananaburn.app</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
 function textLayout(lines: string[], unsubscribe?: string, reason?: string) {
-  const out = [...lines, "", "—", "Banana Burn · Hecho en Costa Rica"];
+  const out = [...lines, "", "-- ", "Banana Burn, hecho en Costa Rica"];
   if (reason) out.push(reason);
   if (unsubscribe) out.push(`Dejar de recibir estos correos: ${unsubscribe}`);
   return out.join("\n");
@@ -66,11 +72,11 @@ function textLayout(lines: string[], unsubscribe?: string, reason?: string) {
 
 export function bienvenida(d: { name: string }): Email {
   const n = firstName(d.name);
-  const subject = `¡Bienvenido a Banana Burn, ${n}! 🍌`;
+  const subject = `Bienvenido a Banana Burn, ${n}. Tu plan te espera`;
   const preheader = "Tu entrenador con IA ya está listo. Te toma 2 minutos armar tu plan.";
-  const body = h1(`¡Pura vida, ${esc(n)}! 🍌`) +
+  const body = h1(`¡Pura vida, ${esc(n)}!`) +
     p("Ya tienes tu entrenador personal con IA. Aquí no hay rutinas genéricas: cada sesión trae las cargas calculadas para ti y se ajusta según cómo te va.") +
-    list(["🏋️ <b>Rutina del día</b> lista para el gym o la casa", "🔥 <b>Racha y niveles</b> para que entrenar sea un juego", "🥗 <b>Comida tica</b> con proteína y calorías claras", "🤖 <b>Coach IA</b> que conoce tus datos"]) +
+    list([`${dot()}<b>Rutina del día</b> lista para el gym o la casa`, `${dot(C.ember)}<b>Racha y niveles</b> para que entrenar sea un juego`, `${dot(C.peel)}<b>Comida tica</b> con proteína y calorías claras`, `${dot(C.ink)}<b>Coach IA</b> que conoce tus datos`]) +
     p("Termina tu perfil en 2 minutos y te armamos el plan.") + button("Armar mi plan", "/bienvenida");
   return {
     subject, preheader,
@@ -79,20 +85,20 @@ export function bienvenida(d: { name: string }): Email {
   };
 }
 
-export function planListo(d: { name: string; trainDays: number; todayRoutine: string; todayEmoji?: string; kcal: number; protein: number; startWeight?: number; goalWeight: number; goalDate: string }): Email {
+export function planListo(d: { name: string; trainDays: number; todayRoutine: string; kcal: number; protein: number; startWeight?: number; goalWeight: number; goalDate: string }): Email {
   const n = firstName(d.name);
-  const subject = `${n}, tu plan está listo: ${d.trainDays} días por semana 💪`;
-  const preheader = `Hoy arrancas con ${d.todayRoutine}. Meta: ${d.goalWeight} kg el ${longDate(d.goalDate)}.`;
-  const body = h1("Tu plan está listo ✅") +
+  const subject = `${n}, tu plan está listo: ${d.trainDays} días por semana`;
+  const preheader = `Hoy arrancas con ${d.todayRoutine}. Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}.`;
+  const body = badge("Plan listo", C.banana) + h1("Tu plan está listo") +
     p(`${esc(n)}, armamos tu programa con base en tus datos. Esto es lo que viene:`) +
-    stats([[`${d.trainDays}`, "días/semana"], [`${d.kcal}`, "kcal/día"], [`${d.protein} g`, "proteína"]]) +
-    rows([["Hoy te toca", `${d.todayRoutine} ${d.todayEmoji ?? ""}`.trim()], ...(d.startWeight ? [["Peso inicial", `${d.startWeight} kg`] as [string, string]] : []), ["Meta", `${d.goalWeight} kg`], ["Fecha meta", longDate(d.goalDate)]]) +
+    stats([[`${d.trainDays}`, "días/semana"], [d.kcal.toLocaleString("es-CR"), "kcal/día"], [`${d.protein} g`, "proteína"]]) +
+    rows([["Hoy te toca", d.todayRoutine], ...(d.startWeight ? [["Peso inicial", `${kg(d.startWeight)} kg`] as [string, string]] : []), ["Meta", `${kg(d.goalWeight)} kg`], ["Fecha meta", longDate(d.goalDate)]]) +
     p("Las cargas se calibran en tu primera sesión y suben solas cuando dominas el rango. Tú solo llega y dale.") +
     button("Ver mi entreno de hoy", "/app/entreno");
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque completaste tu perfil en Banana Burn." }),
-    text: textLayout([`Tu plan está listo, ${n}.`, "", `• ${d.trainDays} días por semana`, `• ${d.kcal} kcal/día · ${d.protein} g de proteína`, `• Hoy te toca: ${d.todayRoutine}`, `• Meta: ${d.goalWeight} kg el ${longDate(d.goalDate)}`, "", `Ver mi entreno de hoy: ${abs("/app/entreno")}`]),
+    text: textLayout([`Tu plan está listo, ${n}.`, "", `• ${d.trainDays} días por semana`, `• ${d.kcal.toLocaleString("es-CR")} kcal/día y ${d.protein} g de proteína`, `• Hoy te toca: ${d.todayRoutine}`, `• Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}`, "", `Ver mi entreno de hoy: ${abs("/app/entreno")}`]),
   };
 }
 
@@ -101,13 +107,13 @@ export type PaymentData = { name: string; plan: string; amount: number; currency
 export function reciboPago(d: PaymentData): Email {
   const n = firstName(d.name);
   const total = money(d.amount, d.currency);
-  const subject = `Recibo de pago · ${d.plan} · ${total}`;
+  const subject = `Recibo de pago: ${d.plan} · ${total}`;
   const preheader = `Gracias, ${n}. Tu pago de ${total} se procesó correctamente.`;
   const r: [string, string][] = [["Plan", d.plan], ["Total", total], ["Fecha", longDate(d.date ?? new Date().toISOString())]];
   if (d.method) r.push(["Método", d.method]);
   if (d.reference) r.push(["Referencia", d.reference]);
   if (d.nextCharge) r.push(["Próximo cobro", longDate(d.nextCharge)]);
-  const body = h1("¡Pago recibido! 🙌") + p(`Gracias, ${esc(n)}. Tu suscripción a <b>${esc(d.plan)}</b> está activa.`) + rows(r) +
+  const body = badge("Pago confirmado", C.peel, "#FFFFFF") + h1("Pago recibido, gracias") + p(`Gracias, ${esc(n)}. Tu suscripción a <b>${esc(d.plan)}</b> está activa.`) + rows(r) +
     p(`Guarda este correo como comprobante. ¿Necesitas factura electrónica? Responde a este correo con tu cédula y te la enviamos.`) + button("Ir a mi entreno", "/app");
   return {
     subject, preheader,
@@ -120,7 +126,7 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
   const n = firstName(d.name);
   const total = money(d.amount, d.currency);
   const url = d.updateUrl ?? "/app/perfil";
-  const subject = "No pudimos procesar tu pago — se arregla en 1 minuto";
+  const subject = "No pudimos procesar tu pago. Se arregla en 1 minuto";
   const preheader = `Tu cobro de ${total} no pasó. Actualiza tu método de pago y sigues entrenando sin pausa.`;
   const body = h1("Tu pago no pasó") +
     p(`Hola ${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó. Pasa seguido: tarjeta vencida, límite o bloqueo de compras en línea.`) +
@@ -151,74 +157,74 @@ export function suscripcionCancelada(d: { name: string; plan: string; accessUnti
 
 // ───────────── Ciclo de vida (llevan enlace de baja) ─────────────
 
-export function recordatorio(d: { name: string; routine: string; emoji?: string; mins?: number; exercises?: string[]; streak: number; unsubscribe: string }): Email {
+export function recordatorio(d: { name: string; routine: string; mins?: number; exercises?: string[]; streak: number; unsubscribe: string }): Email {
   const n = firstName(d.name);
-  const subject = `Hoy te toca ${d.routine} ${d.emoji ?? "💪"}`;
-  const preheader = d.streak >= 2 ? `Vas ${d.streak} días seguidos 🔥 Tus cargas de hoy ya están listas.` : "Tus cargas de hoy ya están calculadas. Solo falta que llegues.";
+  const subject = `Hoy te toca ${d.routine}: tus cargas ya están listas`;
+  const preheader = d.streak >= 2 ? `Vas ${d.streak} días seguidos. Tus cargas de hoy ya están listas.` : "Tus cargas de hoy ya están calculadas. Solo falta que llegues.";
   const ex = (d.exercises ?? []).slice(0, 5);
-  const body = h1(`${esc(n)}, hoy te toca ${esc(d.routine)} ${d.emoji ?? "💪"}`) +
+  const body = h1(`${esc(n)}, hoy te toca ${esc(d.routine)}`) +
     p(d.mins ? `Son unos <b>${d.mins} minutos</b>. Ya calculamos cuánto levantar en cada serie.` : "Ya calculamos cuánto levantar en cada serie.") +
-    (ex.length ? list(ex.map((e) => `• ${esc(e)}`)) : "") +
-    (d.streak >= 2 ? p(`🔥 Racha de <b>${d.streak} días</b>. Hoy la haces crecer.`) : "") +
+    (ex.length ? list(ex.map((e) => `${dot()}${esc(e)}`)) : "") +
+    (d.streak >= 2 ? badge(`Racha de ${d.streak} días`, C.ember, "#FFFFFF") + p("Hoy la haces crecer.") : "") +
     button("Empezar entreno", "/app/entreno");
   const reason = "Recibes este recordatorio porque lo activaste en Banana Burn.";
   return {
     subject, preheader,
     html: layout({ preheader, body, unsubscribe: d.unsubscribe, reason }),
-    text: textLayout([`${n}, hoy te toca ${d.routine}.`, d.mins ? `Unos ${d.mins} minutos. Tus cargas ya están calculadas.` : "Tus cargas ya están calculadas.", ...ex.map((e) => `• ${e}`), d.streak >= 2 ? `Racha: ${d.streak} días 🔥` : "", "", `Empezar: ${abs("/app/entreno")}`], d.unsubscribe, reason),
+    text: textLayout([`${n}, hoy te toca ${d.routine}.`, d.mins ? `Unos ${d.mins} minutos. Tus cargas ya están calculadas.` : "Tus cargas ya están calculadas.", ...ex.map((e) => `• ${e}`), d.streak >= 2 ? `Racha: ${d.streak} días` : "", "", `Empezar: ${abs("/app/entreno")}`], d.unsubscribe, reason),
   };
 }
 
 export function rachaEnPeligro(d: { name: string; streak: number; unsubscribe: string }): Email {
   const n = firstName(d.name);
-  const subject = `Tu racha de ${d.streak} días sigue viva 🔥`;
+  const subject = `Tu racha de ${d.streak} días sigue viva`;
   const preheader = "Con un check-in de 2 minutos la mantienes. Mañana vas por otro día.";
-  const body = h1(`${d.streak} días seguidos, ${esc(n)} 🔥`) +
+  const body = badge(`Racha de ${d.streak} días`, C.ember, "#FFFFFF") + h1(`${d.streak} días seguidos, ${esc(n)}`) +
     p("Hoy todavía no registraste nada, y no hace falta un entreno para mantener la racha: un check-in cuenta.") +
-    list(["💧 Anota tus vasos de agua", "⚖️ Registra tu peso", "😴 Cuéntanos cómo dormiste"]) +
+    list([`${dot("#3B9EFF")}Anota tus vasos de agua`, `${dot()}Registra tu peso`, `${dot(C.ink)}Cuéntanos cómo dormiste`]) +
     p(`Dos minutos y mañana vas por el día <b>${d.streak + 1}</b>.`) + button("Hacer mi check-in", "/app");
   const reason = "Recibes este aviso porque activaste los recordatorios de Banana Burn.";
   return {
     subject, preheader,
     html: layout({ preheader, body, unsubscribe: d.unsubscribe, reason }),
-    text: textLayout([`${d.streak} días seguidos, ${n} 🔥`, "Un check-in rápido (agua, peso o sueño) mantiene tu racha.", `Mañana vas por el día ${d.streak + 1}.`, "", `Hacer mi check-in: ${abs("/app")}`], d.unsubscribe, reason),
+    text: textLayout([`${d.streak} días seguidos, ${n}.`, "Un check-in rápido (agua, peso o sueño) mantiene tu racha.", `Mañana vas por el día ${d.streak + 1}.`, "", `Hacer mi check-in: ${abs("/app")}`], d.unsubscribe, reason),
   };
 }
 
 export type WeeklyData = {
   name: string; workouts: number; planned: number; streak: number;
   kgStart?: number | null; kgEnd?: number | null; trendPerWeek?: number | null;
-  prs: string[]; nextWeek: { day: string; name: string; emoji: string }[]; unsubscribe: string;
+  prs: string[]; nextWeek: { day: string; name: string }[]; unsubscribe: string;
 };
 
 export function resumenSemanal(d: WeeklyData): Email {
   const n = firstName(d.name);
   const delta = d.kgStart != null && d.kgEnd != null ? Math.round((d.kgEnd - d.kgStart) * 10) / 10 : null;
-  const kgLabel = delta == null ? "—" : delta === 0 ? "0.0 kg" : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} kg`;
-  const headline = d.workouts >= d.planned && d.planned > 0 ? `Semana completa: ${d.workouts}/${d.planned} entrenos 🏆` : d.workouts > 0 ? `${d.workouts} entrenos esta semana 💪` : "Una semana nueva para arrancar 🍌";
+  const kgLabel = delta == null ? "Sin pesaje" : delta === 0 ? "0,0 kg" : `${delta > 0 ? "+" : ""}${kg(delta)} kg`;
+  const headline = d.workouts >= d.planned && d.planned > 0 ? `Semana completa: ${d.workouts}/${d.planned} entrenos` : d.workouts > 0 ? `${d.workouts} entrenos esta semana` : "Una semana nueva para arrancar";
   const subject = `Tu semana: ${d.workouts} entrenos${delta != null ? ` · ${kgLabel}` : ""}`;
   const preheader = d.prs.length ? `${d.prs.length} récord${d.prs.length > 1 ? "s" : ""} personal${d.prs.length > 1 ? "es" : ""} y tu plan para esta semana.` : "Tu progreso y lo que viene esta semana.";
-  const trend = d.trendPerWeek == null ? "" : d.trendPerWeek < 0 ? p(`📉 Tu tendencia es <b>${Math.abs(d.trendPerWeek).toFixed(2)} kg/semana</b> hacia abajo. Vas bien.`) : d.trendPerWeek > 0 ? p(`📈 La báscula subió un poco (${d.trendPerWeek.toFixed(2)} kg/semana). Es normal que fluctúe: lo que manda es la tendencia de varias semanas. Tu plan se ajusta solo.`) : p("⚖️ Peso estable esta semana.");
-  const body = h1(esc(headline)) + p(`${esc(n)}, así te fue en los últimos 7 días:`) +
-    stats([[`${d.workouts}/${d.planned || "—"}`, "entrenos"], [kgLabel, "peso"], [`${d.streak} 🔥`, "racha"]]) + trend +
-    (d.prs.length ? `<p style="margin:8px 0 6px;font-size:14px;font-weight:800;color:${C.ink};">🏆 Récords personales</p>` + list(d.prs.slice(0, 5).map((x) => esc(x))) : "") +
-    (d.nextWeek.length ? `<p style="margin:8px 0 6px;font-size:14px;font-weight:800;color:${C.ink};">📅 Esta semana</p>` + list(d.nextWeek.map((x) => `<b>${esc(x.day)}</b> · ${esc(x.name)} ${x.emoji}`)) : "") +
+  const trend = d.trendPerWeek == null ? "" : d.trendPerWeek < 0 ? p(`Tu tendencia es <b>${kg(Math.abs(d.trendPerWeek), 2)} kg/semana</b> hacia abajo. Vas bien.`) : d.trendPerWeek > 0 ? p(`La báscula subió un poco (${kg(d.trendPerWeek, 2)} kg/semana). Es normal que fluctúe: lo que manda es la tendencia de varias semanas. Tu plan se ajusta solo.`) : p("Peso estable esta semana.");
+  const body = (d.workouts >= d.planned && d.planned > 0 ? badge("Semana completa", C.banana) : "") + h1(esc(headline)) + p(`${esc(n)}, así te fue en los últimos 7 días:`) +
+    stats([[d.planned ? `${d.workouts}/${d.planned}` : `${d.workouts}`, "entrenos"], [kgLabel, "peso"], [`${d.streak} días`, "racha"]]) + trend +
+    (d.prs.length ? badge("Récords personales", C.banana) + list(d.prs.slice(0, 5).map((x) => `${dot(C.ember)}${esc(x)}`)) : "") +
+    (d.nextWeek.length ? `<p style="margin:8px 0 6px;font-size:14px;font-weight:800;color:${C.ink};">Esta semana</p>` + list(d.nextWeek.map((x) => `${dot()}<b>${esc(x.day)}</b> · ${esc(x.name)}`)) : "") +
     button("Ver mi progreso", "/app/progreso");
   const reason = "Recibes el resumen semanal porque lo activaste en Banana Burn.";
   return {
     subject, preheader,
     html: layout({ preheader, body, unsubscribe: d.unsubscribe, reason }),
-    text: textLayout([headline, "", `Entrenos: ${d.workouts}/${d.planned || "—"}`, `Peso: ${kgLabel}`, `Racha: ${d.streak} días`, ...(d.prs.length ? ["", "Récords:", ...d.prs.slice(0, 5).map((x) => `• ${x}`)] : []), ...(d.nextWeek.length ? ["", "Esta semana:", ...d.nextWeek.map((x) => `• ${x.day}: ${x.name}`)] : []), "", `Ver mi progreso: ${abs("/app/progreso")}`], d.unsubscribe, reason),
+    text: textLayout([headline, "", `Entrenos: ${d.planned ? `${d.workouts}/${d.planned}` : d.workouts}`, `Peso: ${kgLabel}`, `Racha: ${d.streak} días`, ...(d.prs.length ? ["", "Récords:", ...d.prs.slice(0, 5).map((x) => `• ${x}`)] : []), ...(d.nextWeek.length ? ["", "Esta semana:", ...d.nextWeek.map((x) => `• ${x.day}: ${x.name}`)] : []), "", `Ver mi progreso: ${abs("/app/progreso")}`], d.unsubscribe, reason),
   };
 }
 
 export function reactivacion(d: { name: string; days: 3 | 7; routine: string; trainingDay: boolean; unsubscribe: string }): Email {
   const n = firstName(d.name);
   const three = d.days === 3;
-  const subject = three ? `Te guardamos el lugar, ${n} 🍌` : "Empezamos de nuevo, sin presión 💛";
+  const subject = three ? `Te guardamos el lugar, ${n}` : "Empezamos de nuevo, sin presión";
   const preheader = three ? "Volver es más fácil con una sesión corta. Tu plan sigue igualito." : "Tus datos y tu plan siguen aquí. 20 minutos hoy y arrancamos.";
   const today = d.trainingDay ? `Hoy te toca <b>${esc(d.routine)}</b>.` : "Hoy es día de descanso activo: una caminata y 10 minutos de estiramiento cuentan.";
-  const body = h1(three ? `Te guardamos el lugar, ${esc(n)} 🍌` : "Empezamos de nuevo, sin presión") +
+  const body = h1(three ? `Te guardamos el lugar, ${esc(n)}` : "Empezamos de nuevo, sin presión") +
     p(three ? "La vida pasa, y está bien. Lo que importa es la siguiente sesión, no las que quedaron atrás." : "Una semana fuera no borra nada: tus récords, tu historial y tu plan siguen aquí.") +
     p(today) + p("Si te cuesta arrancar, haz solo los dos primeros ejercicios. Casi siempre terminas la sesión.") +
     button(d.trainingDay ? "Volver con una sesión corta" : "Hacer mi check-in", d.trainingDay ? "/app/entreno" : "/app");

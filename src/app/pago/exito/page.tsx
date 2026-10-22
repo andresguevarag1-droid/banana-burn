@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CircleCheck, Clock } from "lucide-react";
+import { Clock, MonkeyBanana } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
 import { AutoRefresh } from "./auto-refresh";
 
-export const metadata = { title: "¡Pago recibido!" };
+export const metadata = { title: "Pago recibido" };
 
 const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("es-CR", { day: "numeric", month: "long", year: "numeric" }) : null);
 
@@ -32,7 +32,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
 
   if (v.demo) {
     return (
-      <Card icon={<Clock className="size-8" aria-hidden />} title="Modo demo 🧪" body="En la demo no se procesan pagos.">
+      <Card icon={<MonkeyBanana className="size-10" />} title="Modo demo" body="En la demo no se procesan pagos.">
         <Link href="/app" className="btn-primary">Ir a la app</Link>
       </Card>
     );
@@ -40,7 +40,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
 
   if (!confirmed) {
     return (
-      <Card icon={<Clock className="size-8" aria-hidden />} title="Estamos confirmando tu pago…" body="Suele tardar unos segundos. Con SINPE Móvil puede tardar unos minutos. No cierres esta página; se actualiza sola.">
+      <Card icon={<Clock weight="duotone" className="size-8" />} title="Estamos confirmando tu pago…" body="Suele tardar unos segundos. Con SINPE Móvil puede tardar unos minutos. No cierres esta página; se actualiza sola.">
         <AutoRefresh />
         <div className="flex flex-col sm:flex-row gap-2 justify-center">
           <Link href="/app" className="btn-primary">Ir a la app mientras tanto</Link>
@@ -53,7 +53,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
 
   const nutrition = PLANS.find((p) => p.name === planName)?.nutrition;
   return (
-    <Card icon={<CircleCheck className="size-8" aria-hidden />} tone="ok" title={`¡Listo! ${planName ?? "Tu plan"} está activo 🎉`} body={renews ? `Tu próxima renovación es el ${renews}. Tus pagos quedan en Mi suscripción.` : "Tus pagos quedan en Mi suscripción."}>
+    <Card icon={<MonkeyBanana className="size-10" />} tone="ok" title={`Listo: ${planName ?? "tu plan"} está activo`} body={renews ? `Tu próxima renovación es el ${renews}. Tus pagos quedan en Mi suscripción.` : "Tus pagos quedan en Mi suscripción."}>
       <ol className="text-left space-y-3 text-[15px]">
         <Step n={1}>Abre <b>Hoy</b> y haz tu rutina del día.</Step>
         {nutrition ? <Step n={2}>Ve a <b>Nutrición</b>: ya tienes tus calorías y macros.</Step> : <Step n={2}>Pregúntale al <b>Coach IA</b> cualquier duda de técnica.</Step>}

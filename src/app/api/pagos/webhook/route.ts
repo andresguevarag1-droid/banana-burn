@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * Webhook de ONVO Pay — https://docs.onvopay.com/en/webhooks.md
+ * Webhook de ONVO Pay: https://docs.onvopay.com/en/webhooks.md
  * Único camino que otorga planes pagados. Responde 2xx solo si se procesó (o ya estaba procesado);
  * cualquier otro código queda como entrega fallida en ONVO.
  */

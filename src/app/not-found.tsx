@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MonkeyBanana } from "@/components/icons";
 
 export const metadata = { title: "Página no encontrada" };
 
@@ -6,7 +7,7 @@ export default function NotFound() {
   return (
     <main className="min-h-dvh grid place-items-center text-center px-6 py-12">
       <div className="w-full max-w-sm animate-rise">
-        <p aria-hidden className="text-7xl animate-floaty">🍌</p>
+        <span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink animate-floaty"><MonkeyBanana className="size-16" /></span>
         <p className="mt-6 eyebrow">Error 404</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">Esta página se resbaló</h1>
         <p className="mt-2 text-muted">El enlace está roto o la página ya no existe. Te llevamos de vuelta a lo importante.</p>

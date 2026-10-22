@@ -16,7 +16,7 @@ function safeUrl(raw) {
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data ? event.data.text() : "" }; }
-  const title = String(data.title || "Banana Burn 🍌").slice(0, 120);
+  const title = String(data.title || "Banana Burn").slice(0, 120);
   const options = {
     body: String(data.body || "").slice(0, 240),
     icon: "/icons/icon-192.png",

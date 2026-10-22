@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, Banana, Barbell, Drop, Egg, Monkey, Plus, ShieldCheck, Sun, Syringe } from "@/components/icons";
 import { Phone } from "@/components/phone";
 
 export const metadata = {
@@ -8,11 +8,11 @@ export const metadata = {
 };
 
 const PILLARS = [
-  ["🏋️", "Fuerza que protege", "Rutinas de fuerza 3–4 días adaptadas a tu nivel y tiempo. Si hoy hay náusea, modo suave: lo importante es no soltar el músculo."],
-  ["🥩", "Proteína primero", "Tu meta diaria y por comida, en porciones pequeñas que sí te entran. Recetas ticas suaves para días difíciles."],
-  ["💉", "Sabe tu día de inyección", "El día de la inyección y el siguiente bajamos la intensidad y te recordamos agua, fibra y comidas pequeñas."],
-  ["🛡️", "Músculo protegido", "Con tus medidas y tu fuerza calculamos cuánto de lo que bajas es grasa. Meta: al menos 3 de cada 4 kg."],
-];
+  [Barbell, "Fuerza que protege", "Rutinas de fuerza 3-4 días adaptadas a tu nivel y tiempo. Si hoy hay náusea, modo suave: lo importante es no soltar el músculo."],
+  [Egg, "Proteína primero", "Tu meta diaria y por comida, en porciones pequeñas que sí te entran. Recetas ticas suaves para días difíciles."],
+  [Syringe, "Sabe tu día de inyección", "El día de la inyección y el siguiente bajamos la intensidad y te recordamos agua, fibra y comidas pequeñas."],
+  [ShieldCheck, "Músculo protegido", "Con tus medidas y tu fuerza calculamos cuánto de lo que bajas es grasa. Meta: al menos 3 de cada 4 kg."],
+] as const;
 
 const FAQ = [
   ["¿Reemplaza a mi médico?", "No. Banana Shield es entreno, nutrición y hábitos que acompañan el tratamiento que te indicó tu médico. Nunca damos indicaciones de dosis ni de cambios en tu medicamento."],
@@ -36,7 +36,7 @@ export default function Glp1Landing() {
               <Link href="/entrar?modo=registro&programa=glp1" className="btn-primary h-14 px-7 text-base">Activar Banana Shield <ArrowRight className="size-5" /></Link>
               <a href="#como" className="btn-ghost h-14 px-7 text-base">Cómo funciona</a>
             </div>
-            <p className="mt-4 text-sm text-muted">Incluido en Entreno + Nutrición · desde $7.49/mes · en español</p>
+            <p className="mt-4 text-sm text-muted">Incluido en Entreno + Nutrición · desde $7.49/mes, en español</p>
           </div>
           <div className="flex justify-center"><Phone src="/landing/hoy.png" alt="Banana Burn en el teléfono" className="w-[280px] animate-floaty" priority /></div>
         </div>
@@ -45,7 +45,7 @@ export default function Glp1Landing() {
       <section className="border-y border-line bg-ink text-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 grid gap-6 sm:grid-cols-3 text-center">
           <div><p className="text-4xl font-extrabold text-banana">~1 de 4</p><p className="mt-1 text-white/70">kg perdidos con GLP-1 puede ser masa magra si no se protege¹</p></div>
-          <div><p className="text-4xl font-extrabold text-banana">1,2–1,6 g/kg</p><p className="mt-1 text-white/70">de proteína al día recomiendan los expertos durante la pérdida de peso²</p></div>
+          <div><p className="text-4xl font-extrabold text-banana">1,2-1,6 g/kg</p><p className="mt-1 text-white/70">de proteína al día recomiendan los expertos durante la pérdida de peso²</p></div>
           <div><p className="text-4xl font-extrabold text-banana">Fuerza</p><p className="mt-1 text-white/70">la proteína sola no basta: el entrenamiento de fuerza es necesario²</p></div>
         </div>
       </section>
@@ -54,8 +54,8 @@ export default function Glp1Landing() {
         <p className="eyebrow">Cómo funciona</p>
         <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-ink max-w-3xl">Tu medicamento hace su parte. Banana Shield hace la otra.</h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          {PILLARS.map(([e, t, d]) => (
-            <div key={t} className="card p-6"><p className="text-3xl">{e}</p><h3 className="mt-3 text-xl font-extrabold text-ink">{t}</h3><p className="mt-2 text-[17px] text-muted leading-relaxed">{d}</p></div>
+          {PILLARS.map(([I, t, d]) => (
+            <div key={t} className="card p-6"><span className="grid place-items-center size-12 rounded-2xl bg-banana-soft text-banana-ink"><I weight="duotone" className="size-6" /></span><h3 className="mt-3 text-xl font-extrabold text-ink">{t}</h3><p className="mt-2 text-[17px] text-muted leading-relaxed">{d}</p></div>
           ))}
         </div>
       </section>
@@ -63,18 +63,22 @@ export default function Glp1Landing() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-20">
         <div className="rounded-[2rem] bg-banana p-8 sm:p-12 grid gap-8 lg:grid-cols-2 items-center">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Un día con Banana Shield 🍌</h2>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink"><span className="inline-flex flex-wrap items-center gap-x-3">Un día con Banana Shield <Banana weight="fill" className="size-9" /></span></h2>
             <ul className="mt-6 space-y-3 text-[17px] text-ink">
-              <li>☀️ <b>Desayuno pequeño con 30 g de proteína</b> (huevos en taza, 3 minutos)</li>
-              <li>🏋️ <b>Fuerza 30–45 min</b>, o modo suave si es día de inyección</li>
-              <li>🥩 <b>Proteína primero</b> en cada comida, porciones que sí te entran</li>
-              <li>💧 <b>Agua y fibra</b> marcadas en tus anillos de Hoy</li>
-              <li>🛡️ <b>Tu escudo de músculo</b> se actualiza con tus medidas</li>
+              {([
+                [Sun, <><b>Desayuno pequeño con 30 g de proteína</b> (huevos en taza, 3 minutos)</>],
+                [Barbell, <><b>Fuerza 30-45 min</b>, o modo suave si es día de inyección</>],
+                [Egg, <><b>Proteína primero</b> en cada comida, porciones que sí te entran</>],
+                [Drop, <><b>Agua y fibra</b> marcadas en tus anillos de Hoy</>],
+                [ShieldCheck, <><b>Tu escudo de músculo</b> se actualiza con tus medidas</>],
+              ] as const).map(([I, txt], i) => (
+                <li key={i} className="flex items-start gap-3"><I weight="duotone" className="size-6 shrink-0 mt-0.5" /><span>{txt}</span></li>
+              ))}
             </ul>
           </div>
           <div className="rounded-3xl bg-white p-6">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Coach Banana</p>
-            <p className="mt-2 text-lg text-ink">“Hoy es tu día de inyección 💉. Entrena en modo suave (25 min) y prioriza 30 g de proteína en el almuerzo. Si no puedes retener líquidos, llama a tu médico.”</p>
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted"><Monkey className="size-5 text-banana-ink" />Coach Banana</p>
+            <p className="mt-2 text-lg text-ink">“Hoy es tu día de inyección. Entrena en modo suave (25 min) y prioriza 30 g de proteína en el almuerzo. Si no puedes retener líquidos, llama a tu médico.”</p>
           </div>
         </div>
       </section>
@@ -84,7 +88,7 @@ export default function Glp1Landing() {
         <div className="mt-8 space-y-3">
           {FAQ.map(([q, a]) => (
             <details key={q} className="card group p-0 open:shadow-lift">
-              <summary className="cursor-pointer list-none p-5 flex justify-between items-center font-bold text-ink">{q}<span className="text-xl transition-transform group-open:rotate-45" aria-hidden>+</span></summary>
+              <summary className="cursor-pointer list-none p-5 flex justify-between items-center font-bold text-ink">{q}<Plus weight="bold" className="size-5 shrink-0 transition-transform group-open:rotate-45" /></summary>
               <p className="px-5 pb-5 -mt-1 text-muted leading-relaxed">{a}</p>
             </details>
           ))}
@@ -101,7 +105,7 @@ export default function Glp1Landing() {
 
       <aside className="mx-auto max-w-4xl px-4 sm:px-6 pt-12 text-xs text-muted space-y-1">
         <p>¹ Noronha JC et al. <i>Optimizing GLP-1 therapies for obesity and diabetes management.</i> Obesity Pillars, 2025 (meta-análisis citado: ~25 % del peso perdido fue masa magra).</p>
-        <p>² Mozaffarian D et al. <i>Nutritional priorities to support GLP-1 therapy for obesity.</i> Obesity, 2025 — ACLM, ASN, OMA y The Obesity Society.</p>
+        <p>² Mozaffarian D et al. <i>Nutritional priorities to support GLP-1 therapy for obesity.</i> Obesity, 2025. ACLM, ASN, OMA y The Obesity Society.</p>
         <p>Banana Burn no vende ni receta medicamentos y no reemplaza la atención médica. Ozempic®, Wegovy®, Mounjaro®, Zepbound® y Saxenda® son marcas de sus respectivos dueños; Banana Burn no está afiliado a ellos.</p>
       </aside>
     </>

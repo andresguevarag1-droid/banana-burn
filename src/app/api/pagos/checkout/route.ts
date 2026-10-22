@@ -5,7 +5,7 @@ import { BillingError, startCheckout } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
-/** Inicia el pago de un plan. Body: { plan: "entreno"|"completo", billing: "mes"|"anual" } → { url } */
+/** Inicia el pago de un plan. Body: { plan: "entreno"|"completo", billing: "mes"|"anual" } -> { url } */
 export async function POST(req: Request) {
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "Inicia sesión para continuar." }, { status: 401 });

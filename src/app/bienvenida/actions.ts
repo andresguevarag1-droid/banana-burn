@@ -26,6 +26,6 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   await sb.from("xp_events").insert({ user_id: v.id, kind: "onboard", xp: 50 });
   const t = targets({ kg: o.weight, heightCm: o.heightCm, age: ageOn(o.dob), sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : "recomp" });
   const today = planDay(new Date(crToday().iso + "T12:00:00").getDay(), 0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
-  await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, todayEmoji: today.emoji, kcal: t.kcal, protein: t.protein, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
+  await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, kcal: t.kcal, protein: t.protein, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
   return { ok: true };
 }

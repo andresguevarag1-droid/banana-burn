@@ -50,7 +50,7 @@ describe("horas de silencio", () => {
 });
 
 describe("recordatorio de entreno", () => {
-  it("a la hora elegida, día de entreno y sin entrenar → push + correo", () => {
+  it("a la hora elegida, día de entreno y sin entrenar -> push + correo", () => {
     expect(decide(base())).toEqual([{ kind: "recordatorio", push: true, email: true, inapp: true }]);
   });
   it("usa solo la hora del reminder_time (cron horario)", () => {
@@ -69,7 +69,7 @@ describe("recordatorio de entreno", () => {
     expect(decide(base({ hasEmail: false }))[0]).toMatchObject({ email: false, inapp: true });
   });
   it("respeta la zona horaria del usuario", () => {
-    // 07:00 en CDMX = 13:00Z; para alguien en Bogotá (UTC−5) son las 08:00 → no toca.
+    // 07:00 en CDMX = 13:00Z; para alguien en Bogotá (UTC−5) son las 08:00 -> no toca.
     expect(kinds(base({ now: new Date("2026-10-21T13:00:00Z") }, { timezone: "America/Mexico_City" }))).toEqual(["recordatorio"]);
     expect(kinds(base({ now: new Date("2026-10-21T13:00:00Z") }, { timezone: "America/Bogota" }))).toEqual([]);
   });
@@ -93,7 +93,7 @@ describe("racha en peligro (20:00)", () => {
 });
 
 describe("resumen semanal (lunes 07:00)", () => {
-  it("lunes 07:00 → resumen por correo + recordatorio solo push (un solo correo)", () => {
+  it("lunes 07:00 -> resumen por correo + recordatorio solo push (un solo correo)", () => {
     const ds = decide(base({ now: cr(MON, 7) }));
     expect(ds.map((d) => d.kind)).toEqual(["semanal", "recordatorio"]);
     expect(ds[0]).toMatchObject({ push: false, email: true });
@@ -149,9 +149,9 @@ describe("filtro de horas relevantes", () => {
 });
 
 describe("copy", () => {
-  const ctx = { name: "Andrés Guevara", routine: "Empuje A", emoji: "💪", mins: 55, streak: 4, day: WED };
+  const ctx = { name: "Andrés Guevara", routine: "Empuje A", mins: 55, streak: 4, day: WED };
   it("recordatorio nombra la rutina", () => {
-    expect(copyFor("recordatorio", ctx).title).toBe("Hoy te toca Empuje A 💪");
+    expect(copyFor("recordatorio", ctx).title).toBe("Hoy te toca Empuje A");
   });
   it("nunca culpa ni avergüenza", () => {
     const bad = /(fallaste|decepcion|vergüenza|flojo|perezos|no tienes excusa|abandon|culpa)/i;
@@ -159,6 +159,7 @@ describe("copy", () => {
       for (const day of ["2026-10-20", "2026-10-21", "2026-10-22"]) {
         const c = copyFor(k, { ...ctx, day, workouts: 3, kgDelta: -0.4 });
         expect(c.title + c.body).not.toMatch(bad);
+        expect(c.title + c.body).not.toMatch(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u);
         expect(c.url.startsWith("/app")).toBe(true);
       }
     }

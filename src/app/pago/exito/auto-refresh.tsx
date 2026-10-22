@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@/components/icons";
 
 /** Refresca la página mientras el webhook confirma el pago (máx. ~3 min). */
 export function AutoRefresh({ everyMs = 4000, max = 45 }: { everyMs?: number; max?: number }) {
@@ -14,7 +14,7 @@ export function AutoRefresh({ everyMs = 4000, max = 45 }: { everyMs?: number; ma
   }, [n, max, everyMs, router]);
   return (
     <p className="flex items-center justify-center gap-2 text-sm font-semibold text-muted" role="status">
-      {n < max ? <><Loader2 className="size-4 animate-spin" aria-hidden />Verificando…</> : "Sigue pendiente. Revisa en unos minutos desde tu suscripción."}
+      {n < max ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Verificando…</> : "Sigue pendiente. Revisa en unos minutos desde tu suscripción."}
     </p>
   );
 }

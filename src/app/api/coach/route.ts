@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getViewer, createClient } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { getProgress } from "@/lib/progress";
-import { coachSystem, demoReply, safetyCheck } from "@/lib/coach";
+import { coachSystem, demoReply, safetyCheck, stripEmoji } from "@/lib/coach";
 import { crToday } from "@/lib/today";
 
 export const runtime = "nodejs";
@@ -16,8 +16,8 @@ function textStream(gen: AsyncIterable<string>, onDone?: (full: string) => Promi
   return new ReadableStream({
     async start(c) {
       let full = "";
-      try { for await (const t of gen) { full += t; c.enqueue(enc.encode(t)); } }
-      catch { c.enqueue(enc.encode("\n\n⚠️ Se cortó la respuesta. Intenta de nuevo.")); }
+      try { for await (const raw of gen) { const t = stripEmoji(raw); if (!t) continue; full += t; c.enqueue(enc.encode(t)); } }
+      catch { c.enqueue(enc.encode("\n\nSe cortó la respuesta. Intenta de nuevo.")); }
       c.close();
       if (onDone) await onDone(full).catch(() => {});
     },
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const sb = v.demo ? null : await createClient();
   if (sb) {
     const { count } = await sb.from("coach_messages").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("role", "user").gte("created_at", crToday().iso + "T06:00:00Z");
-    if ((count ?? 0) >= DAILY_LIMIT) return new Response(textStream(fake("Llegaste al límite de mensajes de hoy 🙏 Mañana seguimos.")), { headers });
+    if ((count ?? 0) >= DAILY_LIMIT) return new Response(textStream(fake("Llegaste al límite de mensajes de hoy. Mañana seguimos.")), { headers });
   }
 
   const a = await getAthlete(v);

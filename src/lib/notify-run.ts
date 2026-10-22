@@ -124,7 +124,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
       if (!claimed?.length) continue;
 
       const weekly = d.kind === "semanal" ? await weeklyData(admin, u, c.iso, workouts, wsBy.get(u.id) ?? [], streak, sched, eq) : null;
-      const copy = copyFor(d.kind, { name, routine: plan.name, emoji: plan.emoji, mins: plan.mins, streak, trainingDay: plan.tpl !== null, workouts: weekly?.workouts, kgDelta: weekly && weekly.kgStart != null && weekly.kgEnd != null ? weekly.kgEnd - weekly.kgStart : null, day: c.iso });
+      const copy = copyFor(d.kind, { name, routine: plan.name, mins: plan.mins, streak, trainingDay: plan.tpl !== null, workouts: weekly?.workouts, kgDelta: weekly && weekly.kgStart != null && weekly.kgEnd != null ? weekly.kgEnd - weekly.kgStart : null, day: c.iso });
 
       if (d.inapp) await admin.from("notifications").insert({ user_id: u.id, kind: d.kind, title: copy.title, body: copy.body, url: copy.url });
       if (d.push) stats.push += await sendPush(admin, userSubs, { ...copy, tag: d.kind });
@@ -153,7 +153,7 @@ async function weeklyData(admin: SupabaseClient, u: Profile, today: string, work
   const { data: prRows } = await admin.from("xp_events").select("kind").eq("user_id", u.id).eq("kind", "pr").gte("created_at", from + "T00:00:00Z");
   const prs = (prRows ?? []).length;
   const planned = Object.values(sched).filter(Boolean).length;
-  const next = planWeek(0, sched, eq).filter((d) => d.tpl).map((d) => ({ day: DAYS[d.dow], name: d.name, emoji: d.emoji }));
+  const next = planWeek(0, sched, eq).filter((d) => d.tpl).map((d) => ({ day: DAYS[d.dow], name: d.name }));
   return {
     workouts: new Set(week).size, planned, streak,
     kgStart: ws.length ? Number(ws[0].kg) : null, kgEnd: ws.length > 1 ? Number(ws[ws.length - 1].kg) : null, trendPerWeek: trend,
@@ -169,6 +169,6 @@ function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<ty
     case "reactivacion_3":
     case "reactivacion_7": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.reactivacion({ name: x.name, days: kind === "reactivacion_3" ? 3 : 7, routine: x.plan.name, trainingDay: x.plan.tpl !== null, unsubscribe }) }; }
     case "recordatorio":
-    default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ name: x.name, routine: x.plan.name, emoji: x.plan.emoji, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, unsubscribe }) }; }
+    default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ name: x.name, routine: x.plan.name, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, unsubscribe }) }; }
   }
 }

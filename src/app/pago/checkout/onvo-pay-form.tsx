@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { CircleAlert, Loader2 } from "lucide-react";
+import { CircleNotch, WarningCircle } from "@/components/icons";
 
-// SDK web de ONVO — https://docs.onvopay.com/en/integrations/sdk.md
+// SDK web de ONVO: https://docs.onvopay.com/en/integrations/sdk.md
 type OnvoErrorData = { message?: string; details?: { card?: { reason?: string } } };
 type OnvoPayInstance = { render: (selector: string) => void };
 declare global {
@@ -54,14 +54,14 @@ export function OnvoPayForm({ publicKey, subscriptionId, customerId }: { publicK
       <Script src={SDK_URL} strategy="afterInteractive" onReady={() => setReady(true)} onError={() => setLoadFailed(true)} />
       {error && (
         <p role="alert" className="mb-4 flex gap-2 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm font-semibold text-bad">
-          <CircleAlert className="size-5 shrink-0" aria-hidden />{error}
+          <WarningCircle weight="duotone" className="size-5 shrink-0" />{error}
         </p>
       )}
       {loadFailed ? (
         <p role="alert" className="text-sm text-muted">No pudimos cargar el formulario de pago. Revisa tu conexión o desactiva bloqueadores de anuncios y <button type="button" onClick={() => location.reload()} className="font-semibold text-ink underline">recarga la página</button>.</p>
       ) : (
         <div id="onvo-pay" className="min-h-48" aria-live="polite" aria-busy={!ready}>
-          {!ready && <p className="flex items-center gap-2 text-sm text-muted"><Loader2 className="size-4 animate-spin" aria-hidden />Cargando formulario seguro…</p>}
+          {!ready && <p className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin" />Cargando formulario seguro…</p>}
         </div>
       )}
     </div>
