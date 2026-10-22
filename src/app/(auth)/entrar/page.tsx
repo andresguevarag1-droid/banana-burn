@@ -1,13 +1,18 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/brand";
-import { Banana, Monkey } from "@/components/icons";
+import { ArrowRight, Banana, Monkey, MonkeyBanana, SignOut } from "@/components/icons";
 import { isSupabaseConfigured } from "@/lib/env";
+import { getViewer } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
-export default function Entrar() {
+export const dynamic = "force-dynamic";
+
+export default async function Entrar() {
+  // Con sesión abierta no rebotamos a la app: mostramos con qué cuenta estás y dejamos cambiarla.
+  const v = isSupabaseConfigured ? await getViewer() : null;
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
       <div className="flex flex-col px-5 sm:px-10 py-6">
@@ -15,7 +20,20 @@ export default function Entrar() {
         <main className="flex-1 grid place-items-center py-10">
           <div className="w-full max-w-[400px]">
             {/* Google solo si el proveedor está activo en Supabase (NEXT_PUBLIC_GOOGLE_AUTH=1); si no, el botón fallaría. */}
-            <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} /></Suspense>
+            {v ? (
+              <div className="animate-rise">
+                <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
+                <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Ya tienes la sesión abierta</h1>
+                <p className="mt-2 text-muted">Entraste como <b className="text-ink break-all">{v.email}</b>.</p>
+                <Link href={v.onboarded ? "/app" : "/bienvenida"} className="btn-primary w-full h-13 mt-8">{v.onboarded ? "Ir a mi cuenta" : "Terminar de crear mi plan"}<ArrowRight className="size-5" /></Link>
+                <form action="/auth/salir" method="post" className="mt-3">
+                  <input type="hidden" name="next" value="/entrar" />
+                  <button className="btn-ghost w-full h-13"><SignOut weight="bold" className="size-5" />Entrar con otra cuenta</button>
+                </form>
+              </div>
+            ) : (
+              <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} /></Suspense>
+            )}
           </div>
         </main>
         <footer className="text-xs text-muted text-center text-pretty">Al continuar aceptas los <Link href="/terminos" className="tap underline underline-offset-2 hover:text-ink">Términos</Link> y la <Link href="/privacidad" className="tap underline underline-offset-2 hover:text-ink">Política de privacidad</Link>.</footer>

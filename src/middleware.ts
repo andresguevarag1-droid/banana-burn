@@ -26,7 +26,8 @@ export async function middleware(req: NextRequest) {
     url.searchParams.set("next", safeNext(`${path}${req.nextUrl.search}`, "/app"));
     return NextResponse.redirect(url);
   }
-  if (user && (path === "/entrar" || path === "/registro")) {
+  // /entrar ya no rebota a la app: si hay sesión, la página ofrece seguir o entrar con otra cuenta.
+  if (user && path === "/registro") {
     const url = req.nextUrl.clone();
     url.pathname = "/app";
     url.search = "";
