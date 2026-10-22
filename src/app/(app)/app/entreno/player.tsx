@@ -69,6 +69,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
   const [pending, start] = useTransition();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [justDone, setJustDone] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const loaded = useRef(false);
 
   // Restaurar sesión en curso
@@ -141,7 +142,7 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
   function save() {
     start(async () => {
       const res = await saveWorkout({
-        template, startedAt, fun, xp: summary.xp, prs: prs.length,
+        template, startedAt, fun, xp: summary.xp, prs: prs.length, title, emoji, prNames: prs.map((p) => exercises.find((e) => e.id === p)?.name ?? p),
         exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: s.easy ? 4 : 2 })) })).filter((e) => e.sets.length),
       });
       if (!res.ok) return setSaveMsg(res.error ?? "Error al guardar.");
@@ -149,6 +150,10 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
       setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
       setPhase("saved");
       buzz([60, 40, 60, 40, 200]);
+      fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        title, done: doneSets, total: totalSets, prs: prs.map((p) => exercises.find((e) => e.id === p)?.name ?? p), volume: summary.vol,
+        mins: Math.round(elapsed / 60), fun, easy: rows.flat().filter((r) => r.easy).length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
+      }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => {});
     });
   }
 
@@ -192,7 +197,10 @@ export function Player({ template, title, emoji, cardio, options, dateKey, gam }
               </div>
             )}
             {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
-            <p className="mt-6 text-muted">🥩 Proteína en la próxima hora y a dormir 7–9 h. Mañana el motor ajusta tus cargas.</p>
+            <div className="mt-4 card p-4 text-left" aria-live="polite">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">✨ Coach Banana</p>
+              {feedback ? <p className="mt-1 text-[15px] text-ink leading-relaxed animate-rise">{feedback}</p> : <p className="mt-2 flex gap-1" aria-label="Analizando tu entreno">{[0, 1, 2].map((d) => <span key={d} className="size-2 rounded-full bg-faint animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />)}</p>}
+            </div>
             <Link href="/app" className="btn-primary w-full h-14 mt-6 text-base">Listo</Link>
           </div>
         </div>

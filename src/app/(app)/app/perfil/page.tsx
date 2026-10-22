@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getViewer } from "@/lib/supabase/server";
+import { createClient, getViewer } from "@/lib/supabase/server";
+import { CommunitySettings } from "./community-settings";
 import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
@@ -11,6 +12,11 @@ export default async function Perfil() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
+  let cp = { username: "andres", bio: "Bajando de 94 a 85 kg 🍌", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };
+  if (!v.demo) {
+    const { data } = await (await createClient()).from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle();
+    cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
+  }
   const plan = PLANS.find((p) => p.id === v.plan) ?? (v.plan === "pro" ? PLANS[1] : null);
   return (
     <div className="space-y-5 animate-rise max-w-2xl">
@@ -34,6 +40,11 @@ export default async function Perfil() {
       <section className="card p-5">
         <h2 className="font-extrabold text-ink mb-4">🏋️ Mi plan de entreno</h2>
         <TrainingSettings days={a.trainDays} equipment={a.equipment} mode={a.mode} level={a.level} minutes={a.minutes} />
+      </section>
+
+      <section id="comunidad" className="card p-5 scroll-mt-6">
+        <h2 className="font-extrabold text-ink mb-4">👥 Perfil en la comunidad</h2>
+        <CommunitySettings username={cp.username} bio={cp.bio} visibility={cp.visibility} share={cp.share} />
       </section>
 
       <section className="card p-5">

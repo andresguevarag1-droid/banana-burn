@@ -4,9 +4,9 @@ import { createClient, getViewer } from "@/lib/supabase/server";
 import { crToday } from "@/lib/today";
 
 export type DoneSet = { kg: number | null; reps: number; rir: number | null };
-export type Finished = { template: string; startedAt: string; fun: number; exercises: { id: string; sets: DoneSet[] }[]; xp: number; prs: number };
+export type Finished = { template: string; startedAt: string; fun: number; exercises: { id: string; sets: DoneSet[] }[]; xp: number; prs: number; title?: string; emoji?: string; prNames?: string[]; note?: string };
 
-export async function saveWorkout(w: Finished): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
+export async function saveWorkout(w: Finished): Promise<{ ok: boolean; demo?: boolean; error?: string; postId?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
   if (v.demo) return { ok: true, demo: true };
@@ -22,6 +22,18 @@ export async function saveWorkout(w: Finished): Promise<{ ok: boolean; demo?: bo
   }
   const prXp = Math.min(w.prs, 10) * 50;
   await sb.from("xp_events").insert([{ user_id: v.id, kind: "workout", xp: Math.max(0, w.xp - prXp) }, ...Array.from({ length: Math.min(w.prs, 10) }, () => ({ user_id: v.id, kind: "pr", xp: 50 }))]);
+  // Publicación automática en la comunidad (si el usuario lo permite)
+  const { data: prof } = await sb.from("profiles").select("share_workouts,visibility").eq("id", v.id).maybeSingle();
+  let postId: string | undefined;
+  if (prof?.share_workouts !== false) {
+    const volume = Math.round(w.exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.kg ?? 0) * s.reps, 0), 0));
+    const mins = Math.max(1, Math.round((Date.now() - new Date(w.startedAt).getTime()) / 60000));
+    const { data: post } = await sb.from("posts").insert({
+      user_id: v.id, kind: "workout", workout_id: wk.id, body: w.note?.slice(0, 500) || null, visibility: prof?.visibility === "privado" ? "privado" : prof?.visibility ?? "seguidores",
+      data: { title: w.title?.slice(0, 60), emoji: w.emoji?.slice(0, 4), mins: Math.min(mins, 240), sets: rows.length, volume, prs: (w.prNames ?? []).slice(0, 10) },
+    }).select("id").single();
+    postId = post ? String(post.id) : undefined;
+  }
   revalidatePath("/app", "layout");
-  return { ok: true };
+  return { ok: true, postId };
 }

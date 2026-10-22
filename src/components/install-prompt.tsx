@@ -24,7 +24,7 @@ export function InstallPrompt() {
   if (!show) return null;
   const close = () => { setShow(false); try { localStorage.setItem("bb.installDismissed", "1"); } catch { /* */ } };
   return (
-    <div className="lg:hidden fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 animate-rise">
+    <div className="lg:hidden fixed inset-x-3 bottom-[calc(10rem+env(safe-area-inset-bottom))] z-40 animate-rise">
       <div className="flex items-center gap-3 rounded-3xl bg-ink text-white p-3 pl-4 shadow-lift">
         <Image src="/icons/icon-192.png" alt="" width={40} height={40} className="size-10 rounded-xl" />
         <div className="flex-1 min-w-0 text-sm">
