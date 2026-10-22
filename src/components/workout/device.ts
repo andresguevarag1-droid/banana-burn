@@ -126,6 +126,45 @@ export function useNow(ms = 250) {
   return now;
 }
 
+/* ---------- Aviso con la pestaña oculta ---------- */
+const NOTICE_TAG = "bb-workout";
+async function swReg() {
+  try {
+    if (!("serviceWorker" in navigator) || !("Notification" in window) || Notification.permission !== "granted") return null;
+    return (await navigator.serviceWorker.getRegistration("/")) ?? null;
+  } catch { return null; }
+}
+/**
+ * Programa un aviso local para `at` (fin del descanso, del intervalo o de la serie por tiempo).
+ * Solo suena si la pestaña está oculta y el usuario ya dio permiso de notificaciones (service worker de avisos).
+ * Al volver a la app se cierra: el reloj en pantalla ya muestra el estado correcto porque todo va con marcas de tiempo.
+ */
+export function useHiddenAlarm(at: number | null, title: string, body: string) {
+  const text = useRef({ title, body });
+  useEffect(() => { text.current = { title, body }; }, [title, body]);
+  useEffect(() => {
+    if (at == null) return;
+    const ms = at - Date.now();
+    if (ms <= 0) return;
+    const t = setTimeout(() => {
+      if (document.visibilityState !== "hidden") return;
+      void swReg().then((reg) => reg?.showNotification(text.current.title, {
+        body: text.current.body, tag: NOTICE_TAG, icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", lang: "es",
+        data: { url: location.pathname + location.search },
+      }).catch(() => {}));
+    }, ms);
+    return () => clearTimeout(t);
+  }, [at]);
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      void swReg().then((reg) => reg?.getNotifications({ tag: NOTICE_TAG }).then((ns) => ns.forEach((n) => n.close())).catch(() => {}));
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+}
+
 /** Prefiere-movimiento-reducido, leído en vivo. */
 export function useReducedMotion() {
   return useSyncExternalStore(

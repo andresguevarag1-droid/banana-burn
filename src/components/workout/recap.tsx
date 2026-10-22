@@ -6,7 +6,7 @@ import { levelOf } from "@/lib/gamify";
 import { Confetti } from "@/components/confetti";
 import { ProgressBar } from "@/components/progress-bar";
 import { Sheet, SheetTitle } from "@/components/sheet";
-import { clock, plural, volumeText } from "./logic";
+import { cap, clock, plural, volumeText } from "./logic";
 import { drawStory, downloadBlob, shareStory } from "./story-card";
 import { useReducedMotion } from "./device";
 import { GoldBanana } from "./ui";
@@ -25,10 +25,13 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, volume, prs, bananas, saveMsg, feedback }: {
-  title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; volume: number;
-  prs: string[]; bananas: { got: number; total: number }; saveMsg: string | null; feedback: string | null;
+export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, prs, bananas, repeat = false, saveMsg, feedback }: {
+  title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
+  prs: string[]; bananas: { got: number; total: number }; repeat?: boolean; saveMsg: string | null; feedback: string | null;
 }) {
+  // La tarjeta y el título no mienten: "completado" solo si hiciste todo.
+  const full = total > 0 && done >= total;
+  const status = full ? "Entreno completado" : "Sesión parcial";
   const before = levelOf(xpBefore), after = levelOf(xpBefore + xp);
   const leveled = after.idx > before.idx;
   const shownXp = useCountUp(xp);
@@ -45,8 +48,8 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
     setBusy(true); setShareMsg(null);
     try {
       const blob = await drawStory({
-        title, date: new Date(), time: clock(seconds), sets: String(done), volume: volume > 0 ? volumeText(volume) : "0 kg", xp: `+${xp}`,
-        streak, level: `Nivel ${after.idx}, ${after.n}`, prs: rushed ? [] : prs, bananas,
+        title, status, date: new Date(), time: clock(seconds), sets: full ? String(done) : `${done}/${total}`, setsLabel: cap(unit), volume: volume > 0 ? volumeText(volume) : "0 kg", xp: `+${xp}`,
+        streak, level: `${after.n} (nivel ${after.idx})`, prs: rushed ? [] : prs, bananas,
       });
       setStory({ blob, url: URL.createObjectURL(blob) });
     } catch { setShareMsg("No pudimos crear la imagen en este teléfono."); }
@@ -60,8 +63,8 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
 
   const stats: { icon: React.ReactNode; big: string; small: string }[] = [
     { icon: <Timer weight="duotone" className="size-5 text-ink/70" />, big: clock(seconds), small: "tiempo" },
-    { icon: <Barbell weight="duotone" className="size-5 text-ink/70" />, big: `${done}/${total}`, small: "series" },
-    { icon: <BananaCoin className="size-5 text-banana-ink" />, big: `+${shownXp}`, small: "XP ganados" },
+    { icon: <Barbell weight="duotone" className="size-5 text-ink/70" />, big: `${done}/${total}`, small: unit },
+    { icon: <BananaCoin className="size-5 text-banana-ink" />, big: `+${shownXp}`, small: repeat ? "XP (repetición)" : "XP ganados" },
     { icon: <BananaFlame className="size-5 text-ember-ink" />, big: String(streak), small: streak === 1 ? "día de racha" : "días de racha" },
   ];
 
@@ -73,8 +76,9 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
           <div><span className="mx-auto grid place-items-center size-28 rounded-[2.25rem] bg-banana shadow-lift animate-pop">
             {leveled ? <LevelIcon idx={after.idx} className="size-16" title={after.n} /> : <BananaFlame weight="fill" className="size-16 text-ember-ink" />}
           </span></div>
-          <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-ink">{leveled ? `Subiste a ${after.n}` : "Entreno completado"}</h1>
+          <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-ink">{leveled ? `Subiste a ${after.n}` : full ? "Entreno completado" : "Entreno guardado"}</h1>
           <p className="mt-2 flex items-center justify-center gap-1.5 text-lg font-semibold text-muted"><BrandIcon name={icon} className="size-5 text-banana-ink" />{title}</p>
+          {!full && <p className="mt-1 text-sm font-semibold text-muted tabular-nums">Sesión parcial: {done} de {total} {unit}. Cuenta igual para tu racha.</p>}
 
           <div className="mt-6 card text-left">
             <ul role="list" className="grid grid-cols-2">
@@ -99,14 +103,15 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
               <div className="flex items-center gap-2.5">
                 <LevelIcon idx={after.idx} className="size-7 shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-extrabold leading-tight text-ink">{after.n}</p>
-                  <p className="text-xs font-semibold text-muted tabular-nums">Nivel {after.idx}{after.next ? `, ${after.toNext} XP para ${after.next.n}` : ", el máximo"}</p>
+                  <p className="font-extrabold leading-tight text-ink">{after.n} <span className="font-bold text-muted">(nivel {after.idx})</span></p>
+                  <p className="text-xs font-semibold text-muted tabular-nums">{after.next ? `${after.toNext} XP para ${after.next.n}` : "Nivel máximo"}</p>
                 </div>
               </div>
               <ProgressBar value={bar} min={0.04} className="mt-3 h-2.5" fill="bg-ember" label={`Progreso del nivel ${after.idx}`} />
             </div>
           </div>
 
+          {repeat && <p className="mt-3 flex gap-2.5 rounded-2xl bg-cream p-3 text-left text-sm text-ink"><BananaCoin className="size-5 shrink-0 text-banana-ink" /><span>Ya habías hecho este entreno hoy: queda en tu historial, pero no suma XP.</span></p>}
           {rushed && <p className="mt-3 flex gap-2.5 rounded-2xl bg-cream p-3 text-left text-sm text-ink"><Timer weight="duotone" className="size-5 shrink-0 text-ink/70" /><span>Registraste las series muy rápido. El día cuenta para tu racha, pero los XP y los récords se ganan cuando cada serie lleva su tiempo real.</span></p>}
           {prs.length > 0 && !rushed && (
             <div className="mt-3 rounded-[1.5rem] bg-banana p-4 text-left">
@@ -135,7 +140,7 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
           <p className="text-sm text-muted">Lista para Instagram o WhatsApp.</p>
           {story && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={story.url} alt={`Tarjeta del entreno ${title}: ${clock(seconds)}, ${plural(done, "serie", "series")}, racha de ${streak}`} className="mx-auto mt-4 aspect-[9/16] w-full max-w-[240px] rounded-2xl shadow-lift" />
+            <img src={story.url} alt={`Tarjeta del entreno ${title}, ${status.toLowerCase()}: ${clock(seconds)}, ${full ? plural(done, "serie", "series") : `${done} de ${total} ${unit}`}, racha de ${streak}`} className="mx-auto mt-4 aspect-[9/16] w-full max-w-[240px] rounded-2xl shadow-lift" />
           )}
           {shareMsg && <p role="status" className="mt-3 text-center text-sm font-semibold text-ink">{shareMsg}</p>}
           <div className="mt-4 flex gap-2">

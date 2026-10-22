@@ -1,9 +1,10 @@
 // Lógica pura del reproductor de entreno (sin React ni navegador) para poder probarla.
 import { MIN_SET_SECONDS, workoutXp } from "@/lib/gamify";
+import { BARBELL } from "@/lib/engine/data";
 
 export type Effort = "f" | "j" | "l";
 /** Una serie en pantalla. `eff` es opcional para leer sesiones guardadas antes de que existiera. */
-export type Row = { kg: string; reps: string; done: boolean; easy: boolean; eff?: Effort; at?: number };
+export type Row = { kg: string; reps: string; done: boolean; easy: boolean; eff?: Effort; at?: number; c?: number };
 
 export const num = (s: string | number | null | undefined) => Number(String(s ?? "").replace(",", ".")) || 0;
 export const kgFmt = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 2 });
@@ -31,9 +32,14 @@ export const EFFORTS: { id: Effort; label: string; hint: string }[] = [
   { id: "j", label: "Justo", hint: "Sobraban 1 o 2" },
   { id: "l", label: "Al límite", hint: "No salía otra" },
 ];
-/** El motor solo distingue "fácil" (RIR 4) del resto (RIR 2): no cambia lo que se guarda. */
 export const effortPatch = (eff: Effort): Pick<Row, "eff" | "easy"> => ({ eff, easy: eff === "f" });
 export const effortOf = (r: Row): Effort | null => r.eff ?? (r.done && r.easy ? "f" : null);
+/** Reps en reserva que se guardan: Fácil 4, Justo 2, Al límite 0. Sin respuesta, null (el motor asume 2). */
+export const RIR: Record<Effort, number> = { f: 4, j: 2, l: 0 };
+export const rirOf = (r: Row): number | null => { const e = effortOf(r); return e ? RIR[e] : null; };
+
+/* ---------- Diversión: una sola escala para el reproductor y Progreso ---------- */
+export const FUN_LABELS = ["Aburrido", "Normal", "Bien", "Divertido", "Me encantó"] as const;
 
 /* ---------- XP en vivo: el mismo cálculo que el servidor (anti-trampa incluida) ---------- */
 export function liveXp(o: { doneSets: number; totalSets: number; prs: number; seconds: number }) {
@@ -59,6 +65,52 @@ export function nextCombo(prev: number, gapSec: number | null, restSec: number) 
   if (gapSec == null) return 1;
   if (gapSec < MIN_SET_SECONDS * 0.6) return prev; // marcar varias de un golpe no infla el combo
   return gapSec <= restSec + 120 ? prev + 1 : 1;
+}
+
+/** Combo, última marca y mejor combo según las series que siguen hechas (para deshacer sin dejar rastros). */
+export function comboState(rows: Row[][]) {
+  let last: Row | null = null, best = 0;
+  for (const r of rows.flat()) {
+    if (!r.done) continue;
+    best = Math.max(best, r.c ?? 0);
+    if (r.at != null && (!last || (last.at ?? 0) < r.at)) last = r;
+  }
+  return { combo: last?.c ?? 0, lastAt: last?.at, best };
+}
+
+/* ---------- Récords: se derivan de las series hechas, nunca se acumulan a mano ---------- */
+export const beatsBest = (kg: number, reps: number, best: number) => kg > 0 && reps > 0 && best > 0 && e1(kg, reps) > best + 0.01;
+/** Un récord por ejercicio si alguna serie hecha supera su mejor marca guardada. */
+export function prsOf(rows: Row[][], exercises: { id: string; name: string; best: number }[]) {
+  return exercises.flatMap((e, i) => ((rows[i] ?? []).some((r) => r.done && beatsBest(num(r.kg), num(r.reps), e.best)) ? [{ id: e.id, name: e.name }] : []));
+}
+
+/* ---------- Carga inicial (calibración) ---------- */
+export type LoadKind = "barbell" | "ez" | "dumbbell" | "kettlebell" | "machine" | "belt";
+const LOADS: Record<LoadKind, { start: number; chips: { kg: number; label?: string }[] }> = {
+  barbell: { start: 20, chips: [{ kg: 20, label: "Barra sola" }, { kg: 30 }, { kg: 40 }] },
+  ez: { start: 10, chips: [{ kg: 10 }, { kg: 15 }, { kg: 20 }] },
+  dumbbell: { start: 6, chips: [{ kg: 4 }, { kg: 6 }, { kg: 8 }, { kg: 10 }] },
+  kettlebell: { start: 8, chips: [{ kg: 8 }, { kg: 12 }, { kg: 16 }] },
+  machine: { start: 15, chips: [{ kg: 10 }, { kg: 15 }, { kg: 20 }, { kg: 25 }] },
+  belt: { start: 5, chips: [{ kg: 2.5 }, { kg: 5 }, { kg: 10 }] },
+};
+export const loadsFor = (k: LoadKind | null | undefined) => (k ? LOADS[k] : null);
+const MACHINE = new Set(["lat", "lateralc", "facepull", "facepullp"]);
+/** Tipo de carga de un ejercicio del motor (`inc` > 0) o de la biblioteca (por su equipo en inglés). */
+export function loadKindOf(id: string, o: { inc: number; eq?: string }): LoadKind | null {
+  if (o.inc <= 0) return null;
+  if (o.eq != null) {
+    if (/barbell|trap bar|smith/.test(o.eq)) return o.eq.startsWith("ez") ? "ez" : "barbell";
+    if (o.eq === "dumbbell") return "dumbbell";
+    if (o.eq === "kettlebell") return "kettlebell";
+    return "machine";
+  }
+  if (BARBELL.has(id)) return "barbell";
+  if (id === "curl") return "ez";
+  if (id === "dipsw") return "belt";
+  if (MACHINE.has(id)) return "machine";
+  return "dumbbell";
 }
 
 /* ---------- Siguiente serie ---------- */
@@ -92,6 +144,7 @@ export type Warm = { kg: number | null; reps: number }[];
 export function warmupFor(o: { kg: number; barbell: boolean; bw: boolean; unit?: string }): Warm | null {
   if (o.bw || o.unit) return null;
   if (o.barbell) {
+    if (o.kg > 0 && o.kg <= 20) return null; // ya trabajas con la barra sola: la primera serie es el calentamiento
     if (o.kg > 0 && o.kg <= 30) return [{ kg: 20, reps: 10 }];
     const mid = o.kg > 0 ? Math.max(20, Math.round((o.kg * 0.6) / 2.5) * 2.5) : null;
     return mid && mid > 20 && mid < o.kg ? [{ kg: 20, reps: 10 }, { kg: 20, reps: 8 }, { kg: mid, reps: 5 }] : [{ kg: 20, reps: 10 }, { kg: 20, reps: 8 }];
@@ -152,8 +205,47 @@ export function speechFor(kind: "exercise" | "rest" | "go" | "last" | "done" | "
 /** Exprés: todo el entreno es por tiempo con descansos cortos. */
 export const isIntervalPlan = (ex: { cfg: { unit?: string; rest: number } }[]) => ex.length > 0 && ex.every((e) => e.cfg.unit === "s" && e.cfg.rest <= 30);
 
+export type IvPhase = "ready" | "prep" | "work" | "rest";
+export type IvClock = { phase: IvPhase; end: number; total: number };
+/**
+ * Avanza el reloj de intervalos hasta `now` encadenando cada fase desde el final exacto de la anterior.
+ * Si la pestaña estuvo oculta, al volver se reconcilian todas las fases que pasaron (sin perder ni inventar tiempo).
+ * `marked` son las marcas de tiempo de los intervalos de trabajo que terminaron.
+ */
+export function advanceIntervals(iv: IvClock, rows: Row[][], idx: number, cfg: { hi: number; rest: number }[], now: number) {
+  let s = iv, r = rows, i = idx, finished = false;
+  const marked: { ex: number; si: number; at: number }[] = [];
+  for (let guard = 0; s.phase !== "ready" && s.end <= now && guard < 400; guard++) {
+    const t = s.end;
+    const tg = nextPending(r, i);
+    if (!tg) { finished = true; s = { phase: "ready", end: 0, total: 0 }; break; }
+    if (s.phase === "prep" || s.phase === "rest") {
+      const secs = num(r[tg.ex][tg.si].reps) || cfg[tg.ex].hi;
+      i = tg.ex;
+      s = { phase: "work", end: t + secs * 1000, total: secs };
+      continue;
+    }
+    r = r.map((x, k) => (k !== tg.ex ? x : x.map((y, j) => (j === tg.si ? { ...y, done: true, at: t } : y))));
+    marked.push({ ex: tg.ex, si: tg.si, at: t });
+    const nx = nextPending(r, tg.ex);
+    if (!nx) { finished = true; s = { phase: "ready", end: 0, total: 0 }; break; }
+    i = nx.ex;
+    const rest = cfg[tg.ex].rest;
+    s = { phase: "rest", end: t + rest * 1000, total: rest };
+  }
+  return { iv: s, rows: r, idx: i, marked, finished };
+}
+
+/** Serie por tiempo con 3 s de preparación: la barra cubre solo el trabajo. */
+export const PREP_SECONDS = 3;
+export function timedPhase(w: { end: number; secs: number }, now: number) {
+  const left = Math.max(0, (w.end - now) / 1000);
+  const prep = left > w.secs;
+  return { prep, prepLeft: prep ? left - w.secs : 0, workLeft: Math.min(left, w.secs), frac: prep ? 1 : Math.min(1, left / Math.max(1, w.secs)) };
+}
+
 /* ---------- Sesión guardada en el teléfono ---------- */
-export type Saved = { rows: Row[][]; idx: number; startedAt: string; prs: string[]; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean };
+export type Saved = { rows: Row[][]; idx: number; startedAt: string; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean; mode?: string; repeat?: boolean };
 /** Acepta sesiones del formato anterior (sin combo ni esfuerzo) y descarta las que no calzan con el plan de hoy. */
 export function readSaved(v: unknown, exercises: number): Saved | null {
   if (!v || typeof v !== "object") return null;
@@ -162,9 +254,10 @@ export function readSaved(v: unknown, exercises: number): Saved | null {
   if (!s.rows.every((r) => Array.isArray(r) && r.every((x) => x && typeof x === "object" && typeof (x as Row).done === "boolean"))) return null;
   const t = Date.parse(String(s.startedAt));
   return {
-    rows: s.rows.map((r) => r.map((x) => ({ kg: String(x.kg ?? ""), reps: String(x.reps ?? ""), done: !!x.done, easy: !!x.easy, ...(x.eff ? { eff: x.eff } : {}), ...(x.at ? { at: x.at } : {}) }))),
+    rows: s.rows.map((r) => r.map((x) => ({ kg: String(x.kg ?? ""), reps: String(x.reps ?? ""), done: !!x.done, easy: !!x.easy, ...(x.eff ? { eff: x.eff } : {}), ...(x.at ? { at: x.at } : {}), ...(x.c ? { c: Number(x.c) || 0 } : {}) }))),
     idx: Math.min(Math.max(0, Number(s.idx) || 0), exercises - 1), startedAt: Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString(),
-    prs: Array.isArray(s.prs) ? s.prs.map(String) : [], choice: s.choice.map((c) => Math.max(0, Number(c) || 0)),
+    choice: s.choice.map((c) => Math.max(0, Number(c) || 0)),
     combo: Number(s.combo) || 0, best: Number(s.best) || 0, lastAt: Number(s.lastAt) || undefined, warm: !!s.warm,
+    ...(typeof s.mode === "string" ? { mode: s.mode } : {}), ...(s.repeat ? { repeat: true } : {}),
   };
 }

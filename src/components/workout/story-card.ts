@@ -2,7 +2,7 @@
 // Tarjeta para historias (1080×1920) dibujada en el teléfono con canvas: sin servidor, funciona sin conexión.
 
 export type StoryData = {
-  title: string; date: Date; time: string; sets: string; volume: string; xp: string;
+  title: string; status: string; date: Date; time: string; sets: string; setsLabel: string; volume: string; xp: string;
   streak: number; level: string; prs: string[]; bananas: { got: number; total: number };
 };
 
@@ -71,7 +71,7 @@ export async function drawStory(d: StoryData): Promise<Blob> {
   const date = d.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   c.font = `700 40px ${FONT}`; c.fillStyle = "rgba(27,21,5,.72)";
   c.fillText(date[0].toUpperCase() + date.slice(1), M, 330);
-  c.font = `800 44px ${FONT}`; c.fillStyle = INK; c.fillText("Entreno completado", M, 396);
+  c.font = `800 44px ${FONT}`; c.fillStyle = INK; c.fillText(d.status, M, 396);
   let ts = 128, lines: string[] = [];
   for (; ts >= 88; ts -= 8) { c.font = `800 ${ts}px ${FONT}`; lines = wrap(c, d.title, W - M * 2, 2); if (!lines.at(-1)?.endsWith("…")) break; }
   const lh = Math.round(ts * 1.06);
@@ -81,7 +81,7 @@ export async function drawStory(d: StoryData): Promise<Blob> {
   // Panel de estadísticas
   const top = y, ph = 520;
   round(c, M - 8, top, W - (M - 8) * 2, ph, 64); c.fillStyle = INK; c.fill();
-  const stats: [string, string][] = [[d.time, "Tiempo"], [d.sets, "Series"], [d.volume, "Volumen"], [d.xp, "XP ganados"]];
+  const stats: [string, string][] = [[d.time, "Tiempo"], [d.sets, d.setsLabel], [d.volume, "Volumen"], [d.xp, "XP ganados"]];
   const cw = (W - M * 2) / 2;
   stats.forEach(([v, l], i) => {
     const x = M + 56 + (i % 2) * cw, sy = top + 170 + Math.floor(i / 2) * 250;

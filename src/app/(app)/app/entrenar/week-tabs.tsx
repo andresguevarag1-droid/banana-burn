@@ -1,15 +1,16 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BrandIcon, Check, PersonSimpleWalk, TreePalm } from "@/components/icons";
+import { ArrowRight, BrandIcon, Check, PersonSimpleWalk, Repeat, TreePalm } from "@/components/icons";
 import { DAY_NAMES, type PlannedDay } from "@/lib/engine";
 
 const fmtRest = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-419")} min` : `${s} s`);
 
-export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDow: number; done: number[] }) {
+export function WeekTabs({ days, todayDow, done, todayDone = false }: { days: PlannedDay[]; todayDow: number; done: number[]; todayDone?: boolean }) {
   const [sel, setSel] = useState(todayDow);
   const p = days.find((d) => d.dow === sel)!;
   const isToday = sel === todayDow;
+  const doneHere = isToday && todayDone;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-7 gap-1.5">
@@ -29,7 +30,7 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
       <section key={sel} className={`rounded-[1.75rem] p-5 sm:p-6 animate-enter ${isToday && p.tpl ? "bg-banana" : "card"}`}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-ink/75 first-letter:uppercase">{isToday ? `Hoy, ${DAY_NAMES[p.dow]}` : DAY_NAMES[p.dow]}</p>
-          <span className="chip bg-ink/5 text-ink">{p.tag}</span>
+          {doneHere ? <span className="chip bg-peel text-white"><Check weight="bold" className="size-3.5" />Hecho hoy</span> : <span className="chip bg-ink/5 text-ink">{p.tag}</span>}
         </div>
         <h2 className="mt-1 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-ink"><BrandIcon name={p.icon} className="size-8 shrink-0 text-banana-ink" />{p.name}</h2>
         {p.exercises.length > 0 ? (
@@ -45,7 +46,14 @@ export function WeekTabs({ days, todayDow, done }: { days: PlannedDay[]; todayDo
               ))}
             </ol>
             {p.cardio && <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink/70"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0" />Al final: {p.cardio}</p>}
-            <Link href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
+            {doneHere ? (
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-ink/80">Listo por hoy. Descansar también es parte del plan.</p>
+                <Link href="/app/entreno?repetir=1" className="btn-ghost mt-3 w-full sm:w-auto h-13 px-6"><Repeat weight="bold" className="size-5" />Repetir (no suma XP)</Link>
+              </div>
+            ) : (
+              <Link href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
+            )}
           </>
         ) : (
           <p className="mt-3 flex gap-2.5 text-ink/80"><TreePalm weight="duotone" className="mt-0.5 size-5 shrink-0 text-sky" /><span>{p.cardio}. El músculo crece cuando descansas.</span></p>

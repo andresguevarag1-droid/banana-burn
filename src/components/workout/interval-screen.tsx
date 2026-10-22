@@ -1,11 +1,11 @@
 "use client";
 import { Pause, Play, SkipForward, Timer, X } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
-import { clock } from "./logic";
+import { clock, type IvPhase } from "./logic";
 import { CountRing } from "./ui";
 import css from "./workout.module.css";
 
-export type IvPhase = "ready" | "prep" | "work" | "rest";
+export type { IvPhase };
 type Ex = { name: string; anim?: string; setNo: number; sets: number; exNo: number; exTotal: number };
 
 /**
