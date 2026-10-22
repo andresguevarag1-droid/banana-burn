@@ -4,17 +4,20 @@ import { useActionState, useEffect, useId, useRef, type ReactNode } from "react"
 import { useFormStatus } from "react-dom";
 import { Check, Warning as TriangleAlert } from "@/components/icons";
 import type { ActionState } from "@/app/admin/actions";
+import { btnDanger, btnGhost, btnPrimary } from "@/components/admin/ui";
+
+const btnDangerOutline = btnGhost.replace("bg-white!", "bg-white! text-bad! border-[#F3C2C4]! hover:bg-[#FDECEC]!");
 
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
-export function Submit({ children, className = "btn-primary h-10! px-4! text-sm!", pendingText = "Guardando…" }: { children: ReactNode; className?: string; pendingText?: string }) {
+export function Submit({ children, className = btnPrimary, pendingText = "Guardando…" }: { children: ReactNode; className?: string; pendingText?: string }) {
   const { pending } = useFormStatus();
   return <button type="submit" className={className} disabled={pending} aria-disabled={pending}>{pending ? pendingText : children}</button>;
 }
 
 export function Status({ state }: { state: ActionState }) {
   return (
-    <p role="status" aria-live="polite" className={`text-sm min-h-5 ${state?.ok ? "text-[#17703A]" : "text-[#B4232A]"}`}>
+    <p role="status" aria-live="polite" className={`mt-2 text-sm empty:mt-0 ${state?.ok ? "text-[#17703A]" : "text-[#B4232A]"}`}>
       {state && (state.ok ? <Check className="inline size-4 mr-1 -mt-0.5" aria-hidden /> : <TriangleAlert className="inline size-4 mr-1 -mt-0.5" aria-hidden />)}
       {state?.message}
     </p>
@@ -27,8 +30,9 @@ export function ActionForm({ action, children, className = "", resetOnSuccess = 
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => { if (state?.ok && resetOnSuccess) ref.current?.reset(); }, [state, resetOnSuccess]);
   return (
-    <form ref={ref} action={formAction} className={className} noValidate={false}>
-      {children}
+    <form ref={ref} action={formAction} noValidate={false}>
+      {/* El mensaje va fuera de la rejilla del formulario: no ocupa una celda ni deja hueco cuando está vacío. */}
+      <div className={className}>{children}</div>
       <Status state={state} />
     </form>
   );
@@ -51,14 +55,14 @@ export function ConfirmAction({ action, trigger, title, description, hidden, chi
   }, [state]);
   return (
     <>
-      <button type="button" className={triggerClassName ?? (danger ? "btn h-10! px-4! text-sm! border border-[#F3C2C4] bg-white text-[#B4232A] hover:bg-[#FDECEC]" : "btn-ghost h-10! px-4! text-sm!")} onClick={() => dlg.current?.showModal()} aria-haspopup="dialog">
+      <button type="button" className={triggerClassName ?? (danger ? btnDangerOutline : btnGhost)} onClick={() => dlg.current?.showModal()} aria-haspopup="dialog">
         {trigger}
       </button>
       <dialog ref={dlg} aria-labelledby={`${uid}-t`} aria-describedby={description ? `${uid}-d` : undefined}
-        className="m-auto w-[min(92vw,30rem)] rounded-[1.5rem] border border-line bg-white p-0 shadow-lift backdrop:bg-ink/40 backdrop:backdrop-blur-[2px]">
-        <form ref={form} action={formAction} className="p-6 space-y-4">
-          <h2 id={`${uid}-t`} className="text-lg font-extrabold text-ink">{title}</h2>
-          {description && <div id={`${uid}-d`} className="text-sm text-muted">{description}</div>}
+        className="m-auto w-[min(calc(100vw-2rem),30rem)] max-h-[calc(100dvh-2rem)] rounded-2xl border border-line bg-white p-0 shadow-lift backdrop:bg-ink/40 transition-[opacity,scale] duration-150 ease-out starting:open:scale-[.97] starting:open:opacity-0">
+        <form ref={form} action={formAction} className="space-y-4 p-5 sm:p-6">
+          <h2 id={`${uid}-t`} className="text-lg font-extrabold text-ink text-balance">{title}</h2>
+          {description && <div id={`${uid}-d`} className="text-sm text-muted text-pretty">{description}</div>}
           {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={String(v)} />)}
           {children}
           <label className="flex items-start gap-2 text-sm text-ink">
@@ -67,8 +71,8 @@ export function ConfirmAction({ action, trigger, title, description, hidden, chi
           </label>
           <Status state={state} />
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-ghost h-10! px-4! text-sm!" onClick={() => dlg.current?.close()}>Cancelar</button>
-            <Submit className={danger ? "btn h-10! px-4! text-sm! bg-bad text-white hover:brightness-95" : "btn-primary h-10! px-4! text-sm!"} pendingText="Aplicando…">{confirmLabel}</Submit>
+            <button type="button" className={btnGhost} onClick={() => dlg.current?.close()}>Cancelar</button>
+            <Submit className={danger ? btnDanger : btnPrimary} pendingText="Aplicando…">{confirmLabel}</Submit>
           </div>
         </form>
       </dialog>
