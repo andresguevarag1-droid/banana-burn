@@ -245,7 +245,7 @@ export function timedPhase(w: { end: number; secs: number }, now: number) {
 }
 
 /* ---------- Sesión guardada en el teléfono ---------- */
-export type Saved = { rows: Row[][]; idx: number; startedAt: string; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean; mode?: string; repeat?: boolean };
+export type Saved = { rows: Row[][]; idx: number; startedAt: string; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean; mode?: string; repeat?: boolean; /** Ids elegidos por ejercicio (el índice cambia si la lista de opciones cambia). */ choiceIds?: string[] };
 /** Acepta sesiones del formato anterior (sin combo ni esfuerzo) y descarta las que no calzan con el plan de hoy. */
 export function readSaved(v: unknown, exercises: number): Saved | null {
   if (!v || typeof v !== "object") return null;
@@ -259,5 +259,6 @@ export function readSaved(v: unknown, exercises: number): Saved | null {
     choice: s.choice.map((c) => Math.max(0, Number(c) || 0)),
     combo: Number(s.combo) || 0, best: Number(s.best) || 0, lastAt: Number(s.lastAt) || undefined, warm: !!s.warm,
     ...(typeof s.mode === "string" ? { mode: s.mode } : {}), ...(s.repeat ? { repeat: true } : {}),
+    ...(Array.isArray(s.choiceIds) && s.choiceIds.length === exercises ? { choiceIds: s.choiceIds.map((x) => String(x ?? "").slice(0, 40)) } : {}),
   };
 }

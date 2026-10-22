@@ -115,15 +115,31 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   useEffect(() => {
     const s = readSaved(store.get(key), options.length);
     const started = !!s?.rows.flat().some((r) => r.done);
-    if (s) {
-      setRows(s.rows); setIdx(s.idx); setStartedAt(s.startedAt); setChoice(s.choice);
+    // El ejercicio elegido se guarda por id: si era uno de la biblioteca que esta lista no trae, se vuelve a pedir por URL.
+    if (s && started && s.choiceIds) {
+      const miss = s.choiceIds.findIndex((id, i) => id.startsWith("ds:") && !options[i]?.some((o) => o.id === id));
+      if (miss >= 0 && !(preswap && preswap.slot === miss)) {
+        const q = new URLSearchParams(window.location.search);
+        q.set("cambiar", options[miss][0].id); q.set("por", s.choiceIds[miss]);
+        router.replace(`${window.location.pathname}?${q.toString()}`);
+        return;
+      }
+    }
+    const savedChoice = s ? options.map((o, i) => { const at = s.choiceIds ? o.findIndex((x) => x.id === s.choiceIds![i]) : -1; return at >= 0 ? at : Math.min(s.choice[i] ?? 0, o.length - 1); }) : null;
+    if (s && savedChoice && (started || s.repeat)) {
+      // Sesión empezada: se retoma tal cual (series, modo y cambios).
+      setRows(s.rows); setIdx(s.idx); setStartedAt(s.startedAt); setChoice(savedChoice);
       setCombo(s.combo ?? 0); setBestCombo(s.best ?? 0); setLastAt(s.lastAt); setWarmDone(!!s.warm);
       if (s.mode === "suave" || s.mode === "fuerte" || s.mode === "normal") setSessMode(s.mode);
-      if (started || s.repeat) setGate(false);
+      setGate(false);
+    } else if (s && savedChoice) {
+      // Abierta pero sin series: se respetan los cambios de ejercicio, y las series salen del modo de hoy.
+      setChoice(savedChoice);
+      setRows(options.map((o, i) => rowsFor(o[savedChoice[i]] ?? o[0])));
     }
     // Cambio pedido desde la biblioteca: se aplica si ese ejercicio aún no tiene series hechas.
     if (preswap && options[preswap.slot]?.[preswap.option]) {
-      const base = s?.rows ?? options.map((o) => rowsFor(o[0]));
+      const base = started && s ? s.rows : options.map((o, i) => rowsFor(o[savedChoice?.[i] ?? 0] ?? o[0]));
       if (!base[preswap.slot]?.some((r) => r.done)) {
         setChoice((c) => c.map((v, i) => (i === preswap.slot ? preswap.option : v)));
         setRows(base.map((r, i) => (i === preswap.slot ? rowsFor(options[preswap.slot][preswap.option]) : r)));
@@ -134,8 +150,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     if (!started && !store.get(TOUR_KEY) && !isIntervalPlan(options.map((o) => o[0]))) setTour(true);
   }, [key, options]); // eslint-disable-line react-hooks/exhaustive-deps -- preswap se aplica solo al cargar
   useEffect(() => {
-    if (loaded.current && phase === "play" && !gate) store.set(key, { rows, idx, startedAt, choice, combo, best: bestCombo, lastAt, warm: warmDone, mode: sessMode, ...(doneToday ? { repeat: true } : {}) });
-  }, [key, rows, idx, startedAt, choice, combo, bestCombo, lastAt, warmDone, phase, sessMode, gate, doneToday]);
+    if (loaded.current && phase === "play" && !gate) store.set(key, { rows, idx, startedAt, choice, choiceIds: exercises.map((e) => e.id), combo, best: bestCombo, lastAt, warm: warmDone, mode: sessMode, ...(doneToday ? { repeat: true } : {}) });
+  }, [key, rows, idx, startedAt, choice, exercises, combo, bestCombo, lastAt, warmDone, phase, sessMode, gate, doneToday]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 2600); return () => clearTimeout(t); }, [toast]);
   useEffect(() => () => hush(), []);
 

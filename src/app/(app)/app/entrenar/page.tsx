@@ -7,6 +7,7 @@ import { mondayOf } from "@/lib/today";
 import { Books, CaretRight, Lightning, TreePalm } from "@/components/icons";
 import { templatesDoneToday } from "../entreno/done-today";
 
+import { LIB_COUNT } from "@/lib/library";
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
@@ -43,7 +44,7 @@ export default async function Entrenar() {
           ))}
         </div>
       </section>
-      <Link href="/app/ejercicios" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft text-banana-ink" aria-hidden><Books weight="duotone" className="size-6" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Biblioteca de {(1324).toLocaleString("es-419")} ejercicios</span><span className="block text-sm text-muted">Busca por músculo o equipo, con pasos en español.</span></span><CaretRight weight="bold" className="size-5 shrink-0 text-faint" /></Link>
+      <Link href="/app/ejercicios" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft text-banana-ink" aria-hidden><Books weight="duotone" className="size-6" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Biblioteca de {LIB_COUNT.toLocaleString("es-419")} ejercicios</span><span className="block text-sm text-muted">Busca por músculo o equipo, con pasos en español.</span></span><CaretRight weight="bold" className="size-5 shrink-0 text-faint" /></Link>
     </div>
   );
 }

@@ -52,9 +52,9 @@ export async function createPost(body: string, visibility?: "publico" | "seguido
 
 export async function toggleKudo(postId: string, on: boolean): Promise<Res> {
   const v = await getViewer();
+  if (v?.demo) return { ok: true };
   const pid = postIdOf(postId);
   if (!v || pid === null) return { ok: false, error: "No pudimos guardar tu banana." };
-  if (v.demo) return { ok: true };
   const sb = await createClient();
   const r = on ? await sb.from("kudos").upsert({ post_id: pid, user_id: v.id }, { onConflict: "post_id,user_id", ignoreDuplicates: true }) : await sb.from("kudos").delete().eq("post_id", pid).eq("user_id", v.id);
   return r.error ? { ok: false, error: dbError(r.error, "No pudimos guardar tu banana. Intenta de nuevo.") } : { ok: true };
@@ -62,11 +62,12 @@ export async function toggleKudo(postId: string, on: boolean): Promise<Res> {
 
 export async function addComment(postId: string, body: string): Promise<Res & { id?: string }> {
   const text = clean(body, 300);
-  const pid = postIdOf(postId);
-  if (!text || pid === null) return { ok: false, error: "Escribe un comentario." };
+  if (!text) return { ok: false, error: "Escribe un comentario." };
   const w = await canWrite();
   if (!w.ok) return { ok: false, error: w.error };
   if (w.v.demo) return { ok: true, id: `demo-${Date.now()}` };
+  const pid = postIdOf(postId);
+  if (pid === null) return { ok: false, error: "No encontramos esa publicación." };
   const sb = await createClient();
   const { data, error } = await sb.from("comments").insert({ post_id: pid, user_id: w.v.id, body: text }).select("id").single();
   if (error || !data) return { ok: false, error: dbError(error, "No pudimos enviar tu comentario. Intenta de nuevo.") };

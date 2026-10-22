@@ -56,7 +56,7 @@ export const MIN_SET_SECONDS = 25;
 export function workoutXp(o: { doneSets: number; totalSets: number; prs: number; seconds: number }) {
   const done = Math.max(0, Math.min(Math.round(o.doneSets), 40));
   const rushed = done > 0 && o.seconds < done * MIN_SET_SECONDS;
-  if (rushed) return { xp: Math.min(done, 5) * 2, prs: 0, rushed: true };
+  if (rushed) return { xp: 0, prs: 0, rushed: true }; // series demasiado rápidas: no suman XP (coincide con lo que dice la app)
   const prs = Math.max(0, Math.min(Math.round(o.prs), 3));
   const full = o.totalSets > 0 && done >= o.totalSets;
   return { xp: done * 10 + prs * 50 + (full ? 30 : 0), prs, rushed: false };
