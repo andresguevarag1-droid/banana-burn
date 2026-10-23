@@ -1712,6 +1712,57 @@ select bbtest.ok('0037: pasados los 30 días se cierra y da el certificado', pub
 reset role;
 delete from public.user_programs where user_id = bbtest.u('A') and slug = 'pilates-casa-30';
 
+-- ───────────── 15. Tercera auditoría (0038) ─────────────
+-- 15a. public_profiles es de solo lectura: la vista corre como su dueño y salta la RLS de profiles.
+reset role; select bbtest.login(null);
+update public.profiles set username = 'beto', full_name = 'Beto', bio = 'bio de beto', visibility = 'publico' where id = bbtest.u('B');
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0038: A todavía lee perfiles públicos', bbtest.num($q$ select 1 from public.public_profiles where id = bbtest.u('B') $q$) = 1);
+select bbtest.zero('0038: A no edita el nombre de B por public_profiles', $q$ update public.public_profiles set full_name = 'HACK', bio = 'pwned' where id = bbtest.u('B') $q$);
+select bbtest.zero('0038: A no cambia el usuario ni la visibilidad de B por public_profiles', $q$ update public.public_profiles set username = 'hack_b', visibility = 'privado' where id = bbtest.u('B') $q$);
+select bbtest.ok('0038: D es visible para A en public_profiles', bbtest.num($q$ select 1 from public.public_profiles where id = bbtest.u('D') $q$) = 1);
+select bbtest.zero('0038: A no borra el perfil de D por public_profiles', $q$ delete from public.public_profiles where id = bbtest.u('D') $q$);
+select bbtest.zero('0038: A no edita su propio perfil por la vista (solo por profiles, con su RLS)', $q$ update public.public_profiles set bio = 'x' where id = auth.uid() $q$);
+select bbtest.fails('0038: A no inserta en public_profiles', $q$ insert into public.public_profiles (id, username) values (gen_random_uuid(), 'nuevo_x') $q$, '42501');
+reset role;
+select bbtest.ok('0038: el perfil de D sigue existiendo', exists (select 1 from public.profiles where id = bbtest.u('D')));
+select bbtest.ok('0038: el perfil de B quedó intacto', (select full_name = 'Beto' and bio = 'bio de beto' and username = 'beto' and visibility = 'publico' from public.profiles where id = bbtest.u('B')));
+select bbtest.ok('0038: ninguna vista de public acepta escrituras de authenticated/anon', not exists (
+  select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace, unnest(array['anon','authenticated']) r, unnest(array['INSERT','UPDATE','DELETE']) p
+   where n.nspname = 'public' and c.relkind in ('v','m') and has_table_privilege(r, c.oid, p)));
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0038: A sigue editando su perfil por profiles', bbtest.affected($q$ update public.profiles set bio = 'mi bio' where id = auth.uid() $q$) = 1);
+reset role;
+
+-- 15b. Datos de pago: el rol coach (staff sin cuentas) ya no lee clientes, eventos crudos del webhook ni compras ajenas.
+insert into auth.users (id, email) values ('c0ac0000-0000-4000-8000-0000000000c0', 'coach@prueba.test') on conflict (id) do nothing;
+insert into public.profiles (id) values ('c0ac0000-0000-4000-8000-0000000000c0') on conflict (id) do nothing;
+update public.profiles set role = 'coach' where id = 'c0ac0000-0000-4000-8000-0000000000c0';
+insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor, provider_payment_intent_id)
+values (bbtest.u('B'), 'abdomen-21', 'pendiente', 499, 499, 'pi_test_0038');
+create or replace function bbtest.login_coach() returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', 'c0ac0000-0000-4000-8000-0000000000c0', 'role', 'authenticated')::text, false);
+end $$;
+set role authenticated; select bbtest.login_coach();
+select bbtest.ok('0038: coach no lee clientes de pago ajenos', bbtest.num($q$ select 1 from public.billing_customers $q$) = 0);
+select bbtest.ok('0038: coach no lee eventos de pago (webhook crudo)', bbtest.num($q$ select 1 from public.payment_events $q$) = 0);
+select bbtest.ok('0038: coach no lee compras de retos ajenas', bbtest.num($q$ select 1 from public.challenge_purchases $q$) = 0);
+select bbtest.ok('0038: coach todavía lee perfiles (panel de usuarios)', bbtest.num($q$ select 1 from public.profiles where id = bbtest.u('B') $q$) = 1);
+select bbtest.login('P');
+select bbtest.ok('0038: soporte lee clientes, eventos y compras', bbtest.num($q$ select 1 from public.billing_customers where user_id = bbtest.u('B') $q$) = 1
+  and bbtest.num($q$ select 1 from public.payment_events where user_id = bbtest.u('B') $q$) >= 1
+  and bbtest.num($q$ select 1 from public.challenge_purchases where provider_payment_intent_id = 'pi_test_0038' $q$) = 1);
+select bbtest.login('S');
+select bbtest.ok('0038: admin lee eventos y compras', bbtest.num($q$ select 1 from public.payment_events where user_id = bbtest.u('B') $q$) >= 1
+  and bbtest.num($q$ select 1 from public.challenge_purchases where provider_payment_intent_id = 'pi_test_0038' $q$) = 1);
+select bbtest.login('B');
+select bbtest.ok('0038: B lee lo suyo', bbtest.num($q$ select 1 from public.billing_customers $q$) = 1 and bbtest.num($q$ select 1 from public.challenge_purchases where provider_payment_intent_id = 'pi_test_0038' $q$) = 1);
+select bbtest.login('A');
+select bbtest.ok('0038: A no lee pagos de B', bbtest.num($q$ select 1 from public.payment_events where user_id = bbtest.u('B') $q$) = 0 and bbtest.num($q$ select 1 from public.challenge_purchases where provider_payment_intent_id = 'pi_test_0038' $q$) = 0);
+reset role;
+delete from public.challenge_purchases where provider_payment_intent_id = 'pi_test_0038';
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

@@ -1,5 +1,5 @@
 -- ¿Qué migraciones ya corrí? Pégala completa en Supabase → SQL Editor y toca Run.
--- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0036 se puede repetir sin daño).
+-- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0038 se puede repetir sin daño).
 select m.archivo,
        case when m.aplicada then 'Ya está' else 'FALTA: córrela' end as estado
 from (values
@@ -28,6 +28,7 @@ from (values
   (23,'0034_soporte.sql',             to_regclass('public.support_tickets') is not null and to_regclass('public.support_messages') is not null and to_regclass('public.support_events') is not null and to_regprocedure('public.support_create_ticket(text,text,text,jsonb,text)') is not null and exists (select 1 from storage.buckets where id = 'soporte' and not public)),
   (24,'0035_lenguaje.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'lenguaje') and exists (select 1 from pg_constraint where conname = 'profiles_lenguaje_check')),
   (25,'0036_novedades.sql',          exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'news_seen') and to_regprocedure('public.news_mark_seen(text)') is not null),
-  (26,'0037_pilates_platanita.sql',  to_regprocedure('public._program_days(jsonb)') is not null and exists (select 1 from public.challenges_catalog where slug = 'pilates-casa-30'))
+  (26,'0037_pilates_platanita.sql',  to_regprocedure('public._program_days(jsonb)') is not null and exists (select 1 from public.challenges_catalog where slug = 'pilates-casa-30')),
+  (27,'0038_seguridad_3.sql',        not has_table_privilege('authenticated', 'public.public_profiles', 'update') and not has_table_privilege('authenticated', 'public.public_profiles', 'delete') and exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'payment_events' and policyname = 'eventos de pago: leer propios o staff de cuentas'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;
