@@ -6,7 +6,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { attributeReferral } from "@/lib/referrals-server";
 
 /** Tipos de enlace de correo aceptados (lista cerrada) → tipo de verifyOtp. */
-const OTP_TYPES = { email: "email", magiclink: "email", signup: "signup", recovery: "recovery" } as const;
+const OTP_TYPES = { email: "email", magiclink: "email", signup: "signup", recovery: "recovery", email_change: "email_change", invite: "invite" } as const;
 /** Después de un enlace de recuperación siempre se va a fijar la contraseña nueva. */
 const RESET_PATH = "/entrar/nueva-clave";
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const sb = await createClient();
     const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: otpType });
     if (!error) {
-      if (data.user && otpType === "signup") {
+      if (data.user && (otpType === "signup" || otpType === "invite")) {
         await sendWelcomeEmail({ userId: data.user.id, to: data.user.email ?? undefined }).catch(() => {});
         await attributeReferral(data.user.id, data.user.email); // invitación: solo cuentas nuevas (la base lo valida)
       }

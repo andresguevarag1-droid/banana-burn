@@ -185,7 +185,7 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
         x.streak >= 2 ? `Vas ${x.streak} días seguidos. Hoy la racha sigue creciendo.` : `Cada sesión suma. Hoy es un buen día para sumar una más.`,
         `Tu yo de dentro de un mes te lo va a agradecer. Abre la rutina y arrancamos.`,
       ];
-      return { title: `Hoy te toca ${x.routine}`, body: pick(bodies, x.day + kind), url: "/app/entreno" };
+      return { title: x.name.trim() ? `${first}, hoy te toca ${x.routine}` : `Hoy te toca ${x.routine}`, body: pick(bodies, x.day + kind), url: "/app/entreno" };
     }
     case "racha":
       return {
@@ -199,7 +199,7 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
     case "semanal": {
       const f = (n: number) => n.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` y ${f(x.kgDelta)} kg` : x.kgDelta > 0 ? ` y +${f(x.kgDelta)} kg` : " y peso estable";
-      return { title: "Tu semana en Banana Burn", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
+      return { title: x.name.trim() ? `${first}, así te fue esta semana` : "Tu semana en Banana Burn", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
     }
     case "reactivacion_3":
       return { title: `Te guardamos el lugar, ${first}`, body: x.trainingDay === false ? "Volver es más fácil con algo corto: hoy toca caminar y estirar 10 minutos." : `Volver es más fácil con una sesión corta. Hoy: ${x.routine}.`, url: "/app/entreno" };
