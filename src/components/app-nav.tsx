@@ -62,7 +62,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
         </header>
       )}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
-        <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
+        <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell side="start" /></div>
         {program && (
           <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
             <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-[var(--program,var(--color-banana))]" />
@@ -83,8 +83,9 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
           ); })}
         </nav>
         {staff && <ViewSwitch current="usuario" compact className="mt-3 shrink-0" />}
-        <div className="mt-3 shrink-0 flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
-          <Link href="/app/perfil" className="pressable -my-1 flex min-h-11 flex-1 min-w-0 items-center gap-3 rounded-xl"><span className="grid place-items-center size-9 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
+        <div className="mt-3 shrink-0 flex items-center gap-1 rounded-2xl bg-white border border-line p-2">
+          {/* Espacios justos para que el nombre se lea entero junto a los dos botones (antes quedaba en "Andr…"). */}
+          <Link href="/app/perfil" title={name} className="pressable -my-1 flex min-h-11 flex-1 min-w-0 items-center gap-2.5 rounded-xl pl-1"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
           <span className="flex-1 truncate font-semibold text-ink">{name}</span></Link>
           {/* Guía de la app: botón compacto para no alargar el menú lateral */}
           <button type="button" onClick={openGuide} aria-haspopup="dialog" aria-label="Guía de la app" title="Guía de la app" className="tap pressable grid place-items-center size-9 rounded-full text-muted hover:bg-cream hover:text-ink"><Compass className="size-5" weight="duotone" aria-hidden /></button>

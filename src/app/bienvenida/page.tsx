@@ -4,11 +4,10 @@ import { getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { INTENT_COOKIE, decodeIntent } from "@/lib/checkout-intent";
 import { isCountry } from "@/lib/countries";
-import { trialEnd } from "@/lib/copy";
 import { Wizard } from "./wizard";
 import { TzSync } from "@/components/tz-sync";
 import type { Goal } from "./goal";
-import { betaLive } from "@/lib/plans";
+import { BETA_ENDS_AT, betaLive } from "@/lib/plans";
 import { isOnvoConfigured } from "@/lib/onvo";
 import { betaDates } from "@/components/beta-notice";
 
@@ -33,8 +32,10 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   // Desde el fin de la beta, una cuenta nueva sin prueba todavía elige plan y guarda su tarjeta al final (cardStep "trial").
   let trialEndsAt: string | null = null, trialBeta = false, nutrition = true, cardRequired = false;
   if (v.demo) {
+    // Demo igual que una cuenta real de la beta: acceso gratis hasta el fin de la beta (las mismas fechas que el aviso de la tarjeta).
     cardRequired = !betaLive();
-    trialEndsAt = cardRequired ? null : trialEnd(new Date().toISOString())?.toISOString() ?? null;
+    trialEndsAt = cardRequired ? null : BETA_ENDS_AT;
+    trialBeta = !cardRequired;
   } else {
     const ent = await getEntitlements(v);
     nutrition = ent.nutrition || ent.cardStep === "trial";
@@ -50,7 +51,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardRequired={cardRequired} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} />
+      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardRequired={cardRequired} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
     </>
   );
 }

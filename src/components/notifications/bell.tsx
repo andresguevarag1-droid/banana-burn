@@ -34,7 +34,8 @@ function ago(iso: string) {
 }
 
 /** Campanita de avisos in-app: contador de no leídos, lista y "marcar como leído". */
-export function NotificationBell({ className = "" }: { className?: string }) {
+/** `side="start"`: la campana está a la izquierda (barra lateral de escritorio) y el panel se abre hacia la derecha. */
+export function NotificationBell({ className = "", side = "end" }: { className?: string; side?: "start" | "end" }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<InAppNotification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -82,7 +83,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
         {unread > 0 && <span className="absolute -top-1 -right-1 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-ember text-ink text-[11px] font-bold ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {pop.mounted && (
-        <div role="dialog" aria-label="Avisos" data-closing={pop.closing || undefined} className="popover fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-96 card shadow-lift overflow-hidden">
+        <div role="dialog" aria-label="Avisos" data-closing={pop.closing || undefined} className={`popover fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-x-auto ${side === "start" ? "sm:left-0" : "sm:right-0"} sm:top-12 sm:w-96 card shadow-lift overflow-hidden`} style={side === "start" ? { transformOrigin: "top left" } : undefined}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-line">
             <p className="font-extrabold text-ink">Avisos</p>
             {unread > 0 && <button onClick={() => markRead()} className="tap inline-flex items-center gap-1 text-xs font-bold text-banana-ink hover:text-ink"><Checks weight="bold" className="size-4" />Marcar todo leído</button>}

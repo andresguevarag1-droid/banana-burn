@@ -85,7 +85,7 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 
 const SELECT = "input h-14 text-lg px-3";
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardRequired = false, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "" }: {
+export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardRequired = false, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
   /** Solo demo: abrir en el paso de experiencia y lenguaje (?vista=lenguaje). */
   startOnVoice?: boolean;
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
@@ -97,6 +97,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   startOnCard?: boolean;
   /** "1 de noviembre": primer día con cobro (para el resumen de la beta). */
   betaFirstPaid?: string;
+  /** Último día gratis de la beta ("31 de octubre"), el mismo que muestra el aviso de la tarjeta. */
+  betaLastFree?: string;
   /** El acceso gratis viene del período de prueba del servicio (beta), no solo de los 7 días. */
   trialBeta?: boolean;
   /** ¿Tiene nutrición hoy (Entreno + Nutrición, prueba o beta)? En Entreno el resumen no muestra calorías ni proteína. */
@@ -165,7 +167,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const sug = o.weight != null && o.goalWeight != null ? suggestDate(o.weight, o.goalWeight) : null;
   const parqYes = parq.some(Boolean);
   const week = planWeek(0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
-  const trialEnd = trialEndsAt ? new Date(trialEndsAt).toLocaleDateString("es-419", { day: "numeric", month: "long" }) : null;
+  // En la beta el fin llega a medianoche del día siguiente: se muestra el último día con acceso (igual que el aviso de la tarjeta).
+  const trialEnd = trialBeta && betaLastFree ? betaLastFree : trialEndsAt ? new Date(trialEndsAt).toLocaleDateString("es-419", { day: "numeric", month: "long" }) : null;
   const intentPlan = intent ? PLANS.find((p) => p.id === intent.plan) : null;
 
   const canNext = [
