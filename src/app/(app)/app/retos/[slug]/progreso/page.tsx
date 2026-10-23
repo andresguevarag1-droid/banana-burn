@@ -21,6 +21,13 @@ export const metadata = { title: "Avance del programa" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmt = (iso: string) => new Date(iso.slice(0, 10) + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" });
+/** "Del 14 al 21 de octubre": sin repetir el mes ni el año cuando son los mismos. */
+const range = (a: string, b: string) => {
+  const d = (iso: string, o: Intl.DateTimeFormatOptions) => new Date(iso.slice(0, 10) + "T12:00:00").toLocaleDateString("es-419", o);
+  if (a.slice(0, 4) !== b.slice(0, 4)) return `Del ${fmt(a)} al ${fmt(b)}`;
+  if (a.slice(0, 7) !== b.slice(0, 7)) return `Del ${d(a, { day: "numeric", month: "long" })} al ${d(b, { day: "numeric", month: "long" })}`;
+  return `Del ${d(a, { day: "numeric" })} al ${d(b, { day: "numeric", month: "long" })}`;
+};
 const STATUS: Record<string, string> = { activo: "En curso", pausado: "En pausa", completado: "Completado", abandonado: "Lo dejaste" };
 
 /** Registro más cercano a una fecha (hasta 7 días antes o después). */
@@ -136,7 +143,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
               const u = g.unit === "kg" ? "kg" : g.unit === "s" ? "s" : "reps";
               return (
                 <li key={g.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="min-w-0"><span className="block font-bold text-ink">{g.name}</span><span className="block text-xs text-muted">{g.firstOn === g.lastOn ? "Una sola sesión registrada" : `Del ${fmt(g.firstOn)} al ${fmt(g.lastOn)}`}</span></span>
+                  <span className="min-w-0"><span className="block font-bold text-ink">{g.name}</span><span className="block text-xs text-muted">{g.firstOn === g.lastOn ? "Una sola sesión registrada" : range(g.firstOn, g.lastOn)}</span></span>
                   <span className="shrink-0 text-right tabular-nums"><span className="block font-extrabold text-ink">{nf(g.first, g.unit === "kg" ? 1 : 0)} → {nf(g.last, g.unit === "kg" ? 1 : 0)} {u}</span>{g.firstOn !== g.lastOn && <span className={`block text-xs font-bold ${diff > 0 ? "text-peel" : "text-muted"}`}>{diff > 0 ? "+" : ""}{nf(pct, 0)} %</span>}</span>
                 </li>
               );

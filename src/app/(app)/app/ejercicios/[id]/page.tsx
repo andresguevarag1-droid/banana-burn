@@ -41,12 +41,12 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
       <Link href="/app/ejercicios" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Biblioteca</Link>
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{e.n}</h1>
-        {e.n.toLowerCase() !== e.en.toLowerCase() && <p className="text-sm text-muted">{e.en}</p>}
+        {e.n.toLowerCase() !== e.en.toLowerCase() && <p className="text-sm text-muted">En inglés: <span lang="en">{e.en}</span></p>}
         <p className="mt-2 flex flex-wrap gap-1.5"><span className="chip bg-white border border-line text-ink">{es(BODY, e.bp)}</span><span className="chip bg-white border border-line text-ink">{es(EQUIP, e.eq)}</span></p>
       </header>
 
       {inToday && (
-        <Link href="/app/entreno" className="card p-4 flex items-center gap-3">
+        <Link href="/app/entreno" className="card p-4 flex flex-wrap items-center gap-3">
           <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><Barbell weight="duotone" className="size-6" /></span>
           <span className="flex-1 min-w-0"><span className="block font-extrabold text-ink">Está en tu entreno de hoy</span><span className="block text-sm text-muted">{inToday.cfg.sets} series de {inToday.cfg.lo} a {inToday.cfg.hi}{inToday.cfg.unit === "s" ? " s" : inToday.cfg.unit === "m" ? " m" : " reps"}</span></span>
           <span className="inline-flex items-center gap-1 text-sm font-bold text-ink">Ver en mi entreno de hoy<ArrowRight weight="bold" className="size-4" /></span>
@@ -56,7 +56,8 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
         <Link href={`/app/entreno?cambiar=${encodeURIComponent(swapFor.id)}&por=${encodeURIComponent(`ds:${e.id}`)}`} className="card p-4 flex items-center gap-3">
           <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><ArrowsLeftRight weight="bold" className="size-6" /></span>
           <span className="flex-1 min-w-0"><span className="block font-extrabold text-ink">Hoy tienes {swapFor.name}</span><span className="block text-sm text-muted">Mismo patrón de movimiento: puedes usar este en su lugar.</span></span>
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-ink">Cambiar por este<ArrowRight weight="bold" className="size-4" /></span>
+          {/* En móvil el enlace baja a su propia línea para que el texto no quede en una columna angosta. */}
+          <span className="inline-flex basis-full items-center gap-1 pl-14 text-sm font-bold text-ink sm:basis-auto sm:pl-0">Cambiar por este<ArrowRight weight="bold" className="size-4" /></span>
         </Link>
       )}
 

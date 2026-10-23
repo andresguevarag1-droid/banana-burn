@@ -15,7 +15,7 @@ export const TECH: Record<string, Technique> = {
   ],
   "cues": [
    "Rodillas siguen las puntas",
-   "Pecho orgulloso",
+   "Pecho arriba",
    "Talón completo pegado al piso"
   ],
   "err": [
@@ -674,7 +674,7 @@ Object.assign(TECH, {
 
 // Sin equipo y exprés
 Object.assign(TECH, {
-  bwsquat: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pies al ancho de hombros, brazos al frente.", "Baja 3 s como si te sentaras en una silla baja.", "Sube empujando el piso con todo el pie."], cues: ["Rodillas siguen las puntas", "Pecho orgulloso"], err: ["Talones se despegan"], mono: "Coach Banana se sienta en una silla <b>invisible</b>." },
+  bwsquat: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pies al ancho de hombros, brazos al frente.", "Baja 3 s como si te sentaras en una silla baja.", "Sube empujando el piso con todo el pie."], cues: ["Rodillas siguen las puntas", "Pecho arriba"], err: ["Talones se despegan"], mono: "Coach Banana se sienta en una silla <b>invisible</b>." },
   bulgarian: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pie de atrás apoyado en una silla o sofá.", "Baja recto hasta que la rodilla de atrás casi toque el piso.", "Sube con la pierna de adelante. Cambia de lado."], cues: ["Torso alto", "Peso en el pie de adelante"], err: ["Rodilla de adelante hacia adentro"], mono: "Coach Banana sube la escalera <b>una pierna a la vez</b>." },
   pikepush: { anim: "pushup", mus: "Hombros, tríceps", how: ["Manos al piso y cadera arriba en forma de V invertida.", "Baja la cabeza hacia el piso entre las manos.", "Empuja de vuelta arriba."], cues: ["Cadera alta", "Codos hacia atrás"], err: ["Cadera baja (se vuelve flexión normal)"], mono: "Coach Banana hace de <b>techo de casita</b>." },
   slrdl: { anim: "rdl_bw", mus: "Femorales, glúteos, equilibrio", how: ["De pie en una pierna, rodilla apenas doblada.", "Lleva la cadera atrás y la otra pierna estirada hacia atrás.", "Vuelve apretando glúteo. Cambia de lado."], cues: ["Cadera cuadrada al piso"], err: ["Girar la cadera"], mono: "Coach Banana es <b>un avión</b> que despega lento." },
