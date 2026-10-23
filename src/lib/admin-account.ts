@@ -11,7 +11,8 @@ export type DeleteResult = { ok: true } | { ok: false; status: number; error: st
  * Orden (si un paso falla, no se sigue):
  *  1. Cancela en ONVO las suscripciones que aún cobran (si falla, NO borramos: la persona seguiría pagando sin cuenta).
  *  2. Borra todas sus fotos de Storage (carpeta `${uid}/`): Storage no se borra en cascada con auth.users.
- *  3. Borra el usuario en Auth; las tablas públicas caen en cascada (payment_events conserva el registro contable con user_id nulo).
+ *  3. Quita datos personales de lo que no cae en cascada (scrub_deleted_user: cuerpo de webhooks, extractos de reportes).
+ *  4. Borra el usuario en Auth; las tablas públicas caen en cascada (payment_events conserva el registro contable con user_id nulo).
  * `admin` debe ser el cliente con service_role.
  */
 export async function deleteAccountData(admin: SupabaseClient, userId: string, scope = "cuenta"): Promise<DeleteResult> {
@@ -44,7 +45,16 @@ export async function deleteAccountData(admin: SupabaseClient, userId: string, s
     return { ok: false, status: 500, step: "photos", error: "No pudimos borrar las fotos. Intenta de nuevo o escríbenos a hola@bananaburn.app." };
   }
 
-  // 3) Cuenta y datos en cascada.
+  // 3) Lo que sobrevive a la cascada (registro contable y moderación) se queda sin datos personales (0023).
+  //    Si la función aún no existe en la base, se sigue: borrar la cuenta pesa más que este paso.
+  try {
+    const { error: scrubErr } = await admin.rpc("scrub_deleted_user", { p_user: userId });
+    if (scrubErr) console.error(JSON.stringify({ scope, msg: "scrub_deleted_user falló", userId, code: scrubErr.code ?? null }));
+  } catch {
+    console.error(JSON.stringify({ scope, msg: "scrub_deleted_user falló", userId }));
+  }
+
+  // 4) Cuenta y datos en cascada.
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
     console.error(JSON.stringify({ scope, msg: "deleteUser falló", userId, code: error.status ?? null }));

@@ -17,6 +17,7 @@ export type CleanEvent = { name: FunnelEvent; props: FunnelProps };
 
 const MAX_PROPS = 12;
 const KEY = /^[a-z][a-z0-9_]{0,31}$/;
+const PII = /@|\d[\d\s.-]{6,}\d/;
 
 /** Valida y recorta un evento. Devuelve null si no es válido. Nunca acepta objetos anidados ni textos largos. */
 export function cleanEvent(raw: unknown): CleanEvent | null {
@@ -27,7 +28,8 @@ export function cleanEvent(raw: unknown): CleanEvent | null {
   if (props && typeof props === "object" && !Array.isArray(props)) {
     for (const [k, v] of Object.entries(props as Record<string, unknown>).slice(0, MAX_PROPS)) {
       if (!KEY.test(k)) continue;
-      if (typeof v === "string") out[k] = v.slice(0, 120);
+      // Nunca correos ni números largos (teléfono, cédula, tarjeta) en el log, aunque el cliente los mande.
+      if (typeof v === "string") { if (!PII.test(v)) out[k] = v.slice(0, 120); }
       else if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
       else if (typeof v === "boolean") out[k] = v;
     }

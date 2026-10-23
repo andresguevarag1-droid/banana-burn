@@ -1,28 +1,21 @@
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { memoryRateLimit } from "@/lib/security";
+import { EXPORT_BY_USER } from "@/lib/account-export";
 
 export const dynamic = "force-dynamic";
-
-/** Tablas con columna user_id (todas con RLS "propio"). */
-const BY_USER = [
-  "goals", "weights", "measurements", "daily_logs", "meals", "workouts", "workout_sets", "coach_messages", "xp_events", "coach_usage",
-  "subscriptions", "billing_customers", "payment_events", "comp_grants",
-  "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
-  "user_challenges", "challenge_checkins", "posts", "comments", "kudos",
-] as const;
 
 /** Derecho de acceso (Ley 8968): descarga todos tus datos en JSON (incluye enlaces temporales a tus fotos). */
 export async function GET() {
   const v = await getViewer();
   if (!v) return new Response("No autorizado", { status: 401 });
-  // ~25 consultas y enlaces firmados por descarga: tope por persona.
+  // ~30 consultas y enlaces firmados por descarga: tope por persona.
   if (!memoryRateLimit(`exportar:${v.id}`, 6, 3600_000)) return new Response("Ya descargaste tus datos varias veces. Intenta en una hora.", { status: 429, headers: { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "3600" } });
   const out: Record<string, unknown> = { exportado: new Date().toISOString(), cuenta: { id: v.id, email: v.email } };
   if (!v.demo) {
     const sb = await createClient();
     const { data: profile } = await sb.from("profiles").select("*").eq("id", v.id);
     out.profiles = profile ?? [];
-    for (const t of BY_USER) {
+    for (const t of EXPORT_BY_USER) {
       const { data, error } = await sb.from(t).select("*").eq("user_id", v.id);
       out[t] = error ? { error: "no disponible" } : data ?? [];
     }

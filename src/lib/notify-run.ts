@@ -9,6 +9,7 @@ import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHo
 import { sendPush, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import * as T from "@/lib/email/templates";
+import { errInfo } from "@/lib/security/log";
 
 const PAGE = 1000;
 const CHUNK = 100;
@@ -46,7 +47,7 @@ export async function runReminders(now = new Date(), mode = cronMode()): Promise
     stats.candidates += due.length;
     for (let i = 0; i < due.length; i += CHUNK) {
       try { await processChunk(admin, due.slice(i, i + CHUNK), prefsOf, now, mode, stats); }
-      catch (e) { stats.errors++; console.error("[cron:recordatorios]", e); }
+      catch (e) { stats.errors++; console.error("[cron:recordatorios]", errInfo(e)); }
     }
     if (profiles.length < PAGE) break;
   }
