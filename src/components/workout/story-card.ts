@@ -6,7 +6,7 @@ export type StoryData = {
   streak: number; level: string; prs: string[]; bananas: { got: number; total: number };
 };
 
-const INK = "#1B1505", BANANA = "#FFD60A", EMBER = "#FF5A1F", PAPER = "#FFF8E3";
+const INK = "#1B1505", BANANA = "#FFD60A", EMBER = "#F2A100", PAPER = "#FFF8E3";
 const FONT = '"Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif';
 // Mismas formas que los íconos de marca (retícula 256)
 const P_BANANA = "M196 64c24 62 6 128-48 156-34 18-78 18-112 0 40-4 78-20 102-50 24-30 32-68 26-104z";

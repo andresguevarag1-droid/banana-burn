@@ -8,10 +8,10 @@ export const TIER = [
   { bg: "bg-[linear-gradient(140deg,#E9F5A0,#C9E26A)]", ring: "ring-[#9DB83A]/50", ink: "text-[#4E6A10]" },
   { bg: "bg-[linear-gradient(140deg,#FFF1A8,#FFD60A)]", ring: "ring-banana/70", ink: "text-banana-ink" },
   { bg: "bg-[linear-gradient(140deg,#FFD978,#F5A300)]", ring: "ring-[#D98A00]/60", ink: "text-[#6B4300]" },
-  { bg: "bg-[linear-gradient(140deg,#FFC2A3,#FF7A45)]", ring: "ring-ember/50", ink: "text-ember-ink" },
+  { bg: "bg-[linear-gradient(140deg,#FFE58A,#F2A100)]", ring: "ring-ember/50", ink: "text-ember-ink" },
   { bg: "bg-[linear-gradient(140deg,#4A4232,#1B1505)]", ring: "ring-ink/40", ink: "text-banana" },
   { bg: "bg-[linear-gradient(140deg,#2A2210,#1B1505)]", ring: "ring-banana", ink: "text-banana" },
-  { bg: "bg-[linear-gradient(140deg,#FF5A1F,#FFD60A)]", ring: "ring-ember", ink: "text-ink" },
+  { bg: "bg-[linear-gradient(140deg,#F2A100,#FFD60A)]", ring: "ring-ember", ink: "text-ink" },
 ] as const;
 
 export const tierOf = (idx: number) => TIER[Math.max(0, Math.min(TIER.length - 1, idx - 1))];

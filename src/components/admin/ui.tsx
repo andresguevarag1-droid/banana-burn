@@ -213,7 +213,7 @@ export function SubTabs({ label, items }: { label: string; items: { href: string
             <Link href={t.href} aria-current={t.current ? "page" : undefined}
               className={`-mb-px inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-t-lg border-b-2 px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${t.current ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
               {t.icon && <t.icon className="size-4" aria-hidden />}{t.label}
-              {!!t.badge && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[11px] font-bold text-white tabular-nums">{t.badge}<span className="sr-only"> pendientes</span></span>}
+              {!!t.badge && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[11px] font-bold text-ink tabular-nums">{t.badge}<span className="sr-only"> pendientes</span></span>}
             </Link>
           </li>
         ))}

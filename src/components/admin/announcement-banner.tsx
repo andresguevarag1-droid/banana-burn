@@ -6,7 +6,7 @@ import { getLiveAnnouncements, type LiveAnnouncement } from "@/lib/admin-content
 
 const TONES: Record<string, string> = {
   banana: "bg-banana-soft border-[#F2D35B] text-ink",
-  ember: "bg-[#FFE9DF] border-[#FFC3A8] text-ink",
+  ember: "bg-[#FFF6CC] border-[#FFD978] text-ink",
   sky: "bg-[#E6EEFD] border-[#BCD0FA] text-ink",
   peel: "bg-[#E8F6EE] border-[#B5E2C6] text-ink",
 };

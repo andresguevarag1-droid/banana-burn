@@ -185,7 +185,7 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
                 <span key={`h${live.i}`} className="mg-pop absolute left-[6%] top-[6%] rounded-full bg-ink px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-banana">Sostén</span>
               ) : null}
               {muscles ? (
-                <span className={`absolute right-[4%] top-[4%] max-w-[60%] truncate rounded-full px-2.5 py-1 text-[11px] font-bold transition-[background-color,color,transform] duration-300 ease-out ${kind === "con" ? "bg-[var(--ember)] text-white scale-105" : "bg-white/85 text-ink"}`}>{muscles}</span>
+                <span className={`absolute right-[4%] top-[4%] max-w-[60%] truncate rounded-full px-2.5 py-1 text-[11px] font-bold transition-[background-color,color,transform] duration-300 ease-out ${kind === "con" ? "bg-[var(--ember)] text-ink scale-105" : "bg-white/85 text-ink"}`}>{muscles}</span>
               ) : null}
               {cue ? (
                 <span key={`c${live.cycle}`} className="mg-rise absolute inset-x-[6%] bottom-[4%] mx-auto w-fit max-w-[88%] text-center rounded-xl bg-ink px-2.5 py-1 text-[11px] font-bold leading-tight text-white">{cue}</span>

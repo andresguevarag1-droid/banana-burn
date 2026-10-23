@@ -55,7 +55,7 @@ export async function GET(req: Request) {
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoUrl} width={64} height={64} alt="" />
-            <div style={{ display: "flex", fontSize: 36, fontWeight: 800, letterSpacing: -1 }}>Banana<span style={{ color: "#C2410C" }}>Burn</span></div>
+            <div style={{ display: "flex", fontSize: 36, fontWeight: 800, letterSpacing: -1 }}>Banana<span style={{ color: "#6E4E00" }}>Burn</span></div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div style={{ fontSize: title.length > 48 ? 54 : 64, fontWeight: 800, lineHeight: 1.04, letterSpacing: -2 }}>{title}</div>

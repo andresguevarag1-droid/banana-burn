@@ -12,7 +12,7 @@ const isActive = (path: string, href: string) => (href === "/admin" ? path === "
 /** Contador de pendientes: número tabular, sin punto decorativo; el texto accesible dice qué cuenta. */
 function Count({ n, inverted }: { n: number; inverted?: boolean }) {
   return (
-    <span className={`ml-auto grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${inverted ? "bg-banana text-ink" : "bg-ember text-white"}`}>
+    <span className={`ml-auto grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${inverted ? "bg-banana text-ink" : "bg-ember text-ink"}`}>
       {n}<span className="sr-only"> pendientes</span>
     </span>
   );

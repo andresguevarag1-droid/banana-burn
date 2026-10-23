@@ -61,7 +61,7 @@ export function IntervalScreen({ title, phase, left, total, paused, cur, next, p
             <p key={phase} aria-hidden className={`${css.phase} text-[44px] leading-none font-extrabold tracking-tight`}>{word}</p>
             <div className="mt-4">
               <CountRing left={left} total={total} size={256} stroke={16}
-                track={work ? "rgb(27 21 5 / .14)" : "rgb(255 255 255 / .12)"} color={work ? "#1B1505" : phase === "prep" ? "#FF5A1F" : "#FFD60A"}
+                track={work ? "rgb(27 21 5 / .14)" : "rgb(255 255 255 / .12)"} color={work ? "#1B1505" : phase === "prep" ? "#F2A100" : "#FFD60A"}
                 tip={work ? "text-banana" : "text-ink"} text={work ? "text-ink" : "text-white"}>
                 {paused && <span className="mt-1 block text-sm font-extrabold">En pausa</span>}
               </CountRing>

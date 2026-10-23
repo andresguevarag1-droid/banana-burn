@@ -18,7 +18,7 @@ function Name({ r, className = "" }: { r: BoardRow; className?: string }) {
   return <span className={`font-bold text-ink truncate ${className}`}>{h ? <Link href={h} className="hover:underline">{r.name}</Link> : r.name}{r.me && <span className="font-semibold text-muted"> (tú)</span>}</span>;
 }
 
-const MEDAL = ["bg-banana text-ink", "bg-[#E9E4D6] text-ink", "bg-[#F3D2B3] text-ink"];
+const MEDAL = ["bg-banana text-ink", "bg-[#E9E4D6] text-ink", "bg-[#F2D9A0] text-ink"];
 const STEP = ["h-28 sm:h-32", "h-20 sm:h-24", "h-16 sm:h-20"];
 
 /** Podio 2-1-3 con escalones; el primero, más alto y en banana. */

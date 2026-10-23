@@ -12,10 +12,10 @@
   --color-banana: #FFD60A;
   --color-banana-soft: #FFF1A8;
   --color-banana-ink: #8A6200;
-  --color-ember: #FF5A1F;
-  --color-ember-ink: #C13A08;
-  --color-peel: #15703A;
-  --color-sky: #2258C4;
+  --color-ember: #F2A100;
+  --color-ember-ink: #8A5300;
+  --color-peel: #3F6B0E;
+  --color-sky: #7A5A00;
   --color-bad: #C62A2F;
   --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --radius-xl2: 1.5rem;
@@ -152,7 +152,7 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 
 /* Variables del motor de animación */
 :root {
-  --figure: #1B1505; --ember: #FF5A1F; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B;
+  --figure: #1B1505; --ember: #F2A100; --banana: #FFD60A; --line: #EDE3C6; --faint: #A0957C; --muted: #6A604B;
   --mo-face: #F7DDA6; --mo-paper: #FFF8E3; --mo-steel: rgb(27 21 5 / .3); --mo-pad: rgb(27 21 5 / .62); --mo-floor: rgb(27 21 5 / .16); --mo-far: .4;
 }
 .motion { display: flex; flex-direction: column; gap: 8px; }

@@ -5,7 +5,8 @@ import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { DAY_NAMES } from "@/lib/engine";
-import { DayTracker } from "@/components/day-tracker";
+import { TodayPanel } from "@/components/hoy/today-panel";
+import { WeekCard } from "@/components/hoy/week-card";
 import { WeighIn } from "@/components/weigh-in";
 import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
@@ -16,7 +17,6 @@ import { Glp1Card } from "@/components/glp1-card";
 import { ChallengeCard } from "@/components/challenge-card";
 import { getMyChallenges } from "@/lib/challenges-server";
 import { getXpSummary } from "@/lib/xp-server";
-import { LevelCard } from "@/components/levels/level-card";
 import { toView } from "@/lib/challenge-view";
 
 export const metadata = { title: "Hoy" };
@@ -57,8 +57,8 @@ export default async function Hoy() {
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <NotificationBell className="lg:hidden" />
-          <Link href="/app/progreso#logros" className={`pressable flex items-center gap-1.5 h-12 rounded-2xl border px-3 ${g.streak.todayDone ? "bg-ember/10 border-ember/30 hover:border-ember/60" : "bg-white border-line hover:border-ink/25"}`} aria-label={`Racha de ${g.streak.days} días${g.streak.todayDone ? "" : ", aún sin registrar hoy"}`}>
-            <BananaFlame weight={g.streak.todayDone ? "fill" : "duotone"} className={`size-6 ${g.streak.todayDone ? "text-ember-ink" : "text-ember-ink/60"}`} />
+          <Link href="/app/progreso#logros" className={`pressable flex items-center gap-1.5 h-12 rounded-2xl border px-3 ${g.streak.todayDone ? "bg-banana border-banana hover:brightness-95" : "bg-white border-line hover:border-ink/25"}`} aria-label={`Racha de ${g.streak.days} días${g.streak.todayDone ? "" : ", aún sin registrar hoy"}`}>
+            <BananaFlame weight={g.streak.todayDone ? "fill" : "duotone"} className={`size-6 ${g.streak.todayDone ? "text-ink" : "text-banana-ink"}`} />
             <span className="text-lg font-extrabold text-ink tabular-nums leading-none">{g.streak.days}</span>
           </Link>
           <Link href="/app/perfil" className="pressable lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink hover:brightness-95" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
@@ -68,15 +68,15 @@ export default async function Hoy() {
       <AnnouncementBanner />
       <EnablePush hideWhenSnoozed />
 
-      <LevelCard s={xs} week={g.week} todayIso={d.today.iso} training={training} weighed={g.weighedToday} />
-      {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
+      {/* Números de hoy: calorías y macros, lo primero */}
+      <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
+        <TodayPanel initial={g.log} base={eaten} mode={a.mode} target={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat, steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
         {/* Rutina de hoy */}
-        <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-peel/10 border border-peel/30" : training ? "bg-banana" : "card"}`}>
+        <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-banana-soft border border-banana" : training ? "bg-banana" : "card"}`}>
           {training && !g.trainedToday && <BrandIcon name={plan.icon} aria-hidden className="absolute -right-8 -top-8 size-44 text-ink opacity-[.09] rotate-12 select-none pointer-events-none" />}
           <div className="relative flex items-center gap-3.5">
-            <span className={`grid place-items-center size-14 sm:size-16 shrink-0 rounded-2xl ${g.trainedToday ? "bg-peel/15 text-peel" : training ? "bg-ink text-banana shadow-lift" : "bg-banana-soft text-banana-ink"}`}>
+            <span className={`grid place-items-center size-14 sm:size-16 shrink-0 rounded-2xl ${g.trainedToday ? "bg-ink text-banana" : training ? "bg-ink text-banana shadow-lift" : "bg-banana-soft text-banana-ink"}`}>
               {g.trainedToday ? <CheckCircle weight="duotone" className="size-8 sm:size-9" /> : <BrandIcon name={plan.icon} className="size-8 sm:size-9" />}
             </span>
             <div className="min-w-0">
@@ -89,12 +89,13 @@ export default async function Hoy() {
           </div>
           {training ? (
             <>
+              {!g.trainedToday && <p className="relative mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-ink"><b>Por qué importa:</b> entrenar fuerza hace que lo que bajes sea grasa y no músculo. Es la parte que más cambia tu cuerpo.</p>}
               <p className="relative mt-2 text-sm font-semibold text-ink/70 tabular-nums">{plan.exercises.length} ejercicios en unos {mins} min{plan.cardio ? ", más cardio al final" : ""}</p>
               <ul className="relative mt-4 flex flex-wrap gap-1.5">
                 {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/70">{e.cfg.sets}×{e.cfg.lo}-{e.cfg.hi}</span></li>)}
               </ul>
               {g.trainedToday ? (
-                <p className="relative mt-5 flex items-center gap-2 font-extrabold text-peel"><CheckCircle weight="fill" className="size-5 shrink-0" />Entreno de hoy completado. Descansa y come bien.</p>
+                <p className="relative mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0" />Entreno de hoy completado. Descansa y come bien.</p>
               ) : (
                 <div className="relative mt-5"><Readiness suggestSoft={d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post"} initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
               )}
@@ -109,8 +110,27 @@ export default async function Hoy() {
           </div>
         </section>
 
+      </div>
+      {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
+
+
+      {/* Semana y retos */}
+      <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
+        <WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} />
+        <section>
+          <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Tienda de retos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
+          {ch.active.length ? (
+            <div className="grid gap-3">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
+          ) : (
+            <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Elige tu próximo reto</span><span className="block text-sm text-muted">Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
+          )}
+        </section>
+
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Peso y meta */}
-        <section className="card p-5 flex flex-col">
+        <section className="card p-5 flex flex-col" aria-label="Peso y meta">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 rounded-lg bg-banana-soft text-banana-ink"><Scales weight="duotone" className="size-5" /></span>{g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?"}</p>
             <Link href="/app/progreso" className="tap inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink">Ver curva <ArrowRight weight="bold" className="size-3.5" /></Link>
@@ -118,40 +138,21 @@ export default async function Hoy() {
           <p className="mt-1 text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
           <div className="mt-3"><WeighIn last={a.currentWeight} /></div>
           <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
-            <div><p className={`text-lg font-extrabold tabular-nums ${kgLost >= 0.05 ? "text-peel" : "text-ink"}`}>{kgLost >= 0.05 ? `−${nf(kgLost)}` : kgLost <= -0.05 ? `+${nf(-kgLost)}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{kgLost <= -0.05 ? "kg desde el inicio" : "kg perdidos"}</p></div>
+            <div><p className="text-lg font-extrabold tabular-nums text-ink">{kgLost >= 0.05 ? `−${nf(kgLost)}` : kgLost <= -0.05 ? `+${nf(-kgLost)}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{kgLost <= -0.05 ? "kg desde el inicio" : "kg perdidos"}</p></div>
             <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(d.toGo)}</p><p className="text-[11px] font-semibold text-muted">kg a la meta</p></div>
             <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">días</p></div>
           </div>
         </section>
-      </div>
-
-      {d.glp1 && <Glp1Card g={d.glp1} nausea0={g.log.nausea ?? 0} demo={v.demo} />}
-
-      {/* Tu día */}
-      <section>
-        <div className="flex items-baseline justify-between mb-3">
-          <h3 className="text-lg font-extrabold text-ink">Tu día</h3>
-          <Link href="/app/nutricion" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">Registrar comida <ArrowRight weight="bold" className="size-3.5" /></Link>
-        </div>
-        <DayTracker initial={g.log} base={{ kcal: eaten.kcal, protein: eaten.protein }} target={{ kcal: t.kcal, protein: t.protein, steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
-      </section>
-
-      {/* Retos */}
-      <section>
-        <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Tienda de retos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
-        {ch.active.length ? (
-          <div className="grid gap-3 lg:grid-cols-2">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
-        ) : (
-          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Elige tu próximo reto</span><span className="block text-sm text-muted">Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
-        )}
-      </section>
-
       {/* Coach */}
-      <Link href="/app/coach" className="card p-4 flex gap-3 items-center">
+        <Link href="/app/coach" className="card p-4 flex gap-3 items-center self-start">
         <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
         <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{tipFor(d.today.dow, training, t.protein - g.log.protein - eaten.protein, g.trainedToday)}</p></div>
         <CaretRight weight="bold" className="size-5 text-faint shrink-0" />
       </Link>
+      </div>
+
+      {d.glp1 && <Glp1Card g={d.glp1} nausea0={g.log.nausea ?? 0} demo={v.demo} />}
+
     </div>
   );
 }

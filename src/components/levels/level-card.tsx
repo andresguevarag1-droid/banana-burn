@@ -59,7 +59,7 @@ export function LevelCard({ s, week, todayIso, training, weighed }: { s: XpSumma
             const dw = new Date(w.d + "T12:00:00").getDay();
             const isToday = w.d === todayIso;
             return (
-              <li key={w.d} className={`grid size-7 place-items-center rounded-full text-[11px] font-bold ${w.active ? "bg-ember text-white" : isToday ? "border-2 border-dashed border-ember text-ember" : "bg-cream text-faint"}`}>
+              <li key={w.d} className={`grid size-7 place-items-center rounded-full text-[11px] font-bold ${w.active ? "bg-ember text-ink" : isToday ? "border-2 border-dashed border-ember text-ember" : "bg-cream text-faint"}`}>
                 {w.active ? <Check weight="bold" className="size-3.5" aria-hidden /> : DOW1[dw]}<span className="sr-only">{DOW1[dw]} {w.active ? "activo" : "sin actividad"}</span>
               </li>
             );

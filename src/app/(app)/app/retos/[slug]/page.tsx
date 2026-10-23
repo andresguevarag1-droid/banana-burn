@@ -115,7 +115,7 @@ export default async function RetoDetalle({ params }: P) {
               <ol className="overflow-hidden rounded-2xl border border-line bg-white">
                 {plan.days.map((d, i) => (
                   <li key={i} className="flex gap-3 border-b border-line p-3.5 last:border-0">
-                    <span className={`grid size-9 shrink-0 place-items-center rounded-xl text-sm font-extrabold tabular-nums ${ms.includes(i + 1) ? "bg-ember text-white" : d.type === "descanso" ? "bg-sky/10 text-sky" : "bg-banana-soft text-banana-ink"}`}>{i + 1}</span>
+                    <span className={`grid size-9 shrink-0 place-items-center rounded-xl text-sm font-extrabold tabular-nums ${ms.includes(i + 1) ? "bg-ember text-ink" : d.type === "descanso" ? "bg-sky/10 text-sky" : "bg-banana-soft text-banana-ink"}`}>{i + 1}</span>
                     <span className="min-w-0"><span className="block text-[11px] font-bold uppercase tracking-[.1em] text-muted">{TYPE_LABEL[d.type] ?? "Día"}{ms.includes(i + 1) ? (i + 1 === c.days ? ", día final" : ", hito") : ""}</span><span className="block text-sm font-semibold text-ink">{d.t}</span></span>
                   </li>
                 ))}

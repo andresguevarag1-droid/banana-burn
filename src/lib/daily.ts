@@ -28,11 +28,12 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     const days = demoActiveDays(today);
     const xp = demoXp(today);
     const nW = demoWorkouts(today).length;
+    const trainedD = new Set(demoWorkouts(today).map((w) => w.d));
     const streak = streakOf(days, today);
     return {
       log: { water: 5, steps: 4820, sleep: 7.5, protein: 0, kcal: 0 } as DailyLog,
       xp, level: levelOf(xp), streak, workoutsTotal: nW, trainedToday: false, weighedToday: false,
-      week: weekDays(today).map((d) => ({ d, active: days.has(d) })),
+      week: weekDays(today).map((d) => ({ d, active: days.has(d), trained: trainedD.has(d) })),
       badges: badges({ workouts: nW, streak: streak.days, prs: DEMO_PRS, weighIns: demoWeighIns(today), lostKg: startWeight - currentWeight }),
     };
   }
@@ -55,7 +56,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     xp, level: levelOf(xp), streak, workoutsTotal,
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),
-    week: weekDays(today).map((d) => ({ d, active: active.has(d) })),
+    week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),
     badges: badges({ workouts: workoutsTotal, streak: streak.days, prs: prs ?? 0, weighIns: (ws ?? []).length, lostKg: startWeight - currentWeight }),
   };
 }

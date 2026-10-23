@@ -69,7 +69,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
     <div ref={box} className={`relative ${className}`}>
       <button onClick={() => { setOpen((o) => !o); if (!open) void load(); }} className="tap pressable relative grid place-items-center size-10 rounded-full bg-white border border-line text-ink hover:bg-cream" aria-label={unread ? `Avisos: ${unread} sin leer` : "Avisos"} aria-expanded={open} aria-haspopup="dialog">
         <BellIcon weight="duotone" className="size-5" />
-        {unread > 0 && <span className="absolute -top-1 -right-1 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-ember text-white text-[11px] font-bold ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
+        {unread > 0 && <span className="absolute -top-1 -right-1 grid place-items-center min-w-5 h-5 px-1 rounded-full bg-ember text-ink text-[11px] font-bold ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {pop.mounted && (
         <div role="dialog" aria-label="Avisos" data-closing={pop.closing || undefined} className="popover fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-96 card shadow-lift overflow-hidden">

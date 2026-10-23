@@ -45,11 +45,11 @@ export function DayTracker({ initial, base: base0, target, dateKey, demo }: { in
   }
 
   const items: { f: DailyField; label: string; icon: React.ReactNode; color: string; val: number; goal: number; unit: string; fmt: (n: number) => string; quick: [string, number][] }[] = [
-    { f: "protein", label: "Proteína", icon: <Egg weight="duotone" className="size-5" />, color: "#FF5A1F", val: log.protein + base.protein, goal: target.protein, unit: "g", fmt: (n) => `${Math.round(n)}`, quick: [["+20 g", 20], ["+30 g", 30]] },
-    { f: "kcal", label: "Calorías", icon: <BananaFlame className="size-5" />, color: "#D98200", val: log.kcal + base.kcal, goal: target.kcal, unit: "kcal", fmt: (n) => Math.round(n).toLocaleString("es-419"), quick: [["+250", 250], ["+500", 500]] },
-    { f: "water", label: "Agua", icon: <Drop weight="duotone" className="size-5" />, color: "#2F6FED", val: log.water, goal: target.water, unit: "vasos", fmt: (n) => `${Math.round(n)}`, quick: [["+1 vaso", 1]] },
-    { f: "steps", label: "Pasos", icon: <Footprints weight="duotone" className="size-5" />, color: "#23A455", val: log.steps, goal: target.steps, unit: "", fmt: (n) => Math.round(n).toLocaleString("es-419"), quick: [[`+${(1000).toLocaleString("es-419")}`, 1000]] },
-    { f: "sleep", label: "Sueño", icon: <Moon weight="duotone" className="size-5" />, color: "#6B4FD8", val: log.sleep, goal: target.sleep, unit: "h", fmt: (n) => n.toLocaleString("es-419", { maximumFractionDigits: 1 }), quick: [["7 h", -7], ["8 h", -8]] },
+    { f: "protein", label: "Proteína", icon: <Egg weight="duotone" className="size-5" />, color: "#1B1505", val: log.protein + base.protein, goal: target.protein, unit: "g", fmt: (n) => `${Math.round(n)}`, quick: [["+20 g", 20], ["+30 g", 30]] },
+    { f: "kcal", label: "Calorías", icon: <BananaFlame className="size-5" />, color: "#C98200", val: log.kcal + base.kcal, goal: target.kcal, unit: "kcal", fmt: (n) => Math.round(n).toLocaleString("es-419"), quick: [["+250", 250], ["+500", 500]] },
+    { f: "water", label: "Agua", icon: <Drop weight="duotone" className="size-5" />, color: "#8A6200", val: log.water, goal: target.water, unit: "vasos", fmt: (n) => `${Math.round(n)}`, quick: [["+1 vaso", 1]] },
+    { f: "steps", label: "Pasos", icon: <Footprints weight="duotone" className="size-5" />, color: "#3F6B0E", val: log.steps, goal: target.steps, unit: "", fmt: (n) => Math.round(n).toLocaleString("es-419"), quick: [[`+${(1000).toLocaleString("es-419")}`, 1000]] },
+    { f: "sleep", label: "Sueño", icon: <Moon weight="duotone" className="size-5" />, color: "#6A604B", val: log.sleep, goal: target.sleep, unit: "h", fmt: (n) => n.toLocaleString("es-419", { maximumFractionDigits: 1 }), quick: [["7 h", -7], ["8 h", -8]] },
   ];
 
   return (

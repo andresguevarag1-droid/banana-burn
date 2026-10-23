@@ -5,7 +5,7 @@ import { SITE_URL } from "../env";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
-const C = { paper: "#FFF8E3", card: "#FFFFFF", ink: "#1B1505", body: "#2E2818", muted: "#6A604B", faint: "#A0957C", line: "#EDE3C6", banana: "#FFD60A", soft: "#FFF1A8", peel: "#23A455", ember: "#FF5A1F" };
+const C = { paper: "#FFF8E3", card: "#FFFFFF", ink: "#1B1505", body: "#2E2818", muted: "#6A604B", faint: "#A0957C", line: "#EDE3C6", banana: "#FFD60A", soft: "#FFF1A8", peel: "#3F6B0E", ember: "#F2A100" };
 const FONT = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);

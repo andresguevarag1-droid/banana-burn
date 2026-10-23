@@ -11,17 +11,22 @@ export function betaDates() {
   return { lastFree: day(end - 1), firstPaid: day(end) };
 }
 
-/** Aviso del período de prueba dentro de la app (reemplaza al de la prueba de 7 días mientras dure la beta). */
+/** Aviso del período de prueba dentro de la app (compacto: una línea y el detalle al tocar). */
 export function BetaBanner() {
   const { lastFree, firstPaid } = betaDates();
   return (
-    <aside aria-label="Versión de prueba" className="mb-5 flex items-start gap-3 rounded-2xl border border-sky/30 bg-sky/5 px-3.5 py-3 text-sm">
-      <Flask weight="duotone" className="mt-0.5 size-5 shrink-0 text-sky" aria-hidden />
-      <div className="min-w-0 flex-1 text-pretty">
-        <p className="font-bold text-ink">Estás usando una versión de prueba</p>
-        <p className="mt-0.5 text-body">Todo está incluido y es gratis hasta el {lastFree}. A partir del {firstPaid} empezaremos a cobrar los planes a todas las cuentas. Si algo falla o se puede mejorar, cuéntanos.</p>
-        <Link href="/app/suscripcion" className="tap mt-1 inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Ver planes y precios<ArrowRight weight="bold" className="size-4" /></Link>
-      </div>
+    <aside aria-label="Versión de prueba" className="mb-5 rounded-2xl border border-banana bg-banana-soft text-sm">
+      <details className="group">
+        <summary className="tap flex min-h-11 list-none items-center gap-2.5 px-3.5 py-2 [&::-webkit-details-marker]:hidden">
+          <Flask weight="duotone" className="size-5 shrink-0 text-banana-ink" aria-hidden />
+          <span className="min-w-0 flex-1 text-pretty text-ink"><b>Versión de prueba:</b> gratis hasta el {lastFree}. Desde el {firstPaid} se cobran los planes.</span>
+          <span className="shrink-0 text-xs font-bold text-banana-ink underline underline-offset-4 group-open:hidden">Más info</span>
+        </summary>
+        <div className="px-3.5 pb-3 pl-11 text-body text-pretty">
+          <p>Mientras tanto tienes todo incluido. Desde esa fecha empezaremos a cobrar los planes a todas las cuentas. Si algo falla o se puede mejorar, cuéntanos.</p>
+          <Link href="/app/suscripcion" className="tap mt-1 inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Ver planes y precios<ArrowRight weight="bold" className="size-4" /></Link>
+        </div>
+      </details>
     </aside>
   );
 }

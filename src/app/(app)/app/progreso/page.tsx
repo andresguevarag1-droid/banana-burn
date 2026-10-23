@@ -163,5 +163,5 @@ export default async function Progreso() {
 function Spark({ data }: { data: number[] }) {
   const W = 120, H = 32, lo = Math.min(...data), hi = Math.max(...data), r = hi - lo || 1;
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - 3 - ((v - lo) / r) * (H - 6)}`).join(" ");
-  return <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-8" aria-hidden><polyline points={pts} fill="none" stroke="#FF5A1F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-8" aria-hidden><polyline points={pts} fill="none" stroke="#F2A100" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
