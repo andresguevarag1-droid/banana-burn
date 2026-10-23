@@ -45,6 +45,14 @@ const STEPS = [
   ["/landing/progreso.png", "Registra y deja que se ajuste solo", "Si completas tus repeticiones, sube el peso. Cada semana el plan lee tu peso real y corrige el rumbo."],
 ] as const;
 
+/** La app explicada en cuatro partes, con el plan que incluye cada una (coherente con PLANS). */
+const PARTS: { icon: React.ComponentType<{ weight?: "duotone"; className?: string; "aria-hidden"?: boolean }>; t: string; d: string; plan: "todos" | "completo" }[] = [
+  { icon: Barbell, t: "Entrena", d: "Tu rutina del día con series, repeticiones y el peso exacto. Animación de técnica en cada ejercicio y entrenos exprés de 10 a 30 minutos.", plan: "todos" },
+  { icon: BowlFood, t: "Come", d: "Tus calorías y tu proteína del día, calculadas para ti. Registras lo que comes, incluso comida rápida, con más de 1.200 alimentos y platos latinos.", plan: "completo" },
+  { icon: Scales, t: "Mide", d: "Tu tendencia de peso, medidas, fotos y fuerza. Ves si avanzas aunque la báscula suba y baje un día.", plan: "todos" },
+  { icon: MonkeyBanana, t: "No lo dejes", d: "Coach con IA que responde tus dudas, niveles, rachas, retos gratis y una comunidad que entrena contigo.", plan: "todos" },
+];
+
 type Feature = { src: string; alt: string; title: string; body: string; points: string[]; tag?: string };
 const FEATURES: Feature[] = [
   {
@@ -113,7 +121,7 @@ export default function Landing() {
             Baja grasa sin perder músculo. <Marker>Tu coach IA te dice qué hacer hoy.</Marker>
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-muted max-w-[34rem] leading-relaxed text-pretty">
-            Para quien quiere resultados en el gym sin adivinar: <b className="text-ink">el peso exacto de cada serie</b>, rutina a tu nivel y comida latina de verdad. Se ajusta cada semana a tu peso real.
+            Banana Burn es una app en tu celular que <b className="text-ink">te arma la rutina</b> (gym, casa o sin equipo), <b className="text-ink">te dice cuánto peso levantar</b> en cada serie y <b className="text-ink">cuánto comer</b> con comida latina. Cada semana se ajusta sola a tu peso real.
           </p>
           <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
             <Link href={SIGNUP} data-cta="hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
@@ -165,6 +173,46 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* 4. CÓMO FUNCIONA: 3 pasos concretos con pantallas reales */}
+      <section id="como-funciona" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
+        <h2 className={`${H2} max-w-2xl`}>Tu plan listo hoy. Tus resultados, semana a semana.</h2>
+        <ol className="mt-12 grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-x-16 lg:gap-y-0">
+          {STEPS.map(([src, t, d], i) => (
+            <li key={t} className={`grid grid-cols-[auto_1fr] gap-x-5 gap-y-6 sm:grid-cols-[auto_1fr_180px] sm:items-center lg:col-start-1 lg:grid-cols-[auto_1fr] lg:border-b lg:border-line lg:py-8 lg:first:pt-0 ${i === 0 ? "lg:row-start-1" : i === 1 ? "lg:row-start-2" : "lg:row-start-3"}`}>
+              <span aria-hidden className="grid place-items-center size-11 rounded-full bg-ink text-banana text-lg font-extrabold tabular-nums">{i + 1}</span>
+              <div>
+                <h3 className="text-xl font-extrabold text-ink text-balance">{t}</h3>
+                <p className="mt-1.5 text-muted leading-relaxed text-pretty max-w-[52ch]">{d}</p>
+              </div>
+              <Phone src={src} alt={`Paso ${i + 1}: ${t}`} sizes="200px" className="col-span-2 sm:col-span-1 justify-self-center w-[180px] lg:hidden" />
+            </li>
+          ))}
+          <li aria-hidden className="hidden lg:block lg:col-start-2 lg:row-start-1 lg:row-span-3">
+            <div className="relative isolate h-full min-h-[560px] rounded-[2rem] bg-cream border border-line overflow-hidden">
+              <Phone src="/landing/objetivo.png" alt="" sizes="220px" className="absolute w-[210px] left-[6%] top-12 -rotate-6" />
+              <Phone src="/landing/progreso.png" alt="" sizes="220px" className="absolute w-[210px] right-[6%] top-12 rotate-6" />
+              <Phone src="/landing/hoy2.png" alt="" sizes="260px" className="absolute w-[240px] left-1/2 -translate-x-1/2 top-24" />
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      {/* 2c. QUÉ INCLUYE: la app en cuatro partes, y qué plan trae cada una */}
+      <section aria-labelledby="incluye" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
+        <h2 id="incluye" className={`${H2} max-w-3xl`}>Todo lo que hace la app por ti, en un solo lugar.</h2>
+        <p className={LEAD}>Sin saber de gym ni de nutrición: abres la app, ves lo que toca hoy y lo haces.</p>
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {PARTS.map(({ icon: I, t, d, plan }) => (
+            <li key={t} className="card flex flex-col p-5">
+              <span className="grid size-12 place-items-center rounded-2xl bg-banana text-ink"><I weight="duotone" aria-hidden className="size-7" /></span>
+              <h3 className="mt-4 text-xl font-extrabold text-ink">{t}</h3>
+              <p className="mt-1.5 flex-1 text-muted leading-relaxed text-pretty">{d}</p>
+              <p className={`mt-4 w-fit rounded-full px-3 py-1 text-xs font-bold ${plan === "todos" ? "bg-cream text-ink" : "bg-ink text-banana"}`}>{plan === "todos" ? "En todos los planes" : `Solo en ${COMPLETO.name}`}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* 3. PROBLEMA: la realidad del gym en LATAM, y la salida */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-16 items-start">
         <div className="lg:sticky lg:top-24">
@@ -199,30 +247,6 @@ export default function Landing() {
           ))}
         </ul>
         <p className="mx-auto max-w-6xl px-4 sm:px-6 mt-3 text-xs text-faint">Escenas ilustrativas creadas para mostrar cómo te acompaña el coach.</p>
-      </section>
-
-      {/* 4. CÓMO FUNCIONA: 3 pasos concretos con pantallas reales */}
-      <section id="como-funciona" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
-        <h2 className={`${H2} max-w-2xl`}>Tu plan listo hoy. Tus resultados, semana a semana.</h2>
-        <ol className="mt-12 grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-x-16 lg:gap-y-0">
-          {STEPS.map(([src, t, d], i) => (
-            <li key={t} className={`grid grid-cols-[auto_1fr] gap-x-5 gap-y-6 sm:grid-cols-[auto_1fr_180px] sm:items-center lg:col-start-1 lg:grid-cols-[auto_1fr] lg:border-b lg:border-line lg:py-8 lg:first:pt-0 ${i === 0 ? "lg:row-start-1" : i === 1 ? "lg:row-start-2" : "lg:row-start-3"}`}>
-              <span aria-hidden className="grid place-items-center size-11 rounded-full bg-ink text-banana text-lg font-extrabold tabular-nums">{i + 1}</span>
-              <div>
-                <h3 className="text-xl font-extrabold text-ink text-balance">{t}</h3>
-                <p className="mt-1.5 text-muted leading-relaxed text-pretty max-w-[52ch]">{d}</p>
-              </div>
-              <Phone src={src} alt={`Paso ${i + 1}: ${t}`} sizes="200px" className="col-span-2 sm:col-span-1 justify-self-center w-[180px] lg:hidden" />
-            </li>
-          ))}
-          <li aria-hidden className="hidden lg:block lg:col-start-2 lg:row-start-1 lg:row-span-3">
-            <div className="relative isolate h-full min-h-[560px] rounded-[2rem] bg-cream border border-line overflow-hidden">
-              <Phone src="/landing/objetivo.png" alt="" sizes="220px" className="absolute w-[210px] left-[6%] top-12 -rotate-6" />
-              <Phone src="/landing/progreso.png" alt="" sizes="220px" className="absolute w-[210px] right-[6%] top-12 rotate-6" />
-              <Phone src="/landing/hoy2.png" alt="" sizes="260px" className="absolute w-[240px] left-1/2 -translate-x-1/2 top-24" />
-            </div>
-          </li>
-        </ol>
       </section>
 
       {/* 5. RESULTADOS, NO FUNCIONES: titular de beneficio + pantalla que lo prueba */}
