@@ -17,8 +17,8 @@ export function ProgramRibbon({ p }: { p: RibbonProgram }) {
       <ChallengeCover c={{ cover: p.cover, icon: p.icon }} chip={false} className="flex min-h-12 items-center gap-3 px-4 py-2.5">
         <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-banana"><BrandIcon name={p.icon} className="size-4.5" /></span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-extrabold">{p.mode}: {p.title}</span>
-          <span className="block text-xs font-bold opacity-85 tabular-nums">Semana {p.week} de {p.weeks}</span>
+          <span className="block truncate text-sm font-extrabold">{p.title}</span>
+          <span className="block truncate text-xs font-bold opacity-85 tabular-nums">{p.mode}, semana {p.week} de {p.weeks}</span>
         </span>
         <ArrowRight weight="bold" aria-hidden className="size-4 shrink-0" />
       </ChallengeCover>
