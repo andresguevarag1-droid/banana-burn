@@ -4,15 +4,16 @@
 /** Tablas con columna user_id que se exportan completas (todas con RLS "propio": la sesión solo ve lo suyo). */
 export const EXPORT_BY_USER = [
   "goals", "weights", "measurements", "daily_logs", "meals", "workouts", "workout_sets", "coach_messages", "xp_events", "coach_usage",
-  "subscriptions", "billing_customers", "payment_events", "comp_grants",
+  "subscriptions", "billing_customers", "payment_events", "comp_grants", "trial_charges",
   "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
   "user_challenges", "challenge_checkins", "challenge_milestones", "challenge_purchases", "challenge_entitlements", "user_programs",
   "device_interest", "posts", "comments", "kudos", "referral_codes",
 ] as const;
 
 /**
- * Tablas con user_id que se exportan aparte: push_subscriptions con columnas elegidas (sin llaves criptográficas del
+ * Tablas con user_id que se exportan aparte: payment_methods con las columnas que la persona puede leer (0026: marca,
+ * últimos 4 y vencimiento; nunca hubo número de tarjeta), push_subscriptions con columnas elegidas (sin llaves criptográficas del
  * navegador) y referral_signals descrita (es una firma HMAC del prefijo de red, no una IP; nadie la lee por la API).
  * Los referidos y recompensas propios van en "referidos" (my_referrals y referral_rewards).
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods"] as const;

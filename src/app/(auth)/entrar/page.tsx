@@ -9,6 +9,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { REF_COOKIE, normalizeCode } from "@/lib/referrals";
 import { LoginForm } from "./login-form";
+import { offer } from "@/lib/offer";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
@@ -27,6 +28,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   // Con sesión abierta no rebotamos a la app: mostramos con qué cuenta estás y dejamos cambiarla.
   const v = isSupabaseConfigured ? await getViewer() : null;
   const invited = signup && !v && !!normalizeCode((await cookies()).get(REF_COOKIE)?.value);
+  const o = offer();
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
       <FunnelTracker view="page_view" props={{ screen: signup ? "registro" : "entrar" }} />
@@ -49,7 +51,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
             ) : (
               <>
                 {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />Llegaste con una invitación. Crea tu cuenta y entrena gratis {TRIAL_DAYS} días.</p>}
-                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} /></Suspense>
+                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} /></Suspense>
               </>
             )}
           </div>
@@ -64,7 +66,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
             <ul className="mt-8 space-y-3 text-lg font-semibold text-ink">
               {TRIAL_INCLUDES.map((t) => <li key={t} className="flex gap-3"><Check weight="bold" aria-hidden className="mt-1 size-5 shrink-0" />{t}</li>)}
             </ul>
-            <p className="mt-8 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Sin tarjeta. Al terminar eliges si sigues.</p>
+            <p className="mt-8 flex items-center gap-2 font-semibold text-ink/70 text-pretty"><Monkey className="size-6 shrink-0" />{o.signupLine}</p>
           </div>
         ) : (
           <blockquote className="relative max-w-md">

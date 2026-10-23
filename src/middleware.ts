@@ -4,6 +4,9 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env
 import { safeNext } from "@/lib/security/redirect";
 import { PRIVATE_NO_STORE, WALL_PATH, gateAction, needsAccessCheck } from "@/lib/access-gate";
 
+/** Estado de ejemplo de la tarjeta en modo demo (solo sin Supabase). */
+const DEMO_CARD_COOKIE = "bb_demo_tarjeta";
+
 /** Lo privado nunca queda en cachés compartidas (CDN, proxies) ni en el disco del navegador. */
 function noStore(res: NextResponse) {
   res.headers.set("Cache-Control", PRIVATE_NO_STORE);
@@ -11,7 +14,13 @@ function noStore(res: NextResponse) {
 }
 
 export async function middleware(req: NextRequest) {
-  if (!isSupabaseConfigured) return noStore(NextResponse.next()); // modo demo
+  if (!isSupabaseConfigured) {
+    // Modo demo: ?demo=<estado> en Mi plan elige el estado de ejemplo de la tarjeta y del cobro (trial-demo.ts) para toda la app.
+    const res = NextResponse.next();
+    const d = req.nextUrl.searchParams.get("demo");
+    if (d && /^[a-z]{3,12}$/.test(d)) res.cookies.set(DEMO_CARD_COOKIE, d, { path: "/", sameSite: "lax", maxAge: 3600 });
+    return noStore(res);
+  }
   let res = NextResponse.next({ request: req });
   const sb = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {

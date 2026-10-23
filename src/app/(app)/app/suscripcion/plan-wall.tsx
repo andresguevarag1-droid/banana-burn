@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Barbell, Lock, Scales } from "@/components/icons";
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowRight, Barbell, CircleNotch, CreditCard, Lock, Scales, WarningCircle } from "@/components/icons";
+import { TRIAL_CARD_LINE, type CardStep, type ChargePhase } from "@/lib/trial";
 import { MonkeyBanana } from "@/components/icons/brand";
 import { Pricing } from "@/components/pricing";
 import { FunnelTracker } from "@/components/analytics";
@@ -39,16 +40,20 @@ async function loadUsage(): Promise<TrialUsage | null> {
  * El acceso real lo valida el servidor: el middleware no ejecuta las secciones pagadas sin acceso (access-gate.ts), las acciones
  * piden `ent.app` y la base lo repite con RLS (has_app_access). Esto es la pantalla.
  */
-export function PlanGate({ locked, trialEndedOn, children }: { locked: boolean; trialEndedOn: string | null; children: React.ReactNode }) {
+export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase = null, children }: { locked: boolean; trialEndedOn: string | null; cardStep?: CardStep; chargePhase?: ChargePhase | null; children: React.ReactNode }) {
   const path = usePathname();
   const show = locked && !isAlwaysOpen(path);
   const [usage, setUsage] = useState<TrialUsage | null>(null);
   useEffect(() => {
-    if (!show || usage) return;
+    if (!show || usage || cardStep === "trial") return;
     loadUsage().then(setUsage).catch(() => {});
-  }, [show, usage]);
+  }, [show, usage, cardStep]);
 
   if (!show) return <>{children}</>;
+  // Tarjeta guardada (0026): cuenta nueva sin prueba, cobro rechazado, cobro en curso o cuenta de la beta después del 1 de noviembre.
+  if (cardStep === "trial") return <CardWall icon="card" title="Empieza tu prueba gratis de 7 días" body={`Elige tu plan y guarda tu tarjeta. ${TRIAL_CARD_LINE}`} cta="Elegir plan y empezar" />;
+  if (chargePhase === "procesando") return <Processing />;
+  const failed = chargePhase === "reintento" || chargePhase === "fallido";
   const line = usage ? progressLine(usage) : null;
   const rec = usage ? recommendPlan(usage) : "completo";
   const reason = usage ? (usage.glp1 ? "Incluye Banana Shield, que usaste en tu prueba" : usage.meals > 0 ? "Incluye la nutrición que usaste en tu prueba" : "Lo que usaste en tu prueba: entreno y coach") : undefined;
@@ -71,11 +76,51 @@ export function PlanGate({ locked, trialEndedOn, children }: { locked: boolean; 
         )}
         <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted"><Lock weight="bold" className="size-3.5" />No se borra nada mientras decides.</p>
       </header>
+      {(failed || cardStep === "pay") && (
+        <div className="mx-auto max-w-md rounded-[1.5rem] border-2 border-ink bg-white p-5 text-center">
+          <p className="flex items-center justify-center gap-2 font-extrabold text-ink">{failed ? <WarningCircle weight="duotone" className="size-5 text-bad" /> : <CreditCard weight="duotone" className="size-5 text-banana-ink" />}{failed ? "No pudimos cobrar tu plan" : "Guarda tu tarjeta para seguir"}</p>
+          <p className="mt-1 text-sm text-muted text-pretty">{failed ? "Cambia tu tarjeta en Mi plan y sigues hoy, sin perder nada." : "La versión de prueba terminó. Guardas tu tarjeta, eliges tu plan y se cobra hoy."}</p>
+          <Link href="/app/suscripcion#tarjeta" data-cta={failed ? "wall-cambiar-tarjeta" : "wall-guardar-tarjeta"} className="btn-banana mt-4 h-12 w-full">{failed ? "Cambiar tarjeta" : "Guardar tarjeta"}<ArrowRight weight="bold" className="size-4" /></Link>
+          <p className="mt-3 text-xs text-muted">O paga con otra tarjeta eligiendo un plan aquí abajo.</p>
+        </div>
+      )}
       <Pricing recommended={rec} loggedIn reason={reason} />
       <div className="flex flex-col items-center gap-1">
         <Link href="/app/suscripcion" data-cta="wall-mi-plan" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ver mi plan y pagos</Link>
         <Link href="/app/perfil" data-cta="wall-perfil" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ir a mi perfil</Link>
       </div>
+    </div>
+  );
+}
+
+/** Muro de la prueba con tarjeta: un solo paso claro hacia Mi plan, donde se elige el plan y se guarda la tarjeta. */
+function CardWall({ title, body, cta }: { icon: "card"; title: string; body: string; cta: string }) {
+  return (
+    <div className="animate-enter mx-auto max-w-md space-y-5 py-6 text-center">
+      <FunnelTracker view="plan_wall_view" props={{ kind: "prueba_con_tarjeta" }} />
+      <span className="mx-auto grid place-items-center size-20 rounded-[1.75rem] bg-banana-soft text-banana-ink" aria-hidden><MonkeyBanana className="size-12" /></span>
+      <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{title}</h1>
+      <p className="text-muted text-pretty">{body}</p>
+      <Link href="/app/suscripcion#tarjeta" data-cta="wall-empezar-prueba" className="btn-banana h-14 w-full text-base">{cta}<ArrowRight weight="bold" className="size-5" /></Link>
+      <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-muted"><Lock weight="bold" className="size-3.5" />Te avisamos 2 días antes del cobro.</p>
+    </div>
+  );
+}
+
+/** Cobro enviado a ONVO: esperamos el webhook y refrescamos solos durante un minuto. */
+function Processing() {
+  const router = useRouter();
+  useEffect(() => {
+    let n = 0;
+    const t = setInterval(() => { n++; router.refresh(); if (n >= 12) clearInterval(t); }, 5000);
+    return () => clearInterval(t);
+  }, [router]);
+  return (
+    <div aria-live="polite" className="animate-enter mx-auto max-w-md space-y-4 py-10 text-center">
+      <CircleNotch weight="bold" className="mx-auto size-10 animate-spin text-banana-ink motion-reduce:animate-none" aria-hidden />
+      <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Estamos confirmando el cobro de tu plan</h1>
+      <p className="text-muted text-pretty">Suele tardar unos segundos. Esta pantalla se actualiza sola.</p>
+      <Link href="/app/suscripcion" className="tap inline-flex h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ver mi plan</Link>
     </div>
   );
 }
