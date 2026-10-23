@@ -3,6 +3,7 @@ import "server-only";
 // Idempotente: cada envío se "reclama" primero en notification_log (unique user_id+kind+local_day).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
+import { errCode, logError } from "@/lib/log";
 import { planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { streakOf } from "@/lib/gamify";
 import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHour, localClock, type Decision, type Kind, type Prefs } from "@/lib/notify";
@@ -15,7 +16,7 @@ const CHUNK = 100;
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 type Profile = { id: string; full_name: string | null; train_days: number | null; equipment: string | null; timezone: string | null };
-export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"; scanned: number; candidates: number; sent: Record<string, number>; push: number; email: number; errors: number };
+export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"; scanned: number; candidates: number; sent: Record<string, number>; push: number; email: number; errors: number; /** Se cortó por tiempo: la próxima corrida sigue (los envíos ya hechos no se repiten). */ partial?: boolean };
 
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
 
@@ -23,21 +24,29 @@ export function cronMode(): "hourly" | "daily" {
   return cronModeFrom(process.env.NOTIFY_CRON_MODE);
 }
 
-export async function runReminders(now = new Date(), mode = cronMode()): Promise<RunStats> {
+/**
+ * `deadline` (epoch ms): deja de tomar lotes nuevos al acercarse el límite de la función, para terminar
+ * con estadísticas en vez de que Vercel la corte a la mitad. Reintentar es seguro (notification_log).
+ */
+export async function runReminders(now = new Date(), mode = cronMode(), opts: { deadline?: number } = {}): Promise<RunStats> {
   const stats: RunStats = { ok: true, mode, scanned: 0, candidates: 0, sent: {}, push: 0, email: 0, errors: 0 };
   const admin = adminClient();
   if (!admin) return { ...stats, skipped: "Supabase service_role no configurado (modo demo)" };
 
+  const late = () => opts.deadline != null && Date.now() > opts.deadline;
   for (let from = 0; ; from += PAGE) {
+    if (late()) { stats.partial = true; break; }
     const { data: profiles, error } = await admin.from("profiles")
       .select("id,full_name,train_days,equipment,timezone").eq("onboarded", true)
       .order("id").range(from, from + PAGE - 1);
-    if (error) { stats.ok = false; stats.errors++; break; }
+    if (error) { stats.ok = false; stats.errors++; logError("cron:recordatorios", "profiles_query_failed", { code: error.code, from }); break; }
     if (!profiles?.length) break;
     stats.scanned += profiles.length;
 
     const ids = profiles.map((p) => p.id as string);
-    const { data: prefRows } = await admin.from("notification_prefs").select("*").in("user_id", ids);
+    const { data: prefRows, error: prefErr } = await admin.from("notification_prefs").select("*").in("user_id", ids);
+    // Sin preferencias no sabemos quién apagó los avisos ni su horario: mejor no mandar nada en esta página.
+    if (prefErr) { stats.ok = false; stats.errors++; logError("cron:recordatorios", "prefs_query_failed", { code: prefErr.code }); if (profiles.length < PAGE) break; continue; }
     const prefsOf = new Map<string, Prefs>();
     for (const p of profiles as Profile[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
     for (const r of prefRows ?? []) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
@@ -45,9 +54,11 @@ export async function runReminders(now = new Date(), mode = cronMode()): Promise
     const due = (profiles as Profile[]).filter((p) => isRelevantHour(now, prefsOf.get(p.id)!, mode));
     stats.candidates += due.length;
     for (let i = 0; i < due.length; i += CHUNK) {
+      if (late()) { stats.partial = true; break; }
       try { await processChunk(admin, due.slice(i, i + CHUNK), prefsOf, now, mode, stats); }
-      catch (e) { stats.errors++; console.error("[cron:recordatorios]", e); }
+      catch (e) { stats.errors++; logError("cron:recordatorios", "chunk_failed", { kind: errCode(e) }); }
     }
+    if (stats.partial) break;
     if (profiles.length < PAGE) break;
   }
   return stats;
@@ -70,6 +81,9 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
     admin.from("notification_log").select("user_id,kind,local_day,pushes").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)),
     admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids),
   ]);
+  // Si falla una lectura, el lote se salta: con datos incompletos alguien activo parecería inactivo y recibiría "te extrañamos".
+  const failed = [wk, dl, ws, logs, subs].find((r) => r.error);
+  if (failed) throw Object.assign(new Error("lectura incompleta"), { code: failed.error?.code ?? "query_failed" });
   const group = <R extends { user_id: string }>(rows: R[] | null) => {
     const m = new Map<string, R[]>();
     for (const r of rows ?? []) { const l = m.get(r.user_id) ?? []; l.push(r); m.set(r.user_id, l); }
@@ -82,6 +96,19 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const subBy = group(subs.data as (PushSub & { user_id: string })[]);
 
   for (const u of users) {
+    // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
+    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy }); }
+    catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
+  }
+}
+
+type Grouped = {
+  wkBy: Map<string, { user_id: string; day: string }[]>; dlBy: Map<string, { user_id: string; day: string }[]>; wsBy: Map<string, { user_id: string; day: string; kg: number }[]>;
+  logBy: Map<string, { user_id: string; kind: string; local_day: string; pushes: number }[]>; subBy: Map<string, (PushSub & { user_id: string })[]>;
+};
+
+async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy }: Grouped) {
+  {
     const prefs = prefsOf.get(u.id)!;
     const c = localClock(now, prefs.timezone);
     const workouts = (wkBy.get(u.id) ?? []).map((r) => r.day);
@@ -107,7 +134,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
       hasPushSubscription: userSubs.length > 0,
       hasEmail: true,
     });
-    if (!decisions.length) continue;
+    if (!decisions.length) return;
 
     let email: string | null | undefined;
     const getEmail = async () => {

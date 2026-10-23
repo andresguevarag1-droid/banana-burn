@@ -74,7 +74,8 @@ export async function POST(req: Request) {
   }
 
   const [a, p, ent] = await Promise.all([getAthlete(v), getProgress(v), getEntitlements(v)]);
-  const client = new Anthropic({ apiKey: key });
+  // Tiempo límite por debajo de maxDuration: si Anthropic no responde, la persona ve un aviso claro y no un chat colgado.
+  const client = new Anthropic({ apiKey: key, timeout: 40_000, maxRetries: 1 });
   const stream = client.messages.stream({
     model: process.env.COACH_MODEL || "claude-sonnet-5-5",
     max_tokens: 700,

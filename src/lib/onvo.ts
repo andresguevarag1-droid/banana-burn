@@ -14,6 +14,8 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { PLANS, type Billing, type PlanId } from "./plans";
 import { parseIntent } from "./checkout-intent";
+import { errCode, logError } from "./log";
+import { resilientFetch } from "./resilient-fetch";
 
 export const ONVO_API = "https://api.onvopay.com";
 
@@ -73,16 +75,26 @@ export class OnvoError extends Error {
   }
 }
 
+// Tiempo límite en todo; un reintento solo en lecturas (GET). Crear clientes, suscripciones o cobros nunca se reintenta solo.
+const onvoFetch = resilientFetch({ readTimeoutMs: 10_000, writeTimeoutMs: 15_000, retries: 1, backoffMs: 400 });
+
 async function onvo<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
   const key = process.env.ONVO_SECRET_KEY;
   if (!key) throw new OnvoError("ONVO_SECRET_KEY no está configurada", 503);
-  const res = await fetch(`${ONVO_API}${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", Accept: "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-    signal: AbortSignal.timeout(15_000),
-  });
+  let res: Response;
+  try {
+    res = await onvoFetch(`${ONVO_API}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", Accept: "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (e) {
+    // Red caída o tiempo agotado: 503 para que cada ruta muestre su mensaje de "intenta en un momento".
+    logError("onvo", errCode(e) === "TimeoutError" ? "timeout" : "network", { method });
+    throw new OnvoError("ONVO no respondió", 503);
+  }
+  if (!res.ok) logError("onvo", `http_${res.status}`, { method });
   const text = await res.text();
   let json: unknown = null;
   try { json = text ? JSON.parse(text) : null; } catch { json = text; }

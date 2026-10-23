@@ -1,11 +1,18 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { DEFAULT_TZ, validTz } from "@/lib/today";
+import { resilientFetch } from "@/lib/resilient-fetch";
+
+// Tiempo límite por llamada y un reintento solo en lecturas: con Supabase lento la página muestra su error
+// con "Intentar de nuevo" en segundos, en vez de quedarse cargando hasta que Vercel corte la función.
+const dbFetch = resilientFetch({ readTimeoutMs: 6_000, writeTimeoutMs: 10_000 });
 
 export async function createClient() {
   const store = await cookies();
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { fetch: dbFetch },
     cookies: {
       getAll: () => store.getAll(),
       setAll: (list) => {
@@ -29,12 +36,15 @@ async function viewerTz() {
   return validTz(tz) ? tz : DEFAULT_TZ;
 }
 
-/** Usuario actual + perfil. En modo demo devuelve un usuario de ejemplo. */
-export async function getViewer(): Promise<Viewer | null> {
+/**
+ * Usuario actual + perfil. En modo demo devuelve un usuario de ejemplo.
+ * Memorizado por petición (React cache): el layout y la página comparten una sola consulta en vez de repetirla.
+ */
+export const getViewer = cache(async function getViewer(): Promise<Viewer | null> {
   if (!isSupabaseConfigured) return isDemoMode ? { ...DEMO, tz: await viewerTz() } : null; // producción sin llaves: falla cerrada
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
   const { data: p } = await sb.from("profiles").select("full_name, role, plan, onboarded, country").eq("id", user.id).maybeSingle();
   return { demo: false, id: user.id, email: user.email ?? "", name: p?.full_name || user.email?.split("@")[0] || "atleta", role: (p?.role as Role) ?? "free", plan: p?.plan ?? "free", onboarded: Boolean(p?.onboarded), tz: await viewerTz(), country: p?.country ?? null };
-}
+});

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runReminders } from "@/lib/notify-run";
 import { sweepChallenges } from "@/lib/challenges-server";
 import { bearerOk } from "@/lib/security";
+import { errCode, logError } from "@/lib/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,12 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
   if (!authorized(req)) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
-  const stats = await runReminders();
-  const retos = await sweepChallenges().catch((e) => { console.error("[cron:retos]", e); return null; });
+  // Presupuesto de tiempo por debajo de maxDuration: cada parte se detiene a tiempo y responde con lo que alcanzó.
+  const t0 = Date.now();
+  const stats = await runReminders(new Date(), undefined, { deadline: t0 + 35_000 }).catch((e) => {
+    logError("cron:recordatorios", "run_failed", { kind: errCode(e) });
+    return { ok: false, mode: "daily" as const, scanned: 0, candidates: 0, sent: {}, push: 0, email: 0, errors: 1 };
+  });
+  const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
   return NextResponse.json({ ...stats, retos }, { status: stats.ok ? 200 : 500 });
 }

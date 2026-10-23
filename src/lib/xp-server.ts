@@ -1,6 +1,7 @@
 // XP del usuario para Hoy, Niveles y la tienda: total, historial de 7 días, meta semanal y bono de racha.
 // SOLO SERVIDOR. El bono de racha lo calcula gamify.streakBonus y lo otorga public.grant_streak_bonus (service_role).
 import "server-only";
+import { logWarn } from "@/lib/log";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient, type Viewer } from "@/lib/supabase/server";
@@ -104,6 +105,6 @@ export async function settleStreakBonus(v: Viewer): Promise<number> {
   const bonus = streakBonus(base, streakOf(active, today).days);
   if (bonus <= 0) return 0;
   const { data: added, error } = await db.rpc("grant_streak_bonus", { p_user: v.id, p_day: today, p_xp: bonus });
-  if (error) { console.warn("[xp] grant_streak_bonus", error.message); return 0; }
+  if (error) { logWarn("xp", "grant_streak_bonus_failed", { code: error.code }); return 0; }
   return Number(added ?? 0);
 }

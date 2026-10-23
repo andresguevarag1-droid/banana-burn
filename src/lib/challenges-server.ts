@@ -1,4 +1,5 @@
 import "server-only";
+import { errCode, logError, logWarn } from "@/lib/log";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient, type Viewer } from "@/lib/supabase/server";
@@ -125,7 +126,9 @@ export async function getMyChallenges(v: Viewer, m: Metrics): Promise<{ active: 
     .or(`status.eq.activo,status.eq.completado,and(status.in.(fallido,vencido),started_on.gte.${since})`).order("created_at");
   const list = (rows ?? []) as UcRow[];
   const ids = list.filter((r) => r.status !== "completado").map((r) => r.id);
-  const { data: ck } = ids.length ? await sb.from("challenge_checkins").select("user_challenge_id,day").in("user_challenge_id", ids) : { data: [] };
+  const { data: ck, error: ckErr } = ids.length ? await sb.from("challenge_checkins").select("user_challenge_id,day").in("user_challenge_id", ids) : { data: [], error: null };
+  // Sin los días cumplidos, un reto en curso se vería "fallido": mejor la pantalla de error con "Intentar de nuevo".
+  if (ckErr) throw Object.assign(new Error("No se pudieron leer los días de los retos"), { code: ckErr.code });
   const daysOf = new Map<number, string[]>();
   for (const x of (ck ?? []) as { user_challenge_id: number; day: string }[]) daysOf.set(x.user_challenge_id, [...(daysOf.get(x.user_challenge_id) ?? []), x.day]);
 
@@ -229,7 +232,8 @@ export async function creditChallenges(v: Viewer, m?: Metrics): Promise<{ credit
       const { data: added } = await db.from("challenge_checkins").upsert({ user_challenge_id: r.id, user_id: v.id, day: today }, { onConflict: "user_challenge_id,day", ignoreDuplicates: true }).select("day");
       out.credited += added?.length ?? 0;
     }
-    const { data: ck } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
+    const { data: ck, error: ckErr } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
+    if (ckErr) continue; // sin los días cumplidos no se cierra nada (con la lista vacía el reto parecería fallido)
     const res = await finalize(db, v.id, r, c, (ck ?? []).map((x) => x.day as string), today);
     if (res !== "activo") out.closed.push(res);
   }
@@ -239,7 +243,7 @@ export async function creditChallenges(v: Viewer, m?: Metrics): Promise<{ credit
 
 /** Bono de racha del día (nunca bloquea la acción que lo dispara). */
 async function settle(v: Viewer) {
-  try { const { settleStreakBonus } = await import("@/lib/xp-server"); await settleStreakBonus(v); } catch (e) { console.warn("[xp] bono de racha", e); }
+  try { const { settleStreakBonus } = await import("@/lib/xp-server"); await settleStreakBonus(v); } catch (e) { logWarn("xp", "streak_bonus_failed", { kind: errCode(e) }); }
 }
 
 /** Solo cierra retos decididos (antes de contar el cupo de activos al unirse). No acredita nada. */
@@ -253,7 +257,8 @@ export async function closeDecidedChallenges(v: Viewer) {
   for (const r of (rows ?? []) as UcRow[]) {
     const c = catalog.get(r.challenge_id);
     if (!c) continue;
-    const { data: ck } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
+    const { data: ck, error: ckErr } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
+    if (ckErr) continue;
     await finalize(db, v.id, r, c, (ck ?? []).map((x) => x.day as string), today);
   }
 }
@@ -263,14 +268,21 @@ export async function closeDecidedChallenges(v: Viewer) {
  * con sus registros, y cierra los retos decididos (libera el cupo de 3 activos aunque el usuario no abra la app).
  * La proteína necesita la meta personal del motor: esa se acredita con `creditChallenges` al guardar comidas.
  */
-export async function sweepChallenges(now = new Date()): Promise<{ users: number; credited: number; closed: number }> {
-  const stats = { users: 0, credited: 0, closed: 0 };
+export async function sweepChallenges(now = new Date(), opts: { deadline?: number } = {}): Promise<{ users: number; credited: number; closed: number; errors: number; partial?: boolean }> {
+  const stats: { users: number; credited: number; closed: number; errors: number; partial?: boolean } = { users: 0, credited: 0, closed: 0, errors: 0 };
   const db = adminClient();
   if (!db) return stats;
   const catalog = await catalogForCron(db);
-  for (let from = 0; ; from += 500) {
-    const { data, error } = await db.from("user_challenges").select("*").eq("status", "activo").order("id").range(from, from + 499);
-    if (error || !data?.length) break;
+  // Paginación por id (no por posición): al cerrar retos, las filas "activo" se mueven y un range() saltaría algunas.
+  let lastId: number | string | null = null;
+  for (;;) {
+    if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; break; }
+    let q = db.from("user_challenges").select("*").eq("status", "activo").order("id").limit(500);
+    if (lastId !== null) q = q.gt("id", lastId);
+    const { data, error } = await q;
+    if (error) { stats.errors++; logError("cron:retos", "query_failed", { code: error.code }); break; }
+    if (!data?.length) break;
+    lastId = (data[data.length - 1] as { id: number | string }).id;
     const rows = data as (UcRow & { user_id: string })[];
     const users = [...new Set(rows.map((r) => r.user_id))];
     stats.users += users.length;
@@ -280,18 +292,24 @@ export async function sweepChallenges(now = new Date()): Promise<{ users: number
     for (const p of (profs ?? []) as { id: string; timezone: string | null }[]) if (p.timezone) tzOf.set(p.id, p.timezone);
     for (const p of (prefs ?? []) as { user_id: string; timezone: string | null }[]) if (p.timezone) tzOf.set(p.user_id, p.timezone);
     for (const r of rows) {
-      const c = catalog.get(r.challenge_id);
-      if (!c) continue;
-      const today = todayIn(tzOf.get(r.user_id), now).iso;
-      const yesterday = addDaysIso(today, -1);
-      if (c.verify !== "manual" && c.verify !== "protein" && r.started_on <= yesterday && (await metOn(db, r.user_id, c, yesterday))) {
-        const { data: added } = await db.from("challenge_checkins").upsert({ user_challenge_id: r.id, user_id: r.user_id, day: yesterday }, { onConflict: "user_challenge_id,day", ignoreDuplicates: true }).select("day");
-        stats.credited += added?.length ?? 0;
-      }
-      const { data: ck } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
-      if ((await finalize(db, r.user_id, r, c, (ck ?? []).map((x) => x.day as string), today)) !== "activo") stats.closed++;
+      if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; break; }
+      // Un reto con datos raros no detiene al resto. Acreditar (upsert) y cerrar son idempotentes: correr dos veces es seguro.
+      try {
+        const c = catalog.get(r.challenge_id);
+        if (!c) continue; // reto borrado del catálogo: se deja como está
+        const today = todayIn(tzOf.get(r.user_id), now).iso;
+        const yesterday = addDaysIso(today, -1);
+        if (c.verify !== "manual" && c.verify !== "protein" && r.started_on <= yesterday && (await metOn(db, r.user_id, c, yesterday))) {
+          const { data: added } = await db.from("challenge_checkins").upsert({ user_challenge_id: r.id, user_id: r.user_id, day: yesterday }, { onConflict: "user_challenge_id,day", ignoreDuplicates: true }).select("day");
+          stats.credited += added?.length ?? 0;
+        }
+        const { data: ck, error: ckErr } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
+        // Sin la lista de días cumplidos no se decide nada: cerrar con datos vacíos marcaría el reto como fallido.
+        if (ckErr) { stats.errors++; continue; }
+        if ((await finalize(db, r.user_id, r, c, (ck ?? []).map((x) => x.day as string), today)) !== "activo") stats.closed++;
+      } catch (e) { stats.errors++; logError("cron:retos", "row_failed", { kind: errCode(e) }); }
     }
-    if (data.length < 500) break;
+    if (stats.partial || data.length < 500) break;
   }
   return stats;
 }

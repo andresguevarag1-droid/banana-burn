@@ -2,6 +2,7 @@
 // Mismo patrón que src/app/admin/actions.ts: autoriza en el servidor, valida, muta con el cliente del usuario (RLS/RPC
 // revalidan) y escribe public.audit_log.
 import "server-only";
+import { errCode, logError } from "@/lib/log";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { authorize } from "@/lib/admin-auth";
 import type { Capability } from "@/lib/admin-perms";
@@ -22,7 +23,7 @@ export async function run(cap: Capability, fd: FormData, fn: (ctx: Ctx, fd: Form
     return await fn({ v: auth.v, sb: auth.v.demo ? null : await createClient() }, fd);
   } catch (e) {
     if (e instanceof ValidationError) return fail(e.message);
-    console.error("[admin retos]", e);
+    logError("admin-retos", "action_failed", { kind: errCode(e) });
     return fail("No se pudo completar la acción. Intenta de nuevo.");
   }
 }
@@ -39,6 +40,6 @@ export function pgMessage(e: { code?: string; message?: string } | null): string
 
 export async function audit(sb: SB, v: Viewer, action: string, target: string, meta: Record<string, unknown> = {}) {
   const { error } = await sb.from("audit_log").insert({ actor: v.id, action, target, meta });
-  if (error) console.error("[audit]", error);
+  if (error) logError("audit", "insert_failed", { code: error.code });
   return !error;
 }
