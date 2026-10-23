@@ -53,7 +53,7 @@ function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanI
 /** Garantías. La de la prueba cambia con el fin de la beta (offer.ts); las páginas del servidor la pasan ya calculada. */
 const guarantees = (trial: readonly [string, string]) => [
   [Gift, trial[0], trial[1]],
-  [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi suscripción, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
+  [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi plan, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
   [Scroll, "8 días hábiles de retracto", "Si compraste y cambias de opinión, escríbenos dentro de los 8 días hábiles siguientes a la compra (Ley 7472)."],
   [Lock, "Pago seguro con ONVO Pay", "Los datos de tu tarjeta van directo a ONVO Pay, nuestro procesador de pagos, y nunca pasan por nuestros servidores."],
 ] as const;

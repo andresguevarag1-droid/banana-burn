@@ -53,7 +53,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   else if (!owned) cta = (
     <>
       <BuyButton slug={c.id} label={`Comprar por ${usd(finalMinor)}`} />
-      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct}% de descuento. ` : ""}Pago único con tarjeta en USD, procesado por ONVO Pay. Es tuyo para siempre.</p>
+      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento. ` : ""}Pago único con tarjeta en USD, procesado por ONVO Pay. Es tuyo para siempre.</p>
     </>
   );
   else if (!ent.app) cta = (

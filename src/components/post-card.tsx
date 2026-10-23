@@ -50,7 +50,7 @@ function Comment({ c, onDeleted }: { c: FeedComment; onDeleted: (id: string) => 
             {href ? <Link href={href} className="font-bold text-ink hover:underline">{c.author.name}</Link> : <b className="text-ink">{c.author.name}</b>}
             {c.author.tester && <TesterBadge compact className="ml-1.5" />}
             <NameFlair flair={c.author.flair} size="sm" className="ml-1 align-[-3px]" />
-            <span className="ml-1.5 text-xs text-faint"><Ago iso={c.at} /></span>
+            <span className="ml-1.5 inline-block whitespace-nowrap text-xs text-faint"><Ago iso={c.at} /></span>
           </p>
           <p className="text-sm text-body break-words">{c.body}</p>
         </div>

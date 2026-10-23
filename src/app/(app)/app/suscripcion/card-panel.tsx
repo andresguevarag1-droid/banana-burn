@@ -190,8 +190,8 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
           <PlanPicker value={choice} onChange={setChoice} disabled={busy} />
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setView("idle")} className="btn-ghost h-12 flex-1">Volver</button>
-            <button type="button" disabled={busy || (choice.plan === charge.plan && choice.billing === charge.billing)} onClick={() => act({ action: "plan", ...choice }, "idle")} className="btn-primary h-12 flex-1" aria-busy={busy}>{busy ? <CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" /> : null}Guardar cambio</button>
+            <button type="button" onClick={() => setView("idle")} className="btn-ghost h-12 sm:flex-1">Volver</button>
+            <button type="button" disabled={busy || (choice.plan === charge.plan && choice.billing === charge.billing)} onClick={() => act({ action: "plan", ...choice }, "idle")} className="btn-primary h-12 sm:flex-1" aria-busy={busy}>{busy ? <CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" /> : null}Guardar cambio</button>
           </div>
         </div>
       )}
@@ -214,8 +214,8 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
           </label>
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setView("idle")} className="btn-primary h-12 flex-1">Mejor no</button>
-            <button type="button" disabled={busy} onClick={() => act({ action: "cancelar", keepCard: !removeCard }, "cancelado")} className="btn h-12 flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" /> : null}Confirmar cancelación</button>
+            <button type="button" onClick={() => setView("idle")} className="btn-primary h-12 sm:flex-1">Mejor no</button>
+            <button type="button" disabled={busy} onClick={() => act({ action: "cancelar", keepCard: !removeCard }, "cancelado")} className="btn h-12 sm:flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" /> : null}Confirmar cancelación</button>
           </div>
         </div>
       )}

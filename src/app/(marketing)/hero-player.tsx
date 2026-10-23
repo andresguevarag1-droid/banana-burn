@@ -25,7 +25,7 @@ export function HeroPlayer({ className = "" }: { className?: string }) {
         <div className="mx-3 mt-3 rounded-2xl bg-white p-3 shadow-[0_1px_0_var(--color-line)]">
           <div className="flex items-baseline justify-between">
             <p className="text-sm font-extrabold text-ink">Serie 3 <span className="text-muted">de 4</span></p>
-            <p className="text-[11px] font-bold text-peel">+2,5 kg vs. la vez pasada</p>
+            <p className="text-[11px] font-bold text-peel">+2.5 kg vs. la vez pasada</p>
           </div>
           <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div className="flex items-center justify-between rounded-xl bg-cream px-2 py-1.5">

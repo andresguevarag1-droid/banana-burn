@@ -26,6 +26,7 @@ import { getMyTester } from "@/lib/testers-server";
 import { OpenGuideButton } from "@/components/guide/open-guide";
 import { VoiceSettings } from "./voice-settings";
 import { getVoice } from "@/lib/voice-server";
+import { nfmt } from "@/lib/num";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -82,7 +83,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
           </div>
           <p className="text-sm text-muted truncate">{v.email}</p>
           <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-bold">
-            <Link href="/app/niveles" className="inline-flex h-7 items-center gap-1 rounded-full bg-banana-soft px-2.5 text-banana-ink hover:bg-banana"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</Link>
+            <Link href="/app/niveles" className="tap inline-flex h-7 items-center gap-1 rounded-full bg-banana-soft px-2.5 text-banana-ink hover:bg-banana"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</Link>
             <span className="inline-flex h-7 items-center gap-1 rounded-full bg-ember/10 px-2.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} {g.streak.days === 1 ? "día" : "días"} de racha</span>
             {isTester && <TesterBadge />}
           </p>
@@ -165,7 +166,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
 
       <section className="card p-5">
         <H icon={Target}>Meta</H>
-        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-muted">{a.startWeight} kg <ArrowRight weight="bold" className="size-4 text-faint" /><span className="sr-only">a</span> <b className="text-ink">{a.goalWeight} kg</b> el {new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" })}</p>
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-muted">{nfmt(a.startWeight)} kg <ArrowRight weight="bold" className="size-4 text-faint" /><span className="sr-only">a</span> <b className="text-ink">{nfmt(a.goalWeight)} kg</b> el {new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" })}</p>
         <Link href="/app/progreso#meta" className="tap mt-3 inline-flex items-center gap-1 text-sm font-bold text-banana-ink hover:text-ink">Editar meta y datos <ArrowRight weight="bold" className="size-3.5" /></Link>
       </section>
 

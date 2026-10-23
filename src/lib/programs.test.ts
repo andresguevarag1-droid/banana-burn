@@ -429,3 +429,17 @@ describe("0037: Pilates en casa 30 días", () => {
     expect(parseMeta(JSON.parse(JSON.stringify(m)))?.days).toBeUndefined();
   });
 });
+
+import { orderProgramsFor } from "./programs";
+describe("orderProgramsFor: tienda según quién mira", () => {
+  const P = (id: string, coach?: "platanita") => ({ id, program: { experience: coach ? { coach } : {} } as unknown as ProgramMeta });
+  const list = [P("reconstruccion"), P("pilates", "platanita"), P("banana-girl", "platanita"), P("abdomen")];
+  it("a un hombre, los programas de Coach Platanita van al final, en el mismo orden", () => {
+    expect(orderProgramsFor(list, "m").map((c) => c.id)).toEqual(["reconstruccion", "abdomen", "pilates", "banana-girl"]);
+  });
+  it("no mueve lo que ya es suyo; para una mujer, los programas de chicas van primero", () => {
+    expect(orderProgramsFor(list, "m", new Set(["pilates"])).map((c) => c.id)).toEqual(["reconstruccion", "pilates", "abdomen", "banana-girl"]);
+    expect(orderProgramsFor(list, "f").map((c) => c.id)).toEqual(["pilates", "banana-girl", "reconstruccion", "abdomen"]);
+    expect(orderProgramsFor(list, null)).toBe(list);
+  });
+});

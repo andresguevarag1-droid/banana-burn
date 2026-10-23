@@ -14,7 +14,7 @@ import { CardPanel } from "./card-panel";
 import { betaDates } from "@/components/beta-notice";
 import { demoCardState } from "@/lib/trial-demo";
 
-export const metadata = { title: "Mi suscripción" };
+export const metadata = { title: "Mi plan" };
 
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" }) : "Sin fecha");
 

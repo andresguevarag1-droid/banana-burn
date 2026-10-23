@@ -98,7 +98,7 @@ export function BananaTrail({ items, current, onPick, fresh }: { items: { name: 
         return (
           <button key={i} type="button" onClick={() => onPick(i)} aria-current={on ? "step" : undefined}
             aria-label={`${it.name}, ${it.done} de ${it.total} series${full ? ", completo" : ""}`}
-            className={`pressable flex-1 min-w-0 flex flex-col items-center gap-1 rounded-xl pt-1.5 pb-1 ${on ? "bg-white shadow-soft" : "hover:bg-white/60"}`}>
+            className={`pressable flex-1 min-w-0 min-h-11 flex flex-col items-center gap-1 rounded-xl pt-1.5 pb-1 ${on ? "bg-white shadow-soft" : "hover:bg-white/60"}`}>
             {full ? <GoldBanana className="size-6" pop={fresh === i} /> : <Banana weight={on ? "duotone" : "regular"} className={`size-6 ${on ? "text-ink" : "text-faint"}`} aria-hidden />}
             <span aria-hidden className="block h-1 w-[70%] rounded-full bg-line overflow-hidden">
               <span className="bar-fill block h-full w-full rounded-full bg-ink" style={{ transform: `translateX(${(it.done / Math.max(1, it.total) - 1) * 100}%)` }} />

@@ -19,7 +19,7 @@ const TABS: Tab[] = [
     points: ["Animación en cada ejercicio clave", "Ritmo marcado: baja en 3 segundos, sube fuerte", "Alternativas si no tienes la máquina"] },
   { id: "comida", label: "Tu comida", src: "/landing/nutricion.png", title: "Comes lo que ya comes.",
     body: "Arroz con pollo, tacos, arepas o un combo de comida rápida: lo registras y ves cuánto te queda.",
-    points: ["Más de 1.200 alimentos y platos latinos", "Proteína suficiente para reconstruir músculo", "Recetas y menú del día"], plan: "En Entreno + Nutrición" },
+    points: ["Más de 1,200 alimentos y platos latinos", "Proteína suficiente para reconstruir músculo", "Recetas y menú del día"], plan: "En Entreno + Nutrición" },
   { id: "progreso", label: "Progreso", src: "/landing/progreso.png", title: "Ves cómo cambia tu cuerpo, no solo tu peso.",
     body: "La tendencia real de tu peso, tus medidas, tus fotos y la fuerza que vas ganando en cada ejercicio.",
     points: ["Tendencia de peso, no el número del día", "Medidas y fotos privadas", "Fuerza por ejercicio, semana a semana"] },

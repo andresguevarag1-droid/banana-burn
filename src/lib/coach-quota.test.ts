@@ -66,7 +66,7 @@ describe("estado del cupo", () => {
   });
   it("cuándo vuelve, en la hora de la persona", () => {
     const at = "2026-10-24T06:00:00.000Z";
-    expect(resetLabel(at, "day", T, "America/Costa_Rica")).toMatch(/^mañana a las 12:00\sa/);
+    expect(resetLabel(at, "day", T, "America/Costa_Rica")).toBe("a medianoche");
     expect(resetLabel(at, "day", T, "America/Bogota")).toMatch(/^mañana a la 1:00\sa/);
     expect(resetLabel(at, "day", T, "America/Tijuana")).toMatch(/^hoy a las 11:00\sp/);
     expect(resetLabel("2026-11-01T06:00:00.000Z", "month", T, "America/Costa_Rica")).toBe("el 1 de noviembre");

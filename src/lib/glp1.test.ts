@@ -39,7 +39,7 @@ describe("programa GLP-1", () => {
     const t = glp1Targets({ kg: 50, goalKg: 48, heightCm: 150, age: 70, sex: "f" });
     expect(t.kcalMin).toBeGreaterThanOrEqual(KCAL_FLOOR.f);
     const coach = readFileSync(new URL("./coach.ts", import.meta.url), "utf8");
-    const fmt = (n: number) => `${Math.floor(n / 1000)}.${String(n % 1000).padStart(3, "0")}`;
+    const fmt = (n: number) => n.toLocaleString("es-419");
     expect(coach).toContain(`${fmt(KCAL_FLOOR.m)} kcal (hombres) / ${fmt(KCAL_FLOOR.f)} (mujeres)`);
   });
 });

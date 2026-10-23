@@ -15,6 +15,21 @@ const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\
  * Red de seguridad: quita emojis (y sus modificadores) del texto del modelo, trozo por trozo del stream.
  * Conserva saltos de línea y sangrías de markdown; solo colapsa los espacios dobles que deja un emoji en medio de una línea.
  */
+/**
+ * Línea de saludo del coach sobre el entreno de hoy, en neutro (sirve igual para hombres y mujeres).
+ * Solo menciona ayer cuando aporta: un día de descanso o una sesión distinta a la de hoy. Si ayer tocaba la misma
+ * sesión (programas que se hacen en orden), decir "ayer fue X" junto a "hoy te toca X" confunde.
+ */
+export function todayLine(p: { today: { name: string; exercises: number; training: boolean }; yesterday: { name: string; training: boolean }; trainedToday: boolean }): string {
+  const { today, yesterday } = p;
+  if (!today.training) return "Hoy es **descanso activo**: camina y estira.";
+  if (p.trainedToday) return `Ya hiciste **${today.name}** hoy. Buen trabajo.`;
+  const base = `Hoy te toca **${today.name}** (${today.exercises} ejercicios).`;
+  if (!yesterday.training) return `${base} Ayer descansaste: llegas con energía.`;
+  if (yesterday.name && yesterday.name !== today.name) return `${base} Ayer fue ${yesterday.name}: hoy trabajas otros músculos.`;
+  return base;
+}
+
 export function stripEmoji(s: string): string {
   if (!s) return s;
   const out = s.replace(EMOJI, "");
@@ -91,13 +106,13 @@ Estilo:
 Método Banana Burn (no lo contradigas):
 - Si "programa_activo" tiene "enfoque", ese es el objetivo de la persona mientras dure el programa: orienta cada respuesta (ejercicios, comida, hábitos) hacia ese enfoque y usa sus "habitos" y su "consejo_semana".
 - Recomposición: 4 días de básicos cerca del fallo (1-2 reps en reserva), tempo 3-1-1, doble progresión, descarga cada 6 semanas.
-- ${nutrition ? "Proteína 1,6-2,2 g/kg, carbos alrededor del entreno" : "Proteína en cada comida, carbos alrededor del entreno"}, 8-12k pasos, 7-9 h de sueño.
+- ${nutrition ? "Proteína 1.6-2.2 g/kg, carbos alrededor del entreno" : "Proteína en cada comida, carbos alrededor del entreno"}, 8-12k pasos, 7-9 h de sueño.
 - Rutinas que no se repiten día con día. Si piden cambiar un ejercicio, ofrece una alternativa que trabaje el mismo patrón.
 - Comida de verdad de Latinoamérica: arroz, frijoles, tortilla o arepa, plátano, yuca, papa, pollo, pescado, huevos, queso fresco, frutas. Si conoces el país del atleta (campo "pais"), sugiere platos típicos de ahí.
 
 Seguridad:
 - No diagnosticas. Ante dolor agudo, mareo, dolor de pecho o lesión: que pare y consulte a un profesional de salud.
-- Nunca recomiendes menos de 1.600 kcal (hombres) / 1.300 (mujeres), ayunos extremos, purgas, ni perder más de ~1 % del peso por semana.
+- Nunca recomiendes menos de 1,600 kcal (hombres) / 1,300 (mujeres), ayunos extremos, purgas, ni perder más de ~1 % del peso por semana.
 - Si notas señales de trastorno de la conducta alimentaria, responde con empatía, sin números, y sugiere apoyo profesional.
 - No recomiendes esteroides ni fármacos para bajar de peso.
 
@@ -147,7 +162,7 @@ export function demoReply(q: string, name = "", country?: string | null) {
   if (/(cambi|reemplaz|sustitu)/.test(t)) return "¡Claro! En el entreno toca el botón **Cambiar** del ejercicio: te muestro opciones que trabajan el mismo músculo con tu equipo. Mantén las mismas series y anota el peso nuevo; el motor recalibra solo la próxima vez.";
   if (/(cen|comer|comi|prote)/.test(t)) return "Para cerrar la proteína del día, tres opciones fáciles:\n- **Pescado 200 g + yuca o papa + ensalada** (~45 g P)\n- **Pechuga 180 g con arroz, frijoles y ensalada**, mitad de arroz (~50 g P)\n- **3 huevos + 100 g de queso fresco + tortilla o arepa** (~40 g P)";
   if (/(duel|dol|lesi|molest|punz|tiron|pincha)/.test(t)) return "Si es dolor agudo, punzante o en una articulación, **para ese ejercicio hoy** y consulta a un fisio o médico. Si es solo agujeta (dolor muscular difuso de 1 a 3 días), puedes entrenar con **modo suave**. ¿Dónde lo sientes y desde cuándo?";
-  if (/(estanc|no bajo|no baj)/.test(t)) return "Primero confirmemos la tendencia: pésate 4 mañanas esta semana, en ayunas. Si en 2 semanas no se mueve:\n- **−100 kcal** al día (media taza de arroz menos en la cena)\n- **+2.000 pasos** al día\n- Mantén la proteína alta para no perder músculo.";
+  if (/(estanc|no bajo|no baj)/.test(t)) return "Primero confirmemos la tendencia: pésate 4 mañanas esta semana, en ayunas. Si en 2 semanas no se mueve:\n- **−100 kcal** al día (media taza de arroz menos en la cena)\n- **+2,000 pasos** al día\n- Mantén la proteína alta para no perder músculo.";
   return `¡Hola${name ? `, ${name}` : ""}! Hoy te toca la rutina del día. Concéntrate en la técnica, controla la bajada y termina cada serie con 1-2 reps en reserva. Después, proteína en la próxima hora. (Vista previa: respuestas de ejemplo.)`;
 }
 

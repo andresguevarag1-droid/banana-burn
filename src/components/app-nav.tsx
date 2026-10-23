@@ -63,8 +63,8 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
           <NotificationBell />
         </header>
       )}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
-        <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
+        <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell side="start" /></div>
         {program && (
           <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
             <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-[var(--program,var(--color-banana))]" />
@@ -85,8 +85,9 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
           ); })}
         </nav>
         {staff && <ViewSwitch current="usuario" compact className="mt-3 shrink-0" />}
-        <div className="mt-3 shrink-0 flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
-          <Link href="/app/perfil" className="pressable -my-1 flex min-h-11 flex-1 min-w-0 items-center gap-3 rounded-xl"><span className="grid place-items-center size-9 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
+        <div className="mt-3 shrink-0 flex items-center gap-1 rounded-2xl bg-white border border-line p-2">
+          {/* Espacios justos para que el nombre se lea entero junto a los dos botones (antes quedaba en "Andr…"). */}
+          <Link href="/app/perfil" title={name} className="pressable -my-1 flex min-h-11 flex-1 min-w-0 items-center gap-2.5 rounded-xl pl-1"><span className="grid place-items-center size-9 shrink-0 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
           <span className="flex-1 truncate font-semibold text-ink">{name}</span></Link>
           {/* Guía de la app: botón compacto para no alargar el menú lateral */}
           <button type="button" onClick={openGuide} aria-haspopup="dialog" aria-label="Guía de la app" title="Guía de la app" className="tap pressable grid place-items-center size-9 rounded-full text-muted hover:bg-cream hover:text-ink"><Compass className="size-5" weight="duotone" aria-hidden /></button>
@@ -122,7 +123,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
       <Sheet id="menu-mas" open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-3 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
+          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Mi plan", icon: CreditCard, hint: "Plan, tarjeta y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
             <li key={href}>
               <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-1.5 rounded-2xl p-3.5 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}{newMark(it)}</span>

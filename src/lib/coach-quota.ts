@@ -107,13 +107,15 @@ export function quotaLine(q: Pick<CoachQuota, "left" | "reason">): { text: strin
   return { text, tone: q.left <= COACH_LOW_AT ? "low" : "quiet" };
 }
 
-/** Cuándo se renueva, en la hora del navegador: "mañana a la 1:00 a. m.", "hoy a las 11:00 p. m." o "el 1 de noviembre". */
+/** Cuándo se renueva, en la hora del navegador: "a medianoche", "mañana a la 1:00 a. m.", "hoy a las 11:00 p. m." o "el 1 de noviembre". */
 export function resetLabel(resetsAt: string, reason: "day" | "month" | null, now = new Date(), timeZone?: string): string {
   const at = new Date(resetsAt);
   if (reason === "month") return `el ${at.toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone })}`;
   const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone });
   const tomorrow = new Date(now.getTime() + 864e5);
   const when = day(at) === day(now) ? "hoy" : day(at) === day(tomorrow) ? "mañana" : `el ${at.toLocaleDateString("es-419", { weekday: "long", timeZone })}`;
+  // Medianoche de esta noche: "a medianoche" se entiende mejor que "mañana a las 12:00 a. m.".
+  if (when === "mañana" && at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone }) === "00:00") return "a medianoche";
   const time = at.toLocaleTimeString("es-419", { hour: "numeric", minute: "2-digit", timeZone });
   return `${when} a ${/^1:/.test(time) ? "la" : "las"} ${time}`;
 }

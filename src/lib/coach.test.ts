@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COACH_STYLE_RULE, coachSystem, demoReply, safetyCheck, stripEmoji } from "./coach";
+import { COACH_STYLE_RULE, coachSystem, demoReply, safetyCheck, stripEmoji, todayLine } from "./coach";
 import type { Athlete } from "./athlete";
 import { ruleFeedback } from "./feedback";
 
@@ -53,7 +53,7 @@ describe("coach según el plan", () => {
     expect(d.objetivos_diarios.kcal).toBeGreaterThan(0);
     expect(d.objetivos_diarios.protein).toBeGreaterThan(0);
     expect(d.glp1).not.toBeNull();
-    expect(sys).toContain("1,6-2,2 g/kg");
+    expect(sys).toContain("1.6-2.2 g/kg");
     expect(sys).not.toContain("Plan del atleta: Entreno (sin nutrición)");
   });
 
@@ -66,6 +66,23 @@ describe("coach según el plan", () => {
     expect(d.glp1).toBeNull();
     expect(sys).toContain("Plan del atleta: Entreno (sin nutrición)");
     expect(sys).toContain("parte de Entreno + Nutrición");
-    expect(sys).not.toContain("1,6-2,2 g/kg");
+    expect(sys).not.toContain("1.6-2.2 g/kg");
+  });
+});
+
+describe("todayLine: saludo del coach sobre el entreno de hoy", () => {
+  const today = { name: "Cuerpo completo B", exercises: 6, training: true };
+  it("no dice 'ayer fue X' si ayer tocaba la misma sesión", () => {
+    expect(todayLine({ today, yesterday: { name: "Cuerpo completo B", training: true }, trainedToday: false })).toBe("Hoy te toca **Cuerpo completo B** (6 ejercicios).");
+  });
+  it("menciona ayer cuando fue otra sesión o descanso, sin género", () => {
+    expect(todayLine({ today, yesterday: { name: "Pierna", training: true }, trainedToday: false })).toContain("Ayer fue Pierna: hoy trabajas otros músculos.");
+    const r = todayLine({ today, yesterday: { name: "Descanso", training: false }, trainedToday: false });
+    expect(r).toContain("Ayer descansaste");
+    expect(r).not.toMatch(/fresco|fresca|listo|lista/);
+  });
+  it("ya entrenó y día de descanso", () => {
+    expect(todayLine({ today, yesterday: { name: "x", training: true }, trainedToday: true })).toBe("Ya hiciste **Cuerpo completo B** hoy. Buen trabajo.");
+    expect(todayLine({ today: { ...today, training: false }, yesterday: { name: "x", training: true }, trainedToday: false })).toContain("descanso activo");
   });
 });

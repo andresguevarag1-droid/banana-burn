@@ -165,7 +165,7 @@ export function GuideVisual({ step, input }: { step: GuideStep; input: GuideInpu
       );
     case "programas": {
       // Portadas reales de tres programas (arte de Coach Banana por programa, challenge-art.ts).
-      const main = { id: "gluteos-30", cover: "ember" as CoverStyle, icon: "bolt", title: "Glúteos de acero", mode: "Modo glúteo", habits: ["Activación de glúteo", "Camina 8.000 pasos"] };
+      const main = { id: "gluteos-30", cover: "ember" as CoverStyle, icon: "bolt", title: "Glúteos de acero", mode: "Modo glúteo", habits: ["Activación de glúteo", "Camina 8,000 pasos"] };
       const more = [{ id: "banana-girl", cover: "fresa" as CoverStyle, icon: "sparkle", title: "Banana Girl" }, { id: "abdomen-marcado", cover: "sky" as CoverStyle, icon: "target", title: "Operación Abdomen" }];
       return (
         <div aria-hidden className="grid h-full grid-rows-[1.35fr_1fr] gap-2">

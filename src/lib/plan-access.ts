@@ -50,6 +50,6 @@ export function hoyTip(x: { dow: number; training: boolean; proteinLeft: number;
   if (trained) return proteinLeft > 30 ? `Ya entrenaste. Ahora cierra la proteína: te faltan unos ${Math.round(proteinLeft)} g (pechuga, atún, yogur griego o huevos).` : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
   if (!training) return "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo.";
   if (proteinLeft > 100) return "Come tus carbos de 60 a 90 min antes de entrenar: avena con banana, arroz con huevo o pan integral con yogur griego.";
-  if (dow === 5) return "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el finde hay salida, máximo 2 tragos.";
+  if (dow === 5) return "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el fin de semana hay salida, máximo 2 tragos.";
   return "Tempo 3-1-1 en cada rep. Bajar lento es donde se construye el músculo.";
 }

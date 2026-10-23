@@ -7,7 +7,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { BRAND_ICONS, type BrandWeight } from "./brand";
 import { LEVELS } from "@/lib/gamify";
-import Image from "next/image";
+import { SafeImage } from "@/components/safe-image";
 import { levelArt } from "@/lib/challenge-art";
 
 const UTIL = {
@@ -40,5 +40,6 @@ export function BrandIcon({ name, weight = "duotone", ...rest }: P) {
 export function LevelIcon({ idx, className = "", title }: { idx: number; className?: string; size?: number | string; title?: string }) {
   const lv = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx - 1))];
   // Coach Banana en la etapa del nivel (de bebé a King Kong), recortado en círculo para que se lea en tamaños chicos.
-  return <Image src={levelArt(idx)} alt={title ?? ""} aria-hidden={title ? undefined : true} title={title ?? lv.n} width={64} height={64} sizes="64px" className={`inline-block shrink-0 rounded-full object-cover ring-1 ring-ink/10 ${className}`} />;
+  // Si el arte remoto no carga, Coach Banana de la marca en el mismo círculo (sin ícono roto ni texto alternativo suelto).
+  return <SafeImage src={levelArt(idx)} alt={title ?? ""} aria-hidden={title ? undefined : true} title={title ?? lv.n} width={64} height={64} sizes="64px" className={`inline-block shrink-0 rounded-full bg-banana object-cover ring-1 ring-ink/10 ${className}`} />;
 }

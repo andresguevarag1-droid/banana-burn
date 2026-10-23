@@ -7,7 +7,7 @@ export type Voice = "basico" | "intermedio" | "tecnico";
 export const DEFAULT_VOICE: Voice = "intermedio";
 
 export const VOICES: { id: Voice; label: string; d: string; sample: string }[] = [
-  { id: "basico", label: "Básico", d: "Palabras simples y todo explicado. Ideal si estás empezando.", sample: "Baja lento contando 3 y deja 2 repeticiones en el tanque." },
+  { id: "basico", label: "Básico", d: "Palabras simples y todo explicado. Ideal si estás empezando.", sample: "Baja lento contando 3 y detente cuando aún puedas hacer 2 más." },
   { id: "intermedio", label: "Intermedio", d: "Términos de gym, explicados la primera vez.", sample: "Tempo 3-1-1 y RIR 2: te quedan 2 repeticiones en reserva." },
   { id: "tecnico", label: "Técnico", d: "Lenguaje preciso de entrenamiento, sin rodeos.", sample: "Tempo 3-1-1, RIR 2, doble progresión en 6-10 reps." },
 ];
@@ -25,6 +25,26 @@ export const voiceForLevel = (level: string): Voice => (level === "principiante"
 
 const n = (x: number) => x.toLocaleString("es-419", { maximumFractionDigits: 2 });
 const plural = (k: number, one: string, many: string) => (k === 1 ? one : many);
+
+/* ───────────── Músculos ───────────── */
+
+// En básico, los nombres anatómicos pasan a partes del cuerpo que cualquiera reconoce. Los compuestos van primero.
+const PLAIN_MUSCLE: [RegExp, string][] = ([
+  ["deltoides posterior", "parte de atrás del hombro"], ["deltoides", "hombros"], ["isquiotibiales", "parte de atrás del muslo"],
+  ["cuádriceps", "parte de adelante del muslo"], ["aductores", "parte interna del muslo"], ["abductores", "parte externa de la cadera"],
+  ["dorsales", "espalda"], ["trapecios", "parte alta de la espalda"], ["romboides", "espalda alta"], ["pectorales", "pecho"],
+  ["tríceps", "parte de atrás del brazo"], ["oblicuos", "costados del abdomen"], ["core", "abdomen y zona media"], ["tibiales", "espinillas"],
+  ["sóleo", "pantorrillas"], ["serrato", "costados del pecho"],
+] as const).map(([k, v]) => [new RegExp(`(^|[^\\p{L}])${k}(?![\\p{L}])`, "giu"), v]);
+
+/** Músculo como se muestra según el registro: en básico, "isquiotibiales" se lee "parte de atrás del muslo". */
+export function muscleText(v: Voice, muscle: string): string {
+  if (v !== "basico" || !muscle) return muscle;
+  let out = muscle;
+  for (const [re, plain] of PLAIN_MUSCLE) out = out.replace(re, (_m, pre: string) => pre + plain);
+  // Respeta la mayúscula inicial del original ("Isquiotibiales" -> "Parte de atrás del muslo").
+  return /^\p{Lu}/u.test(muscle) ? out.charAt(0).toUpperCase() + out.slice(1) : out;
+}
 
 /** "2 min", "90 s": descansos en texto corrido. */
 export function restText(sec: number) {
@@ -47,7 +67,7 @@ export function rirText(v: Voice, a: number, b?: number) {
   const many = (b ?? a) !== 1;
   if (a === 0 && (b == null || b === 0)) return t(v, { basico: "hasta que no salga otra con buena forma", intermedio: "al límite (RIR 0: no salía otra)", tecnico: "RIR 0" });
   return t(v, {
-    basico: `deja ${range} ${many ? "repeticiones" : "repetición"} en el tanque`,
+    basico: `detente cuando aún puedas hacer ${range} más`,
     intermedio: `RIR ${b != null && b !== a ? `${a}-${b}` : a}: te ${many ? "quedan" : "queda"} ${range} ${many ? "reps" : "rep"} en reserva`,
     tecnico: `RIR ${b != null && b !== a ? `${a}-${b}` : a}`,
   });
@@ -150,8 +170,8 @@ export function readinessTips(v: Voice, program = false): [string, string, strin
   return [
     t(v, { basico: "Modo suave: una serie menos en cada ejercicio y que te sobren 3 repeticiones. Entrenar suave también suma a tu racha.", intermedio: "Modo suave: una serie menos por ejercicio y RIR 3 (te quedan 3 reps). Entrenar suave también suma a tu racha.", tecnico: "Modo suave: −1 serie por ejercicio, RIR 3. Cuenta para la racha." }),
     program
-      ? t(v, { basico: "Plan normal: sigue el ritmo que marca cada ejercicio y deja 1 o 2 repeticiones en el tanque.", intermedio: "Plan normal: el tempo de cada ejercicio y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo del programa, RIR 1-2." })
-      : t(v, { basico: "Plan normal: baja lento contando 3 y deja 1 o 2 repeticiones en el tanque.", intermedio: "Plan normal: tempo 3-1-1 y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo 3-1-1, RIR 1-2." }),
+      ? t(v, { basico: "Plan normal: sigue el ritmo que marca cada ejercicio y detente cuando aún puedas hacer 1 o 2 más.", intermedio: "Plan normal: el tempo de cada ejercicio y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo del programa, RIR 1-2." })
+      : t(v, { basico: "Plan normal: baja lento contando 3 y detente cuando aún puedas hacer 1 o 2 más.", intermedio: "Plan normal: tempo 3-1-1 y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo 3-1-1, RIR 1-2." }),
     t(v, { basico: "Aprovecha: intenta 1 repetición extra en la última serie de los ejercicios grandes.", intermedio: "Aprovecha: intenta 1 rep extra en la última serie de cada básico.", tecnico: "Día fuerte: +1 rep en la última serie de los compuestos (top set)." }),
   ];
 }
@@ -192,7 +212,7 @@ export function rxNote(v: Voice, rx: { type: RxType; kg: number | null; reps: nu
   switch (rx.type) {
     case "cal": {
       if (o.weighted) return t(v, {
-        basico: `Primer día con este ejercicio: elige un peso con el que puedas hacer de ${lo} a ${hi} repeticiones y te queden 2 más en el tanque. Anota lo que hiciste y yo ajusto el resto.`,
+        basico: `Primer día con este ejercicio: elige un peso con el que puedas hacer de ${lo} a ${hi} repeticiones y aún puedas hacer 2 más. Anota lo que hiciste y yo ajusto el resto.`,
         intermedio: `Calibración: elige un peso con el que llegues a ${lo}-${hi} reps con RIR 2 (te quedan 2 reps en reserva).`,
         tecnico: `Calibración: carga para ${lo}-${hi} reps a RIR 2. Esta sesión fija tu punto de partida para la doble progresión.`,
       });
@@ -275,7 +295,7 @@ export function effortHints(v: Voice): { f: string; j: string; l: string } {
 /** Una regla para el coach: cómo hablarle a esta persona. */
 export function coachRule(v: Voice) {
   return t(v, {
-    basico: "Habla en palabras simples, sin jerga de gym: explica cada término (en vez de RIR di \"deja 2 repeticiones en el tanque\"; en vez de tempo 3-1-1, \"baja lento contando 3\").",
+    basico: "Habla en palabras simples, sin jerga de gym: explica cada término (en vez de RIR di \"detente cuando aún puedas hacer 2 más\"; en vez de tempo 3-1-1, \"baja lento contando 3\").",
     intermedio: "Usa términos de gym comunes y explícalos una vez entre paréntesis (por ejemplo, RIR 2: te quedan 2 repeticiones).",
     tecnico: "Usa lenguaje técnico preciso (RIR, tempo, doble progresión, volumen por grupo muscular, e1RM) sin explicar lo básico.",
   });
@@ -298,7 +318,7 @@ const BENEFIT: Record<string, Three> = {
   pushB: {
     basico: "Más repeticiones con un poco menos de peso: así se da forma y firmeza a pecho, hombros y piernas.",
     intermedio: "Día de volumen: más repeticiones (8 a 12) para dar forma a pecho, hombros y piernas.",
-    tecnico: "Volumen en empuje y pierna (8-20 reps): más series efectivas por grupo muscular, descansos de 1 a 2,5 min.",
+    tecnico: "Volumen en empuje y pierna (8-20 reps): más series efectivas por grupo muscular, descansos de 1 a 2.5 min.",
   },
   pullB: {
     basico: "Espalda, glúteos y la parte de atrás de las piernas: mejor postura y glúteos más firmes.",

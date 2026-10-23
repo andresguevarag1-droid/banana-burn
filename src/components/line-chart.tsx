@@ -20,7 +20,7 @@ export function LineChart({ data, goal, unit = "kg", height = 180, trend = false
   const fmt = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short" });
   const last = data.at(-1)!;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Gráfica, último valor ${last.v} ${unit}`}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Gráfica, último valor ${last.v.toLocaleString("es-419", { maximumFractionDigits: 1 })} ${unit}`}>
       <defs><linearGradient id="lcfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#FFD60A" stopOpacity=".45" /><stop offset="1" stopColor="#FFD60A" stopOpacity="0" /></linearGradient></defs>
       {ticks.map((t) => (
         <g key={t}><line x1={pl} x2={W - pr} y1={y(t)} y2={y(t)} stroke="#EDE3C6" strokeDasharray="3 5" /><text x={W - pr + 6} y={y(t) + 4} fontSize="15" fill="#A0957C">{t.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</text></g>

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
-import { getSex } from "@/lib/athlete";
 import { getCatalog, getMyChallenges, getOwned, getParticipants, levelPerks } from "@/lib/challenges-server";
 import { getActiveProgram, getProgramSessions, getProgramStates, type ProgramChallenge } from "@/lib/programs-server";
 import { todayMetrics } from "@/lib/metrics";
 import { todayFor } from "@/lib/today";
 import { MAX_ACTIVE, isProgram, storeSection, type Challenge, type StoreSection } from "@/lib/challenges";
-import { daysLabel, durationLabel } from "@/lib/programs";
+import { daysLabel, durationLabel, orderProgramsFor } from "@/lib/programs";
+import { getAthlete } from "@/lib/athlete";
 import { toEndedView, toView } from "@/lib/challenge-view";
 import { ChallengeCard, EndedChallengeCard } from "@/components/challenge-card";
 import { StoreCard } from "@/components/retos/store-card";
@@ -29,17 +29,15 @@ const SECTIONS: { key: Exclude<StoreSection, "programas">; title: string; desc: 
 export default async function Retos() {
   const v = (await getViewer())!;
   const today = todayFor(v).iso;
-  const [{ active, done, ended }, catalog, owned, participants, perks, states, activeProgram] = await Promise.all([
-    todayMetrics(v).then((m) => getMyChallenges(v, m)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getProgramStates(v), getActiveProgram(v),
+  const [{ active, done, ended }, catalog, owned, participants, perks, states, activeProgram, athlete] = await Promise.all([
+    todayMetrics(v).then((m) => getMyChallenges(v, m)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getProgramStates(v), getActiveProgram(v), getAthlete(v),
   ]);
   const activeIds = new Set(active.map((a) => a.c.id));
   const list = [...catalog.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort - b.sort);
   const by = (k: StoreSection) => list.filter((c) => storeSection(c, today) === k);
-  // Para ella, primero los programas de chicas (con Coach Platanita); el resto, en el orden del panel.
-  const girlFirst = (await getSex(v)) === "f";
-  const girls = (c: ProgramChallenge) => Number(c.program.experience?.coach === "platanita");
-  const programs = (by("programas").filter(isProgram) as ProgramChallenge[]).map((c, i) => ({ c, i })).sort((a, b) => (girlFirst ? girls(b.c) - girls(a.c) : 0) || a.i - b.i).map((x) => x.c);
   const stateOf = new Map(states.map((s) => [s.slug, s]));
+  // Para ella, primero los programas de chicas (Coach Platanita); a un hombre no le abrimos la tienda con ellos (van al final).
+  const programs = orderProgramsFor(by("programas").filter(isProgram) as ProgramChallenge[], athlete.sex, new Set([...owned, ...stateOf.keys()]));
   const sessions = await Promise.all(programs.map((c) => getProgramSessions(v, c.id)));
   const days = new Map(programs.map((c, i) => [c.id, daysLabel(c.program, sessions[i])]));
   const paused = states.filter((s) => s.status === "pausado").map((s) => ({ s, c: catalog.get(s.slug) })).filter((x): x is { s: typeof x.s; c: Challenge } => !!x.c);
@@ -95,7 +93,7 @@ export default async function Retos() {
         <section className="space-y-3" aria-labelledby="sec-programas">
           <div>
             <h2 id="sec-programas" className="flex items-center gap-2 text-xl font-extrabold text-ink"><Sparkle weight="duotone" className="size-5 text-banana-ink" />Programas</h2>
-            <p className="max-w-[65ch] text-sm text-muted">Al empezarlo, tu entreno de cada día sale del programa: ejercicios, series, descansos y cargas que suben solas. Pago único, aparte de tu plan.{perks.discountPct > 0 ? ` Tu nivel ${perks.level.n} te da ${perks.discountPct}% de descuento.` : ""}</p>
+            <p className="max-w-[65ch] text-sm text-muted">Al empezarlo, tu entreno de cada día sale del programa: ejercicios, series, descansos y cargas que suben solas. Pago único, aparte de tu plan.{perks.discountPct > 0 ? ` Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento.` : ""}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
             {programs.map((c, i) => <ProgramCard key={c.id} c={c} big={i === 0 && c.featured} owned={owned.has(c.id)} discountPct={perks.discountPct} status={(stateOf.get(c.id)?.status as "activo" | "pausado" | "completado" | undefined) ?? null} days={days.get(c.id) ?? ""} />)}

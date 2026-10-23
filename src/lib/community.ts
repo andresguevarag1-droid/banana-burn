@@ -134,7 +134,7 @@ export async function getFeed(v: Viewer, mode: "siguiendo" | "descubrir" = "sigu
 export async function getComments(v: Viewer, postId: string): Promise<FeedComment[]> {
   if (v.demo) {
     const p = demoFeed(v).find((x) => x.id === postId);
-    return p ? [{ id: "c0", author: DEMO_AUTHORS[2], body: "¡Bien ahí! Mañana me toca pierna también.", at: ago(1.9), mine: false }, ...p.comments] : [];
+    return p ? [{ id: "c0", author: DEMO_AUTHORS[2], body: "¡Muy bien! Mañana me toca pierna también.", at: ago(1.9), mine: false }, ...p.comments] : [];
   }
   if (!/^[0-9]{1,18}$/.test(postId)) return [];
   const sb = await createClient();
