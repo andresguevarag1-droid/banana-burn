@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Lightning, Target } from "@/components/icons";
 import { MapPin } from "@/components/community/icons";
 import { Avatar, LevelBadge } from "@/components/community/avatar";
+import { NameFlair } from "@/components/community/flair";
 import { plural } from "@/lib/community-view";
 import type { Person } from "@/lib/community";
 import { FollowButton } from "./follow";
@@ -21,7 +22,7 @@ export function PersonCard({ p }: { p: Person }) {
         <div className="flex-1 min-w-0">
           {href ? <Link href={href} className="block font-extrabold text-ink truncate hover:underline">{p.name}</Link> : <span className="block font-extrabold text-ink truncate">{p.name}</span>}
           {p.username && <span className="block text-xs text-faint truncate">@{p.username}</span>}
-          <LevelBadge xp={p.xp} className="mt-1.5" />
+          <span className="mt-1.5 flex flex-wrap items-center gap-1"><LevelBadge xp={p.xp} /><NameFlair flair={p.flair} /></span>
         </div>
       </div>
       {p.bio && <p className="mt-3 text-sm text-body line-clamp-2 break-words">{p.bio}</p>}
@@ -45,7 +46,7 @@ export function PersonRow({ p }: { p: Person }) {
     <li className="flex items-center gap-3">
       <Avatar name={p.name} xp={p.xp} size="md" />
       <span className="flex-1 min-w-0">
-        {href ? <Link href={href} className="block font-bold text-ink truncate hover:underline">{p.name}</Link> : <span className="block font-bold text-ink truncate">{p.name}</span>}
+        <span className="flex min-w-0 items-center gap-1">{href ? <Link href={href} className="block font-bold text-ink truncate hover:underline">{p.name}</Link> : <span className="block font-bold text-ink truncate">{p.name}</span>}<NameFlair flair={p.flair} size="sm" className="shrink-0" /></span>
         <span className="block text-xs text-faint truncate">{p.activeDays > 0 ? plural(p.activeDays, "día activo", "días activos") + " en 2 semanas" : p.username ? `@${p.username}` : ""}</span>
       </span>
       <FollowButton userId={p.id} name={p.name} />

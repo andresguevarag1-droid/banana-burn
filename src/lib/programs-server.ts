@@ -53,7 +53,14 @@ function demoDone(today: string): DoneSession[] {
 
 /** Programas de la persona (todos los estados). Sin la migración 0024: ninguno. */
 export const getProgramStates = cache(async (v: Viewer): Promise<ProgramState[]> => {
-  if (v.demo) return [{ slug: DEMO_PROGRAM, status: "activo", startedOn: demoStart(todayFor(v).iso), pausedOn: null, pausedDays: 0, completedAt: null }];
+  if (v.demo) {
+    const today = todayFor(v).iso;
+    // Antes del programa insignia, Andrés completó Abdomen marcado (6 semanas): su certificado sale en Retos y en su perfil.
+    return [
+      { slug: DEMO_PROGRAM, status: "activo", startedOn: demoStart(today), pausedOn: null, pausedDays: 0, completedAt: null },
+      { slug: "abdomen-marcado", status: "completado", startedOn: addDays(today, -55), pausedOn: null, pausedDays: 0, completedAt: `${addDays(today, -12)}T19:00:00.000Z` },
+    ];
+  }
   const { data, error } = await (await createClient()).from("user_programs").select("slug,status,started_on,paused_on,paused_days,completed_at").eq("user_id", v.id).order("updated_at", { ascending: false });
   if (error) return [];
   return ((data ?? []) as UpRow[]).map(toState);

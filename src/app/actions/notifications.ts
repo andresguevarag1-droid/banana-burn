@@ -76,6 +76,7 @@ const DEMO_ITEMS = async (): Promise<InAppNotification[]> => {
   return [
     { id: 2, kind: "recordatorio", ...today, url: d.plan.tpl ? "/app/entreno" : "/app", read_at: null, created_at: new Date(t - 2 * 3600e3).toISOString() },
     { id: 1, kind: "semanal", title: "Tu semana en Banana Burn", body: "5 entrenos y −0.6 kg. Mira lo que viene esta semana.", url: "/app/progreso", read_at: new Date(t - 20 * 3600e3).toISOString(), created_at: new Date(t - 26 * 3600e3).toISOString() },
+    { id: 3, kind: "perfil_nivel", title: "Tu perfil subió a Cosecha", body: "Tu perfil ahora se ve como Cosecha en la comunidad. Mira lo que desbloqueaste.", url: "/app/perfil#poder", read_at: new Date(t - 8 * 3600e3).toISOString(), created_at: new Date(t - 12 * 24 * 3600e3).toISOString() },
   ];
 };
 

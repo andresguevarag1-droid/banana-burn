@@ -4,6 +4,7 @@ import { sweepChallenges } from "@/lib/challenges-server";
 import { deliverPendingGifts } from "@/lib/gifts-server";
 import { deliverTesterNotices } from "@/lib/testers-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
+import { purgeIdentityFiles } from "@/lib/identity-server";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 
@@ -19,6 +20,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * el push de regalos y recompensas por referidos que aún no se avisaron (respaldo: el panel y la app ya los mandan) y
  * los cobros con tarjeta guardada: aviso 2 días antes, cobro al terminar la prueba y un reintento al día siguiente.
  * También los avisos de testers de la beta (asignación, 3 días antes del final y agradecimiento).
+ * También borra las fotos de verificaciones de identidad ya decididas o vencidas (máximo 30 días, 0030).
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -37,5 +39,7 @@ export async function GET(req: Request) {
   // Testers (0029): correo y push de asignaciones sin avisar, aviso de 3 días antes del final y agradecimiento al terminar.
   // El acceso no depende de esto: sale de la fecha de vencimiento.
   const testers = await deliverTesterNotices({ limit: 200 }).catch((e) => { logError("cron:testers", "run_failed", { kind: errCode(e) }); return null; });
-  return NextResponse.json({ ...stats, retos, regalos, cobros, testers }, { status: stats.ok ? 200 : 500 });
+  // Verificación de identidad (0030): fotos de lo ya decidido o vencido (30 días) fuera de Storage.
+  const identidad = await purgeIdentityFiles({ deadline: t0 + 57_000 }).catch((e) => { logError("cron:identidad", "run_failed", { kind: errCode(e) }); return null; });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad }, { status: stats.ok ? 200 : 500 });
 }

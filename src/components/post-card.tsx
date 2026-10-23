@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Banana, BananaCoin, BananaMedal, BananaTrophy, Barbell, BrandIcon, ChatCircle, Clock, DotsThree, Flag, ForkKnife, Lightning, PaperPlaneTilt, Question, Trash, TrendUp, WarningCircle } from "@/components/icons";
 import { Avatar, LevelBadge } from "@/components/community/avatar";
+import { NameFlair } from "@/components/community/flair";
 import { TesterBadge } from "@/components/testers/tester-badge";
 import { addComment, deleteComment, deletePost, getComments, report, toggleKudo, type ReportReason } from "@/app/actions/community";
 import { fmtDuration, fmtNum, fmtVolume, tagDef, timeAgo } from "@/lib/community-view";
@@ -48,6 +49,7 @@ function Comment({ c, onDeleted }: { c: FeedComment; onDeleted: (id: string) => 
           <p className="text-sm break-words">
             {href ? <Link href={href} className="font-bold text-ink hover:underline">{c.author.name}</Link> : <b className="text-ink">{c.author.name}</b>}
             {c.author.tester && <TesterBadge compact className="ml-1.5" />}
+            <NameFlair flair={c.author.flair} size="sm" className="ml-1 align-[-3px]" />
             <span className="ml-1.5 text-xs text-faint"><Ago iso={c.at} /></span>
           </p>
           <p className="text-sm text-body break-words">{c.body}</p>
@@ -211,9 +213,10 @@ export function PostCard({ p, me, onDeleted }: { p: FeedPost; me: string; onDele
       <header className="flex items-center gap-3 p-4 pb-0">
         {href ? <Link href={href} className="rounded-full" tabIndex={-1} aria-hidden><Avatar name={p.author.name} xp={p.author.xp} /></Link> : <Avatar name={p.author.name} xp={p.author.xp} />}
         <div className="flex-1 min-w-0">
-          <p className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}</span>
-            <LevelBadge xp={p.author.xp} compact className="shrink-0" />
+          <p className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+            <span className="min-w-[3.5rem] font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}</span>
+            <NameFlair flair={p.author.flair} className="shrink-0" />
+            <LevelBadge xp={p.author.xp} compact className={`shrink-0 ${(p.author.flair?.tier && p.author.flair.tier > 1) || p.author.tester ? "max-[419px]:hidden" : ""}`} />
             {p.author.tester && <TesterBadge compact />}
           </p>
           <p className="text-xs text-muted truncate">{p.author.username && <span>@{p.author.username} </span>}<Ago iso={p.at} /></p>

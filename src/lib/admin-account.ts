@@ -4,13 +4,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { cancelSubscription, detachPaymentMethod, OnvoError } from "@/lib/onvo";
 
 const BUCKET = "progreso";
+const ID_BUCKET = "identidad";
 
 export type DeleteResult = { ok: true } | { ok: false; status: number; error: string; step: "subscriptions" | "photos" | "auth" };
 
 /**
  * Orden (si un paso falla, no se sigue):
  *  1. Cancela en ONVO las suscripciones que aún cobran (si falla, NO borramos: la persona seguiría pagando sin cuenta).
- *  2. Borra todas sus fotos de Storage (carpeta `${uid}/`): Storage no se borra en cascada con auth.users.
+ *  2. Borra todas sus fotos de Storage (carpeta `${uid}/` en 'progreso' y en 'identidad'): Storage no se borra en cascada.
  *  3. Quita datos personales de lo que no cae en cascada (scrub_deleted_user: cuerpo de webhooks, extractos de reportes).
  *  4. Borra el usuario en Auth; las tablas públicas caen en cascada (payment_events conserva el registro contable con user_id nulo).
  * `admin` debe ser el cliente con service_role.
@@ -50,6 +51,21 @@ export async function deleteAccountData(admin: SupabaseClient, userId: string, s
   } catch {
     console.error(JSON.stringify({ scope, msg: "no se pudieron borrar las fotos", userId }));
     return { ok: false, status: 500, step: "photos", error: "No pudimos borrar las fotos. Intenta de nuevo o escríbenos a hola@bananaburn.app." };
+  }
+
+  // 2b) Fotos de verificación de identidad (bucket privado 'identidad', 0030). Documentos de identidad: no se sigue sin borrarlas.
+  try {
+    for (let guard = 0; guard < 5; guard++) {
+      const { data: files, error } = await admin.storage.from(ID_BUCKET).list(userId, { limit: 100 });
+      if (error) { if (/not found/i.test(error.message ?? "")) break; throw error; }
+      if (!files?.length) break;
+      const { error: rmErr } = await admin.storage.from(ID_BUCKET).remove(files.map((f) => `${userId}/${f.name}`));
+      if (rmErr) throw rmErr;
+      if (files.length < 100) break;
+    }
+  } catch {
+    console.error(JSON.stringify({ scope, msg: "no se pudieron borrar las fotos de identidad", userId }));
+    return { ok: false, status: 500, step: "photos", error: "No pudimos borrar las fotos de tu verificación. Intenta de nuevo o escríbenos a hola@bananaburn.app." };
   }
 
   // 3) Lo que sobrevive a la cascada (registro contable y moderación) se queda sin datos personales (0023).

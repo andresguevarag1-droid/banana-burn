@@ -1,6 +1,7 @@
 // Lógica pura de la comunidad "La tropa" (sin servidor): tiempo relativo, tipos de publicación,
 // formato de cifras, contador de caracteres, podio del ranking e insignias públicas. Probada en community-view.test.ts.
 import { badges, levelOf, type Badge } from "@/lib/gamify";
+import type { Flair } from "@/lib/profile-power";
 
 const LOCALE = "es-419";
 const nf = (n: number, max = 0) => n.toLocaleString(LOCALE, { maximumFractionDigits: max });
@@ -60,7 +61,7 @@ export function counterState(len: number, max: number) {
 }
 
 // ───────────── Ranking ─────────────
-export type BoardRow = { userId: string; username: string | null; name: string; workouts: number; xp: number; totalXp: number | null; pos: number; me: boolean };
+export type BoardRow = { userId: string; username: string | null; name: string; workouts: number; xp: number; totalXp: number | null; pos: number; me: boolean; flair?: Flair | null };
 
 /**
  * Divide el ranking en podio (3 primeros con XP), el resto y tu fila fijada.

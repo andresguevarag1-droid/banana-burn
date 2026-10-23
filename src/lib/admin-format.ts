@@ -68,8 +68,12 @@ export const ACTION_LABEL: Record<string, string> = {
   "report.resolve": "Reporte resuelto",
   "report.dismiss": "Reporte descartado",
   "report.reopen": "Reporte reabierto",
+  "identity.view": "Fotos de identidad abiertas",
+  "identity.approve": "Identidad aprobada",
+  "identity.reject": "Identidad rechazada",
+  "identity.withdraw": "Verificación retirada por la persona",
 };
-const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación" };
+const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación", identity: "Verificación" };
 export const actionLabel = (a: string) => ACTION_LABEL[a] ?? a.replace(/[._]/g, " ");
 export const actionGroupLabel = (prefix: string) => GROUP_LABEL[prefix] ?? prefix;
 
@@ -79,7 +83,7 @@ const META_LABEL: Record<string, string> = {
   expires_at: "Vence", vence: "Vence", grant: "Cortesía", title: "Título", titulo: "Título", slug: "Identificador", active: "Activo", days: "Días",
   audience: "Audiencia", name: "Nombre", nombre: "Nombre", enabled: "Habilitado", habilitado: "Habilitado", verified: "Verificado", verificado: "Verificado",
   months: "Meses", starts_at: "Empieza", message: "Con mensaje", reward: "Recompensa", group: "Grupo", referral: "Referido", flag: "Señal",
-  target_type: "Tipo", tipo: "Tipo", target_id: "Contenido", id: "Contenido", note: "Nota", count: "Cantidad", role: "Rol", step: "Paso", cues: "Claves",
+  target_type: "Tipo", tipo: "Tipo", target_id: "Contenido", id: "Contenido", note: "Nota", count: "Cantidad", role: "Rol", step: "Paso", cues: "Claves", doc_type: "Documento", country: "País", status: "Estado",
 };
 const VALUE_LABEL: Record<string, string> = {
   free: "Usuario", pro: "Usuario con plan", coach: "Coach", support: "Soporte", admin: "Admin", superadmin: "Superadmin",

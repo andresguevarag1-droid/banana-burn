@@ -12,9 +12,13 @@ import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
 import { ArrowRight, BananaFlame, Barbell, Compass, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
-import { getCompletedChallenges } from "@/lib/challenges-server";
-import { Certificates } from "@/components/retos/certificates";
 import { FRAME_RING } from "@/components/levels/level-badge";
+import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
+import { TIER_CARD, TierBanner, TierGuide, TierPill, TierProgress, PowerStats, Showcase } from "@/components/perfil/power";
+import { InsigniasPicker } from "@/components/perfil/insignias-picker";
+import { VerifyCard } from "@/components/perfil/verify-card";
+import { FeaturedBadge, VerifiedMark } from "@/components/community/flair";
+import { insigniaMeta } from "@/lib/profile-power";
 import { money } from "@/lib/copy";
 import { TesterBadge } from "@/components/testers/tester-badge";
 import { getMyTester } from "@/lib/testers-server";
@@ -33,12 +37,14 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   const sp = await searchParams;
   // En paralelo: el perfil público, el plan, los avisos y las medallas no dependen del atleta.
   const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
-  const [a, data, ent, prefs, certs, tester] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getCompletedChallenges(v).catch(() => []), getMyTester(v, v.demo ? sp.tester : null).catch(() => null)]);
+  const [a, data, ent, prefs, power, verif, tester] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null)]);
   const isTester = tester?.phase === "activo" || tester?.phase === "pronto";
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   let cp = { username: "andres", bio: "Bajando de 94 a 85 kg con Banana Burn", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };
   if (!v.demo) cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
   const frame = perksAt(g.level.idx).frame;
+  const featuredIns = power.insignias.find((i) => i.id === power.featured) ?? null;
+  const featured = featuredIns ? insigniaMeta(featuredIns.id, { label: featuredIns.label, icon: featuredIns.icon, cover: featuredIns.cover, xp: power.stats.totalXp }) : null;
   const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
   const planTitle = plan ? plan.name : ent.trial ? "Prueba gratis" : "Sin plan";
   const planText = isTester && (ent.access === "comp" || ent.access === "demo") ? `Mes de tester de la beta hasta el ${fmtDay(tester!.until ?? undefined, v.tz)}: Entreno + Nutrición, sin cobros.${ent.charge?.testerHold ? ` Tu cobro programado pasa al ${fmtDay(ent.charge.chargeAt, v.tz)}.` : ""}`
@@ -56,20 +62,42 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
     : "Tu prueba gratis terminó. Elige un plan para seguir; tus datos siguen guardados.";
   return (
     <div className="space-y-5 animate-enter max-w-2xl">
-      <header className="flex items-center gap-4">
-        <span className={`grid place-items-center size-16 shrink-0 rounded-3xl bg-banana text-2xl font-extrabold text-ink ${frame ? FRAME_RING[frame] : ""}`} title={frame ? "Marco desbloqueado por tu nivel" : undefined}>{a.name[0]?.toUpperCase()}</span>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink truncate">{a.name}</h1>
+      <section id="poder" className={`card overflow-hidden scroll-mt-6 ${TIER_CARD[power.tier] ?? ""}`} aria-labelledby="perfil-nombre">
+        <TierBanner tier={power.tier} className="h-28 sm:h-36">
+          <TierPill tier={power.tier} className="absolute left-4 top-4" />
+        </TierBanner>
+        <div className="px-5 pb-5">
+          <div className="flex items-end justify-between gap-3">
+            <span className={`relative z-10 -mt-10 grid size-20 shrink-0 place-items-center rounded-3xl bg-banana text-3xl font-extrabold text-ink shadow-lift ${frame ? FRAME_RING[frame] : "ring-4 ring-white"}`} title={frame ? "Marco desbloqueado por tu nivel" : undefined}>{a.name[0]?.toUpperCase()}</span>
+            {cp.username && <Link href={`/app/comunidad/u/${cp.username}`} className="btn-ghost mt-3 h-11 px-4 text-sm">Ver mi perfil público</Link>}
+          </div>
+          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 id="perfil-nombre" className="min-w-0 truncate text-2xl font-extrabold tracking-tight text-ink">{a.name}</h1>
+            {power.stats.verified && <VerifiedMark className="size-6" />}
+            {featured && <FeaturedBadge f={featured} />}
+          </div>
           <p className="text-sm text-muted truncate">{v.email}</p>
-          <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-bold">
-            <Link href="/app/niveles" className="inline-flex items-center gap-1 rounded-full bg-banana-soft px-2 py-0.5 text-banana-ink hover:bg-banana"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</Link>
-            <span className="inline-flex items-center gap-1 rounded-full bg-ember/10 px-2 py-0.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} {g.streak.days === 1 ? "día" : "días"} de racha</span>
+          <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-bold">
+            <Link href="/app/niveles" className="inline-flex h-7 items-center gap-1 rounded-full bg-banana-soft px-2.5 text-banana-ink hover:bg-banana"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</Link>
+            <span className="inline-flex h-7 items-center gap-1 rounded-full bg-ember/10 px-2.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} {g.streak.days === 1 ? "día" : "días"} de racha</span>
             {isTester && <TesterBadge />}
           </p>
+          <div className="mt-4 space-y-3">
+            <TierProgress points={power.points} />
+            <PowerStats p={power} />
+          </div>
         </div>
-      </header>
+      </section>
 
-      <Certificates done={certs} />
+      {!power.stats.verified && <VerifyCard s={verif} />}
+
+      <Showcase items={power.showcase} mine />
+
+      {power.insignias.length > 0 && <InsigniasPicker items={power.insignias} featured={power.featured} />}
+
+      <TierGuide p={power} mine />
+
+      {power.stats.verified && <VerifyCard s={verif} />}
 
       <section className="card p-5">
         <div className="flex items-center justify-between">
