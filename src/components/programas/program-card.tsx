@@ -3,17 +3,16 @@ import Link from "next/link";
 import { ArrowRight, CalendarCheck, CheckCircle, Clock, Lock, Target } from "@/components/icons";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { PriceTag } from "@/components/retos/store-card";
-import { LEVEL_LABEL, weeksOf } from "@/lib/programs";
+import { LEVEL_LABEL, durationLabel } from "@/lib/programs";
 import type { ProgramChallenge } from "@/lib/programs-server";
 
 export function ProgramCard({ c, owned, discountPct, status, days, big = false }: { c: ProgramChallenge; owned: boolean; discountPct: number; status?: "activo" | "pausado" | "completado" | null; days: string; big?: boolean }) {
   const ink = coverInk(c.cover);
-  const weeks = weeksOf(c.program);
   return (
     <Link href={`/app/retos/${c.id}`} className={`card group flex min-w-0 flex-col overflow-hidden p-0! outline-none ${big ? "md:col-span-2 md:flex-row" : ""}`}>
       <ChallengeCover c={c} chip={false} className={big ? "h-44 md:h-auto md:w-[46%] md:shrink-0" : "h-36"}>
         <div className={`absolute inset-x-0 bottom-0 p-4 ${ink}`}>
-          <p className="text-[11px] font-extrabold uppercase tracking-[.14em] opacity-85">Programa de {weeks} {weeks === 1 ? "semana" : "semanas"}</p>
+          <p className="text-[11px] font-extrabold uppercase tracking-[.14em] opacity-85">Programa de {durationLabel(c.program)}</p>
           <h3 className={`mt-0.5 font-extrabold leading-tight tracking-tight text-balance ${big ? "text-[26px]" : "text-xl"}`}>{c.title}</h3>
         </div>
         <span className="absolute right-3 top-3 inline-flex h-7 items-center gap-1 rounded-full bg-ink px-2.5 text-[11px] font-extrabold text-banana">

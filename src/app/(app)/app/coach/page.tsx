@@ -6,6 +6,7 @@ import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { demoQuota, parseQuota, tierFromAccess, type CoachQuota } from "@/lib/coach-quota";
 import { Chat } from "./chat";
+import { coachOf } from "@/lib/coaches";
 
 export const metadata = { title: "Coach IA" };
 
@@ -48,5 +49,9 @@ export default async function Coach({ searchParams }: { searchParams: Promise<{ 
     "Siento que me estanqué, ¿qué ajusto?",
     "Me duele el hombro en press banca",
   ];
-  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} configured={configured} quota={quota} demo={v.demo} />;
+  // Programa activo con su propia coach (Coach Platanita): ella responde, con su retrato y su saludo.
+  const coach = d.program ? coachOf(d.program.meta.experience) : null;
+  const persona = coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null;
+  if (persona && d.program) lines.splice(1, 0, `Soy ${persona.name}, tu coach en **${d.program.title}**.`);
+  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} configured={configured} quota={quota} demo={v.demo} persona={persona} />;
 }

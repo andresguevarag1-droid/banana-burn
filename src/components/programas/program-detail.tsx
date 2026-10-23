@@ -1,13 +1,15 @@
 // Página de un programa en la tienda (servidor): vende la transformación con datos reales del programa.
 // Para quién es, el resultado, duración, días, minutos, equipo y nivel; la semana 1 completa; la técnica animada de un
 // ejercicio; qué cambia en tu app al empezarlo; fases; precio y botón. Sin testimonios ni cifras inventadas.
+import Image from "next/image";
 import Link from "next/link";
 import type { Viewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { getAthlete } from "@/lib/athlete";
 import { getOwned, levelPerks } from "@/lib/challenges-server";
 import { exAnim, exInfo, getProgramSessions, getProgramStates, sessionViews, type ProgramChallenge } from "@/lib/programs-server";
-import { LEVEL_LABEL, MODE_LABEL, daysLabel, phaseAt, sessionsOfPhase, weeksOf } from "@/lib/programs";
+import { LEVEL_LABEL, MODE_LABEL, daysLabel, daysOf, durationLabel, phaseAt, sessionsOfPhase, weeksOf } from "@/lib/programs";
+import { coachArt, coachOf } from "@/lib/coaches";
 import { priceMinor, usd } from "@/lib/challenges";
 import { NUTRITION_PLAN_NAME } from "@/lib/plan-access";
 import { TECH } from "@/lib/engine/technique";
@@ -26,6 +28,8 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   const sessions = await getProgramSessions(v, c.id);
   const meta = c.program;
   const weeks = weeksOf(meta);
+  const totalDays = daysOf(meta), dur = durationLabel(meta);
+  const coach = coachOf(meta.experience);
   const days = daysLabel(meta, sessions);
   const week1 = sessionsOfPhase(sessions, 1);
   const ink = coverInk(c.cover);
@@ -71,14 +75,15 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   const x = meta.experience;
   const changes: { icon: typeof Barbell; t: string }[] = [
     { icon: Barbell, t: `Hoy y Entrenar te muestran la sesión del programa: ${days.toLowerCase()}, de unos ${meta.sessionMinutes} minutos.` },
-    { icon: Lightning, t: "Cada serie trae su carga exacta: sale de tu historial y sube cuando llegas al tope del rango." },
+    meta.adapt ? { icon: Lightning, t: "Cada serie trae su carga exacta: sale de tu historial y sube cuando llegas al tope del rango." }
+      : { icon: Lightning, t: "Cada ejercicio trae sus repeticiones o segundos exactos, y suben semana a semana." },
     ...(meta.adapt ? [{ icon: Target, t: "Si entrenas en casa, los ejercicios de máquina cambian por su versión con tu equipo." }] : []),
     ...(n ? [{ icon: Info, t: ent.nutrition ? `Tus calorías y tu proteína siguen el programa: ${MODE_LABEL[n.mode ?? a.mode].toLowerCase()}${n.proteinPerKg ? `, con ${n.proteinPerKg.toLocaleString("es-419")} g de proteína por kg` : ""}.` : `El programa ajusta calorías y proteína en ${NUTRITION_PLAN_NAME}. Con tu plan actual, el entreno cambia y tu nutrición no.` }] : []),
     { icon: CalendarCheck, t: "Hoy muestra tu semana del programa, tu avance y el próximo hito, con los colores del programa." },
     ...(x ? [
-      { icon: Sparkle, t: `Toda la app entra en ${x.mode}: la cinta del programa te acompaña en cada sección y Coach Banana responde con su enfoque.` },
+      { icon: Sparkle, t: `Toda la app entra en ${x.mode}: la cinta del programa te acompaña en cada sección y ${coach.name} responde con su enfoque.` },
       ...(x.habits.length ? [{ icon: CheckCircle, t: `Tus hábitos de cada día: ${x.habits.map((h) => h.label.toLowerCase()).join(", ")}.` }] : []),
-      ...(x.tips.length ? [{ icon: Lightning, t: `Un consejo de Coach Banana para cada una de las ${Math.min(x.tips.length, weeks)} semanas.` }] : []),
+      ...(x.tips.length ? [{ icon: Lightning, t: `Un consejo de ${coach.name} para cada una de las ${Math.min(x.tips.length, weeks)} semanas.` }] : []),
       ...(x.food.length ? [{ icon: ForkKnife, t: `Cómo comer en este programa: ${x.food[0].charAt(0).toLowerCase()}${x.food[0].slice(1)}` }] : []),
     ] : []),
     { icon: TreePalm, t: "Puedes pausarlo o dejarlo cuando quieras y volver a tu rutina normal. Tu avance queda guardado." },
@@ -105,14 +110,14 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
           <header className="overflow-hidden rounded-[1.75rem] shadow-soft">
             <ChallengeCover c={c} className="h-48 sm:h-56">
               <div className={`absolute inset-x-0 bottom-0 p-5 ${ink}`}>
-                <p className="text-xs font-extrabold uppercase tracking-[.14em] opacity-85">Programa Premium de {weeks} semanas</p>
+                <p className="text-xs font-extrabold uppercase tracking-[.14em] opacity-85">Programa Premium de {dur}</p>
                 <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-balance">{c.title}</h1>
               </div>
             </ChallengeCover>
           </header>
 
           <ul className="flex flex-wrap gap-2 text-xs font-bold text-ink/85">
-            <li className="chip h-8 border border-line bg-white"><CalendarCheck weight="duotone" className="size-4" />{weeks} semanas</li>
+            <li className="chip h-8 border border-line bg-white"><CalendarCheck weight="duotone" className="size-4" />{dur}</li>
             <li className="chip h-8 border border-line bg-white"><Barbell weight="duotone" className="size-4" />{days}</li>
             <li className="chip h-8 border border-line bg-white"><Clock weight="duotone" className="size-4" />{meta.sessionMinutes} min por sesión</li>
             <li className="chip h-8 border border-line bg-white"><Target weight="duotone" className="size-4" />{LEVEL_LABEL[meta.level]}</li>
@@ -129,6 +134,17 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               <p className="mt-1 font-semibold text-ink">{meta.result}</p>
             </div>
           </section>
+
+          {coach.id !== "banana" && (
+            <section aria-labelledby="tu-coach" className="flex items-center gap-4 overflow-hidden rounded-[1.5rem] bg-[linear-gradient(135deg,#F3E8FF,#FFD6E7)] p-4 sm:p-5">
+              <Image src={coach.hello} alt={`${coach.name} saludando`} width={128} height={128} sizes="128px" className="size-28 shrink-0 object-contain sm:size-32" />
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold uppercase tracking-[.12em] text-ink/70">Tu coach en este programa</p>
+                <h2 id="tu-coach" className="text-xl font-extrabold text-ink">{coach.name}</h2>
+                <p className="mt-1 text-sm text-body text-pretty">Mientras dura el programa, ella te acompaña en lugar de Coach Banana: te da la bienvenida, un consejo cada semana, responde tus preguntas en el chat y aparece haciendo cada ejercicio contigo.</p>
+              </div>
+            </section>
+          )}
 
           <div className="lg:hidden">{priceCard}</div>
 
@@ -150,7 +166,20 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               sessions={sessionViews({ slug: c.id, title: c.title, meta }, c.icon, week1, 1, a.equipment, () => false, () => null)} /> : <p className="text-sm text-muted">Las sesiones de este programa se están preparando.</p>}
           </section>
 
-          {anim && animId && (
+          {coach.id !== "banana" && allIds.some((id) => coachArt(coach, id)) ? (
+            <section aria-labelledby="tecnica" className="card overflow-hidden p-5">
+              <h2 id="tecnica" className="text-lg font-extrabold text-ink">{coach.name} te enseña cada movimiento</h2>
+              <p className="mt-1 text-sm text-muted">{allIds.filter((id) => coachArt(coach, id)).length} de los {allIds.length} ejercicios traen su ilustración, para que veas la postura antes de hacerla.</p>
+              <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {allIds.filter((id) => coachArt(coach, id)).slice(0, 6).map((id) => (
+                  <li key={id} className="overflow-hidden rounded-2xl bg-[#F3E8FF]">
+                    <Image src={coachArt(coach, id)!} alt="" width={240} height={240} sizes="(min-width: 640px) 200px, 45vw" className="aspect-square w-full object-contain" />
+                    <p className="px-2.5 pb-2.5 pt-1 text-sm font-bold leading-tight text-ink">{exInfo(id)?.name ?? id}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : anim && animId && (
             <section aria-labelledby="tecnica" className="card overflow-hidden p-5">
               <h2 id="tecnica" className="text-lg font-extrabold text-ink">Técnica guiada: {exInfo(animId)?.name}</h2>
               <p className="mt-1 text-sm text-muted">En el reproductor, {animated} de los {allIds.length} ejercicios de este programa traen su técnica animada, con la bajada al tempo de cada fase.</p>
@@ -164,7 +193,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               {phases.map((p, i) => (
                 <li key={i} className="relative">
                   <span aria-hidden className={`absolute -left-[27px] top-1 grid size-3.5 place-items-center rounded-full ring-4 ring-paper ${p.deload ? "bg-sky" : "bg-ember"}`} />
-                  <p className="text-xs font-bold uppercase tracking-[.1em] text-muted">{p.from === p.to ? `Semana ${p.from}` : `Semanas ${p.from} a ${p.to}`}{p.deload ? ", descarga" : ""}</p>
+                  <p className="text-xs font-bold uppercase tracking-[.1em] text-muted">{totalDays !== weeks * 7 && i === phases.length - 1 ? `Días ${(p.from - 1) * 7 + 1} ${totalDays - (p.from - 1) * 7 === 2 ? "y" : "a"} ${totalDays}` : p.from === p.to ? `Semana ${p.from}` : `Semanas ${p.from} a ${p.to}`}{p.deload ? ", descarga" : ""}</p>
                   <p className="font-extrabold text-ink">{p.name}</p>
                   {p.focus && <p className="text-sm text-body">{p.focus}</p>}
                 </li>

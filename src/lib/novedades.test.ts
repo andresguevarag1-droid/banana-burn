@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { AUDIENCES, NOVEDADES, countLabel, isNewer, itemVisible, needsNudge, nudgeRelease, releaseDay, releaseIndex, releaseStart, releasesFor, unseenReleases, type Release } from "./novedades";
@@ -7,9 +7,16 @@ import { CHALLENGE_ART } from "./challenge-art";
 
 const ROOT = join(__dirname, "..", "app");
 /** La ruta existe como página de la app (src/app/(app)/… o src/app/…). */
+/** ¿Hay una página para la ruta? Acepta segmentos dinámicos ([slug]) del árbol de la app. */
 function routeExists(href: string) {
-  const path = href.split("#")[0].split("?")[0];
-  return [join(ROOT, "(app)", path, "page.tsx"), join(ROOT, path, "page.tsx")].some((f) => existsSync(f));
+  const parts = href.split("#")[0].split("?")[0].split("/").filter(Boolean);
+  const walk = (dir: string, i: number): boolean => {
+    if (i === parts.length) return existsSync(join(dir, "page.tsx"));
+    if (existsSync(join(dir, parts[i])) && walk(join(dir, parts[i]), i + 1)) return true;
+    const dyn = existsSync(dir) ? readdirSync(dir).filter((d) => /^\[[^.\]]+\]$/.test(d)) : [];
+    return dyn.some((d) => walk(join(dir, d), i + 1));
+  };
+  return walk(join(ROOT, "(app)"), 0) || walk(ROOT, 0);
 }
 const texts = (r: Release) => [r.title, r.intro, ...r.items.flatMap((i) => [i.title, i.benefit, i.cta ?? ""])];
 const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;

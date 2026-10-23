@@ -57,9 +57,9 @@ export const JOIN_WINDOW_DAYS = 3;
 export const MIN_PRICE_USD = 0.5;
 export const MAX_PRICE_USD = 200;
 
-export const COVERS: CoverStyle[] = ["banana", "ember", "sky", "peel", "noche", "selva", "fresa"];
-export const COVER_LABEL: Record<CoverStyle, string> = { banana: "Banana", ember: "Fuego", sky: "Cielo", peel: "Hoja", noche: "Noche", selva: "Selva", fresa: "Fresa" };
-const COVER_COLOR: Record<CoverStyle, string> = { banana: "bg-banana", ember: "bg-ember/15", sky: "bg-sky/15", peel: "bg-peel/15", noche: "bg-ink/10", selva: "bg-peel/10", fresa: "bg-[#FFD9E2]" };
+export const COVERS: CoverStyle[] = ["banana", "ember", "sky", "peel", "noche", "selva", "fresa", "lila"];
+export const COVER_LABEL: Record<CoverStyle, string> = { banana: "Banana", ember: "Fuego", sky: "Cielo", peel: "Hoja", noche: "Noche", selva: "Selva", fresa: "Fresa", lila: "Lila" };
+const COVER_COLOR: Record<CoverStyle, string> = { banana: "bg-banana", ember: "bg-ember/15", sky: "bg-sky/15", peel: "bg-peel/15", noche: "bg-ink/10", selva: "bg-peel/10", fresa: "bg-[#FFD9E2]", lila: "bg-[#EEDCFF]" };
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = { facil: "Fácil", media: "Media", dificil: "Difícil" };
 export const VERIFY_LABEL: Record<Verify, string> = { manual: "Lo marcas tú", workout: "Entreno registrado", steps: "Pasos registrados", protein: "Meta de proteína", water: "Vasos de agua" };
 export const STATUS_LABEL: Record<ChallengeStatus, string> = { borrador: "Borrador", publicado: "Publicado", oculto: "Oculto", archivado: "Archivado" };

@@ -3,7 +3,7 @@
 -- la 5c los programas (0024), la 7, el acceso a nutrición por plan (0022), la 9, regalos, referidos y escribir datos con plan (0025)
 -- la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026), la 11, testers de la beta y "Reportar algo" (0029),
 -- la 12, la guía de la app (0031), y el cupo de Coach Banana por plan (0032).
--- la 12, la guía de la app (0031), y la 13, las novedades (0036).
+-- la 12, la guía de la app (0031), la 13, las novedades (0036), y la 14, Pilates en casa 30 días (0037).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -486,7 +486,7 @@ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 15);
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 16);
 select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
 select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
 select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
@@ -547,7 +547,7 @@ update public.challenges_catalog set status = 'publicado' where slug = 'reto-pag
 
 -- Staff: admin (S) edita y regala; soporte (P) regala pero no edita el catálogo
 set role authenticated; select bbtest.login('S');
-select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 19);
+select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 20);
 select bbtest.ok('panel: admin cambia el estado', bbtest.affected($q$ update public.challenges_catalog set status = 'publicado' where slug = 'movilidad-14' $q$) = 1);
 select bbtest.ok('panel: active queda sincronizado con publicado', (select active from public.challenges_catalog where slug = 'movilidad-14') and not (select active from public.challenges_catalog where slug = 'sin-azucar-7'));
 select bbtest.ok('panel: admin edita el plan', bbtest.affected($q$ update public.challenge_plans set days = days where slug = 'movilidad-14' $q$) = 1);
@@ -572,15 +572,15 @@ select bbtest.ok('cuenta borrada: la venta queda registrada sin dueño y el acce
 -- F (prueba vigente) compra programas; A intenta tocar lo de F; S (admin) edita; E (prueba vencida) no empieza.
 reset role;
 select bbtest.login(null);
-select bbtest.ok('programas: la siembra trae 8 programas con sesiones', (select count(*) = 8 from public.challenges_catalog where kind = 'programa')
-  and (select count(distinct slug) = 8 from public.program_sessions));
+select bbtest.ok('programas: la siembra trae 9 programas con sesiones', (select count(*) = 9 from public.challenges_catalog where kind = 'programa')
+  and (select count(distinct slug) = 9 from public.program_sessions));
 select bbtest.ok('programas: los retos de hábitos siguen siendo retos', (select kind = 'reto' from public.challenges_catalog where slug = 'banana-30') and (select kind = 'reto' from public.challenges_catalog where slug = 'sprint-verano-28'));
 select bbtest.ok('programas: el insignia cuesta $9.99 y dura 8 semanas', (select price_usd = 9.99 and public._program_weeks(program) = 8 from public.challenges_catalog where slug = 'reconstruccion-8-semanas'));
 select bbtest.ok('programas: los convertidos conservan su precio', (select bool_and(price_usd = case slug when 'abdomen-21' then 4.99 when 'gluteos-30' then 6.99 when 'dominadas-desde-cero' then 7.99 else 9.99 end) from public.challenges_catalog where slug in ('abdomen-21','gluteos-30','dominadas-desde-cero','pierde-3kg-6-semanas')));
 select bbtest.fails('programas: un programa necesita su meta', $q$ update public.challenges_catalog set program = null where slug = 'abdomen-21' $q$, '23514');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 7);
+select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 8);
 select bbtest.ok('sesiones: sin comprar ve la semana 1 (fase 1)', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase = 1 $q$) = 4);
 select bbtest.ok('sesiones: sin comprar no ve las demás fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase > 1 $q$) = 0);
 select bbtest.zero('sesiones: F no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'reconstruccion-8-semanas' $q$);
@@ -616,7 +616,7 @@ select bbtest.ok('dejar: deja el programa en pausa', bbtest.affected($q$ select 
 select bbtest.ok('dejar: queda abandonado', (select status = 'abandonado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
 select bbtest.ok('dejar: lo vuelve a empezar desde cero', public.program_start('gluteos-30', current_date, true) = 'reiniciado');
 -- 0027: experiencias. Cada programa trae su modo; los nuevos se compran aparte; los hábitos manuales viven en daily_logs.
-select bbtest.ok('0027: los 7 programas publicados traen su experiencia (abdomen-21 quedó oculto en 0028)', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 7);
+select bbtest.ok('0027: los 8 programas publicados traen su experiencia (abdomen-21 quedó oculto en 0028; Pilates llega en 0037)', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 8);
 select bbtest.ok('0028: 21 días de abdomen no se ve en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'abdomen-21' $q$) = 0);
 select bbtest.ok('0028: Brazos de Gorila con su modo nuevo', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'brazos-definidos' and title = 'Brazos de Gorila' and cover = 'peel' and program->'experience'->>'mode' = 'Modo gorila' $q$) = 1);
 select bbtest.ok('0027: Glúteos de acero rehecho con 4 sesiones por semana', bbtest.num($q$ select 1 from public.program_sessions where slug = 'gluteos-30' and phase = 2 $q$) = 4);
@@ -1693,6 +1693,24 @@ reset role;
 set role anon; select bbtest.login(null);
 select bbtest.fails('novedades: anon no marca novedades', $q$ select public.news_mark_seen('2026-10-23-programas') $q$, '42501');
 reset role;
+
+-- ───────────── 14. Pilates en casa 30 días y Coach Platanita (0037) ─────────────
+select bbtest.ok('0037: Pilates en casa está en la tienda con portada lila y dura 30 días', (select days = 30 and cover = 'lila' and kind = 'programa' and status = 'publicado' and public._program_days(program) = 30 and public._program_weeks(program) = 5 from public.challenges_catalog where slug = 'pilates-casa-30'));
+select bbtest.ok('0037: 21 sesiones (4 semanas de 5 y la prueba final)', (select count(*) = 21 from public.program_sessions where slug = 'pilates-casa-30'));
+select bbtest.ok('0037: Coach Platanita en Pilates y en Banana Girl', (select bool_and(program->'experience'->>'coach' = 'platanita') from public.challenges_catalog where slug in ('pilates-casa-30', 'banana-girl')));
+select bbtest.ok('0037: los programas en semanas siguen igual', (select bool_and(public._program_days(program) = public._program_weeks(program) * 7) from public.challenges_catalog where kind = 'programa' and slug <> 'pilates-casa-30'));
+select bbtest.ok('0037: days fuera de rango se ignora', public._program_days('{"phases":[{"weeks":2}],"days":30}'::jsonb) = 14 and public._program_days('{"phases":[{"weeks":2}],"days":"x"}'::jsonb) = 14 and public._program_days('{"phases":[{"weeks":2}],"days":10}'::jsonb) = 10);
+select bbtest.fails('0037: una portada desconocida no entra', $q$ update public.challenges_catalog set cover = 'violeta' where slug = 'pilates-casa-30' $q$, '23514');
+delete from public.user_programs where user_id = bbtest.u('A');
+insert into public.user_programs (user_id, slug, status, started_on) values (bbtest.u('A'), 'pilates-casa-30', 'activo', current_date - 29);
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('0037: el día 30 todavía no se cierra sin las sesiones', $q$ select public.program_finish('pilates-casa-30', current_date) $q$, 'P0001');
+reset role;
+update public.user_programs set started_on = current_date - 30 where user_id = bbtest.u('A') and slug = 'pilates-casa-30';
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0037: pasados los 30 días se cierra y da el certificado', public.program_finish('pilates-casa-30', current_date));
+reset role;
+delete from public.user_programs where user_id = bbtest.u('A') and slug = 'pilates-casa-30';
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));

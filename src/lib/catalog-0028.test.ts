@@ -19,8 +19,8 @@ describe("0028: retos más llamativos", () => {
   });
   it("cada programa Premium visible tiene su propio color y su portada ilustrada", () => {
     const programs = SEED_CHALLENGES.filter((c) => c.kind === "programa" && c.status === "publicado");
-    expect(programs.length).toBe(7);
-    expect(new Set(programs.map((c) => c.cover)).size).toBe(7);
+    expect(programs.length).toBe(8);
+    expect(new Set(programs.map((c) => c.cover)).size).toBe(8);
     for (const c of programs) expect(CHALLENGE_ART[c.id], c.id).toBeTruthy();
   });
   it("nombres nuevos en el catálogo de respaldo, sin emojis ni raya larga", () => {

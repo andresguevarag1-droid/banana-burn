@@ -10,7 +10,7 @@ import { getMeasures, getPhotos } from "@/lib/measures";
 import { todayFor } from "@/lib/today";
 import { EX, type ExerciseId } from "@/lib/engine";
 import { getLiftGains, getProgramStates, loadProgram, exInfo } from "@/lib/programs-server";
-import { adaptId, addDays, phaseAt, sessionsOfPhase, weeksOf } from "@/lib/programs";
+import { adaptId, addDays, phaseAt, sessionsOfPhase, weeksOf, daysOf, durationLabel } from "@/lib/programs";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { weekLabel } from "@/components/programas/program-hero";
 import { ProgramControls, StartProgramButton } from "@/components/programas/program-actions";
@@ -82,7 +82,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
             <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-[.12em] text-banana-ink">Certificado de programa</p>
               <h2 id="cert" className="text-2xl font-extrabold leading-tight text-ink">{c.badge}</h2>
-              <p className="mt-0.5 text-sm text-muted">{c.title}: {weeks} semanas, {run.sessionsDone} sesiones, completado el {fmt(endIso)}{c.rewardTitle ? `. Título: ${c.rewardTitle}` : ""}.</p>
+              <p className="mt-0.5 text-sm text-muted">{c.title}: {durationLabel(def.meta)}, {run.sessionsDone} sesiones, completado el {fmt(endIso)}{c.rewardTitle ? `. Título: ${c.rewardTitle}` : ""}.</p>
             </div>
           </div>
         </section>
@@ -93,7 +93,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
           { l: "Cumplimiento", v: `${Math.round(run.pct * 100)} %`, h: "de las sesiones del programa" },
           { l: "Sesiones hechas", v: `${run.sessionsDone}`, h: `de ${run.sessionsTotal}${run.extrasDone ? `, más ${run.extrasDone} extra` : ""}` },
           { l: "Perdidas", v: `${run.sessionsMissed}`, h: run.sessionsMissed ? "en semanas que ya pasaron" : "ninguna, vas al día" },
-          { l: "Semana", v: `${Math.min(run.week, weeks)} de ${weeks}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` },
+          run.byDays ? { l: "Día", v: `${Math.min(run.days, run.effectiveDay + 1)} de ${run.days}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` } : { l: "Semana", v: `${Math.min(run.week, weeks)} de ${weeks}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` },
         ].map((k) => (
           <div key={k.l} className="card p-4"><p className="text-xs font-bold text-muted">{k.l}</p><p className="mt-1 text-2xl font-extrabold tabular-nums text-ink">{k.v}</p><p className="text-xs text-muted">{k.h}</p></div>
         ))}
@@ -170,7 +170,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
       {(st.status === "activo" || st.status === "pausado") && (
         <section aria-labelledby="opciones" className="card p-5">
           <h2 id="opciones" className="font-extrabold text-ink">Opciones</h2>
-          <p className="mt-1 text-sm text-muted">{st.status === "pausado" ? `En pausa desde el ${fmt(st.pausedOn ?? today)}. La semana no avanza mientras tanto.` : run.canFinish ? "Terminaste el calendario del programa. Ciérralo para recibir tu certificado." : `Si necesitas unos días, pausa: la semana deja de avanzar. Termina el ${fmt(addDays(st.startedOn, weeks * 7 - 1 + st.pausedDays))} si sigues al día.`}</p>
+          <p className="mt-1 text-sm text-muted">{st.status === "pausado" ? `En pausa desde el ${fmt(st.pausedOn ?? today)}. La semana no avanza mientras tanto.` : run.canFinish ? "Terminaste el calendario del programa. Ciérralo para recibir tu certificado." : `Si necesitas unos días, pausa: la semana deja de avanzar. Termina el ${fmt(addDays(st.startedOn, daysOf(def.meta) - 1 + st.pausedDays))} si sigues al día.`}</p>
           <div className="mt-4 space-y-3">
             {st.status === "pausado" && ent.app && <StartProgramButton slug={slug} title={c.title} label="Reanudar programa" className="btn-primary h-12 px-5" />}
             <ProgramControls slug={slug} title={c.title} status={st.status} canFinish={run.canFinish} />

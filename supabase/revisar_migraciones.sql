@@ -27,6 +27,7 @@ from (values
   (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check')),
   (23,'0034_soporte.sql',             to_regclass('public.support_tickets') is not null and to_regclass('public.support_messages') is not null and to_regclass('public.support_events') is not null and to_regprocedure('public.support_create_ticket(text,text,text,jsonb,text)') is not null and exists (select 1 from storage.buckets where id = 'soporte' and not public)),
   (24,'0035_lenguaje.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'lenguaje') and exists (select 1 from pg_constraint where conname = 'profiles_lenguaje_check')),
-  (25,'0036_novedades.sql',          exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'news_seen') and to_regprocedure('public.news_mark_seen(text)') is not null)
+  (25,'0036_novedades.sql',          exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'news_seen') and to_regprocedure('public.news_mark_seen(text)') is not null),
+  (26,'0037_pilates_platanita.sql',  to_regprocedure('public._program_days(jsonb)') is not null and exists (select 1 from public.challenges_catalog where slug = 'pilates-casa-30'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

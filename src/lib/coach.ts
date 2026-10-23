@@ -1,4 +1,5 @@
 import { tipFor } from "@/lib/programs";
+import { coachOf } from "@/lib/coaches";
 import { dashboard, type Athlete } from "@/lib/athlete";
 import { DAY_NAMES, weeklyTrend } from "@/lib/engine";
 import type { Point } from "@/lib/progress";
@@ -60,6 +61,7 @@ function coachData(a: Athlete, weights: Point[], workouts: { d: string; tpl: str
     // Programa Premium activo (0024): su entreno reemplaza la rutina normal mientras dure.
     programa_activo: d.program ? { nombre: dataText(d.program.title, 80), semana: d.program.run.week, semanas: d.program.run.weeks, fase: d.program.run.phase.phase.name, sesiones_hechas: d.program.run.sessionsDone, sesiones_total: d.program.run.sessionsTotal,
       // 0027: el enfoque del programa manda sobre el método general mientras dure.
+      ...(d.program.meta.experience?.coach && d.program.meta.experience.coach !== "banana" ? { coach: `${coachOf(d.program.meta.experience).name}: mientras dure el programa ese es tu nombre (no Coach Banana); habla como ella, en femenino y con calidez.` } : {}),
       ...(d.program.meta.experience ? { modo: dataText(d.program.meta.experience.mode, 40), enfoque: dataText(d.program.meta.experience.coachFocus, 300), consejo_semana: dataText(tipFor(d.program.meta.experience, d.program.run.week) ?? "", 220), habitos: d.program.meta.experience.habits.map((h) => dataText(h.label, 60)), comida: nutrition ? d.program.meta.experience.food.map((f) => dataText(f, 200)) : undefined } : {}) } : null,
     rutina_hoy: { nombre: d.plan.name, ejercicios: d.plan.exercises.map((e) => `${e.name} ${e.cfg.sets}x${e.cfg.lo}-${e.cfg.hi}`), cardio: d.plan.cardio },
     ayer: d.yesterday.name, manana: d.tomorrow.name,

@@ -55,6 +55,17 @@ export type Release = {
 // ───────────── Historial (la más nueva primero) ─────────────
 export const NOVEDADES: Release[] = [
   {
+    id: "2026-10-23-pilates-platanita",
+    date: "2026-10-23",
+    title: "Pilates en casa con Coach Platanita",
+    intro: "Llega un programa nuevo para entrenar en tu sala y una coach nueva que te acompaña en él.",
+    items: [
+      { title: "Pilates en casa 30 días", benefit: "Sesiones de 20 a 30 minutos con solo un tapete, una mini banda y una toalla: abdomen, glúteo, postura y cintura, sin gimnasio.", icon: "sparkle", href: "/app/retos/pilates-casa-30", cta: "Ver el programa", image: { reto: "pilates-casa-30" } },
+      { title: "Conoce a Coach Platanita", benefit: "En Pilates en casa y en Banana Girl, ella te da la bienvenida, un consejo cada semana, responde en el chat y aparece haciendo cada ejercicio para que veas la postura.", icon: "monkey", href: "/app/retos/pilates-casa-30", cta: "Conocerla" },
+      { title: "Tu comida de hoy, más clara", benefit: "En Hoy ves qué comiste en cada tiempo de comida y qué te recomienda tu coach para el siguiente.", icon: "fork", href: "/app", audience: "completo" },
+    ],
+  },
+  {
     id: "2026-10-23-retos-y-guia",
     date: "2026-10-23",
     title: "Retos más cortos, soporte y una guía para tu plan",

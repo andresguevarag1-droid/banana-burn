@@ -3,7 +3,7 @@
 // Tocar una ficha abre la página de técnica del ejercicio. Servidor (solo la imagen es de cliente, por el respaldo).
 import Image from "next/image";
 import Link from "next/link";
-import { SheetFrame } from "@/components/safe-image";
+import { SafeImage, SheetFrame } from "@/components/safe-image";
 import { TECH } from "@/lib/engine/technique";
 import { sheetFor } from "@/lib/exercise-frames";
 import { DS_ID, animFor, getLibEx } from "@/lib/library";
@@ -23,18 +23,20 @@ export function techniqueHref(e: Pick<TileExercise, "id" | "name">) {
   return DS_ID[e.id] ? `/app/ejercicios/${DS_ID[e.id]}` : `/app/ejercicios?q=${encodeURIComponent(e.name)}`;
 }
 
-export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy" }: { exercises: TileExercise[]; voice: Voice; label?: string }) {
+/** `art`: ilustración del coach del programa haciendo cada ejercicio (Coach Platanita); manda sobre la animación. */
+export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", art }: { exercises: TileExercise[]; voice: Voice; label?: string; art?: Record<string, string> }) {
   return (
     <ol aria-label={label} className="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-5 px-5 pb-1 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-3">
       {exercises.map((e, i) => {
         const anim = animOf(e.id);
         const sheet = anim ? sheetFor(anim) : null;
         const cell = sheet ? (sheet.cells ? sheet.cells[Math.min(sheet.cells.length - 1, 1)] : 1) : 0;
+        const pic = art?.[e.id];
         return (
           <li key={`${e.id}-${i}`} className="w-[10.5rem] shrink-0 snap-start lg:w-auto">
             <Link href={techniqueHref(e)} className="pressable group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_1px_0_rgb(27_21_5/.08)] hover:shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
-              <span className="relative block aspect-[4/3] bg-banana-soft">
-                {sheet ? <SheetFrame src={sheet.url} grid={sheet.grid} cell={cell} sizes={sheet.grid === 3 ? "504px" : "336px"} /> : <Image src="/brand/mascota-sola.webp" alt="" fill sizes="168px" className="object-contain p-2" />}
+              <span className={`relative block aspect-[4/3] ${pic ? "bg-[#F3E8FF]" : "bg-banana-soft"}`}>
+                {pic ? <SafeImage src={pic} alt="" fill sizes="(min-width: 1024px) 240px, 168px" className="object-contain" fallbackClassName="object-contain p-2" /> : sheet ? <SheetFrame src={sheet.url} grid={sheet.grid} cell={cell} sizes={sheet.grid === 3 ? "504px" : "336px"} /> : <Image src="/brand/mascota-sola.webp" alt="" fill sizes="168px" className="object-contain p-2" />}
                 <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-ink text-xs font-extrabold text-banana tabular-nums">{i + 1}</span>
               </span>
               <span className="flex flex-1 flex-col p-3">
