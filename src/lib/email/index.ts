@@ -125,3 +125,24 @@ export async function sendGiftEmail(r: Recipient & Omit<Parameters<typeof T.rega
   void _u; void _t; void _n;
   return sendEmail(to.to, T.regalo({ ...g, name: to.name }), { idempotencyKey: `regalo/${grantId}`, tags: { kind: g.source } });
 }
+
+/** Te hicieron tester (o se renovó). Idempotente por asignación (`grantId`). Transaccional. */
+export async function sendTesterEmail(r: Recipient & { grantId: number; expiresAt: string; renewal?: boolean }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  return sendEmail(to.to, T.testerAsignado({ name: to.name, expiresAt: r.expiresAt, renewal: r.renewal }), { idempotencyKey: `tester/${r.grantId}`, tags: { kind: "tester" } });
+}
+
+/** Terminó el mes de tester: agradecimiento y qué pasa ahora. Idempotente por asignación. */
+export async function sendTesterEndedEmail(r: Recipient & { grantId: number; endedAt: string }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  return sendEmail(to.to, T.testerTerminado({ name: to.name, endedAt: r.endedAt }), { idempotencyKey: `tester_fin/${r.grantId}`, tags: { kind: "tester_fin" } });
+}
+
+/** Aviso al equipo de un reporte nuevo desde la app (FEEDBACK_EMAIL o el correo de ayuda). Idempotente por reporte. */
+export async function sendFeedbackToTeam(d: Omit<Parameters<typeof T.reporteEquipo>[0], "adminUrl"> & { reportId: number; userId: string }): Promise<SendResult> {
+  const to = (process.env.FEEDBACK_EMAIL || "hola@bananaburn.app").trim();
+  const { reportId, userId, ...rest } = d;
+  return sendEmail(to, T.reporteEquipo({ ...rest, adminUrl: `/admin/usuarios/${userId}#s-tester` }), { idempotencyKey: `reporte/${reportId}`, tags: { kind: "reporte" } });
+}

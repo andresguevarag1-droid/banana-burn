@@ -43,6 +43,14 @@ describe("matriz de permisos", () => {
     expect(can("coach", "referrals.view")).toBe(false);
     for (const r of ["admin", "superadmin"] as Role[]) expect(can(r, "users.gift") && can(r, "referrals.manage")).toBe(true);
   });
+  it("testers: solo admin y superadmin asignan; soporte gestiona los reportes; tester no es un rol", () => {
+    for (const r of ["coach", "support", "free", "pro"] as Role[]) expect(can(r, "users.tester")).toBe(false);
+    for (const r of ["admin", "superadmin"] as Role[]) expect(can(r, "users.tester")).toBe(true);
+    expect(can("support", "feedback.manage")).toBe(true);
+    expect(can("coach", "feedback.manage")).toBe(false);
+    expect(ROLES).not.toContain("tester");
+    for (const r of ROLES) expect(assignableRoles(r)).not.toContain("tester");
+  });
   it("suspender: soporte y admin; borrar cuentas: solo admin", () => {
     expect(can("support", "users.suspend")).toBe(true);
     expect(can("coach", "users.suspend")).toBe(false);

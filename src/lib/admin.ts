@@ -169,9 +169,11 @@ export type UserRow = {
   id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; last_active: string | null; comp_until: string | null;
   /** Estado y periodicidad de la suscripción más reciente (misma fila que muestra Pagos). */
   sub_status: string | null; billing: string | null;
+  /** Fin del mes de tester vigente (0029), o null. */
+  tester_until?: string | null;
 };
 
-export const USER_STATUS = [["activo", "Activo (7 d)"], ["inactivo", "Inactivo"], ["pendiente", "Sin terminar bienvenida"], ["cortesia", "Con cortesía"]] as const;
+export const USER_STATUS = [["activo", "Activo (7 d)"], ["inactivo", "Inactivo"], ["pendiente", "Sin terminar bienvenida"], ["cortesia", "Con cortesía"], ["tester", "Testers"]] as const;
 export const ACTIVITY_LABEL: Record<string, string> = { activo: "Activo", inactivo: "Inactivo", pendiente: "Sin bienvenida" };
 
 export function statusOf(u: Pick<UserRow, "onboarded" | "last_active" | "comp_until">, today = crToday().iso): string {
@@ -189,6 +191,7 @@ function demoUserRow(u: DemoUser): UserRow {
     id: u.id, full_name: u.full_name, email: u.email, role: u.role, plan: u.plan, onboarded: u.onboarded, created_at: u.created_at,
     last_active: lastOf(u.days), comp_until: comp && u.plan === comp.plan && !(u.sub && PAYING_STATUSES.has(u.sub.status ?? "")) ? comp.expires_at : null,
     sub_status: u.sub?.status ?? null, billing: u.sub?.billing ?? null,
+    tester_until: u.tester && Date.parse(u.tester.expires_at) > Date.now() ? u.tester.expires_at : null,
   };
 }
 
@@ -203,7 +206,7 @@ export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: User
       (!q || norm(u.full_name).includes(q) || norm(u.email).includes(q) || u.id === q) &&
       (!f.plan || u.plan === f.plan) && (!f.role || u.role === f.role) &&
       (!f.from || crDay(u.created_at) >= f.from) && (!f.to || crDay(u.created_at) <= f.to) &&
-      (!f.status || (f.status === "cortesia" ? !!u.comp_until : statusOf(u, today) === f.status)));
+      (!f.status || (f.status === "cortesia" ? !!u.comp_until : f.status === "tester" ? !!u.tester_until : statusOf(u, today) === f.status)));
     rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
     return { rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: rows.length, limited: false };
   }

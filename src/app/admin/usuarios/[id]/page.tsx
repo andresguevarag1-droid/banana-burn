@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Gift, Lock, ArrowCounterClockwise as RotateCcw, Trash, UserGear as UserCog, ShieldWarning } from "@/components/icons";
+import { Flask, Gift, Lock, ArrowCounterClockwise as RotateCcw, Trash, UserGear as UserCog, ShieldWarning } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { ACTIVITY_LABEL, getUserDetail, PLAN_LABEL, statusOf } from "@/lib/admin";
 import { assignableRoles, can, PRIVILEGED, ROLE_LABEL } from "@/lib/admin-perms";
@@ -9,7 +9,7 @@ import { addDays } from "@/lib/admin-kpis";
 import { crToday } from "@/lib/today";
 import { actionLabel } from "@/lib/admin-format";
 import { ActivityStrip, Sparkline } from "@/components/admin/charts";
-import { ConfirmAction } from "@/components/admin/action-form";
+import { ActionForm, ConfirmAction, Submit } from "@/components/admin/action-form";
 import { Badge, DemoNotice, MetaList, Nil, Notice, PageHeader, PlanText, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, fmtNum, inputSm, link, money, panel, rowAction, rowActionDanger, textareaSm, tr } from "@/components/admin/ui";
 import { changeRole, deleteUserAccount, grantComp, resetOnboarding, revokeComp, setSuspended } from "../../actions";
 import { giftMonths, reviewReferral, revokeReferralReward } from "../../regalos-actions";
@@ -17,6 +17,9 @@ import { GiftFields, type GiftCover } from "@/components/admin/gift-fields";
 import { getReferralOverview, REFERRAL_FLAG_LABEL, REFERRAL_STATUS_LABEL } from "@/lib/admin-referrals";
 import { GIFT_STATUS_LABEL, giftStatus, monthsLabel } from "@/lib/gifts";
 import { BETA_ENDS_AT } from "@/lib/plans";
+import { setTester, revokeTester, setFeedbackStatus } from "../../testers-actions";
+import { getTesterAdmin } from "@/lib/testers-server";
+import { daysLeftLabel, FEEDBACK_KIND_LABEL, FEEDBACK_STATUS_LABEL, TESTER_DAYS, testerState, type FeedbackKind } from "@/lib/testers";
 
 export const metadata = { title: "Ficha de usuario" };
 
@@ -44,7 +47,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const v = await requireSection("usuarios");
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const [d, refs] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id)]);
+  const [d, refs, tester] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id), getTesterAdmin(v, id).catch(() => ({ grants: [], feedback: [], unavailable: true }))]);
   if (!d) notFound();
   const a = d.account;
   const today = crToday().iso;
@@ -54,7 +57,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const targetPrivileged = PRIVILEGED.includes(a.role);
   const canChangeRole = can(v.role, "users.role") && !isSelf && (v.role === "superadmin" || !targetPrivileged);
   const isGift = (c: { source?: string | null }) => c.source === "regalo" || c.source === "referido";
-  const comps = d.billing?.comps.filter((c) => !isGift(c)) ?? [];
+  // El mes de tester tiene su propia sección (no se revoca como una cortesía).
+  const comps = d.billing?.comps.filter((c) => !isGift(c) && c.source !== "tester") ?? [];
+  const ts = testerState(tester.grants);
+  const isTester = ts.phase === "activo" || ts.phase === "pronto";
+  const renewUntil = fmtDate(new Date(Date.now() + TESTER_DAYS * 864e5).toISOString());
+  const canTester = can(v.role, "users.tester") && !isSelf;
   const gifts = d.billing?.comps.filter(isGift) ?? [];
   const activeComp = comps.find((c) => !c.revoked_at && Date.parse(c.expires_at) > Date.now());
   const renewing = d.billing?.subs.find((s) => (s.status === "active" || s.status === "trialing") && !s.cancel_at_period_end && s.current_period_end && Date.parse(s.current_period_end) > Date.now());
@@ -74,6 +82,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <Badge tone={status === "activo" ? "good" : status === "pendiente" ? "warn" : "muted"}>{ACTIVITY_LABEL[status]}</Badge>
           {isSelf && <Badge tone="info">Eres tú</Badge>}
           {a.suspended_at && <Badge tone="bad">Suspendido</Badge>}
+          {isTester && <Badge tone="warn"><Flask weight="duotone" className="size-3.5" aria-hidden />Tester hasta {fmtDate(ts.until)}</Badge>}
         </>} />
       {v.demo && <DemoNotice what="los datos de esta ficha" />}
 
@@ -122,6 +131,44 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 <div><h3 className="text-sm font-bold text-ink mb-2">Entrenos de los últimos 28 días</h3><ActivityStrip days={d.activity.recent} today={today} label="Días con entreno en los últimos 28 días" /></div>
               </>
             ) : <Restricted what="la actividad de entrenamiento" />}
+          </Section>
+
+          <Section title="Tester de la beta" id="s-tester">
+            {tester.unavailable ? <p className="text-sm text-muted">Falta aplicar la migración 0029_testers.sql.</p> : (<>
+              <p className="max-w-prose text-sm text-muted text-pretty">Un mes de Entreno + Nutrición como cortesía por probar la beta. No es un rol del equipo: no da acceso al panel. Al terminar, la cuenta vuelve a sus reglas normales.</p>
+              {tester.grants.length ? (
+                <ul className="space-y-2">{tester.grants.map((g) => {
+                  const live = !g.revoked_at && Date.parse(g.starts_at) <= Date.now() && Date.parse(g.expires_at) > Date.now();
+                  const st = live ? "Vigente" : g.end_kind === "renovado" ? "Renovado" : g.end_kind === "quitado" ? "Quitado" : "Terminado";
+                  return (
+                    <li key={g.id} className="rounded-xl border border-line px-3 py-2.5 text-sm">
+                      <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">Del {fmtDate(g.starts_at)} al {fmtDate(g.expires_at)}
+                        <Badge tone={live ? "good" : g.end_kind === "quitado" ? "bad" : "muted"}>{st}</Badge>{g.renewal && <Badge tone="info">Renovación</Badge>}</p>
+                      <MetaList className="mt-0.5" items={[live && daysLeftLabel(Math.max(1, Math.ceil((Date.parse(g.expires_at) - Date.now()) / 864e5))), g.granted_by_name && `Por ${g.granted_by_name}`, g.revoked_at && `Cerrado el ${fmtDate(g.revoked_at)}`, g.seen_at ? "Vio la bienvenida" : live ? "Aún no abre la app" : null]} />
+                    </li>);
+                })}</ul>
+              ) : <p className="text-sm text-muted">Nunca fue tester.</p>}
+              <div>
+                <h3 className="text-sm font-bold text-ink mb-2">Lo que reportó desde la app</h3>
+                {tester.feedback.length ? (
+                  <ul className="space-y-2">{tester.feedback.map((f) => (
+                    <li key={f.id} className="rounded-xl border border-line px-3 py-2.5 text-sm">
+                      <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{FEEDBACK_KIND_LABEL[f.kind as FeedbackKind] ?? f.kind}
+                        <Badge tone={f.status === "resuelto" ? "good" : f.status === "visto" ? "muted" : "warn"}>{FEEDBACK_STATUS_LABEL[f.status] ?? f.status}</Badge>{f.from_tester && <Badge tone="info">Tester</Badge>}</p>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-body text-pretty">{f.body}</p>
+                      <MetaList className="mt-1" items={[fmtDateTime(f.created_at), f.page && `En ${f.page}`]} />
+                      {can(v.role, "feedback.manage") && f.status !== "resuelto" && (
+                        <ActionForm action={setFeedbackStatus} className="mt-2 flex flex-wrap gap-1">
+                          <input type="hidden" name="id" value={f.id} />
+                          <input type="hidden" name="status" value="resuelto" />
+                          <Submit className={rowAction} pendingText="Guardando…">Marcar resuelto</Submit>
+                        </ActionForm>
+                      )}
+                    </li>
+                  ))}</ul>
+                ) : <p className="text-sm text-muted">Sin reportes.</p>}
+              </div>
+            </>)}
           </Section>
 
           <Section title="Facturación" id="s-billing">
@@ -246,8 +293,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
         <div className="space-y-3">
           <Section title="Acciones" id="s-acciones">
             <div className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><UserCog className="size-4" aria-hidden />Rol</h3>
+                <dl className="rounded-xl bg-paper/60 px-3">
+                  <Row k="Rol actual"><RoleBadge role={a.role} /></Row>
+                  <Row k="Tester de la beta">{isTester ? <span>Hasta el {fmtDate(ts.until)}<span className="block text-xs font-normal text-muted">{daysLeftLabel(ts.daysLeft)}{ts.daysLeft > 1 ? " restantes" : ""}</span></span> : ts.phase === "terminado" ? <span className="font-normal text-muted">Terminó el {fmtDate(ts.until)}</span> : <span className="font-normal text-muted">No</span>}</Row>
+                </dl>
                 {canChangeRole && roleOptions.length ? (
                   <ConfirmAction action={changeRole} trigger="Cambiar rol" title={`Cambiar rol de ${a.full_name || "usuario"}`} hidden={{ target: a.id }} confirmLabel="Cambiar rol"
                     description={<>Rol actual: <b className="text-ink">{ROLE_LABEL[a.role]}</b>. Los roles de staff dan acceso al panel.{v.role !== "superadmin" && " Solo un superadmin puede otorgar admin/superadmin."}</>}>
@@ -259,6 +310,23 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 ) : (
                   <p className="text-sm text-muted">{isSelf ? "No puedes cambiar tu propio rol." : !can(v.role, "users.role") ? "Solo admin y superadmin cambian roles." : "Solo un superadmin puede modificar a un admin."}</p>
                 )}
+                {canTester && !tester.unavailable ? (
+                  <div className="flex flex-wrap gap-2">
+                    <ConfirmAction action={setTester} trigger={<><Flask weight="duotone" className="size-4" aria-hidden />{isTester ? "Renovar 1 mes desde hoy" : "Hacer tester por 1 mes"}</>}
+                      title={isTester ? `Renovar el mes de tester de ${a.full_name || "este usuario"}` : `Hacer tester a ${a.full_name || "este usuario"} por 1 mes`} hidden={{ target: a.id }} confirmLabel={isTester ? "Renovar" : "Hacer tester"}
+                      description={<>{isTester ? <>El mes vuelve a empezar hoy y vence el <b className="text-ink">{renewUntil}</b>.</> : <>Tendrá Entreno + Nutrición gratis por {TESTER_DAYS} días, hasta el <b className="text-ink">{renewUntil}</b>, como cortesía por probar la beta.</>} No es un rol del equipo: no da acceso al panel ni cambia su rol. Le llega un aviso en la app, una ventana de bienvenida, un correo y una notificación si las activó.</>}>
+                      <div><label htmlFor="ts-reason" className="block text-xs font-bold text-ink mb-1">Motivo</label>
+                        <input id="ts-reason" name="reason" required minLength={4} maxLength={300} placeholder="p. ej. prueba la app desde septiembre y reporta errores" className={inputSm} /></div>
+                    </ConfirmAction>
+                    {isTester && (
+                      <ConfirmAction action={revokeTester} danger trigger="Quitar tester" title={`Quitar el estado de tester a ${a.full_name || "este usuario"}`} hidden={{ target: a.id }} confirmLabel="Quitar tester"
+                        description="Pierde la insignia y el mes de cortesía desde ahora y vuelve a las reglas normales de su cuenta. No se le avisa.">
+                        <div><label htmlFor="ts-rv" className="block text-xs font-bold text-ink mb-1">Motivo</label>
+                          <input id="ts-rv" name="reason" required minLength={4} maxLength={300} placeholder="p. ej. ya no está probando la app" className={inputSm} /></div>
+                      </ConfirmAction>
+                    )}
+                  </div>
+                ) : !isSelf && !can(v.role, "users.tester") ? <p className="text-sm text-muted">Solo admin y superadmin asignan testers.</p> : null}
               </div>
 
               <div className="space-y-2 border-t border-line pt-4">

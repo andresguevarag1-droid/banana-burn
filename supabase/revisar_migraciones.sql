@@ -1,5 +1,5 @@
 -- ¿Qué migraciones ya corrí? Pégala completa en Supabase → SQL Editor y toca Run.
--- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0027 se puede repetir sin daño).
+-- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0029 se puede repetir sin daño).
 select m.archivo,
        case when m.aplicada then 'Ya está' else 'FALTA: córrela' end as estado
 from (values
@@ -18,6 +18,7 @@ from (values
   (13,'0024_programas.sql',           to_regclass('public.user_programs') is not null and to_regclass('public.program_sessions') is not null and to_regprocedure('public.program_start(text,date,boolean)') is not null and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'challenges_catalog' and column_name = 'kind')),
   (14,'0025_regalos_referidos.sql',   to_regclass('public.referrals') is not null and to_regprocedure('public.admin_gift_months(uuid,text,integer,text,text)') is not null and to_regprocedure('public._beta_ends_at()') is not null and exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'workouts' and policyname = 'workouts: crear con plan')),
   (15,'0026_tarjeta_prueba.sql',      to_regclass('public.payment_methods') is not null and to_regclass('public.trial_charges') is not null and to_regprocedure('public._trial_live(uuid)') is not null and exists (select 1 from pg_proc where proname = '_has_app_access' and prosrc like '%_trial_live%') and not exists (select 1 from pg_proc where proname = '_has_app_access' and prosrc like '%7 days%')),
-  (16,'0027_experiencias.sql',        exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'daily_logs' and column_name = 'program_checks') and exists (select 1 from public.challenges_catalog where slug = 'banana-girl'))
+  (16,'0027_experiencias.sql',        exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'daily_logs' and column_name = 'program_checks') and exists (select 1 from public.challenges_catalog where slug = 'banana-girl')),
+  (18,'0029_testers.sql',             to_regclass('public.tester_grants') is not null and to_regclass('public.feedback_reports') is not null and to_regprocedure('public.admin_set_tester(uuid,text)') is not null and exists (select 1 from pg_proc where proname = 'admin_list_users' and prosrc like '%tester_until%'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

@@ -34,6 +34,8 @@ export type DemoUser = {
   billing: Billing | null;
   sub: SubRow | null;
   comp: DemoComp | null;
+  /** Mes de tester de la beta (0029): ejemplo determinista para la lista y la ficha. */
+  tester?: { starts_at: string; expires_at: string } | null;
 };
 export type DemoFailedPayment = { id: string; user_id: string; amount: number; status: string; created_at: string; failure_reason: string };
 export type DemoWorld = { key: string; users: DemoUser[]; subs: SubRow[]; failedPayments: DemoFailedPayment[] };
@@ -169,6 +171,15 @@ export function demoWorld(): DemoWorld {
     if (sub && sub.created_at && crDay(sub.created_at) < signup) sub.created_at = users[users.length - 1].created_at;
   }
 
+  // Testers de ejemplo (sin consumir el azar: el resto del demo no cambia): uno recién asignado, dos a mitad de mes,
+  // uno con 2 días y uno que ya terminó.
+  const pool = users.filter((u) => u.onboarded && (u.role === "free" || u.role === "pro"));
+  ([[3, 0], [11, 9], [19, 16], [27, 28], [35, 33]] as const).forEach(([k, daysIn]) => {
+    const u = pool[k % Math.max(1, pool.length)];
+    if (!u || u.tester) return;
+    const start = new Date(now.getTime() - daysIn * 864e5 - 3600e3);
+    u.tester = { starts_at: start.toISOString(), expires_at: new Date(start.getTime() + 30 * 864e5).toISOString() };
+  });
   cache = { key: today, users, subs, failedPayments };
   return cache;
 }

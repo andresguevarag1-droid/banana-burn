@@ -40,6 +40,8 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
   }
   const sb = await createClient();
   const since = addDays(today, -90);
+  // Medalla "Tester beta" (0029): si alguna vez fue tester. Sin la migración, sin medalla. Va en paralelo con lo demás.
+  const testerQ = Promise.resolve(sb.from("tester_grants").select("id", { count: "exact", head: true }).eq("user_id", v.id)).then((r) => (r.error ? { count: 0 } : r), () => ({ count: 0 }));
   // Con mucho historial, una lectura sin filtro se corta en 1000 filas: los totales van con count o paginados.
   const [{ data: log }, { data: wk }, { data: dl }, { data: ws }, { count: weighIns }, xp, { count: prs }, { count: workoutsTotal }] = await Promise.all([
     sb.from("daily_logs").select("water_glasses,steps,sleep_h,protein_g,kcal,energy,nausea,fiber_g").eq("user_id", v.id).eq("day", today).maybeSingle(),
@@ -51,6 +53,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     sb.from("xp_events").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("kind", "pr"),
     sb.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", v.id),
   ]);
+  const { count: testerGrants } = await testerQ;
   const active = new Set<string>([...(wk ?? []), ...(dl ?? []), ...(ws ?? [])].map((r) => r.day as string));
   const streak = streakOf(active, today);
   return {
@@ -59,6 +62,6 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),
     week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),
-    badges: badges({ workouts: workoutsTotal ?? 0, streak: streak.days, prs: prs ?? 0, weighIns: weighIns ?? 0, lostKg: startWeight - currentWeight }),
+    badges: badges({ workouts: workoutsTotal ?? 0, streak: streak.days, prs: prs ?? 0, weighIns: weighIns ?? 0, lostKg: startWeight - currentWeight, tester: (testerGrants ?? 0) > 0 }),
   };
 }
