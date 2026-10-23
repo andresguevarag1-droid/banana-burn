@@ -96,7 +96,7 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     }
   }
   const template = plan.key ?? plan.tpl ?? (expres ? `expres${expres}` : "descanso");
-  const title = plan.program ? `${plan.name}: semana ${plan.program.week}` : plan.name;
+  const title = plan.name;
   const doneToday = options.length > 0 && (await templatesDoneToday(v)).includes(template);
   return <Player template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
