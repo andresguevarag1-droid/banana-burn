@@ -119,7 +119,7 @@ export function createCustomer(input: { email: string; name?: string; userId: st
   return onvo<OnvoCustomer>("POST", "/v1/customers", {
     email: input.email,
     name: input.name || undefined,
-    description: `Banana Burn · usuario ${input.userId}`,
+    description: `Banana Burn, usuario ${input.userId}`,
   });
 }
 
@@ -147,7 +147,7 @@ export function createSubscription(input: { customerId: string; plan: PlanId; bi
   return onvo<OnvoSubscription>("POST", "/v1/subscriptions", {
     customerId: input.customerId,
     paymentBehavior: "allow_incomplete",
-    description: `Banana Burn · ${name} (${input.billing === "mes" ? "mensual" : "anual"})`,
+    description: `Banana Burn, ${name} (${input.billing === "mes" ? "mensual" : "anual"})`,
     items: [{ priceId, quantity: 1 }],
     metadata: { userId: input.userId, plan: input.plan, billing: input.billing },
   });
@@ -167,7 +167,7 @@ export function createChargedSubscription(input: { customerId: string; paymentMe
   return onvo<OnvoSubscription>("POST", "/v1/subscriptions", {
     customerId: input.customerId,
     paymentMethodId: input.paymentMethodId,
-    description: `Banana Burn · ${name} (${input.billing === "mes" ? "mensual" : "anual"})`,
+    description: `Banana Burn, ${name} (${input.billing === "mes" ? "mensual" : "anual"})`,
     items: [{ priceId, quantity: 1 }],
     metadata: { userId: input.userId, plan: input.plan, billing: input.billing, trialKey: input.trialKey, attempt: String(input.attempt) },
   });
