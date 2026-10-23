@@ -18,6 +18,7 @@ import { TrialBanner } from "./suscripcion/trial-banner";
 import { BetaBanner } from "@/components/beta-notice";
 import { betaLive } from "@/lib/plans";
 import { getActiveProgram } from "@/lib/programs-server";
+import { ProgramRibbon } from "@/components/programas/program-ribbon";
 import { GiftCelebration } from "@/components/gift-celebration";
 import { deliverPendingGifts, getUnseenGifts } from "@/lib/gifts-server";
 import { AddCardBanner, FailedBanner, ProcessingBanner, ScheduledBanner } from "@/components/card-banner";
@@ -35,6 +36,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!v.onboarded) redirect("/bienvenida");
   const [ent, xp, prog, unseen] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false }))]);
   // Un regalo creado por la base (recompensa de referidos) todavía sin correo ni push: se manda después de responder.
+  // Programa activo: solo con acceso a la app (sin acceso queda guardado y vuelve al renovar).
+  const live = prog && ent.app ? prog : null;
   if (unseen.undelivered) after(() => deliverPendingGifts({ userId: v.id, limit: 5 }).then(() => {}));
   // Tarjeta guardada (0026): en demo, el estado de ejemplo. Revisión al abrir la app: si el cobro ya tocaba (o el aviso
   // del día 5, o hay que confirmar uno en curso), se hace después de responder. El cron diario es el respaldo.
@@ -48,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="lg:pl-64">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
-      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={prog && ent.app ? { slug: prog.c.id, title: prog.c.title } : null} />
+      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} />
       <InstallPrompt />
       <TzSync current={v.tz} />
       <ConnectionStatus />
@@ -56,6 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
+        {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, week: live.run.week, weeks: live.run.weeks }} />}
         {banner === "beta-add" ? <AddCardBanner />
           : banner === "beta-scheduled" && charge ? <ScheduledBanner charge={charge} tz={v.tz} />
           : banner === "failed" && charge ? <FailedBanner charge={charge} tz={v.tz} />

@@ -4,7 +4,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { CaretDown, Copy, MagnifyingGlass, Plus, Trash, WarningCircle } from "@/components/icons";
 import { Field, btnGhost, inputSm, panel, textareaSm } from "@/components/admin/ui";
-import { LEVEL_LABEL, MAX_DAYS_PER_WEEK, MAX_EXERCISES, MAX_PHASES, MODE_LABEL, TEMPO_RE, programErrors, weeksOf, type ProgramExercise, type ProgramLevel, type ProgramMeta, type ProgramMode, type ProgramSession } from "@/lib/programs";
+import { HABIT_KINDS, HABIT_KIND_LABEL, MAX_HABITS, MAX_TIPS, type HabitKind, type ProgramExperience, type ProgramHabit, LEVEL_LABEL, MAX_DAYS_PER_WEEK, MAX_EXERCISES, MAX_PHASES, MODE_LABEL, TEMPO_RE, programErrors, weeksOf, type ProgramExercise, type ProgramLevel, type ProgramMeta, type ProgramMode, type ProgramSession } from "@/lib/programs";
 import { searchExercises, type ExerciseHit } from "./actions";
 
 export const EMPTY_META: ProgramMeta = {
@@ -50,6 +50,10 @@ export function ProgramEditor({ init, sessions: init2, names: names0 }: { init: 
   const used = [...new Set(visible.flatMap((s) => s.exercises.map((e) => e.id)))];
   const nameOf = (id: string) => names[id] ?? id;
   const n = meta.nutrition;
+  const x = meta.experience;
+  const EMPTY_X: ProgramExperience = { mode: "", welcome: "", habits: [], tips: [], coachFocus: "", restDay: "", food: [] };
+  const setX = (patch: Partial<ProgramExperience>) => set({ experience: { ...(x ?? EMPTY_X), ...patch } });
+  const putHabit = (i: number, patch: Partial<ProgramHabit>) => setX({ habits: (x?.habits ?? []).map((h, k) => (k === i ? { ...h, ...patch } : h)) });
 
   return (
     <div className="space-y-5">
@@ -165,6 +169,31 @@ export function ProgramEditor({ init, sessions: init2, names: names0 }: { init: 
           <label className="mt-3 block max-w-sm text-sm font-semibold text-ink" htmlFor="pg-prev">Ejercicio con técnica animada en la tienda
             <select id="pg-prev" value={meta.previewExercise ?? ""} onChange={(e) => set({ previewExercise: e.target.value || undefined })} className={`${sel} mt-1`}><option value="">El primero de la semana 1</option>{used.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}</select>
           </label>
+        </fieldset>
+      </section>
+
+      <section className={`${panel} grid gap-3 p-4 sm:grid-cols-2 sm:p-5`} aria-label="Experiencia en la app">
+        <h2 className="font-extrabold text-ink sm:col-span-2">Experiencia en la app</h2>
+        <p className="-mt-2 text-sm text-muted sm:col-span-2">Lo que cambia mientras el programa está activo: el nombre del modo, los hábitos de cada día, el consejo semanal de Coach Banana y cómo comer. Vacío = textos genéricos.</p>
+        <Field label="Nombre del modo" htmlFor="px-mode" hint="Ej.: Modo glúteo"><input id="px-mode" maxLength={40} value={x?.mode ?? ""} onChange={(e) => setX({ mode: e.target.value })} className={inputSm} /></Field>
+        <Field label="Descanso activo" htmlFor="px-rest" hint="Qué hacer los días sin sesión"><input id="px-rest" maxLength={140} value={x?.restDay ?? ""} disabled={!x} onChange={(e) => setX({ restDay: e.target.value })} className={inputSm} /></Field>
+        <Field label="Bienvenida (primer día)" htmlFor="px-wel" className="sm:col-span-2"><textarea id="px-wel" rows={2} maxLength={280} value={x?.welcome ?? ""} disabled={!x} onChange={(e) => setX({ welcome: e.target.value })} className={textareaSm} /></Field>
+        <Field label="Enfoque para Coach Banana" htmlFor="px-coach" className="sm:col-span-2"><textarea id="px-coach" rows={2} maxLength={300} value={x?.coachFocus ?? ""} disabled={!x} onChange={(e) => setX({ coachFocus: e.target.value })} className={textareaSm} /></Field>
+        <Field label={`Consejo por semana (una línea por semana, ${weeksOf(meta)} semanas)`} htmlFor="px-tips" className="sm:col-span-2"><textarea id="px-tips" rows={4} value={(x?.tips ?? []).join("\n")} disabled={!x} onChange={(e) => setX({ tips: e.target.value.split("\n").slice(0, MAX_TIPS) })} className={textareaSm} /></Field>
+        <Field label="Cómo comer (una línea cada uno, máx. 4)" htmlFor="px-food" className="sm:col-span-2"><textarea id="px-food" rows={3} value={(x?.food ?? []).join("\n")} disabled={!x} onChange={(e) => setX({ food: e.target.value.split("\n").slice(0, 4) })} className={textareaSm} /></Field>
+        <fieldset className="sm:col-span-2" disabled={!x}>
+          <legend className="text-sm font-bold text-ink">Hábitos de cada día (máx. {MAX_HABITS})</legend>
+          <div className="mt-2 space-y-2">
+            {(x?.habits ?? []).map((h, i) => (
+              <div key={i} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[2fr_1fr_6rem_auto]">
+                <input aria-label={`Hábito ${i + 1}`} maxLength={60} value={h.label} onChange={(e) => putHabit(i, { label: e.target.value })} className={`${inputSm} col-span-2 sm:col-span-1`} />
+                <select aria-label={`Tipo del hábito ${i + 1}`} value={h.kind} onChange={(e) => putHabit(i, { kind: e.target.value as HabitKind, target: undefined })} className={sel}>{HABIT_KINDS.map((k) => <option key={k} value={k}>{HABIT_KIND_LABEL[k]}</option>)}</select>
+                <input aria-label={`Meta del hábito ${i + 1}`} type="number" value={h.target ?? ""} disabled={!["pasos", "agua", "sueno"].includes(h.kind)} onChange={(e) => putHabit(i, { target: e.target.value ? Number(e.target.value) : undefined })} className={small} />
+                <button type="button" onClick={() => setX({ habits: (x?.habits ?? []).filter((_, k) => k !== i) })} className={`${btnGhost} px-2!`} aria-label={`Quitar el hábito ${i + 1}`}><Trash className="size-4" /></button>
+              </div>
+            ))}
+            {(x?.habits.length ?? 0) < MAX_HABITS && <button type="button" onClick={() => setX({ habits: [...(x?.habits ?? []), { key: `h${Date.now().toString(36).slice(-6)}`, label: "", kind: "check" }] })} className={btnGhost}><Plus className="size-4" />Agregar hábito</button>}
+          </div>
         </fieldset>
       </section>
 

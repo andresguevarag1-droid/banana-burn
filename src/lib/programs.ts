@@ -51,7 +51,42 @@ export type ProgramMeta = {
   nutrition: ProgramNutrition | null;
   /** Ejercicio con la animación de técnica en la página del programa. */
   previewExercise?: string;
+  /** Cómo cambia la app mientras el programa está activo (0027). Sin esto, la app usa los textos genéricos. */
+  experience?: ProgramExperience;
 };
+
+// ───────────── Experiencia: lo que el programa cambia en la app ─────────────
+
+/**
+ * Hábitos diarios del programa. Los automáticos se marcan solos con lo que la persona ya registra en Hoy:
+ * pasos, agua (vasos), sueño (horas), proteína (g, contra su meta) y entreno (sesión del programa hecha hoy).
+ * `check` es un hábito que la persona marca a mano (se guarda en daily_logs.program_checks).
+ */
+export type HabitKind = "pasos" | "agua" | "sueno" | "proteina" | "entreno" | "check";
+export type ProgramHabit = { key: string; label: string; kind: HabitKind; target?: number };
+export type ProgramExperience = {
+  /** Nombre del modo que toma la app: "Modo glúteo". */
+  mode: string;
+  /** Mensaje del primer día. */
+  welcome: string;
+  /** Hábitos de cada día (máximo 4). */
+  habits: ProgramHabit[];
+  /** Consejo de Coach Banana por semana; el último se repite si el programa dura más. */
+  tips: string[];
+  /** Qué prioriza Coach Banana al responder mientras dura el programa. */
+  coachFocus: string;
+  /** Qué hacer en los días sin sesión. */
+  restDay: string;
+  /** Cómo comer en este programa (máximo 4 líneas). Se muestra en Nutrición y en Hoy. */
+  food: string[];
+};
+export const HABIT_KINDS: HabitKind[] = ["pasos", "agua", "sueno", "proteina", "entreno", "check"];
+export const HABIT_KIND_LABEL: Record<HabitKind, string> = { pasos: "Pasos", agua: "Vasos de agua", sueno: "Horas de sueño", proteina: "Proteína del día", entreno: "Sesión del programa", check: "Lo marca la persona" };
+export const HABIT_KEY = /^[a-z0-9-]{1,24}$/;
+const HABIT_DEFAULT: Partial<Record<HabitKind, number>> = { pasos: 8000, agua: 8, sueno: 7 };
+const HABIT_RANGE: Partial<Record<HabitKind, [number, number]>> = { pasos: [1000, 30000], agua: [1, 20], sueno: [4, 12] };
+export const MAX_HABITS = 4;
+export const MAX_TIPS = 12;
 export type ProgramDef = { slug: string; title: string; meta: ProgramMeta; sessions: ProgramSession[] };
 export type ProgramState = { slug: string; status: ProgramStatus; startedOn: string; pausedOn: string | null; pausedDays: number; completedAt: string | null };
 /** Sesión hecha: semana, día y la fecha del entreno. */
@@ -109,6 +144,7 @@ export function parseMeta(x: unknown): ProgramMeta | null {
   const mode = n && MODES.includes(n.mode as ProgramMode) ? (n.mode as ProgramMode) : undefined;
   const ppk = n && typeof n.proteinPerKg === "number" && Number.isFinite(n.proteinPerKg) ? Math.round(clampN(n.proteinPerKg, 1.2, 2.4) * 10) / 10 : undefined;
   const nutrition = mode || ppk ? { ...(mode ? { mode } : {}), ...(ppk ? { proteinPerKg: ppk } : {}), ...(n && txt(n.note, 240) ? { note: txt(n.note, 240) } : {}) } : null;
+  const experience = parseExperience(o.experience);
   const list = (v: unknown, max: number, len: number) => (Array.isArray(v) ? v : []).map((s) => txt(s, len)).filter(Boolean).slice(0, max);
   return {
     phases, daysPerWeek: clampN(int(o.daysPerWeek, 3), 1, MAX_DAYS_PER_WEEK), sessionMinutes: clampN(int(o.sessionMinutes, 45), 5, 180),
@@ -116,7 +152,58 @@ export function parseMeta(x: unknown): ProgramMeta | null {
     who: txt(o.who, 400), result: txt(o.result, 400), outcomes: list(o.outcomes, 8, 160),
     keyLifts: (Array.isArray(o.keyLifts) ? o.keyLifts : []).filter((s): s is string => typeof s === "string" && PROGRAM_EXERCISE_ID.test(s)).slice(0, 4),
     nutrition, ...(typeof o.previewExercise === "string" && PROGRAM_EXERCISE_ID.test(o.previewExercise) ? { previewExercise: o.previewExercise } : {}),
+    ...(experience ? { experience } : {}),
   };
+}
+
+export function parseExperience(x: unknown): ProgramExperience | null {
+  if (!x || typeof x !== "object") return null;
+  const o = x as Record<string, unknown>;
+  const mode = txt(o.mode, 40);
+  if (!mode) return null;
+  const seen = new Set<string>();
+  const habits: ProgramHabit[] = [];
+  for (const h of Array.isArray(o.habits) ? o.habits : []) {
+    const q = (h && typeof h === "object" ? h : {}) as Record<string, unknown>;
+    const key = typeof q.key === "string" ? q.key.trim() : "", label = txt(q.label, 60);
+    const kind = HABIT_KINDS.includes(q.kind as HabitKind) ? (q.kind as HabitKind) : null;
+    if (!HABIT_KEY.test(key) || !label || !kind || seen.has(key)) continue;
+    seen.add(key);
+    const r = HABIT_RANGE[kind];
+    const target = r ? clampN(int(q.target, HABIT_DEFAULT[kind]!), r[0], r[1]) : undefined;
+    habits.push({ key, label, kind, ...(target !== undefined ? { target } : {}) });
+    if (habits.length >= MAX_HABITS) break;
+  }
+  const tips = (Array.isArray(o.tips) ? o.tips : []).map((t) => txt(t, 220)).filter(Boolean).slice(0, MAX_TIPS);
+  const food = (Array.isArray(o.food) ? o.food : []).map((t) => txt(t, 200)).filter(Boolean).slice(0, 4);
+  return { mode, welcome: txt(o.welcome, 280), habits, tips, coachFocus: txt(o.coachFocus, 300), restDay: txt(o.restDay, 140), food };
+}
+
+/** Consejo de la semana (1-based); el último se repite. */
+export const tipFor = (x: Pick<ProgramExperience, "tips"> | null | undefined, week: number) => (x?.tips.length ? x.tips[clampN(week, 1, x.tips.length) - 1] : null);
+
+export type HabitView = { key: string; label: string; kind: HabitKind; done: boolean; auto: boolean; detail: string | null; pct: number };
+/**
+ * Estado de los hábitos de hoy. Pura. `proteinTarget` solo llega con nutrición: sin ella, el hábito de proteína se
+ * marca a mano. El de entreno, en un día sin sesión, se convierte en el descanso activo (a mano).
+ */
+export function habitsToday(x: ProgramExperience, log: { steps: number; water: number; sleep: number; protein: number }, o: { checks: string[]; proteinTarget: number | null; trainedToday: boolean; sessionDay: boolean }): HabitView[] {
+  const fmt = (n: number) => n.toLocaleString("es-419");
+  const checked = new Set(o.checks);
+  return x.habits.map((h) => {
+    const manual = (label = h.label): HabitView => ({ key: h.key, label, kind: h.kind, done: checked.has(h.key), auto: false, detail: null, pct: checked.has(h.key) ? 1 : 0 });
+    const auto = (have: number, goal: number, unit: string): HabitView => ({ key: h.key, label: h.label, kind: h.kind, done: have >= goal, auto: true, detail: `${fmt(have)} de ${fmt(goal)} ${unit}`, pct: goal ? Math.min(1, have / goal) : 0 });
+    switch (h.kind) {
+      case "pasos": return auto(log.steps, h.target ?? 8000, "pasos");
+      case "agua": return auto(log.water, h.target ?? 8, "vasos");
+      case "sueno": return auto(log.sleep, h.target ?? 7, "h");
+      case "proteina": return o.proteinTarget ? auto(log.protein, o.proteinTarget, "g") : manual();
+      case "entreno":
+        if (o.trainedToday) return { key: h.key, label: h.label, kind: h.kind, done: true, auto: true, detail: "Sesión hecha", pct: 1 };
+        return o.sessionDay ? { key: h.key, label: h.label, kind: h.kind, done: false, auto: true, detail: "Te toca hoy", pct: 0 } : manual(x.restDay || "Descanso activo: camina y estira 10 minutos");
+      default: return manual();
+    }
+  });
 }
 
 // ───────────── Calendario ─────────────

@@ -1,7 +1,7 @@
 // Retos: tienda (gratis y Premium), plan día a día y estado. El catálogo vive en la BD (challenges_catalog, 0018) y lo edita
 // el admin en /admin/retos; challenge-seed.ts es la siembra inicial y el respaldo si la base aún no tiene la migración.
 import { SEED, type ChallengeStatus, type CoverStyle, type DayTask, type Difficulty, type SeedChallenge, type Verify } from "./challenge-seed";
-import { PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./program-seed";
+import { ALL_PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./program-seed";
 import { parseMeta, type ProgramMeta } from "./programs";
 export type { ChallengeStatus, CoverStyle, DayTask, Difficulty, TaskType, Verify } from "./challenge-seed";
 
@@ -42,9 +42,9 @@ export const JOIN_WINDOW_DAYS = 3;
 export const MIN_PRICE_USD = 0.5;
 export const MAX_PRICE_USD = 200;
 
-export const COVERS: CoverStyle[] = ["banana", "ember", "sky", "peel", "noche", "selva"];
-export const COVER_LABEL: Record<CoverStyle, string> = { banana: "Banana", ember: "Fuego", sky: "Cielo", peel: "Hoja", noche: "Noche", selva: "Selva" };
-const COVER_COLOR: Record<CoverStyle, string> = { banana: "bg-banana", ember: "bg-ember/15", sky: "bg-sky/15", peel: "bg-peel/15", noche: "bg-ink/10", selva: "bg-peel/10" };
+export const COVERS: CoverStyle[] = ["banana", "ember", "sky", "peel", "noche", "selva", "fresa"];
+export const COVER_LABEL: Record<CoverStyle, string> = { banana: "Banana", ember: "Fuego", sky: "Cielo", peel: "Hoja", noche: "Noche", selva: "Selva", fresa: "Fresa" };
+const COVER_COLOR: Record<CoverStyle, string> = { banana: "bg-banana", ember: "bg-ember/15", sky: "bg-sky/15", peel: "bg-peel/15", noche: "bg-ink/10", selva: "bg-peel/10", fresa: "bg-[#FFD9E2]" };
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = { facil: "Fácil", media: "Media", dificil: "Difícil" };
 export const VERIFY_LABEL: Record<Verify, string> = { manual: "Lo marcas tú", workout: "Entreno registrado", steps: "Pasos registrados", protein: "Meta de proteína", water: "Vasos de agua" };
 export const STATUS_LABEL: Record<ChallengeStatus, string> = { borrador: "Borrador", publicado: "Publicado", oculto: "Oculto", archivado: "Archivado" };
@@ -87,7 +87,7 @@ export function fromProgramSeed(p: ProgramSeed, source: "app" | "admin" = "app")
 
 /** Los 6 retos con los que nació la app (sus ids se guardan en user_challenges desde 0008). */
 export const BASE_IDS = ["banana-30", "flexiones-30", "plancha-30", "pasos-30", "proteina-21", "agua-21"];
-export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p))];
+export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...ALL_PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p))];
 export const CHALLENGES: Challenge[] = SEED_CHALLENGES.filter((c) => BASE_IDS.includes(c.id));
 export const CHALLENGE_BY_ID: Record<string, Challenge> = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
 

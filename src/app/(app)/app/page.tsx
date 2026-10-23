@@ -8,6 +8,9 @@ import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
 import { DAY_NAMES, isTrainingDay } from "@/lib/engine";
 import { ProgramHero } from "@/components/programas/program-hero";
+import { ProgramHabits } from "@/components/programas/program-habits";
+import { getProgramChecks } from "@/lib/programs-server";
+import { habitsToday } from "@/lib/programs";
 import { TodayPanel } from "@/components/hoy/today-panel";
 import { WeekCard } from "@/components/hoy/week-card";
 import { WeighIn } from "@/components/weigh-in";
@@ -33,7 +36,14 @@ export default async function Hoy() {
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
-  const ch = await getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein });
+  const px = d.program?.meta.experience ?? null;
+  const [ch, checks] = await Promise.all([
+    getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein }),
+    px ? getProgramChecks(v, d.today.iso) : Promise.resolve([] as string[]),
+  ]);
+  // Programa con experiencia (0027): sus hábitos del día y una línea de comida que cambia cada día.
+  const habits = px && d.program ? habitsToday(px, { ...g.log, protein: g.log.protein + eaten.protein }, { checks, proteinTarget: ent.nutrition ? d.t.protein : null, trainedToday: g.trainedToday || d.program.run.today === "hecho", sessionDay: d.program.run.today === "entreno" }) : null;
+  const food = px?.food.length ? px.food[d.program!.run.effectiveDay % px.food.length] : null;
   const { plan, t } = d;
   const training = isTrainingDay(plan);
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
@@ -104,6 +114,7 @@ export default async function Hoy() {
         </section>}
 
       </div>
+      {px && habits && d.program && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
       {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
 

@@ -60,7 +60,8 @@ describe("siembra de programas", () => {
   });
   it("el insignia: 3 sesiones obligatorias y 1 opcional por semana", () => {
     expect(daysLabel(recon.meta, recon.sessions)).toBe("3 a 4 días por semana");
-    expect(daysLabel(PROGRAM_SEED_BY_SLUG["gluteos-30"].meta, PROGRAM_SEED_BY_SLUG["gluteos-30"].sessions)).toBe("3 días por semana");
+    expect(daysLabel(PROGRAM_SEED_BY_SLUG["dominadas-desde-cero"].meta, PROGRAM_SEED_BY_SLUG["dominadas-desde-cero"].sessions)).toBe("3 días por semana");
+    expect(daysLabel(PROGRAM_SEED_BY_SLUG["gluteos-30"].meta, PROGRAM_SEED_BY_SLUG["gluteos-30"].sessions)).toBe("3 a 4 días por semana");
   });
   it("en el catálogo de respaldo los programas convertidos y el insignia son programas; los hábitos siguen siendo retos", () => {
     const by = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
@@ -257,5 +258,117 @@ describe("adaptación al equipo", () => {
   });
   it("un programa que no se adapta (dominadas) deja sus ejercicios", () => {
     expect(adaptId({ id: "lat" }, "ninguno", false, info)).toBe("lat");
+  });
+});
+
+// ───────────── 0027: experiencias y programas nuevos ─────────────
+import { ALL_PROGRAM_SEED, EXPERIENCES, PROGRAM_SEED_2, PROGRAM_UPGRADES, program0027Sql } from "./program-seed";
+import { habitsToday, parseExperience, tipFor, type ProgramExperience } from "./programs";
+
+const sql27 = readFileSync(new URL("../../supabase/migrations/0027_experiencias.sql", import.meta.url), "utf8");
+const muscleOf = (id: string) => (exInfo(id)?.muscle ?? "").toLowerCase();
+
+describe("0027 coincide con el código", () => {
+  it("la siembra de 0027 es la de program-seed.ts (regenerar con scripts/gen-programas-seed.ts --0027)", () => {
+    expect(sql27).toContain(program0027Sql().trim());
+  });
+  it("precios de los nuevos programas", () => {
+    expect(Object.fromEntries(PROGRAM_SEED_2.map((p) => [p.slug, p.priceUsd]))).toEqual({ "abdomen-marcado": 7.99, "brazos-definidos": 6.99, "banana-girl": 7.99 });
+  });
+});
+
+describe("programas de 0027", () => {
+  const all = ALL_PROGRAM_SEED;
+  it("todos los programas tienen experiencia completa: modo, 4 hábitos, un consejo por semana, comida y descanso", () => {
+    for (const p of all) {
+      const x = p.meta.experience!;
+      expect(x, p.slug).toBeTruthy();
+      expect(x.mode.length, p.slug).toBeGreaterThan(3);
+      expect(x.habits.length, p.slug).toBe(4);
+      expect(x.tips.length, p.slug).toBe(weeksOf(p.meta));
+      expect(x.food.length, p.slug).toBeGreaterThanOrEqual(3);
+      expect(x.restDay && x.coachFocus && x.welcome, p.slug).toBeTruthy();
+      expect(parseExperience(JSON.parse(JSON.stringify(x))), p.slug).toEqual(x);
+    }
+  });
+  it("ejercicios existentes y programas publicables", () => {
+    for (const p of all) {
+      for (const s of p.sessions) for (const e of s.exercises) {
+        expect(knownExercise(e.id), `${p.slug} ${e.id}`).toBe(true);
+        if (e.home) expect(knownExercise(e.home), `${p.slug} ${e.home}`).toBe(true);
+      }
+      expect(programErrors(p.meta, p.sessions, knownExercise), p.slug).toEqual([]);
+      expect(parseMeta(JSON.parse(JSON.stringify(p.meta))), p.slug).toEqual(p.meta);
+    }
+  });
+  it("textos sin emojis ni raya larga", () => {
+    const bad = /[—\p{Extended_Pictographic}]/u;
+    for (const p of all) expect(bad.test(JSON.stringify([p.title, p.description, p.meta, p.sessions, p.safetyNote])), p.slug).toBe(false);
+  });
+  it("Glúteos de acero: cada sesión obligatoria es de glúteo y pierna; nada de tren superior", () => {
+    const g = PROGRAM_UPGRADES["gluteos-30"];
+    for (const s of g.sessions) for (const e of s.exercises) {
+      expect(/glúteo|piernas|femoral|cuádriceps|abductor|isquio|core|aductor/.test(muscleOf(e.id)) || ["ds:0628", "ds:1774", "ds:0710"].includes(e.id), `${s.title} ${e.id} ${muscleOf(e.id)}`).toBe(true);
+    }
+    // Hip thrust o puente en las 3 sesiones dedicadas de cada fase... al menos en 2 de 3, y abducción cada semana.
+    for (const ph of [1, 2, 3]) {
+      const req = g.sessions.filter((s) => s.phase === ph && !s.optional);
+      expect(req.length).toBe(3);
+      expect(req.filter((s) => s.exercises.some((e) => e.id === "ds:1409")).length).toBeGreaterThanOrEqual(2);
+      expect(req.some((s) => s.exercises.some((e) => ["ds:0597", "ds:0710", "ds:1774"].includes(e.id)))).toBe(true);
+    }
+  });
+  it("Brazos definidos: bíceps y tríceps en las 3 sesiones; nada de pierna", () => {
+    const b = PROGRAM_SEED_2.find((p) => p.slug === "brazos-definidos")!;
+    for (const s of b.sessions) for (const e of s.exercises) expect(/piernas|glúteo|femoral|cuádriceps/.test(muscleOf(e.id)), `${s.title} ${e.id}`).toBe(false);
+    const req = b.sessions.filter((s) => s.phase === 2 && !s.optional);
+    const sets = (re: RegExp) => req.reduce((a, s) => a + s.exercises.filter((e) => re.test(muscleOf(e.id))).reduce((x, e) => x + e.sets, 0), 0);
+    expect(sets(/bíceps/)).toBeGreaterThanOrEqual(12);
+    expect(sets(/tríceps/)).toBeGreaterThanOrEqual(12);
+  });
+  it("Abdomen marcado: core en todas las sesiones y déficit para bajar grasa", () => {
+    const a = PROGRAM_SEED_2.find((p) => p.slug === "abdomen-marcado")!;
+    for (const s of a.sessions) expect(s.exercises.some((e) => /core|abdom|oblicuo/.test(muscleOf(e.id))), s.title).toBe(true);
+    expect(a.meta.nutrition?.mode).toBe("acelerada");
+  });
+  it("cada programa tiene su propia nutrición", () => {
+    for (const p of all.filter((x) => x.slug !== "dominadas-desde-cero" && x.slug !== "abdomen-21")) expect(p.meta.nutrition, p.slug).toBeTruthy();
+  });
+  it("la experiencia viaja al catálogo de respaldo", () => {
+    const by = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
+    for (const slug of Object.keys(EXPERIENCES)) expect(by[slug]?.program?.experience?.mode, slug).toBe(EXPERIENCES[slug].mode);
+    expect(by["banana-girl"].cover).toBe("fresa");
+  });
+});
+
+describe("hábitos del programa", () => {
+  const x: ProgramExperience = {
+    mode: "Modo prueba", welcome: "", tips: ["uno", "dos"], coachFocus: "", restDay: "Camina 20 minutos", food: [],
+    habits: [{ key: "entreno", label: "Sesión", kind: "entreno" }, { key: "pasos", label: "Pasos", kind: "pasos", target: 8000 }, { key: "proteina", label: "Proteína", kind: "proteina" }, { key: "yo", label: "Para ti", kind: "check" }],
+  };
+  const log = { steps: 4000, water: 3, sleep: 6, protein: 90 };
+  it("automáticos con lo que ya registra; manuales con sus marcas", () => {
+    const h = habitsToday(x, log, { checks: ["yo"], proteinTarget: 120, trainedToday: false, sessionDay: true });
+    expect(h.map((v) => [v.key, v.done, v.auto])).toEqual([["entreno", false, true], ["pasos", false, true], ["proteina", false, true], ["yo", true, false]]);
+    expect(h[1].pct).toBe(0.5);
+    expect(h[1].detail).toBe(`${(4000).toLocaleString("es-419")} de ${(8000).toLocaleString("es-419")} pasos`);
+  });
+  it("sin nutrición, la proteína se marca a mano; en día de descanso el entreno es el descanso activo", () => {
+    const h = habitsToday(x, log, { checks: ["proteina", "entreno"], proteinTarget: null, trainedToday: false, sessionDay: false });
+    expect(h[0]).toMatchObject({ label: "Camina 20 minutos", auto: false, done: true });
+    expect(h[2]).toMatchObject({ auto: false, done: true });
+  });
+  it("entrenar hoy cumple el hábito de entreno", () => {
+    expect(habitsToday(x, log, { checks: [], proteinTarget: null, trainedToday: true, sessionDay: false })[0].done).toBe(true);
+  });
+  it("consejo por semana; el último se repite", () => {
+    expect([tipFor(x, 1), tipFor(x, 2), tipFor(x, 9), tipFor(null, 1)]).toEqual(["uno", "dos", "dos", null]);
+  });
+  it("saneado: claves inválidas, repetidas, tipos raros y metas fuera de rango", () => {
+    const p = parseExperience({ mode: "Modo", habits: [{ key: "A B", label: "x", kind: "check" }, { key: "ok", label: "Bien", kind: "pasos", target: 999999 }, { key: "ok", label: "Otra", kind: "check" }, { key: "z", label: "Z", kind: "magia" }], tips: ["", "t"], food: "no" });
+    expect(p?.habits).toEqual([{ key: "ok", label: "Bien", kind: "pasos", target: 30000 }]);
+    expect(p?.tips).toEqual(["t"]);
+    expect(p?.food).toEqual([]);
+    expect(parseExperience({ mode: "" })).toBeNull();
   });
 });

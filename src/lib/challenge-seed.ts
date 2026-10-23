@@ -6,7 +6,7 @@ export type Verify = "manual" | "workout" | "steps" | "protein" | "water";
 export type TaskType = "reps" | "tiempo" | "pasos" | "entreno" | "habito" | "nutricion" | "descanso";
 export type DayTask = { t: string; type: TaskType; target?: number };
 export type Difficulty = "facil" | "media" | "dificil";
-export type CoverStyle = "banana" | "ember" | "sky" | "peel" | "noche" | "selva";
+export type CoverStyle = "banana" | "ember" | "sky" | "peel" | "noche" | "selva" | "fresa";
 export type ChallengeStatus = "borrador" | "publicado" | "oculto" | "archivado";
 
 export type SeedChallenge = {

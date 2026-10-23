@@ -34,7 +34,7 @@ const SOON: Item = { href: "/app/conexiones", label: "Relojes", icon: Watch, hin
 const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
 
 /** `program`: programa activo (0024). Se marca en el menú con un distintivo discreto. */
-export function AppNav({ name, staff, nutrition, program = null }: { name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string } | null }) {
+export function AppNav({ name, staff, nutrition, program = null }: { name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string; mode?: string | null } | null }) {
   const path = usePathname();
   const [more, setMore] = useState(false);
   useEffect(() => setMore(false), [path]);
@@ -58,7 +58,7 @@ export function AppNav({ name, staff, nutrition, program = null }: { name: strin
         {program && (
           <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
             <span aria-hidden className="size-2 shrink-0 rounded-full bg-banana" />
-            <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">Programa activo</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
+            <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">{program.mode ?? "Programa activo"}</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
           </Link>
         )}
         <nav aria-label="Menú principal" className={`${program ? "mt-6" : "mt-10"} space-y-1`}>

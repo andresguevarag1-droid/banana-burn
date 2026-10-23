@@ -1,14 +1,14 @@
 // Héroe del programa activo en Hoy: reemplaza la tarjeta genérica de "Rutina de hoy" mientras hay un programa.
 // Portada del programa, "Semana 2 de 8, día 2", la sesión de hoy, el avance y el próximo hito. Servidor.
 import Link from "next/link";
-import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Pause, TreePalm } from "@/components/icons";
+import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Monkey, Pause, TreePalm } from "@/components/icons";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { ProgressBar } from "@/components/progress-bar";
 import { Readiness } from "@/components/readiness";
 import { ExpressChips } from "@/components/express-chips";
 import { DAY_NAMES } from "@/lib/engine";
 import type { AthleteProgram } from "@/lib/programs-server";
-import { setsLabel } from "@/lib/programs";
+import { setsLabel, tipFor } from "@/lib/programs";
 
 const fmtDay = (iso: string) => {
   const d = new Date(iso + "T12:00:00");
@@ -28,12 +28,16 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { 
   const r = p.run;
   const plan = p.plan;
   const session = r.today === "entreno" && plan.program;
+  const x = p.meta.experience;
+  // Primer día: la bienvenida del programa; después, el consejo de Coach Banana de esa semana.
+  const first = r.sessionsDone === 0 && r.week === 1 && !!x?.welcome;
+  const tip = first ? x!.welcome : tipFor(x, r.week);
   return (
     <section aria-labelledby="prog-hoy" className="overflow-hidden rounded-[1.75rem] shadow-soft">
       <ChallengeCover c={{ cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
         <div className={`relative ${ink}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />Programa activo</span>
+            <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />{x?.mode ?? "Programa activo"}</span>
             {r.phase.phase.deload && <span className="inline-flex h-7 items-center gap-1 rounded-full bg-white/85 px-2.5 text-[11px] font-extrabold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
           </div>
           <h2 id="prog-hoy" className="mt-3 text-[26px] sm:text-[30px] font-extrabold leading-tight tracking-tight text-balance">{p.title}</h2>
@@ -46,6 +50,12 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { 
       </ChallengeCover>
 
       <div className="bg-cream p-5 sm:p-6">
+        {tip && r.today !== "terminado" && (
+          <div className="mb-4 flex items-start gap-3 rounded-2xl bg-white p-3 shadow-[0_1px_0_var(--color-line)]">
+            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-xl bg-banana text-ink"><Monkey weight="duotone" className="size-5" /></span>
+            <p className="min-w-0 text-sm text-body"><b className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana-ink">{first ? "Bienvenida" : `Coach Banana, semana ${r.week}`}</b>{tip}</p>
+          </div>
+        )}
         {session ? (
           <>
             <p className="text-sm font-semibold text-muted">Hoy {DAY_NAMES[new Date(dateKey + "T12:00:00").getDay()]}, sesión del programa</p>
@@ -71,7 +81,7 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { 
           <div>
             <p className="flex items-start gap-2.5 text-ink"><TreePalm weight="duotone" className="mt-0.5 size-6 shrink-0 text-sky" /><span>
               <b className="block text-lg font-extrabold">{r.today === "semana-completa" ? "Semana completa" : "Hoy descansas"}</b>
-              <span className="text-sm text-muted">{r.today === "semana-completa" ? (r.nextOn ? `La semana ${r.week + 1} empieza el ${fmtDay(r.nextOn)}. Camina y estira.` : "Camina y estira.") : `Tu próxima sesión es el ${r.nextOn ? fmtDay(r.nextOn) : "próximo día"}: ${r.next?.session.title ?? ""}. El músculo crece cuando descansas.`}</span>
+              <span className="text-sm text-muted">{r.today === "semana-completa" ? (r.nextOn ? `La semana ${r.week + 1} empieza el ${fmtDay(r.nextOn)}. Camina y estira.` : "Camina y estira.") : `${x?.restDay ? `${x.restDay}. ` : ""}Tu próxima sesión es el ${r.nextOn ? fmtDay(r.nextOn) : "próximo día"}: ${r.next?.session.title ?? ""}. El músculo crece cuando descansas.`}</span>
             </span></p>
             {r.next && <Link href="/app/entreno" className="btn-ghost mt-4 h-12 w-full sm:w-auto px-5">Adelantar la sesión de {r.next.session.title}<ArrowRight weight="bold" className="size-4" /></Link>}
           </div>

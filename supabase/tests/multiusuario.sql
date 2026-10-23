@@ -473,7 +473,7 @@ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 13);
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 16);
 select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
 select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
 select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
@@ -534,7 +534,7 @@ update public.challenges_catalog set status = 'publicado' where slug = 'reto-pag
 
 -- Staff: admin (S) edita y regala; soporte (P) regala pero no edita el catálogo
 set role authenticated; select bbtest.login('S');
-select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 16);
+select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 19);
 select bbtest.ok('panel: admin cambia el estado', bbtest.affected($q$ update public.challenges_catalog set status = 'publicado' where slug = 'movilidad-14' $q$) = 1);
 select bbtest.ok('panel: active queda sincronizado con publicado', (select active from public.challenges_catalog where slug = 'movilidad-14') and not (select active from public.challenges_catalog where slug = 'sin-azucar-7'));
 select bbtest.ok('panel: admin edita el plan', bbtest.affected($q$ update public.challenge_plans set days = days where slug = 'movilidad-14' $q$) = 1);
@@ -559,15 +559,15 @@ select bbtest.ok('cuenta borrada: la venta queda registrada sin dueño y el acce
 -- F (prueba vigente) compra programas; A intenta tocar lo de F; S (admin) edita; E (prueba vencida) no empieza.
 reset role;
 select bbtest.login(null);
-select bbtest.ok('programas: la siembra trae 5 programas con sesiones', (select count(*) = 5 from public.challenges_catalog where kind = 'programa')
-  and (select count(distinct slug) = 5 from public.program_sessions));
+select bbtest.ok('programas: la siembra trae 8 programas con sesiones', (select count(*) = 8 from public.challenges_catalog where kind = 'programa')
+  and (select count(distinct slug) = 8 from public.program_sessions));
 select bbtest.ok('programas: los retos de hábitos siguen siendo retos', (select kind = 'reto' from public.challenges_catalog where slug = 'banana-30') and (select kind = 'reto' from public.challenges_catalog where slug = 'sprint-verano-28'));
 select bbtest.ok('programas: el insignia cuesta $9.99 y dura 8 semanas', (select price_usd = 9.99 and public._program_weeks(program) = 8 from public.challenges_catalog where slug = 'reconstruccion-8-semanas'));
 select bbtest.ok('programas: los convertidos conservan su precio', (select bool_and(price_usd = case slug when 'abdomen-21' then 4.99 when 'gluteos-30' then 6.99 when 'dominadas-desde-cero' then 7.99 else 9.99 end) from public.challenges_catalog where slug in ('abdomen-21','gluteos-30','dominadas-desde-cero','pierde-3kg-6-semanas')));
 select bbtest.fails('programas: un programa necesita su meta', $q$ update public.challenges_catalog set program = null where slug = 'abdomen-21' $q$, '23514');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 5);
+select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 8);
 select bbtest.ok('sesiones: sin comprar ve la semana 1 (fase 1)', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase = 1 $q$) = 4);
 select bbtest.ok('sesiones: sin comprar no ve las demás fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase > 1 $q$) = 0);
 select bbtest.zero('sesiones: F no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'reconstruccion-8-semanas' $q$);
@@ -602,7 +602,25 @@ select bbtest.fails('terminar: antes del final no hay certificado', $q$ select p
 select bbtest.ok('dejar: deja el programa en pausa', bbtest.affected($q$ select public.program_leave('gluteos-30') $q$) = 1);
 select bbtest.ok('dejar: queda abandonado', (select status = 'abandonado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
 select bbtest.ok('dejar: lo vuelve a empezar desde cero', public.program_start('gluteos-30', current_date, true) = 'reiniciado');
-select bbtest.ok('programas: my_program_defs trae los suyos', bbtest.num($q$ select 1 from public.my_program_defs() $q$) = 2);
+-- 0027: experiencias. Cada programa trae su modo; los nuevos se compran aparte; los hábitos manuales viven en daily_logs.
+select bbtest.ok('0027: los 8 programas traen su experiencia', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 8);
+select bbtest.ok('0027: Glúteos de acero rehecho con 4 sesiones por semana', bbtest.num($q$ select 1 from public.program_sessions where slug = 'gluteos-30' and phase = 2 $q$) = 4);
+select bbtest.fails('0027: Banana Girl sin comprar no empieza', $q$ select public.program_start('banana-girl', current_date, true) $q$, '42501');
+select bbtest.fails('0027: Abdomen marcado sin comprar no empieza', $q$ select public.program_start('abdomen-marcado', current_date, true) $q$, '42501');
+select bbtest.fails('0027: Brazos definidos sin comprar no empieza', $q$ select public.program_start('brazos-definidos', current_date, true) $q$, '42501');
+select bbtest.ok('0027: sin comprar ve solo la semana 1 de Banana Girl', bbtest.num($q$ select 1 from public.program_sessions where slug = 'banana-girl' and phase > 1 $q$) = 0 and bbtest.num($q$ select 1 from public.program_sessions where slug = 'banana-girl' and phase = 1 $q$) = 4);
+select bbtest.ok('0027: F marca un hábito del programa', bbtest.affected($q$ insert into public.daily_logs (user_id, day, program_checks) values (auth.uid(), current_date, '{activacion}') on conflict (user_id, day) do update set program_checks = excluded.program_checks $q$) = 1);
+select bbtest.fails('0027: hábitos con claves raras no entran', $q$ update public.daily_logs set program_checks = '{"<script>"}' where user_id = auth.uid() and day = current_date $q$, '23514');
+select bbtest.fails('0027: máximo 8 hábitos marcados', $q$ update public.daily_logs set program_checks = '{a,b,c,d,e,f,g,h,i}' where user_id = auth.uid() and day = current_date $q$, '23514');
+select bbtest.zero('0027: F no marca hábitos de otra cuenta', $q$ update public.daily_logs set program_checks = '{x}' where user_id <> auth.uid() $q$);
+reset role;
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'banana-girl', 'compra');
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('0027: con la compra empieza Banana Girl', public.program_start('banana-girl', current_date, true) = 'empezado');
+select bbtest.ok('0027: con la compra ve sus 3 fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'banana-girl' $q$) = 12);
+select bbtest.ok('0027: Banana Girl queda como el único activo', (select slug = 'banana-girl' from public.user_programs where user_id = auth.uid() and status = 'activo'));
+select bbtest.ok('0027: vuelve a Glúteos de acero pausando Banana Girl', public.program_start('gluteos-30', current_date, true) in ('reanudado', 'reiniciado', 'activo'));
+select bbtest.ok('programas: my_program_defs trae los suyos', bbtest.num($q$ select 1 from public.my_program_defs() $q$) = 3);
 reset role;
 -- A no ve ni toca lo de F.
 set role authenticated; select bbtest.login('A');

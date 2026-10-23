@@ -37,12 +37,23 @@ export default async function Nutricion() {
   const d = dashboard(await getAthlete(v));
   const [meals, daily, extras] = await Promise.all([getMeals(v), getDaily(v, 0, 0), getNutritionExtras(v)]);
   const { t } = d;
+  const px = d.program?.meta.experience ?? null;
   return (
     <div className="space-y-5 animate-enter">
       <header>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Comida de hoy</h1>
-        <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-419")} kcal y {t.protein} g de proteína. Se ajusta cada semana con tu peso real.</p>
+        <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-419")} kcal y {t.protein} g de proteína. {px ? `Ajustada a ${d.program!.title}.` : "Se ajusta cada semana con tu peso real."}</p>
       </header>
+      {px && px.food.length > 0 && (
+        <section aria-labelledby="comida-programa" className="rounded-[1.5rem] bg-ink p-5 text-cream">
+          <p className="text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">{px.mode}</p>
+          <h2 id="comida-programa" className="mt-1 text-xl font-extrabold text-white">Cómo comer en {d.program!.title}</h2>
+          {d.program!.meta.nutrition?.note && <p className="mt-1 text-sm text-cream/85">{d.program!.meta.nutrition.note}</p>}
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {px.food.map((f) => <li key={f} className="flex items-start gap-2 text-sm"><CheckCircle weight="fill" className="mt-0.5 size-4 shrink-0 text-banana" />{f}</li>)}
+          </ul>
+        </section>
+      )}
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] items-start [&>*]:min-w-0">
         <FoodLog quick={{ kcal: daily.log.kcal ?? 0, protein: daily.log.protein ?? 0 }} initial={meals.today} yesterday={meals.yesterday} targets={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }} dateKey={d.today.iso} demo={v.demo} country={v.country} extras={extras} />
         <aside className="space-y-3 lg:sticky lg:top-6">

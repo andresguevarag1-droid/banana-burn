@@ -10,6 +10,8 @@ const STYLE: Record<CoverStyle, { bg: string; ink: string; dots: string; chip: s
   peel: { bg: "bg-[linear-gradient(135deg,#7FA83A_0%,#3F6B0E_70%,#2C4D09_100%)]", ink: "text-white", dots: "rgb(255 255 255 / .14)", chip: "bg-banana text-ink" },
   noche: { bg: "bg-[linear-gradient(135deg,#3A3120_0%,#1B1505_70%,#0D0A02_100%)]", ink: "text-banana", dots: "rgb(255 214 10 / .12)", chip: "bg-banana text-ink" },
   selva: { bg: "bg-[linear-gradient(135deg,#FFD60A_0%,#B8C93A_45%,#3F6B0E_100%)]", ink: "text-ink", dots: "rgb(27 21 5 / .10)", chip: "bg-ink text-banana" },
+  // Banana Girl: fresa con banana. Texto ink (contraste 11:1 sobre el rosa más oscuro).
+  fresa: { bg: "bg-[linear-gradient(135deg,#FFE45C_0%,#FFC2D1_45%,#FF9DB5_100%)]", ink: "text-ink", dots: "rgb(27 21 5 / .09)", chip: "bg-ink text-[#FFC2D1]" },
 };
 
 export const coverInk = (s: CoverStyle) => STYLE[s].ink;
