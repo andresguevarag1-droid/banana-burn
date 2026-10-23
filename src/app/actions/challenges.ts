@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { getEntitlements } from "@/lib/entitlements";
+import { APP_LOCKED_MSG } from "@/lib/plan-access";
 import { MAX_ACTIVE, openState } from "@/lib/challenges";
 import { NUTRITION_LOCKED_MSG, challengeNeedsNutrition } from "@/lib/plan-access";
 import { closeDecidedChallenges, creditChallenges, getCatalog, getOwned } from "@/lib/challenges-server";
@@ -54,6 +55,7 @@ export async function checkInChallenge(ucId: string): Promise<{ ok: boolean; dem
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
   if (v.demo) return { ok: true, demo: true };
+  if (!(await getEntitlements(v)).app) return { ok: false, error: APP_LOCKED_MSG };
   const n = Number(ucId);
   if (!Number.isSafeInteger(n) || n <= 0) return { ok: false };
   const sb = await createClient();

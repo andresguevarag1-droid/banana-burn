@@ -17,6 +17,9 @@ export type Capability =
   | "users.billing"       // suscripciones y cortesías del usuario
   | "users.role"          // cambiar rol (con reglas extra, ver checkRoleChange)
   | "users.comp"          // regalar plan de cortesía con vencimiento
+  | "users.gift"          // regalar meses (se apilan, con aviso, correo y push). Solo admin: es una decisión de ingresos
+  | "referrals.view"      // referidos de un usuario, recompensas y conteos
+  | "referrals.manage"    // revocar recompensas por fraude y revisar referidos "en revisión"
   | "users.onboarding"    // reiniciar la bienvenida
   | "users.suspend"       // pausar a un usuario en la comunidad (no puede publicar ni comentar)
   | "users.delete"        // borrar una cuenta (misma secuencia que el borrado por el usuario)
@@ -42,6 +45,9 @@ export const MATRIX: Record<Capability, Role[]> = {
   "users.billing": SUPPORT_ADMIN,
   "users.role": PRIVILEGED,
   "users.comp": SUPPORT_ADMIN,
+  "users.gift": PRIVILEGED,
+  "referrals.view": SUPPORT_ADMIN,
+  "referrals.manage": PRIVILEGED,
   "users.onboarding": SUPPORT_ADMIN,
   "users.suspend": SUPPORT_ADMIN,
   "users.delete": PRIVILEGED,

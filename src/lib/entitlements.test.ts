@@ -115,3 +115,58 @@ describe("período de prueba del servicio (beta)", () => {
     expect(e.trial).toBeNull();
   });
 });
+
+describe("regalos de meses (0025)", () => {
+  const g = (o: Partial<CompRow>): CompRow => comp({ source: "regalo", ...o });
+  it("regalo de Entreno + Nutrición: todo", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [g({ plan: "completo" })] });
+    expect(e).toMatchObject({ plan: "completo", access: "comp", app: true, nutrition: true, locked: false });
+  });
+  it("regalo de Entreno: app sí, nutrición no (respeta el plan regalado)", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [g({ plan: "entreno" })] });
+    expect(e).toMatchObject({ plan: "entreno", access: "comp", app: true, nutrition: false, locked: false });
+  });
+  it("recompensa por referidos se comporta igual que un regalo", () => {
+    expect(entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [comp({ source: "referido", plan: "entreno" })] }).nutrition).toBe(false);
+  });
+  it("un regalo programado (empieza después) todavía no da acceso", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [g({ starts_at: inDays(3), expires_at: inDays(33) })] });
+    expect(e.locked).toBe(true);
+  });
+  it("regalos apilados: el fin mostrado es el del último de la cadena", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [g({ starts_at: daysAgo(5), expires_at: inDays(10) }), g({ starts_at: inDays(10), expires_at: inDays(40), created_at: daysAgo(1) })] });
+    expect(e.compEndsAt).toBe(inDays(40));
+  });
+  it("regalo de Entreno + cortesía de siempre: gana la cortesía (completo)", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [g({ plan: "entreno", expires_at: inDays(60) }), comp({ plan: "entreno", source: "cortesia", expires_at: inDays(5) })] });
+    expect(e).toMatchObject({ plan: "completo", nutrition: true });
+  });
+  it("paga Completo y tiene un regalo de Entreno vigente: manda el plan pagado", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(90), subs: [sub({ plan: "completo" })], comps: [g({ plan: "entreno" })] });
+    expect(e).toMatchObject({ plan: "completo", access: "subscription", nutrition: true });
+  });
+  it("regalo revocado por fraude: sin acceso", () => {
+    expect(entitlementsFrom({ ...base, createdAt: daysAgo(90), comps: [g({ revoked_at: daysAgo(1) })] }).locked).toBe(true);
+  });
+  it("al vencer un regalo no queda plan pegado (vale el plan previo)", () => {
+    const e = entitlementsFrom({ ...base, profilePlan: "free", createdAt: daysAgo(200), comps: [g({ previous_plan: "free", starts_at: daysAgo(100), expires_at: daysAgo(10), created_at: daysAgo(100) })] });
+    expect(e.locked).toBe(true);
+  });
+});
+
+describe("fin de la beta: el muro aplica en el servidor", () => {
+  const beta = { ...base, betaEndsAt: "2026-11-01T06:00:00.000Z" };
+  it("el 1 de noviembre a las 00:00 de Costa Rica se bloquea quien no pagó y ya pasó su prueba", () => {
+    expect(entitlementsFrom({ ...beta, now: new Date("2026-11-01T05:59:59Z"), createdAt: "2026-09-01T00:00:00Z" }).locked).toBe(false);
+    const after = entitlementsFrom({ ...beta, now: new Date("2026-11-01T06:00:00Z"), createdAt: "2026-09-01T00:00:00Z" });
+    expect(after).toMatchObject({ locked: true, app: false, nutrition: false, access: "none" });
+  });
+  it("quien se registró en la última semana de la beta conserva sus 7 días", () => {
+    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-03T12:00:00Z"), createdAt: "2026-10-30T12:00:00Z" });
+    expect(e).toMatchObject({ locked: false, access: "trial" });
+  });
+  it("con un regalo o un plan pagado no se bloquea", () => {
+    const now = new Date("2026-11-05T12:00:00Z");
+    expect(entitlementsFrom({ ...beta, now, createdAt: "2026-09-01T00:00:00Z", comps: [comp({ source: "regalo", starts_at: "2026-11-01T06:00:00Z", expires_at: "2027-02-01T06:00:00Z" })] }).locked).toBe(false);
+  });
+});

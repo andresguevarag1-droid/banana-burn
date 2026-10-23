@@ -76,12 +76,12 @@ export function bienvenida(d: { name: string }): Email {
   const preheader = "Tu entrenador personal ya está listo. Te toma 2 minutos armar tu plan.";
   const body = h1(`¡Hola, ${esc(n)}!`) +
     p("Ya tienes tu entrenador personal en el celular. Aquí no hay rutinas genéricas: cada sesión trae las cargas calculadas para ti y se ajusta según cómo te va.") +
-    list([`${dot()}<b>Rutina del día</b> lista para el gym o la casa`, `${dot(C.ember)}<b>Racha y niveles</b> para que entrenar sea un juego`, `${dot(C.peel)}<b>Comida latina</b> con proteína y calorías claras, incluida en tu prueba gratis`, `${dot(C.ink)}<b>Coach IA</b> que conoce tus datos`]) +
+    list([`${dot()}<b>Rutina del día</b> lista para el gym o la casa`, `${dot(C.ember)}<b>Racha y niveles</b> para que entrenar sea un juego`, `${dot(C.peel)}<b>Comida latina</b> con proteína y calorías claras, incluida en tu prueba gratis`, `${dot(C.ink)}<b>Coach Banana</b>, que conoce tus datos`]) +
     p("Termina tu perfil en 2 minutos y te armamos el plan.") + button("Armar mi plan", "/bienvenida");
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque creaste una cuenta en Banana Burn." }),
-    text: textLayout([`¡Hola, ${n}!`, "", "Ya tienes tu entrenador personal en el celular: rutina del día con cargas calculadas, racha y niveles, un Coach IA que conoce tus datos y, en tu prueba gratis, comida latina con proteína y calorías claras.", "", `Arma tu plan en 2 minutos: ${abs("/bienvenida")}`], undefined, "Recibes este correo porque creaste una cuenta en Banana Burn."),
+    text: textLayout([`¡Hola, ${n}!`, "", "Ya tienes tu entrenador personal en el celular: rutina del día con cargas calculadas, racha y niveles, Coach Banana, que conoce tus datos, y, en tu prueba gratis, comida latina con proteína y calorías claras.", "", `Arma tu plan en 2 minutos: ${abs("/bienvenida")}`], undefined, "Recibes este correo porque creaste una cuenta en Banana Burn."),
   };
 }
 
@@ -153,6 +153,31 @@ export function suscripcionCancelada(d: { name: string; plan: string; accessUnti
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo como confirmación de un cambio en tu suscripción." }),
     text: textLayout([`${n}, confirmamos la cancelación de ${d.plan}. No se harán más cobros.`, d.accessUntil ? `Mantienes acceso hasta el ${longDate(d.accessUntil)}.` : "", "Tus datos y progreso quedan guardados.", "", `Reactivar: ${abs("/precios")}`]),
+  };
+}
+
+/**
+ * Regalo de meses (del equipo o por referidos). Transaccional: no lleva enlace de baja.
+ * `message` es el mensaje personal que escribió el equipo (se escapa siempre).
+ */
+export function regalo(d: { name: string; months: number; plan: string; source: "regalo" | "referido"; startsAt: string; expiresAt: string; message?: string | null; startsNow: boolean }): Email {
+  const n = firstName(d.name);
+  const meses = `${d.months} ${d.months === 1 ? "mes" : "meses"}`;
+  const subject = d.source === "referido" ? `Ganaste ${meses} gratis de ${d.plan}` : `${n}, te regalaron ${meses} de ${d.plan}`;
+  const preheader = d.startsNow ? `Ya está activo hasta el ${longDate(d.expiresAt)}.` : `Empieza el ${longDate(d.startsAt)}, cuando termine el acceso que ya tienes.`;
+  const intro = d.source === "referido"
+    ? "Las personas que invitaste ya entrenan con Banana Burn. Gracias por compartir: este tiempo va por nuestra cuenta."
+    : "El equipo de Banana Burn te hizo un regalo. No tienes que hacer nada: ya quedó en tu cuenta.";
+  const r: [string, string][] = [["Plan", d.plan], ["Tiempo", meses], ["Desde", longDate(d.startsAt)], ["Hasta", longDate(d.expiresAt)]];
+  const body = badge(d.source === "referido" ? "Recompensa" : "Regalo", C.banana) + h1(esc(subject)) + p(esc(intro)) +
+    (d.message ? `<blockquote style="margin:0 0 16px;padding:14px 16px;background:${C.soft};border-radius:16px;font-size:16px;line-height:1.6;color:${C.ink};">${esc(d.message)}</blockquote>` : "") +
+    rows(r) + p(d.startsNow ? "Ya puedes usarlo. Sin cobros: al terminar, tu cuenta sigue como estaba." : "Se suma al final de tu acceso actual, así no pierdes ni un día. Sin cobros.") +
+    button("Ver mi plan", "/app/suscripcion");
+  const reason = "Recibes este correo porque se agregó tiempo gratis a tu cuenta de Banana Burn.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, body, reason }),
+    text: textLayout([subject, "", intro, ...(d.message ? ["", `"${d.message}"`] : []), "", ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
   };
 }
 

@@ -27,7 +27,9 @@ function F({ label, ...p }: { label: string } & React.InputHTMLAttributes<HTMLIn
   return <label className="block space-y-1.5"><span className="text-sm font-semibold text-ink">{label}</span><input {...p} className="input h-12" /></label>;
 }
 
-export function ProfileForm({ a }: { a: Athlete }) {
+/** Solo los campos del formulario: el resto del perfil (GLP-1, país, entreno) no viaja al navegador desde aquí. */
+export type ProfileFormData = Pick<Athlete, "name" | "dob" | "heightCm" | "startWeight" | "goalWeight" | "goalDate" | "mode" | "sex">;
+export function ProfileForm({ a }: { a: ProfileFormData }) {
   const [s, act, pending] = useActionState((st: FormState, fd: FormData) => saveProfile(st, fd).catch((): FormState => ({ error: netMessage() })), {});
   return (
     <form action={act} className="grid gap-4 sm:grid-cols-2">

@@ -167,7 +167,7 @@ export default async function Progreso() {
 
       <details id="meta" className="card group scroll-mt-6" open={!a.complete}>
         <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><CaretDown weight="bold" className="size-5 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
-        <div className="px-5 pb-5"><ProfileForm a={{ ...a, program: null, programNutrition: null }} /></div>
+        <div className="px-5 pb-5"><ProfileForm a={{ name: a.name, dob: a.dob, heightCm: a.heightCm, startWeight: a.startWeight, goalWeight: a.goalWeight, goalDate: a.goalDate, mode: a.mode, sex: a.sex }} /></div>
       </details>
     </div>
   );

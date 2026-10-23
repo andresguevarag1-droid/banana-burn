@@ -5,6 +5,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
 import { memoryRateLimit } from "@/lib/security";
 import { dbRateLimitAll, keyPart } from "@/lib/security/db-rate-limit";
+import { attributeReferral } from "@/lib/referrals-server";
 import { loginOutcome, normEmail, signupError } from "./validate";
 
 // Acceso sin correo de confirmación: si producción no tiene SMTP, el correo de confirmación nunca llega y la persona
@@ -60,8 +61,12 @@ export async function signUpConfirmed(email: string, password: string): Promise<
   const admin = adminClient();
   if (!admin) return { ok: false, error: "", fallback: true };
   if (await limited("signup", mail, admin)) return { ok: false, error: TOO_MANY };
-  const { error } = await admin.auth.admin.createUser({ email: mail, password, email_confirm: true });
-  if (!error) return { ok: true };
+  const { data, error } = await admin.auth.admin.createUser({ email: mail, password, email_confirm: true });
+  if (!error) {
+    // Invitación (/r/<código>): se atribuye aquí, en el servidor, al crear la cuenta. Nunca bloquea el registro.
+    if (data.user) await attributeReferral(data.user.id, mail);
+    return { ok: true };
+  }
   if (/already|registered|exists/i.test(error.message)) return { ok: false, error: "Ya existe una cuenta con ese correo. Entra con tu contraseña." };
   if (/password/i.test(error.message)) return { ok: false, error: "Esa contraseña es muy débil. Usa al menos 8 caracteres, con letras y números." };
   return { ok: false, error: "No pudimos crear tu cuenta. Intenta de nuevo en un momento." };

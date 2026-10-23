@@ -242,7 +242,8 @@ async function withSubs<T extends { id: string }>(sb: SB, rows: T[]): Promise<(T
   });
 }
 
-export type CompGrant = { id: number | string; plan: string; reason: string | null; starts_at: string; expires_at: string; revoked_at: string | null; granted_by_name?: string };
+/** `source` (0025): cortesía del panel, regalo de meses o recompensa por referidos. `message`: lo que ve la persona. */
+export type CompGrant = { id: number | string; plan: string; reason: string | null; starts_at: string; expires_at: string; revoked_at: string | null; granted_by_name?: string; source?: string | null; months?: number | null; message?: string | null };
 export type AuditRow = { id: number; actor: string | null; actor_name?: string; action: string; target: string | null; target_name?: string; meta: Record<string, unknown> | null; created_at: string };
 
 export type UserDetail = {
@@ -278,7 +279,8 @@ export async function getUserDetail(v: Viewer, id: string): Promise<UserDetail |
   }
 
   const sb = await createClient();
-  const { data: p } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
+  // Solo las columnas que la ficha usa (los datos de salud del perfil se muestran únicamente a quien tiene users.health).
+  const { data: p } = await sb.from("profiles").select("id,full_name,role,plan,onboarded,created_at,country,username,suspended_at,suspended_reason,goal_type,equipment,train_days").eq("id", id).maybeSingle();
   if (!p) return null;
   const acc = await sb.rpc("admin_user_account", { p_target: id });
   const a0 = (acc.data as { email: string; last_sign_in_at: string | null; last_active: string | null }[] | null)?.[0];

@@ -10,6 +10,10 @@ describe("errores del chat del coach", () => {
     expect(errorFor(401).text).toMatch(/sesión/);
     expect(errorFor(500).retry).toBe(true);
   });
+  it("402: sin plan ni prueba, muestra el mensaje del servidor y no reintenta", () => {
+    expect(errorFor(402, "Tu prueba gratis terminó. Elige un plan para seguir registrando.")).toEqual({ text: "Tu prueba gratis terminó. Elige un plan para seguir registrando.", retry: false });
+    expect(errorFor(402).text).toMatch(/plan/);
+  });
   it("503 usa el texto del servidor; configurando no ofrece reintentar", () => {
     expect(errorFor(503, "El coach se está configurando. Vuelve en un rato.")).toEqual({ text: "El coach se está configurando. Vuelve en un rato.", retry: false });
     expect(errorFor(503, "").retry).toBe(true);

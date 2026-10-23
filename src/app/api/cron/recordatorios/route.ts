@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runReminders } from "@/lib/notify-run";
 import { sweepChallenges } from "@/lib/challenges-server";
+import { deliverPendingGifts } from "@/lib/gifts-server";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 
@@ -12,7 +13,8 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
 
 /**
  * Vercel Cron (diario por defecto; cada hora con NOTIFY_CRON_MODE=hourly en Pro). Protegido con `Authorization: Bearer CRON_SECRET`.
- * Además de los avisos, acredita el día anterior de los retos automáticos y cierra los retos decididos.
+ * Además de los avisos, acredita el día anterior de los retos automáticos, cierra los retos decididos y manda el correo y
+ * el push de regalos y recompensas por referidos que aún no se avisaron (respaldo: el panel y la app ya los mandan).
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -24,5 +26,6 @@ export async function GET(req: Request) {
     return { ok: false, mode: "daily" as const, scanned: 0, candidates: 0, sent: {}, push: 0, email: 0, errors: 1 };
   });
   const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
-  return NextResponse.json({ ...stats, retos }, { status: stats.ok ? 200 : 500 });
+  const regalos = await deliverPendingGifts({ limit: 200 }).catch((e) => { logError("cron:regalos", "run_failed", { kind: errCode(e) }); return null; });
+  return NextResponse.json({ ...stats, retos, regalos }, { status: stats.ok ? 200 : 500 });
 }

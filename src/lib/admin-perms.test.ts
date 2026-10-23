@@ -34,6 +34,15 @@ describe("matriz de permisos", () => {
     expect(vis("superadmin")).toHaveLength(7);
     expect(vis("free")).toEqual([]);
   });
+  it("regalar meses y gestionar referidos: solo admin y superadmin; soporte solo mira referidos", () => {
+    for (const r of ["coach", "support", "free", "pro"] as Role[]) {
+      expect(can(r, "users.gift")).toBe(false);
+      expect(can(r, "referrals.manage")).toBe(false);
+    }
+    expect(can("support", "referrals.view")).toBe(true);
+    expect(can("coach", "referrals.view")).toBe(false);
+    for (const r of ["admin", "superadmin"] as Role[]) expect(can(r, "users.gift") && can(r, "referrals.manage")).toBe(true);
+  });
   it("suspender: soporte y admin; borrar cuentas: solo admin", () => {
     expect(can("support", "users.suspend")).toBe(true);
     expect(can("coach", "users.suspend")).toBe(false);

@@ -12,9 +12,10 @@ from (values
   (7, '0018_tienda_retos.sql',        to_regclass('public.challenge_purchases') is not null),
   (8, '0019_comunidad_tribu.sql',     exists (select 1 from pg_proc where proname = 'community_board')),
   (9, '0020_dueno_siempre_admin.sql', exists (select 1 from pg_proc where proname = 'handle_new_user' and prosrc ilike '%andresguevarag@hotmail.com%') or to_regprocedure('public.rate_hit(text,integer,integer)') is not null),
-  (10,'0021_periodo_prueba.sql',      exists (select 1 from pg_proc where proname = '_has_app_access' and prosrc like '%2026-11-01%')),
+  (10,'0021_periodo_prueba.sql',      exists (select 1 from pg_proc where proname = '_has_app_access' and (prosrc like '%2026-11-01%' or prosrc like '%_beta_ends_at()%'))),
   (11,'0022_acceso_nutricion.sql',    to_regprocedure('public.has_nutrition_access()') is not null and exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'meals' and policyname = 'meals: crear propias con nutrición')),
   (12,'0023_seguridad_2.sql',         to_regprocedure('public.rate_hit(text,integer,integer)') is not null and to_regprocedure('public.scrub_deleted_user(uuid)') is not null and not exists (select 1 from pg_proc where proname = 'handle_new_user' and prosrc ilike '%andresguevarag@hotmail.com%')),
-  (13,'0024_programas.sql',           to_regclass('public.user_programs') is not null and to_regclass('public.program_sessions') is not null and to_regprocedure('public.program_start(text,date,boolean)') is not null and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'challenges_catalog' and column_name = 'kind'))
+  (13,'0024_programas.sql',           to_regclass('public.user_programs') is not null and to_regclass('public.program_sessions') is not null and to_regprocedure('public.program_start(text,date,boolean)') is not null and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'challenges_catalog' and column_name = 'kind')),
+  (14,'0025_regalos_referidos.sql',   to_regclass('public.referrals') is not null and to_regprocedure('public.admin_gift_months(uuid,text,integer,text,text)') is not null and to_regprocedure('public._beta_ends_at()') is not null and exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'workouts' and policyname = 'workouts: crear con plan'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

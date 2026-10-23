@@ -36,6 +36,10 @@ export const ACTION_LABEL: Record<string, string> = {
   "user.comp_grant": "Cortesía otorgada",
   "user.comp_revoke": "Cortesía revocada",
   "user.comp_expire": "Cortesía vencida",
+  "user.gift": "Meses regalados",
+  "referral.reward_revoke": "Recompensa de referidos revocada",
+  "referral.approve": "Referido aprobado",
+  "referral.reject": "Referido descartado",
   "user.onboarding_reset": "Bienvenida reiniciada",
   "user.suspend": "Usuario suspendido",
   "user.unsuspend": "Usuario reactivado",
@@ -62,7 +66,7 @@ export const ACTION_LABEL: Record<string, string> = {
   "report.dismiss": "Reporte descartado",
   "report.reopen": "Reporte reabierto",
 };
-const GROUP_LABEL: Record<string, string> = { user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación" };
+const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación" };
 export const actionLabel = (a: string) => ACTION_LABEL[a] ?? a.replace(/[._]/g, " ");
 export const actionGroupLabel = (prefix: string) => GROUP_LABEL[prefix] ?? prefix;
 
@@ -71,6 +75,7 @@ const META_LABEL: Record<string, string> = {
   from: "De", to: "A", de: "De", a: "A", reason: "Motivo", motivo: "Motivo", plan: "Plan", previous_plan: "Plan anterior", restored_plan: "Plan restaurado",
   expires_at: "Vence", vence: "Vence", grant: "Cortesía", title: "Título", titulo: "Título", slug: "Identificador", active: "Activo", days: "Días",
   audience: "Audiencia", name: "Nombre", nombre: "Nombre", enabled: "Habilitado", habilitado: "Habilitado", verified: "Verificado", verificado: "Verificado",
+  months: "Meses", starts_at: "Empieza", message: "Con mensaje", reward: "Recompensa", group: "Grupo", referral: "Referido", flag: "Señal",
   target_type: "Tipo", tipo: "Tipo", target_id: "Contenido", id: "Contenido", note: "Nota", count: "Cantidad", role: "Rol", step: "Paso", cues: "Claves",
 };
 const VALUE_LABEL: Record<string, string> = {
