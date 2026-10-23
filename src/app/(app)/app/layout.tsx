@@ -62,11 +62,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!v.demo && ent.charge && (ent.charge.due || ent.charge.remind || ent.charge.phase === "procesando")) after(() => runDueForUser(v.id).then(() => {}));
   // Guía de la app: cambia con el plan, la prueba y el programa activo (lib/guide.ts).
   const px = live?.c.program.experience ?? null;
+  const liveCoach = live ? coachOf(px) : null;
   const guideInput: GuideInput = {
     name: v.name, plan: ent.plan, nutrition: ent.nutrition, cardStep,
     trial: trial ? { beta: Boolean(trial.beta), endsAt: trial.endsAt, daysLeft: trial.daysLeft } : null,
     charge: charge ? { kind: charge.kind, phase: charge.phase, plan: charge.plan, amount: charge.amount, chargeAt: charge.chargeAt } : null,
-    program: live ? { slug: live.c.id, title: live.c.title, mode: px?.mode ?? null, welcome: px?.welcome ?? null, habits: px?.habits.map((h) => h.label) ?? [], hasTips: Boolean(px?.tips.length), week: live.run.week, weeks: live.run.weeks, cover: live.c.cover, icon: live.c.icon } : null,
+    program: live ? { slug: live.c.id, title: live.c.title, mode: px?.mode ?? null, welcome: px?.welcome ?? null, habits: px?.habits.map((h) => h.label) ?? [], hasTips: Boolean(px?.tips.length), week: live.run.week, weeks: live.run.weeks, ...(live.run.byDays ? { day: Math.min(live.run.days, live.run.effectiveDay + 1), days: live.run.days } : {}), coach: liveCoach && liveCoach.id !== "banana" ? liveCoach.name : null, cover: live.c.cover, icon: live.c.icon } : null,
   };
   // Novedades (0036): lo que cambió desde la última visita, según el plan. Espera su turno detrás de la guía y las celebraciones.
   const news = newsView({ nutrition: ent.nutrition, plan: ent.plan, program: Boolean(live), staff: NEWS_STAFF_ROLES.includes(v.role) }, newsState);
@@ -77,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {live && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-[var(--program)]" />}
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
-      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
+      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} coachName={liveCoach && liveCoach.id !== "banana" ? liveCoach.name : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
       <InstallPrompt />
       <TzSync current={v.tz} />
       <ConnectionStatus />
@@ -88,7 +89,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
       <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
-        {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: coachOf(live.c.program.experience).id !== "banana" ? coachOf(live.c.program.experience).avatar : null }} />}
+        {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.today === "terminado" ? "tu certificado te espera" : live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: liveCoach && liveCoach.id !== "banana" ? liveCoach.avatar : null }} />}
         {banner === "beta-add" ? <AddCardBanner />
           : banner === "beta-scheduled" && charge ? <ScheduledBanner charge={charge} tz={v.tz} />
           : banner === "failed" && charge ? <FailedBanner charge={charge} tz={v.tz} />

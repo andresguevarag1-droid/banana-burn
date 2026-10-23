@@ -3,7 +3,9 @@
 // Tocar una ficha abre la página de técnica del ejercicio. Servidor (solo la imagen es de cliente, por el respaldo).
 import Image from "next/image";
 import Link from "next/link";
-import { SafeImage, SheetFrame } from "@/components/safe-image";
+import { SheetFrame } from "@/components/safe-image";
+import { CoachArtFill } from "@/components/coach-pic";
+import { Monkey } from "@/components/icons";
 import { TECH } from "@/lib/engine/technique";
 import { sheetFor } from "@/lib/exercise-frames";
 import { DS_ID, animFor, getLibEx } from "@/lib/library";
@@ -36,7 +38,8 @@ export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", a
           <li key={`${e.id}-${i}`} className="w-[10.5rem] shrink-0 snap-start lg:w-auto">
             <Link href={techniqueHref(e)} className="pressable group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_1px_0_rgb(27_21_5/.08)] hover:shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
               <span className={`relative block aspect-[4/3] ${pic ? "bg-[#F3E8FF]" : "bg-banana-soft"}`}>
-                {pic ? <SafeImage src={pic} alt="" fill sizes="(min-width: 1024px) 240px, 168px" className="object-contain" fallbackClassName="object-contain p-2" /> : sheet ? <SheetFrame src={sheet.url} grid={sheet.grid} cell={cell} sizes={sheet.grid === 3 ? "504px" : "336px"} /> : <Image src="/brand/mascota-sola.webp" alt="" fill sizes="168px" className="object-contain p-2" />}
+                {pic ? <CoachArtFill src={pic} sizes="(min-width: 1024px) 240px, 168px" className="object-contain"
+                  fallback={sheet ? <SheetFrame src={sheet.url} grid={sheet.grid} cell={cell} sizes={sheet.grid === 3 ? "504px" : "336px"} /> : <Monkey weight="duotone" aria-hidden className="absolute inset-0 m-auto size-12 text-ink/70" />} /> : sheet ? <SheetFrame src={sheet.url} grid={sheet.grid} cell={cell} sizes={sheet.grid === 3 ? "504px" : "336px"} /> : <Image src="/brand/mascota-sola.webp" alt="" fill sizes="168px" className="object-contain p-2" />}
                 <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-ink text-xs font-extrabold text-banana tabular-nums">{i + 1}</span>
               </span>
               <span className="flex flex-1 flex-col p-3">

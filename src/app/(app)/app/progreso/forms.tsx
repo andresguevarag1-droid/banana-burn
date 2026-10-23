@@ -37,12 +37,12 @@ export function ProfileForm({ a }: { a: ProfileFormData }) {
       <F label="Fecha de nacimiento" name="dob" type="date" defaultValue={a.dob} required />
       <F label="Estatura (cm)" name="height_cm" inputMode="decimal" defaultValue={a.heightCm} required />
       <label className="block space-y-1.5"><span className="text-sm font-semibold text-ink">Sexo</span>
-        <select name="sex" className="input h-12" defaultValue="m"><option value="m">Hombre</option><option value="f">Mujer</option></select></label>
+        <select name="sex" className="input h-12" defaultValue={a.sex}><option value="m">Hombre</option><option value="f">Mujer</option></select></label>
       <F label="Peso inicial (kg)" name="start_weight" inputMode="decimal" defaultValue={a.startWeight} required />
       <F label="Peso meta (kg)" name="goal_weight" inputMode="decimal" defaultValue={a.goalWeight} required />
       <F label="Fecha meta" name="goal_date" type="date" defaultValue={a.goalDate} required />
       <label className="block space-y-1.5"><span className="text-sm font-semibold text-ink">Modo</span>
-        <select name="mode" className="input h-12" defaultValue={a.mode}><option value="acelerada">Acelerada (−500 kcal)</option><option value="recomp">Recomposición (−200 kcal)</option></select></label>
+        <select name="mode" className="input h-12" defaultValue={a.mode}><option value="acelerada">Acelerada (−500 kcal)</option><option value="recomp">Recomposición (−200 kcal)</option><option value="fuerza">Ganar fuerza (+250 kcal)</option></select></label>
       <label className="sm:col-span-2 flex gap-3 items-start text-sm text-muted">
         <input type="checkbox" name="health_consent" required className="mt-1 size-4 accent-ink" />
         Autorizo a Banana Burn a procesar mis datos de salud (peso, medidas, alimentación) para personalizar mi plan, según la Ley 8968. Puedo retirar este consentimiento y borrar mis datos cuando quiera.

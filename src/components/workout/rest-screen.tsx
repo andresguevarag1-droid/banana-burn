@@ -40,8 +40,10 @@ export type RestInfo = {
  * luego una sola pregunta de un toque (¿cómo se sintió?), el reloj grande y lo que sigue.
  * Se puede minimizar para ajustar pesos mientras corre.
  */
-export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onSkip, onMinimize }: {
+export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onSkip, onMinimize, minimizeLabel = "Ajustar pesos" }: {
   left: number; total: number; info: RestInfo; closing: boolean;
+  /** "Ajustar pesos" o, sin carga (pilates, plancha), "Ajustar la serie". */
+  minimizeLabel?: string;
   onEffort: (e: Effort) => void; onAdjust: (d: number) => void; onSkip: () => void; onMinimize: () => void;
 }) {
   const go = useRef<HTMLButtonElement>(null);
@@ -73,8 +75,8 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
         <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-bold text-white/70">Descanso</p>
-            <button type="button" onClick={onMinimize} className="tap pressable inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">
-              <CaretDown weight="bold" className="size-4" />Ajustar pesos
+            <button type="button" onClick={onMinimize} className="tap pressable inline-flex items-center gap-1.5 h-11 px-3.5 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">
+              <CaretDown weight="bold" className="size-4" />{minimizeLabel}
             </button>
           </div>
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { ageOn, goalPace, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
 import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
@@ -8,6 +9,7 @@ import { programNutrition, withProgramProtein, type ProgramNutrition } from "@/l
 import { getActiveProgram, programContext, type AthleteProgram } from "@/lib/programs-server";
 import { getVoice } from "@/lib/voice-server";
 import type { Voice } from "@/lib/voice";
+import { DEMO_GIRL, demoState } from "@/lib/demo-persona";
 
 export type Athlete = {
   name: string; dob: string; heightCm: number; startWeight: number; currentWeight: number; goalWeight: number; goalDate: string; startDate: string; mode: Mode; complete: boolean; trainDays: number; sex: Sex; equipment: Equipment; level: Level; minutes: number | null; glp1: Glp1;
@@ -25,8 +27,20 @@ export type Athlete = {
 
 const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 94.9, currentWeight: 93.1, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true, trainDays: 6, sex: "m", equipment: "gym", level: "intermedio", minutes: null, glp1: { on: false, med: "semaglutida", injectionDow: null, since: null } };
 
+/** Solo el sexo de la persona (para ordenar la tienda o el texto en femenino) sin cargar todo el atleta. */
+export const getSex = cache(async (v: Viewer): Promise<Sex> => {
+  if (v.demo) return (await demoState()).girl ? "f" : "m";
+  const { data } = await (await createClient()).from("profiles").select("sex").eq("id", v.id).maybeSingle();
+  return data?.sex === "f" ? "f" : "m";
+});
+
 export async function getAthlete(v: Viewer): Promise<Athlete> {
-  if (v.demo) return withProgram(v, { ...DEMO, voice: await getVoice(v), tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) });
+  if (v.demo) {
+    // Demo de chica (?programa=pilates-casa-30 o ?persona=chica): Valeria, mujer; en Pilates entrena en casa.
+    const ds = await demoState();
+    const girl: Partial<Athlete> = ds.girl ? { name: DEMO_GIRL.name, sex: "f", heightCm: DEMO_GIRL.heightCm, goalWeight: DEMO_GIRL.goalWeight, trainDays: 5, ...(ds.program === "pilates-casa-30" ? { equipment: "casa" as Equipment, level: "principiante" as Level } : {}) } : {};
+    return withProgram(v, { ...DEMO, ...girl, voice: await getVoice(v), tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) });
+  }
   const sb = await createClient();
   const [{ data: p }, { data: g }, { data: w }, ent, voice] = await Promise.all([
     sb.from("profiles").select("full_name,dob,height_cm,train_days,sex,onboarded,equipment,level,session_minutes,glp1,glp1_med,glp1_injection_dow,glp1_since").eq("id", v.id).maybeSingle(),

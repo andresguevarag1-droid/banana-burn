@@ -10,7 +10,7 @@ import { getMeasures, getPhotos } from "@/lib/measures";
 import { todayFor } from "@/lib/today";
 import { EX, type ExerciseId } from "@/lib/engine";
 import { getLiftGains, getProgramStates, loadProgram, exInfo } from "@/lib/programs-server";
-import { adaptId, addDays, phaseAt, sessionsOfPhase, weeksOf, daysOf, durationLabel } from "@/lib/programs";
+import { adaptId, addDays, phaseAt, programDayOf, sessionsOfPhase, weeksOf, daysOf, durationLabel, weekDaysLabel } from "@/lib/programs";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { weekLabel } from "@/components/programas/program-hero";
 import { ProgramControls, StartProgramButton } from "@/components/programas/program-actions";
@@ -21,6 +21,7 @@ export const metadata = { title: "Avance del programa" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmt = (iso: string) => new Date(iso.slice(0, 10) + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" });
+const NO_KG_EQ = new Set(["body weight", "band", "resistance band"]);
 const STATUS: Record<string, string> = { activo: "En curso", pausado: "En pausa", completado: "Completado", abandonado: "Lo dejaste" };
 
 /** Registro más cercano a una fecha (hasta 7 días antes o después). */
@@ -50,7 +51,8 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
   const keyIds = [...new Set(def.meta.keyLifts.map((id) => adaptId(allEx.find((e) => e.id === id) ?? { id }, a.equipment, def.meta.adapt, exInfo)))];
   const units = Object.fromEntries(keyIds.map((id) => {
     const e = allEx.find((x) => x.id === id || x.home === id);
-    const bw = id.startsWith("ds:") ? exInfo(id)?.eq === "body weight" : EX[id as ExerciseId]?.inc === 0;
+    // Sin carga en kilos: peso corporal y bandas (el teaser con banda de Pilates se mide en repeticiones, no en 1RM).
+    const bw = id.startsWith("ds:") ? NO_KG_EQ.has(exInfo(id)?.eq ?? "") : EX[id as ExerciseId]?.inc === 0;
     return [id, e?.unit === "s" ? "s" : bw ? "reps" : "kg"] as const;
   })) as Record<string, "kg" | "reps" | "s">;
   const gains = await getLiftGains(v, keyIds, st.startedOn, units);
@@ -92,7 +94,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
         {[
           { l: "Cumplimiento", v: `${Math.round(run.pct * 100)} %`, h: "de las sesiones del programa" },
           { l: "Sesiones hechas", v: `${run.sessionsDone}`, h: `de ${run.sessionsTotal}${run.extrasDone ? `, más ${run.extrasDone} extra` : ""}` },
-          { l: "Perdidas", v: `${run.sessionsMissed}`, h: run.sessionsMissed ? "en semanas que ya pasaron" : "ninguna, vas al día" },
+          { l: "Perdidas", v: `${run.sessionsMissed}`, h: run.sessionsMissed ? (run.byDays ? "en días que ya pasaron" : "en semanas que ya pasaron") : st.status === "completado" ? "ninguna" : "ninguna, vas al día" },
           run.byDays ? { l: "Día", v: `${Math.min(run.days, run.effectiveDay + 1)} de ${run.days}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` } : { l: "Semana", v: `${Math.min(run.week, weeks)} de ${weeks}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` },
         ].map((k) => (
           <div key={k.l} className="card p-4"><p className="text-xs font-bold text-muted">{k.l}</p><p className="mt-1 text-2xl font-extrabold tabular-nums text-ink">{k.v}</p><p className="text-xs text-muted">{k.h}</p></div>
@@ -101,7 +103,8 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
       <ProgressBar value={run.pct} min={0.02} className="h-3" fill="bg-ink" track="bg-line" label={`${Math.round(run.pct * 100)} % del programa`} />
 
       <section aria-labelledby="semanas" className="card p-5">
-        <h2 id="semanas" className="font-extrabold text-ink">Semana por semana</h2>
+        <h2 id="semanas" className="font-extrabold text-ink">{run.byDays ? `Tus ${run.days} días` : "Semana por semana"}</h2>
+        {run.byDays && <p className="mt-1 text-sm text-muted">Cada casilla es una sesión, con el día del programa en que toca.</p>}
         <ol className="mt-3 space-y-1.5">
           {Array.from({ length: weeks }, (_, i) => i + 1).map((w) => {
             const ph = phaseAt(def.meta, w);
@@ -109,13 +112,15 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
             const cur = w === run.week && (st.status === "activo" || st.status === "pausado");
             return (
               <li key={w} className={`flex items-center gap-3 rounded-xl px-2 py-1.5 ${cur ? "bg-banana-soft" : ""}`}>
-                <span className="w-20 shrink-0 text-xs font-bold text-muted">Semana {w}{ph.phase.deload ? <span className="block text-[10px] text-sky">descarga</span> : null}</span>
+                <span className="w-20 shrink-0 text-xs font-bold text-muted first-letter:uppercase">{run.byDays ? weekDaysLabel(def.meta, w) : `Semana ${w}`}{ph.phase.deload ? <span className="block text-[10px] text-sky">descarga</span> : null}</span>
                 <span className="flex flex-wrap gap-1.5">
                   {ss.map((s) => {
                     const ok = doneKeys.has(`${w}.${s.day}`);
+                    // En días (Pilates 30 días): el día del programa en que el calendario pone esa sesión.
+                    const label = run.byDays ? programDayOf(def, w, s.day) : s.day;
                     const past = w < run.week || (st.status !== "activo" && st.status !== "pausado");
-                    return <span key={s.day} title={`${s.title}${ok ? ": hecha" : past && !s.optional ? ": perdida" : ""}`} className={`grid size-7 place-items-center rounded-lg text-[11px] font-bold ${ok ? "bg-ink text-banana" : past && !s.optional ? "bg-cream text-bad" : s.optional ? "border border-dashed border-line text-faint" : "border border-line bg-white text-muted"}`}>
-                      {ok ? <Check weight="bold" className="size-3.5" /> : past && !s.optional ? <X weight="bold" className="size-3" /> : s.day}
+                    return <span key={s.day} title={`${run.byDays ? `Día ${label}: ` : ""}${s.title}${ok ? ": hecha" : past && !s.optional ? ": perdida" : ""}`} className={`grid size-7 place-items-center rounded-lg text-[11px] font-bold ${ok ? "bg-ink text-banana" : past && !s.optional ? "bg-cream text-bad" : s.optional ? "border border-dashed border-line text-faint" : "border border-line bg-white text-muted"}`}>
+                      {ok ? <Check weight="bold" className="size-3.5" /> : past && !s.optional ? <X weight="bold" className="size-3" /> : label}
                       <span className="sr-only">{ok ? "hecha" : past && !s.optional ? "perdida" : "pendiente"}</span>
                     </span>;
                   })}
@@ -127,7 +132,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
       </section>
 
       <section aria-labelledby="fuerza" className="card p-5">
-        <h2 id="fuerza" className="flex items-center gap-2 font-extrabold text-ink"><TrendUp weight="duotone" className="size-5 text-peel" />Fuerza en los ejercicios clave</h2>
+        <h2 id="fuerza" className="flex items-center gap-2 font-extrabold text-ink"><TrendUp weight="duotone" className="size-5 text-peel" />{Object.values(units).includes("kg") ? "Fuerza en los ejercicios clave" : "Tu avance en los ejercicios clave"}</h2>
         <p className="mt-1 text-sm text-muted">Tu mejor serie en la primera sesión del programa contra la más reciente{Object.values(units).includes("kg") ? " (1RM estimado)" : ""}.</p>
         {gains.length ? (
           <ul className="mt-3 divide-y divide-line">
@@ -170,7 +175,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
       {(st.status === "activo" || st.status === "pausado") && (
         <section aria-labelledby="opciones" className="card p-5">
           <h2 id="opciones" className="font-extrabold text-ink">Opciones</h2>
-          <p className="mt-1 text-sm text-muted">{st.status === "pausado" ? `En pausa desde el ${fmt(st.pausedOn ?? today)}. La semana no avanza mientras tanto.` : run.canFinish ? "Terminaste el calendario del programa. Ciérralo para recibir tu certificado." : `Si necesitas unos días, pausa: la semana deja de avanzar. Termina el ${fmt(addDays(st.startedOn, daysOf(def.meta) - 1 + st.pausedDays))} si sigues al día.`}</p>
+          <p className="mt-1 text-sm text-muted">{st.status === "pausado" ? `En pausa desde el ${fmt(st.pausedOn ?? today)}. ${run.byDays ? "Los días del programa no avanzan" : "La semana no avanza"} mientras tanto.` : run.canFinish ? (run.today === "terminado" ? "Terminaste el calendario del programa. Ciérralo para recibir tu certificado." : "Hiciste todas las sesiones del programa. Ya puedes cerrarlo y recibir tu certificado.") : `Si necesitas unos días, pausa: ${run.byDays ? "el conteo de días se detiene" : "la semana deja de avanzar"}. Termina el ${fmt(addDays(st.startedOn, daysOf(def.meta) - 1 + st.pausedDays))} si sigues al día.`}</p>
           <div className="mt-4 space-y-3">
             {st.status === "pausado" && ent.app && <StartProgramButton slug={slug} title={c.title} label="Reanudar programa" className="btn-primary h-12 px-5" />}
             <ProgramControls slug={slug} title={c.title} status={st.status} canFinish={run.canFinish} />

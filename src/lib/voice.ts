@@ -112,12 +112,25 @@ export function setsLegend(v: Voice) {
 }
 
 /** Resumen del día en Entrenar y en Hoy. */
-export function sessionLine(v: Voice, o: { exercises: number; mins: number; cardio?: boolean }) {
+/**
+ * "5 ejercicios en unos 40 min, tempo 3-1-1". `tempo`: el de la sesión (un programa de pilates usa 2-1-2); null lo
+ * omite (sesión sin un tempo común); sin pasarlo, el 3-1-1 del método.
+ */
+export function sessionLine(v: Voice, o: { exercises: number; mins: number; cardio?: boolean; tempo?: string | null }) {
+  const tempo = o.tempo === undefined ? "3-1-1" : o.tempo;
   return t(v, {
     basico: `${o.exercises} ejercicios, unos ${o.mins} minutos${o.cardio ? ", y al final caminas" : ""}. Te guío paso a paso.`,
-    intermedio: `${o.exercises} ejercicios en unos ${o.mins} min${o.cardio ? ", más cardio al final" : ""}, tempo 3-1-1`,
-    tecnico: `${o.exercises} ejercicios, ~${o.mins} min${o.cardio ? " + cardio LISS" : ""}, tempo 3-1-1, RIR 1-2`,
+    intermedio: `${o.exercises} ejercicios en unos ${o.mins} min${o.cardio ? ", más cardio al final" : ""}${tempo ? `, tempo ${tempo}` : ""}`,
+    tecnico: `${o.exercises} ejercicios, ~${o.mins} min${o.cardio ? " + cardio LISS" : ""}${tempo ? `, tempo ${tempo}` : ""}, RIR 1-2`,
   });
+}
+
+/** Tempo que comparte la mayoría de los ejercicios de una sesión de programa (null si no hay uno común). */
+export function commonTempo(exs: { tempo?: string }[]): string | null {
+  const n = new Map<string, number>();
+  for (const e of exs) if (e.tempo) n.set(e.tempo, (n.get(e.tempo) ?? 0) + 1);
+  const top = [...n.entries()].sort((a, b) => b[1] - a[1])[0];
+  return top && top[1] * 2 >= exs.length ? top[0] : null;
 }
 
 /* ───────────── Por qué importa ───────────── */
@@ -132,10 +145,13 @@ export function whyItMatters(v: Voice) {
 
 /* ───────────── Check-in de energía ───────────── */
 
-export function readinessTips(v: Voice): [string, string, string] {
+/** `program`: en un programa el tempo lo marca cada ejercicio (pilates 2-1-2, glúteo 2-2-1), no el 3-1-1 del método. */
+export function readinessTips(v: Voice, program = false): [string, string, string] {
   return [
     t(v, { basico: "Modo suave: una serie menos en cada ejercicio y que te sobren 3 repeticiones. Entrenar suave también suma a tu racha.", intermedio: "Modo suave: una serie menos por ejercicio y RIR 3 (te quedan 3 reps). Entrenar suave también suma a tu racha.", tecnico: "Modo suave: −1 serie por ejercicio, RIR 3. Cuenta para la racha." }),
-    t(v, { basico: "Plan normal: baja lento contando 3 y deja 1 o 2 repeticiones en el tanque.", intermedio: "Plan normal: tempo 3-1-1 y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo 3-1-1, RIR 1-2." }),
+    program
+      ? t(v, { basico: "Plan normal: sigue el ritmo que marca cada ejercicio y deja 1 o 2 repeticiones en el tanque.", intermedio: "Plan normal: el tempo de cada ejercicio y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo del programa, RIR 1-2." })
+      : t(v, { basico: "Plan normal: baja lento contando 3 y deja 1 o 2 repeticiones en el tanque.", intermedio: "Plan normal: tempo 3-1-1 y RIR 1-2 (te quedan 1 o 2 reps).", tecnico: "Plan normal: tempo 3-1-1, RIR 1-2." }),
     t(v, { basico: "Aprovecha: intenta 1 repetición extra en la última serie de los ejercicios grandes.", intermedio: "Aprovecha: intenta 1 rep extra en la última serie de cada básico.", tecnico: "Día fuerte: +1 rep en la última serie de los compuestos (top set)." }),
   ];
 }
@@ -144,7 +160,9 @@ export function readinessTips(v: Voice): [string, string, string] {
 
 export type RxType = "cal" | "up" | "reps" | "hold" | "reset" | "deload";
 
-export function rxBadge(v: Voice, type: RxType) {
+/** `unit` "s": ejercicio por tiempo (plancha): la progresión es en segundos, no "+1 rep" ni "sube carga". */
+export function rxBadge(v: Voice, type: RxType, unit?: string) {
+  if (unit === "s" && (type === "reps" || type === "up")) return t(v, { basico: "Unos segundos más", intermedio: "+ segundos", tecnico: "Progresión de tiempo" });
   const L: Record<RxType, { basico: string; intermedio: string; tecnico: string }> = {
     cal: { basico: "Primer día", intermedio: "Calibración", tecnico: "Calibración" },
     up: { basico: "Sube el peso", intermedio: "Sube carga", tecnico: "Progresión de carga" },

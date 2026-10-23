@@ -11,6 +11,7 @@ import { animFor, es, getLibEx, MUSCLE } from "@/lib/library";
 import { getCatalog, getOwned } from "@/lib/challenges-server";
 import { isProgram, type Challenge, type CoverStyle } from "@/lib/challenges";
 import { PROGRAM_SEED_BY_SLUG } from "@/lib/program-seed";
+import { demoState, isDemoGirlProgram, type DemoState } from "@/lib/demo-persona";
 import {
   addDays, calendarSlot, parseProgramTemplate, parseSession, plannedFromSession, resolveProgram, restDay, restLabel, setsLabel,
   type DoneSession, type ExInfo, type ProgramDef, type ProgramMeta, type ProgramRun, type ProgramSession, type ProgramState, type ProgramStatus,
@@ -52,11 +53,39 @@ function demoDone(today: string): DoneSession[] {
   return [[1, 1, 0], [1, 2, 1], [1, 3, 3], [2, 1, 7]].map(([week, day, off]) => ({ week, day, on: addDays(s, off) }));
 }
 
+/**
+ * Demo de chica (?programa=pilates-casa-30&dia=12): Valeria va por el día `day` y no se saltó ninguna sesión.
+ * En pausa, la pausó hace 3 días en ese mismo día; completado, lo cerró ayer.
+ */
+export function girlDemoState(d: DemoState, today: string): ProgramState {
+  const slug = d.program;
+  const back = d.day - 1;
+  if (d.status === "pausado") return { slug, status: "pausado", startedOn: addDays(today, -back - 3), pausedOn: addDays(today, -3), pausedDays: 0, completedAt: null };
+  if (d.status === "completado") return { slug, status: "completado", startedOn: addDays(today, -back), pausedOn: null, pausedDays: 0, completedAt: `${addDays(today, -1)}T19:00:00.000Z` };
+  return { slug, status: "activo", startedOn: addDays(today, -back), pausedOn: null, pausedDays: 0, completedAt: null };
+}
+/** Sesiones hechas del demo de chica: todas las que el calendario puso antes de hoy. */
+export function girlDemoDone(st: ProgramState, today: string): DoneSession[] {
+  const seed = PROGRAM_SEED_BY_SLUG[st.slug];
+  if (!seed) return [];
+  const def = { meta: seed.meta, sessions: seed.sessions };
+  const active = { ...st, status: "activo" as const };
+  const out: DoneSession[] = [];
+  const last = st.status === "pausado" && st.pausedOn ? addDays(st.pausedOn, -1) : addDays(today, -1);
+  for (let on = st.startedOn; on <= last; on = addDays(on, 1)) {
+    const slot = calendarSlot(def, active, today, on);
+    if (slot) out.push({ week: slot.week, day: slot.day, on });
+  }
+  return out;
+}
+
 /** Programas de la persona (todos los estados). Sin la migración 0024: ninguno. */
 export const getProgramStates = cache(async (v: Viewer): Promise<ProgramState[]> => {
   if (v.demo) {
     const today = todayFor(v).iso;
     // Demo: ?programa=no muestra la rutina normal del motor (sin programa activo) para revisar Hoy y Entrenar.
+    const ds = await demoState();
+    if (isDemoGirlProgram(ds.program)) return [girlDemoState(ds, today)];
     if ((await cookies()).get("bb_demo_programa")?.value === "no") return [{ slug: "abdomen-marcado", status: "completado", startedOn: addDays(today, -55), pausedOn: null, pausedDays: 0, completedAt: `${addDays(today, -12)}T19:00:00.000Z` }];
     // Antes del programa insignia, Andrés completó Abdomen marcado (6 semanas): su certificado sale en Retos y en su perfil.
     return [
@@ -84,7 +113,12 @@ export const getProgramSessions = cache(async (v: Viewer, slug: string): Promise
 
 /** Sesiones hechas desde `since` (entrenos guardados con la plantilla del programa). */
 export async function getProgramDone(v: Viewer, slug: string, since: string): Promise<DoneSession[]> {
-  if (v.demo) return slug === DEMO_PROGRAM ? demoDone(todayFor(v).iso) : [];
+  if (v.demo) {
+    const today = todayFor(v).iso;
+    if (slug === DEMO_PROGRAM) return demoDone(today);
+    const st = (await getProgramStates(v)).find((s) => s.slug === slug);
+    return st && isDemoGirlProgram(slug) ? girlDemoDone(st, today) : [];
+  }
   const { data } = await (await createClient()).from("workouts").select("day,template").eq("user_id", v.id).like("template", `p:${slug}:%`).gte("day", since).order("day").limit(500);
   const out: DoneSession[] = [];
   for (const r of (data ?? []) as { day: string; template: string }[]) {

@@ -1,14 +1,14 @@
 // Página de un programa en la tienda (servidor): vende la transformación con datos reales del programa.
 // Para quién es, el resultado, duración, días, minutos, equipo y nivel; la semana 1 completa; la técnica animada de un
 // ejercicio; qué cambia en tu app al empezarlo; fases; precio y botón. Sin testimonios ni cifras inventadas.
-import Image from "next/image";
+import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
 import type { Viewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { getAthlete } from "@/lib/athlete";
 import { getOwned, levelPerks } from "@/lib/challenges-server";
 import { exAnim, exInfo, getProgramSessions, getProgramStates, sessionViews, type ProgramChallenge } from "@/lib/programs-server";
-import { LEVEL_LABEL, MODE_LABEL, daysLabel, daysOf, durationLabel, phaseAt, sessionsOfPhase, weeksOf } from "@/lib/programs";
+import { LEVEL_LABEL, MODE_LABEL, programDayOf, daysLabel, daysOf, durationLabel, phaseAt, sessionsOfPhase, weeksOf } from "@/lib/programs";
 import { coachArt, coachOf } from "@/lib/coaches";
 import { priceMinor, usd } from "@/lib/challenges";
 import { NUTRITION_PLAN_NAME } from "@/lib/plan-access";
@@ -20,6 +20,9 @@ import { ProgramWeek } from "./program-week";
 import { StartProgramButton } from "./program-actions";
 import { ArrowLeft, ArrowRight, BananaMedal, Barbell, CalendarCheck, CheckCircle, Clock, Eye, ForkKnife, Info, Lightning, Shield, Sparkle, Target, TreePalm, WarningCircle } from "@/components/icons";
 
+/** "Días 1 a 7", "Días 29 y 30", "Día 29". */
+const daysSpan = (a: number, b: number) => (b <= a ? `Día ${a}` : b === a + 1 ? `Días ${a} y ${b}` : `Días ${a} a ${b}`);
+
 export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: ProgramChallenge; preview?: boolean }) {
   const [owned0, perks, states, ent, a] = await Promise.all([getOwned(v), levelPerks(v), getProgramStates(v), getEntitlements(v), getAthlete(v)]);
   // Vista previa del panel: se ve como alguien que todavía no lo compró.
@@ -29,6 +32,8 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   const meta = c.program;
   const weeks = weeksOf(meta);
   const totalDays = daysOf(meta), dur = durationLabel(meta);
+  // Programa contado en días (Pilates 30 días): todo se dice en días, no en semanas.
+  const byDays = totalDays !== weeks * 7;
   const coach = coachOf(meta.experience);
   const days = daysLabel(meta, sessions);
   const week1 = sessionsOfPhase(sessions, 1);
@@ -67,7 +72,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   else cta = (
     <>
       <StartProgramButton slug={c.id} title={c.title} label={st?.status === "pausado" ? "Reanudar programa" : st ? "Empezar de nuevo" : "Empezar programa"} />
-      <p className="mt-2 text-center text-xs text-muted">{st?.status === "pausado" ? "Sigues donde lo dejaste." : other ? "Tu otro programa activo queda en pausa, con su avance guardado." : "Empieza hoy: la semana 1 arranca con tu primera sesión."}</p>
+      <p className="mt-2 text-center text-xs text-muted">{st?.status === "pausado" ? "Sigues donde lo dejaste." : other ? "Tu otro programa activo queda en pausa, con su avance guardado." : byDays ? "Empieza hoy: el día 1 es tu primera sesión." : "Empieza hoy: la semana 1 arranca con tu primera sesión."}</p>
     </>
   );
 
@@ -79,11 +84,11 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
       : { icon: Lightning, t: "Cada ejercicio trae sus repeticiones o segundos exactos, y suben semana a semana." },
     ...(meta.adapt ? [{ icon: Target, t: "Si entrenas en casa, los ejercicios de máquina cambian por su versión con tu equipo." }] : []),
     ...(n ? [{ icon: Info, t: ent.nutrition ? `Tus calorías y tu proteína siguen el programa: ${MODE_LABEL[n.mode ?? a.mode].toLowerCase()}${n.proteinPerKg ? `, con ${n.proteinPerKg.toLocaleString("es-419")} g de proteína por kg` : ""}.` : `El programa ajusta calorías y proteína en ${NUTRITION_PLAN_NAME}. Con tu plan actual, el entreno cambia y tu nutrición no.` }] : []),
-    { icon: CalendarCheck, t: "Hoy muestra tu semana del programa, tu avance y el próximo hito, con los colores del programa." },
+    { icon: CalendarCheck, t: `Hoy muestra ${byDays ? `en qué día de los ${totalDays} vas` : "tu semana del programa"}, tu avance y el próximo hito, con los colores del programa.` },
     ...(x ? [
       { icon: Sparkle, t: `Toda la app entra en ${x.mode}: la cinta del programa te acompaña en cada sección y ${coach.name} responde con su enfoque.` },
       ...(x.habits.length ? [{ icon: CheckCircle, t: `Tus hábitos de cada día: ${x.habits.map((h) => h.label.toLowerCase()).join(", ")}.` }] : []),
-      ...(x.tips.length ? [{ icon: Lightning, t: `Un consejo de ${coach.name} para cada una de las ${Math.min(x.tips.length, weeks)} semanas.` }] : []),
+      ...(x.tips.length ? [{ icon: Lightning, t: byDays ? `Un consejo nuevo de ${coach.name} cada semana, del día 1 al ${totalDays}.` : `Un consejo de ${coach.name} para cada una de las ${Math.min(x.tips.length, weeks)} semanas.` }] : []),
       ...(x.food.length ? [{ icon: ForkKnife, t: `Cómo comer en este programa: ${x.food[0].charAt(0).toLowerCase()}${x.food[0].slice(1)}` }] : []),
     ] : []),
     { icon: TreePalm, t: "Puedes pausarlo o dejarlo cuando quieras y volver a tu rutina normal. Tu avance queda guardado." },
@@ -137,7 +142,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
 
           {coach.id !== "banana" && (
             <section aria-labelledby="tu-coach" className="flex items-center gap-4 overflow-hidden rounded-[1.5rem] bg-[linear-gradient(135deg,#F3E8FF,#FFD6E7)] p-4 sm:p-5">
-              <Image src={coach.hello} alt={`${coach.name} saludando`} width={128} height={128} sizes="128px" className="size-28 shrink-0 object-contain sm:size-32" />
+              <CoachPic src={coach.hello} alt={`${coach.name} saludando`} size={128} className="size-28 shrink-0 rounded-2xl object-contain sm:size-32 !bg-transparent" iconClassName="size-14" />
               <div className="min-w-0">
                 <p className="text-xs font-extrabold uppercase tracking-[.12em] text-ink/70">Tu coach en este programa</p>
                 <h2 id="tu-coach" className="text-xl font-extrabold text-ink">{coach.name}</h2>
@@ -159,10 +164,10 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
 
           <section aria-labelledby="semana1" className="space-y-3">
             <div>
-              <h2 id="semana1" className="text-xl font-extrabold text-ink">Tu semana 1, completa</h2>
-              <p className="text-sm text-muted">Fase 1: {phaseAt(meta, 1).phase.name}. {owned ? "" : "El resto de las semanas se abre al comprarlo."}</p>
+              <h2 id="semana1" className="text-xl font-extrabold text-ink">{byDays ? "Tus primeros 7 días, completos" : "Tu semana 1, completa"}</h2>
+              <p className="text-sm text-muted">Fase 1: {phaseAt(meta, 1).phase.name}. {owned ? "" : byDays ? `El resto de los ${totalDays} días se abre al comprarlo.` : "El resto de las semanas se abre al comprarlo."}</p>
             </div>
-            {week1.length ? <ProgramWeek cta={false} current={1} label="Sesiones de la semana 1"
+            {week1.length ? <ProgramWeek cta={false} current={1} label={byDays ? "Sesiones de los días 1 a 7" : "Sesiones de la semana 1"} dayLabel={byDays ? Object.fromEntries(week1.map((s) => [s.day, programDayOf({ meta, sessions }, 1, s.day)])) : undefined}
               sessions={sessionViews({ slug: c.id, title: c.title, meta }, c.icon, week1, 1, a.equipment, () => false, () => null)} /> : <p className="text-sm text-muted">Las sesiones de este programa se están preparando.</p>}
           </section>
 
@@ -173,7 +178,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {allIds.filter((id) => coachArt(coach, id)).slice(0, 6).map((id) => (
                   <li key={id} className="overflow-hidden rounded-2xl bg-[#F3E8FF]">
-                    <Image src={coachArt(coach, id)!} alt="" width={240} height={240} sizes="(min-width: 640px) 200px, 45vw" className="aspect-square w-full object-contain" />
+                    <CoachPic src={coachArt(coach, id)!} size={240} sizes="(min-width: 640px) 200px, 45vw" className="aspect-square w-full object-contain" iconClassName="size-12" />
                     <p className="px-2.5 pb-2.5 pt-1 text-sm font-bold leading-tight text-ink">{exInfo(id)?.name ?? id}</p>
                   </li>
                 ))}
@@ -193,7 +198,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               {phases.map((p, i) => (
                 <li key={i} className="relative">
                   <span aria-hidden className={`absolute -left-[27px] top-1 grid size-3.5 place-items-center rounded-full ring-4 ring-paper ${p.deload ? "bg-sky" : "bg-ember"}`} />
-                  <p className="text-xs font-bold uppercase tracking-[.1em] text-muted">{totalDays !== weeks * 7 && i === phases.length - 1 ? `Días ${(p.from - 1) * 7 + 1} ${totalDays - (p.from - 1) * 7 === 2 ? "y" : "a"} ${totalDays}` : p.from === p.to ? `Semana ${p.from}` : `Semanas ${p.from} a ${p.to}`}{p.deload ? ", descarga" : ""}</p>
+                  <p className="text-xs font-bold uppercase tracking-[.1em] text-muted">{byDays ? daysSpan((p.from - 1) * 7 + 1, Math.min(totalDays, p.to * 7)) : p.from === p.to ? `Semana ${p.from}` : `Semanas ${p.from} a ${p.to}`}{p.deload ? ", descarga" : ""}</p>
                   <p className="font-extrabold text-ink">{p.name}</p>
                   {p.focus && <p className="text-sm text-body">{p.focus}</p>}
                 </li>
@@ -218,7 +223,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
             <h2 id="reglas-t" className="flex items-center gap-2 font-extrabold text-ink"><Shield weight="duotone" className="size-5 text-sky" />Reglas</h2>
             <ul className="mt-3 space-y-2 text-sm text-body">
               <li>Un programa activo a la vez. Si empiezas otro, el actual queda en pausa con su avance.</li>
-              <li>La semana no avanza mientras está en pausa.</li>
+              <li>{byDays ? "Los días del programa no avanzan mientras está en pausa." : "La semana no avanza mientras está en pausa."}</li>
               <li>Necesita un plan activo para entrenarlo; si tu plan vence, el programa queda guardado.</li>
               <li>Los retos de hábitos (agua, pasos, proteína) siguen funcionando junto con el programa.</li>
             </ul>

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { CoachPic } from "@/components/coach-pic";
 import { ArrowRight, Check, CheckCircle, Drop, Footprints, Lock, Moon, Plus } from "@/components/icons";
 import type { HoyFood } from "@/lib/hoy-food";
 import type { DailyField } from "@/app/actions/daily";
@@ -15,7 +16,8 @@ import { clamp01 } from "@/lib/num";
 type Macros = { kcal: number; protein: number; carbs: number; fat: number };
 type Habits = { steps: number; sleep: number; water: number };
 /** Calorías y macros de hoy: solo llegan con nutrición (Entreno + Nutrición, prueba o beta). */
-export type NutritionNumbers = { base: Macros; target: Macros; mode: GoalMode; meal: HoyFood };
+/** `coach`: la coach del programa activo (Coach Platanita) firma la recomendación; sin ella, Coach Banana. */
+export type NutritionNumbers = { base: Macros; target: Macros; mode: GoalMode; meal: HoyFood; coach?: { name: string; avatar: string } | null };
 export type GoalMode = "acelerada" | "recomp" | "fuerza";
 
 const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
@@ -172,7 +174,7 @@ function Numbers({ n, log, base }: { n: NutritionNumbers; log: DailyLog; base: M
         </div>
       </div>
 
-      <MealToday meal={n.meal} />
+      <MealToday meal={n.meal} coach={n.coach ?? null} />
 
       <p className="relative mt-4 border-t border-white/10 pt-3 text-xs text-white/75">{WHY[n.mode]} <Link href="/app/nutricion" className="font-bold text-banana underline-offset-4 hover:underline">Ver mi plan de comidas<ArrowRight weight="bold" className="ml-0.5 inline size-3" /></Link></p>
     </section>
@@ -183,7 +185,7 @@ function Numbers({ n, log, base }: { n: NutritionNumbers; log: DailyLog; base: M
  * Comida de hoy: qué comió en cada tiempo de comida (o que falta registrarlo) y lo que Coach Banana le recomienda
  * para el siguiente, calculado en el servidor con lo que le falta del día y la hora local.
  */
-function MealToday({ meal }: { meal: HoyFood }) {
+function MealToday({ meal, coach }: { meal: HoyFood; coach: NutritionNumbers["coach"] }) {
   const nx = meal.next;
   return (
     <div className="relative mt-5">
@@ -217,13 +219,14 @@ function MealToday({ meal }: { meal: HoyFood }) {
 
       {nx ? (
         <div className="mt-3 flex gap-3 rounded-2xl bg-banana p-3.5 text-ink">
-          <Image src="/brand/mascota-sola.webp" alt="" width={56} height={56} className="size-14 shrink-0 object-contain" />
+          {coach ? <CoachPic src={coach.avatar} size={56} className="size-14 shrink-0 rounded-2xl object-cover" iconClassName="size-8" />
+            : <Image src="/brand/mascota-sola.webp" alt="" width={56} height={56} className="size-14 shrink-0 object-contain" />}
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-ink/75">Coach Banana te recomienda. {nx.when}:</p>
+            <p className="text-xs font-bold text-ink/75">{coach?.name ?? "Coach Banana"} te recomienda. {nx.when}:</p>
             <p className="mt-0.5 text-[17px] font-extrabold leading-tight text-balance">{nx.title}</p>
             <p className="mt-1 text-xs font-semibold tabular-nums text-ink/80">{n0(nx.kcal)} kcal y {n0(nx.protein)} g de proteína{nx.portions !== 1 ? ` (${nx.portions.toLocaleString("es-419")} porciones)` : ""}</p>
             {nx.others.length > 0 && <p className="mt-1 text-xs text-ink/75">También te sirve: {nx.others.join(" o ")}.</p>}
-            <Link href="/app/nutricion/recetas" className="tap pressable mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-extrabold text-banana">Ver la receta<ArrowRight weight="bold" className="size-3.5" /></Link>
+            <Link href="/app/nutricion/recetas" className="tap pressable mt-2.5 inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-extrabold text-banana">Ver la receta<ArrowRight weight="bold" className="size-3.5" /></Link>
           </div>
         </div>
       ) : (

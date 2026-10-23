@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
+import { getSex } from "@/lib/athlete";
 import { getCatalog, getMyChallenges, getOwned, getParticipants, levelPerks } from "@/lib/challenges-server";
 import { getActiveProgram, getProgramSessions, getProgramStates, type ProgramChallenge } from "@/lib/programs-server";
 import { todayMetrics } from "@/lib/metrics";
@@ -34,7 +35,10 @@ export default async function Retos() {
   const activeIds = new Set(active.map((a) => a.c.id));
   const list = [...catalog.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort - b.sort);
   const by = (k: StoreSection) => list.filter((c) => storeSection(c, today) === k);
-  const programs = by("programas").filter(isProgram) as ProgramChallenge[];
+  // Para ella, primero los programas de chicas (con Coach Platanita); el resto, en el orden del panel.
+  const girlFirst = (await getSex(v)) === "f";
+  const girls = (c: ProgramChallenge) => Number(c.program.experience?.coach === "platanita");
+  const programs = (by("programas").filter(isProgram) as ProgramChallenge[]).map((c, i) => ({ c, i })).sort((a, b) => (girlFirst ? girls(b.c) - girls(a.c) : 0) || a.i - b.i).map((x) => x.c);
   const stateOf = new Map(states.map((s) => [s.slug, s]));
   const sessions = await Promise.all(programs.map((c) => getProgramSessions(v, c.id)));
   const days = new Map(programs.map((c, i) => [c.id, daysLabel(c.program, sessions[i])]));

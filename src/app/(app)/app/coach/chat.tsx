@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowCounterClockwise, ArrowRight, ArrowUp, ChatCircle, Moon, Monkey, Plus, WarningCircle } from "@/components/icons";
@@ -18,7 +18,7 @@ const noEmoji = (t: string) => t.replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u
 export type ChatPersona = { name: string; avatar: string } | null;
 
 function CoachAvatar({ persona }: { persona: ChatPersona }) {
-  if (persona) return <Image src={persona.avatar} alt="" width={36} height={36} sizes="36px" className="size-9 shrink-0 rounded-xl bg-[#F3E8FF] object-cover" />;
+  if (persona) return <CoachPic src={persona.avatar} size={36} className="size-9 shrink-0 rounded-xl object-cover" />;
   return <span aria-hidden className="grid place-items-center size-9 shrink-0 rounded-xl bg-ink text-banana"><Monkey className="size-6" /></span>;
 }
 function UserAvatar({ name }: { name: string }) {
@@ -165,7 +165,7 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
   return (
     <div className="flex flex-col min-h-[calc(100dvh-9rem)] lg:min-h-[calc(100dvh-6rem)]">
       <header className="flex items-center gap-3 pb-4 border-b border-line">
-        {persona ? <Image src={persona.avatar} alt="" width={48} height={48} sizes="48px" priority className="size-12 shrink-0 rounded-2xl bg-[#F3E8FF] object-cover" />
+        {persona ? <CoachPic src={persona.avatar} size={48} priority className="size-12 shrink-0 rounded-2xl object-cover" iconClassName="size-8" />
           : <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey weight="fill" className="size-8 [--bb-icon-bg:var(--color-ink)]" /></span>}
         <div className="flex-1 min-w-0"><h1 className="text-xl font-extrabold text-ink">{coachName}</h1><p className="text-sm text-muted">Conoce tu plan, tu peso y tus entrenos</p><p className="text-xs text-muted">Puede equivocarse y no sustituye el consejo médico.</p></div>
         {configured && msgs.length > 0 && (

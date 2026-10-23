@@ -104,12 +104,16 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       if (option > 0) preswap = { slot, option };
     }
   }
-  // Programa con su propia coach (Coach Platanita): ella aparece haciendo cada ejercicio que tiene ilustración.
-  const coach = plan.program && prog ? coachOf(prog.meta.experience) : null;
+  // Programa con su propia coach (Coach Platanita): mientras dura, ella presenta cada entreno (también el exprés) y
+  // aparece haciendo cada ejercicio que tiene ilustración.
+  const coach = prog ? coachOf(prog.meta.experience) : null;
   if (coach && coach.id !== "banana") for (const list of options) for (const o of list) o.art = coachArt(coach, o.id);
+  // Coach Platanita presenta la sesión del programa antes de la primera serie (el motor no trae gancho para estas).
+  const sess = plan.program && prog ? prog.run.weekSessions.find((w) => w.day === plan.program!.day)?.session : undefined;
+  const intro = coach && coach.id !== "banana" && sess?.focus ? `${sess.focus.replace(/\.?$/, ".")} Son unos ${plan.mins ?? prog?.meta.sessionMinutes ?? 25} minutos, a tu ritmo.` : undefined;
   const template = plan.key ?? plan.tpl ?? (expres ? `expres${expres}` : "descanso");
   const title = plan.name;
   const doneToday = options.length > 0 && doneTemplates.includes(template);
-  return <Player voice={voice} hook={plan.hook} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
-    doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
+  return <Player voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+    doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
 }

@@ -1,4 +1,5 @@
 "use client";
+import { CoachPic } from "@/components/coach-pic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BananaCoin, BananaFlame, BananaTrophy, Barbell, BrandIcon, DownloadSimple, LevelIcon, Monkey, ShareNetwork, Timer } from "@/components/icons";
@@ -26,8 +27,10 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE }: {
+export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
   voice?: Voice;
+  /** Coach del programa (Coach Platanita) que firma el feedback; sin ella, Coach Banana. */
+  coach?: { name: string; avatar: string } | null;
   title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
   /** XP de un entreno completo como este (para estimar cuántos faltan al próximo nivel) */
   perWorkout?: number;
@@ -145,7 +148,7 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
           {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
 
           <div className="mt-3 card p-4 text-left" aria-live="polite">
-            <p className="flex items-center gap-1.5 text-sm font-bold text-ink"><Monkey className="size-5 text-banana-ink" />Coach Banana</p>
+            <p className="flex items-center gap-1.5 text-sm font-bold text-ink">{coach ? <CoachPic src={coach.avatar} size={24} className="size-6 rounded-lg object-cover" iconClassName="size-4" /> : <Monkey className="size-5 text-banana-ink" />}{coach?.name ?? "Coach Banana"}</p>
             {feedback ? <p className="mt-1 text-[15px] text-ink leading-relaxed animate-enter">{feedback}</p> : <p className="mt-2 flex gap-1" aria-label="Analizando tu entreno">{[0, 1, 2].map((d) => <span key={d} className="size-2 rounded-full bg-faint animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />)}</p>}
           </div>
         </div>

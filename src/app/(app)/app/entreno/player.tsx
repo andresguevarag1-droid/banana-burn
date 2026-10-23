@@ -23,6 +23,7 @@ import { ListSets } from "@/components/workout/list-sets";
 import { RestPill, RestScreen, type RestInfo } from "@/components/workout/rest-screen";
 import { IntervalScreen } from "@/components/workout/interval-screen";
 import { Recap } from "@/components/workout/recap";
+import { CoachArtFill, CoachPic } from "@/components/coach-pic";
 import { Tour, type TourStep } from "@/components/workout/tour";
 import { BananaTrail, LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/components/workout/ui";
 import { MILESTONES, expressRows, finishValue, lastVolume, levelGoal, levelGoalText, nextMilestone, pickFact, reachedMilestones, restFacts, volumeWithHistory, type LevelGoal } from "@/components/workout/motivation";
@@ -63,7 +64,13 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins }: {
+export function Player({ template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+  /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
+  intro?: string;
+  /** Campo de lastre en los ejercicios con el peso corporal. Un programa de equipo fijo (pilates, dominadas) no lo usa. */
+  ballast?: boolean;
+  /** Coach del programa activo (Coach Platanita): presenta el entreno y firma el feedback. Sin ella, Coach Banana. */
+  coach?: { name: string; avatar: string } | null;
   /** "Cómo te hablo": registro del lenguaje (mismos números en los tres). */
   voice?: Voice;
   /** Línea de Coach Banana que presenta el entreno y sus minutos. */
@@ -551,7 +558,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
   if (phase === "saved") {
     return <Recap title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
-      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} />;
+      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} />;
   }
 
   if (phase === "summary") {
@@ -584,7 +591,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
                   ))}
                 </dl>
                 {noXp && <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">Ya habías hecho este entreno hoy: esta repetición queda en tu historial, pero no suma XP.</p>}
-                {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} {setWord}. Puedes terminar igual; Coach Banana lo toma en cuenta.</p>}
+                {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} {setWord}. Puedes terminar igual; {coach?.name ?? "Coach Banana"} lo toma en cuenta.</p>}
                 {last && lastSet && (
                   <fieldset className="mt-3 card p-5">
                     <legend className="sr-only">Esfuerzo de la última serie</legend>
@@ -674,8 +681,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
   /* ---------- Reproductor ---------- */
   const [, badgeCls, BadgeIcon] = RX_BADGE[ex.rx.type];
-  const badge = rxBadge(voice, ex.rx.type);
-  const intro = hookLine(hook, mins);
+  const badge = rxBadge(voice, ex.rx.type, ex.cfg.unit);
+  const intro = introText ?? hookLine(hook, mins);
   const unit = unitLbl(ex.cfg.unit);
   const allDoneHere = here.every((r) => r.done);
   const plates = ex.barbell && activeSet >= 0 ? platesPerSide(num(here[activeSet].kg)) : null;
@@ -730,7 +737,10 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           {/* Ejercicio: el mosaico abre la técnica; el único botón al lado es Cambiar */}
           <section key={ex.id} className="flex gap-3 items-stretch animate-enter">
             <button onClick={() => setSheet("tech")} className={`pressable relative shrink-0 w-[88px] min-h-[104px] rounded-3xl overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver técnica de ${ex.name}`}>
-              {ex.art ? <Image src={ex.art} alt="" fill sizes="88px" className="object-contain pb-4" /> : ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-11 text-ink/80" />}
+              {(() => {
+                const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-11 text-ink/80" />;
+                return ex.art ? <CoachArtFill src={ex.art} sizes="88px" className="object-contain pb-4" fallback={still} /> : still;
+              })()}
               <span className="absolute bottom-1.5 inset-x-0 text-[10px] font-bold text-ink/75">Ver técnica</span>
             </button>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -748,10 +758,11 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           {/* Coach Banana presenta el entreno antes de la primera serie */}
           {doneSets === 0 && intro && (
             <div className="mt-3 flex items-center gap-3 rounded-[1.25rem] bg-ink p-3 pr-4 text-white">
-              <span aria-hidden className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-banana">
-                <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="object-cover origin-[52%_4%] scale-[2.5]" />
-              </span>
-              <p className="min-w-0"><span className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">Coach Banana</span><span className="block text-sm font-bold leading-snug text-pretty">{intro}</span></p>
+              {coach ? <CoachPic src={coach.avatar} size={44} className="size-11 shrink-0 rounded-xl object-cover" />
+                : <span aria-hidden className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-banana">
+                  <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="object-cover origin-[52%_4%] scale-[2.5]" />
+                </span>}
+              <p className="min-w-0"><span className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">{coach?.name ?? "Coach Banana"}</span><span className="block text-sm font-bold leading-snug text-pretty">{intro}</span></p>
             </div>
           )}
 
@@ -787,14 +798,14 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
           <div className="mt-2.5">
             {focus && activeSet >= 0 ? (
-              <FocusSet rows={here} active={activeSet} bw={ex.bw} unit={ex.cfg.unit} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
+              <FocusSet rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
                 chips={chips} onPickKg={pickKg} onStep={step} onChange={change} onCopy={copy} onUndo={undo} />
             ) : focus ? (
               <div className="space-y-2">
                 {here.map((x, si) => <DoneRow key={si} si={si} row={x} unit={ex.cfg.unit} bw={ex.bw} onUndo={undo} />)}
               </div>
             ) : (
-              <ListSets rows={here} active={activeSet} bw={ex.bw} unit={ex.cfg.unit} unitLabel={unit} plates={plates} last={here.map((_, si) => ex.lastSets?.[si])} needsKg={needsLoad(ex)}
+              <ListSets rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} unitLabel={unit} plates={plates} last={here.map((_, si) => ex.lastSets?.[si])} needsKg={needsLoad(ex)}
                 pop={pop && pop.ex === idx ? pop : null} onStep={step} onChange={change} onToggle={toggle} onEffort={(si, e) => setEffort(idx, si, e)}
                 timedSlot={timed && !rest ? (
                   <div className="px-3 pb-3">
@@ -851,6 +862,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       {/* Descanso */}
       {restP.mounted && shownRest && shownInfo && (
         <RestScreen left={rest ? restLeft : 0} total={shownRest.total} info={shownInfo} closing={restP.closing}
+          minimizeLabel={ex.bw && !ex.load ? "Ajustar la serie" : "Ajustar pesos"}
           onEffort={(e) => restTarget.current && setEffort(restTarget.current.ex, restTarget.current.si, e)}
           onAdjust={(d) => setRest((r) => r && (d > 0 ? { end: r.end + d * 1000, total: r.total + d } : { ...r, end: r.end + d * 1000 }))}
           onSkip={cancelRest}
@@ -870,14 +882,17 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           )}
           {shownSheet === "tech" && ex.tech && (
             <div className="space-y-4">
-              {ex.art ? <div className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-[1.5rem] bg-[#F3E8FF]"><Image src={ex.art} alt={`Así se hace: ${ex.name}`} fill sizes="360px" className="object-contain" /></div>
-                : ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} mus={ex.tech.mus} cues={ex.tech.cues.length ? ex.tech.cues : undefined} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>}
+              {(() => {
+                const motion = ex.tech.anim ? <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} mus={ex.tech.mus} cues={ex.tech.cues.length ? ex.tech.cues : undefined} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div> : null;
+                return ex.art ? <CoachArtFill src={ex.art} alt={`Así se hace: ${ex.name}`} sizes="360px" className="object-contain" fallback={motion} wrap="mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-[1.5rem] bg-[#F3E8FF]" />
+                  : motion;
+              })()}
               <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
               {ex.tech.mus && <p className="text-sm text-muted">{ex.tech.mus}</p>}
               {ex.tech.how.length > 0 && <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>}
               {ex.tech.cues.length > 0 && <div className="flex flex-wrap gap-2">{ex.tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel"><Check weight="bold" className="size-3.5" />{c}</span>)}</div>}
               {ex.tech.err.length > 0 && <div className="space-y-1">{ex.tech.err.map((c) => <p key={c} className="flex gap-1.5 text-sm text-ember-ink"><X weight="bold" className="mt-0.5 size-4 shrink-0" />{c}</p>)}</div>}
-              {ex.tech.mono && <p className="flex gap-2.5 rounded-2xl bg-white p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={ex.tech.mono} /></span></p>}
+              {ex.tech.mono && <p className="flex gap-2.5 rounded-2xl bg-white p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={coach ? ex.tech.mono.replaceAll("Coach Banana", coach.name) : ex.tech.mono} /></span></p>}
               {canSpeak() && ex.tech.how.length > 0 && <button onClick={() => say([ex.name, ...ex.tech!.how].join(". "), { interrupt: true })} className="btn-ghost w-full"><SpeakerHigh weight="bold" className="size-5" />Escuchar los pasos</button>}
               <button onClick={() => setSheet(null)} className="btn-primary w-full">Entendido</button>
             </div>
