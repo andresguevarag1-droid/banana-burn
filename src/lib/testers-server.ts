@@ -112,7 +112,10 @@ export async function deliverTesterNotices(opts: { userId?: string; limit?: numb
       const c = COPY[due](r);
       if (due !== "asignado" && (await notifyInApp(r.user_id, { kind: "tester", ...c }))) out.inApp++;
       if (due === "asignado") {
-        const m = await sendTesterEmail({ userId: r.user_id, grantId: r.id, expiresAt: r.expires_at, renewal: !!r.renewal }).catch(() => null);
+        // Si tenía un cobro con tarjeta programado, la base ya lo pasó al final del mes de tester: el correo lo dice.
+        const { data: ch, error: chErr } = await admin.from("trial_charges").select("amount_minor,charge_at,status,tester_hold").eq("user_id", r.user_id).maybeSingle();
+        const charge = !chErr && ch?.tester_hold && ch.status === "scheduled" ? { amount: Number(ch.amount_minor) / 100, chargeAt: String(ch.charge_at) } : null;
+        const m = await sendTesterEmail({ userId: r.user_id, grantId: r.id, expiresAt: r.expires_at, renewal: !!r.renewal, charge }).catch(() => null);
         if (m?.ok) out.email++;
       } else if (due === "terminado") {
         const m = await sendTesterEndedEmail({ userId: r.user_id, grantId: r.id, endedAt: r.expires_at }).catch(() => null);

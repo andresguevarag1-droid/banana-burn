@@ -50,6 +50,10 @@ export type TrialChargeRow = {
   canceled_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Fecha original del cobro si se movió (0029: mes de tester). */
+  moved_from?: string | null;
+  /** Hoy está aplazado porque la persona es tester (0029): no se cobra hasta el final de su mes de tester. */
+  tester_hold?: boolean | null;
 };
 
 /** Lo que la persona puede leer de su tarjeta (0026: sin IDs de ONVO). */
@@ -201,6 +205,10 @@ export type ChargeView = {
   due: boolean;
   /** Toca el aviso de "En 2 días se cobra tu plan" y aún no salió. */
   remind: boolean;
+  /** Aplazado al final del mes de tester (0029): mientras sea tester no se cobra. */
+  testerHold: boolean;
+  /** La fecha del cobro ya no es la original (se movió por el mes de tester). */
+  moved: boolean;
 };
 
 export function chargeView(row: TrialChargeRow | null | undefined, now = new Date()): ChargeView | null {
@@ -221,6 +229,8 @@ export function chargeView(row: TrialChargeRow | null | undefined, now = new Dat
     retryAt: row.status === "retry_scheduled" ? row.next_attempt_at : null,
     daysToCharge: Math.max(0, Math.ceil((at - now.getTime()) / DAY_MS)),
     canCancel: canCancel(row), canChangePlan: canChangePlan(row, now), due: isDue(row, now), remind: reminderDue(row, now),
+    testerHold: !!row.tester_hold && (row.status === "scheduled" || row.status === "retry_scheduled") && ms(row.next_attempt_at) > now.getTime(),
+    moved: !!row.moved_from,
   };
 }
 
@@ -246,9 +256,16 @@ const usd2 = (n: number) => `$${(Math.round(n * 100) / 100).toFixed(2)}`;
 /** La frase que va en todas partes desde el fin de la beta. */
 export const TRIAL_CARD_LINE = `${TRIAL_DAYS} días gratis. Hoy no te cobramos. El día ${TRIAL_DAYS} se cobra tu plan, salvo que canceles antes.`;
 
-/** Aviso 2 días antes del cobro (día 5). */
-export function reminderLine(amount: number, kind: ChargeKind = "prueba", chargeDay?: string): string {
-  if (kind === "beta") return `En ${REMINDER_DAYS_BEFORE} días se cobra tu plan de ${usd2(amount)}${chargeDay ? `, el ${chargeDay}` : ""}. Puedes cancelar sin costo antes de esa fecha.`;
+/** Por qué el cobro no está en su fecha original: el mes de tester sigue ("tester") o ya terminó antes ("ajustado"). */
+export type ChargeMoved = "tester" | "ajustado" | null;
+
+/** De la fila: aplazado por tester hoy, movido antes, o en su fecha original. */
+export const chargeMoved = (row: Pick<TrialChargeRow, "moved_from" | "tester_hold"> | null | undefined): ChargeMoved => (row?.tester_hold ? "tester" : row?.moved_from ? "ajustado" : null);
+
+/** Aviso 2 días antes del cobro (día 5, o 2 días antes de la fecha a la que se movió). */
+export function reminderLine(amount: number, kind: ChargeKind = "prueba", chargeDay?: string, moved: ChargeMoved = null): string {
+  if (moved === "tester") return `Tu mes de tester termina en ${REMINDER_DAYS_BEFORE} días. ${chargeDay ? `El ${chargeDay}` : "Ese día"} se cobra tu plan de ${usd2(amount)}. Puedes cancelar sin costo antes de esa fecha.`;
+  if (kind === "beta" || moved) return `En ${REMINDER_DAYS_BEFORE} días se cobra tu plan de ${usd2(amount)}${chargeDay ? `, el ${chargeDay}` : ""}. Puedes cancelar sin costo antes de esa fecha.`;
   return `En ${REMINDER_DAYS_BEFORE} días se cobra tu plan de ${usd2(amount)}. Puedes cancelar sin costo hasta el día ${TRIAL_DAYS}.`;
 }
 

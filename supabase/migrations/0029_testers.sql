@@ -16,6 +16,11 @@
 --   5. feedback_reports: "Reportar algo" desde la app. La base marca si quien escribe es tester (la persona no lo elige).
 --   6. Comunidad: community_testers() dice qué autores visibles son testers (para la insignia), sin exponer fechas.
 --   7. Panel: admin_list_users() suma el filtro "tester" y la columna tester_until; las cortesías ya no cuentan el mes de tester.
+--   8. Un tester no paga durante su mes de tester: el primer cobro con tarjeta guardada (trial_charges de 0026, programado o
+--      con reintento) pasa al final del mes de tester, con su aviso de 2 días antes otra vez listo. Renovar lo vuelve a mover;
+--      quitar al tester lo regresa a la fecha original o a ahora, nunca antes de 2 días (para que el aviso salga antes).
+--      moved_from guarda la fecha original; tester_hold dice que hoy está aplazado por el mes de tester. El servidor además
+--      revisa justo antes de cobrar (tester_hold_charge): si la persona es tester, no cobra y aplaza.
 
 -- ───────────── 1. Acceso: comp_grants acepta source = 'tester' ─────────────
 do $$ begin
@@ -77,6 +82,93 @@ $$;
 revoke all on function public.is_tester() from public, anon;
 grant execute on function public.is_tester() to authenticated;
 
+-- ───────────── 2b. El cobro con tarjeta espera al final del mes de tester ─────────────
+alter table public.trial_charges add column if not exists moved_from timestamptz;
+alter table public.trial_charges add column if not exists tester_hold boolean not null default false;
+-- 0026 pedía charge_at = trial_ends_at. Ahora el cobro puede quedar DESPUÉS del fin de la prueba si se movió (moved_from),
+-- nunca antes. La prueba de 7 días (trial_charges_seven_days) no cambia: el acceso por la prueba no se alarga.
+do $$ begin
+  if exists (select 1 from pg_constraint where conname = 'trial_charges_dates' and conrelid = 'public.trial_charges'::regclass
+              and pg_get_constraintdef(oid) not like '%moved_from%') then
+    alter table public.trial_charges drop constraint trial_charges_dates;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'trial_charges_dates' and conrelid = 'public.trial_charges'::regclass) then
+    alter table public.trial_charges add constraint trial_charges_dates check (trial_ends_at >= trial_started_at
+      and (charge_at = trial_ends_at or (moved_from is not null and charge_at > trial_ends_at)));
+  end if;
+end $$;
+
+/**
+ * Si la persona es tester hoy, su primer cobro (programado o con reintento) pasa al final del mes de tester. Nunca lo
+ * adelanta: solo mueve cobros que caerían antes. Idempotente. Devuelve el fin del mes de tester (null si no es tester).
+ */
+create or replace function public._tester_hold_charge(p_user uuid)
+returns timestamptz language plpgsql security definer set search_path = public as $$
+declare v_until timestamptz := public._tester_until(p_user); n int;
+begin
+  if v_until is null then return null; end if;
+  update public.trial_charges
+     set moved_from = coalesce(moved_from, charge_at), charge_at = v_until, next_attempt_at = v_until,
+         reminder_sent_at = null, tester_hold = true, updated_at = now()
+   where user_id = p_user and status = 'scheduled' and charge_at < v_until;
+  get diagnostics n = row_count;
+  update public.trial_charges set next_attempt_at = v_until, tester_hold = true, updated_at = now()
+   where user_id = p_user and status = 'retry_scheduled' and next_attempt_at < v_until;
+  if n > 0 then
+    insert into public.notifications (user_id, kind, title, body, url)
+    values (p_user, 'cobro', 'Tu cobro pasa al final de tu mes de tester',
+            'Mientras seas tester no se te cobra nada. Tu plan se cobra el día que termina tu mes de tester y te avisamos 2 días antes. Puedes cancelar sin costo antes de esa fecha.', '/app/suscripcion');
+  end if;
+  return v_until;
+end $$;
+revoke all on function public._tester_hold_charge(uuid) from public, anon, authenticated;
+
+/**
+ * Ya no es tester (se lo quitaron antes de tiempo): el cobro aplazado vuelve a su fecha original o a ahora, lo que sea
+ * más tarde, y nunca a menos de 2 días, para que el aviso de "En 2 días se cobra tu plan" salga antes de cobrar.
+ * Un reintento aplazado queda para ahora (ya se avisó del rechazo). Nunca cobra dos veces: solo cambia fechas.
+ */
+create or replace function public._tester_release_charge(p_user uuid)
+returns int language plpgsql security definer set search_path = public as $$
+declare n int; m int;
+begin
+  if public._tester_until(p_user) is not null then perform public._tester_hold_charge(p_user); return 0; end if;
+  update public.trial_charges t
+     set charge_at = x.at, next_attempt_at = x.at, moved_from = case when x.at = t.trial_ends_at then null else t.moved_from end,
+         reminder_sent_at = null, tester_hold = false, updated_at = now()
+    from (select id, greatest(coalesce(moved_from, charge_at), now() + interval '2 days') as at
+            from public.trial_charges where user_id = p_user and status = 'scheduled' and tester_hold) x
+   where t.id = x.id and t.status = 'scheduled';
+  get diagnostics n = row_count;
+  update public.trial_charges set next_attempt_at = now(), tester_hold = false, updated_at = now()
+   where user_id = p_user and status = 'retry_scheduled' and tester_hold;
+  get diagnostics m = row_count;
+  if n > 0 then
+    insert into public.notifications (user_id, kind, title, body, url)
+    values (p_user, 'cobro', 'Tu cobro vuelve a estar programado',
+            'Tu mes de tester terminó antes de tiempo. Mira en Mi plan la fecha del cobro; te avisamos antes de cobrar y puedes cancelar sin costo hasta ese día.', '/app/suscripcion');
+  end if;
+  -- Retenciones que ya no aplican (el cobro se hizo o se canceló): se limpian.
+  update public.trial_charges set tester_hold = false where user_id = p_user and tester_hold and status not in ('scheduled', 'retry_scheduled');
+  return n + m;
+end $$;
+revoke all on function public._tester_release_charge(uuid) from public, anon, authenticated;
+
+/** Servidor (service_role), justo antes de avisar o cobrar: si es tester, aplaza y devuelve el fin de su mes de tester. */
+create or replace function public.tester_hold_charge(p_user uuid)
+returns timestamptz language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null then raise exception 'No autorizado' using errcode = '42501'; end if;
+  if public._tester_until(p_user) is null then
+    -- Terminó su mes de tester: la marca de "aplazado por tester" ya no aplica (el cobro sigue en su fecha).
+    update public.trial_charges set tester_hold = false where user_id = p_user and tester_hold;
+    return null;
+  end if;
+  return public._tester_hold_charge(p_user);
+end $$;
+revoke all on function public.tester_hold_charge(uuid) from public, anon, authenticated;
+grant execute on function public.tester_hold_charge(uuid) to service_role;
+
 /**
  * Panel: hace tester a una persona por 30 días desde ahora. Si ya era tester, renueva (cierra la asignación vigente y
  * empieza otra de 30 días desde ahora, nunca recorta). Solo admin y superadmin. Motivo obligatorio (solo en auditoría).
@@ -111,6 +203,8 @@ begin
   insert into public.notifications (user_id, kind, title, body, url)
   values (p_target, 'tester', case when v_renew then 'Renovamos tu mes de tester' else 'Eres tester de Banana Burn' end,
           'Tienes Entreno + Nutrición gratis por 30 días, como agradecimiento por ayudarnos a probar la beta.', '/app');
+  -- Su primer cobro con tarjeta (si lo tiene) pasa al final del mes de tester.
+  perform public._tester_hold_charge(p_target);
   insert into public.audit_log (actor, action, target, meta)
   values (v_actor, 'user.tester_grant', p_target::text, jsonb_build_object('grant', v_id, 'comp_grant', v_comp, 'expires_at', v_end,
           'renewal', v_renew, 'reason', left(p_reason, 300)));
@@ -135,6 +229,8 @@ begin
    where user_id = p_target and revoked_at is null and expires_at > now();
   get diagnostics n = row_count;
   if n > 0 then
+    -- El cobro aplazado vuelve a su fecha (o a dentro de 2 días como mínimo, con aviso).
+    perform public._tester_release_charge(p_target);
     insert into public.audit_log (actor, action, target, meta)
     values (v_actor, 'user.tester_revoke', p_target::text, jsonb_build_object('closed', n, 'reason', left(p_reason, 300)));
   end if;

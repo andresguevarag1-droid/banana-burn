@@ -116,3 +116,32 @@ describe("acceso del mes de tester (comp_grants con origen tester)", () => {
     expect(entitlementsFrom({ ...base, comps: [testerComp({ revoked_at: at(-1) })] }).locked).toBe(true);
   });
 });
+
+describe("cobro aplazado por el mes de tester (copy honesta)", async () => {
+  const { chargeView, chargeMoved, reminderLine } = await import("./trial");
+  const { recordatorioCobro, testerAsignado } = await import("./email/templates");
+  const row = { id: 1, user_id: "u", idem_key: "trial:u", kind: "beta" as const, plan: "completo" as const, billing: "mes" as const, amount_minor: 1499, trial_started_at: at(-30), trial_ends_at: at(-20), charge_at: at(10), next_attempt_at: at(10), status: "scheduled" as const, attempts: 0, last_attempt_at: null, provider_subscription_id: null, last_error: null, reminder_sent_at: null, failure_notified_attempt: null, canceled_at: null, created_at: at(-30), updated_at: at(-1), moved_from: at(-20), tester_hold: true };
+  it("la vista sabe que está aplazado por tester y que se movió", () => {
+    expect(chargeView(row, NOW)).toMatchObject({ testerHold: true, moved: true, daysToCharge: 10 });
+    expect(chargeView({ ...row, tester_hold: false }, NOW)).toMatchObject({ testerHold: false, moved: true });
+    expect(chargeView({ ...row, tester_hold: null, moved_from: null }, NOW)).toMatchObject({ testerHold: false, moved: false });
+  });
+  it("por qué se movió", () => {
+    expect(chargeMoved(row)).toBe("tester");
+    expect(chargeMoved({ ...row, tester_hold: false })).toBe("ajustado");
+    expect(chargeMoved(null)).toBeNull();
+  });
+  it("aviso de 2 días antes: dice que termina el mes de tester, con la fecha, sin hablar del día 7", () => {
+    expect(reminderLine(14.99, "prueba", "22 de noviembre", "tester")).toBe("Tu mes de tester termina en 2 días. El 22 de noviembre se cobra tu plan de $14.99. Puedes cancelar sin costo antes de esa fecha.");
+    expect(reminderLine(14.99, "prueba", "22 de noviembre", "ajustado")).not.toMatch(/día 7/);
+    const e = recordatorioCobro({ name: "Ana", plan: "Entreno + Nutrición", amount: 14.99, chargeAt: "2026-11-22T18:00:00Z", kind: "prueba", moved: "tester" });
+    expect(e.text).toContain("Tu mes de tester termina en 2 días");
+    expect(e.text).not.toMatch(/día 7/);
+  });
+  it("el correo de tester avisa que el cobro pasa al final del mes", () => {
+    const e = testerAsignado({ name: "Ana", expiresAt: "2026-11-22T18:00:00Z", charge: { amount: 14.99, chargeAt: "2026-11-22T18:00:00Z" } });
+    expect(e.text).toContain("Tu cobro programado pasa al final de tu mes de tester");
+    expect(e.text).toContain("22 de noviembre de 2026");
+    expect(testerAsignado({ name: "Ana", expiresAt: "2026-11-22T18:00:00Z" }).text).not.toContain("cobro programado");
+  });
+});
