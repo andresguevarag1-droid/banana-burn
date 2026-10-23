@@ -6,6 +6,8 @@ import { createClient, type Viewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { programNutrition, withProgramProtein, type ProgramNutrition } from "@/lib/programs";
 import { getActiveProgram, programContext, type AthleteProgram } from "@/lib/programs-server";
+import { getVoice } from "@/lib/voice-server";
+import type { Voice } from "@/lib/voice";
 
 export type Athlete = {
   name: string; dob: string; heightCm: number; startWeight: number; currentWeight: number; goalWeight: number; goalDate: string; startDate: string; mode: Mode; complete: boolean; trainDays: number; sex: Sex; equipment: Equipment; level: Level; minutes: number | null; glp1: Glp1;
@@ -17,18 +19,21 @@ export type Athlete = {
   program?: AthleteProgram | null;
   /** Ajuste de nutrición del programa: solo si la persona tiene nutrición (`ent.nutrition`). Un programa nunca la da. */
   programNutrition?: ProgramNutrition | null;
+  /** "Cómo te hablo" (0035): registro del lenguaje del entreno y del coach. */
+  voice?: Voice;
 };
 
 const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, startWeight: 94.9, currentWeight: 93.1, goalWeight: 85, goalDate: "2026-12-31", startDate: "2026-10-19", mode: "acelerada", complete: true, trainDays: 6, sex: "m", equipment: "gym", level: "intermedio", minutes: null, glp1: { on: false, med: "semaglutida", injectionDow: null, since: null } };
 
 export async function getAthlete(v: Viewer): Promise<Athlete> {
-  if (v.demo) return withProgram(v, { ...DEMO, tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) });
+  if (v.demo) return withProgram(v, { ...DEMO, voice: await getVoice(v), tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) });
   const sb = await createClient();
-  const [{ data: p }, { data: g }, { data: w }, ent] = await Promise.all([
+  const [{ data: p }, { data: g }, { data: w }, ent, voice] = await Promise.all([
     sb.from("profiles").select("full_name,dob,height_cm,train_days,sex,onboarded,equipment,level,session_minutes,glp1,glp1_med,glp1_injection_dow,glp1_since").eq("id", v.id).maybeSingle(),
     sb.from("goals").select("*").eq("user_id", v.id).eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     sb.from("weights").select("kg").eq("user_id", v.id).order("day", { ascending: false }).limit(1).maybeSingle(),
     getEntitlements(v),
+    getVoice(v),
   ]);
   const complete = Boolean(p?.onboarded && p?.dob && p?.height_cm && g);
   return withProgram(v, {
@@ -37,7 +42,7 @@ export async function getAthlete(v: Viewer): Promise<Athlete> {
     startWeight: Number(g?.start_weight ?? 80), currentWeight: Number(w?.kg ?? g?.start_weight ?? 80),
     goalWeight: Number(g?.goal_weight ?? 75), goalDate: g?.goal_date ?? "2026-12-31",
     startDate: g?.start_date ?? mondayOf(todayFor(v).iso), mode: (g?.mode as Mode) ?? "acelerada", complete, trainDays: Number(p?.train_days ?? 6), sex: (p?.sex as Sex) ?? "m", equipment: (p?.equipment as Equipment) ?? "gym", level: (p?.level as Level) ?? "intermedio", minutes: p?.session_minutes ?? null,
-    tz: v.tz, country: v.country,
+    tz: v.tz, country: v.country, voice,
     // Banana Shield es de Entreno + Nutrición: sin nutrición se apaga en todas las pantallas (el perfil guarda la configuración).
     glp1: { on: Boolean(p?.glp1) && ent.nutrition, med: ((p?.glp1_med as Glp1Med) ?? "otro"), injectionDow: p?.glp1_injection_dow ?? null, since: p?.glp1_since ?? null },
   });

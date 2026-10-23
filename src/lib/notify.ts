@@ -1,5 +1,6 @@
 // Banana Burn: lógica pura de notificaciones: quién recibe qué, a qué hora local y por qué canal.
 // Sin dependencias de servidor (solo imports relativos) para poder testearla con Vitest.
+import { t, type Voice } from "./voice";
 
 export type Kind = "recordatorio" | "racha" | "semanal" | "reactivacion_3" | "reactivacion_7";
 export const KINDS: Kind[] = ["recordatorio", "racha", "semanal", "reactivacion_3", "reactivacion_7"];
@@ -167,7 +168,47 @@ export function decide(i: DecideInput): Decision[] {
 // ───────────── Copy de push / in-app ─────────────
 // Motivador, específico, nunca culpa ni vergüenza.
 
-export type CopyCtx = { name: string; routine: string; trainingDay?: boolean; mins?: number; streak: number; workouts?: number; kgDelta?: number | null; day: string };
+export type CopyCtx = {
+  name: string; routine: string; trainingDay?: boolean; mins?: number; streak: number; workouts?: number; kgDelta?: number | null; day: string;
+  /** "Cómo te hablo" (0035). Sin dato, intermedio. */
+  voice?: Voice;
+  /** Línea de Coach Banana del entreno de hoy ("Hoy armas una espalda ancha..."). */
+  hook?: string;
+  /** Dato real de la última sesión del ejercicio principal de hoy (ver `liftFact`). */
+  lift?: LiftFact | null;
+};
+
+/** Lo último que hizo la persona en el ejercicio principal de hoy: subió de peso o lo repitió. */
+export type LiftFact = { name: string; kg: number; delta: number };
+
+const kgTxt = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 2 });
+const lower = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);
+
+/**
+ * Último progreso en un ejercicio: sesiones (de antigua a reciente) con el mayor peso de cada una.
+ * Devuelve el peso de la última y cuánto subió respecto de la anterior (0 si igual o bajó). Sin peso, null.
+ */
+export function liftFact(name: string, sessions: number[]): LiftFact | null {
+  const s = sessions.filter((x) => Number.isFinite(x) && x > 0);
+  if (!s.length) return null;
+  const last = s[s.length - 1], prev = s.length > 1 ? s[s.length - 2] : null;
+  return { name, kg: last, delta: prev != null && last > prev ? Math.round((last - prev) * 100) / 100 : 0 };
+}
+
+/** El dato real dicho en el registro de la persona. */
+export function liftLine(v: Voice, f: LiftFact): string {
+  const n = lower(f.name);
+  if (f.delta > 0) return t(v, {
+    basico: `La última vez tu ${n} subió ${kgTxt(f.delta)} kg. Hoy vamos por más.`,
+    intermedio: `Tu ${n} subió ${kgTxt(f.delta)} kg la última vez.`,
+    tecnico: `${f.name}: +${kgTxt(f.delta)} kg en tu última sesión (${kgTxt(f.kg)} kg).`,
+  });
+  return t(v, {
+    basico: `La última vez hiciste ${n} con ${kgTxt(f.kg)} kg. Hoy intentamos una repetición más.`,
+    intermedio: `Última vez: ${n} con ${kgTxt(f.kg)} kg. Hoy toca superarlo.`,
+    tecnico: `${f.name}: ${kgTxt(f.kg)} kg en tu última sesión. Objetivo: +1 rep.`,
+  });
+}
 export type Copy = { title: string; body: string; url: string };
 
 const pick = <T,>(list: T[], seed: string) => {
@@ -180,12 +221,23 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
   const first = x.name.split(" ")[0] || "crack";
   switch (kind) {
     case "recordatorio": {
-      const bodies = [
-        `${x.mins ? `${x.mins} min` : "Una sesión"} y listo. Tus cargas ya están calculadas, ${first}.`,
-        x.streak >= 2 ? `Vas ${x.streak} días seguidos. Hoy la racha sigue creciendo.` : `Cada sesión suma. Hoy es un buen día para sumar una más.`,
-        `Tu yo de dentro de un mes te lo va a agradecer. Abre la rutina y arrancamos.`,
+      // Coach Banana habla: el nombre del entreno de hoy, sus minutos y, si hay, un dato real de la última vez.
+      const v = x.voice ?? "intermedio";
+      const who = x.name.trim() ? `, ${first}` : "";
+      const mins = x.mins ? `${x.mins} min` : "";
+      const bodies = x.lift ? [liftLine(v, x.lift)] : [
+        t(v, {
+          basico: `Yo te digo qué peso usar en cada serie${who}. Tú solo llega.`,
+          intermedio: `Tus cargas ya están calculadas${who}. Abre y arrancamos.`,
+          tecnico: `Cargas recalculadas con tu última sesión${who}.`,
+        }),
+        x.streak >= 2
+          ? t(v, { basico: `Llevas ${x.streak} días seguidos. Hoy la racha sigue creciendo.`, intermedio: `Vas ${x.streak} días seguidos. Hoy la racha sigue creciendo.`, tecnico: `Racha de ${x.streak} días: la constancia es lo que más progreso da.` })
+          : t(v, { basico: "Cada entreno suma. Hoy sumas uno más.", intermedio: "Cada sesión suma. Hoy es un buen día para sumar una más.", tecnico: "Una sesión más de estímulo: así se acumula el progreso." }),
+        ...(x.hook ? [`${x.hook}.`] : []),
       ];
-      return { title: x.name.trim() ? `${first}, hoy te toca ${x.routine}` : `Hoy te toca ${x.routine}`, body: pick(bodies, x.day + kind), url: "/app/entreno" };
+      const routine = x.routine.replace(/:.*$/, ""); // "Bombeo Banana: brazos y hombros" → "Bombeo Banana" (sin dos ":" en el título)
+      return { title: `Coach Banana: hoy toca ${routine}${mins ? `, ${mins}` : ""}`, body: pick(bodies, x.day + kind), url: "/app/entreno" };
     }
     case "racha":
       return {

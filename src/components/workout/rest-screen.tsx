@@ -29,6 +29,8 @@ export type RestInfo = {
   goal?: { idx: number; progress: number; text: string } | null;
   /** Lo que vale terminar completo y la racha que se protege */
   finish?: string | null;
+  /** Pistas de esfuerzo en el registro de la persona ("Me sobraban 1 o 2", "RIR 1-2"). */
+  hints?: Partial<Record<Effort, string>>;
   /** Dato motivador con números reales (rota en cada descanso) */
   fact?: string | null;
 };
@@ -131,7 +133,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
                     <button key={e.id} type="button" onClick={() => onEffort(e.id)} aria-pressed={on}
                       className={`pressable flex flex-col items-center justify-center gap-0.5 h-16 rounded-2xl px-1 text-center ${on ? "bg-banana text-ink" : "bg-white/10 text-white hover:bg-white/15"}`}>
                       <span className="inline-flex items-center gap-1 text-[15px] font-extrabold">{on && <Check weight="bold" className="size-4" />}{e.label}</span>
-                      <span className={`text-[11px] font-semibold leading-tight ${on ? "text-ink/75" : "text-white/60"}`}>{e.hint}</span>
+                      <span className={`text-[11px] font-semibold leading-tight ${on ? "text-ink/75" : "text-white/60"}`}>{info.hints?.[e.id] ?? e.hint}</span>
                     </button>
                   );
                 })}

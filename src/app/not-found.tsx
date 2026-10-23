@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MonkeyBanana } from "@/components/icons";
+import { Logo } from "@/components/brand";
 
 export const metadata = { title: "Página no encontrada", robots: { index: false } };
 
@@ -7,6 +8,7 @@ export default function NotFound() {
   return (
     <main className="min-h-dvh grid place-items-center text-center px-6 py-12">
       <div className="w-full max-w-sm animate-rise">
+        <div className="mb-8 flex justify-center"><Logo small /></div>
         <span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink"><MonkeyBanana className="size-16" /></span>
         <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-ink text-balance">Esta página se resbaló</h1>
         <p className="mt-2 text-muted text-pretty">El enlace está roto o la página ya no existe. Te llevamos de vuelta a lo importante.</p>

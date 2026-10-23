@@ -19,6 +19,8 @@ import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, TRIAL_CARD_LINE } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
+import { VoicePicker } from "@/components/voice-picker";
+import { voiceForLevel } from "@/lib/voice";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -83,7 +85,9 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 
 const SELECT = "input h-14 text-lg px-3";
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardRequired = false, payments = true, startOnCard = false, betaFirstPaid = "" }: {
+export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardRequired = false, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "" }: {
+  /** Solo demo: abrir en el paso de experiencia y lenguaje (?vista=lenguaje). */
+  startOnVoice?: boolean;
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
   /** Desde el fin de la beta la prueba pide tarjeta: paso extra para elegir plan y guardarla (no se cobra ese día). */
   cardRequired?: boolean;
@@ -100,14 +104,16 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
 }) {
   const router = useRouter();
   const TOTAL = cardRequired ? STEPS + 1 : STEPS;
-  const [step, setStep] = useState(startOnCard && cardRequired ? STEPS : 0);
+  const [step, setStep] = useState(startOnCard && cardRequired ? STEPS : startOnVoice ? 3 : 0);
+  /** El registro sigue al nivel hasta que la persona elige uno a mano. */
+  const [voiceTouched, setVoiceTouched] = useState(false);
   const [choice, setChoice] = useState<PlanChoice>(intent ?? { plan: "completo", billing: "mes" });
   const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
   const [o, setO] = useState<Draft>(() => ({
     name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
-    days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
+    days: 4, equipment: "gym", level: "intermedio", voice: "intermedio", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
   }));
   const [dob, setDob] = useState<Dob>(startOnCard ? { d: 27, m: 1, y: 1999 } : { d: null, m: null, y: null });
   const [touchedDate, setTouchedDate] = useState(false);
@@ -126,6 +132,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
 
   const up = (p: Partial<Draft>) => setO((x) => {
     const n = { ...x, ...p };
+    if (p.level && !voiceTouched && !p.voice) n.voice = voiceForLevel(p.level);
     if (!touchedDate && (p.weight != null || p.goalWeight != null) && n.weight != null && n.goalWeight != null) n.goalDate = suggestDate(n.weight, n.goalWeight).date;
     return n;
   });
@@ -302,6 +309,11 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
               <Choice on={o.level === "principiante"} onClick={() => up({ level: "principiante" })} icon={<BrandIcon name="plant" />} t="Principiante" d="Nunca o casi nunca he entrenado con pesas" />
               <Choice on={o.level === "intermedio"} onClick={() => up({ level: "intermedio" })} icon={<Banana />} t="Intermedio" d="Entreno hace meses y conozco los básicos" />
               <Choice on={o.level === "avanzado"} onClick={() => up({ level: "avanzado" })} icon={<Gorilla />} t="Avanzado" d="Más de 2 años entrenando en serio" />
+            </div>
+            <div className="pt-2">
+              <h2 className="text-xl font-extrabold tracking-tight text-ink">¿Cómo quieres que te hable?</h2>
+              <p className="mt-1 text-sm text-muted">Coach Banana te explica cada serie a tu manera. Los números son los mismos; lo cambias cuando quieras en tu perfil.</p>
+              <div className="mt-3"><VoicePicker value={o.voice ?? "intermedio"} onChange={(voice) => { setVoiceTouched(true); up({ voice }); }} /></div>
             </div>
           </>)}
 

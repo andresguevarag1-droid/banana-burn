@@ -8,7 +8,7 @@ import { Check } from "@/components/icons";
 type Tab = { id: string; label: string; title: string; body: string; points: string[]; src?: string; motion?: true; plan?: string };
 
 const TABS: Tab[] = [
-  { id: "hoy", label: "Tu día", src: "/landing/hoy2.png", title: "Abres la app y sabes qué hacer hoy.",
+  { id: "hoy", label: "Tu día", src: "/landing/hoy2.png", title: "Abres Banana Burn y sabes qué hacer hoy.",
     body: "Tus números del día y tu entreno, en una sola pantalla. Sin pensar, sin buscar videos.",
     points: ["Calorías y proteína que te quedan", "El entreno que te toca y por qué importa", "Cómo va tu semana de un vistazo"] },
   { id: "entreno", label: "Tu entreno", src: "/landing/entreno.png", title: "El peso exacto de cada serie.",

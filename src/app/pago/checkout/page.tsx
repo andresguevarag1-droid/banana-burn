@@ -88,7 +88,7 @@ function Notice({ title, body, demo }: { title: string; body: string; demo?: boo
       <p className="text-muted">{body}</p>
       <div className="flex flex-col sm:flex-row gap-2 justify-center">
         <Link href="/app/suscripcion" className="btn-primary">Ver mi suscripción</Link>
-        <Link href="/app" className="btn-ghost">Ir a la app</Link>
+        <Link href="/app" className="btn-ghost">Ir a Banana Burn</Link>
       </div>
     </div>
   );

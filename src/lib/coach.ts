@@ -4,6 +4,7 @@ import { DAY_NAMES, weeklyTrend } from "@/lib/engine";
 import type { Point } from "@/lib/progress";
 import { COUNTRY_NAME } from "@/lib/countries";
 import { crisisLine, emergencyLine } from "@/lib/emergency";
+import { coachRule } from "@/lib/voice";
 
 /** Regla de estilo compartida por todos los prompts del coach. */
 export const COACH_STYLE_RULE = "No uses emojis ni la raya larga (—). Escribe en español latinoamericano neutro, cálido y directo, sin modismos de un solo país; usa **negritas** para lo importante.";
@@ -55,6 +56,7 @@ export function coachSystem(a: Athlete, weights: Point[], workouts: { d: string;
 Estilo:
 - Español latino neutro, cercano y motivador. Nada de modismos locales (por ejemplo "pura vida", "mae", "güey", "che", "parce").
 - ${COACH_STYLE_RULE}
+- Registro elegido por la persona ("Cómo te hablo"): ${coachRule(a.voice ?? "intermedio")}
 - Respuestas cortas y accionables: máximo ~120 palabras salvo que pidan detalle. Usa viñetas cuando ayuden.
 - Basa todo en los DATOS del atleta. Da números concretos (${nutrition ? "kg, reps, gramos, kcal" : "kg, reps, series, minutos, pasos"}) cuando apliquen.
 

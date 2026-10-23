@@ -2,11 +2,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BrandIcon, Check, PersonSimpleWalk, Repeat, TreePalm } from "@/components/icons";
-import { DAY_NAMES, type PlannedDay } from "@/lib/engine";
+import { DAY_NAMES, hookLine, type PlannedDay } from "@/lib/engine";
+import { DEFAULT_VOICE, restText, sessionLine, setsReps, setsLegend, t, type Voice } from "@/lib/voice";
 
-const fmtRest = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-419")} min` : `${s} s`);
 
-export function WeekTabs({ days, todayDow, done, todayDone = false }: { days: PlannedDay[]; todayDow: number; done: number[]; todayDone?: boolean }) {
+export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFAULT_VOICE }: { days: PlannedDay[]; todayDow: number; done: number[]; todayDone?: boolean; voice?: Voice }) {
   const [sel, setSel] = useState(todayDow);
   const p = days.find((d) => d.dow === sel)!;
   const isToday = sel === todayDow;
@@ -32,19 +32,21 @@ export function WeekTabs({ days, todayDow, done, todayDone = false }: { days: Pl
           <p className="text-sm font-semibold text-ink/75 first-letter:uppercase">{isToday ? `Hoy, ${DAY_NAMES[p.dow]}` : DAY_NAMES[p.dow]}</p>
           {doneHere ? <span className="chip bg-peel text-white"><Check weight="bold" className="size-3.5" />Hecho hoy</span> : <span className="chip bg-ink/5 text-ink">{p.tag}</span>}
         </div>
-        <h2 className="mt-1 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-ink"><BrandIcon name={p.icon} className="size-8 shrink-0 text-banana-ink" />{p.name}</h2>
+        <h2 className="mt-1 flex items-start gap-2.5 text-3xl font-extrabold tracking-tight text-ink text-balance leading-[1.1]"><BrandIcon name={p.icon} className="mt-0.5 size-8 shrink-0 text-banana-ink" />{p.name}</h2>
+        {p.hook && p.exercises.length > 0 && !doneHere && <p className="mt-2 text-[15px] font-bold text-ink/85 text-pretty">{hookLine(p.hook, p.mins ?? 55)}</p>}
         {p.exercises.length > 0 ? (
           <>
-            <p className="mt-1 text-sm font-semibold text-ink/75 tabular-nums">{p.exercises.length} ejercicios en unos {p.mins ?? 55} min, tempo 3-1-1</p>
+            <p className="mt-1 text-sm font-semibold text-ink/75 tabular-nums">{sessionLine(voice, { exercises: p.exercises.length, mins: p.mins ?? 55, cardio: !!p.cardio })}</p>
             <ol className="mt-4 space-y-2 stagger">
               {p.exercises.map((e, i) => (
                 <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white/80 px-3.5 py-3">
                   <span className="grid place-items-center size-8 shrink-0 rounded-xl bg-ink text-white text-sm font-bold">{i + 1}</span>
-                  <div className="flex-1 min-w-0"><p className="font-bold text-ink leading-tight">{e.name}</p><p className="text-xs text-muted">{e.muscle}, descanso de {fmtRest(e.cfg.rest)}</p></div>
-                  <p className="shrink-0 whitespace-nowrap font-extrabold text-ink tabular-nums">{e.cfg.sets}×{e.cfg.lo}-{e.cfg.hi}{e.cfg.unit === "s" ? " s" : e.cfg.unit === "m" ? " m" : ""}</p>
+                  <div className="flex-1 min-w-0"><p className="font-bold text-ink leading-tight">{e.name}</p><p className="text-xs text-muted">{e.muscle}, {t(voice, { basico: "descansa", intermedio: "descanso de", tecnico: "descanso" })} {restText(e.cfg.rest)}</p></div>
+                  <p className={`shrink-0 font-extrabold text-ink tabular-nums text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit)}</p>
                 </li>
               ))}
             </ol>
+            {setsLegend(voice) && <p className="mt-2 text-xs font-semibold text-ink/70">{setsLegend(voice)}</p>}
             {p.cardio && <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink/70"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0" />Al final: {p.cardio}</p>}
             {doneHere ? (
               <div className="mt-5">

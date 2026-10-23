@@ -23,6 +23,7 @@ from (values
   (18,'0029_testers.sql',             to_regclass('public.tester_grants') is not null and to_regclass('public.feedback_reports') is not null and to_regprocedure('public.admin_set_tester(uuid,text)') is not null and to_regprocedure('public.tester_hold_charge(uuid)') is not null and exists (select 1 from pg_proc where proname = 'admin_list_users' and prosrc like '%tester_until%')),
   (19,'0030_perfil_insignias.sql',    to_regclass('public.identity_verifications') is not null and to_regclass('public.profile_flair') is not null and to_regprocedure('public.community_flair(uuid[])') is not null and to_regprocedure('public.identity_purge_due(integer)') is not null and exists (select 1 from storage.buckets where id = 'identidad' and not public)),
   (20,'0031_guia.sql',                exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'guide_tips') and to_regprocedure('public.guide_mark_seen(integer)') is not null and to_regprocedure('public.guide_tip_seen(text)') is not null),
-  (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check'))
+  (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check')),
+  (24,'0035_lenguaje.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'lenguaje') and exists (select 1 from pg_constraint where conname = 'profiles_lenguaje_check'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

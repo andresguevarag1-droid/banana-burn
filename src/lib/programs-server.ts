@@ -2,6 +2,7 @@
 // La lógica pura (semana, día, pausas, nutrición) vive en programs.ts y está probada en programs.test.ts.
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { mondayOf, todayFor } from "@/lib/today";
 import { EX, e1rm, isTrainingDay, type Equipment, type ExerciseId, type PlannedDay } from "@/lib/engine";
@@ -55,6 +56,8 @@ function demoDone(today: string): DoneSession[] {
 export const getProgramStates = cache(async (v: Viewer): Promise<ProgramState[]> => {
   if (v.demo) {
     const today = todayFor(v).iso;
+    // Demo: ?programa=no muestra la rutina normal del motor (sin programa activo) para revisar Hoy y Entrenar.
+    if ((await cookies()).get("bb_demo_programa")?.value === "no") return [{ slug: "abdomen-marcado", status: "completado", startedOn: addDays(today, -55), pausedOn: null, pausedDays: 0, completedAt: `${addDays(today, -12)}T19:00:00.000Z` }];
     // Antes del programa insignia, Andrés completó Abdomen marcado (6 semanas): su certificado sale en Retos y en su perfil.
     return [
       { slug: DEMO_PROGRAM, status: "activo", startedOn: demoStart(today), pausedOn: null, pausedDays: 0, completedAt: null },

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, BananaFlame, BananaTrophy, BrandIcon, CaretRight, CheckCircle, Monkey, PersonSimpleWalk, Scales, TreePalm } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
@@ -6,7 +7,9 @@ import { getDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
-import { DAY_NAMES, isTrainingDay } from "@/lib/engine";
+import { DAY_NAMES, hookLine, isTrainingDay } from "@/lib/engine";
+import { getVoice } from "@/lib/voice-server";
+import { sessionLine, setsReps, setsLegend, whyItMatters } from "@/lib/voice";
 import { ProgramHero } from "@/components/programas/program-hero";
 import { ProgramHabits } from "@/components/programas/program-habits";
 import { getProgramChecks } from "@/lib/programs-server";
@@ -36,7 +39,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
   const demoTester = v.demo ? (await searchParams).tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
-  const [a, meals, ent, xs, tester] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null)]);
+  const [a, meals, ent, xs, tester, voice] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
@@ -53,6 +56,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = plan.mins ?? (training ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;
+  const hook = hookLine(plan.hook, training ? mins : null);
+  const legend = setsLegend(voice);
 
   return (
     <div className="space-y-5 animate-enter">
@@ -92,20 +97,30 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
                 <span>Hoy {DAY_NAMES[d.today.dow]}, {/^(fuerza|volumen)$/i.test(plan.tag) ? `día de ${plan.tag.toLowerCase()}` : plan.tag.toLowerCase()}</span>
                 {d.deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
               </p>
-              <h2 className="mt-1 text-[28px] sm:text-[32px] leading-none font-extrabold tracking-tight text-ink">{plan.name}</h2>
+              <h2 className="mt-1 text-[28px] sm:text-[32px] leading-[1.05] font-extrabold tracking-tight text-ink text-balance">{plan.name}</h2>
             </div>
           </div>
+          {/* Coach Banana presenta el día: una línea que da ganas de entrenar */}
+          {hook && !g.trainedToday && (
+            <div className="relative mt-4 flex items-center gap-3 rounded-2xl bg-ink p-3 pr-4 text-white shadow-lift">
+              <span aria-hidden className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-banana">
+                <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="object-cover origin-[52%_4%] scale-[2.5]" />
+              </span>
+              <p className="min-w-0"><span className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">Coach Banana</span><span className="block text-[15px] font-bold leading-snug text-pretty">{hook}</span></p>
+            </div>
+          )}
           {training ? (
             <>
-              {!g.trainedToday && <p className="relative mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-ink"><b>Por qué importa:</b> entrenar fuerza hace que lo que bajes sea grasa y no músculo. Es la parte que más cambia tu cuerpo.</p>}
-              <p className="relative mt-2 text-sm font-semibold text-ink/70 tabular-nums">{plan.exercises.length} ejercicios en unos {mins} min{plan.cardio ? ", más cardio al final" : ""}</p>
+              {!g.trainedToday && <p className="relative mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-ink"><b>Por qué importa:</b> {whyItMatters(voice)[0].toLowerCase()}{whyItMatters(voice).slice(1)}</p>}
+              <p className="relative mt-2 text-sm font-semibold text-ink/70 tabular-nums">{sessionLine(voice, { exercises: plan.exercises.length, mins, cardio: !!plan.cardio })}</p>
               <ul className="relative mt-4 flex flex-wrap gap-1.5">
-                {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/70">{e.cfg.sets}×{e.cfg.lo}-{e.cfg.hi}</span></li>)}
+                {plan.exercises.map((e) => <li key={e.id} className="chip min-h-8 h-auto py-1 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/70 tabular-nums">{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit)}</span></li>)}
               </ul>
+              {legend && !g.trainedToday && <p className="relative mt-2 text-xs font-semibold text-ink/70">{legend}</p>}
               {g.trainedToday ? (
                 <p className="relative mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0" />Entreno de hoy completado. Descansa y come bien.</p>
               ) : (
-                <div className="relative mt-5"><Readiness suggestSoft={d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post"} initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
+                <div className="relative mt-5"><Readiness voice={voice} suggestSoft={d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post"} initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
               )}
             </>
           ) : (

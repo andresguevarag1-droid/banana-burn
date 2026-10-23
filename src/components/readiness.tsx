@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BananaFlame, Banana, Bed, Syringe } from "@/components/icons";
 import { useDailySave } from "@/components/use-daily-save";
+import { DEFAULT_VOICE, readinessTips, type Voice } from "@/lib/voice";
 
 const OPTS = [
   { v: 1, I: Bed, t: "Cansado", tip: "Modo suave: una serie menos por ejercicio y 3 reps en reserva. Entrenar suave también suma a tu racha.", q: "?modo=suave" },
@@ -11,7 +12,7 @@ const OPTS = [
 ];
 
 /** Check-in de energía (estilo "readiness") que ajusta el entreno de hoy. */
-export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean }) {
+export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, voice = DEFAULT_VOICE }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean; voice?: Voice }) {
   const key = `bb.ready.${dateKey}`;
   const [v, setV] = useState(initial);
   const daily = useDailySave();
@@ -22,6 +23,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false }:
     if (demo) { try { localStorage.setItem(key, String(n)); } catch { /* */ } return; }
     daily.save("energy", n, () => setV((x) => (x === n ? prev : x)));
   };
+  const tips = readinessTips(voice);
   const sel = OPTS.find((o) => o.v === v);
   return (
     <div className="relative">
@@ -35,7 +37,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false }:
           </button>
         ))}
       </div>
-      {sel && <p className="mt-2.5 text-[13px] font-semibold text-ink/80 animate-enter">{sel.tip}</p>}
+      {sel && <p className="mt-2.5 text-[13px] font-semibold text-ink/80 animate-enter">{tips[sel.v - 1] ?? sel.tip}</p>}
       <Link href={`/app/entreno${sel?.q ?? ""}`} className="mt-4 btn-primary w-full sm:w-auto h-14 px-7 text-base">
         {sel?.v === 1 ? "Empezar modo suave" : "Empezar entreno"} <span className="font-medium text-white/70 tabular-nums">{sel?.v === 1 ? Math.round(mins * 0.75) : mins} min</span> <ArrowRight weight="bold" className="size-5" />
       </Link>

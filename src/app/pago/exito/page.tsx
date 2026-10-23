@@ -37,7 +37,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
   if (v.demo) {
     return (
       <Card icon={<MonkeyBanana className="size-10" />} title="Modo demo" body="En la demo no se procesan pagos.">
-        <Link href="/app" className="btn-primary">Ir a la app</Link>
+        <Link href="/app" className="btn-primary">Ir a Banana Burn</Link>
       </Card>
     );
   }
@@ -49,7 +49,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
           <Link href="/app/suscripcion" className="btn-primary">Ver mi suscripción</Link>
           <Link href="/precios" className="btn-ghost">Ver planes</Link>
         </div>
-        <Link href="/app" className="tap inline-block text-sm font-semibold text-muted underline underline-offset-2 transition-colors duration-150 hover:text-ink">Ir a la app</Link>
+        <Link href="/app" className="tap inline-block text-sm font-semibold text-muted underline underline-offset-2 transition-colors duration-150 hover:text-ink">Ir a Banana Burn</Link>
       </Card>
     );
   }

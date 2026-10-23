@@ -14,11 +14,13 @@ import { daysLabel } from "@/lib/programs";
 
 import { LIB_COUNT } from "@/lib/library";
 import { FirstTip } from "@/components/guide/first-tip";
+import { getVoice } from "@/lib/voice-server";
+import { t } from "@/lib/voice";
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
   const v = (await getViewer())!;
-  const a = await getAthlete(v);
+  const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const block = (d.week % 6) + 1;
@@ -31,7 +33,7 @@ export default async function Entrenar() {
   const p = d.program;
   return (
     <div className="space-y-5 animate-enter">
-      <FirstTip id="entrenar" title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: las cargas suben solas con tu historial." : "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos."}</FirstTip>
+      <FirstTip id="entrenar" title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: las cargas suben solas con tu historial." : t(voice, { basico: "Toca el día de hoy para empezar. Si se te pasa uno, hazlo mañana: Coach Banana mantiene el orden y te dice qué peso usar.", intermedio: "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos.", tecnico: "Sigue el orden de la semana. Si saltas un día, retómalo al siguiente: la progresión de cargas se recalcula con tu historial." })}</FirstTip>
       {p ? (
         <>
           {/* Programa activo: su portada, la semana del programa y sus sesiones */}
@@ -54,7 +56,7 @@ export default async function Entrenar() {
             </div>
           </header>
           <ProgramWeek current={p.run.next?.day ?? null} label={`Sesiones de la semana ${p.run.week}`}
-            sessions={sessionViews(p, p.icon, p.run.weekSessions.map((w) => w.session), p.run.week, d.equipment, (day) => p.run.weekSessions.some((w) => w.day === day && w.done), (day) => (day === p.run.next?.day ? "/app/entreno" : `/app/entreno?sesion=${day}`))} />
+            voice={voice} sessions={sessionViews(p, p.icon, p.run.weekSessions.map((w) => w.session), p.run.week, d.equipment, (day) => p.run.weekSessions.some((w) => w.day === day && w.done), (day) => (day === p.run.next?.day ? "/app/entreno" : `/app/entreno?sesion=${day}`))} />
         </>
       ) : (
         <>
@@ -64,9 +66,9 @@ export default async function Entrenar() {
             <div className="mt-3 flex gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={6} aria-valuenow={block} aria-label={`Semana ${block} de 6`}>
               {[1, 2, 3, 4, 5, 6].map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < block ? "bg-ink" : w === block ? "bg-ember" : w === 6 ? "bg-sky/30" : "bg-line"}`} />)}
             </div>
-            <p className="mt-2 max-w-[65ch] text-sm text-muted">{a.trainDays} días por semana, nivel {a.level}{a.minutes ? `, ${a.minutes} min por sesión` : ""}. Haz el día que te toca. Si se te pasa uno, hazlo mañana y sigue con el orden: el motor ajusta los pesos solo.</p>
+            <p className="mt-2 max-w-[65ch] text-sm text-muted">{a.trainDays} días por semana, nivel {a.level}{a.minutes ? `, ${a.minutes} min por sesión` : ""}. Haz el día que te toca. Si se te pasa uno, hazlo mañana y sigue con el orden: Coach Banana ajusta los pesos solo.</p>
           </header>
-          <WeekTabs days={d.weekPlan} todayDow={d.today.dow} done={done} todayDone={!!todayTpl && doneTpls.includes(todayTpl)} />
+          <WeekTabs voice={voice} days={d.weekPlan} todayDow={d.today.dow} done={done} todayDone={!!todayTpl && doneTpls.includes(todayTpl)} />
         </>
       )}
       <section className="rounded-[1.75rem] bg-ink text-white p-5 sm:p-6">

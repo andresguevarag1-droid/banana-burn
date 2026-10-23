@@ -6,6 +6,8 @@ import { PRIVATE_NO_STORE, WALL_PATH, gateAction, needsAccessCheck } from "@/lib
 
 /** Estado de ejemplo de la tarjeta en modo demo (solo sin Supabase). */
 const DEMO_CARD_COOKIE = "bb_demo_tarjeta";
+/** Registro de lenguaje de ejemplo en modo demo (mismo nombre que voice-server.ts; aquí sin importar next/headers). */
+const DEMO_VOICE_COOKIE = "bb_demo_lenguaje";
 
 /** Lo privado nunca queda en cachés compartidas (CDN, proxies) ni en el disco del navegador. */
 function noStore(res: NextResponse) {
@@ -16,9 +18,18 @@ function noStore(res: NextResponse) {
 export async function middleware(req: NextRequest) {
   if (!isSupabaseConfigured) {
     // Modo demo: ?demo=<estado> en Mi plan elige el estado de ejemplo de la tarjeta y del cobro (trial-demo.ts) para toda la app.
-    const res = NextResponse.next();
+    // ?lenguaje=basico|intermedio|tecnico elige el registro de ejemplo ("Cómo te hablo") desde esta misma página.
+    const l = req.nextUrl.searchParams.get("lenguaje");
+    const voice = l === "basico" || l === "intermedio" || l === "tecnico" ? l : null;
+    if (voice) req.cookies.set(DEMO_VOICE_COOKIE, voice);
+    // ?programa=no|si: con o sin el programa de ejemplo activo (para revisar la rutina normal de Hoy y Entrenar).
+    const progParam = req.nextUrl.searchParams.get("programa");
+    if (progParam === "no" || progParam === "si") req.cookies.set("bb_demo_programa", progParam);
+    const res = voice || progParam ? NextResponse.next({ request: req }) : NextResponse.next();
     const d = req.nextUrl.searchParams.get("demo");
     if (d && /^[a-z]{3,12}$/.test(d)) res.cookies.set(DEMO_CARD_COOKIE, d, { path: "/", sameSite: "lax", maxAge: 3600 });
+    if (voice) res.cookies.set(DEMO_VOICE_COOKIE, voice, { path: "/", sameSite: "lax", maxAge: 3600 });
+    if (progParam === "no" || progParam === "si") res.cookies.set("bb_demo_programa", progParam, { path: "/", sameSite: "lax", maxAge: 3600 });
     return noStore(res);
   }
   let res = NextResponse.next({ request: req });

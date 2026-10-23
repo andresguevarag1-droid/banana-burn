@@ -110,7 +110,7 @@ describe("Hoy", () => {
 
 describe("Progreso", () => {
   test("nombres de sesión legibles", () => {
-    expect(workoutName("pushA")).toBe("Pierna y empuje A");
+    expect(workoutName("pushA")).toBe("Fuerza total: piernas, pecho y hombros");
     expect(workoutName("expres20")).toBe("Exprés 20 min");
     expect(workoutName("descanso")).toBe("Descanso activo");
   });
