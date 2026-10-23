@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning } from "@/components/icons";
+import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning, WifiSlash } from "@/components/icons";
 import { platesPerSide, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
 import { FULL_BONUS, SET_XP, levelCrossed, workoutXp } from "@/lib/gamify";
 import type { Technique } from "@/lib/engine/technique";
@@ -27,6 +27,7 @@ import { BananaTrail, LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/com
 import { MILESTONES, expressRows, finishValue, lastVolume, levelGoal, levelGoalText, nextMilestone, pickFact, reachedMilestones, restFacts, volumeWithHistory, type LevelGoal } from "@/components/workout/motivation";
 import type { SaveResult } from "./actions";
 import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/components/offline/outbox";
+import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
@@ -100,6 +101,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   /** El entreno quedó en la bandeja del teléfono (sin señal) y se sube solo al volver la conexión. */
   const [queued, setQueued] = useState(false);
+  const online = useOnline();
   const [saved, setSaved] = useState<SaveResult | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pop, setPop] = useState<{ ex: number; si: number; xp: number; k: number } | null>(null);
@@ -617,8 +619,6 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
                 </fieldset>
               </>
             )}
-            {saveMsg && <p role="alert" className={`mt-4 text-sm font-semibold ${queued ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
-            {queued && <Link href="/app" className="btn-ghost mt-3 w-full h-12">Salir: se sube solo al volver la señal</Link>}
           </div>
         </div>
         <footer className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line bg-white/95">
@@ -628,7 +628,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               <button onClick={backToPlay} className="btn-banana flex-1 h-16 text-base font-extrabold">Volver al entreno</button>
             </div>
           ) : (
+            <>
+            {/* Junto al botón (no al final del resumen): quien toca Guardar ve de inmediato qué pasó. */}
+            {saveMsg && <p role="alert" className={`mx-auto mb-2 max-w-md text-sm font-semibold text-pretty ${queued ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
             <button onClick={save} disabled={pending} aria-busy={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{pending ? "Guardando…" : queued ? "Reintentar ahora" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno"}</button>
+            {queued && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">Salir: se sube solo al volver la señal</Link>}
+            </>
           )}
         </footer>
       </Shell>
@@ -695,6 +700,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>
               {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-3.5" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{xpNow.xp} XP</span>}
               {sessMode === "suave" && <span className="text-sky">Modo suave</span>}
+              {!online && <span role="status" className="inline-flex items-center gap-1 text-ink"><WifiSlash weight="bold" className="size-3.5" aria-hidden />Sin señal: guardamos todo aquí</span>}
               {combo >= 2 && <span className="inline-flex items-center gap-1 text-ember-ink"><Lightning weight="fill" className="size-3.5" aria-hidden />Combo x{combo}</span>}
             </p>
           </div>

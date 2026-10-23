@@ -19,6 +19,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <div style={{ marginTop: 24, display: "grid", gap: 10 }}>
             <button type="button" onClick={() => (stale ? window.location.reload() : reset())} style={{ ...btn, background: "#1B1505", color: "#FFFFFF" }}>{stale ? "Actualizar ahora" : "Intentar de nuevo"}</button>
             {/* <a> y no <Link>: el enrutador puede ser justo lo que falló. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/" style={{ ...btn, background: "#FFFFFF", color: "#1B1505", border: "1px solid #EDE3C6" }}>Ir al inicio</a>
           </div>
           {error.digest && <p style={{ marginTop: 20, fontSize: 11, color: "#766A52" }}>Código de referencia: <span style={{ fontFamily: "ui-monospace, monospace", userSelect: "all" }}>{error.digest}</span></p>}
