@@ -92,15 +92,18 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const since = isoMinus(utcToday, 61);
   // 100 usuarios × 61 días pasan de las 1000 filas que devuelve Supabase por respuesta: se lee por páginas.
   // Sin esto, alguien activo quedaba fuera del corte, parecía inactivo y recibía "te extrañamos".
-  const [wk, dl, ws, logs, subs] = await Promise.all([
+  const [wk, dl, ws, logs, subs, gl] = await Promise.all([
     allPages((a, b) => admin.from("workouts").select("user_id,day").in("user_id", ids).gte("day", since).order("id").range(a, b)),
     allPages((a, b) => admin.from("daily_logs").select("user_id,day").in("user_id", ids).gte("day", since).order("user_id").order("day").range(a, b)),
     allPages((a, b) => admin.from("weights").select("user_id,day,kg").in("user_id", ids).gte("day", isoMinus(utcToday, 21)).order("user_id").order("day").range(a, b)),
     allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,pushes").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)).order("id").range(a, b)),
     allPages((a, b) => admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids).order("endpoint").range(a, b)),
+    // Meta activa: personaliza los correos ("te faltan X kg"). Si falla, los correos salen sin la tarjeta de meta.
+    allPages((a, b) => admin.from("goals").select("user_id,start_weight,goal_weight,goal_date").in("user_id", ids).eq("active", true).order("id").range(a, b)),
   ]);
   // Si falla una lectura, el lote se salta: con datos incompletos alguien activo parecería inactivo y recibiría "te extrañamos".
   const failed = [wk, dl, ws, logs, subs].find((r) => r.error);
+  if (gl.error) logError("cron:recordatorios", "goals_query_failed", { code: gl.error.code });
   if (failed) throw Object.assign(new Error("lectura incompleta"), { code: failed.error?.code ?? "query_failed" });
   const group = <R extends { user_id: string }>(rows: R[] | null) => {
     const m = new Map<string, R[]>();
@@ -112,10 +115,12 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const wsBy = group(ws.data as { user_id: string; day: string; kg: number }[]);
   const logBy = group(logs.data as { user_id: string; kind: string; local_day: string; pushes: number }[]);
   const subBy = group(subs.data as (PushSub & { user_id: string })[]);
+  const goalBy = new Map<string, GoalRow>();
+  for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
 
   for (const u of users) {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
-    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy }); }
+    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, goalBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
   }
 }
@@ -123,9 +128,21 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
 type Grouped = {
   wkBy: Map<string, { user_id: string; day: string }[]>; dlBy: Map<string, { user_id: string; day: string }[]>; wsBy: Map<string, { user_id: string; day: string; kg: number }[]>;
   logBy: Map<string, { user_id: string; kind: string; local_day: string; pushes: number }[]>; subBy: Map<string, (PushSub & { user_id: string })[]>;
+  goalBy: Map<string, GoalRow>;
 };
+type GoalRow = { user_id: string; start_weight: number | string; goal_weight: number | string; goal_date: string | null };
 
-async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy }: Grouped) {
+/** Meta para los correos: el peso actual es el último pesaje (hasta 21 días) o, si no hay, el inicial. Exportada para pruebas. */
+export function goalFor(g: GoalRow | undefined, weights: { day: string; kg: number | string }[]): T.Goal | null {
+  if (!g) return null;
+  const goal = Number(g.goal_weight), start = Number(g.start_weight);
+  if (!Number.isFinite(goal) || !Number.isFinite(start)) return null;
+  const last = [...weights].sort((a, b) => (a.day < b.day ? -1 : 1)).at(-1);
+  const current = last ? Number(last.kg) : start;
+  return { start, current: Number.isFinite(current) ? current : start, goal, date: g.goal_date };
+}
+
+async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, goalBy }: Grouped) {
   {
     const prefs = prefsOf.get(u.id)!;
     const c = localClock(now, prefs.timezone);
@@ -160,6 +177,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       return email;
     };
     const name = u.full_name || "";
+    const goal = goalFor(goalBy.get(u.id), wsBy.get(u.id) ?? []);
 
     for (const d of decisions) {
       // Reclamar el envío: si otra corrida ya lo hizo hoy, no se repite.
@@ -177,7 +195,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       if (d.email) {
         const to = await getEmail();
         if (to) {
-          const msg = emailFor(d.kind, { u, name, plan, streak, weekly });
+          const msg = emailFor(d.kind, { u, name, plan, streak, weekly, goal });
           const r = await sendEmail(to, msg.email, { idempotencyKey: `${d.kind}/${u.id}/${c.iso}`, unsubscribe: msg.unsubscribe, tags: { kind: d.kind } });
           if (r.ok) stats.email++;
         }
@@ -208,13 +226,13 @@ async function weeklyData(admin: SupabaseClient, u: Profile, today: string, work
   };
 }
 
-function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<typeof planDay>; streak: number; weekly: WeeklyCtx | null }) {
+function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<typeof planDay>; streak: number; weekly: WeeklyCtx | null; goal: T.Goal | null }) {
   switch (kind) {
-    case "semanal": { const unsubscribe = unsubscribeUrl(x.u.id, "semanal"); return { unsubscribe, email: T.resumenSemanal({ name: x.name, ...x.weekly!, unsubscribe }) }; }
+    case "semanal": { const unsubscribe = unsubscribeUrl(x.u.id, "semanal"); return { unsubscribe, email: T.resumenSemanal({ name: x.name, ...x.weekly!, goal: x.goal, unsubscribe }) }; }
     case "racha": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.rachaEnPeligro({ name: x.name, streak: x.streak, unsubscribe }) }; }
     case "reactivacion_3":
-    case "reactivacion_7": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.reactivacion({ name: x.name, days: kind === "reactivacion_3" ? 3 : 7, routine: x.plan.name, trainingDay: x.plan.tpl !== null, unsubscribe }) }; }
+    case "reactivacion_7": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.reactivacion({ name: x.name, days: kind === "reactivacion_3" ? 3 : 7, routine: x.plan.name, trainingDay: x.plan.tpl !== null, goal: x.goal, unsubscribe }) }; }
     case "recordatorio":
-    default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ name: x.name, routine: x.plan.name, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, unsubscribe }) }; }
+    default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ name: x.name, routine: x.plan.name, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, goal: x.goal, unsubscribe }) }; }
   }
 }
