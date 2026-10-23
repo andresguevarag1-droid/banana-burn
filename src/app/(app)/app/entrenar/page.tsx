@@ -3,8 +3,9 @@ import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { WeekTabs } from "./week-tabs";
 import Link from "next/link";
+import { ExpressCard } from "@/components/express-chips";
 import { mondayOf } from "@/lib/today";
-import { ArrowRight, Books, BrandIcon, CaretRight, Lightning, TreePalm } from "@/components/icons";
+import { ArrowRight, Books, BrandIcon, CaretRight, TreePalm } from "@/components/icons";
 import { templatesDoneToday } from "../entreno/done-today";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { ProgramWeek } from "@/components/programas/program-week";
@@ -32,6 +33,8 @@ export default async function Entrenar() {
   return (
     <div className="space-y-5 animate-enter">
       <FirstTip id="entrenar" title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: las cargas suben solas con tu historial." : "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos."}</FirstTip>
+      {/* Exprés arriba: la salida para los días ocupados (antes quedaba al final y casi nadie la veía). */}
+      <ExpressCard program={!!p} />
       {p ? (
         <>
           {/* Programa activo: su portada, la semana del programa y sus sesiones */}
@@ -69,17 +72,6 @@ export default async function Entrenar() {
           <WeekTabs days={d.weekPlan} todayDow={d.today.dow} done={done} todayDone={!!todayTpl && doneTpls.includes(todayTpl)} />
         </>
       )}
-      <section className="rounded-[1.75rem] bg-ink text-white p-5 sm:p-6">
-        <h2 className="flex items-start gap-2.5 text-2xl font-extrabold"><Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Día ocupado? Entrena donde estés</h2>
-        <p className="mt-1 text-sm text-white/70">Exprés sin equipo: cuerpo completo con tu peso en un espacio de 2 × 2 m. Cuenta para tu racha{p ? ", aunque no reemplaza la sesión del programa" : ""}.</p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {[[10, "Activa"], [20, "Quema"], [30, "Completo"]].map(([m, l]) => (
-            <Link key={m} href={`/app/entreno?expres=${m}`} className="pressable rounded-2xl bg-white/10 hover:bg-white/15 px-2 py-4 text-center">
-              <p className="text-3xl font-extrabold text-banana tabular-nums leading-none">{m}<span className="ml-0.5 text-sm font-bold">min</span></p><p className="mt-1.5 text-xs font-bold text-white/70">{l}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
       <Link href="/app/ejercicios" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft text-banana-ink" aria-hidden><Books weight="duotone" className="size-6" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Biblioteca de {LIB_COUNT.toLocaleString("es-419")} ejercicios</span><span className="block text-sm text-muted">Busca por músculo o equipo, con pasos en español.</span></span><CaretRight weight="bold" className="size-5 shrink-0 text-faint" /></Link>
     </div>
   );

@@ -15,7 +15,7 @@ import { TodayPanel } from "@/components/hoy/today-panel";
 import { WeekCard } from "@/components/hoy/week-card";
 import { WeighIn } from "@/components/weigh-in";
 import { Readiness } from "@/components/readiness";
-import { ExpressChips } from "@/components/express-chips";
+import { ExpressCard } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
 import { EnablePush } from "@/components/notifications/enable-push";
 import { AnnouncementBanner } from "@/components/admin/announcement-banner";
@@ -111,7 +111,6 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
           ) : (
             <p className="relative mt-4 flex items-start gap-2 text-ink/80"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 mt-0.5 text-banana-ink" /><span>{plan.cardio}. Tu músculo crece hoy.</span></p>
           )}
-          {!g.trainedToday && <div className="relative mt-4"><ExpressChips /></div>}
           <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-ink/75">
             <span className="inline-flex items-center gap-1.5">Ayer <BrandIcon name={d.yesterday.icon} className="size-4" /> {d.yesterday.name}</span>
             <span className="inline-flex items-center gap-1.5">Mañana <BrandIcon name={d.tomorrow.icon} className="size-4" /> {d.tomorrow.name}</span>
@@ -119,6 +118,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         </section>}
 
       </div>
+      {!g.trainedToday && <ExpressCard program={!!d.program} compact />}
       {px && habits && d.program && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
       {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 

@@ -5,7 +5,6 @@ import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Monkey, Pause,
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { ProgressBar } from "@/components/progress-bar";
 import { Readiness } from "@/components/readiness";
-import { ExpressChips } from "@/components/express-chips";
 import { DAY_NAMES } from "@/lib/engine";
 import type { AthleteProgram } from "@/lib/programs-server";
 import { setsLabel, tipFor } from "@/lib/programs";
@@ -86,7 +85,6 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { 
             {r.next && <Link href="/app/entreno" className="btn-ghost mt-4 h-12 w-full sm:w-auto px-5">Adelantar la sesión de {r.next.session.title}<ArrowRight weight="bold" className="size-4" /></Link>}
           </div>
         )}
-        {!trainedToday && r.today !== "terminado" && <div className="mt-4"><ExpressChips /></div>}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line pt-3 text-xs font-semibold text-ink/75">
           {r.milestone && <span className="inline-flex items-center gap-1.5"><CalendarCheck weight="duotone" className="size-4 text-banana-ink" />Próximo hito: {r.milestone.label}{r.milestone.left > 0 ? `, en ${r.milestone.left} ${r.milestone.left === 1 ? "semana" : "semanas"}` : ", esta semana"}</span>}
           <Link href={`/app/retos/${p.slug}/progreso`} className="tap inline-flex min-h-11 items-center gap-1 font-bold text-ink hover:underline underline-offset-4">Ver avance<ArrowRight weight="bold" className="size-3.5" /></Link>

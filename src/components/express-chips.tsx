@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Lightning } from "@/components/icons";
 
@@ -12,5 +13,39 @@ export function ExpressChips({ tone = "light" }: { tone?: "light" | "dark" }) {
         ))}
       </div>
     </div>
+  );
+}
+
+const EXPRESS: [number, string, string][] = [
+  [10, "Activa", "Despierta el cuerpo"],
+  [20, "Quema", "Sube pulsaciones"],
+  [30, "Completo", "Cuerpo completo"],
+];
+
+/**
+ * Tarjeta grande de entrenos exprés sin equipo (10/20/30 min) con Coach Banana. Va arriba en Entrenar y en Hoy debajo
+ * del entreno del día: es la salida para los días ocupados y cuenta para la racha.
+ */
+export function ExpressCard({ program = false, compact = false }: { program?: boolean; compact?: boolean }) {
+  return (
+    <section aria-labelledby="expres-t" className="relative overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-soft sm:p-6">
+      <Image src="/brand/mascota-sola.webp" alt="" aria-hidden width={220} height={220} sizes="160px" className="pointer-events-none absolute -right-4 -top-3 w-28 select-none opacity-95 sm:w-36" />
+      <div className="relative pr-24 sm:pr-32">
+        <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-banana">Coach Banana exprés</p>
+        <h2 id="expres-t" className={`mt-1 flex items-start gap-2 font-extrabold tracking-tight text-balance ${compact ? "text-xl" : "text-2xl sm:text-[28px]"}`}>
+          <Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Día ocupado? Entrena donde estés
+        </h2>
+        <p className="mt-1 max-w-[52ch] text-sm text-white/75">Sin equipo, con tu peso, en un espacio de 2 × 2 m. Cuenta para tu racha{program ? ", aunque no reemplaza la sesión del programa" : ""}.</p>
+      </div>
+      <div className="relative mt-4 grid grid-cols-3 gap-2">
+        {EXPRESS.map(([m, l, d]) => (
+          <Link key={m} href={`/app/entreno?expres=${m}`} aria-label={`Entreno exprés de ${m} minutos: ${l}`} className="pressable rounded-2xl bg-white/10 px-2 py-4 text-center ring-1 ring-white/10 hover:bg-white/15 hover:ring-banana/50">
+            <p className="text-3xl font-extrabold leading-none tabular-nums text-banana sm:text-4xl">{m}<span className="ml-0.5 text-sm font-bold">min</span></p>
+            <p className="mt-1.5 text-sm font-extrabold text-white">{l}</p>
+            <p className="mt-0.5 hidden text-xs text-white/70 sm:block">{d}</p>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
