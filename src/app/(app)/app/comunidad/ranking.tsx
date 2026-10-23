@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BananaCoin, BananaMedal, BananaTrophy, Globe, Users } from "@/components/icons";
 import { MapPin } from "@/components/community/icons";
 import { Avatar, LevelBadge } from "@/components/community/avatar";
+import { NameFlair } from "@/components/community/flair";
 import { fmtNum, plural, podiumOrder, splitBoard, type BoardRow } from "@/lib/community-view";
 import { BOARD_SCOPES, type BoardScope } from "@/lib/community";
 
@@ -36,6 +37,7 @@ function Podium({ rows }: { rows: BoardRow[] }) {
               <span className={`absolute -bottom-2.5 left-1/2 -translate-x-1/2 grid place-items-center size-6 rounded-full text-[11px] font-extrabold ring-2 ring-white shadow-soft ${MEDAL[idx]}`}><span className="sr-only">Lugar </span>{place}</span>
             </div>
             <Name r={r} className="mt-3.5 block max-w-full text-sm" />
+            <NameFlair flair={r.flair} size="sm" className="mt-0.5" />
             <span className="text-xs font-extrabold tabular-nums text-ink">{fmtNum(r.xp)} XP</span>
             <div className={`mt-2 w-full rounded-t-2xl ${STEP[idx]} ${place === 1 ? "bg-gradient-to-b from-banana to-banana/60" : "bg-cream border border-b-0 border-line"} grid place-items-start justify-center pt-2`}>
               {place === 1 ? <BananaTrophy className="size-7 text-ink" /> : <BananaMedal weight="duotone" className="size-6 text-banana-ink" />}
@@ -52,7 +54,7 @@ function Row({ r }: { r: BoardRow }) {
     <li className={`flex items-center gap-3 px-4 py-3 border-t border-line ${r.me ? "bg-banana-soft/60" : ""}`}>
       <span className="w-7 shrink-0 text-center text-sm font-extrabold text-muted tabular-nums">{r.pos}</span>
       <Avatar name={r.name} xp={r.totalXp} size="sm" />
-      <span className="flex-1 min-w-0 flex items-center gap-1.5"><Name r={r} /><span className="hidden sm:inline-flex shrink-0"><LevelBadge xp={r.totalXp} compact /></span></span>
+      <span className="flex-1 min-w-0 flex items-center gap-1.5"><Name r={r} /><NameFlair flair={r.flair} size="sm" className="shrink-0" /><span className="hidden sm:inline-flex shrink-0"><LevelBadge xp={r.totalXp} compact /></span></span>
       <span className="hidden sm:inline text-sm text-muted tabular-nums">{plural(r.workouts, "entreno", "entrenos")}</span>
       <span className="shrink-0 text-right font-extrabold text-ink tabular-nums">{fmtNum(r.xp)} XP</span>
     </li>

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Banana, BananaFlame, Barbell, Bell as BellIcon, ChartLine, Checks, CreditCard, Heart, MonkeyBanana, type PhosphorIcon } from "@/components/icons";
+import { Banana, BananaFlame, BananaTrophy, Barbell, Bell as BellIcon, ChartLine, Checks, CreditCard, Heart, MonkeyBanana, ShieldCheck, type PhosphorIcon } from "@/components/icons";
 import { usePresence } from "@/components/use-presence";
 import { listNotifications, markNotificationsRead, type InAppNotification } from "@/app/actions/notifications";
 
@@ -13,6 +13,8 @@ const ICON: Record<string, { I: PhosphorIcon | typeof Banana; tile: string }> = 
   reactivacion_7: { I: Heart, tile: "bg-ember/10 text-ember-ink" },
   pago_fallido: { I: CreditCard, tile: "bg-bad/10 text-bad" },
   test: { I: BellIcon, tile: "bg-ink text-banana" },
+  perfil_nivel: { I: BananaTrophy, tile: "bg-banana text-ink" },
+  verificacion: { I: ShieldCheck, tile: "bg-peel/10 text-peel" },
 };
 const FALLBACK = { I: Banana, tile: "bg-banana-soft text-banana-ink" };
 

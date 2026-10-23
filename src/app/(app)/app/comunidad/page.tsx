@@ -12,6 +12,9 @@ import { TropaHero } from "./hero";
 import { PersonCard, PersonRow } from "./people";
 import { Ranking } from "./ranking";
 import { RefreshButton } from "./refresh";
+import { getMyPower } from "@/lib/profile-power-server";
+import { TierEmblem, VerifiedMark } from "@/components/community/flair";
+import { TierProgress } from "@/components/perfil/power";
 
 export const metadata = { title: "Comunidad" };
 
@@ -75,12 +78,13 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
   const scope: BoardScope = SCOPES.includes(sp.alcance as BoardScope) ? (sp.alcance as BoardScope) : "siguiendo";
   const filter: PeopleFilter = FILTERS.some(([k]) => k === sp.filtro) ? (sp.filtro as PeopleFilter) : "todos";
   // Una sola ronda de consultas en paralelo (antes eran dos seguidas).
-  const [a, me, stats, feed, board, people, today] = await Promise.all([
+  const [a, me, stats, feed, board, people, today, power] = await Promise.all([
     getAthlete(v), getCommunityMe(v), getWeekStats(v),
     tab === "ranking" ? Promise.resolve([]) : getFeed(v, tab),
     tab === "ranking" ? getLeaderboard(v, scope) : Promise.resolve([]),
     getPeople(v, tab === "descubrir" ? filter : "activos").then((p) => (p.length || tab === "descubrir" ? p : getPeople(v, "todos"))),
     tab === "siguiendo" ? getTodayWorkout(v) : Promise.resolve(null),
+    getMyPower(v).catch(() => null),
   ]);
   const country = v.country && COUNTRY_NAME[v.country] ? COUNTRY_NAME[v.country] : null;
   const canPost = !me.suspended;
@@ -158,14 +162,18 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
             </section>
           )}
           {me.username && (
-            <Link href={`/app/comunidad/u/${me.username}`} className="card pressable flex items-center gap-3 p-4 hover:bg-banana-soft/40">
-              <Avatar name={a.name} xp={stats.xp} />
-              <span className="flex-1 min-w-0">
-                <span className="block font-bold text-ink truncate">Mi perfil en la tropa</span>
-                <span className="flex items-center gap-1.5 text-xs text-faint"><span className="truncate">@{me.username}</span><LevelBadge xp={stats.xp} compact /></span>
-              </span>
-              <ArrowRight weight="bold" className="size-4 text-muted" />
-            </Link>
+            <section className="card p-4 space-y-3" aria-label="Mi perfil en la tropa">
+              <Link href={`/app/comunidad/u/${me.username}`} className="pressable -m-1 flex items-center gap-3 rounded-2xl p-1 hover:bg-banana-soft/40">
+                <Avatar name={a.name} xp={stats.xp} />
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center gap-1 font-bold text-ink"><span className="truncate">Mi perfil en la tropa</span>{power?.stats.verified && <VerifiedMark />}</span>
+                  <span className="flex items-center gap-1.5 text-xs text-faint"><span className="truncate">@{me.username}</span><TierEmblem tier={power?.tier} /><LevelBadge xp={stats.xp} compact /></span>
+                </span>
+                <ArrowRight weight="bold" className="size-4 text-muted" />
+              </Link>
+              {power && <TierProgress points={power.points} compact />}
+              {power && <Link href="/app/perfil#poder" className="tap inline-flex h-11 items-center gap-1 text-sm font-bold text-banana-ink hover:text-ink">Cómo subir mi perfil<ArrowRight weight="bold" className="size-4" /></Link>}
+            </section>
           )}
           {tab !== "descubrir" && (feed.length > 0 || tab === "ranking") && (
             <section className="card p-4" aria-labelledby="sugerencias">

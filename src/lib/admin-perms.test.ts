@@ -50,6 +50,12 @@ describe("matriz de permisos", () => {
     expect(can("coach", "users.delete")).toBe(false);
     expect(can("admin", "users.delete")).toBe(true);
   });
+  it("verificar identidad: soporte y admin (igual que is_billing_staff en 0030); coach no ve documentos", () => {
+    expect(can("support", "users.verify")).toBe(true);
+    expect(can("coach", "users.verify")).toBe(false);
+    expect(canSee("support", "verificaciones")).toBe(true);
+    expect(canSee("coach", "verificaciones")).toBe(false);
+  });
   it("anuncios y auditoría solo admin", () => {
     expect(can("coach", "content.announcements")).toBe(false);
     expect(can("coach", "content.challenges")).toBe(true);

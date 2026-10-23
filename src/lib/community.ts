@@ -6,9 +6,12 @@ import { streakOf } from "@/lib/gamify";
 import { exerciseName, workoutName } from "@/lib/progress";
 import { mondayIso, zonedMidnightUtc, type BoardRow } from "@/lib/community-view";
 import { getXpTotal } from "@/lib/xp-total";
+import { DEMO_FLAIR, getFlair } from "@/lib/profile-power-server";
+import type { Flair } from "@/lib/profile-power";
 
 /** `xp`: XP total para la insignia de nivel; null si la persona no comparte sus entrenos (o no se pudo leer). */
-export type Author = { id: string; username: string | null; name: string; xp?: number | null };
+/** `flair`: verificado, nivel de perfil e insignia destacada (0030); null si no se pudo leer o no aplica. */
+export type Author = { id: string; username: string | null; name: string; xp?: number | null; flair?: Flair | null };
 export type PostData = { title?: string; mins?: number; sets?: number; volume?: number; prs?: string[]; emoji?: string; icon?: string; challenge?: string; xp?: number; ex?: string[]; tag?: string };
 export type FeedComment = { id: string; author: Author; body: string; at: string; mine: boolean };
 export type FeedPost = { id: string; author: Author; kind: string; body: string | null; data: PostData; at: string; kudos: number; mine: boolean; iKudo: boolean; comments: FeedComment[]; commentCount: number };
@@ -24,19 +27,21 @@ const missingRpc = (e: { code?: string } | null) => !!e && ["PGRST202", "42883"]
 // ───────────── Modo demo: una sola historia, coherente con demo-story ─────────────
 const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
 const DEMO_AUTHORS: Author[] = [
-  { id: "d1", username: "carla.fit", name: "Carla Mora", xp: 3420 }, { id: "d2", username: "diego.sol", name: "Diego Solís", xp: 5180 }, { id: "d3", username: "vale.run", name: "Valeria Jiménez", xp: 1240 },
+  { id: "d1", username: "carla.fit", name: "Carla Mora", xp: 3420, flair: DEMO_FLAIR.d1 }, { id: "d2", username: "diego.sol", name: "Diego Solís", xp: 5180, flair: DEMO_FLAIR.d2 }, { id: "d3", username: "vale.run", name: "Valeria Jiménez", xp: 1240, flair: DEMO_FLAIR.d3 },
 ];
+/** El Andrés del demo: Cosecha con su certificado de Abdomen marcado (coherente con demoPower en profile-power-server). */
+const DEMO_ME_FLAIR: Flair = { verified: false, tier: 3, featured: { id: "prog:abdomen-marcado", label: "Core de acero", icon: "target", cover: "sky" } };
 /** Gente que todavía no sigues (sugerencias del demo). */
 const DEMO_SUGGEST: (Author & { bio: string; sameCountry: boolean; sameGoal: boolean; activeDays: number; followers: number })[] = [
-  { id: "d4", username: "fabi.rojas", name: "Fabián Rojas", xp: 2210, bio: "Pierna los lunes, sin falta.", sameCountry: true, sameGoal: true, activeDays: 9, followers: 21 },
-  { id: "d5", username: "mariela.q", name: "Mariela Quesada", xp: 860, bio: "Mamá de dos, entreno exprés en casa.", sameCountry: true, sameGoal: false, activeDays: 6, followers: 14 },
-  { id: "d6", username: "jp.vargas", name: "José Pablo Vargas", xp: 420, bio: "Empezando de cero, aquí vamos.", sameCountry: false, sameGoal: true, activeDays: 3, followers: 5 },
+  { id: "d4", username: "fabi.rojas", name: "Fabián Rojas", xp: 2210, flair: DEMO_FLAIR.d4, bio: "Pierna los lunes, sin falta.", sameCountry: true, sameGoal: true, activeDays: 9, followers: 21 },
+  { id: "d5", username: "mariela.q", name: "Mariela Quesada", xp: 860, flair: DEMO_FLAIR.d5, bio: "Mamá de dos, entreno exprés en casa.", sameCountry: true, sameGoal: false, activeDays: 6, followers: 14 },
+  { id: "d6", username: "jp.vargas", name: "José Pablo Vargas", xp: 420, flair: DEMO_FLAIR.d6, bio: "Empezando de cero, aquí vamos.", sameCountry: false, sameGoal: true, activeDays: 3, followers: 5 },
 ];
 const DEMO_BIO: Record<string, string> = { "carla.fit": "Fuerza 4 días por semana. Bajando de 78 a 68 kg.", "diego.sol": "Volví al gym después de 3 años.", "vale.run": "Corro y levanto. Exprés cuando viajo." };
 const weekDemo = (v: Viewer) => {
   const t = todayFor(v).iso, mon = mondayIso(t);
   const all = demoWorkouts(t);
-  return { all, today: t, week: new Set(all.filter((w) => w.d >= mon).map((w) => w.d)).size, me: { id: v.id, username: "andres", name: "Andrés", xp: demoXp(t) } as Author };
+  return { all, today: t, week: new Set(all.filter((w) => w.d >= mon).map((w) => w.d)).size, me: { id: v.id, username: "andres", name: "Andrés", xp: demoXp(t), flair: DEMO_ME_FLAIR } as Author };
 };
 
 function demoFeed(v: Viewer): FeedPost[] {
@@ -65,6 +70,17 @@ async function levelsOf(sb: Sb, ids: string[]): Promise<Map<string, number>> {
   return new Map(((data ?? []) as { user_id: string; total_xp: number }[]).map((r) => [r.user_id, Number(r.total_xp)]));
 }
 
+/** Nivel (XP) e insignias junto al nombre en una sola lectura (0030). Sin 0030: solo el nivel de 0019. */
+async function badgesOf(sb: Sb, ids: string[]): Promise<{ xp: Map<string, number>; flair: Map<string, Flair> }> {
+  const f = await getFlair(sb, ids);
+  if (f) {
+    const xp = new Map<string, number>();
+    for (const [id, r] of f) if (r.xp !== null) xp.set(id, r.xp);
+    return { xp, flair: new Map([...f].map(([id, r]) => [id, { verified: r.verified, tier: r.tier, featured: r.featured }])) };
+  }
+  return { xp: await levelsOf(sb, ids), flair: new Map() };
+}
+
 /** Arma las tarjetas: autores (con nivel), bananas y los últimos comentarios visibles (RLS decide qué se ve). */
 async function hydrate(sb: Sb, v: Viewer, list: PostRow[]): Promise<FeedPost[]> {
   if (!list.length) return [];
@@ -74,11 +90,13 @@ async function hydrate(sb: Sb, v: Viewer, list: PostRow[]): Promise<FeedPost[]> 
     sb.from("public_profiles").select("id,username,full_name").in("id", userIds),
     sb.from("kudos").select("post_id,user_id").in("post_id", postIds),
     sb.from("comments").select("id,post_id,user_id,body,created_at").in("post_id", postIds).eq("hidden", false).order("created_at"),
-    levelsOf(sb, userIds),
+    badgesOf(sb, userIds),
   ]);
   const cmUsers = [...new Set((cm ?? []).map((c) => c.user_id as string))].filter((u) => !userIds.includes(u));
-  const { data: cmProfs } = cmUsers.length ? await sb.from("public_profiles").select("id,username,full_name").in("id", cmUsers) : { data: [] };
-  const pmap = new Map([...((profs ?? []) as ProfRow[]), ...((cmProfs ?? []) as ProfRow[])].map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", xp: lv.get(p.id) ?? null }]));
+  const [{ data: cmProfs }, cmLv] = cmUsers.length ? await Promise.all([sb.from("public_profiles").select("id,username,full_name").in("id", cmUsers), badgesOf(sb, cmUsers)]) : [{ data: [] }, null];
+  const xpOf = (id: string) => lv.xp.get(id) ?? cmLv?.xp.get(id) ?? null;
+  const flairOf = (id: string) => lv.flair.get(id) ?? cmLv?.flair.get(id) ?? null;
+  const pmap = new Map([...((profs ?? []) as ProfRow[]), ...((cmProfs ?? []) as ProfRow[])].map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", xp: xpOf(p.id), flair: flairOf(p.id) }]));
   const author = (id: string): Author => pmap.get(id) ?? { id, username: null, name: "Atleta", xp: null };
   return list.map((p) => {
     const ks = (kd ?? []).filter((k) => k.post_id === p.id);
@@ -116,8 +134,8 @@ export async function getComments(v: Viewer, postId: string): Promise<FeedCommen
   const sb = await createClient();
   const { data: cm } = await sb.from("comments").select("id,user_id,body,created_at").eq("post_id", Number(postId)).eq("hidden", false).order("created_at").limit(200);
   const ids = [...new Set((cm ?? []).map((c) => c.user_id as string))];
-  const { data: profs } = ids.length ? await sb.from("public_profiles").select("id,username,full_name").in("id", ids) : { data: [] };
-  const pmap = new Map(((profs ?? []) as ProfRow[]).map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta" }]));
+  const [{ data: profs }, b] = ids.length ? await Promise.all([sb.from("public_profiles").select("id,username,full_name").in("id", ids), badgesOf(sb, ids)]) : [{ data: [] }, null];
+  const pmap = new Map(((profs ?? []) as ProfRow[]).map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", xp: b?.xp.get(p.id) ?? null, flair: b?.flair.get(p.id) ?? null }]));
   return (cm ?? []).map((c) => ({ id: String(c.id), author: pmap.get(c.user_id as string) ?? { id: c.user_id as string, username: null, name: "Atleta" }, body: c.body as string, at: c.created_at as string, mine: c.user_id === v.id }));
 }
 
@@ -259,11 +277,16 @@ export async function getLeaderboard(v: Viewer, scope: BoardScope = "siguiendo")
     ];
     const extra = DEMO_SUGGEST.map((s, i) => ({ userId: s.id, username: s.username, name: s.name, workouts: s.activeDays > 6 ? 4 : 2, xp: [760, 320, 140][i], totalXp: s.xp ?? 0, me: false, sameCountry: s.sameCountry }));
     const rows = scope === "siguiendo" ? base : scope === "global" ? [...base, ...extra] : [base[1], base[0], ...extra.filter((x) => x.sameCountry)];
-    return rows.sort((a, b) => b.xp - a.xp).map((r, i) => ({ userId: r.userId, username: r.username, name: r.name, workouts: r.workouts, xp: r.xp, totalXp: r.totalXp, me: r.me, pos: i + 1 }));
+    const flairOf = (id: string) => (id === v.id ? DEMO_ME_FLAIR : DEMO_FLAIR[id] ?? null);
+    return rows.sort((a, b) => b.xp - a.xp).map((r, i) => ({ userId: r.userId, username: r.username, name: r.name, workouts: r.workouts, xp: r.xp, totalXp: r.totalXp, me: r.me, pos: i + 1, flair: flairOf(r.userId) }));
   }
   const sb = await createClient();
   const { data, error } = await sb.rpc("community_board", { p_scope: scope });
-  if (!error) return ((data ?? []) as { user_id: string; username: string | null; full_name: string | null; workouts: number; xp: number; total_xp: number; pos: number }[]).map((r) => ({ userId: r.user_id, username: r.username, name: r.full_name || r.username || "Atleta", workouts: Number(r.workouts), xp: Number(r.xp), totalXp: Number(r.total_xp), pos: Number(r.pos), me: r.user_id === v.id }));
+  if (!error) {
+    const rows = (data ?? []) as { user_id: string; username: string | null; full_name: string | null; workouts: number; xp: number; total_xp: number; pos: number }[];
+    const fl = await getFlair(sb, rows.map((r) => r.user_id));
+    return rows.map((r) => ({ userId: r.user_id, username: r.username, name: r.full_name || r.username || "Atleta", workouts: Number(r.workouts), xp: Number(r.xp), totalXp: Number(r.total_xp), pos: Number(r.pos), me: r.user_id === v.id, flair: fl?.get(r.user_id) ?? null }));
+  }
   if (!missingRpc(error) || scope !== "siguiendo") return [];
   // Sin la migración 0019: el ranking de siempre (tú y a quienes sigues).
   const { data: old } = await sb.rpc("weekly_leaderboard");
@@ -282,7 +305,11 @@ export async function getPeople(v: Viewer, filter: PeopleFilter = "todos"): Prom
   }
   const sb = await createClient();
   const { data, error } = await sb.rpc("community_people", { p_filter: filter });
-  if (!error) return ((data ?? []) as { id: string; username: string; full_name: string | null; bio: string | null; same_country: boolean; same_goal: boolean; active_days: number; total_xp: number | null; followers: number }[]).map((r) => ({ id: r.id, username: r.username, name: r.full_name || r.username, bio: r.bio, sameCountry: !!r.same_country, sameGoal: !!r.same_goal, activeDays: Number(r.active_days), xp: r.total_xp === null ? null : Number(r.total_xp), followers: Number(r.followers) }));
+  if (!error) {
+    const rows = (data ?? []) as { id: string; username: string; full_name: string | null; bio: string | null; same_country: boolean; same_goal: boolean; active_days: number; total_xp: number | null; followers: number }[];
+    const fl = await getFlair(sb, rows.map((r) => r.id));
+    return rows.map((r) => ({ id: r.id, username: r.username, name: r.full_name || r.username, bio: r.bio, sameCountry: !!r.same_country, sameGoal: !!r.same_goal, activeDays: Number(r.active_days), xp: r.total_xp === null ? null : Number(r.total_xp), followers: Number(r.followers), flair: fl?.get(r.id) ?? null }));
+  }
   if (!missingRpc(error) || filter !== "todos") return [];
   // Sin la migración 0019: perfiles públicos sin filtros.
   const { data: f } = await sb.from("follows").select("followee").eq("follower", v.id);

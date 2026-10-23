@@ -264,6 +264,8 @@ begin
   if p_id is not null and (p_id !~ '^[a-z0-9][a-z0-9:._-]{0,79}$' or not exists (select 1 from public._insignias(v_uid) i where i.id = p_id)) then
     raise exception 'Esa insignia todavía no es tuya' using errcode = '42501';
   end if;
+  -- La racha solo la ves tú (igual que en el perfil): no se puede mostrar junto a tu nombre.
+  if p_id like 'racha%' then raise exception 'La racha solo la ves tú' using errcode = '42501'; end if;
   perform public._power_refresh(v_uid, false);
   update public.profile_flair set featured = p_id, updated_at = now() where user_id = v_uid;
 end $$;

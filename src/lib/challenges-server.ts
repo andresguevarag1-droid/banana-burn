@@ -71,7 +71,7 @@ export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Chall
 
 /** Retos de pago que el usuario tiene (compra o cortesía). */
 export const getOwned = cache(async (v: Viewer): Promise<Set<string>> => {
-  if (v.demo) return new Set(["abdomen-21", "reconstruccion-8-semanas"]);
+  if (v.demo) return new Set(["abdomen-21", "reconstruccion-8-semanas", "abdomen-marcado", "banana-girl"]);
   const { data } = await (await createClient()).from("challenge_entitlements").select("challenge_slug").eq("user_id", v.id);
   return new Set(((data ?? []) as { challenge_slug: string }[]).map((r) => r.challenge_slug));
 });

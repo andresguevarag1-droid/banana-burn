@@ -3,6 +3,7 @@ import { runReminders } from "@/lib/notify-run";
 import { sweepChallenges } from "@/lib/challenges-server";
 import { deliverPendingGifts } from "@/lib/gifts-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
+import { purgeIdentityFiles } from "@/lib/identity-server";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 
@@ -17,6 +18,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * Además de los avisos, acredita el día anterior de los retos automáticos, cierra los retos decididos y manda el correo y
  * el push de regalos y recompensas por referidos que aún no se avisaron (respaldo: el panel y la app ya los mandan) y
  * los cobros con tarjeta guardada: aviso 2 días antes, cobro al terminar la prueba y un reintento al día siguiente.
+ * También borra las fotos de verificaciones de identidad ya decididas o vencidas (máximo 30 días, 0030).
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -32,5 +34,7 @@ export async function GET(req: Request) {
   const cobros = await sweepTrialCharges(new Date(), { deadline: t0 + 42_000 }).catch((e) => { logError("cron:cobros", "run_failed", { kind: errCode(e) }); return null; });
   const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
   const regalos = await deliverPendingGifts({ limit: 200 }).catch((e) => { logError("cron:regalos", "run_failed", { kind: errCode(e) }); return null; });
-  return NextResponse.json({ ...stats, retos, regalos, cobros }, { status: stats.ok ? 200 : 500 });
+  // Verificación de identidad (0030): fotos de lo ya decidido o vencido (30 días) fuera de Storage.
+  const identidad = await purgeIdentityFiles({ deadline: t0 + 57_000 }).catch((e) => { logError("cron:identidad", "run_failed", { kind: errCode(e) }); return null; });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, identidad }, { status: stats.ok ? 200 : 500 });
 }

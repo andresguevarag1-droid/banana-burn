@@ -9,6 +9,14 @@ import { RoleBadge } from "@/components/admin/ui";
 import { getAdminViewer } from "@/lib/admin-auth";
 import { canSee, isStaff, ROLE_LABEL, STAFF_ROLES, type Section } from "@/lib/admin-perms";
 import { openReportsCount } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/server";
+
+/** Verificaciones de identidad pendientes (0030). Sin la migración o sin permiso: 0. */
+async function pendingVerifications(demo: boolean): Promise<number> {
+  if (demo) return 2;
+  const { data, error } = await (await createClient()).rpc("admin_identity_queue", { p_status: "pendiente" });
+  return error ? 0 : ((data ?? []) as unknown[]).length;
+}
 import { setDemoRole } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +29,7 @@ const NAV: (Omit<NavItem, "badge"> & { key: Section })[] = [
   { key: "contenido", href: "/admin/contenido", label: "Contenido" },
   { key: "retos", href: "/admin/retos", label: "Retos" },
   { key: "comunidad", href: "/admin/comunidad", label: "Comunidad" },
+  { key: "verificaciones", href: "/admin/verificaciones", label: "Verificaciones" },
   { key: "auditoria", href: "/admin/auditoria", label: "Auditoría" },
 ];
 
@@ -28,8 +37,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const v = await getAdminViewer();
   if (!v) redirect("/entrar?next=/admin");
   if (!isStaff(v.role)) redirect("/app");
-  const reports = canSee(v.role, "comunidad") ? await openReportsCount(v) : 0;
-  const items: NavItem[] = NAV.filter((n) => canSee(v.role, n.key)).map((n) => ({ ...n, badge: n.key === "comunidad" ? reports : undefined }));
+  const [reports, verifs] = await Promise.all([canSee(v.role, "comunidad") ? openReportsCount(v) : 0, canSee(v.role, "verificaciones") ? pendingVerifications(v.demo).catch(() => 0) : 0]);
+  const items: NavItem[] = NAV.filter((n) => canSee(v.role, n.key)).map((n) => ({ ...n, badge: n.key === "comunidad" ? reports : n.key === "verificaciones" ? verifs : undefined }));
 
   return (
     <div className="min-h-dvh bg-[#FAF7EE]">

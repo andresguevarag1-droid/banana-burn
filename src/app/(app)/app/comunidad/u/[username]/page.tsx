@@ -6,11 +6,15 @@ import { getProfileStats, getPublicProfile } from "@/lib/community";
 import { fmtDuration, fmtNum, fmtVolume, plural, publicBadges, timeAgo } from "@/lib/community-view";
 import { PostCard } from "@/components/post-card";
 import { Avatar, LevelBadge } from "@/components/community/avatar";
-import { ArrowLeft, Banana, BananaTrophy, BrandIcon, Globe, Lock, MonkeyBanana, PencilSimple, Users } from "@/components/icons";
+import { ArrowLeft, BananaTrophy, BrandIcon, Globe, Lock, MonkeyBanana, PencilSimple, Users } from "@/components/icons";
 import { FollowButton } from "../../follow";
 import { ReportUser } from "./report-user";
 import { levelOf, perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
+import { getProfilePower } from "@/lib/profile-power-server";
+import { insigniaMeta } from "@/lib/profile-power";
+import { FeaturedBadge, TierEmblem, VerifiedMark } from "@/components/community/flair";
+import { InsigniasWall, Showcase, TIER_CARD, TierBanner, TierGuide, TierPill, TierProgress } from "@/components/perfil/power";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -24,6 +28,12 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
   if (!p) notFound();
   const [a, stats] = await Promise.all([getAthlete(v), getProfileStats(v, p.id, p.me)]);
   const xp = stats?.xp ?? null;
+  const pw = await getProfilePower(v, p.id, p.me, xp).catch(() => null);
+  const power = pw && pw.visible ? pw : null;
+  const verified = pw ? (pw.visible ? pw.stats.verified : pw.verified) : false;
+  const tier = power?.tier ?? 1;
+  const fIns = power?.insignias.find((i) => i.id === power.featured) ?? null;
+  const featured = power?.featured ? insigniaMeta(power.featured, { label: fIns?.label, icon: fIns?.icon, cover: fIns?.cover, xp }) : null;
   const frame = xp !== null ? perksAt(levelOf(xp).idx).frame : null;
   const canSee = p.visibility === "publico" || p.iFollow || p.me;
   const workouts = p.posts.filter((x) => x.kind === "workout").slice(0, 4);
@@ -40,16 +50,9 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
     <div className="space-y-5 animate-enter max-w-2xl">
       <Link href="/app/comunidad" className="tap inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />La tropa</Link>
 
-      <header className="card overflow-hidden">
-        {/* Portada de marca */}
-        <div aria-hidden className="relative h-32 sm:h-40 overflow-hidden bg-ink">
-          <div className="absolute -right-10 -top-16 size-64 rounded-full bg-banana/30 blur-3xl" />
-          <div className="absolute left-1/4 -bottom-20 size-48 rounded-full bg-ember/25 blur-3xl" />
-          <Banana weight="fill" className="bb-sway absolute left-6 top-5 size-7 text-banana/40" style={{ ["--r" as string]: "-20deg" }} />
-          <Banana weight="fill" className="bb-sway absolute left-[42%] top-10 size-5 text-banana/25 [animation-delay:1.4s]" style={{ ["--r" as string]: "30deg" }} />
-          <Banana weight="duotone" className="bb-sway absolute right-[30%] bottom-4 size-6 text-white/20 [animation-delay:2.2s]" style={{ ["--r" as string]: "8deg" }} />
-          <MonkeyBanana weight="fill" className="absolute -right-4 -bottom-6 size-36 sm:size-44 text-banana rotate-[-8deg] [--bb-icon-bg:#1B1505]" />
-        </div>
+      <header className={`card overflow-hidden ${TIER_CARD[tier] ?? ""}`}>
+        {/* Portada según el nivel de perfil: con más programas, certificados y constancia, más presencia. */}
+        <TierBanner tier={tier}>{power && <TierPill tier={tier} className="absolute left-4 top-4" />}</TierBanner>
         <div className="px-5 pb-5">
           <div className="flex items-end justify-between gap-3">
             <Avatar name={p.name} xp={xp} size="xl" className={`relative z-10 -mt-12 !ring-offset-0 shadow-lift ${frame ? "" : "ring-4 !ring-white"}`} frame={frame ? FRAME_RING[frame] : ""} />
@@ -59,8 +62,11 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <h1 className="min-w-0 text-2xl sm:text-3xl font-extrabold tracking-tight text-ink break-words">{p.name}</h1>
+            {verified && <VerifiedMark className="size-6" />}
+            <TierEmblem tier={power?.tier} full />
             <LevelBadge xp={xp} />
           </div>
+          {featured && <p className="mt-1.5"><FeaturedBadge f={featured} /></p>}
           <p className="text-sm text-faint">@{p.username}</p>
           {p.bio && <p className="mt-2 text-[15px] text-body break-words">{p.bio}</p>}
           <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-faint">{p.visibility === "publico" ? <><Globe weight="duotone" className="size-4" />Perfil público</> : <><Users weight="duotone" className="size-4" />Solo seguidores ven sus entrenos</>}</p>
@@ -73,10 +79,13 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
               </div>
             ))}
           </dl>
+          {power && p.me && <div className="mt-3"><TierProgress points={power.points} /></div>}
         </div>
       </header>
 
-      {shownBadges.length > 0 && (
+      {power && <Showcase items={power.showcase} mine={p.me} name={p.name.split(" ")[0]} />}
+
+      {power && power.insignias.length > 0 ? <InsigniasWall items={power.insignias} featured={power.featured} /> : shownBadges.length > 0 && (
         <section className="card p-4" aria-labelledby="pp-logros">
           <h2 id="pp-logros" className="font-extrabold text-ink">Logros</h2>
           <ul className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -110,6 +119,8 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
           </ul>
         </section>
       )}
+
+      {power && !p.me && <TierGuide p={power} mine={false} />}
 
       <section className="space-y-4" aria-labelledby="pp-posts">
         <h2 id="pp-posts" className="text-xl font-extrabold text-ink">Publicaciones</h2>
