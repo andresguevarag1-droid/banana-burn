@@ -122,7 +122,7 @@ describe("capítulos que van en todas las variantes", () => {
       expect(p.body).toMatch(/pago único/);
       expect(p.bullets.join(" ")).toMatch(/Hasta 4 hábitos/);
       expect(p.bullets.join(" ")).toMatch(/certificado/);
-      expect(s.find((x) => x.id === "retos")!.body).toContain("de 7 a 30 días");
+      expect(s.find((x) => x.id === "retos")!.body).toContain("de 7 a 15 días");
     }
   });
 });

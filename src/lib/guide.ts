@@ -228,7 +228,7 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
 
   steps.push({
     id: "retos", chapter: "Retos gratis", title: "Retos gratis, XP y racha",
-    body: "Los retos gratis son un hábito diario de 7 a 30 días: pasos, agua, flexiones, plancha. Se suman a tu rutina sin cambiarla y puedes hacerlos junto con un programa.",
+    body: "Los retos gratis son un hábito diario de 7 a 15 días: agua, pasos, movilidad y menos azúcar. Se suman a tu rutina sin cambiarla y puedes hacerlos junto con un programa.",
     bullets: [
       "Cada entreno y cada registro suman XP. Subir de nivel te da descuento en los programas Premium.",
       "La racha cuenta los días seguidos en que entrenas o registras algo.",
