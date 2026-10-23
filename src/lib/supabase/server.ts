@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isDemoMode, isSupabaseConfigured } from "@/lib/env";
 import { DEFAULT_TZ, validTz } from "@/lib/today";
 import { resilientFetch } from "@/lib/resilient-fetch";
+import { DEMO_GIRL, demoState } from "@/lib/demo-persona";
 
 // Tiempo límite por llamada y un reintento solo en lecturas: con Supabase lento la página muestra su error
 // con "Intentar de nuevo" en segundos, en vez de quedarse cargando hasta que Vercel corte la función.
@@ -41,7 +42,7 @@ async function viewerTz() {
  * Memorizado por petición (React cache): el layout y la página comparten una sola consulta en vez de repetirla.
  */
 export const getViewer = cache(async function getViewer(): Promise<Viewer | null> {
-  if (!isSupabaseConfigured) return isDemoMode ? { ...DEMO, tz: await viewerTz() } : null; // producción sin llaves: falla cerrada
+  if (!isSupabaseConfigured) return isDemoMode ? { ...DEMO, ...((await demoState()).girl ? { name: DEMO_GIRL.name } : {}), tz: await viewerTz() } : null; // producción sin llaves: falla cerrada
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;

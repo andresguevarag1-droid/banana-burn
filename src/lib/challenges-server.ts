@@ -3,6 +3,7 @@ import { errCode, logError, logWarn } from "@/lib/log";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient, type Viewer } from "@/lib/supabase/server";
+import { demoState } from "@/lib/demo-persona";
 import { adminClient } from "@/lib/supabase/admin";
 import { todayFor, todayIn } from "@/lib/today";
 import { MILESTONE_DAYS, MILESTONE_XP, levelOf, perksAt } from "@/lib/gamify";
@@ -71,7 +72,8 @@ export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Chall
 
 /** Retos de pago que el usuario tiene (compra o cortesía). */
 export const getOwned = cache(async (v: Viewer): Promise<Set<string>> => {
-  if (v.demo) return new Set(["abdomen-21", "reconstruccion-8-semanas", "abdomen-marcado", "banana-girl"]);
+  // Demo: Pilates solo está comprado cuando se revisa (?programa=pilates-casa-30); si no, se ve su compra.
+  if (v.demo) return new Set(["abdomen-21", "reconstruccion-8-semanas", "abdomen-marcado", "banana-girl", ...((await demoState()).program === "pilates-casa-30" ? ["pilates-casa-30"] : [])]);
   const { data } = await (await createClient()).from("challenge_entitlements").select("challenge_slug").eq("user_id", v.id);
   return new Set(((data ?? []) as { challenge_slug: string }[]).map((r) => r.challenge_slug));
 });

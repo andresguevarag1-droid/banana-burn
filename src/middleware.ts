@@ -9,6 +9,14 @@ const DEMO_CARD_COOKIE = "bb_demo_tarjeta";
 /** Registro de lenguaje de ejemplo en modo demo (mismo nombre que voice-server.ts; aquí sin importar next/headers). */
 const DEMO_VOICE_COOKIE = "bb_demo_lenguaje";
 
+/** Parámetros del demo de persona y programa (mismos nombres de cookie que demo-persona.ts; aquí sin next/headers). */
+const DEMO_PARAMS: [string, string, RegExp][] = [
+  ["programa", "bb_demo_programa", /^(no|si|pilates-casa-30|banana-girl)$/],
+  ["dia", "bb_demo_dia", /^([1-9]|[1-5]\d|60)$/],
+  ["estado", "bb_demo_estado", /^(activo|pausado|completado)$/],
+  ["persona", "bb_demo_persona", /^(chica|chico|auto)$/],
+];
+
 /** Lo privado nunca queda en cachés compartidas (CDN, proxies) ni en el disco del navegador. */
 function noStore(res: NextResponse) {
   res.headers.set("Cache-Control", PRIVATE_NO_STORE);
@@ -22,14 +30,18 @@ export async function middleware(req: NextRequest) {
     const l = req.nextUrl.searchParams.get("lenguaje");
     const voice = l === "basico" || l === "intermedio" || l === "tecnico" ? l : null;
     if (voice) req.cookies.set(DEMO_VOICE_COOKIE, voice);
-    // ?programa=no|si: con o sin el programa de ejemplo activo (para revisar la rutina normal de Hoy y Entrenar).
-    const progParam = req.nextUrl.searchParams.get("programa");
-    if (progParam === "no" || progParam === "si") req.cookies.set("bb_demo_programa", progParam);
-    const res = voice || progParam ? NextResponse.next({ request: req }) : NextResponse.next();
+    // ?programa=no|si|pilates-casa-30|banana-girl, ?dia=N, ?estado=activo|pausado|completado y ?persona=chica|chico|auto:
+    // persona y programa de ejemplo (demo-persona.ts) para revisar cada estado de Hoy, Entrenar y los programas de chicas.
+    const demo: [string, string][] = [];
+    for (const [param, cookie, ok] of DEMO_PARAMS) {
+      const val = req.nextUrl.searchParams.get(param);
+      if (val && ok.test(val)) { req.cookies.set(cookie, val); demo.push([cookie, val]); }
+    }
+    const res = voice || demo.length ? NextResponse.next({ request: req }) : NextResponse.next();
     const d = req.nextUrl.searchParams.get("demo");
     if (d && /^[a-z]{3,12}$/.test(d)) res.cookies.set(DEMO_CARD_COOKIE, d, { path: "/", sameSite: "lax", maxAge: 3600 });
     if (voice) res.cookies.set(DEMO_VOICE_COOKIE, voice, { path: "/", sameSite: "lax", maxAge: 3600 });
-    if (progParam === "no" || progParam === "si") res.cookies.set("bb_demo_programa", progParam, { path: "/", sameSite: "lax", maxAge: 3600 });
+    for (const [cookie, val] of demo) res.cookies.set(cookie, val, { path: "/", sameSite: "lax", maxAge: 3600 });
     return noStore(res);
   }
   let res = NextResponse.next({ request: req });
