@@ -16,7 +16,7 @@ import { BuyButton } from "@/components/retos/buy-button";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { ProgramWeek } from "./program-week";
 import { StartProgramButton } from "./program-actions";
-import { ArrowLeft, ArrowRight, BananaMedal, Barbell, CalendarCheck, CheckCircle, Clock, Eye, Info, Lightning, Shield, Target, TreePalm, WarningCircle } from "@/components/icons";
+import { ArrowLeft, ArrowRight, BananaMedal, Barbell, CalendarCheck, CheckCircle, Clock, Eye, ForkKnife, Info, Lightning, Shield, Sparkle, Target, TreePalm, WarningCircle } from "@/components/icons";
 
 export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: ProgramChallenge; preview?: boolean }) {
   const [owned0, perks, states, ent, a] = await Promise.all([getOwned(v), levelPerks(v), getProgramStates(v), getEntitlements(v), getAthlete(v)]);
@@ -68,12 +68,19 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   );
 
   const n = meta.nutrition;
+  const x = meta.experience;
   const changes: { icon: typeof Barbell; t: string }[] = [
     { icon: Barbell, t: `Hoy y Entrenar te muestran la sesión del programa: ${days.toLowerCase()}, de unos ${meta.sessionMinutes} minutos.` },
     { icon: Lightning, t: "Cada serie trae su carga exacta: sale de tu historial y sube cuando llegas al tope del rango." },
     ...(meta.adapt ? [{ icon: Target, t: "Si entrenas en casa, los ejercicios de máquina cambian por su versión con tu equipo." }] : []),
     ...(n ? [{ icon: Info, t: ent.nutrition ? `Tus calorías y tu proteína siguen el programa: ${MODE_LABEL[n.mode ?? a.mode].toLowerCase()}${n.proteinPerKg ? `, con ${n.proteinPerKg.toLocaleString("es-419")} g de proteína por kg` : ""}.` : `El programa ajusta calorías y proteína en ${NUTRITION_PLAN_NAME}. Con tu plan actual, el entreno cambia y tu nutrición no.` }] : []),
     { icon: CalendarCheck, t: "Hoy muestra tu semana del programa, tu avance y el próximo hito, con los colores del programa." },
+    ...(x ? [
+      { icon: Sparkle, t: `Toda la app entra en ${x.mode}: la cinta del programa te acompaña en cada sección y Coach Banana responde con su enfoque.` },
+      ...(x.habits.length ? [{ icon: CheckCircle, t: `Tus hábitos de cada día: ${x.habits.map((h) => h.label.toLowerCase()).join(", ")}.` }] : []),
+      ...(x.tips.length ? [{ icon: Lightning, t: `Un consejo de Coach Banana para cada una de las ${Math.min(x.tips.length, weeks)} semanas.` }] : []),
+      ...(x.food.length ? [{ icon: ForkKnife, t: `Cómo comer en este programa: ${x.food[0].charAt(0).toLowerCase()}${x.food[0].slice(1)}` }] : []),
+    ] : []),
     { icon: TreePalm, t: "Puedes pausarlo o dejarlo cuando quieras y volver a tu rutina normal. Tu avance queda guardado." },
   ];
   let start = 1;

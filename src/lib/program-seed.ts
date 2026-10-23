@@ -430,46 +430,38 @@ function abdomenMarcado(): ProgramSession[] {
 }
 
 // ───────────── Brazos definidos (6 semanas) ─────────────
+// Especialización de brazos: bíceps, tríceps y hombros en las 4 sesiones, con énfasis en la posición estirada
+// (curl inclinado, extensión de tríceps sobre la cabeza), que en los estudios recientes hace crecer más el músculo.
 function brazos(): ProgramSession[] {
   const bombeo = (p: number) => ses(p, 4, "Bombeo de brazos", "Opcional, 20 minutos: series ligeras y descansos cortos para bíceps, tríceps y hombro.", [
     x("curlp", 3, 10, 12, 45, { tempo: "2-1-1" }), x("ds:0333", 3, 12, 15, 45, { tempo: I, note: "Codo pegado al cuerpo; estira el brazo del todo." }),
     x("lateral", 3, 15, 20, 30, { tempo: I }), x("hammer", 2, 12, 15, 45), x("pushupd", 2, 8, 15, 45),
   ], true);
-  const p1 = [
-    ses(1, 1, "Brazos y hombros", "Press, curl y tríceps con técnica limpia", [
-      x("dbpress", 3, 8, 12, 90, { tempo: S }), x("curl", 3, 8, 12, 75, { tempo: S, note: "Codos quietos al costado; baja en 3 s." }),
-      x("ds:0201", 3, 10, 12, 60, { tempo: I, note: "Codos pegados; estira del todo abajo.", home: "ds:0430" }), x("lateral", 3, 12, 15, 45, { tempo: I }),
-      x("hammer", 2, 10, 12, 60, { tempo: I }), x("ds:0333", 2, 12, 15, 45, { tempo: I }),
+  const set = (p: number, plus: number, lo: number, hi: number) => [
+    ses(p, 1, "Bíceps y espalda", "Tirones pesados y curl en estiramiento", [
+      x("lat", 3, 8, 12, 90, { tempo: I, note: "Agarre supino (palmas hacia ti) para que trabaje más el bíceps." }),
+      x("ds:0318", 3 + plus, 8, 12, 75, { tempo: S, note: "Brazos colgando detrás del cuerpo: el bíceps trabaja estirado." }),
+      x("curl", 3, lo, hi, 75, { tempo: S, note: "Codos quietos al costado; baja en 3 s." }),
+      x("hammer", 2 + plus, 10, 12, 60, { tempo: I }),
+      x("ds:0297", 2, 12, 15, 45, { tempo: S, note: "Por brazo. Aprieta arriba 1 s." }),
     ]),
-    ses(1, 2, "Pierna y espalda", "El resto del cuerpo también cuenta: más músculo, más definición", [
-      x("goblet", 3, 10, 12, 90, { tempo: S }), x("rdl", 3, 8, 12, 120, { tempo: S }), x("lat", 3, 10, 12, 90, { tempo: I }),
-      x("dbrow", 3, 10, 12, 90, { tempo: I, note: "Por brazo." }), x("plank", 2, 30, 45, 45, { unit: "s" }),
+    ses(p, 2, "Tríceps y pecho", "Press cerrado y tríceps estirado sobre la cabeza", [
+      x("closebench", 3, lo - 2, hi - 2, 120, { tempo: S, note: "Manos al ancho de los hombros; codos cerca del cuerpo." }),
+      x("ds:0194", 3 + plus, 10, 12, 75, { tempo: S, note: "Estira del todo arriba de la cabeza: el tríceps largo crece más así.", home: "ds:0430" }),
+      x("ds:0201", 3, 10, 15, 60, { tempo: I, note: "Codos pegados; estira del todo abajo.", home: "ds:0333" }),
+      x("pushupd", 2 + plus, 8, 15, 60),
     ]),
-    ses(1, 3, "Brazos y pecho", "Tríceps pesado, curl inclinado y hombro posterior", [
-      x("closebench", 3, 8, 10, 120, { tempo: S, note: "Manos al ancho de los hombros; codos cerca del cuerpo." }),
-      x("ds:0318", 3, 10, 12, 60, { tempo: S, note: "Brazos colgando detrás del cuerpo: estira bien el bíceps." }),
-      x("ds:0194", 3, 10, 12, 60, { tempo: I, note: "Estira arriba y siente el tríceps largo.", home: "ds:0430" }),
-      x("pushupd", 2, 8, 12, 60), x("ds:2292", 2, 12, 15, 45, { tempo: I }), x("ds:0297", 2, 10, 12, 45, { tempo: S, note: "Por brazo." }),
+    ses(p, 3, "Hombros y brazos", "Hombro ancho y un bombeo final de bíceps y tríceps", [
+      x("dbpress", 3, lo, hi, 90, { tempo: S }),
+      x("lateral", 4, 12, 20, 45, { tempo: I, note: "Sube hasta la altura del hombro, sin impulso." }),
+      x("ds:2292", 3, 12, 15, 45, { tempo: I }),
+      x("curlp", 2 + plus, 10, 12, 60, { tempo: "2-1-1" }),
+      x("ds:0333", 2 + plus, 12, 15, 45, { tempo: I }),
     ]),
-    bombeo(1),
+    bombeo(p),
   ];
-  const p2 = [
-    ses(2, 1, "Brazos y hombros", "Una serie más en los principales", [
-      x("dbpress", 4, 8, 10, 120, { tempo: S }), x("curl", 4, 8, 10, 75, { tempo: S }), x("ds:0201", 4, 10, 12, 60, { tempo: I, home: "ds:0430" }),
-      x("lateral", 3, 12, 15, 45, { tempo: I }), x("hammer", 3, 10, 12, 60, { tempo: I }), x("ds:0333", 2, 12, 15, 45, { tempo: I }),
-    ]),
-    ses(2, 2, "Pierna y espalda", "Básicos con más carga", [
-      x("goblet", 4, 8, 12, 120, { tempo: S }), x("rdl", 3, 8, 10, 120, { tempo: S }), x("lat", 3, 8, 12, 90, { tempo: I }),
-      x("dbrow", 3, 8, 12, 90, { tempo: I, note: "Por brazo." }), x("plank", 2, 40, 60, 45, { unit: "s" }),
-    ]),
-    ses(2, 3, "Brazos y pecho", "Tríceps pesado y bíceps estirado", [
-      x("closebench", 4, 6, 10, 120, { tempo: S }), x("ds:0318", 3, 10, 12, 60, { tempo: S }), x("ds:0194", 3, 10, 12, 60, { tempo: I, home: "ds:0430" }),
-      x("pushupd", 3, 8, 15, 60), x("ds:2292", 3, 12, 15, 45, { tempo: I }), x("ds:0297", 2, 10, 12, 45, { tempo: S, note: "Por brazo." }),
-    ]),
-    bombeo(2),
-  ];
-  const pico = copyPhase(p2, 2, 3, (e) => (["curl", "closebench", "dbpress"].includes(e.id) ? { ...e, lo: 6, hi: 8 } : e), "Semana pico: más carga en curl, press cerrado y press de hombro. Toma tu foto y mide tu brazo el último día.");
-  return [...p1, ...p2, ...pico];
+  const pico = copyPhase(set(2, 1, 8, 12), 2, 3, (e) => (["curl", "closebench", "dbpress"].includes(e.id) ? { ...e, lo: 6, hi: 8 } : e), "Semana pico: más carga en curl, press cerrado y press de hombro. Toma tu foto y mide tu brazo el último día.");
+  return [...set(1, 0, 8, 12), ...set(2, 1, 8, 12), ...pico];
 }
 
 // ───────────── Banana Girl (6 semanas) ─────────────
@@ -513,6 +505,67 @@ function bananaGirl(): ProgramSession[] {
   return [...p1, ...p2, ...brilla];
 }
 
+// ───────────── Glúteos de acero v2 (0027): especialización completa de glúteo ─────────────
+// Cada sesión es de glúteo: empuje de cadera (hip thrust), sentadilla y zancada profundas (glúteo estirado),
+// bisagra de cadera y abducción para la parte alta. 3 sesiones y 1 exprés opcional en casa.
+function gluteosV2(): ProgramSession[] {
+  const expres = (p: number) => ses(p, 4, "Glúteo exprés en casa", "Opcional, 20 minutos y sin equipo: bombeo y abducción para sumar volumen.", [
+    x("glutebridge", 3, 15, 25, 45, { tempo: "2-2-1", note: "Pausa de 2 s arriba." }), x("ds:0710", 3, 15, 20, 30, { note: "Por pierna, despacio." }),
+    x("ds:0628", 2, 12, 16, 30, { note: "Pasos por lado, con banda si tienes." }), x("ds:3561", 2, 30, 40, 30, { unit: "s" }),
+  ], true);
+  const set = (p: number, plus: number) => [
+    ses(p, 1, "Glúteo pesado", "Hip thrust pesado, búlgara y peso muerto rumano", [
+      x("ds:1409", 3 + plus, p === 1 ? 8 : 6, p === 1 ? 12 : 10, 120, { tempo: I, note: "Pausa de 1 s arriba; mentón adentro y costillas abajo.", home: "glutebridge" }),
+      x("bulgarian", 3, 8, 12, 90, { tempo: S, note: "Por pierna. Torso un poco inclinado al frente y baja profundo." }),
+      x("rdl", 3, 8, 10, 120, { tempo: S, note: "Cadera atrás hasta sentir el estiramiento; no redondees la espalda." }),
+      x("ds:0597", 2 + plus, 12, 20, 45, { tempo: I, note: "Inclina el torso al frente para cargar la parte alta del glúteo.", home: "ds:0710" }),
+    ]),
+    ses(p, 2, "Glúteo estirado", "Profundidad: sentadilla, peso muerto a una pierna y subida al cajón", [
+      x("goblet", 3 + plus, 8, 12, 120, { tempo: S, note: "Baja tan profundo como tu movilidad permita: el glúteo trabaja más estirado." }),
+      x("ds:1757", 3, 8, 12, 75, { tempo: S, note: "Por pierna.", home: "slrdl" }),
+      x("ds:0431", 3, 8, 12, 75, { tempo: S, note: "Por pierna. Cajón alto y empuja con el talón." }),
+      x("ds:0228", 2 + plus, 12, 15, 45, { tempo: I, note: "Por pierna. Sin arquear la espalda baja.", home: "ds:3561" }),
+    ]),
+    ses(p, 3, "Glúteo bombeo", "Más repeticiones y pausas para el glúteo medio y mayor", [
+      x("ds:1409", 3, 12, 15, 75, { tempo: "2-2-1", note: "Pausa de 2 s arriba.", home: "glutebridge" }),
+      x("ds:0381", 3, 10, 12, 75, { tempo: S, note: "Por pierna. Paso largo hacia atrás." }),
+      x("ds:1774", 2 + plus, 10, 15, 45, { note: "Por lado." }),
+      x("ds:0628", 2, 12, 16, 45, { note: "Pasos por lado, con banda si tienes." }),
+    ]),
+    expres(p),
+  ];
+  const pico = copyPhase(set(2, 1), 2, 3, (e, ss) => (ss.day === 1 && e.id === "ds:1409" ? { ...e, lo: 5, hi: 8, rest: 150 } : e), "Semana pico: tu hip thrust más pesado. Mide tu cadera y toma tu foto el último día.");
+  return [...set(1, 0), ...set(2, 1), ...pico];
+}
+
+const GLUTEOS_V2: ProgramMeta = {
+  phases: [
+    { name: "Activación y técnica", weeks: 2, focus: "Siente el glúteo en cada repetición: pausas arriba y bajadas lentas." },
+    { name: "Carga progresiva", weeks: 3, focus: "Una serie más en hip thrust, sentadilla y abducción, y más peso cuando llegas al tope." },
+    { name: "Semana pico", weeks: 1, focus: "Tu hip thrust más pesado y la comparación con la semana 1." },
+  ],
+  daysPerWeek: 4, sessionMinutes: 45, level: "todos", equipment: "Gimnasio o casa con mancuernas y banda", adapt: true,
+  who: "Para quien quiere más glúteo y caderas más firmes, y puede entrenar glúteo 3 veces por semana durante 6 semanas, en el gimnasio o en casa.",
+  result: "Construir glúteo con 3 sesiones dedicadas por semana y una exprés opcional: hip thrust, sentadilla y zancada profundas, bisagra de cadera y abducción para la parte alta.",
+  outcomes: [
+    "Glúteo en todas las sesiones: unas 20 a 25 series semanales",
+    "Ejercicios en posición estirada (sentadilla profunda, búlgara) y en contracción (hip thrust)",
+    "Versión para casa de cada ejercicio de máquina",
+    "Fuerza en hip thrust y peso muerto rumano comparada con el día 1",
+  ],
+  keyLifts: ["ds:1409", "rdl", "goblet"],
+  nutrition: { mode: "fuerza", proteinPerKg: 1.8, note: "Superávit pequeño (unas 200 a 300 kcal) y proteína alta: el glúteo necesita energía para crecer." },
+  previewExercise: "rdl",
+};
+
+/** Programas de 0024 que 0027 rehace (sesiones y meta nuevas; mismas compras). */
+export const PROGRAM_UPGRADES: Record<string, Pick<ProgramSeed, "description" | "minutes" | "meta" | "sessions">> = {
+  "gluteos-30": {
+    description: "6 semanas de especialización en glúteo: hip thrust, sentadilla y zancada profundas, peso muerto rumano y abducción, 3 sesiones dedicadas y 1 exprés opcional por semana. En el gimnasio o en casa.",
+    minutes: 45, meta: GLUTEOS_V2, sessions: gluteosV2(),
+  },
+};
+
 const ABDOMEN_MARCADO: ProgramMeta = {
   phases: [
     { name: "Base", weeks: 2, focus: "Core estable, fuerza de cuerpo completo y el hábito de 4 sesiones por semana." },
@@ -540,10 +593,10 @@ const BRAZOS: ProgramMeta = {
     { name: "Pico", weeks: 1, focus: "Más carga en los básicos y la foto de tus brazos del último día." },
   ],
   daysPerWeek: 4, sessionMinutes: 45, level: "todos", equipment: "Gimnasio (se adapta a casa con mancuernas)", adapt: true,
-  who: "Para quien quiere brazos firmes y definidos (bíceps, tríceps y hombros) sin descuidar el resto del cuerpo.",
-  result: "Construir bíceps, tríceps y hombros con 2 sesiones de brazos, 1 de pierna y espalda y 1 de bombeo opcional por semana, con pesos que suben solos.",
+  who: "Para quien quiere brazos firmes y definidos: bíceps, tríceps y hombros como prioridad durante 6 semanas.",
+  result: "Construir bíceps, tríceps y hombros con 3 sesiones de brazos por semana y una de bombeo opcional, con ejercicios en posición estirada y pesos que suben solos. Mantén tus pasos para cuidar las piernas.",
   outcomes: [
-    "Unas 12 a 16 series semanales de bíceps y de tríceps",
+    "Unas 14 a 18 series semanales de bíceps y de tríceps",
     "Hombro lateral y posterior para un brazo que se ve más ancho",
     "Sesión opcional de bombeo de 20 minutos",
     "Fuerza en curl y press cerrado comparada con el día 1",
@@ -713,7 +766,7 @@ export const EXPERIENCES: Record<string, ProgramExperience> = {
       "Semana 1: en el curl, los codos no se mueven. Si tienes que balancearte, el peso es demasiado alto.",
       "Semana 2: el tríceps es dos tercios de tu brazo. Estira del todo en cada extensión.",
       "Semana 3: el hombro lateral hace que el brazo se vea más ancho. Sube hasta la altura del hombro, sin impulso.",
-      "Semana 4: no te saltes pierna y espalda. Más músculo en todo el cuerpo ayuda a que se vea la definición.",
+      "Semana 4: en el curl inclinado y la extensión sobre la cabeza, la bajada lenta y el estiramiento completo son lo que más hace crecer el brazo.",
       "Semana 5: la sesión de bombeo es opcional. Si te sobra energía, súmala; si no, descansa.",
       "Semana 6: semana pico. Toma tu foto con la misma luz que el día 1 y compara.",
     ],
@@ -754,7 +807,7 @@ export const PROGRAM_SEED_2: ProgramSeed[] = [
     safetyNote: "Si tienes diástasis abdominal, una hernia, dolor de espalda baja, estás embarazada o tuviste un parto reciente, consulta con tu médico antes de empezar.",
     meta: withX("abdomen-marcado", ABDOMEN_MARCADO), sessions: abdomenMarcado() },
   { ...base, slug: "brazos-definidos", title: "Brazos definidos", insert: true, featured: false, sort: 30, priceUsd: 6.99, cover: "ember", icon: "barbell", difficulty: "media", minutes: 45,
-    description: "6 semanas para bíceps, tríceps y hombros firmes: 2 sesiones de brazos, 1 de pierna y espalda y 1 de bombeo opcional por semana, con pesos que suben solos.",
+    description: "6 semanas de especialización en brazos: bíceps, tríceps y hombros en cada sesión, con curl inclinado y tríceps sobre la cabeza para trabajar el músculo estirado. 3 sesiones y 1 de bombeo opcional por semana.",
     badge: "Brazos definidos", rewardTitle: "Brazos de acero", xp: 350,
     safetyNote: "Si sientes dolor en el codo o el hombro (no cansancio muscular), baja el peso y consulta con un profesional antes de seguir.",
     meta: withX("brazos-definidos", BRAZOS), sessions: brazos() },
@@ -766,15 +819,29 @@ export const PROGRAM_SEED_2: ProgramSeed[] = [
 ];
 
 /** Todos los programas de la siembra con su experiencia (catálogo de respaldo y modo demo). */
-export const ALL_PROGRAM_SEED: ProgramSeed[] = [...PROGRAM_SEED.map((p) => ({ ...p, meta: withX(p.slug, p.meta) })), ...PROGRAM_SEED_2];
+export const ALL_PROGRAM_SEED: ProgramSeed[] = [...PROGRAM_SEED.map((p) => { const u = PROGRAM_UPGRADES[p.slug]; const q2 = u ? { ...p, ...u } : p; return { ...q2, meta: withX(p.slug, q2.meta) }; }), ...PROGRAM_SEED_2];
 export const PROGRAM_SEED_BY_SLUG: Record<string, ProgramSeed> = Object.fromEntries(ALL_PROGRAM_SEED.map((p) => [p.slug, p]));
 
 /** Bloque de siembra de 0027: programas nuevos y la experiencia de los de 0024 (solo si todavía no tienen una). */
 export function program0027Sql() {
   const out = [programSeedSql(PROGRAM_SEED_2).replace("-- ───────────── 6. Siembra (generada con scripts/gen-programas-seed.ts; no pisa lo editado en el panel) ─────────────", "-- ───────────── Siembra de programas nuevos (generada con scripts/gen-programas-seed.ts --0027) ─────────────").replace(/-- Retos Premium que pasan a ser programas[^\n]*\n/, "")];
+  out.push("-- Programas de 0024 rehechos en 0027 (enfoque completo en su objetivo). Mismo slug: las compras siguen valiendo.");
+  for (const [slug, u] of Object.entries(PROGRAM_UPGRADES)) {
+    const weeks = u.meta.phases.reduce((a, x) => a + x.weeks, 0);
+    out.push(`update public.challenges_catalog set program = ${j(withX(slug, u.meta))}, description = ${q(u.description)}, minutes = ${u.minutes}, days = ${weeks * 7} where slug = ${q(slug)} and kind = 'programa';`);
+    out.push(`delete from public.program_sessions where slug = ${q(slug)};`);
+    out.push("insert into public.program_sessions (slug, phase, day, title, focus, optional, exercises) values");
+    out.push(u.sessions.map((s) => `  (${[q(slug), s.phase, s.day, q(s.title), q(s.focus), !!s.optional, j(s.exercises)].join(", ")})`).join(",\n"));
+    out.push("on conflict (slug, phase, day) do nothing;");
+  }
+  out.push("-- Duración en días = semanas del programa (algunos retos convertidos en 0024 conservaban la de 0018).");
+  for (const p of PROGRAM_SEED.filter((x) => !x.insert && !PROGRAM_UPGRADES[x.slug])) {
+    const d = p.meta.phases.reduce((a, x) => a + x.weeks, 0) * 7;
+    out.push(`update public.challenges_catalog set days = ${d} where slug = ${q(p.slug)} and kind = 'programa' and days <> ${d};`);
+  }
   out.push("-- Experiencia de los programas de 0024: solo si el panel todavía no les puso una.");
   for (const p of PROGRAM_SEED) {
-    if (!EXPERIENCES[p.slug]) continue;
+    if (!EXPERIENCES[p.slug] || PROGRAM_UPGRADES[p.slug]) continue;
     out.push(`update public.challenges_catalog set program = program || jsonb_build_object('experience', ${j(EXPERIENCES[p.slug])}) where slug = ${q(p.slug)} and kind = 'programa' and program is not null and not (program ? 'experience');`);
   }
   return out.join("\n") + "\n";
