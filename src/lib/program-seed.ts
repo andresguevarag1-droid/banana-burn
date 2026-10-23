@@ -398,30 +398,30 @@ function abdomenMarcado(): ProgramSession[] {
   const p1 = [
     ses(1, 1, "Fuerza y core A", "Cuerpo completo con cargas cómodas y core anti-extensión", [
       x("goblet", 3, 10, 12, 90, { tempo: S }), x("dbrow", 3, 10, 12, 90, { tempo: I, note: "Por brazo." }), x("pushup", 3, 8, 12, 60),
-      x("ds:0276", 3, 8, 10, 45, { tempo: I, note: "Por lado. Espalda baja pegada al piso." }), x("plank", 3, 30, 45, 45, { unit: "s" }),
+      x("ds:0276", 2, 8, 10, 45, { tempo: I, note: "Por lado. Espalda baja pegada al piso." }), x("plank", 2, 30, 45, 45, { unit: "s" }),
     ]),
-    ses(1, 2, "Core y cardio", "Abdomen inferior, oblicuos e intervalos", [
-      x("ds:0872", 3, 10, 15, 45, { tempo: I, note: "Sube la cadera con el abdomen, sin impulso." }), x("ds:0687", 3, 16, 20, 45, { note: "Cuenta cada lado." }),
-      x("ds:0705", 3, 20, 30, 30, { unit: "s", note: "Por lado. Cadera alta." }), x("mountain", 4, 25, 30, 30, { unit: "s" }), x("jacks", 4, 30, 40, 20, { unit: "s" }),
+    ses(1, 2, "Core y cardio", "Abdomen inferior, anti-rotación e intervalos", [
+      x("ds:0872", 3, 10, 15, 60, { tempo: I, note: "Sube la cadera con el abdomen, sin impulso." }), x("ds:0979", 3, 10, 12, 45, { tempo: "1-2-1", note: "Por lado. Brazos al frente sin dejar que la banda te gire." }),
+      x("ds:0705", 2, 20, 30, 30, { unit: "s", note: "Por lado. Cadera alta." }), x("mountain", 4, 25, 30, 30, { unit: "s" }), x("jacks", 4, 30, 40, 20, { unit: "s" }),
     ]),
     ses(1, 3, "Fuerza y core B", "Bisagra de cadera, espalda y crunch con carga", [
       x("rdl", 3, 10, 12, 120, { tempo: S }), x("lat", 3, 10, 12, 90, { tempo: I }), x("incline", 3, 8, 12, 90, { tempo: S }),
-      x("ds:0874", 3, 12, 15, 45, { tempo: I, note: "Redondea la espalda llevando las costillas a la cadera.", home: "ds:0274" }), x("planktap", 2, 16, 20, 45, { note: "Cadera quieta." }),
+      x("ds:0175", 3, 10, 15, 60, { tempo: S, note: "De rodillas: lleva las costillas hacia la cadera y sube despacio. Cerca del fallo.", home: "ds:0274" }),
     ]),
     quema(1, 3),
   ];
   const p2 = [
     ses(2, 1, "Fuerza y core A", "Más series en los básicos", [
       x("goblet", 4, 8, 12, 120, { tempo: S }), x("dbrow", 4, 8, 12, 90, { tempo: I, note: "Por brazo." }), x("pushup", 3, 10, 15, 60),
-      x("ds:0276", 3, 10, 12, 45, { tempo: I, note: "Por lado." }), x("plank", 3, 40, 60, 45, { unit: "s" }),
+      x("ds:0276", 2, 10, 12, 45, { tempo: I, note: "Por lado." }), x("plank", 2, 40, 60, 45, { unit: "s" }),
     ]),
-    ses(2, 2, "Core y cardio", "Más tiempo bajo tensión y un intervalo más", [
-      x("kneeraise", 3, 8, 12, 60, { note: "Colgado o en el piso: sube con el abdomen, sin balanceo." }), x("ds:0687", 3, 20, 24, 45, { note: "Cuenta cada lado." }),
-      x("ds:0705", 3, 30, 40, 30, { unit: "s", note: "Por lado." }), x("mountain", 5, 30, 35, 25, { unit: "s" }), x("jacks", 5, 35, 40, 20, { unit: "s" }),
+    ses(2, 2, "Core y cardio", "Elevación de piernas, anti-rotación y un intervalo más", [
+      x("kneeraise", 3, 8, 12, 60, { note: "Colgado o en el piso: sube con el abdomen, sin balanceo." }), x("ds:0979", 3, 12, 15, 45, { tempo: "1-2-1", note: "Por lado." }),
+      x("ds:0705", 2, 30, 40, 30, { unit: "s", note: "Por lado." }), x("mountain", 5, 30, 35, 25, { unit: "s" }), x("jacks", 5, 35, 40, 20, { unit: "s" }),
     ]),
     ses(2, 3, "Fuerza y core B", "Bisagra pesada y crunch con carga", [
       x("rdl", 4, 8, 10, 120, { tempo: S }), x("lat", 3, 8, 12, 90, { tempo: I }), x("incline", 3, 8, 10, 120, { tempo: S }),
-      x("ds:0874", 3, 12, 15, 45, { tempo: I, home: "ds:0274" }), x("suitcase", 3, 20, 30, 60, { unit: "m", note: "Por lado. No dejes que el peso te incline." }),
+      x("ds:0175", 4, 10, 15, 60, { tempo: S, home: "ds:0274" }), x("suitcase", 3, 20, 30, 60, { unit: "m", note: "Por lado. No dejes que el peso te incline." }),
     ]),
     quema(2, 4),
   ];
@@ -443,7 +443,7 @@ function brazos(): ProgramSession[] {
       x("ds:0318", 3 + plus, 8, 12, 75, { tempo: S, note: "Brazos colgando detrás del cuerpo: el bíceps trabaja estirado." }),
       x("curl", 3, lo, hi, 75, { tempo: S, note: "Codos quietos al costado; baja en 3 s." }),
       x("hammer", 2 + plus, 10, 12, 60, { tempo: I }),
-      x("ds:0297", 2, 12, 15, 45, { tempo: S, note: "Por brazo. Aprieta arriba 1 s." }),
+      x("ds:0372", 2, 10, 12, 60, { tempo: S, note: "Por brazo. Baja hasta estirar casi del todo: trabaja la parte del bíceps cerca del codo." }),
     ]),
     ses(p, 2, "Tríceps y pecho", "Press cerrado y tríceps estirado sobre la cabeza", [
       x("closebench", 3, lo - 2, hi - 2, 120, { tempo: S, note: "Manos al ancho de los hombros; codos cerca del cuerpo." }),
@@ -456,11 +456,11 @@ function brazos(): ProgramSession[] {
       x("lateral", 4, 12, 20, 45, { tempo: I, note: "Sube hasta la altura del hombro, sin impulso." }),
       x("ds:2292", 3, 12, 15, 45, { tempo: I }),
       x("curlp", 2 + plus, 10, 12, 60, { tempo: "2-1-1" }),
-      x("ds:0333", 2 + plus, 12, 15, 45, { tempo: I }),
+      x("ds:0430", 2 + plus, 10, 15, 60, { tempo: S, note: "Mancuerna sobre la cabeza: estira bien el tríceps abajo." }),
     ]),
     bombeo(p),
   ];
-  const pico = copyPhase(set(2, 1, 8, 12), 2, 3, (e) => (["curl", "closebench", "dbpress"].includes(e.id) ? { ...e, lo: 6, hi: 8 } : e), "Semana pico: más carga en curl, press cerrado y press de hombro. Toma tu foto y mide tu brazo el último día.");
+  const pico = copyPhase(set(2, 1, 8, 12), 2, 3, (e) => (["curl", "closebench", "dbpress"].includes(e.id) ? { ...e, lo: 6, hi: 8 } : e.id === "curlp" || e.id === "ds:0430" ? { ...e, note: "Última serie en rest-pause: al fallo, 15 s de pausa y 2 o 3 repeticiones más." } : e), "Semana pico: más carga en curl, press cerrado y press de hombro, y rest-pause al final. Toma tu foto y mide tu brazo el último día.");
   return [...set(1, 0, 8, 12), ...set(2, 1, 8, 12), ...pico];
 }
 
@@ -468,7 +468,7 @@ function brazos(): ProgramSession[] {
 function bananaGirl(): ProgramSession[] {
   const cintura = (p: number) => ses(p, 4, "Cintura y cardio suave", "Core sin impacto y un circuito para sudar sin saltos.", [
     x("ds:0276", p === 1 ? 2 : 3, 8, 12, 45, { tempo: I, note: "Por lado. Espalda baja pegada al piso." }),
-    x("ds:0705", p === 1 ? 2 : 3, 20, 35, 30, { unit: "s", note: "Por lado." }), x("ds:0687", 2, 16, 20, 45, { note: "Cuenta cada lado." }),
+    x("ds:0705", p === 1 ? 2 : 3, 20, 35, 30, { unit: "s", note: "Por lado." }), x("ds:0979", 2, 10, 12, 45, { tempo: "1-2-1", note: "Por lado. Que la banda no te gire." }),
     x("bwsquat", p === 1 ? 3 : 4, 30, 40, 20, { unit: "s" }), x("ds:3561", p === 1 ? 3 : 4, 30, 40, 20, { unit: "s", note: "Cadera alta mientras marchas." }),
   ]);
   const p1 = [
@@ -597,7 +597,7 @@ const BRAZOS: ProgramMeta = {
   result: "Construir bíceps, tríceps y hombros con 3 sesiones de brazos por semana y una de bombeo opcional, con ejercicios en posición estirada y pesos que suben solos. Mantén tus pasos para cuidar las piernas.",
   outcomes: [
     "Unas 14 a 18 series semanales de bíceps y de tríceps",
-    "Hombro lateral y posterior para un brazo que se ve más ancho",
+    "La mitad del tríceps en ejercicios sobre la cabeza y curl inclinado y predicador para todo el bíceps",
     "Sesión opcional de bombeo de 20 minutos",
     "Fuerza en curl y press cerrado comparada con el día 1",
   ],
@@ -663,7 +663,7 @@ export const EXPERIENCES: Record<string, ProgramExperience> = {
     tips: [
       "Semana 1: en el puente con barra, pausa 1 segundo arriba y aprieta. Si sientes la espalda baja, mete el mentón y las costillas.",
       "Semana 2: en el peso muerto rumano la cadera va hacia atrás, no hacia abajo. Para cuando sientas el estiramiento detrás del muslo.",
-      "Semana 3: el glúteo crece con carga. Si completas el rango, deja que el peso suba aunque te dé miedo.",
+      "Semana 3: la sentadilla profunda y la búlgara hacen crecer el glúteo tanto como el hip thrust. Baja profundo y termina cada serie a 1 o 2 repeticiones del fallo.",
       "Semana 4: en la búlgara, inclina un poco el torso al frente para que trabaje más el glúteo.",
       "Semana 5: come suficiente. Un superávit pequeño y proteína alta son la energía que tu glúteo necesita para crecer.",
       "Semana 6: semana pico. Prueba tu mejor puente con barra y compara con la semana 1.",
@@ -743,9 +743,9 @@ export const EXPERIENCES: Record<string, ProgramExperience> = {
     ],
     tips: [
       "Semana 1: mide tu cintura a la altura del ombligo, en ayunas. Es tu número del día 1.",
-      "Semana 2: en el dead bug, la espalda baja no se despega del piso. Si se despega, acorta el movimiento.",
+      "Semana 2: los abdominales no queman la grasa de la panza. La cintura baja con el déficit y los pasos; el entreno hace que se vea el músculo debajo.",
       "Semana 3: las bebidas azucaradas son las calorías más fáciles de quitar. Cámbialas por agua o café sin azúcar.",
-      "Semana 4: en el crunch con polea, piensa en llevar las costillas hacia la cadera, no la cabeza hacia las rodillas.",
+      "Semana 4: en el crunch de rodillas con polea, lleva las costillas hacia la cadera y acércate al fallo: el abdomen es un músculo y crece con carga.",
       "Semana 5: si la báscula no se mueve, mira la cinta métrica. La cintura suele bajar primero.",
       "Semana 6: semana pico. Mide tu cintura y toma tu foto el último día para compararla con el día 1.",
     ],
@@ -767,7 +767,7 @@ export const EXPERIENCES: Record<string, ProgramExperience> = {
       "Semana 2: el tríceps es dos tercios de tu brazo. Estira del todo en cada extensión.",
       "Semana 3: el hombro lateral hace que el brazo se vea más ancho. Sube hasta la altura del hombro, sin impulso.",
       "Semana 4: en el curl inclinado y la extensión sobre la cabeza, la bajada lenta y el estiramiento completo son lo que más hace crecer el brazo.",
-      "Semana 5: la sesión de bombeo es opcional. Si te sobra energía, súmala; si no, descansa.",
+      "Semana 5: \"tonificar\" es tener más músculo y menos grasa encima. Por eso el brazo necesita carga que suba, no muchas repeticiones sin peso.",
       "Semana 6: semana pico. Toma tu foto con la misma luz que el día 1 y compara.",
     ],
     coachFocus: "Brazos definidos: bíceps, tríceps y hombros con técnica estricta y sobrecarga progresiva, sin descuidar pierna y espalda.",

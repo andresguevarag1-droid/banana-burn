@@ -328,7 +328,7 @@ describe("programas de 0027", () => {
   });
   it("Abdomen marcado: core en todas las sesiones y déficit para bajar grasa", () => {
     const a = PROGRAM_SEED_2.find((p) => p.slug === "abdomen-marcado")!;
-    for (const s of a.sessions) expect(s.exercises.some((e) => /core|abdominales|oblicuo|abs/.test(muscleOf(e.id))), s.title).toBe(true);
+    for (const s of a.sessions) expect(s.exercises.some((e) => /core|abdom|oblicuo/.test(muscleOf(e.id))), s.title).toBe(true);
     expect(a.meta.nutrition?.mode).toBe("acelerada");
   });
   it("cada programa tiene su propia nutrición", () => {
