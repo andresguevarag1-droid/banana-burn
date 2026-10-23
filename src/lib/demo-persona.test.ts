@@ -3,7 +3,7 @@ import { parseDemoState } from "./demo-persona";
 import { girlDemoDone, girlDemoState } from "./programs-server";
 import { PROGRAM_SEED_BY_SLUG } from "./program-seed";
 import { addDays, daysToWeekEnd, programDayOf, resolveProgram, weekDaysLabel } from "./programs";
-import { commonTempo, sessionLine } from "./voice";
+import { commonTempo, rxBadge, sessionLine } from "./voice";
 
 const get = (o: Record<string, string>) => (k: string) => o[k];
 
@@ -79,5 +79,10 @@ describe("etiquetas de un programa en días", () => {
     expect(sessionLine("intermedio", { exercises: 5, mins: 16, tempo: "2-1-2" })).toBe("5 ejercicios en unos 16 min, tempo 2-1-2");
     expect(sessionLine("intermedio", { exercises: 5, mins: 16, tempo: null })).toBe("5 ejercicios en unos 16 min");
     expect(sessionLine("intermedio", { exercises: 5, mins: 40 })).toContain("tempo 3-1-1");
+  });
+  it("un ejercicio por tiempo progresa en segundos, no en repeticiones", () => {
+    expect(rxBadge("intermedio", "reps", "s")).toBe("+ segundos");
+    expect(rxBadge("intermedio", "reps")).toBe("+1 rep");
+    expect(rxBadge("intermedio", "cal", "s")).toBe("Calibración");
   });
 });
