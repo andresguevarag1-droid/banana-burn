@@ -700,7 +700,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>
               {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-3.5" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{xpNow.xp} XP</span>}
               {sessMode === "suave" && <span className="text-sky">Modo suave</span>}
-              {!online && <span role="status" className="inline-flex items-center gap-1 text-ink"><WifiSlash weight="bold" className="size-3.5" aria-hidden />Sin señal: guardamos todo aquí</span>}
+              {!online && <span role="status" className="inline-flex items-center gap-1 whitespace-nowrap text-ink"><WifiSlash weight="bold" className="size-3.5" aria-hidden />Sin señal<span className="sr-only">: puedes seguir, guardamos todo en este teléfono</span></span>}
               {combo >= 2 && <span className="inline-flex items-center gap-1 text-ember-ink"><Lightning weight="fill" className="size-3.5" aria-hidden />Combo x{combo}</span>}
             </p>
           </div>
