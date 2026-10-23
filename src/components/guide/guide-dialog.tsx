@@ -94,7 +94,7 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
       <div data-closing={closing || undefined} className="sheet-backdrop fixed inset-0 z-[90] flex items-stretch justify-center bg-ink/45 backdrop-blur-sm sm:items-center sm:p-6"
         onClick={(e) => { if (!closing && e.target === e.currentTarget) onClose(); }}>
         <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId} tabIndex={-1} data-closing={closing || undefined}
-          className="sheet-panel relative flex h-[100dvh] w-full flex-col bg-paper outline-none sm:h-[min(700px,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem] sm:shadow-lift">
+          className="sheet-panel relative flex h-[100dvh] w-full flex-col bg-paper outline-none sm:h-[min(760px,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem] sm:shadow-lift">
           {/* Encabezado: capítulo, avance y Saltar */}
           <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-2 sm:px-6 sm:pt-5">
             {/* div y no p: el text-wrap global de los párrafos le gana a truncate */}
@@ -142,7 +142,9 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
           <div className="shrink-0 border-t border-line/80 bg-paper px-4 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:rounded-b-[2rem] sm:px-6 sm:pb-5">
             <p className="sr-only" aria-live="polite">Paso {idx + 1} de {steps.length}: {step.title}</p>
             <div className="sm:flex sm:items-center sm:justify-between sm:gap-6">
-            <ol className="flex flex-wrap items-center justify-center sm:justify-start" aria-label="Pasos de la guía">
+            {/* Celular: barra de avance (no caben 16 puntos de 24 px). Escritorio: puntos que llevan a cada paso. */}
+            <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-line sm:hidden"><div className="h-full rounded-full bg-ink transition-[width] duration-(--dur-base) ease-out" style={{ width: `${((idx + 1) / steps.length) * 100}%` }} /></div>
+            <ol className="hidden flex-wrap items-center justify-start sm:flex" aria-label="Pasos de la guía">
               {steps.map((s, n) => (
                 <li key={s.id}>
                   <button type="button" onClick={() => go(n)} aria-label={`Paso ${n + 1}: ${s.title}`} aria-current={n === idx ? "step" : undefined}
@@ -152,7 +154,7 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
                 </li>
               ))}
             </ol>
-            <div className="mt-2 flex items-center gap-2 sm:mt-0 sm:shrink-0">
+            <div className="mt-3 flex items-center gap-2 sm:mt-0 sm:shrink-0">
               <button type="button" onClick={() => { if (idx === 1) primary.current?.focus(); go(idx - 1); }} disabled={idx === 0} className="btn-ghost h-12 px-4 disabled:invisible">
                 <ArrowLeft weight="bold" className="size-4" aria-hidden />Atrás
               </button>

@@ -68,10 +68,12 @@ export type GuideVisual =
   | { kind: "programa" }
   | { kind: "mejora" }
   | { kind: "recetas" }
+  | { kind: "programas" }
+  | { kind: "shield"; included: boolean }
   | { kind: "coach" }
   | { kind: "final" };
 
-export type GuideStepId = "inicio" | "hoy" | "plan" | "reproductor" | "progresion" | "tecnica" | "programa" | "retos" | "nutricion" | "recetas" | "coach" | "comunidad" | "progreso" | "final";
+export type GuideStepId = "inicio" | "hoy" | "plan" | "reproductor" | "progresion" | "tecnica" | "programa" | "programas" | "retos" | "nutricion" | "recetas" | "shield" | "coach" | "comunidad" | "progreso" | "final";
 
 export type GuideStep = {
   id: GuideStepId;
@@ -209,15 +211,30 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
     });
   }
 
+  // Programas Premium: lo que de verdad cambia en la app mientras dura uno (layout: franja del programa; Hoy: ProgramHero
+  // y ProgramHabits; Nutrición: "Cómo comer en..."; coach: consejo por semana; al cerrar: certificado y poder del perfil).
   steps.push({
-    id: "retos", chapter: "Retos y programas", title: "Retos gratis y programas Premium",
-    body: "Los retos gratis son hábitos de 7 a 42 días: pasos, agua, entrenos. Los programas Premium se compran aparte con un pago único y transforman la app mientras duran.",
+    id: "programas", chapter: "Programas Premium", title: "Un programa Premium transforma toda tu app",
+    body: "Cada programa tiene un objetivo claro, como glúteo, abdomen o tu primera dominada. Se compra aparte con un pago único, en cualquier plan, y mientras dura la app entera trabaja para ese objetivo.",
     bullets: [
-      "Cada entreno y cada registro suman XP.",
-      "Subir de nivel desbloquea recompensas y descuento en los programas Premium.",
-      "La racha cuenta los días seguidos en que entrenas o registras algo.",
+      "Toma su color: una franja del programa arriba en cada pantalla y un nombre de modo, como Modo glúteo.",
+      "Hoy te muestra la sesión del programa, con entrenos enfocados en su objetivo, por fases y con semana de descarga.",
+      "Hasta 4 hábitos diarios propios y un consejo nuevo de Coach Banana cada semana.",
+      nutri ? "Tu comida también se ajusta al programa: proteína y calorías para su objetivo." : `Con ${COMPLETO.name}, tu comida también se ajusta al programa.`,
+      "Al terminar recibes su certificado y tu perfil gana poder.",
     ],
-    cta: { href: "/app/retos", label: "Ver retos y programas" }, visual: { kind: "captura", src: "/landing/retos.png", alt: "Tienda de retos y programas" },
+    cta: { href: "/app/retos", label: "Ver los programas" }, visual: { kind: "programas" },
+  });
+
+  steps.push({
+    id: "retos", chapter: "Retos gratis", title: "Retos gratis, XP y racha",
+    body: "Los retos gratis son un hábito diario de 7 a 30 días: pasos, agua, flexiones, plancha. Se suman a tu rutina sin cambiarla y puedes hacerlos junto con un programa.",
+    bullets: [
+      "Cada entreno y cada registro suman XP. Subir de nivel te da descuento en los programas Premium.",
+      "La racha cuenta los días seguidos en que entrenas o registras algo.",
+      "Cada reto completado te deja su medalla.",
+    ],
+    cta: { href: "/app/retos", label: "Ver retos gratis" }, visual: { kind: "captura", src: "/landing/retos.png", alt: "Tienda de retos y programas" },
   });
 
   if (nutri) {
@@ -233,11 +250,11 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
       ...(variant === "prueba" ? { note: `Incluido en tu prueba. Después, solo en ${COMPLETO.name}.` } : {}),
     });
     steps.push({
-      id: "recetas", chapter: "Nutrición", title: "Recetas, Menú flash y Banana Shield",
+      id: "recetas", chapter: "Nutrición", title: "Recetas latinas y Menú flash",
       body: "¿No sabes qué comer? Menú flash arma tu comida con lo que te falta hoy, con recetas latinas fáciles.",
       bullets: [
         "Recetas con calorías y proteína por porción.",
-        "Banana Shield: si usas GLP-1, cuida que lo que bajes sea grasa y no músculo. Lo activas en Perfil.",
+        "Guarda tus propias recetas en Mis recetas y regístralas en un toque.",
       ],
       cta: { href: "/app/nutricion/recetas", label: "Ver recetas" }, visual: { kind: "recetas" },
       ...(variant === "prueba" ? { note: `Incluido en tu prueba. Después, solo en ${COMPLETO.name}.` } : {}),
@@ -255,6 +272,39 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
       ],
       note: `Cuesta ${money(COMPLETO.price.mes)} al mes (${money(extra)} más que ${ENTRENO.name}) o ${money(COMPLETO.price.anual)} al año. Puedes cambiar de plan cuando quieras.`,
       cta: { href: "/app/suscripcion", label: "Ver planes" }, visual: { kind: "mejora" },
+    });
+  }
+
+  // Banana Shield: uno de los diferenciadores. Completo y prueba: el capítulo entero. Entreno: qué es y que viene con
+  // Entreno + Nutrición, sin dar a entender que ya lo tiene. Siempre con lenguaje médico prudente (sin dosis).
+  if (nutri) {
+    steps.push({
+      id: "shield", chapter: "Banana Shield", title: "Banana Shield: si usas GLP-1, protege tu músculo",
+      body: "El medicamento te ayuda a comer menos. Banana Shield se asegura de que lo que bajes sea grasa y no músculo, con un plan pensado para el tratamiento.",
+      bullets: [
+        "Proteína primero: una meta diaria de proteína y un piso de calorías para no comer de menos.",
+        "Sabe qué día te inyectas: ese día y el siguiente te sugiere un entreno más suave.",
+        "Consejos de comida para las molestias comunes: náuseas, estreñimiento y diarrea.",
+        "Te muestra cuánto de lo que bajas es grasa y si tu fuerza se mantiene.",
+        "Actívalo en Perfil, en la sección Banana Shield, con tu medicamento y tu día de inyección.",
+      ],
+      note: variant === "prueba"
+        ? `Incluido en tu prueba. Después, solo en ${COMPLETO.name}. No da indicaciones de dosis ni reemplaza a tu médico: consulta con tu médico cualquier cambio.`
+        : "No da indicaciones de dosis ni reemplaza a tu médico: consulta con tu médico cualquier cambio en tu tratamiento.",
+      cta: { href: "/app/glp1", label: "Abrir Banana Shield" }, visual: { kind: "shield", included: true },
+    });
+  } else {
+    steps.push({
+      id: "shield", chapter: "Banana Shield", title: "¿Usas GLP-1? Conoce Banana Shield",
+      body: `Si usas un medicamento GLP-1, como semaglutida o tirzepatida, Banana Shield cuida que lo que bajes sea grasa y no músculo. Tu plan ${ENTRENO.name} no lo incluye: viene con ${COMPLETO.name}.`,
+      bullets: [
+        "Metas de proteína primero y un piso de calorías para no comer de menos.",
+        "Un plan que sabe qué día te inyectas y te sugiere un entreno más suave ese día y el siguiente.",
+        "Consejos de comida para las náuseas, el estreñimiento y la diarrea.",
+        "Seguimiento de cuánto de lo que bajas es grasa y de tu fuerza.",
+      ],
+      note: `${COMPLETO.name} cuesta ${money(COMPLETO.price.mes)} al mes o ${money(COMPLETO.price.anual)} al año. Banana Shield no da indicaciones de dosis ni reemplaza a tu médico.`,
+      cta: { href: "/app/suscripcion", label: "Ver planes" }, visual: { kind: "shield", included: false },
     });
   }
 
