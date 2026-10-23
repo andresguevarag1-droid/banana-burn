@@ -4,11 +4,17 @@ import { SEED, type ChallengeStatus, type CoverStyle, type DayTask, type Difficu
 import { ALL_PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./program-seed";
 import { parseMeta, type ProgramMeta } from "./programs";
 import { RESTYLE } from "./catalog-0028";
+import { FREE_HIDE, FREE_REWORK } from "./catalog-0033";
 
 /** Catálogo de respaldo con los nombres, colores y estados de 0028 (la base ya los tiene después de la migración). */
-function restyle(c: Challenge): Challenge {
+function restyle(c0: Challenge): Challenge {
+  // 0033: los retos gratis que se quedan, con su plan nuevo; los demás, ocultos.
+  const f = FREE_REWORK[c0.id];
+  const c: Challenge = f
+    ? { ...c0, title: f.title, desc: f.description, days: f.days, xp: f.xp, grace: f.grace, minutes: f.minutes, badge: f.badge, sort: f.sort, featured: !!f.featured, stepsGoal: f.stepsGoal ?? c0.stepsGoal, plan: f.plan, task: (d) => taskFor(f.plan, d, c0.verify, f.stepsGoal ?? c0.stepsGoal) }
+    : FREE_HIDE.includes(c0.id) ? { ...c0, status: "oculto", featured: false } : c0;
   const r = RESTYLE[c.id];
-  if (!r) return c;
+  if (!r || f) return c;
   const program = c.program && r.mode && c.program.experience?.mode === r.mode[0] ? { ...c.program, experience: { ...c.program.experience, mode: r.mode[1] } } : c.program;
   return { ...c, title: r.title ?? c.title, cover: r.cover ?? c.cover, color: r.cover ? COVER_COLOR[r.cover] : c.color, status: r.hide ? "oculto" : c.status, featured: r.hide ? false : c.featured, program };
 }

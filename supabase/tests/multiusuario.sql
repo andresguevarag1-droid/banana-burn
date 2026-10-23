@@ -125,6 +125,17 @@ begin
   perform bbtest.zero(format('%s no edita el perfil de %s', me, other), format('update public.profiles set full_name = ''x'' where id = %L', ot));
 end $$;
 
+-- ───────────── 0033: retos gratis (antes de restaurar el catálogo de 0018 para las pruebas de abajo) ─────────────
+select bbtest.ok('0033: quedan 4 retos gratis publicados, todos de 15 días o menos', (select count(*) = 4 and bool_and(days <= 15) from public.challenges_catalog where status = 'publicado' and price_usd = 0 and kind = 'reto'));
+select bbtest.ok('0033: Hidratado 14 días con su plan de 14 días', (select c.days = 14 and jsonb_array_length(p.days) = 14 from public.challenges_catalog c join public.challenge_plans p using (slug) where slug = 'agua-21' and c.title = 'Hidratado 14 días'));
+select bbtest.ok('0033: Caminata de la selva 15 días con 8.000 pasos', (select days = 15 and steps_goal = 8000 from public.challenges_catalog where slug = 'pasos-30'));
+select bbtest.ok('0033: los demás gratis quedan ocultos', (select bool_and(status = 'oculto') from public.challenges_catalog where slug in ('banana-30','flexiones-30','plancha-30','proteina-21','pasos-14')));
+select bbtest.fails('0033: un reto gratis publicado no dura más de 15 días', $q$ update public.challenges_catalog set days = 30 where slug = 'agua-21' $q$, '23514');
+select bbtest.ok('0033: uno oculto sí puede durar más', bbtest.affected($q$ update public.challenges_catalog set days = days where slug = 'banana-30' $q$) = 1);
+-- Las pruebas de abajo (escritas sobre el catálogo de 0018) usan los retos gratis originales: se vuelven a publicar.
+alter table public.challenges_catalog drop constraint challenges_catalog_free_days_check;
+update public.challenges_catalog set status = 'publicado' where slug in ('banana-30','flexiones-30','plancha-30','proteina-21','pasos-14');
+
 -- ───────────── Datos: usuarios y una fila por tabla (como servidor, sin guardas de la API) ─────────────
 reset role;
 select bbtest.login(null);
