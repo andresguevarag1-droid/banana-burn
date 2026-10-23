@@ -22,6 +22,8 @@ import { ProgramRibbon } from "@/components/programas/program-ribbon";
 import { COVER_ACCENT } from "@/components/retos/cover";
 import { GiftCelebration } from "@/components/gift-celebration";
 import { deliverPendingGifts, getUnseenGifts } from "@/lib/gifts-server";
+import { TesterCelebration } from "@/components/testers/tester-celebration";
+import { deliverTesterNotices, getMyTester } from "@/lib/testers-server";
 import { AddCardBanner, FailedBanner, ProcessingBanner, ScheduledBanner } from "@/components/card-banner";
 import { bannerFor } from "@/lib/trial";
 import { demoCardState } from "@/lib/trial-demo";
@@ -35,11 +37,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app");
   if (!v.onboarded) redirect("/bienvenida");
-  const [ent, xp, prog, unseen] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false }))]);
+  const [ent, xp, prog, unseen, tester] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false })), getMyTester(v).catch(() => null)]);
   // Un regalo creado por la base (recompensa de referidos) todavía sin correo ni push: se manda después de responder.
   // Programa activo: solo con acceso a la app (sin acceso queda guardado y vuelve al renovar).
   const live = prog && ent.app ? prog : null;
   if (unseen.undelivered) after(() => deliverPendingGifts({ userId: v.id, limit: 5 }).then(() => {}));
+  // Tester (0029): correo y push de la asignación, aviso de 3 días antes y agradecimiento al terminar, si faltan.
+  if (tester?.pending) after(() => deliverTesterNotices({ userId: v.id, limit: 5 }).then(() => {}));
+  // Un aviso grande a la vez: primero el regalo, la bienvenida de tester en la próxima visita.
+  const testerWelcome = tester?.unseenId && !unseen.gifts.length ? tester.until : null;
   // Tarjeta guardada (0026): en demo, el estado de ejemplo. Revisión al abrir la app: si el cobro ya tocaba (o el aviso
   // del día 5, o hay que confirmar uno en curso), se hace después de responder. El cron diario es el respaldo.
   const cs = v.demo ? demoCardState((await cookies()).get("bb_demo_tarjeta")?.value) : null;
@@ -61,6 +67,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <UpdatePrompt version={deployId()} />
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
+      <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, week: live.run.week, weeks: live.run.weeks }} />}
         {banner === "beta-add" ? <AddCardBanner />

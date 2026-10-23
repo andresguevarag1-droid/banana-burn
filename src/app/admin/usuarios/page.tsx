@@ -8,7 +8,7 @@ import { ConfirmAction } from "@/components/admin/action-form";
 import { GiftFields } from "@/components/admin/gift-fields";
 import { GIFT_BULK_MAX } from "@/lib/gifts";
 import { crToday } from "@/lib/today";
-import { CaretRight } from "@/components/icons";
+import { CaretRight, Flask } from "@/components/icons";
 import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, Nil, Notice, PageHeader, Pagination, RoleBadge, SubStatus, Table, Td, Th, ago, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, textareaSm, trHover } from "@/components/admin/ui";
 
 export const metadata = { title: "Usuarios" };
@@ -17,6 +17,11 @@ type SP = { q?: string; plan?: string; role?: string; status?: string; from?: st
 const PLAN_OPTS = (["free", "entreno", "completo", "pro"] as const).map((k) => [k, PLAN_LABEL[k]] as const);
 const STATUS_TONE = { activo: "good", inactivo: "muted", pendiente: "warn" } as const;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Insignia "Tester" de la lista (no es un rol: se muestra junto al rol, con su vencimiento al pasar el cursor). */
+function TesterChip({ until }: { until: string }) {
+  return <span title={`Tester hasta el ${fmtDate(until)}`}><Badge tone="warn"><Flask weight="duotone" className="size-3.5" aria-hidden />Tester</Badge></span>;
+}
 
 export default async function Usuarios({ searchParams }: { searchParams: Promise<SP> }) {
   const v = await requireSection("usuarios");
@@ -36,6 +41,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-5">
       <PageHeader title="Usuarios" desc="Busca por nombre, correo o ID y abre la ficha para ver detalle y acciones.">
+        <Link href="/admin/usuarios/testers" className={btnGhost}><Flask weight="duotone" className="size-4" aria-hidden />Testers y reportes</Link>
         {can(v.role, "users.gift") && (
           <ConfirmAction action={giftMonthsBulk} trigger="Regalar meses en lote" title="Regalar meses a varias personas" hidden={{}} confirmLabel="Regalar"
             description={`Marca personas de esta página o pega sus ID (máximo ${GIFT_BULK_MAX}). Cada regalo se suma al final del acceso de cada persona, con aviso, correo y notificación.`}>
@@ -69,7 +75,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
         <Field label="Rol" htmlFor="f-role" className={fw.select}>
           <select id="f-role" name="role" defaultValue={f.role ?? ""} className={inputSm}><option value="">Todos</option>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select>
         </Field>
-        <Field label="Actividad" htmlFor="f-status" className={fw.select}>
+        <Field label="Estado" htmlFor="f-status" className={fw.select}>
           <select id="f-status" name="status" defaultValue={f.status ?? ""} className={inputSm}><option value="">Todos</option>{USER_STATUS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         </Field>
         <Field label="Alta desde" htmlFor="f-from" className={fw.date}><input id="f-from" name="from" type="date" defaultValue={f.from} className={inputSm} /></Field>
@@ -85,7 +91,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
             <li key={u.id}>
               <Link href={`/admin/usuarios/${u.id}`} className="flex items-center gap-3 px-4 py-3 outline-none transition-colors duration-150 hover:bg-paper/50 focus-visible:bg-paper focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-banana/50">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-ink">{u.full_name || "Sin nombre"}</p>
+                  <p className="flex min-w-0 items-center gap-2 font-semibold text-ink"><span className="truncate">{u.full_name || "Sin nombre"}</span>{u.tester_until && <TesterChip until={u.tester_until} />}</p>
                   {u.email && <p className="truncate text-xs text-muted">{u.email}</p>}
                   <MetaList className="mt-1.5" items={[<Badge key="a" tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge>, PLAN_LABEL[u.plan] ?? u.plan, limited ? null : ago(u.last_active, today), refCounts.get(u.id) ? `${fmtNum(refCounts.get(u.id)!.total)} referidos` : null]} />
                 </div>
@@ -108,7 +114,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                   <Link href={`/admin/usuarios/${u.id}`} className="block truncate font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{u.full_name || "Sin nombre"}</Link>
                   {u.email && <p className="truncate text-xs text-muted">{u.email}</p>}
                 </Td>
-                <Td><RoleBadge role={u.role} /></Td>
+                <Td><span className="flex flex-wrap items-center gap-1"><RoleBadge role={u.role} />{u.tester_until && <TesterChip until={u.tester_until} />}</span></Td>
                 <Td>
                   <span className="text-ink whitespace-nowrap">{PLAN_LABEL[u.plan] ?? u.plan}</span>
                   {u.plan !== "free" && u.billing && !u.comp_until && <p className="text-xs text-muted">{BILLING_LABEL[u.billing] ?? u.billing}</p>}

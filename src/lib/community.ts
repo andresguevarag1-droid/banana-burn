@@ -6,9 +6,11 @@ import { streakOf } from "@/lib/gamify";
 import { exerciseName, workoutName } from "@/lib/progress";
 import { mondayIso, zonedMidnightUtc, type BoardRow } from "@/lib/community-view";
 import { getXpTotal } from "@/lib/xp-total";
+import { testersAmong } from "@/lib/testers-server";
 
 /** `xp`: XP total para la insignia de nivel; null si la persona no comparte sus entrenos (o no se pudo leer). */
-export type Author = { id: string; username: string | null; name: string; xp?: number | null };
+/** `tester`: es tester de la beta hoy (insignia; 0029). */
+export type Author = { id: string; username: string | null; name: string; xp?: number | null; tester?: boolean };
 export type PostData = { title?: string; mins?: number; sets?: number; volume?: number; prs?: string[]; emoji?: string; icon?: string; challenge?: string; xp?: number; ex?: string[]; tag?: string };
 export type FeedComment = { id: string; author: Author; body: string; at: string; mine: boolean };
 export type FeedPost = { id: string; author: Author; kind: string; body: string | null; data: PostData; at: string; kudos: number; mine: boolean; iKudo: boolean; comments: FeedComment[]; commentCount: number };
@@ -24,7 +26,7 @@ const missingRpc = (e: { code?: string } | null) => !!e && ["PGRST202", "42883"]
 // ───────────── Modo demo: una sola historia, coherente con demo-story ─────────────
 const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
 const DEMO_AUTHORS: Author[] = [
-  { id: "d1", username: "carla.fit", name: "Carla Mora", xp: 3420 }, { id: "d2", username: "diego.sol", name: "Diego Solís", xp: 5180 }, { id: "d3", username: "vale.run", name: "Valeria Jiménez", xp: 1240 },
+  { id: "d1", username: "carla.fit", name: "Carla Mora", xp: 3420, tester: true }, { id: "d2", username: "diego.sol", name: "Diego Solís", xp: 5180 }, { id: "d3", username: "vale.run", name: "Valeria Jiménez", xp: 1240 },
 ];
 /** Gente que todavía no sigues (sugerencias del demo). */
 const DEMO_SUGGEST: (Author & { bio: string; sameCountry: boolean; sameGoal: boolean; activeDays: number; followers: number })[] = [
@@ -77,8 +79,11 @@ async function hydrate(sb: Sb, v: Viewer, list: PostRow[]): Promise<FeedPost[]> 
     levelsOf(sb, userIds),
   ]);
   const cmUsers = [...new Set((cm ?? []).map((c) => c.user_id as string))].filter((u) => !userIds.includes(u));
-  const { data: cmProfs } = cmUsers.length ? await sb.from("public_profiles").select("id,username,full_name").in("id", cmUsers) : { data: [] };
-  const pmap = new Map([...((profs ?? []) as ProfRow[]), ...((cmProfs ?? []) as ProfRow[])].map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", xp: lv.get(p.id) ?? null }]));
+  const [{ data: cmProfs }, testers] = await Promise.all([
+    cmUsers.length ? sb.from("public_profiles").select("id,username,full_name").in("id", cmUsers) : Promise.resolve({ data: [] }),
+    testersAmong(sb, [...userIds, ...cmUsers]),
+  ]);
+  const pmap = new Map([...((profs ?? []) as ProfRow[]), ...((cmProfs ?? []) as ProfRow[])].map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", xp: lv.get(p.id) ?? null, tester: testers.has(p.id) }]));
   const author = (id: string): Author => pmap.get(id) ?? { id, username: null, name: "Atleta", xp: null };
   return list.map((p) => {
     const ks = (kd ?? []).filter((k) => k.post_id === p.id);
@@ -116,12 +121,15 @@ export async function getComments(v: Viewer, postId: string): Promise<FeedCommen
   const sb = await createClient();
   const { data: cm } = await sb.from("comments").select("id,user_id,body,created_at").eq("post_id", Number(postId)).eq("hidden", false).order("created_at").limit(200);
   const ids = [...new Set((cm ?? []).map((c) => c.user_id as string))];
-  const { data: profs } = ids.length ? await sb.from("public_profiles").select("id,username,full_name").in("id", ids) : { data: [] };
-  const pmap = new Map(((profs ?? []) as ProfRow[]).map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta" }]));
+  const [{ data: profs }, testers] = await Promise.all([
+    ids.length ? sb.from("public_profiles").select("id,username,full_name").in("id", ids) : Promise.resolve({ data: [] }),
+    testersAmong(sb, ids),
+  ]);
+  const pmap = new Map(((profs ?? []) as ProfRow[]).map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", tester: testers.has(p.id) }]));
   return (cm ?? []).map((c) => ({ id: String(c.id), author: pmap.get(c.user_id as string) ?? { id: c.user_id as string, username: null, name: "Atleta" }, body: c.body as string, at: c.created_at as string, mine: c.user_id === v.id }));
 }
 
-export type PublicProfile = { id: string; username: string; name: string; bio: string | null; visibility: string; followers: number; following: number; iFollow: boolean; me: boolean; posts: FeedPost[] };
+export type PublicProfile = { id: string; username: string; name: string; bio: string | null; visibility: string; followers: number; following: number; iFollow: boolean; me: boolean; posts: FeedPost[]; tester?: boolean };
 
 /** Perfil público por usuario (null si no existe o es privado). */
 export async function getPublicProfile(v: Viewer, username: string): Promise<PublicProfile | null> {
@@ -133,7 +141,7 @@ export async function getPublicProfile(v: Viewer, username: string): Promise<Pub
     if (!a) return null;
     const me = a.id === v.id;
     const sugg = DEMO_SUGGEST.find((x) => x.id === a.id);
-    return { id: a.id, username: u, name: a.name, bio: me ? "Bajando de 94 a 85 kg con Banana Burn" : DEMO_BIO[u] ?? sugg?.bio ?? null, visibility: "publico", followers: me ? 12 : sugg?.followers ?? 48, following: me ? 9 : 31, iFollow: DEMO_AUTHORS.some((x) => x.id === a.id), me, posts: feed.filter((p) => p.author.id === a.id) };
+    return { id: a.id, username: u, name: a.name, bio: me ? "Bajando de 94 a 85 kg con Banana Burn" : DEMO_BIO[u] ?? sugg?.bio ?? null, visibility: "publico", followers: me ? 12 : sugg?.followers ?? 48, following: me ? 9 : 31, iFollow: DEMO_AUTHORS.some((x) => x.id === a.id), me, posts: feed.filter((p) => p.author.id === a.id), tester: !!a.tester };
   }
   const sb = await createClient();
   const { data, error } = await sb.rpc("community_profile", { p_username: u });
@@ -146,7 +154,8 @@ export async function getPublicProfile(v: Viewer, username: string): Promise<Pub
     const { data: f } = await sb.from("follows").select("followee").eq("follower", v.id).eq("followee", p.id).maybeSingle();
     return { id: p.id as string, username: u, name: (p.full_name as string) || u, bio: (p.bio as string) ?? null, visibility: p.visibility as string, followers: 0, following: 0, iFollow: !!f, me: p.id === v.id, posts: await postsOf(sb, v, p.id as string) };
   }
-  return { id: row.id, username: row.username, name: row.full_name || row.username, bio: row.bio, visibility: row.visibility, followers: Number(row.followers), following: Number(row.following), iFollow: row.i_follow, me: row.id === v.id, posts: await postsOf(sb, v, row.id) };
+  const [posts, testers] = await Promise.all([postsOf(sb, v, row.id), testersAmong(sb, [row.id])]);
+  return { id: row.id, username: row.username, name: row.full_name || row.username, bio: row.bio, visibility: row.visibility, followers: Number(row.followers), following: Number(row.following), iFollow: row.i_follow, me: row.id === v.id, posts, tester: testers.has(row.id) };
 }
 
 async function postsOf(sb: Sb, v: Viewer, userId: string) {

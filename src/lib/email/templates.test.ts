@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bienvenida, planListo, regalo } from "./templates";
+import { bienvenida, planListo, regalo, reporteEquipo, testerAsignado, testerTerminado } from "./templates";
 
 const base = { name: "Ana López", trainDays: 4, todayRoutine: "Pierna", goalWeight: 68, goalDate: "2027-03-01" };
 
@@ -49,6 +49,43 @@ describe("correo de regalo", () => {
   });
 });
 
+describe("correos de tester", () => {
+  const e = testerAsignado({ name: "Ana López", expiresAt: "2026-11-22T18:00:00Z" });
+  it("héroe de tester, cortesía de la beta, 30 días y hasta qué fecha", () => {
+    expect(e.subject).toBe("Ana, eres tester de Banana Burn");
+    expect(e.html).toContain("Eres tester de Banana Burn");
+    expect(e.html).toContain("30 días gratis");
+    expect(e.text).toContain("Hasta: 22 de noviembre de 2026");
+    expect(e.text).toMatch(/agradecimiento|probar la beta/);
+    expect(e.text).toContain("Entreno + Nutrición");
+  });
+  it("explica cómo reportar y que no hay cobros", () => {
+    expect(e.text).toContain("Reportar algo");
+    expect(e.text).toMatch(/sin cobros|No se te cobrará/i);
+    expect(e.html).toContain("/app");
+  });
+  it("renovación con su propio asunto", () => {
+    expect(testerAsignado({ name: "Ana", expiresAt: "2026-11-22T18:00:00Z", renewal: true }).subject).toBe("Ana, renovamos tu mes de tester");
+  });
+  it("agradecimiento al terminar con lo que pasa ahora", () => {
+    const t = testerTerminado({ name: "Ana", endedAt: "2026-11-22T18:00:00Z" });
+    expect(t.subject).toBe("Gracias por probar Banana Burn, Ana");
+    expect(t.text).toContain("22 de noviembre de 2026");
+    expect(t.text).toMatch(/elige un plan/i);
+    expect(t.html).toContain("/app/suscripcion");
+  });
+  it("sin emojis, sin raya larga, sin modismos y sin cadenas con punto medio", () => {
+    for (const x of [e, testerTerminado({ name: "Ana", endedAt: "2026-11-22T18:00:00Z" })]) {
+      expect(x.subject + x.text + x.html).not.toMatch(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]|\u2014|·|pura vida|\bmae\b|banano/u);
+    }
+  });
+  it("el aviso interno de reportes escapa el texto", () => {
+    const r = reporteEquipo({ name: "Ana", kind: "Algo falla", body: "<script>x</script>", tester: true, adminUrl: "/admin/usuarios/testers" });
+    expect(r.subject).toBe("Reporte de tester: Algo falla");
+    expect(r.html).not.toContain("<script>x");
+  });
+});
+
 describe("marca y personalización", () => {
   const unsubscribe = "https://bananaburn.app/api/email/baja?token=x";
   it("todos los correos siguen el libro de marca", async () => {
@@ -63,6 +100,8 @@ describe("marca y personalización", () => {
       T.rachaEnPeligro({ name: "Ana", streak: 4, unsubscribe }),
       T.resumenSemanal({ name: "Ana", workouts: 3, planned: 4, streak: 5, prs: [], nextWeek: [], unsubscribe }),
       T.reactivacion({ name: "Ana", days: 3, routine: "Pierna", trainingDay: true, unsubscribe }),
+      T.testerAsignado({ name: "Ana", expiresAt: "2026-11-22T18:00:00Z" }),
+      T.testerTerminado({ name: "Ana", endedAt: "2026-11-22T18:00:00Z" }),
     ];
     for (const e of all) {
       expect(e.html).toMatch(/\/email\/(coach|mascota)\.png/); // Coach Banana, una sola pose por correo

@@ -395,6 +395,80 @@ export function regalo(d: { name: string; months: number; plan: string; source: 
   };
 }
 
+/**
+ * Te hicieron tester de la beta: un mes de Entreno + Nutrición como cortesía. Transaccional: no lleva enlace de baja.
+ * `renewal`: ya era tester y se renovó por otros 30 días desde hoy.
+ */
+export function testerAsignado(d: { name: string; expiresAt: string; days?: number; renewal?: boolean }): Email {
+  const n = firstName(d.name);
+  const days = d.days ?? 30;
+  const until = longDate(d.expiresAt);
+  const subject = d.renewal ? `${n}, renovamos tu mes de tester` : `${n}, eres tester de Banana Burn`;
+  const preheader = `Tienes Entreno + Nutrición gratis hasta el ${until}, como agradecimiento por probar la beta.`;
+  const intro = d.renewal
+    ? `Gracias por seguir probando la beta con nosotros. Tu mes de tester empieza de nuevo hoy: ${days} días más con todo incluido.`
+    : "Te elegimos para probar Banana Burn durante la beta. Como agradecimiento, tienes la app completa por un mes, sin cobros.";
+  const hero: Hero = { eyebrow: "Tester de la beta", chip: `${days} días gratis`, title: d.renewal ? "Seguimos contigo, tester" : "Eres tester de Banana Burn", lead: esc(intro) };
+  const r: [string, string][] = [["Plan", "Entreno + Nutrición"], ["Tiempo", `${days} días`], ["Hasta", until], ["Costo", "Gratis, sin tarjeta"]];
+  const body =
+    eyebrow("Lo que tienes este mes") +
+    list([
+      `${dot()}<b>Entrenos con pesos que se ajustan solos</b>, coach y todos los programas.`,
+      `${dot()}<b>Nutrición completa</b>: calorías, macros, comidas, recetas y Banana Shield.`,
+      `${dot()}<b>Insignia de tester</b> en tu perfil y en la comunidad.`,
+    ]) +
+    rows(r) +
+    eyebrow("Cómo nos ayudas") +
+    p("Usa la app como lo harías normalmente. Si algo falla, se ve raro o se te ocurre una idea, toca <b>Reportar algo</b> en Hoy y escríbenos en una frase. Cada reporte nos llega directo y lo revisamos.") +
+    button("Abrir la app", "/app") +
+    small(`Al terminar, tu cuenta sigue con todos tus datos y vuelves a las reglas normales: eliges un plan cuando quieras. No se te cobrará nada por este mes. También puedes escribirnos a ${SUPPORT}.`);
+  const coach = "Gracias por entrenar con nosotros desde el principio. Lo que nos cuentes hace mejor la app para todos.";
+  const reason = "Recibes este correo porque el equipo de Banana Burn te hizo tester de la beta.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason, coach }),
+    text: textLayout([subject, "", intro, "", "Lo que tienes este mes:", "- Entrenos con pesos que se ajustan solos, coach y todos los programas.", "- Nutrición completa: calorías, macros, comidas, recetas y Banana Shield.", "- Insignia de tester en tu perfil y en la comunidad.", "", ...r.map(([k, v]) => `${k}: ${v}`), "",
+      "Cómo nos ayudas: si algo falla o se te ocurre una idea, toca Reportar algo en Hoy y escríbenos en una frase.", "", `Abrir la app: ${abs("/app")}`], undefined, reason, coach),
+  };
+}
+
+/** Terminó el mes de tester: agradecimiento y qué pasa ahora. Transaccional. */
+export function testerTerminado(d: { name: string; endedAt: string }): Email {
+  const n = firstName(d.name);
+  const subject = `Gracias por probar Banana Burn, ${n}`;
+  const preheader = "Terminó tu mes de tester. Tus datos siguen guardados.";
+  const intro = `Tu mes de tester terminó el ${longDate(d.endedAt)}. Gracias por cada entreno y cada reporte: nos ayudaron a mejorar la app.`;
+  const hero: Hero = { eyebrow: "Tester de la beta", title: "Gracias por ayudarnos a probar la app", lead: esc(intro), mascot: true };
+  const body =
+    eyebrow("Qué pasa ahora") +
+    list([
+      `${dot()}Tu historial, tus récords y tu plan siguen guardados. No se borra nada.`,
+      `${dot()}Vuelves a las reglas normales: para seguir registrando, elige un plan en Mi plan.`,
+      `${dot()}No se te cobró nada por este mes y no hay cobros automáticos por haber sido tester.`,
+      `${dot()}Tu insignia de Tester beta se queda en tus logros.`,
+    ]) +
+    button("Ver planes", "/app/suscripcion") +
+    small(`Si quieres seguir probando funciones nuevas, escríbenos a ${SUPPORT}.`);
+  const reason = "Recibes este correo porque fuiste tester de la beta de Banana Burn.";
+  const coach = "Fue un gusto entrenar contigo este mes. Aquí sigo cuando quieras volver.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason, coach }),
+    text: textLayout([subject, "", intro, "", "Qué pasa ahora:", "- Tu historial, tus récords y tu plan siguen guardados.", "- Para seguir registrando, elige un plan en Mi plan.", "- No se te cobró nada por este mes.", "- Tu insignia de Tester beta se queda en tus logros.", "", `Ver planes: ${abs("/app/suscripcion")}`], undefined, reason, coach),
+  };
+}
+
+/** Aviso interno al equipo: llegó un reporte desde la app. Transaccional, solo para el equipo. */
+export function reporteEquipo(d: { name: string; email?: string | null; kind: string; body: string; page?: string | null; tester: boolean; adminUrl: string }): Email {
+  const subject = `${d.tester ? "Reporte de tester" : "Reporte de la app"}: ${d.kind}`;
+  const preheader = d.body.slice(0, 90);
+  const hero: Hero = { eyebrow: d.tester ? "Tester de la beta" : "Reporte", title: esc(subject), lead: `De <b>${esc(d.name)}</b>${d.email ? ` (${esc(d.email)})` : ""}.` };
+  const r: [string, string][] = [["Tipo", d.kind], ["Pantalla", d.page || "Sin dato"], ["Tester", d.tester ? "Sí" : "No"]];
+  const body = `<blockquote style="margin:0 0 16px;padding:14px 16px;background:${C.soft};border-radius:16px;font-size:16px;line-height:24px;color:${C.ink};white-space:pre-wrap;">${esc(d.body)}</blockquote>` + rows(r) + button("Ver en el panel", d.adminUrl);
+  const reason = "Aviso interno del panel de Banana Burn.";
+  return { subject, preheader, html: layout({ preheader, hero, body, reason }), text: textLayout([subject, "", `De: ${d.name}${d.email ? ` (${d.email})` : ""}`, "", d.body, "", ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver en el panel: ${abs(d.adminUrl)}`], undefined, reason) };
+}
+
 // ───────────── Ciclo de vida (llevan enlace de baja) ─────────────
 
 export function recordatorio(d: { name: string; routine: string; mins?: number; exercises?: string[]; streak: number; goal?: Goal | null; unsubscribe: string }): Email {

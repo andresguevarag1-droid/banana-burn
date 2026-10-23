@@ -24,15 +24,19 @@ import { ChallengeCard } from "@/components/challenge-card";
 import { getMyChallenges } from "@/lib/challenges-server";
 import { getXpSummary } from "@/lib/xp-server";
 import { toView } from "@/lib/challenge-view";
+import { TesterCard } from "@/components/testers/tester-card";
+import { getMyTester } from "@/lib/testers-server";
 
 export const metadata = { title: "Hoy" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export default async function Hoy() {
+export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string }> }) {
   const v = (await getViewer())!;
+  // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
+  const demoTester = v.demo ? (await searchParams).tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
-  const [a, meals, ent, xs] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v)]);
+  const [a, meals, ent, xs, tester] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
@@ -70,6 +74,7 @@ export default async function Hoy() {
 
       <AnnouncementBanner />
       <EnablePush hideWhenSnoozed />
+      {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
 
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}

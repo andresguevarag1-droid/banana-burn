@@ -3,7 +3,7 @@ import type { SVGProps } from "react";
 import {
   Avocado, Barbell, Bed, BowlFood, BowlSteam, Bread, Carrot, ChartBar, Coffee, Cookie, Cow, Drop, Egg, Fish, Flag, Footprints, ForkKnife, Grains, Hamburger,
   HandsClapping, Leaf, Lightning, Moon, OrangeSlice, PersonSimpleRun, PersonSimpleWalk, Plant, Scales, Shield, Sneaker, Sun, SunHorizon, Target, Timer,
-  TreePalm, TrendDown, Waves, ArrowsClockwise, Sparkle, Syringe, Hourglass,
+  TreePalm, TrendDown, Waves, ArrowsClockwise, Sparkle, Syringe, Hourglass, Flask,
 } from "@phosphor-icons/react/dist/ssr";
 import { BRAND_ICONS, type BrandWeight } from "./brand";
 import { LEVELS } from "@/lib/gamify";
@@ -14,7 +14,7 @@ const UTIL = {
   barbell: Barbell, bowl: BowlFood, soup: BowlSteam, bread: Bread, coffee: Coffee, cookie: Cookie, drop: Drop, egg: Egg, fish: Fish, meat: Cow, grains: Grains, fruit: OrangeSlice,
   avocado: Avocado, fastfood: Hamburger, steps: Footprints, walk: PersonSimpleWalk, sneaker: Sneaker, fork: ForkKnife, leaf: Leaf, plant: Plant, bolt: Lightning, run: PersonSimpleRun,
   scale: Scales, target: Target, timer: Timer, hourglass: Hourglass, trendDown: TrendDown, carrot: Carrot, moon: Moon, sun: Sun, sunrise: SunHorizon, palm: TreePalm, bed: Bed,
-  clap: HandsClapping, flag: Flag, shield: Shield, waves: Waves, cycle: ArrowsClockwise, sparkle: Sparkle, syringe: Syringe, chart: ChartBar,
+  clap: HandsClapping, flag: Flag, shield: Shield, waves: Waves, cycle: ArrowsClockwise, sparkle: Sparkle, syringe: Syringe, chart: ChartBar, flask: Flask,
 } as const;
 
 export const ICON_NAMES = [...Object.keys(BRAND_ICONS), ...Object.keys(UTIL)] as (keyof typeof BRAND_ICONS | keyof typeof UTIL)[];
