@@ -15,6 +15,21 @@ const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\
  * Red de seguridad: quita emojis (y sus modificadores) del texto del modelo, trozo por trozo del stream.
  * Conserva saltos de línea y sangrías de markdown; solo colapsa los espacios dobles que deja un emoji en medio de una línea.
  */
+/**
+ * Línea de saludo del coach sobre el entreno de hoy, en neutro (sirve igual para hombres y mujeres).
+ * Solo menciona ayer cuando aporta: un día de descanso o una sesión distinta a la de hoy. Si ayer tocaba la misma
+ * sesión (programas que se hacen en orden), decir "ayer fue X" junto a "hoy te toca X" confunde.
+ */
+export function todayLine(p: { today: { name: string; exercises: number; training: boolean }; yesterday: { name: string; training: boolean }; trainedToday: boolean }): string {
+  const { today, yesterday } = p;
+  if (!today.training) return "Hoy es **descanso activo**: camina y estira.";
+  if (p.trainedToday) return `Ya hiciste **${today.name}** hoy. Buen trabajo.`;
+  const base = `Hoy te toca **${today.name}** (${today.exercises} ejercicios).`;
+  if (!yesterday.training) return `${base} Ayer descansaste: llegas con energía.`;
+  if (yesterday.name && yesterday.name !== today.name) return `${base} Ayer fue ${yesterday.name}: hoy trabajas otros músculos.`;
+  return base;
+}
+
 export function stripEmoji(s: string): string {
   if (!s) return s;
   const out = s.replace(EMOJI, "");

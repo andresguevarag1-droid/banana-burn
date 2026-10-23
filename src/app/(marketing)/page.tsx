@@ -187,7 +187,7 @@ export default function Landing() {
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
         <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
-          {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
+          {([[LIB_COUNT.toLocaleString("es-CO"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse">
               <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
               <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-ink">{v}</dd>
@@ -205,7 +205,7 @@ export default function Landing() {
             <Image src={POSE.entrenador} alt="Coach Banana como entrenador personal, con tabla y silbato" width={400} height={400} sizes="220px" className="mt-6 w-40 sm:w-52" />
           </div>
           <ul className="grid gap-3">
-            {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando estás listo", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
+            {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando tu cuerpo lo pide", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
               <li key={t} className="flex items-center gap-3 rounded-2xl bg-white p-4 font-bold text-ink shadow-[0_1px_0_var(--color-line)]">
                 <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-banana"><Check weight="bold" className="size-4" /></span>{t}
               </li>
