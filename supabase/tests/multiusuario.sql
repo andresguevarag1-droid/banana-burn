@@ -2,7 +2,7 @@
 -- Uso (BD desechable con stub.sql + migraciones 0001→0026, ver README.md). La sección 5b cubre la tienda de retos (0018),
 -- la 5c los programas (0024), la 7, el acceso a nutrición por plan (0022), la 9, regalos, referidos y escribir datos con plan (0025)
 -- la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026), la 11, testers de la beta y "Reportar algo" (0029),
--- y la 12, la guía de la app (0031).
+-- la 12, la guía de la app (0031), y el cupo de Coach Banana por plan (0032).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -1412,6 +1412,126 @@ set role anon; select bbtest.login(null);
 select bbtest.fails('guía: anon no marca guías', $q$ select public.guide_mark_seen(1) $q$, '42501');
 select bbtest.fails('guía: anon no marca consejos', $q$ select public.guide_tip_seen('entrenar') $q$, '42501');
 reset role;
+
+-- ───────────── 12. Cupo de Coach Banana por plan (0032) ─────────────
+-- Topes por día y mes según el plan, sin pasarse, sin editar contadores, staff sin límite (contado), devolución con
+-- ticket, y la beta encendida y apagada (se fija aquí y se restaura al final).
+reset role; select bbtest.login(null);
+create function bbtest.cq(n text) returns uuid language sql immutable as $$ select ('c0a00000-0000-4000-8000-0000000000' || n)::uuid $$;
+/** Toma `times` preguntas como la sesión actual; devuelve cuántas salieron ok. */
+create function bbtest.take(times int) returns int language plpgsql as $$
+declare ok int := 0;
+begin
+  for i in 1..times loop if (public.coach_take_quota('chat') ->> 'ok')::boolean then ok := ok + 1; end if; end loop;
+  return ok;
+end $$;
+create function bbtest.used(u uuid) returns int language sql as $$ select coalesce(sum(n), 0)::int from public.coach_usage where user_id = u and kind = 'chat' and day = public.cr_today() $$;
+-- C1 sin plan, C2 Entreno, C3 Entreno + Nutrición, C4 tester, C5 Entreno (devoluciones), C6 Entreno (tope mensual), C7 regalo Entreno.
+insert into auth.users (id, email) select bbtest.cq(k), 'cuota' || k || '@prueba.test' from unnest(array['01','02','03','04','05','06','07']) k;
+update public.profiles set created_at = now() - interval '90 days', onboarded = true where id in (select bbtest.cq(k) from unnest(array['01','02','03','04','05','06','07']) k);
+update public.profiles set plan = 'entreno' where id in (bbtest.cq('02'), bbtest.cq('05'), bbtest.cq('06'));
+update public.profiles set plan = 'completo' where id = bbtest.cq('03');
+insert into public.comp_grants (user_id, plan, previous_plan, starts_at, expires_at, reason, source)
+  values (bbtest.cq('07'), 'entreno', 'free', now() - interval '1 day', now() + interval '20 days', 'regalo de prueba', 'regalo');
+set role authenticated; select bbtest.login('S');
+select public.admin_set_tester(bbtest.cq('04'), 'prueba la app');
+reset role; select bbtest.login(null);
+
+-- 12a. Beta apagada: cada plan con su tope.
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() - interval '1 day' $$;
+select bbtest.ok('cuota: niveles sin beta (sin plan, entreno, completo, tester, staff, regalo entreno)',
+  public._coach_tier(bbtest.cq('01')) = 'none' and public._coach_tier(bbtest.cq('02')) = 'entreno' and public._coach_tier(bbtest.cq('03')) = 'completo'
+  and public._coach_tier(bbtest.cq('04')) = 'prueba' and public._coach_tier(bbtest.u('S')) = 'staff' and public._coach_tier(bbtest.u('P')) = 'staff'
+  and public._coach_tier(bbtest.cq('07')) = 'entreno');
+
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('01'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: sin plan no toma preguntas (locked)', (select (r ->> 'ok')::boolean = false and r ->> 'reason' = 'locked' and r ->> 'left' = '0' from public.coach_take_quota('chat') r));
+reset role;
+select bbtest.ok('cuota: sin plan no suma nada', bbtest.used(bbtest.cq('01')) = 0);
+
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('02'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: Entreno, la primera deja 9 y trae ticket', (select (r ->> 'ok')::boolean and (r ->> 'left')::int = 9 and (r ->> 'day_limit')::int = 10 and (r ->> 'month_limit')::int = 150 and r ->> 'ticket' is not null from public.coach_take_quota('chat') r));
+select bbtest.ok('cuota: Entreno toma 9 más y la 11 no pasa', bbtest.take(12) = 9);
+select bbtest.ok('cuota: Entreno agotado responde reason day y left 0', (select (r ->> 'ok')::boolean = false and r ->> 'reason' = 'day' and (r ->> 'left')::int = 0 from public.coach_take_quota('chat') r));
+select bbtest.ok('cuota: Entreno, el estado dice 0 y 10 usadas', (select (r ->> 'left')::int = 0 and (r ->> 'day_used')::int = 10 from public.coach_quota_status() r));
+select bbtest.ok('cuota: lee solo su propio contador', (select count(*) = 1 and sum(n) = 10 from public.coach_usage where kind = 'chat' and day = public.cr_today()));
+select bbtest.fails('cuota: no se resetea el contador', $q$ update public.coach_usage set n = 0 where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('cuota: no borra su contador', $q$ delete from public.coach_usage where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('cuota: no inserta contadores', $q$ insert into public.coach_usage (user_id, day, kind, n) values (auth.uid(), public.cr_today() + 1, 'chat', 0) $q$, '42501');
+select bbtest.fails('cuota: no lee tickets', $q$ select * from public.coach_quota_tickets $q$, '42501');
+select bbtest.fails('cuota: no crea tickets', $q$ insert into public.coach_quota_tickets (user_id, day) values (auth.uid(), public.cr_today()) $q$, '42501');
+select bbtest.fails('cuota: no llama funciones internas', $q$ select public._coach_tier(auth.uid()) $q$, '42501');
+select bbtest.fails('cuota: tipo inválido', $q$ select public.coach_take_quota('feedback') $q$, '22023');
+select bbtest.fails('cuota: no ve el panel de uso', $q$ select public.admin_coach_usage(null) $q$, '42501');
+select bbtest.ok('cuota: devolver un ticket inventado no suma', public.coach_refund_quota(gen_random_uuid()) = false and bbtest.used(bbtest.cq('02')) = 10);
+reset role;
+select bbtest.ok('cuota: Entreno quedó en 10 exactas', bbtest.used(bbtest.cq('02')) = 10);
+
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('03'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: Entreno + Nutrición toma 20 de 25', bbtest.take(25) = 20);
+select bbtest.ok('cuota: Entreno + Nutrición topes 20 y 300', (select (r ->> 'day_limit')::int = 20 and (r ->> 'month_limit')::int = 300 and (r ->> 'left')::int = 0 from public.coach_quota_status() r));
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('04'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: tester (prueba) toma 10 de 15 aunque su acceso sea completo', bbtest.take(15) = 10);
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('07'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: regalo de Entreno toma 10', bbtest.take(11) = 10);
+
+-- Staff: sin límite, pero contado.
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('cuota: staff toma 30 de 30', bbtest.take(30) = 30);
+select bbtest.ok('cuota: staff sin tope (left null)', (select r -> 'left' = 'null'::jsonb and r -> 'day_limit' = 'null'::jsonb and (r ->> 'day_used')::int = 30 from public.coach_quota_status() r));
+select bbtest.ok('cuota: panel de una persona', (select (r ->> 'day_used')::int = 10 and r ->> 'tier' = 'entreno' from public.admin_coach_usage(bbtest.cq('02')) r));
+select bbtest.ok('cuota: panel total y quién llegó al tope', (select (r ->> 'day_total')::int >= 80 and (r ->> 'at_limit_today')::int >= 4 from public.admin_coach_usage(null) r));
+reset role;
+select bbtest.ok('cuota: lo del staff queda registrado', bbtest.used(bbtest.u('S')) = 30);
+
+-- 12b. Devolución: una vez, solo el dueño, 10 minutos.
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('05'), 'role', 'authenticated')::text, false);
+create temp table cq_t (k text, t uuid);
+grant all on cq_t to authenticated;
+insert into cq_t select 'a', (public.coach_take_quota('chat') ->> 'ticket')::uuid;
+insert into cq_t select 'b', (public.coach_take_quota('chat') ->> 'ticket')::uuid;
+insert into cq_t select 'c', (public.coach_take_quota('chat') ->> 'ticket')::uuid;
+select bbtest.ok('cuota: C5 lleva 3', bbtest.used(bbtest.cq('05')) = 3);
+select bbtest.ok('cuota: devolver su ticket resta 1', public.coach_refund_quota((select t from cq_t where k = 'a')) and bbtest.used(bbtest.cq('05')) = 2);
+select bbtest.ok('cuota: el mismo ticket no se devuelve dos veces', public.coach_refund_quota((select t from cq_t where k = 'a')) = false and bbtest.used(bbtest.cq('05')) = 2);
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('02'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: nadie devuelve el ticket de otra persona', public.coach_refund_quota((select t from cq_t where k = 'b')) = false);
+reset role;
+select bbtest.ok('cuota: C2 sigue en 10 y C5 en 2', bbtest.used(bbtest.cq('02')) = 10 and bbtest.used(bbtest.cq('05')) = 2);
+update public.coach_quota_tickets set created_at = now() - interval '11 minutes' where id = (select t from cq_t where k = 'c');
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('05'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: un ticket viejo ya no se devuelve', public.coach_refund_quota((select t from cq_t where k = 'c')) = false and bbtest.used(bbtest.cq('05')) = 2);
+select bbtest.ok('cuota: devolver y volver a tomar no pasa del tope', bbtest.take(20) = 8 and bbtest.used(bbtest.cq('05')) = 10);
+reset role;
+
+-- 12c. Tope mensual: lo de días anteriores del mes cuenta; lo del mes pasado no.
+insert into public.coach_usage (user_id, day, kind, n) values (bbtest.cq('06'), (date_trunc('month', public.cr_today()) - interval '1 day')::date, 'chat', 500);
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('06'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: el mes pasado no cuenta', (select (r ->> 'month_used')::int = 0 and (r ->> 'left')::int = 10 from public.coach_quota_status() r));
+reset role;
+insert into public.coach_usage (user_id, day, kind, n) values (bbtest.cq('06'), date_trunc('month', public.cr_today())::date, 'chat', 150)
+  on conflict (user_id, day, kind) do update set n = 150;
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('06'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: con 150 en el mes ya no hay preguntas', (select (r ->> 'ok')::boolean = false and r ->> 'reason' = case when date_trunc('month', public.cr_today())::date = public.cr_today() then 'day' else 'month' end from public.coach_take_quota('chat') r));
+reset role;
+
+-- 12d. Beta encendida: la cuenta sin plan tiene 10 (prueba); los planes pagados conservan su tope.
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() + interval '10 days' $$;
+select bbtest.ok('cuota: en la beta, sin plan es prueba y los planes conservan su nivel',
+  public._coach_tier(bbtest.cq('01')) = 'prueba' and public._coach_tier(bbtest.cq('02')) = 'entreno' and public._coach_tier(bbtest.cq('03')) = 'completo');
+set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('01'), 'role', 'authenticated')::text, false);
+select bbtest.ok('cuota: en la beta, sin plan toma 10 de 12', bbtest.take(12) = 10);
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('cuota: anon no toma preguntas', $q$ select public.coach_take_quota('chat') $q$, '42501');
+select bbtest.fails('cuota: anon no devuelve preguntas', $q$ select public.coach_refund_quota(gen_random_uuid()) $q$, '42501');
+reset role;
+-- Borrar la cuenta borra su uso y sus tickets.
+delete from auth.users where id = bbtest.cq('05');
+select bbtest.ok('cuota: borrar la cuenta borra uso y tickets', not exists (select 1 from public.coach_usage where user_id = bbtest.cq('05')) and not exists (select 1 from public.coach_quota_tickets where user_id = bbtest.cq('05')));
+-- Restaurar la beta original (misma fecha que src/lib/plans.ts).
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select timestamptz '2026-11-01 06:00:00+00' $$;
+revoke all on function public._beta_ends_at() from public, anon, authenticated;
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));

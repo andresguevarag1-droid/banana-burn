@@ -15,5 +15,7 @@ export const EXPORT_BY_USER = [
  * últimos 4 y vencimiento; nunca hubo número de tarjeta), push_subscriptions con columnas elegidas (sin llaves criptográficas del
  * navegador) y referral_signals descrita (es una firma HMAC del prefijo de red, no una IP; nadie la lee por la API).
  * Los referidos y recompensas propios van en "referidos" (my_referrals y referral_rewards).
+ * coach_quota_tickets (0032) va descrita: son comprobantes internos de cada pregunta al coach (fecha, sin contenido) que
+ * nadie lee por la API; el conteo de preguntas ya va completo en coach_usage.
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods", "coach_quota_tickets"] as const;

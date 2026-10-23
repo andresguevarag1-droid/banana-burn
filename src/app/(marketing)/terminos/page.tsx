@@ -47,7 +47,7 @@ const SECTIONS: LegalSection[] = [
     ["Consulta a tu médico antes de empezar, sobre todo si tienes una condición del corazón, presión alta, lesiones, estás embarazada o tomas medicamentos.", "Si sientes dolor de pecho, mareo, falta de aire o dolor agudo, detente de inmediato y busca atención médica. En una emergencia llama al número de emergencias de tu país.", "El programa Banana Shield acompaña a personas que usan medicamentos GLP-1 recetados por su médico. No damos indicaciones sobre dosis, cambios ni suspensión del medicamento, y no recomendamos péptidos ni compuestos no aprobados.", "Tú decides las cargas y la intensidad. Entrena con técnica correcta y dentro de tus capacidades."],
   ] },
   { id: "coach", t: "El Coach Banana", p: [
-    "Las respuestas del Coach Banana se generan con inteligencia artificial y pueden contener errores. Úsalas como guía y no como diagnóstico. Hay un límite diario de mensajes para mantener el servicio disponible para todos.",
+    "Las respuestas del Coach Banana se generan con inteligencia artificial y pueden contener errores. Úsalas como guía y no como diagnóstico. Hay un límite de preguntas por día y por mes según tu plan, que se muestra en la pantalla del coach, para mantener el servicio disponible para todos.",
   ] },
   { id: "cuenta", t: "Tu cuenta", p: [
     "Debes ser mayor de 18 años y dar información veraz. Eres responsable del acceso a tu correo y de la actividad de tu cuenta. Podemos suspender cuentas que incumplan estos términos o pongan en riesgo a otras personas.",

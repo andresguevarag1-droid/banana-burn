@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
 import { getDashboard } from "@/lib/admin";
+import { COACH_COST_PER_Q, getCoachTotals } from "@/lib/admin-coach";
 import { delta, pct, RETENTION_WINDOWS, type Cell } from "@/lib/admin-kpis";
 import { can, SECTION_CAPS, type Section } from "@/lib/admin-perms";
 import { BarChart, LineChart } from "@/components/admin/charts";
@@ -24,7 +25,7 @@ function RetCell({ c }: { c: Cell }) {
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ sin_acceso?: string }> }) {
   const v = await requireSection("resumen");
   const { sin_acceso } = await searchParams;
-  const d = await getDashboard(v);
+  const [d, coach] = await Promise.all([getDashboard(v), getCoachTotals(v).catch(() => null)]);
   const dNew = delta(d.new_7, d.new_prev_7);
   const workouts = d.series.map((s) => ({ day: s.day, n: s.workouts }));
   const signups = d.series.map((s) => ({ day: s.day, n: s.signups }));
@@ -51,6 +52,18 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <Kpi label="Entrenos hoy" value={fmtNum(d.workouts_today)} hint={`${fmtNum(d.workouts_7)} en 7 d, ${avgWorkouts} por día en 30 d`} />
         </div>
       </section>
+
+      {coach && (
+        <section aria-labelledby="kpi-coach" className="space-y-2.5">
+          <SectionHeading id="kpi-coach" title="Coach Banana" />
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Kpi label="Preguntas hoy" value={fmtNum(coach.dayTotal)} hint={`${fmtNum(coach.usersToday)} personas`} />
+            <Kpi label="Preguntas del mes" value={fmtNum(coach.monthTotal)} hint={`${fmtNum(coach.usersMonth)} personas`} />
+            <Kpi label="Costo estimado del mes" value={money(Math.round(coach.monthTotal * COACH_COST_PER_Q * 100) / 100)} hint={`Aproximado, a unos USD ${COACH_COST_PER_Q.toLocaleString("es-419")} por pregunta`} />
+            <Kpi label="Llegaron al tope hoy" value={fmtNum(coach.atLimitToday)} hint="Usaron todas sus preguntas del día" />
+          </div>
+        </section>
+      )}
 
       {d.revenue && (
         <section aria-labelledby="kpi-ingresos" className="space-y-2.5">
