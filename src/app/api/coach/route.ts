@@ -4,30 +4,44 @@ import { getAthlete } from "@/lib/athlete";
 import { getEntitlements } from "@/lib/entitlements";
 import { APP_LOCKED_MSG } from "@/lib/plan-access";
 import { getProgress } from "@/lib/progress";
-import { coachSystem, demoReply, safetyCheck, sanitizeMessages, stripEmoji } from "@/lib/coach";
+import { coachSystemBlocks, demoReply, safetyCheck, sanitizeMessages, stripEmoji } from "@/lib/coach";
+import { COACH_MAX_TOKENS, parseQuota, quotaFrom, tierFromAccess, type CoachLimitBody, type CoachQuota } from "@/lib/coach-quota";
 import { clientIp, isSameOrigin, memoryRateLimit } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_BODY_BYTES = 64_000;
-const LIMIT_TEXT = "Llegaste al límite de mensajes de hoy. Mañana seguimos.";
+const MISSING = new Set(["PGRST202", "42883"]);
 
-function textStream(gen: AsyncIterable<string>, onDone?: (full: string) => Promise<void>) {
+function textStream(gen: AsyncIterable<string>, onDone?: (full: string, failed: boolean) => Promise<void>) {
   const enc = new TextEncoder();
   return new ReadableStream({
     async start(c) {
-      let full = "";
+      let full = "", failed = false;
       try { for await (const raw of gen) { const t = stripEmoji(raw); if (!t) continue; full += t; c.enqueue(enc.encode(t)); } }
       catch (e) {
+        failed = true;
         // Al usuario: mensaje genérico. Al log: solo tipo/estado, sin contenido del chat (datos de salud).
         console.error("[coach] stream", e instanceof Anthropic.APIError ? `APIError ${e.status}` : e instanceof Error ? e.name : "error");
         c.enqueue(enc.encode("\n\nSe cortó la respuesta. Intenta de nuevo."));
       }
       c.close();
-      if (onDone) await onDone(full).catch(() => {});
+      if (onDone) await onDone(full, failed).catch(() => {});
     },
   });
+}
+
+/** 429 con el detalle del cupo: la pantalla muestra cuándo vuelve el coach (no es un error). */
+function limitResponse(q: CoachQuota) {
+  const body: CoachLimitBody = { error: "cuota", reason: q.reason === "month" ? "month" : "day", tier: q.tier, left: 0, dayLimit: q.dayLimit, monthLimit: q.monthLimit, resetsAt: q.resetsAt };
+  return Response.json(body, { status: 429, headers: { "Cache-Control": "no-store", "X-Coach-State": "limit" } });
+}
+
+/** Cupo restante en cabeceras, para que la pantalla actualice el contador sin otra consulta. */
+function quotaHeaders(q: CoachQuota | null): Record<string, string> {
+  if (!q || q.left === null) return {};
+  return { "X-Coach-Left": String(q.left), "X-Coach-Day-Used": String(q.dayUsed), "X-Coach-Month-Used": String(q.monthUsed) };
 }
 
 async function* fake(text: string) { for (const w of text.split(/(?<=\s)/)) { yield w; await new Promise((r) => setTimeout(r, 18)); } }
@@ -48,7 +62,7 @@ export async function POST(req: Request) {
   const urgent = safetyCheck(last.content, v.country);
   if (urgent) return new Response(textStream(fake(urgent)), { headers });
   // El coach es parte del plan (las respuestas de urgencia de arriba nunca se bloquean): sin plan ni prueba vigente no
-  // responde ni gasta cupo. coach_consume (0013) lo repite en la base.
+  // responde ni gasta cupo. coach_take_quota (0032) lo repite en la base.
   const ent = await getEntitlements(v);
   if (!ent.app) return new Response(APP_LOCKED_MSG, { status: 402, headers: { ...headers, "X-Coach-State": "locked" } });
 
@@ -57,41 +71,81 @@ export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key && !v.demo) return new Response("El coach se está configurando. Vuelve en un rato.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Coach-State": "setup" } });
 
-  // Cupo diario en el servidor: con Supabase, contador atómico que el usuario no puede editar (coach_consume, 0012);
-  // en modo demo, límite en memoria por IP. Aplica también al camino sin llave de Anthropic.
+  // Cupo por plan en el servidor (0032): la base revisa el plan, suma 1 de forma atómica solo si queda cupo y devuelve
+  // un ticket para devolver la pregunta si la respuesta falla. Nadie edita su contador por la API.
+  // En modo demo no hay costo (respuestas de ejemplo): solo un freno en memoria por IP; la pantalla simula el contador.
   const sb = v.demo ? null : await createClient();
+  let quota: CoachQuota | null = null;
+  let ticket: string | null = null;
   if (sb) {
-    const { data: left, error } = await sb.rpc("coach_consume", { p_kind: "chat" });
-    if (error) {
+    const { data, error } = await sb.rpc("coach_take_quota", { p_kind: "chat" });
+    if (error && MISSING.has(error.code ?? "")) {
+      // 0032 aún sin aplicar: el cupo diario de antes (coach_consume, 0012/0013) para no apagar el coach.
+      const old = await sb.rpc("coach_consume", { p_kind: "chat" });
+      if (old.error) {
+        console.error("[coach] cupo", old.error.code);
+        if (!MISSING.has(old.error.code ?? "")) return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+        if (!memoryRateLimit(`coach:${v.id}`, 40, 24 * 3600_000)) return limitResponse(quotaFrom(tierFromAccess(ent), 1e6, 0));
+      } else if (typeof old.data === "number" && old.data < 0) return limitResponse(quotaFrom(tierFromAccess(ent), 1e6, 0));
+    } else if (error) {
       console.error("[coach] cupo", error.code);
-      // Migración 0012 aún sin aplicar (función inexistente): cupo en memoria en vez de apagar el coach.
-      if (error.code !== "PGRST202" && error.code !== "42883") return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
-      if (!memoryRateLimit(`coach:${v.id}`, 40, 24 * 3600_000)) return new Response(textStream(fake(LIMIT_TEXT)), { headers });
+      return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+    } else {
+      const q = parseQuota(data);
+      if (!q) return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+      if (q.reason === "locked") return new Response(APP_LOCKED_MSG, { status: 402, headers: { ...headers, "X-Coach-State": "locked" } });
+      if (!q.ok) return limitResponse(q);
+      quota = q; ticket = q.ticket;
+      if (q.tier === "staff") console.info(JSON.stringify({ scope: "coach", msg: "pregunta de staff (sin tope)", day_used: q.dayUsed }));
     }
-    if (typeof left === "number" && left < 0) return new Response(textStream(fake(LIMIT_TEXT)), { headers });
   } else if (!memoryRateLimit(`coach:${clientIp(req)}`, 40, 24 * 3600_000)) {
-    return new Response(textStream(fake(LIMIT_TEXT)), { headers });
+    return limitResponse(quotaFrom(tierFromAccess(ent), 1e6, 0));
   }
+  const out = { ...headers, ...quotaHeaders(quota) };
+  /** Respuesta fallida antes de mandar texto: la pregunta se devuelve (una vez, con el ticket). */
+  const refund = async () => {
+    if (!sb || !ticket) return;
+    const { error } = await sb.rpc("coach_refund_quota", { p_ticket: ticket });
+    if (error) console.error("[coach] devolver cupo", error.code);
+  };
 
   if (!key) {
     const a0 = await getAthlete(v);
-    return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? "", v.country))), { headers });
+    return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? "", v.country))), { headers: out });
   }
 
   const [a, p] = await Promise.all([getAthlete(v), getProgress(v)]);
   // Tiempo límite por debajo de maxDuration: si Anthropic no responde, la persona ve un aviso claro y no un chat colgado.
   const client = new Anthropic({ apiKey: key, timeout: 40_000, maxRetries: 1 });
-  const stream = client.messages.stream({
-    model: process.env.COACH_MODEL || "claude-sonnet-5-5",
-    max_tokens: 700,
-    system: coachSystem(a, p.weights, p.workouts, { nutrition: ent.nutrition }),
-    messages,
-  });
+  let stream: ReturnType<typeof client.messages.stream>;
+  try {
+    stream = client.messages.stream({
+      model: process.env.COACH_MODEL || "claude-sonnet-5-5",
+      max_tokens: COACH_MAX_TOKENS,
+      // Las reglas (fijas por plan) van en caché; los datos del atleta, aparte.
+      system: coachSystemBlocks(a, p.weights, p.workouts, { nutrition: ent.nutrition }),
+      messages,
+    });
+  } catch (e) {
+    console.error("[coach] inicio", e instanceof Error ? e.name : "error");
+    await refund();
+    return new Response("El coach no está disponible ahora. Intenta en un momento.", { status: 503 });
+  }
+  const usage = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
   async function* text() {
-    for await (const ev of stream) if (ev.type === "content_block_delta" && ev.delta.type === "text_delta") yield ev.delta.text;
+    for await (const ev of stream) {
+      if (ev.type === "message_start") {
+        const u = ev.message.usage;
+        usage.in = u.input_tokens; usage.cacheRead = u.cache_read_input_tokens ?? 0; usage.cacheWrite = u.cache_creation_input_tokens ?? 0;
+      } else if (ev.type === "message_delta") usage.out = ev.usage.output_tokens;
+      else if (ev.type === "content_block_delta" && ev.delta.type === "text_delta") yield ev.delta.text;
+    }
   }
   return new Response(textStream(text(), async (full) => {
+    // Solo conteos de tokens (sin contenido): para vigilar el costo por pregunta.
+    console.info(JSON.stringify({ scope: "coach", msg: "tokens", ...usage, tier: quota?.tier ?? null }));
+    if (!full.trim()) { await refund(); return; }
     if (!sb) return;
     await sb.from("coach_messages").insert([{ user_id: v.id, role: "user", content: last.content }, { user_id: v.id, role: "assistant", content: full }]);
-  }), { headers });
+  }), { headers: out });
 }

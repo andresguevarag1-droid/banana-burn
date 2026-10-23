@@ -19,6 +19,7 @@ import { GIFT_STATUS_LABEL, giftStatus, monthsLabel } from "@/lib/gifts";
 import { BETA_ENDS_AT } from "@/lib/plans";
 import { setTester, revokeTester, setFeedbackStatus } from "../../testers-actions";
 import { getTesterAdmin } from "@/lib/testers-server";
+import { getCoachUsage } from "@/lib/admin-coach";
 import { daysLeftLabel, FEEDBACK_KIND_LABEL, FEEDBACK_STATUS_LABEL, TESTER_DAYS, testerState, type FeedbackKind } from "@/lib/testers";
 
 export const metadata = { title: "Ficha de usuario" };
@@ -26,6 +27,7 @@ export const metadata = { title: "Ficha de usuario" };
 const GOAL: Record<string, string> = { grasa: "Bajar grasa", recomp: "Recomposición", fuerza: "Fuerza" };
 const EQUIP: Record<string, string> = { gym: "Gimnasio", casa: "Casa", mixto: "Mixto" };
 const PLAN = PLAN_LABEL;
+const COACH_TIER_LABEL: Record<string, string> = { none: "Sin acceso", prueba: "Prueba o beta", entreno: "Entreno", completo: "Entreno + Nutrición", staff: "Equipo, sin tope" };
 const COUNTRY: Record<string, string> = { CR: "Costa Rica", PA: "Panamá", NI: "Nicaragua", GT: "Guatemala", MX: "México", CO: "Colombia", SV: "El Salvador", HN: "Honduras", US: "Estados Unidos" };
 
 function Section({ title, children, id }: { title: string; children: React.ReactNode; id: string }) {
@@ -47,7 +49,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const v = await requireSection("usuarios");
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const [d, refs, tester] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id), getTesterAdmin(v, id).catch(() => ({ grants: [], feedback: [], unavailable: true }))]);
+  const [d, refs, tester, coach] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id), getTesterAdmin(v, id).catch(() => ({ grants: [], feedback: [], unavailable: true })), getCoachUsage(v, id).catch(() => null)]);
   if (!d) notFound();
   const a = d.account;
   const today = crToday().iso;
@@ -131,6 +133,20 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 <div><h3 className="text-sm font-bold text-ink mb-2">Entrenos de los últimos 28 días</h3><ActivityStrip days={d.activity.recent} today={today} label="Días con entreno en los últimos 28 días" /></div>
               </>
             ) : <Restricted what="la actividad de entrenamiento" />}
+          </Section>
+
+          <Section title="Coach Banana" id="s-coach">
+            {coach === "missing" ? <p className="text-sm text-muted">Falta aplicar la migración 0032_coach_cuota.sql.</p> : coach ? (
+              <>
+                <dl className="grid grid-cols-3 divide-x divide-line rounded-xl bg-paper/60">
+                  {([["Preguntas hoy", coach.dayUsed, coach.dayLimit], ["Preguntas del mes", coach.monthUsed, coach.monthLimit]] as const).map(([l, used, lim]) => (
+                    <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}{lim === null ? ", sin tope" : ` de ${fmtNum(lim)}`}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(used)}</dd></div>
+                  ))}
+                  <div className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">Cupo</dt><dd className="text-base font-extrabold leading-tight text-ink">{COACH_TIER_LABEL[coach.tier]}</dd></div>
+                </dl>
+                <p className="max-w-prose text-xs text-muted text-pretty">Solo conteos (hora de Costa Rica). El contenido de las conversaciones no se muestra en el panel.</p>
+              </>
+            ) : <p className="text-sm text-muted">No se pudo leer el uso del coach.</p>}
           </Section>
 
           <Section title="Tester de la beta" id="s-tester">

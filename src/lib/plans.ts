@@ -1,4 +1,5 @@
 // Planes y precios de Banana Burn (USD). Fuente única para landing, app y pagos.
+import { coachPlanFeat } from "@/lib/coach-quota";
 export type PlanId = "entreno" | "completo";
 export type Billing = "mes" | "anual";
 
@@ -15,7 +16,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
       "Rutina hecha a tu nivel, tiempo y equipo",
       "Reproductor con animaciones de técnica y biblioteca de ejercicios",
       "Progresión automática de cargas y entrenos exprés",
-      "Coach Banana resuelve tus dudas de entreno 24/7",
+      coachPlanFeat("entreno"),
       "Progreso de peso, medidas, fuerza y fotos",
       "Registro de agua, pasos y sueño",
       "Comunidad y retos gratis",
@@ -33,7 +34,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
       "Recetas latinas y Menú flash con lo que te falta hoy",
       "Ajuste semanal según tu peso real",
       "Banana Shield para personas en GLP-1",
-      "Coach Banana también para tu comida",
+      coachPlanFeat("completo"),
     ],
     excluded: [],
   },

@@ -36,6 +36,7 @@ export async function GET() {
     const [mine, rewards] = await Promise.all([sb.rpc("my_referrals"), sb.from("referral_rewards").select("group_no,months,plan,created_at,upgraded_at,revoked_at").eq("referrer", v.id)]);
     out.referidos = { invitados: mine.data ?? [], recompensas: rewards.data ?? [] };
     out.referral_signals = "Para evitar abusos guardamos una firma (HMAC) del prefijo de tu red al abrir Invita y gana. No guardamos tu IP.";
+    out.coach_quota_tickets = "Por cada pregunta a Coach Banana guardamos un comprobante interno (fecha, sin el texto) por 2 días, para devolverte la pregunta si la respuesta falla. Tus conteos están en coach_usage.";
     const photos = (out.progress_photos as { path?: string }[] | undefined) ?? [];
     const paths = Array.isArray(photos) ? photos.map((p) => p.path).filter((p): p is string => typeof p === "string") : [];
     if (paths.length) {
