@@ -38,7 +38,8 @@ export async function POST(req: Request) {
   if (!allowed) return Response.json({ text: ruleFeedback(b), source: "reglas" });
 
   try {
-    const client = new Anthropic({ apiKey: key });
+    // Corto a propósito: si la IA tarda, la persona recibe el feedback por reglas en vez de esperar.
+    const client = new Anthropic({ apiKey: key, timeout: 12_000, maxRetries: 1 });
     const msg = await client.messages.create({
       model: process.env.COACH_MODEL || "claude-sonnet-5-5",
       max_tokens: 160,

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning } from "@/components/icons";
+import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning, WifiSlash } from "@/components/icons";
 import { platesPerSide, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
 import { FULL_BONUS, SET_XP, levelCrossed, workoutXp } from "@/lib/gamify";
 import type { Technique } from "@/lib/engine/technique";
@@ -25,7 +25,10 @@ import { Recap } from "@/components/workout/recap";
 import { Tour, type TourStep } from "@/components/workout/tour";
 import { BananaTrail, LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/components/workout/ui";
 import { MILESTONES, expressRows, finishValue, lastVolume, levelGoal, levelGoalText, nextMilestone, pickFact, reachedMilestones, restFacts, volumeWithHistory, type LevelGoal } from "@/components/workout/motivation";
-import { saveWorkout, type SaveResult } from "./actions";
+import type { SaveResult } from "./actions";
+import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/components/offline/outbox";
+import { useOnline } from "@/components/offline/connection-status";
+import { outboxId } from "@/lib/offline-queue";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
 export type Gam = { xp: number; streak: number; todayDone: boolean };
@@ -96,6 +99,9 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const [fun, setFun] = useState<number | null>(null);
   const [pending, start] = useTransition();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  /** El entreno quedó en la bandeja del teléfono (sin señal) y se sube solo al volver la conexión. */
+  const [queued, setQueued] = useState(false);
+  const online = useOnline();
   const [saved, setSaved] = useState<SaveResult | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pop, setPop] = useState<{ ex: number; si: number; xp: number; k: number } | null>(null);
@@ -453,29 +459,52 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   /* ---------- Resumen y guardado ---------- */
   const summary = useMemo(() => ({ vol: volumeOf(rows), ...(noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed })) }), [rows, doneSets, planTotal, prs.length, elapsed, noXp]);
   const prNames = prs.map((p) => p.name);
+  const outId = outboxId({ template, startedAt });
+  const sending = useRef(false);
+  const savedOnce = useRef(false);
+  function onSaved(res: SaveResult) {
+    if (!res.ok) { setQueued(false); setSaveMsg(res.error ?? "No pudimos guardar. Intenta de nuevo."); return; }
+    if (savedOnce.current) return;
+    savedOnce.current = true;
+    setQueued(false);
+    store.del(key);
+    setSaved(res);
+    setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
+    setPhase("saved");
+    buzz([60, 40, 60, 40, 200]);
+    fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
+      title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
+      mins: Math.round(elapsed / 60), fun: fun ?? 0, easy: rows.flat().filter((r) => effortOf(r) === "f").length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
+    }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino."));
+  }
   function save() {
+    if (pending) return; // doble toque: el botón ya está guardando
+    // Primero al teléfono (bandeja de salida), luego al servidor: si se cae la señal o se cierra la app, el entreno no se pierde.
+    const item = queueWorkout({
+      template, startedAt, finishedAt: new Date(endedAt ?? Date.now()).toISOString(), fun, total: planTotal, title, icon,
+      exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) })) })).filter((e) => e.sets.length),
+    }, key);
+    setSaveMsg(null);
+    sending.current = true;
     start(async () => {
-      let res: SaveResult;
-      try {
-        res = await saveWorkout({
-          template, startedAt, fun, total: planTotal, title, icon,
-          exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) })) })).filter((e) => e.sets.length),
-        });
-      } catch {
-        res = { ok: false, error: typeof navigator !== "undefined" && !navigator.onLine ? "Sin conexión. Tu entreno sigue guardado en este teléfono: intenta de nuevo cuando tengas señal." : "No pudimos guardar. Intenta de nuevo." };
+      const res = await sendQueued(item).finally(() => { sending.current = false; });
+      if (res === null) {
+        setQueued(true);
+        setSaveMsg(typeof navigator !== "undefined" && !navigator.onLine
+          ? "Sin señal. Tu entreno quedó guardado en este teléfono y se sube solo cuando vuelva la conexión."
+          : "No pudimos conectar. Tu entreno quedó guardado en este teléfono: lo intentamos de nuevo solo, o toca Reintentar.");
+        return;
       }
-      if (!res.ok) return setSaveMsg(res.error ?? "No pudimos guardar. Intenta de nuevo.");
-      store.del(key);
-      setSaved(res);
-      setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
-      setPhase("saved");
-      buzz([60, 40, 60, 40, 200]);
-      fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
-        mins: Math.round(elapsed / 60), fun: fun ?? 0, easy: rows.flat().filter((r) => effortOf(r) === "f").length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
-      }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino."));
+      onSaved(res);
     });
   }
+  // Si la sincronización global (al volver la señal) sube este entreno mientras sigues en el resumen, se celebra aquí.
+  useEffect(() => {
+    if (phase !== "summary") return;
+    const h = (e: Event) => { const d = (e as CustomEvent<OutboxEvent>).detail; if (!sending.current && d?.id === outId && d.result) onSaved(d.result); };
+    window.addEventListener(OUTBOX_EVENT, h);
+    return () => window.removeEventListener(OUTBOX_EVENT, h);
+  }); // sin dependencias a propósito: se vuelve a suscribir en cada render con el estado más reciente
 
   const finishTour = useCallback(() => {
     setTour(false); store.set(TOUR_KEY, 1);
@@ -590,7 +619,6 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
                 </fieldset>
               </>
             )}
-            {saveMsg && <p role="alert" className="mt-4 text-sm font-semibold text-bad">{saveMsg}</p>}
           </div>
         </div>
         <footer className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line bg-white/95">
@@ -600,7 +628,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               <button onClick={backToPlay} className="btn-banana flex-1 h-16 text-base font-extrabold">Volver al entreno</button>
             </div>
           ) : (
-            <button onClick={save} disabled={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold">{pending ? "Guardando…" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno"}</button>
+            <>
+            {/* Junto al botón (no al final del resumen): quien toca Guardar ve de inmediato qué pasó. */}
+            {saveMsg && <p role="alert" className={`mx-auto mb-2 max-w-md text-sm font-semibold text-pretty ${queued ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
+            <button onClick={save} disabled={pending} aria-busy={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{pending ? "Guardando…" : queued ? "Reintentar ahora" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno"}</button>
+            {queued && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">Salir: se sube solo al volver la señal</Link>}
+            </>
           )}
         </footer>
       </Shell>
@@ -667,6 +700,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>
               {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-3.5" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{xpNow.xp} XP</span>}
               {sessMode === "suave" && <span className="text-sky">Modo suave</span>}
+              {!online && <span role="status" className="inline-flex items-center gap-1 whitespace-nowrap text-ink"><WifiSlash weight="bold" className="size-3.5" aria-hidden />Sin señal<span className="sr-only">: puedes seguir, guardamos todo en este teléfono</span></span>}
               {combo >= 2 && <span className="inline-flex items-center gap-1 text-ember-ink"><Lightning weight="fill" className="size-3.5" aria-hidden />Combo x{combo}</span>}
             </p>
           </div>

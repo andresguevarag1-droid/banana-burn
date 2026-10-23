@@ -5,6 +5,7 @@ import { demoActiveDays, demoWorkouts, demoXp, DEMO_PRS } from "@/lib/demo-story
 import { streakOf } from "@/lib/gamify";
 import { exerciseName, workoutName } from "@/lib/progress";
 import { mondayIso, zonedMidnightUtc, type BoardRow } from "@/lib/community-view";
+import { getXpTotal } from "@/lib/xp-total";
 
 /** `xp`: XP total para la insignia de nivel; null si la persona no comparte sus entrenos (o no se pudo leer). */
 export type Author = { id: string; username: string | null; name: string; xp?: number | null };
@@ -199,17 +200,17 @@ export async function getWeekStats(v: Viewer): Promise<WeekStats> {
   const sb = await createClient();
   const today = todayFor(v).iso, mon = mondayIso(today);
   const since = zonedMidnightUtc(mon, v.tz).toISOString();
-  const [{ data: wk }, kd, s, { data: xpRows }] = await Promise.all([
+  const [{ data: wk }, kd, s, xp] = await Promise.all([
     sb.from("workouts").select("day").eq("user_id", v.id).gte("day", mon),
     sb.from("kudos").select("post_id,posts!inner(user_id)", { count: "exact", head: true }).eq("posts.user_id", v.id).neq("user_id", v.id).gte("created_at", since),
     myStreak(sb, v),
-    sb.from("xp_events").select("xp").eq("user_id", v.id),
+    getXpTotal(v).catch(() => 0),
   ]);
   return {
     workouts: new Set((wk ?? []).map((r) => r.day as string)).size,
     kudos: kd.error ? 0 : kd.count ?? 0,
     streak: s.days, todayDone: s.todayDone,
-    xp: (xpRows ?? []).reduce((a, r) => a + Number(r.xp), 0),
+    xp,
   };
 }
 

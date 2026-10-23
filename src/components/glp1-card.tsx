@@ -1,8 +1,8 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BananaFlame, Drop, Egg, Leaf, ShieldCheck, SunHorizon, Syringe, type PhosphorIcon } from "@/components/icons";
-import { setDaily } from "@/app/actions/daily";
+import { useDailySave } from "@/components/use-daily-save";
 
 type G = { protein: number; perMeal: number; kcalMin: number; fiber: number; waterL: number; meals: number; phase: "inyeccion" | "post" | "normal" };
 
@@ -15,11 +15,12 @@ const PHASE: Record<G["phase"], { I: PhosphorIcon; t: string; b: string }> = {
 /** Tarjeta del programa Banana Shield (GLP-1) en Hoy. */
 export function Glp1Card({ g, nausea0, demo }: { g: G; nausea0: number; demo: boolean }) {
   const [nausea, setN] = useState(nausea0);
-  const [, start] = useTransition();
+  const daily = useDailySave();
   const ph = PHASE[g.phase];
-  const pick = (n: number) => { setN(n); if (!demo) start(() => { setDaily("nausea", n); }); };
+  const pick = (n: number) => { const prev = nausea; setN(n); if (!demo) daily.save("nausea", n, () => setN((x) => (x === n ? prev : x))); };
   return (
     <section className="rounded-[1.75rem] border-2 border-ink bg-white p-5" aria-labelledby="shield-t">
+      {daily.toast}
       <div className="flex items-center gap-2">
         <span className="grid place-items-center size-9 rounded-xl bg-ink text-banana"><ShieldCheck weight="duotone" className="size-5" /></span>
         <h3 id="shield-t" className="font-extrabold text-ink">Banana Shield <span className="font-semibold text-muted">para GLP-1</span></h3>

@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { saveCommunityProfile } from "@/app/actions/community";
 import { CheckCircle, Globe, Lock, Users, WarningCircle } from "@/components/icons";
 import { Toggle } from "@/components/notifications/toggle";
+import { safeAction } from "@/lib/action-client";
 
 type Vis = "publico" | "seguidores" | "privado";
 
@@ -14,7 +15,7 @@ export function CommunitySettings({ username: u0, bio: b0, visibility: v0, share
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [pending, start] = useTransition();
   return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await saveCommunityProfile({ username, bio, visibility: vis, share }); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Perfil público actualizado" } : { ok: false, t: r.error ?? "No pudimos guardar tu perfil. Intenta de nuevo." }); }); }}>
+    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await safeAction(saveCommunityProfile({ username, bio, visibility: vis, share })); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Perfil público actualizado" } : { ok: false, t: r.error ?? "No pudimos guardar tu perfil. Intenta de nuevo." }); }); }}>
       <label className="block"><span className="text-sm font-bold text-ink">Usuario</span>
         <div className="mt-1 flex items-center rounded-2xl border border-line bg-white focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40"><span className="pl-4 text-faint">@</span><input value={username} onChange={(e) => setU(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ""))} maxLength={24} placeholder="tunombre" className="h-12 flex-1 min-w-0 bg-transparent px-1 text-[16px] text-ink outline-none" aria-describedby="u-help" /></div>
         <span id="u-help" className="text-[11px] text-faint">De 3 a 24 caracteres: letras, números, punto o guion bajo.</span></label>

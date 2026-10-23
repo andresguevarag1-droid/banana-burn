@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { errCode, logError } from "@/lib/log";
 import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { BillingError, cancelAtPeriodEnd } from "@/lib/billing";
-import { errInfo } from "@/lib/security/log";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, endsAt });
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
-    console.error("[pagos] cancelar", errInfo(e));
+    logError("pagos", "cancel_failed", { kind: errCode(e) });
     return NextResponse.json({ ok: false, error: "No se pudo cancelar. Escríbenos a hola@bananaburn.app." }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { SITE_URL } from "@/lib/env";
+import { errCode, logError } from "@/lib/log";
 import { signUnsubToken, unsubSecret, type UnsubScope } from "./token";
 
 export const EMAIL_FROM = process.env.EMAIL_FROM || "Banana Burn <hola@bananaburn.app>";
@@ -48,11 +49,16 @@ export async function sendEmail(to: string, msg: EmailMessage, opts: { idempoten
         headers,
         tags: Object.entries(opts.tags ?? {}).map(([name, value]) => ({ name, value: value.replace(/[^a-zA-Z0-9_-]/g, "_") })),
       }),
+      // Sin tiempo límite, un Resend lento dejaría colgado el cron o la acción que manda el correo.
+      // No se reintenta aquí: el reintento seguro lo da la Idempotency-Key en la próxima corrida.
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
     });
     const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-    if (!res.ok) return { ok: false, error: data.message ?? `HTTP ${res.status}` };
+    if (!res.ok) { logError("email", `resend_${res.status}`); return { ok: false, error: `HTTP ${res.status}` }; }
     return { ok: true, id: data.id };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "error de red" };
+    logError("email", errCode(e) === "TimeoutError" ? "resend_timeout" : "resend_network", { kind: errCode(e) });
+    return { ok: false, error: "error de red" };
   }
 }

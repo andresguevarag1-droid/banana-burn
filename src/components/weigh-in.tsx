@@ -1,11 +1,12 @@
 "use client";
+import { netMessage } from "@/lib/action-client";
 import { useActionState, useState } from "react";
 import { CheckCircle, CircleNotch, Minus, Plus } from "@/components/icons";
-import { logWeight } from "@/app/(app)/app/progreso/actions";
+import { logWeight, type FormState } from "@/app/(app)/app/progreso/actions";
 
 export function WeighIn({ last, compact = false }: { last: number; compact?: boolean }) {
   const [kg, setKg] = useState(last);
-  const [s, act, pending] = useActionState(logWeight, {});
+  const [s, act, pending] = useActionState((st: FormState, fd: FormData) => logWeight(st, fd).catch((): FormState => ({ error: netMessage() })), {});
   const fmt = (n: number) => n.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const bump = (d: number) => { setKg((k) => Math.round((k + d) * 10) / 10); try { navigator.vibrate?.(10); } catch { /* */ } };
   if (s.ok) return <p role="status" className="flex items-center gap-2 font-bold text-peel py-2"><CheckCircle weight="fill" className="size-5 shrink-0" />{s.ok}</p>;

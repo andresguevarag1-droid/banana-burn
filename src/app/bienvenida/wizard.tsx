@@ -14,10 +14,12 @@ import { intentPath, type CheckoutIntent } from "@/lib/checkout-intent";
 import { PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
+import { safeAction } from "@/lib/action-client";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
-const iso = (d: Date) => d.toISOString().slice(0, 10);
+/** Fecha local del teléfono (no UTC: en Costa Rica después de las 6 p. m. el día UTC ya es mañana). */
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const COMPLETO = PLANS.find((p) => p.nutrition)!;
@@ -156,7 +158,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     if (!full) return;
     setErr(null);
     start(async () => {
-      const r = await completeOnboarding(full);
+      const r = await safeAction(completeOnboarding(full));
       if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
       setStep(STEPS);
     });

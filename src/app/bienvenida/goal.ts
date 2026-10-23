@@ -32,7 +32,8 @@ export function suggestDate(weight: number, goalWeight: number, from = new Date(
   const perWeek = goalWeight > weight ? Math.max(0.1, weight * GAIN_RATE) : Math.max(0.3, weight * LOSS_RATE);
   const weeks = Math.max(4, Math.ceil(delta / perWeek));
   const d = new Date(from); d.setDate(d.getDate() + weeks * 7);
-  return { date: d.toISOString().slice(0, 10), perWeek };
+  // Fecha local (no UTC): en el teléfono de alguien en Costa Rica a las 7 p. m., el día UTC ya sería mañana.
+  return { date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`, perWeek };
 }
 
 export type Pace = { kgPerWeek: number; direction: "baja" | "sube" | "mantiene"; tooFast: boolean; title: string; body: string };

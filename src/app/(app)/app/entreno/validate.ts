@@ -4,7 +4,30 @@ import { e1rm, type SetLog } from "@/lib/engine";
 export type DoneSet = { kg: number | null; reps: number; rir: number | null };
 export type Finished = {
   template: string; startedAt: string; fun: number | null; exercises: { id: string; sets: DoneSet[] }[]; total?: number; title?: string; icon?: string; note?: string;
+  /** Cuándo terminó (al pasar al resumen). Importa si se guarda más tarde, por ejemplo al volver la señal. */
+  finishedAt?: string;
 };
+
+const HOUR = 3600_000;
+/** Un entreno guardado sin señal puede subirse hasta 3 días después y conservar su fecha. */
+export const OFFLINE_WINDOW_MS = 72 * HOUR;
+const MAX_SESSION_MS = 6 * HOUR;
+const SKEW_MS = 5 * 60_000;
+
+/**
+ * Horas del entreno que el servidor acepta. El inicio del navegador vale si es de los últimos 3 días (entreno
+ * guardado sin señal); si no, se usa la hora del servidor. La duración nunca pasa de 6 horas.
+ * `clientStart` indica si se respetó el inicio del navegador: con él se reconoce un doble envío.
+ */
+export function workoutTiming(startedAt: string | undefined, finishedAt: string | undefined, now: number) {
+  const t0 = Date.parse(String(startedAt ?? ""));
+  const clientStart = Number.isFinite(t0) && t0 <= now + SKEW_MS && now - t0 <= OFFLINE_WINDOW_MS;
+  const started = clientStart ? Math.min(t0, now) : now;
+  const t1 = Date.parse(String(finishedAt ?? ""));
+  const finishOk = clientStart && Number.isFinite(t1) && t1 >= started && t1 <= now + SKEW_MS && t1 - started <= MAX_SESSION_MS;
+  const finished = finishOk ? Math.min(t1, now) : Math.min(now, started + MAX_SESSION_MS);
+  return { started, finished, seconds: Math.max(0, (finished - started) / 1000), clientStart, startIso: new Date(clientStart ? t0 : started).toISOString() };
+}
 
 const fin = (x: unknown, lo: number, hi: number) => (typeof x === "number" && Number.isFinite(x) && x >= lo && x <= hi);
 /** Ejercicios del motor ("squat") y de la biblioteca ("ds:0043"). */
@@ -25,10 +48,11 @@ export function normalizeWorkout(w: Finished): Finished | null {
     exercises.push({ id: e.id, sets });
   }
   return {
-    template: w.template, startedAt: String(w.startedAt ?? ""), fun: fin(w.fun, 1, 5) ? Math.round(w.fun as number) : null, exercises,
+    template: w.template, startedAt: String(w.startedAt ?? "").slice(0, 40), fun: fin(w.fun, 1, 5) ? Math.round(w.fun as number) : null, exercises,
     total: fin(w.total, 0, 200) ? w.total : undefined,
     title: typeof w.title === "string" ? w.title.slice(0, 60) : undefined, icon: typeof w.icon === "string" ? w.icon : undefined,
     note: typeof w.note === "string" ? w.note : undefined,
+    finishedAt: typeof w.finishedAt === "string" && w.finishedAt.length <= 40 ? w.finishedAt : undefined,
   };
 }
 

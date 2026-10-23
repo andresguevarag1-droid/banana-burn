@@ -74,8 +74,9 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
   const tab: Tab = TABS.some(([k]) => k === sp.vista) ? (sp.vista as Tab) : "siguiendo";
   const scope: BoardScope = SCOPES.includes(sp.alcance as BoardScope) ? (sp.alcance as BoardScope) : "siguiendo";
   const filter: PeopleFilter = FILTERS.some(([k]) => k === sp.filtro) ? (sp.filtro as PeopleFilter) : "todos";
-  const [a, me, stats] = await Promise.all([getAthlete(v), getCommunityMe(v), getWeekStats(v)]);
-  const [feed, board, people, today] = await Promise.all([
+  // Una sola ronda de consultas en paralelo (antes eran dos seguidas).
+  const [a, me, stats, feed, board, people, today] = await Promise.all([
+    getAthlete(v), getCommunityMe(v), getWeekStats(v),
     tab === "ranking" ? Promise.resolve([]) : getFeed(v, tab),
     tab === "ranking" ? getLeaderboard(v, scope) : Promise.resolve([]),
     getPeople(v, tab === "descubrir" ? filter : "activos").then((p) => (p.length || tab === "descubrir" ? p : getPeople(v, "todos"))),

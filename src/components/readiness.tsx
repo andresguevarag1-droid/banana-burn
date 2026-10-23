@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BananaFlame, Banana, Bed, Syringe } from "@/components/icons";
-import { setDaily } from "@/app/actions/daily";
+import { useDailySave } from "@/components/use-daily-save";
 
 const OPTS = [
   { v: 1, I: Bed, t: "Cansado", tip: "Modo suave: una serie menos por ejercicio y 3 reps en reserva. Entrenar suave también suma a tu racha.", q: "?modo=suave" },
@@ -14,16 +14,18 @@ const OPTS = [
 export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean }) {
   const key = `bb.ready.${dateKey}`;
   const [v, setV] = useState(initial);
-  const [, start] = useTransition();
+  const daily = useDailySave();
   useEffect(() => { if (demo) try { const s = Number(localStorage.getItem(key)); if (s) setV(s); } catch { /* */ } }, [demo, key]);
   const pick = (n: number) => {
+    const prev = v;
     setV(n); try { navigator.vibrate?.(15); } catch { /* */ }
     if (demo) { try { localStorage.setItem(key, String(n)); } catch { /* */ } return; }
-    start(() => { setDaily("energy", n); });
+    daily.save("energy", n, () => setV((x) => (x === n ? prev : x)));
   };
   const sel = OPTS.find((o) => o.v === v);
   return (
     <div className="relative">
+      {daily.toast}
       <p className="text-sm font-bold text-ink/75">¿Cómo te sientes hoy?</p>
       {suggestSoft && !v && <p className="mt-1 flex gap-1.5 text-xs font-semibold text-ink/75"><Syringe weight="duotone" className="size-4 shrink-0" />Cerca de tu inyección: si hay náusea o poca energía, elige “Cansado” para el modo suave.</p>}
       <div className="mt-2 grid grid-cols-3 gap-2">

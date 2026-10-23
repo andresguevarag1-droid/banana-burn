@@ -5,6 +5,7 @@ import { updateGlp1 } from "./actions";
 import { MEDS, type Glp1Med } from "@/lib/glp1";
 import { CheckCircle, WarningCircle } from "@/components/icons";
 import { Toggle } from "@/components/notifications/toggle";
+import { safeAction } from "@/lib/action-client";
 
 const DAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
@@ -25,7 +26,7 @@ export function Glp1Settings({ on: on0, med: m0, dow: d0 }: { on: boolean; med: 
         </div>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <button disabled={pending || (on === on0 && med === m0 && dow === d0)} onClick={() => start(async () => { const r = await updateGlp1({ on, med, dow }); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Guardado" } : { ok: false, t: r.error ?? "No pudimos guardar. Intenta de nuevo." }); router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar"}</button>
+        <button disabled={pending || (on === on0 && med === m0 && dow === d0)} onClick={() => start(async () => { const r = await safeAction(updateGlp1({ on, med, dow })); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Guardado" } : { ok: false, t: r.error ?? "No pudimos guardar. Intenta de nuevo." }); if (r.ok) router.refresh(); })} className="btn-primary h-11 px-6">{pending ? "Guardando…" : "Guardar"}</button>
         {msg && <p role={msg.ok ? "status" : "alert"} className={`flex items-center gap-1.5 text-sm font-semibold ${msg.ok ? "text-peel" : "text-bad"}`}>{msg.ok ? <CheckCircle weight="fill" className="size-4 shrink-0" /> : <WarningCircle weight="fill" className="size-4 shrink-0" />}{msg.t}</p>}
       </div>
       <p className="text-[11px] text-faint">No damos indicaciones de dosis. Cualquier cambio en tu medicamento, con tu médico.</p>

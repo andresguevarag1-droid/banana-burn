@@ -2,6 +2,7 @@ import { createClient, type Viewer } from "@/lib/supabase/server";
 import { DEMO_PRS, demoActiveDays, demoWeighIns, demoWorkouts, demoXp } from "@/lib/demo-story";
 import { todayFor } from "@/lib/today";
 import { badges, levelOf, streakOf } from "@/lib/gamify";
+import { getXpTotal } from "@/lib/xp-total";
 
 export type DailyLog = { water: number; steps: number; sleep: number; protein: number; kcal: number; energy?: number; nausea?: number; fiber?: number };
 export const EMPTY: DailyLog = { water: 0, steps: 0, sleep: 0, protein: 0, kcal: 0 };
@@ -39,24 +40,25 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
   }
   const sb = await createClient();
   const since = addDays(today, -90);
-  const [{ data: log }, { data: wk }, { data: dl }, { data: ws }, { data: xpRows }, { count: prs }] = await Promise.all([
+  // Con mucho historial, una lectura sin filtro se corta en 1000 filas: los totales van con count o paginados.
+  const [{ data: log }, { data: wk }, { data: dl }, { data: ws }, { count: weighIns }, xp, { count: prs }, { count: workoutsTotal }] = await Promise.all([
     sb.from("daily_logs").select("water_glasses,steps,sleep_h,protein_g,kcal,energy,nausea,fiber_g").eq("user_id", v.id).eq("day", today).maybeSingle(),
     sb.from("workouts").select("day").eq("user_id", v.id).gte("day", since),
     sb.from("daily_logs").select("day").eq("user_id", v.id).gte("day", since),
-    sb.from("weights").select("day").eq("user_id", v.id),
-    sb.from("xp_events").select("xp").eq("user_id", v.id),
+    sb.from("weights").select("day").eq("user_id", v.id).gte("day", since),
+    sb.from("weights").select("*", { count: "exact", head: true }).eq("user_id", v.id),
+    getXpTotal(v),
     sb.from("xp_events").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("kind", "pr"),
+    sb.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", v.id),
   ]);
-  const active = new Set<string>([...(wk ?? []), ...(dl ?? []), ...(ws ?? []).filter((w) => w.day >= since)].map((r) => r.day as string));
-  const xp = (xpRows ?? []).reduce((a, r) => a + (r.xp as number), 0);
+  const active = new Set<string>([...(wk ?? []), ...(dl ?? []), ...(ws ?? [])].map((r) => r.day as string));
   const streak = streakOf(active, today);
-  const workoutsTotal = (await sb.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", v.id)).count ?? 0;
   return {
     log: { water: log?.water_glasses ?? 0, steps: log?.steps ?? 0, sleep: Number(log?.sleep_h ?? 0), protein: log?.protein_g ?? 0, kcal: log?.kcal ?? 0, energy: log?.energy ?? 0, nausea: log?.nausea ?? 0, fiber: log?.fiber_g ?? 0 },
-    xp, level: levelOf(xp), streak, workoutsTotal,
+    xp, level: levelOf(xp), streak, workoutsTotal: workoutsTotal ?? 0,
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),
     week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),
-    badges: badges({ workouts: workoutsTotal, streak: streak.days, prs: prs ?? 0, weighIns: (ws ?? []).length, lostKg: startWeight - currentWeight }),
+    badges: badges({ workouts: workoutsTotal ?? 0, streak: streak.days, prs: prs ?? 0, weighIns: weighIns ?? 0, lostKg: startWeight - currentWeight }),
   };
 }

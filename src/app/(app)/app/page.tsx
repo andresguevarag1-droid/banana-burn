@@ -27,14 +27,12 @@ const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDig
 
 export default async function Hoy() {
   const v = (await getViewer())!;
-  const a = await getAthlete(v);
+  // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
+  const [a, meals, ent, xs] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v)]);
   const d = dashboard(a);
-  const [g, meals, ent] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v), getEntitlements(v)]);
+  const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
-  const [ch, xs] = await Promise.all([
-    getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein }),
-    getXpSummary(v),
-  ]);
+  const ch = await getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein });
   const { plan, t } = d;
   const training = !!plan.tpl;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
@@ -134,7 +132,7 @@ export default async function Hoy() {
           <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
             <div><p className="text-lg font-extrabold tabular-nums text-ink">{kgLost >= 0.05 ? `−${nf(kgLost)}` : kgLost <= -0.05 ? `+${nf(-kgLost)}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{kgLost <= -0.05 ? "kg desde el inicio" : "kg perdidos"}</p></div>
             <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(d.toGo)}</p><p className="text-[11px] font-semibold text-muted">kg a la meta</p></div>
-            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">días</p></div>
+            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.goalPassed ? "0" : d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">{d.goalPassed ? "fecha meta vencida" : d.daysLeft === 1 ? "día" : "días"}</p></div>
           </div>
         </section>
       {/* Coach */}

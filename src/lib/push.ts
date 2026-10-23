@@ -2,6 +2,7 @@ import "server-only";
 import webpush from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SITE_URL } from "@/lib/env";
+import { errCode, logError } from "@/lib/log";
 import { isKnownPushEndpoint, safeNext } from "@/lib/security";
 
 export type PushPayload = { title: string; body: string; url?: string; tag?: string };
@@ -11,9 +12,18 @@ const publicKey = () => process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_
 export const isPushConfigured = () => Boolean(publicKey() && process.env.VAPID_PRIVATE_KEY);
 
 let configured = false;
+let broken = false;
 function setup() {
-  if (configured || !isPushConfigured()) return isPushConfigured();
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || `mailto:hola@bananaburn.app`, publicKey(), process.env.VAPID_PRIVATE_KEY!);
+  if (configured) return true;
+  if (broken || !isPushConfigured()) return false;
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || `mailto:hola@bananaburn.app`, publicKey(), process.env.VAPID_PRIVATE_KEY!);
+  } catch (e) {
+    // Llaves VAPID mal copiadas: los avisos push se apagan (in-app y correo siguen) en vez de romper el cron.
+    broken = true;
+    logError("push", "vapid_invalid", { kind: errCode(e) });
+    return false;
+  }
   configured = true;
   return true;
 }
@@ -34,11 +44,12 @@ export async function sendPush(admin: SupabaseClient | null, allSubs: PushSub[],
   const dead: string[] = [];
   await Promise.all(subs.map(async (s) => {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 60 * 60 * 6, urgency: "normal" });
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 60 * 60 * 6, urgency: "normal", timeout: 8_000 });
       delivered++;
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
       if (code === 404 || code === 410) dead.push(s.endpoint);
+      else logError("push", "send_failed", { kind: errCode(e) });
     }
   }));
   if (admin) {

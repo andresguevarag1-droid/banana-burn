@@ -41,7 +41,7 @@ describe("paceFor", () => {
 });
 
 describe("suggestDate", () => {
-  const from = new Date("2026-01-01T12:00:00Z");
+  const from = new Date(2026, 0, 1, 12); // mediodía local: la fecha sugerida es local (la del teléfono), no UTC
   it("al menos 4 semanas", () => expect(suggestDate(80, 80, from).date).toBe("2026-01-29"));
   it("las ganancias van más lento que las pérdidas", () => {
     expect(suggestDate(80, 84, from).date > suggestDate(80, 76, from).date).toBe(true);

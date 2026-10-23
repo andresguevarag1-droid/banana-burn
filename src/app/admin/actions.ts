@@ -2,6 +2,7 @@
 // Mutaciones del panel. Cada acción: (1) valida la sesión y el rol en el servidor, (2) valida la entrada a mano,
 // (3) muta con el cliente del usuario (RLS / RPC SECURITY DEFINER vuelven a validar), (4) escribe public.audit_log.
 import { revalidatePath } from "next/cache";
+import { errCode, logError } from "@/lib/log";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/supabase/admin";
@@ -15,7 +16,6 @@ import { EX } from "@/lib/engine/data";
 import { FOODS } from "@/lib/foods";
 import { demoWorld } from "@/lib/admin-demo";
 import { fmtDate } from "@/lib/admin-format";
-import { errInfo } from "@/lib/security/log";
 
 export type ActionState = { ok: boolean; message: string; at?: number } | null;
 
@@ -34,7 +34,7 @@ async function run(cap: Capability, fd: FormData, fn: (ctx: Ctx, fd: FormData) =
     return await fn({ v: auth.v, sb: auth.v.demo ? null : await createClient() }, fd);
   } catch (e) {
     if (e instanceof ValidationError) return fail(e.message);
-    console.error("[admin action]", errInfo(e));
+    logError("admin", "action_failed", { kind: errCode(e) });
     return fail("No se pudo completar la acción. Intenta de nuevo.");
   }
 }
@@ -51,7 +51,7 @@ function pgMessage(e: { code?: string; message?: string } | null): string | null
 
 async function audit(sb: SB, v: Viewer, action: string, target: string, meta: Record<string, unknown> = {}) {
   const { error } = await sb.from("audit_log").insert({ actor: v.id, action, target, meta });
-  if (error) console.error("[audit]", errInfo(error));
+  if (error) logError("audit", "insert_failed", { code: error.code });
   return !error;
 }
 
@@ -339,7 +339,7 @@ export async function deleteUserAccount(_: ActionState, fd: FormData): Promise<A
     }
   } catch (e) {
     if (e instanceof ValidationError) return fail(e.message);
-    console.error("[admin action] borrar cuenta", errInfo(e));
+    logError("admin", "delete_account_failed", { kind: errCode(e) });
     return fail("No se pudo completar la acción. Intenta de nuevo.");
   }
   revalidatePath("/admin/usuarios");

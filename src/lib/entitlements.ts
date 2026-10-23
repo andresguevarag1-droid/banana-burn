@@ -7,6 +7,7 @@
 // La base de datos repite la regla de acceso en public.has_app_access() (0013/0021) para el coach y la comunidad,
 // y la de nutrición en public.has_nutrition_access() (0022) para comidas, Mis comidas y Mis recetas.
 import "server-only";
+import { logError } from "@/lib/log";
 import { cache } from "react";
 import { createClient, STAFF, type Role, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
@@ -181,7 +182,7 @@ const load = cache(async (userId: string, role: string, viewerPlan: string): Pro
     const admin = adminClient();
     if (admin) {
       await admin.from("profiles").update({ plan: "free" }).eq("id", userId).then(({ error }) => {
-        if (error) console.error("[pagos] no se pudo bajar el plan vencido", userId, error.message);
+        if (error) logError("pagos", "downgrade_failed", { code: error.code });
         else console.info("[pagos] plan vencido → free", userId);
       });
     }

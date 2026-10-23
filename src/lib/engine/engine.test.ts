@@ -126,3 +126,20 @@ describe("personalización", () => {
     x.exercises.forEach((e) => expect(EX[e.id].inc).toBe(0));
   });
 });
+
+import { goalPace } from ".";
+describe("goalPace", () => {
+  const today = new Date("2026-10-22T12:00:00");
+  it("calcula días y ritmo normales", () => {
+    const g = goalPace("2026-11-19", today, 4);
+    expect(g).toEqual({ daysLeft: 28, needPerWeek: 1, goalPassed: false });
+  });
+  it("fecha vencida o inválida: sin ritmos absurdos ni NaN", () => {
+    expect(goalPace("2026-10-01", today, 5)).toEqual({ daysLeft: 0, needPerWeek: 0, goalPassed: true });
+    expect(goalPace("no-es-fecha", today, 5)).toEqual({ daysLeft: 0, needPerWeek: 0, goalPassed: true });
+    expect(goalPace("2026-10-22", today, 5).goalPassed).toBe(true);
+  });
+  it("meta cumplida: ritmo 0", () => {
+    expect(goalPace("2026-12-31", today, 0).needPerWeek).toBe(0);
+  });
+});

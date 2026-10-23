@@ -5,7 +5,7 @@ import { createClient, getViewer, type Viewer } from "@/lib/supabase/server";
 import { accessError } from "@/lib/entitlements";
 import { adminClient } from "@/lib/supabase/admin";
 import { todayFor } from "@/lib/today";
-import { byGrams, CATALOG_BY_ID, cleanCustom, mealName, portion, type SavedFood } from "@/lib/foods-catalog";
+import { byGrams, CATALOG_BY_ID, clampQty, cleanCustom, mealName, portion, type SavedFood } from "@/lib/foods-catalog";
 import { cleanRecipe, recipeFromRow, type UserRecipe } from "@/lib/user-recipes";
 import { localDayStartUtc } from "@/lib/foods-gamify";
 import { MEAL_XP_DAILY_MAX, mealXpFor } from "@/lib/gamify";
@@ -98,6 +98,7 @@ export async function removeMeal(id: string): Promise<{ ok: boolean; error?: str
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };
+  if (!/^\d{1,18}$/.test(String(id))) return { ok: false };
   const sb = await createClient();
   const { error } = await sb.from("meals").delete().eq("id", Number(id)).eq("user_id", v.id);
   await creditChallenges(v).catch(() => null);
@@ -111,7 +112,12 @@ export async function copyMeals(items: { slot: Slot; name: string; qty: number; 
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   if (!Array.isArray(items)) return { ok: false };
-  const clean = items.slice(0, 40).filter((i) => SLOTS.includes(i.slot)).map((i) => ({ slot: i.slot, name: String(i.name).slice(0, 80), qty: Number(i.qty) || 1, kcal: Math.max(0, Math.min(5000, Math.round(i.kcal))), protein: Math.max(0, Math.min(400, r1(i.protein))), carbs: Math.max(0, r1(i.carbs)), fat: Math.max(0, r1(i.fat)) }));
+  // Todo llega del navegador: nombre obligatorio y números finitos y acotados (NaN, negativos o gigantes no pasan).
+  const clean = items.slice(0, 40).filter((i) => i && SLOTS.includes(i.slot)).flatMap((i) => {
+    const c = cleanCustom(i);
+    return c ? [{ slot: i.slot, name: c.name, qty: clampQty(i.qty), kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat }] : [];
+  });
+  if (!clean.length) return { ok: false };
   if (v.demo) return { ok: true, items: clean.map((c, n) => ({ ...c, id: `demo-${Date.now()}-${n}` })) };
   const sb = await createClient();
   const { data, error } = await sb.from("meals").insert(clean.map((c) => ({ ...c, user_id: v.id, day: todayFor(v).iso }))).select("id");

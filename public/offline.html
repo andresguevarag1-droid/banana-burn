@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es-419">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FFF8E3">
+<meta name="robots" content="noindex">
+<title>Sin conexión | Banana Burn</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; background: #FFF8E3; color: #2E2818; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-align: center; }
+  main { width: 100%; max-width: 380px; }
+  img { display: block; margin: 0 auto; border-radius: 28px; }
+  h1 { margin: 20px 0 0; font-size: 28px; line-height: 1.15; font-weight: 800; color: #1B1505; }
+  p { margin: 8px 0 0; color: #6A604B; line-height: 1.5; }
+  button { margin-top: 24px; width: 100%; min-height: 52px; border: 0; border-radius: 999px; background: #1B1505; color: #fff; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+  button:focus-visible { outline: 2px solid #1B1505; outline-offset: 3px; }
+  .note { margin-top: 16px; padding: 12px 14px; border-radius: 16px; background: #FFF1A8; color: #1B1505; font-size: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+<main role="alert">
+  <img src="/icons/icon-192.png" width="80" height="80" alt="">
+  <h1>Estás sin conexión.</h1>
+  <p>Banana Burn necesita señal para abrir esta pantalla.</p>
+  <p class="note">Si estabas entrenando, tu entreno está guardado en este teléfono y se sube solo cuando vuelva la señal.</p>
+  <button type="button" id="retry">Intentar de nuevo</button>
+</main>
+<script>
+  document.getElementById("retry").addEventListener("click", function () { location.reload(); });
+  window.addEventListener("online", function () { location.reload(); });
+</script>
+</body>
+</html>

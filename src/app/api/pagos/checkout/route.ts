@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { errCode, logError } from "@/lib/log";
 import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError, startCheckout } from "@/lib/billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { dbRateLimit } from "@/lib/security/db-rate-limit";
-import { errInfo } from "@/lib/security/log";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, url });
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
-    console.error("[pagos] checkout", errInfo(e));
+    logError("pagos", "checkout_failed", { kind: errCode(e) });
     return NextResponse.json({ ok: false, error: "No pudimos iniciar el pago. Intenta de nuevo en un momento." }, { status: 502 });
   }
 }

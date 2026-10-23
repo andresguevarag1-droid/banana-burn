@@ -1,4 +1,4 @@
-import { ageOn, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
+import { ageOn, goalPace, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
 import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
@@ -46,14 +46,14 @@ export function dashboard(a: Athlete) {
   const t = g ? { ...base, kcal: g.kcal, protein: g.protein, fat: g.fat, carbs: g.carbs, steps: 8000 } : base;
   const sched = scheduleFor(a.trainDays);
   const opts = { equipment: a.equipment, level: a.level, minutes: a.minutes ?? undefined };
-  const daysLeft = Math.max(1, Math.round((new Date(a.goalDate + "T12:00:00").getTime() - today.date.getTime()) / 864e5));
   const toGo = a.mode === "fuerza" ? Math.max(0, a.goalWeight - a.currentWeight) : Math.max(0, a.currentWeight - a.goalWeight);
+  const { daysLeft, needPerWeek, goalPassed } = goalPace(a.goalDate, today.date, toGo);
   const total = Math.max(0.1, a.startWeight - a.goalWeight);
   return {
     glp1: g ? { ...g, phase: injectionPhase(a.glp1.injectionDow, today.dow) } : null,
     today, week, deload: isDeloadWeek(week), t,
     plan: planDay(today.dow, week, sched, opts), yesterday: planDay((today.dow + 6) % 7, week, sched, opts), tomorrow: planDay((today.dow + 1) % 7, week, sched, opts), sched, equipment: a.equipment, opts,
-    weekPlan: planWeek(week, sched, opts), daysLeft, toGo, needPerWeek: Math.round((toGo / (daysLeft / 7)) * 100) / 100,
+    weekPlan: planWeek(week, sched, opts), daysLeft, toGo, needPerWeek, goalPassed,
     progress: Math.min(1, Math.max(0, (a.startWeight - a.currentWeight) / total)),
   };
 }
