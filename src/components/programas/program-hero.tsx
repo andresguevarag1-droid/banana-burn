@@ -34,7 +34,7 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { 
   const tip = first ? x!.welcome : tipFor(x, r.week);
   return (
     <section aria-labelledby="prog-hoy" className="overflow-hidden rounded-[1.75rem] shadow-soft">
-      <ChallengeCover c={{ cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
+      <ChallengeCover c={{ id: p.slug, cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
         <div className={`relative ${ink}`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />{x?.mode ?? "Programa activo"}</span>

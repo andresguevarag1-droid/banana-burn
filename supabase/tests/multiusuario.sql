@@ -473,7 +473,7 @@ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 16);
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 15);
 select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
 select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
 select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
@@ -481,7 +481,7 @@ select bbtest.zero('tienda: el usuario no oculta retos', $q$ update public.chall
 select bbtest.zero('tienda: el usuario no borra retos', $q$ delete from public.challenges_catalog where slug = 'banana-30' $q$);
 select bbtest.ok('plan: el usuario no lee la tabla de planes directo', bbtest.num($q$ select 1 from public.challenge_plans $q$) = 0);
 select bbtest.ok('plan: reto gratis completo', (select (public.challenge_plan('flexiones-30')->>'locked')::boolean = false and jsonb_array_length(public.challenge_plan('flexiones-30')->'days') = 30));
-select bbtest.ok('plan: reto de pago sin comprar = 3 días y bloqueado', (select (public.challenge_plan('abdomen-21')->>'locked')::boolean and jsonb_array_length(public.challenge_plan('abdomen-21')->'days') = 3));
+select bbtest.ok('plan: reto de pago sin comprar = 3 días y bloqueado', (select (public.challenge_plan('sprint-verano-28')->>'locked')::boolean and jsonb_array_length(public.challenge_plan('sprint-verano-28')->'days') = 3));
 select bbtest.ok('plan: nada de un reto oculto en el que no está', public.challenge_plan('movilidad-14') is null);
 select bbtest.fails('compras: el usuario no se crea una compra', $q$ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor) values (auth.uid(), 'abdomen-21', 'pagado', 499, 499) $q$, '42501');
 select bbtest.fails('compras: el usuario no se da acceso a un reto de pago', $q$ insert into public.challenge_entitlements (user_id, challenge_slug, source) values (auth.uid(), 'abdomen-21', 'compra') $q$, '42501');
@@ -567,7 +567,7 @@ select bbtest.ok('programas: los convertidos conservan su precio', (select bool_
 select bbtest.fails('programas: un programa necesita su meta', $q$ update public.challenges_catalog set program = null where slug = 'abdomen-21' $q$, '23514');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 8);
+select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 7);
 select bbtest.ok('sesiones: sin comprar ve la semana 1 (fase 1)', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase = 1 $q$) = 4);
 select bbtest.ok('sesiones: sin comprar no ve las demás fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase > 1 $q$) = 0);
 select bbtest.zero('sesiones: F no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'reconstruccion-8-semanas' $q$);
@@ -603,7 +603,9 @@ select bbtest.ok('dejar: deja el programa en pausa', bbtest.affected($q$ select 
 select bbtest.ok('dejar: queda abandonado', (select status = 'abandonado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
 select bbtest.ok('dejar: lo vuelve a empezar desde cero', public.program_start('gluteos-30', current_date, true) = 'reiniciado');
 -- 0027: experiencias. Cada programa trae su modo; los nuevos se compran aparte; los hábitos manuales viven en daily_logs.
-select bbtest.ok('0027: los 8 programas traen su experiencia', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 8);
+select bbtest.ok('0027: los 7 programas publicados traen su experiencia (abdomen-21 quedó oculto en 0028)', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 7);
+select bbtest.ok('0028: 21 días de abdomen no se ve en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'abdomen-21' $q$) = 0);
+select bbtest.ok('0028: Brazos de Gorila con su modo nuevo', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'brazos-definidos' and title = 'Brazos de Gorila' and cover = 'peel' and program->'experience'->>'mode' = 'Modo gorila' $q$) = 1);
 select bbtest.ok('0027: Glúteos de acero rehecho con 4 sesiones por semana', bbtest.num($q$ select 1 from public.program_sessions where slug = 'gluteos-30' and phase = 2 $q$) = 4);
 select bbtest.fails('0027: Banana Girl sin comprar no empieza', $q$ select public.program_start('banana-girl', current_date, true) $q$, '42501');
 select bbtest.fails('0027: Abdomen marcado sin comprar no empieza', $q$ select public.program_start('abdomen-marcado', current_date, true) $q$, '42501');
