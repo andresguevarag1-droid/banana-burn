@@ -220,7 +220,8 @@ export function priceMinor(priceUsd: number, discountPct = 0) {
   return Math.max(Math.round(MIN_PRICE_USD * 100), Math.round((base * (100 - d)) / 100));
 }
 
-export const usd = (minor: number) => `$${(minor / 100).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** Precio de un reto en USD, con punto decimal como el resto de los precios (copy.ts money): $6.99. */
+export const usd = (minor: number) => `$${(minor / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Días del plan que puede ver alguien: todos si es gratis o ya lo tiene; si no, los primeros PREVIEW_DAYS. */
 export function visibleDays(c: Pick<Challenge, "priceUsd" | "days">, owned: boolean) {
