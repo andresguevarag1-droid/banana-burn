@@ -3,6 +3,9 @@ import { AppNav } from "@/components/app-nav";
 import { DemoBanner } from "@/components/brand";
 import { InstallPrompt } from "@/components/install-prompt";
 import { TzSync } from "@/components/tz-sync";
+import { ConnectionStatus } from "@/components/offline/connection-status";
+import { UpdatePrompt } from "@/components/offline/update-prompt";
+import { deployId } from "@/lib/version";
 import { getEntitlements } from "@/lib/entitlements";
 import { getViewer, STAFF } from "@/lib/supabase/server";
 import { PlanGate } from "./suscripcion/plan-wall";
@@ -29,6 +32,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} />
       <InstallPrompt />
       <TzSync current={v.tz} />
+      <ConnectionStatus />
+      <UpdatePrompt version={deployId()} />
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {betaLive() && !ent.fromSubscription ? <BetaBanner /> : ent.trial && <TrialBanner daysLeft={ent.trial.daysLeft} />}

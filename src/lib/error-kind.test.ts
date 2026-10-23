@@ -19,3 +19,13 @@ describe("errorKind", () => {
     for (const c of Object.values(ERROR_COPY)) expect(`${c.title}${c.body}${c.action}`).not.toMatch(/[—–]/);
   });
 });
+
+import { isNewer } from "./version";
+describe("isNewer", () => {
+  it("solo avisa si ambas versiones existen y difieren", () => {
+    expect(isNewer("a", "b")).toBe(true);
+    expect(isNewer("a", "a")).toBe(false);
+    expect(isNewer("", "b")).toBe(false);
+    expect(isNewer("a", undefined)).toBe(false);
+  });
+});
