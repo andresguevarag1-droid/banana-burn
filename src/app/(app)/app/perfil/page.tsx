@@ -15,6 +15,7 @@ import { perksAt } from "@/lib/gamify";
 import { getCompletedChallenges } from "@/lib/challenges-server";
 import { Certificates } from "@/components/retos/certificates";
 import { FRAME_RING } from "@/components/levels/level-badge";
+import { money } from "@/lib/copy";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -40,7 +41,13 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
     : ent.access === "staff" ? "Acceso completo por ser parte del equipo."
     : ent.access === "manual" ? "Plan asignado por el equipo de Banana Burn, sin cobros automáticos."
     : plan ? "Pagas con tarjeta de crédito o débito. Cancela cuando quieras."
-    : ent.trial ? `Tienes todo incluido hasta el ${fmtDay(ent.trial.endsAt, v.tz)} (${ent.trial.daysLeft === 1 ? "último día" : `${ent.trial.daysLeft} días`}). Sin tarjeta. Después eliges tu plan.`
+    : ent.trial ? `Tienes todo incluido hasta el ${fmtDay(ent.trial.endsAt, v.tz)} (${ent.trial.daysLeft === 1 ? "último día" : `${ent.trial.daysLeft} días`}). ${
+      ent.charge?.phase === "programado" ? `El ${fmtDay(ent.charge.chargeAt, v.tz)} se cobra tu plan de ${money(ent.charge.amount)}, salvo que canceles antes.`
+      : ent.charge?.phase === "cancelado" ? "Cancelaste tu plan: no se te cobrará."
+      : ent.trial.beta ? "Todavía no guardaste una tarjeta, así que no hay cobros. Agrégala en Mi plan antes de esa fecha para seguir sin cortes."
+      : "Después eliges tu plan."}`
+    : ent.charge?.phase === "reintento" || ent.charge?.phase === "fallido" ? "No pudimos cobrar tu plan. Cambia tu tarjeta en Mi plan para seguir; tus datos siguen guardados."
+    : ent.cardStep === "trial" ? "Elige tu plan y guarda tu tarjeta en Mi plan para empezar tus 7 días gratis."
     : "Tu prueba gratis terminó. Elige un plan para seguir; tus datos siguen guardados.";
   return (
     <div className="space-y-5 animate-enter max-w-2xl">

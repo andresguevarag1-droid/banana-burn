@@ -15,6 +15,10 @@ import { PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
 import { safeAction } from "@/lib/action-client";
+import { CardForm, type CardSaved } from "@/components/pagos/card-form";
+import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
+import { DAY_MS, TRIAL_CARD_LINE } from "@/lib/trial";
+import { money as money2 } from "@/lib/copy";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -79,22 +83,33 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 
 const SELECT = "input h-14 text-lg px-3";
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true }: {
+export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardRequired = false, payments = true, startOnCard = false, betaFirstPaid = "" }: {
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
+  /** Desde el fin de la beta la prueba pide tarjeta: paso extra para elegir plan y guardarla (no se cobra ese día). */
+  cardRequired?: boolean;
+  /** ¿Están activos los pagos con ONVO? Sin ellos no se puede guardar la tarjeta. */
+  payments?: boolean;
+  /** Solo demo: abrir directo en el paso de la tarjeta (?vista=tarjeta) para revisarlo. */
+  startOnCard?: boolean;
+  /** "1 de noviembre": primer día con cobro (para el resumen de la beta). */
+  betaFirstPaid?: string;
   /** El acceso gratis viene del período de prueba del servicio (beta), no solo de los 7 días. */
   trialBeta?: boolean;
   /** ¿Tiene nutrición hoy (Entreno + Nutrición, prueba o beta)? En Entreno el resumen no muestra calorías ni proteína. */
   nutrition?: boolean;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const TOTAL = cardRequired ? STEPS + 1 : STEPS;
+  const [step, setStep] = useState(startOnCard && cardRequired ? STEPS : 0);
+  const [choice, setChoice] = useState<PlanChoice>(intent ?? { plan: "completo", billing: "mes" });
+  const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
   const [o, setO] = useState<Draft>(() => ({
-    name: initialName, goal: initialGoal ?? "grasa", sex: null, heightCm: null, weight: null, goalWeight: null, goalDate: "",
-    days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: false, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
+    name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
+    days: 4, equipment: "gym", level: "intermedio", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
   }));
-  const [dob, setDob] = useState<Dob>({ d: null, m: null, y: null });
+  const [dob, setDob] = useState<Dob>(startOnCard ? { d: 27, m: 1, y: 1999 } : { d: null, m: null, y: null });
   const [touchedDate, setTouchedDate] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [parq, setParq] = useState<boolean[]>([false, false, false, false]);
@@ -154,17 +169,25 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     Boolean(full) && o.consent && (!parqYes || medOk),
   ][step];
 
-  function finish() {
+  // Desde el fin de la beta: "Crear mi plan" lleva primero a elegir plan y guardar la tarjeta. El perfil se guarda después,
+  // ya con la prueba activa (así el primer peso se registra con acceso).
+  function next() {
+    if (cardRequired && !saved) { go(STEPS); return; }
+    finish();
+  }
+  function finish(card?: CardSaved) {
     if (!full) return;
     setErr(null);
     start(async () => {
       const r = await safeAction(completeOnboarding(full));
       if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
-      setStep(STEPS);
+      if (card) setSaved(card);
+      setStep(TOTAL);
     });
   }
 
-  if (step === STEPS && full && t) {
+  if (step === TOTAL && full && t) {
+    const chargeAt = saved?.charge?.chargeAt ?? (saved ? new Date(Date.now() + 7 * DAY_MS).toISOString() : null);
     return (
       <main className="min-h-dvh bg-paper grid place-items-center px-6 py-10 text-center">
         <Confetti />
@@ -172,9 +195,13 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           <span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink"><MonkeyBanana className="size-16" /></span>
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-ink text-balance">¡Tu plan está listo, {full.name.trim().split(" ")[0]}!</h1>
           <p className="mt-2 text-muted text-pretty">{nutrition ? "Calculado para ti. Se ajusta solo cada semana con tu peso real." : "Calculado para ti. Tus cargas suben solas cuando dominas el rango."}</p>
-          {trialEnd && (
+          {saved && chargeAt ? (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              {trialBeta ? `Estás en el período de prueba de Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}.`} Sin tarjeta, así que no hay cobros automáticos; te avisamos en la app antes de que termine.
+              Tu prueba gratis de {TRIAL_DAYS} días ya empezó. {TRIAL_CARD_LINE} Tu día {TRIAL_DAYS} es el {new Date(chargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long" })}: ese día se cobran {money2(saved.charge?.amount ?? PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])}. Te avisamos 2 días antes.
+            </p>
+          ) : trialEnd && (
+            <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
+              {trialBeta ? `Estás en la versión de prueba de Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}.`}
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
@@ -185,7 +212,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           {demo && <p className="mt-4 text-sm text-banana-ink">Modo demo: no se guardó nada.</p>}
           <FunnelTracker view="onboarding_done" props={{ goal: full.goal, trial: Boolean(trialEnd) }} />
           <button data-cta="bienvenida-hoy" onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Empezar mi entreno de hoy <ArrowRight className="size-5" /></button>
-          {intent && intentPlan && (
+          {intent && intentPlan && !saved && (
             <button data-cta="bienvenida-activar" onClick={() => router.replace(intentPath(intent))} className="tap mt-4 w-full text-sm font-semibold text-muted underline underline-offset-4 transition-colors duration-150 hover:text-ink">
               {trialEnd ? `¿Ya te decidiste? Activa ${intentPlan.name} desde hoy` : `Activar ${intentPlan.name}`}
             </button>
@@ -200,9 +227,9 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
       <header className="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto max-w-md flex items-center justify-between h-12">
           {step > 0 ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-11 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
-          <span className="text-sm font-bold text-muted tabular-nums">{step + 1} de {STEPS}</span>
+          <span className="text-sm font-bold text-muted tabular-nums">{step + 1} de {TOTAL}</span>
         </div>
-        <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-label="Progreso" aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step + 1}><div className="h-full w-full bg-ink rounded-full origin-left transition-transform duration-300 ease-[cubic-bezier(.23,1,.32,1)]" style={{ transform: `scaleX(${(step + 1) / STEPS})` }} /></div>
+        <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-label="Progreso" aria-valuemin={1} aria-valuemax={TOTAL} aria-valuenow={step + 1}><div className="h-full w-full bg-ink rounded-full origin-left transition-transform duration-300 ease-[cubic-bezier(.23,1,.32,1)]" style={{ transform: `scaleX(${(step + 1) / TOTAL})` }} /></div>
       </header>
 
       <section key={step} className={`flex-1 px-5 py-8 transition-[opacity,translate] duration-250 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 ${dir > 0 ? "starting:translate-x-6" : "starting:-translate-x-6"} motion-reduce:starting:translate-x-0`}>
@@ -334,6 +361,23 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             </div>
             {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
           </>)}
+
+          {step === STEPS && cardRequired && (<>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Activa tus {TRIAL_DAYS} días gratis</h1>
+              <p className="mt-2 text-muted text-pretty">Elige tu plan y guarda tu tarjeta. En la prueba tienes todo incluido, sin importar el plan.</p>
+            </div>
+            <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-bold text-ink text-pretty">{TRIAL_CARD_LINE}</p>
+            <PlanPicker value={choice} onChange={setChoice} disabled={pending} />
+            {payments || demo ? (
+              <CardForm choice={choice} demo={demo} submitLabel={`Empezar mis ${TRIAL_DAYS} días gratis`} onSaved={(r) => finish(r)}
+                note={<>Hoy no te cobramos. Tu día {TRIAL_DAYS} es el {new Date(Date.now() + 7 * DAY_MS).toLocaleDateString("es-419", { day: "numeric", month: "long" })}: ese día se cobran {money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.</>} />
+            ) : (
+              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Escríbenos a hola@bananaburn.app y te ayudamos.</p>
+            )}
+            {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />Creando tu plan…</p>}
+            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
+          </>)}
         </div>
       </section>
 
@@ -341,9 +385,9 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
         <div className="mx-auto max-w-md">
           {step < STEPS - 1 ? (
             <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>
-          ) : (
-            <button disabled={!canNext || pending} onClick={finish} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>Crear mi plan <ArrowRight className="size-5" /></>}</button>
-          )}
+          ) : step === STEPS - 1 ? (
+            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardRequired ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
+          ) : null}
         </div>
       </footer>
     </main>

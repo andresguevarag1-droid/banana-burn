@@ -60,9 +60,15 @@ export async function startCheckout(v: Viewer, plan: PlanId, billing: Billing): 
   const same = subs.find((r) => r.plan === plan && r.billing === billing && profilePlanFor(r) !== "free" && !r.cancel_at_period_end && r.status !== "canceled");
   if (same) throw new BillingError("Ya tienes este plan activo.", 409);
 
+  // Cobro con la tarjeta guardada (0026) en curso: no abrimos otro pago en paralelo. Sus suscripciones no se reutilizan aquí
+  // (las cobra el servidor con la tarjeta guardada, no el SDK).
+  const { data: tc } = await db.from("trial_charges").select("status,provider_subscription_id").eq("user_id", v.id).maybeSingle();
+  if (tc && ["charging", "pending", "unknown"].includes(tc.status as string)) throw new BillingError("Estamos procesando el cobro de tu plan con tu tarjeta guardada. Revisa en unos minutos.", 409);
+  const trialSub = (tc?.provider_subscription_id as string | null | undefined) ?? null;
+
   // Reutiliza una pendiente reciente del mismo plan (doble clic, volver atrás).
   const hourAgo = Date.now() - 3600_000;
-  const pending = subs.find((r) => r.status === "incomplete" && r.plan === plan && r.billing === billing && r.price_id === priceId && new Date(r.created_at).getTime() > hourAgo && r.provider_subscription_id);
+  const pending = subs.find((r) => r.status === "incomplete" && r.plan === plan && r.billing === billing && r.price_id === priceId && new Date(r.created_at).getTime() > hourAgo && r.provider_subscription_id && r.provider_subscription_id !== trialSub);
   if (pending) return { url: `/pago/checkout?s=${encodeURIComponent(pending.provider_subscription_id!)}`, subscriptionId: pending.provider_subscription_id! };
 
   const customerId = await getOrCreateCustomer(db, v);
@@ -167,6 +173,9 @@ async function activate(db: SupabaseClient, row: SubscriptionRow, a: { periodSta
   if (error) throw new Error(`subscriptions: ${error.message}`);
   const updated = { ...row, status: "active", current_period_end: keepEnd };
   await cancelOthers(db, updated);
+  // Primer cobro de la prueba (0026): queda cobrado; o, si pagó por otro lado, el cobro programado ya no se hace.
+  const { trialOnActivated } = await import("@/lib/trial-billing");
+  await trialOnActivated(db, row);
   const plan = await syncProfilePlan(db, row.user_id);
   if (row.billing === "anual") await referralAnnualPaid(db, row.user_id);
   return plan;
@@ -254,7 +263,13 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
     if (action.kind === "activate") {
       const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", action.subscriptionId).maybeSingle();
       const row = data as SubscriptionRow | null;
-      if (!row) return finish("ignored", "suscripción desconocida (no creada desde la app)");
+      if (!row) {
+        // El cobro con la tarjeta guardada (0026) puede llegar antes de que registremos la suscripción: error = ONVO reintenta,
+        // y attemptCharge() lo reprocesa en cuanto la registra.
+        const { trialChargeInFlight } = await import("@/lib/trial-billing");
+        if (await trialChargeInFlight(db, action.customerId)) return finish("error", "cobro de la prueba aún sin registrar");
+        return finish("ignored", "suscripción desconocida (no creada desde la app)");
+      }
       const check = checkPaidAmount(row, action.amountMinor, action.currency);
       if (!check.ok) {
         // Nunca otorgamos un plan con un cobro menor al precio del servidor o en otra moneda. Queda para revisión manual.
@@ -271,6 +286,9 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", action.subscriptionId).maybeSingle();
       const row = data as SubscriptionRow | null;
       if (!row) return finish("ignored", "suscripción desconocida");
+      // Primer cobro de la prueba rechazado: muro, aviso y un solo reintento al día 8 (trial-billing.ts), no past_due.
+      const { trialOnRenewalFailed } = await import("@/lib/trial-billing");
+      if (await trialOnRenewalFailed(db, action.subscriptionId)) return finish("processed", "rechazo del primer cobro de la prueba", row.user_id);
       const status = action.terminal ? "canceled" : "past_due";
       await db.from("subscriptions").update({ status, cancel_at_period_end: false, canceled_at: action.terminal ? new Date().toISOString() : row.canceled_at, last_event_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", row.id);
       const plan = await syncProfilePlan(db, row.user_id);
@@ -283,7 +301,11 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
     // verify_customer: payment-intent.succeeded de un cliente con suscripción pendiente.
     const { data: pend } = await db.from("subscriptions").select(SUB_COLS).eq("provider_customer_id", action.customerId).eq("status", "incomplete").order("created_at", { ascending: false }).limit(3);
     const candidates = (pend as SubscriptionRow[] | null) ?? [];
-    if (!candidates.length) return finish("ignored", "payment intent sin suscripción pendiente");
+    if (!candidates.length) {
+      const { trialChargeInFlight } = await import("@/lib/trial-billing");
+      if (await trialChargeInFlight(db, action.customerId)) return finish("error", "cobro de la prueba aún sin registrar");
+      return finish("ignored", "payment intent sin suscripción pendiente");
+    }
     for (const row of candidates) {
       if (!row.provider_subscription_id) continue;
       // Fuente de verdad: preguntamos a ONVO por la suscripción (servidor a servidor con la llave secreta).

@@ -8,12 +8,15 @@ import { trialEnd } from "@/lib/copy";
 import { Wizard } from "./wizard";
 import { TzSync } from "@/components/tz-sync";
 import type { Goal } from "./goal";
+import { betaLive } from "@/lib/plans";
+import { isOnvoConfigured } from "@/lib/onvo";
+import { betaDates } from "@/components/beta-notice";
 
 export const metadata = { title: "Bienvenida", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 
-export default async function Bienvenida() {
+export default async function Bienvenida({ searchParams }: { searchParams: Promise<{ vista?: string }> }) {
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/bienvenida");
 
@@ -27,18 +30,24 @@ export default async function Bienvenida() {
 
   // Prueba gratis (7 días desde el registro, o el período de prueba del servicio) y si hoy tiene nutrición: misma regla
   // que el resto de la app (entitlements.ts). Con plan pagado o del equipo no hay prueba que mostrar.
-  let trialEndsAt: string | null = null, trialBeta = false, nutrition = true;
-  if (v.demo) trialEndsAt = trialEnd(new Date().toISOString())?.toISOString() ?? null;
-  else {
+  // Desde el fin de la beta, una cuenta nueva sin prueba todavía elige plan y guarda su tarjeta al final (cardStep "trial").
+  let trialEndsAt: string | null = null, trialBeta = false, nutrition = true, cardRequired = false;
+  if (v.demo) {
+    cardRequired = !betaLive();
+    trialEndsAt = cardRequired ? null : trialEnd(new Date().toISOString())?.toISOString() ?? null;
+  } else {
     const ent = await getEntitlements(v);
-    nutrition = ent.nutrition;
+    nutrition = ent.nutrition || ent.cardStep === "trial";
+    cardRequired = ent.cardStep === "trial";
     if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
   }
+  // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
+  const startOnCard = v.demo && cardRequired && (await searchParams).vista === "tarjeta";
 
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} />
+      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardRequired={cardRequired} payments={isOnvoConfigured()} startOnCard={startOnCard} betaFirstPaid={betaDates().firstPaid} />
     </>
   );
 }

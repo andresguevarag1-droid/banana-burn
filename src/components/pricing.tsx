@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { intentPath } from "@/lib/checkout-intent";
 import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
 import { useCheckout } from "@/components/pagos/use-checkout";
+import { offer } from "@/lib/offer";
 
 /**
  * ¿Hay sesión? (lectura local de la sesión de Supabase, sin red). En demo no hay cuentas.
@@ -36,7 +37,7 @@ function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanI
   if (!isSupabaseConfigured) return <Link href={intentPath(intent)} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only"> con {name}</span></Link>;
   if (!loggedIn) {
     // Sin sesión: registro con la prueba gratis. /entrar guarda el plan elegido en una cookie de intención
-    // (sobrevive al onboarding) y la bienvenida ofrece activarlo; la prueba no pide tarjeta.
+    // (sobrevive al onboarding) y la bienvenida la usa para el plan de la prueba (con tarjeta desde el fin de la beta).
     const href = `/entrar?modo=registro&plan=${plan}&pago=${billing}`;
     return <Link href={href} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only">, luego {name}</span></Link>;
   }
@@ -49,8 +50,9 @@ function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanI
   );
 }
 
-const GUARANTEES = [
-  [Gift, `${TRIAL_DAYS} días gratis, sin tarjeta`, "Pruebas todo antes de pagar, incluida la nutrición y Banana Shield. Como no pedimos tarjeta, no hay cobros sorpresa cuando termina."],
+/** Garantías. La de la prueba cambia con el fin de la beta (offer.ts); las páginas del servidor la pasan ya calculada. */
+const guarantees = (trial: readonly [string, string]) => [
+  [Gift, trial[0], trial[1]],
   [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi suscripción, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
   [Scroll, "8 días hábiles de retracto", "Si compraste y cambias de opinión, escríbenos dentro de los 8 días hábiles siguientes a la compra (Ley 7472)."],
   [Lock, "Pago seguro con ONVO Pay", "Los datos de tu tarjeta van directo a ONVO Pay, nuestro procesador de pagos, y nunca pasan por nuestros servidores."],
@@ -60,7 +62,7 @@ const GUARANTEES = [
  * Planes con el anual anclado. `recommended` decide qué plan va destacado (por defecto el completo;
  * el muro de planes lo elige según el uso de la prueba). `loggedIn` evita leer la sesión cuando ya se sabe.
  */
-export function Pricing({ recommended = "completo", loggedIn: known, reason }: { recommended?: PlanId; loggedIn?: boolean; reason?: string } = {}) {
+export function Pricing({ recommended = "completo", loggedIn: known, reason, trialGuarantee }: { recommended?: PlanId; loggedIn?: boolean; reason?: string; trialGuarantee?: readonly [string, string] } = {}) {
   const [b, setB] = useState<Billing>("anual");
   const loggedIn = useLoggedIn(known);
   const checkout = useCheckout();
@@ -114,7 +116,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason }: {
           <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">términos</Link>, escritos para leerse en cinco minutos.</p>
         </div>
         <ul className="divide-y divide-line">
-          {GUARANTEES.map(([I, t, d]) => (
+          {guarantees(trialGuarantee ?? offer().guarantee).map(([I, t, d]) => (
             <li key={t} className="flex gap-4 py-4 first:pt-0 last:pb-0">
               <I weight="duotone" aria-hidden className="mt-0.5 size-6 shrink-0 text-banana-ink" />
               <div>

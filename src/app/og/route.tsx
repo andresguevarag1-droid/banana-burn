@@ -1,6 +1,15 @@
 import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { offer } from "@/lib/offer";
+import { BETA_ENDS_AT } from "@/lib/plans";
+
+/** Una semana en la CDN, salvo que el fin de la beta (cambia el texto de la prueba) llegue antes: entonces hasta ese momento. */
+function ogCache(now = Date.now()) {
+  const left = Math.floor((Date.parse(BETA_ENDS_AT) - now) / 1000);
+  const ttl = left > 0 && left < 604800 ? Math.max(60, left) : 604800;
+  return `public, max-age=${Math.min(ttl, 86400)}, s-maxage=${ttl}, stale-while-revalidate=${Math.min(ttl, 86400)}`;
+}
 
 export const runtime = "nodejs";
 
@@ -62,7 +71,7 @@ export async function GET(req: Request) {
             <div style={{ fontSize: 28, fontWeight: 600, lineHeight: 1.3, color: "rgba(27,21,5,.78)" }}>{sub}</div>
           </div>
           <div style={{ display: "flex", alignSelf: "flex-start", background: "#1B1505", color: "#FFD60A", borderRadius: 999, padding: "14px 26px", fontSize: 26, fontWeight: 800 }}>
-            Prueba gratis 7 días, sin tarjeta
+            {offer().ogLine}
           </div>
         </div>
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", position: "relative" }}>
@@ -83,7 +92,7 @@ export async function GET(req: Request) {
         { name: "Jakarta", data: f800, weight: 800, style: "normal" },
         { name: "Jakarta", data: f600, weight: 600, style: "normal" },
       ],
-      headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" },
+      headers: { "Cache-Control": ogCache() },
     },
   );
 }

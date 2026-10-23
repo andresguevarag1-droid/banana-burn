@@ -1,17 +1,20 @@
-import { FAQ } from "@/app/(marketing)/content";
+import { faq } from "@/app/(marketing)/content";
+import { offer } from "@/lib/offer";
 import { SITE_URL } from "@/lib/env";
 import { PLANS, PREMIUM_RETOS_NOTE } from "@/lib/plans";
-import { TRIAL_DAYS, money } from "@/lib/copy";
+import { money } from "@/lib/copy";
 
-export const dynamic = "force-static";
+// Se regenera cada hora como las páginas públicas: el texto de la prueba cambia solo con el fin de la beta (offer.ts).
+export const revalidate = 3600;
 
 /** Resumen factual para asistentes de IA (GEO): qué es, para quién, precios reales y preguntas frecuentes. */
 export function GET() {
   const plans = PLANS.map((p) => `- ${p.name}: ${money(p.price.mes)} USD al mes o ${money(p.price.anual)} USD al año. ${p.tagline}. Incluye: ${p.feats.join("; ")}.${p.excluded.length ? ` No incluye: ${p.excluded.join("; ")}.` : ""}`).join("\n");
-  const faq = FAQ.map(([q, a]) => `### ${q}\n${a}`).join("\n\n");
+  const o = offer();
+  const faqText = faq().map(([q, a]) => `### ${q}\n${a}`).join("\n\n");
   const body = `# Banana Burn
 
-> App de recomposición corporal en español que reemplaza al entrenador personal, pensada para personas que bajaron rápido de peso. Rutina de gym, casa o sin equipo ajustada a tu nivel, el peso sugerido de cada serie, técnica animada, Coach Banana para tus dudas y nutrición con comida latina. Prueba gratis de ${TRIAL_DAYS} días sin tarjeta.
+> App de recomposición corporal en español que reemplaza al entrenador personal, pensada para personas que bajaron rápido de peso. Rutina de gym, casa o sin equipo ajustada a tu nivel, el peso sugerido de cada serie, técnica animada, Coach Banana para tus dudas y nutrición con comida latina. ${o.llms}
 
 Banana Burn es una app web (PWA) que se instala desde el navegador en iPhone, Android o computadora. La opera Atlas Resources SRL desde San José, Costa Rica, para usuarios de México, Centroamérica, el Caribe, Sudamérica, hispanos en Estados Unidos y España.
 
@@ -28,7 +31,7 @@ Banana Burn es una app web (PWA) que se instala desde el navegador en iPhone, An
 ## Precios (USD)
 ${plans}
 - ${PREMIUM_RETOS_NOTE}
-- Prueba gratis de ${TRIAL_DAYS} días con todo incluido, sin tarjeta. Pago con tarjeta de crédito o débito procesado por ONVO Pay. Se cancela cuando quieras.
+- ${o.llms} Pago con tarjeta de crédito o débito procesado por ONVO Pay. Se cancela cuando quieras.
 
 ## Enlaces
 - Inicio: ${SITE_URL}/
@@ -39,7 +42,7 @@ ${plans}
 - Contacto: hola@bananaburn.app
 
 ## Preguntas frecuentes
-${faq}
+${faqText}
 `;
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }
