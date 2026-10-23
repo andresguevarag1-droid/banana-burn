@@ -510,3 +510,14 @@ export function calendarSlot(def: Pick<ProgramDef, "meta" | "sessions">, s: Pick
   const k = slotsFor(Math.max(1, list.length || def.meta.daysPerWeek)).indexOf(off);
   return k >= 0 && list[k] ? { week, day: list[k].day, session: list[k] } : null;
 }
+
+/**
+ * Orden de los programas en la tienda según quién mira. A un hombre, los programas de Coach Platanita (pensados para
+ * chicas: Banana Girl, Pilates en casa) no le salen primero: van al final de la lista, salvo que ya sean suyos
+ * (`keep`: comprados o con estado). Para el resto, el orden no cambia. Orden estable.
+ */
+export function orderProgramsFor<T extends { id: string; program: ProgramMeta | null }>(list: T[], sex: string | null | undefined, keep: Set<string> = new Set()): T[] {
+  if (sex !== "m") return list;
+  const forHer = (c: T) => c.program?.experience?.coach === "platanita" && !keep.has(c.id);
+  return [...list.filter((c) => !forHer(c)), ...list.filter(forHer)];
+}

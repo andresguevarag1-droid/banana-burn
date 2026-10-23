@@ -5,7 +5,8 @@ import { getActiveProgram, getProgramSessions, getProgramStates, type ProgramCha
 import { todayMetrics } from "@/lib/metrics";
 import { todayFor } from "@/lib/today";
 import { MAX_ACTIVE, isProgram, storeSection, type Challenge, type StoreSection } from "@/lib/challenges";
-import { daysLabel, durationLabel } from "@/lib/programs";
+import { daysLabel, durationLabel, orderProgramsFor } from "@/lib/programs";
+import { getAthlete } from "@/lib/athlete";
 import { toEndedView, toView } from "@/lib/challenge-view";
 import { ChallengeCard, EndedChallengeCard } from "@/components/challenge-card";
 import { StoreCard } from "@/components/retos/store-card";
@@ -28,14 +29,15 @@ const SECTIONS: { key: Exclude<StoreSection, "programas">; title: string; desc: 
 export default async function Retos() {
   const v = (await getViewer())!;
   const today = todayFor(v).iso;
-  const [{ active, done, ended }, catalog, owned, participants, perks, states, activeProgram] = await Promise.all([
-    todayMetrics(v).then((m) => getMyChallenges(v, m)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getProgramStates(v), getActiveProgram(v),
+  const [{ active, done, ended }, catalog, owned, participants, perks, states, activeProgram, athlete] = await Promise.all([
+    todayMetrics(v).then((m) => getMyChallenges(v, m)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getProgramStates(v), getActiveProgram(v), getAthlete(v),
   ]);
   const activeIds = new Set(active.map((a) => a.c.id));
   const list = [...catalog.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort - b.sort);
   const by = (k: StoreSection) => list.filter((c) => storeSection(c, today) === k);
-  const programs = by("programas").filter(isProgram) as ProgramChallenge[];
   const stateOf = new Map(states.map((s) => [s.slug, s]));
+  // A un hombre no le abrimos la tienda con los programas para chicas; siguen ahí, al final.
+  const programs = orderProgramsFor(by("programas").filter(isProgram) as ProgramChallenge[], athlete.sex, new Set([...owned, ...stateOf.keys()]));
   const sessions = await Promise.all(programs.map((c) => getProgramSessions(v, c.id)));
   const days = new Map(programs.map((c, i) => [c.id, daysLabel(c.program, sessions[i])]));
   const paused = states.filter((s) => s.status === "pausado").map((s) => ({ s, c: catalog.get(s.slug) })).filter((x): x is { s: typeof x.s; c: Challenge } => !!x.c);
