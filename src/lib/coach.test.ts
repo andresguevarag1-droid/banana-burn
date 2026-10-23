@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { COACH_STYLE_RULE, demoReply, safetyCheck, stripEmoji } from "./coach";
+import { COACH_STYLE_RULE, coachSystem, demoReply, safetyCheck, stripEmoji } from "./coach";
+import type { Athlete } from "./athlete";
 import { ruleFeedback } from "./feedback";
 
 const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}]/u;
@@ -38,5 +39,33 @@ describe("copy del coach sin emojis", () => {
     const fb = ruleFeedback({ prs: ["Banca"], done: 12, total: 12, fun: 1, easy: 3, streak: 5 });
     expect(fb).not.toMatch(EMOJI);
     expect(fb).not.toContain("⇄");
+  });
+});
+
+describe("coach según el plan", () => {
+  const a = { name: "Ana", dob: "1995-01-01", heightCm: 165, startWeight: 80, currentWeight: 78, goalWeight: 68, goalDate: "2027-03-01", startDate: "2026-10-01", mode: "acelerada", complete: true, trainDays: 4, sex: "f", equipment: "gym", level: "intermedio", minutes: null, glp1: { on: true, med: "semaglutida", injectionDow: 1, since: "2026-09-01" } } as unknown as Athlete;
+  const data = (sys: string) => JSON.parse(sys.slice(sys.lastIndexOf("<datos_atleta>") + 14, sys.lastIndexOf("</datos_atleta>")).replace(/\\u003c/g, "<"));
+
+  it("Entreno + Nutrición: recibe calorías, macros y Banana Shield", () => {
+    const sys = coachSystem(a, [], [], { nutrition: true });
+    const d = data(sys);
+    expect(d.plan).toBe("Entreno + Nutrición");
+    expect(d.objetivos_diarios.kcal).toBeGreaterThan(0);
+    expect(d.objetivos_diarios.protein).toBeGreaterThan(0);
+    expect(d.glp1).not.toBeNull();
+    expect(sys).toContain("1,6-2,2 g/kg");
+    expect(sys).not.toContain("Plan del atleta: Entreno (sin nutrición)");
+  });
+
+  it("Entreno: sin metas de calorías ni macros ni GLP-1, y con la regla de principios generales", () => {
+    const sys = coachSystem(a, [], [], { nutrition: false });
+    const d = data(sys);
+    expect(d.plan).toBe("Entreno");
+    expect(d.objetivos_diarios).toEqual({ pasos: expect.any(Number), sueno_h: expect.any(Number) });
+    expect(JSON.stringify(d)).not.toMatch(/kcal|protein|carbs|fat|proteina_meta/);
+    expect(d.glp1).toBeNull();
+    expect(sys).toContain("Plan del atleta: Entreno (sin nutrición)");
+    expect(sys).toContain("parte de Entreno + Nutrición");
+    expect(sys).not.toContain("1,6-2,2 g/kg");
   });
 });

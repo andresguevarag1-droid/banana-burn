@@ -9,6 +9,7 @@ import { SLOTS_MEAL } from "@/lib/meals-shared";
 import { MenuToday, RecipeCard } from "./recipe-card";
 import { MyRecipes } from "./my-recipes";
 import { listRecipes } from "@/app/actions/meals";
+import { PLANS, usd } from "@/lib/plans";
 import { ArrowLeft, BananaBunch, BrandIcon } from "@/components/icons";
 
 export const metadata = { title: "Recetas y plan de comidas" };
@@ -18,7 +19,18 @@ const SLOT_ICON = Object.fromEntries(SLOTS_MEAL.map((s) => [s.id, s.icon])) as R
 
 export default async function Recetas() {
   const v = (await getViewer())!;
-  if (!(await getEntitlements(v)).nutrition) return <div className="text-center py-16"><span className="mx-auto grid place-items-center size-20 rounded-3xl bg-banana-soft text-banana-ink"><BananaBunch className="size-11" /></span><h1 className="mt-3 text-2xl font-extrabold text-ink">Recetas y plan de comidas</h1><p className="mt-2 text-muted">Incluido en Entreno + Nutrición.</p><Link href="/precios" className="btn-banana mt-6">Ver planes</Link></div>;
+  if (!(await getEntitlements(v)).nutrition) {
+    const p = PLANS.find((x) => x.nutrition)!;
+    return (
+      <div className="max-w-xl mx-auto text-center py-8 animate-enter">
+        <span className="mx-auto grid place-items-center size-20 rounded-3xl bg-banana-soft text-banana-ink"><BananaBunch className="size-11" /></span>
+        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink text-balance">Recetas y plan de comidas</h1>
+        <p className="mt-3 text-muted text-pretty">Las recetas latinas, el Menú flash y Mis recetas están incluidos en {p.name}, junto con tus calorías y macros calculados para ti.</p>
+        <Link href="/app/suscripcion" data-cta="recetas-mejorar" className="btn-banana w-full h-14 mt-6 text-base">Mejorar a {p.name} por {usd(p.price.mes)}/mes</Link>
+        <p className="mt-2 text-xs text-faint">Cancela cuando quieras.</p>
+      </div>
+    );
+  }
   const d = dashboard(await getAthlete(v));
   const [meals, daily, mine] = await Promise.all([getMeals(v), getDaily(v, 0, 0), listRecipes().catch(() => [])]);
   const dateKey = d.today.iso;

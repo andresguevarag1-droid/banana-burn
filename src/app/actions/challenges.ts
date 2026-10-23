@@ -4,6 +4,7 @@ import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { getEntitlements } from "@/lib/entitlements";
 import { MAX_ACTIVE, openState } from "@/lib/challenges";
+import { NUTRITION_LOCKED_MSG, challengeNeedsNutrition } from "@/lib/plan-access";
 import { closeDecidedChallenges, creditChallenges, getCatalog, getOwned } from "@/lib/challenges-server";
 
 export type JoinResult = { ok: boolean; demo?: boolean; error?: string };
@@ -33,7 +34,10 @@ export async function joinChallenge(id: string): Promise<JoinResult> {
   // Retos de pago: solo con compra confirmada por el webhook o cortesía (la base lo vuelve a exigir).
   if (c.priceUsd > 0 && !(await getOwned(v)).has(id)) return { ok: false, error: "Compra este reto para empezarlo." };
   if (v.demo) return { ok: true, demo: true };
-  if (c.priceUsd === 0 && !(await getEntitlements(v)).app) return { ok: false, error: "Tu plan no incluye retos ahora mismo. Revisa tu suscripción." };
+  const ent = await getEntitlements(v);
+  if (c.priceUsd === 0 && !ent.app) return { ok: false, error: "Tu plan no incluye retos ahora mismo. Revisa tu suscripción." };
+  // Retos que se miden con la meta de proteína: necesitan el registro de comidas de Entreno + Nutrición.
+  if (challengeNeedsNutrition(c) && !ent.nutrition) return { ok: false, error: NUTRITION_LOCKED_MSG };
   // Los retos ya decididos (completados, fallidos o vencidos) liberan su lugar antes de contar.
   await closeDecidedChallenges(v);
   const sb = await createClient();

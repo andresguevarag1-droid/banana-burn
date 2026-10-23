@@ -56,6 +56,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         <ul className="mt-4 grid gap-1.5 text-sm text-body sm:grid-cols-2">
           {plan.feats.slice(0, 4).map((f) => <li key={f} className="flex gap-2"><Check weight="bold" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">{noBreakGlp1(f)}</span></li>)}
         </ul>
+        {plan.excluded.length > 0 && <p className="mt-2 text-xs text-muted text-pretty">No incluye: {plan.excluded.map((f) => noBreakGlp1(/^Banana/.test(f) ? f : f.charAt(0).toLowerCase() + f.slice(1))).join(", ")}.</p>}
         <dl className="mt-4 border-t border-line pt-4 space-y-2 text-sm">
           <div className="flex items-baseline justify-between gap-4"><dt className="font-extrabold text-ink">Hoy pagas</dt><dd className="text-lg font-extrabold tabular-nums text-ink">{money(price)} USD</dd></div>
           <div className="flex items-baseline justify-between gap-4"><dt className="text-muted">Se renueva el</dt><dd className="font-semibold text-ink text-right">{renews}, por {money(price)}</dd></div>

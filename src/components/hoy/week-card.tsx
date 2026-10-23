@@ -9,12 +9,14 @@ import type { XpSummary } from "@/lib/xp-server";
 const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
 const n = (x: number) => x.toLocaleString("es-419");
 
-export function WeekCard({ s, week, sched, todayIso, training, weighed, streak }: {
+export function WeekCard({ s, week, sched, todayIso, training, weighed, streak, nutrition }: {
   s: XpSummary;
   week: { d: string; active: boolean; trained?: boolean }[];
   /** Plan por día de la semana (0 = domingo): con rutina o descanso. */
   sched: Record<number, unknown>;
   todayIso: string; training: boolean; weighed: boolean; streak: number;
+  /** Con nutrición puede sugerir registrar comida; en Entreno no. */
+  nutrition: boolean;
 }) {
   const days = week.map((w) => {
     const dow = new Date(w.d + "T12:00:00").getDay();
@@ -23,7 +25,7 @@ export function WeekCard({ s, week, sched, todayIso, training, weighed, streak }
   });
   const planned = days.filter((d) => d.planned).length;
   const done = days.filter((d) => d.trained).length;
-  const qa = quickAction(s, { training, weighed });
+  const qa = quickAction(s, { training, weighed, nutrition });
   const weekPct = s.week.goal ? s.week.xp / s.week.goal : 0;
 
   return (

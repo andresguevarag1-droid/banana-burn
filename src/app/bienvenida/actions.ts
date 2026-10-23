@@ -5,6 +5,7 @@ import { isCountry } from "@/lib/countries";
 import { sendPlanReadyEmail } from "@/lib/email";
 import { ageOn, planDay, scheduleFor, targets } from "@/lib/engine";
 import { goalError } from "./goal";
+import { getEntitlements } from "@/lib/entitlements";
 
 export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string };
 
@@ -30,6 +31,8 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   if (!before?.onboarded) await sb.from("xp_events").insert({ user_id: v.id, kind: "onboard", xp: 50 }); // una sola vez
   const t = targets({ kg: o.weight, heightCm: o.heightCm, age: ageOn(o.dob), sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : o.goal === "fuerza" ? "fuerza" : "recomp" });
   const today = planDay(new Date(todayFor(v).iso + "T12:00:00").getDay(), 0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
-  await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, kcal: t.kcal, protein: t.protein, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
+  // Calorías y proteína en el correo solo si hoy tiene nutrición (Entreno + Nutrición, prueba o beta).
+  const nutrition = (await getEntitlements(v)).nutrition;
+  await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, ...(nutrition ? { kcal: t.kcal, protein: t.protein } : {}), minutes: o.minutes, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
   return { ok: true };
 }

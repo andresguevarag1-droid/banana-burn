@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
 import { getXpSummary } from "@/lib/xp-server";
+import { getEntitlements } from "@/lib/entitlements";
 import { CHECKIN_XP, CHALLENGE_DAY_XP, FULL_BONUS, LEVELS, LEVEL_PERKS, MEAL_XP, MEAL_XP_DAILY_MAX, MILESTONE_XP, PR_XP, SET_XP, STREAK_BONUS_MAX, STREAK_TIERS, WEIGH_XP } from "@/lib/gamify";
 import { LevelBadge } from "@/components/levels/level-badge";
 import { ProgressBar } from "@/components/progress-bar";
@@ -14,14 +15,17 @@ const DOW = ["D", "L", "M", "M", "J", "V", "S"];
 
 export default async function Niveles() {
   const v = (await getViewer())!;
-  const s = await getXpSummary(v);
+  const [s, ent] = await Promise.all([getXpSummary(v), getEntitlements(v)]);
   const maxDay = Math.max(1, ...s.history.map((d) => d.xp));
   const sum7 = s.history.reduce((a, d) => a + d.xp, 0);
   const bonus7 = s.history.reduce((a, d) => a + d.bonus, 0);
 
   const ways = [
     { icon: Barbell, title: "Entrenar", xp: `+${SET_XP} por serie, +${FULL_BONUS} si completas todo, +${PR_XP} por récord`, done: s.sources.workout, href: "/app/entreno", status: s.sources.workout ? "Hecho hoy" : null },
-    { icon: BowlFood, title: "Registrar comidas", xp: `+${MEAL_XP} cada una, hasta ${MEAL_XP_DAILY_MAX} al día`, done: s.sources.meals >= MEAL_XP_DAILY_MAX, href: "/app/nutricion", status: `${s.sources.meals} de ${MEAL_XP_DAILY_MAX}` },
+    // Registrar comidas es de Entreno + Nutrición: en Entreno se muestra con candado y lleva a Mi plan.
+    ent.nutrition
+      ? { icon: BowlFood, title: "Registrar comidas", xp: `+${MEAL_XP} cada una, hasta ${MEAL_XP_DAILY_MAX} al día`, done: s.sources.meals >= MEAL_XP_DAILY_MAX, href: "/app/nutricion", status: `${s.sources.meals} de ${MEAL_XP_DAILY_MAX}` }
+      : { icon: Lock, title: "Registrar comidas", xp: `+${MEAL_XP} cada una, incluido en Entreno + Nutrición`, done: false, href: "/app/suscripcion", status: null },
     { icon: CalendarCheck, title: "Registro del día", xp: `+${CHECKIN_XP} con el primer dato de hoy (agua, pasos o sueño)`, done: s.sources.checkin, href: "/app", status: s.sources.checkin ? "Hecho hoy" : null },
     { icon: Scales, title: "Pesarte", xp: `+${WEIGH_XP} una vez al día`, done: s.sources.weigh, href: "/app/progreso", status: s.sources.weigh ? "Hecho hoy" : null },
     { icon: Target, title: "Reto del día", xp: `+${CHALLENGE_DAY_XP} al marcar un reto manual, +${MILESTONE_XP} en los hitos de los días 7 y 14`, done: s.sources.challengeDays > 0, href: "/app/retos", status: s.sources.challengeDays ? `${s.sources.challengeDays} hoy` : null },

@@ -93,6 +93,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
           {ent.renewsAt && <Item k="Próxima renovación" v={fmtDate(ent.renewsAt)} />}
           {ent.endsAt && <Item k={ent.status === "past_due" ? "Acceso hasta (aprox.)" : ent.status === "canceling" ? "Acceso hasta" : "Terminó"} v={fmtDate(ent.endsAt)} />}
           <Item k="Nutrición y Banana Shield" v={ent.nutrition ? (ent.trial ? "Incluidas en la prueba" : "Incluidas") : "No incluidas"} />
+          <Item k="Retos Premium" v="Aparte, con pago único" />
           {ent.fromSubscription && ent.billing && <Item k="Periodo" v={ent.billing === "anual" ? "Anual" : "Mensual"} />}
         </dl>
         {ent.status === "past_due" && <p role="alert" className="mt-4 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm text-bad font-semibold">No pudimos cobrar tu renovación. ONVO reintentará; revisa que tu tarjeta tenga fondos o elige un plan de nuevo para pagar con otro método.</p>}

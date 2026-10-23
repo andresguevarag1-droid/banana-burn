@@ -15,7 +15,7 @@ export const metadata = { title: "Tienda de retos" };
 
 const SECTIONS: { key: StoreSection; title: string; desc: string }[] = [
   { key: "gratis", title: "Gratis", desc: "Incluidos con tu plan o tu prueba gratis." },
-  { key: "premium", title: "Premium", desc: "Pago único en USD. Son tuyos para siempre y puedes repetirlos." },
+  { key: "premium", title: "Premium", desc: "Pago único en USD, aparte de tu plan. Son tuyos para siempre y puedes repetirlos." },
   { key: "proximamente", title: "Próximamente", desc: "Retos con fecha de inicio para hacerlos en grupo." },
 ];
 

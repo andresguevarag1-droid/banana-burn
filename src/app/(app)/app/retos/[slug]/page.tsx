@@ -4,6 +4,8 @@ import { getViewer } from "@/lib/supabase/server";
 import { getCatalog, getMyChallenges, getOwned, getParticipants, getPlan, levelPerks } from "@/lib/challenges-server";
 import { todayMetrics } from "@/lib/metrics";
 import { todayFor } from "@/lib/today";
+import { getEntitlements } from "@/lib/entitlements";
+import { NUTRITION_PLAN_NAME, challengeNeedsNutrition } from "@/lib/plan-access";
 import { DIFFICULTY_LABEL, MAX_ACTIVE, milestonesFor, openState, priceMinor, usd, VERIFY_LABEL } from "@/lib/challenges";
 import { CHALLENGE_DAY_XP, MILESTONE_XP } from "@/lib/gamify";
 import { toView } from "@/lib/challenge-view";
@@ -29,7 +31,7 @@ export default async function RetoDetalle({ params }: P) {
   const { slug } = await params;
   const v = (await getViewer())!;
   const today = todayFor(v).iso;
-  const [catalog, owned, participants, perks, mine] = await Promise.all([getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getMyChallenges(v, await todayMetrics(v))]);
+  const [catalog, owned, participants, perks, mine, ent] = await Promise.all([getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getMyChallenges(v, await todayMetrics(v)), getEntitlements(v)]);
   const c = catalog.get(slug);
   const myActive = mine.active.find((m) => m.c.id === slug);
   if (!c || (c.status !== "publicado" && !myActive)) notFound();
@@ -57,6 +59,12 @@ export default async function RetoDetalle({ params }: P) {
   );
   else if (open === "pronto") cta = <p className="rounded-2xl bg-sky/10 p-3 text-center text-sm font-bold text-sky">{c.startDate ? `Abre el ${fmtStart(c.startDate)}` : "Muy pronto"}</p>;
   else if (open === "cerrado") cta = <p className="rounded-2xl bg-cream p-3 text-center text-sm font-semibold text-muted">Las inscripciones de esta edición ya cerraron.</p>;
+  else if (challengeNeedsNutrition(c) && !ent.nutrition) cta = (
+    <>
+      <p className="rounded-2xl bg-cream p-3 text-center text-sm text-body"><Lock weight="duotone" aria-hidden className="mr-1 inline size-4 align-[-3px] text-banana-ink" />Este reto se mide con tu meta de proteína y el registro de comidas, que están en {NUTRITION_PLAN_NAME}.</p>
+      <Link href="/app/suscripcion" data-cta="reto-mejorar-nutricion" className="btn-banana mt-2 h-12 w-full">Ver {NUTRITION_PLAN_NAME}</Link>
+    </>
+  );
   else if (full) cta = <p className="rounded-2xl bg-cream p-3 text-center text-sm text-muted">Ya tienes {MAX_ACTIVE} retos en curso. Termina o abandona uno para empezar este.</p>;
   else cta = <JoinButton id={c.id} title={c.title} label={paid ? (completedBefore ? "Repetir reto" : "Empezar reto") : "Unirme gratis"} className="btn-primary h-12 w-full text-base" info={{ cover: c.cover, icon: c.icon, days: c.days, firstTask: plan.days[0]?.t }} />;
 

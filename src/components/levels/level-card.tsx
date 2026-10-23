@@ -10,15 +10,16 @@ const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
 const n = (x: number) => x.toLocaleString("es-419");
 const mult = (m: number) => `x${m.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 
-export function quickAction(s: XpSummary, opts: { training: boolean; weighed: boolean }) {
+/** Acción rápida para sumar XP. Registrar comida solo se sugiere con nutrición (plan Entreno + Nutrición, prueba o beta). */
+export function quickAction(s: XpSummary, opts: { training: boolean; weighed: boolean; nutrition: boolean }) {
   if (opts.training && !s.sources.workout) return { href: "/app/entreno", label: "Entrenar", xp: `+${SET_XP} XP por serie`, icon: Barbell };
-  if (s.sources.meals < MEAL_XP_DAILY_MAX) return { href: "/app/nutricion", label: "Registrar comida", xp: `+${MEAL_XP} XP`, icon: BowlFood };
+  if (opts.nutrition && s.sources.meals < MEAL_XP_DAILY_MAX) return { href: "/app/nutricion", label: "Registrar comida", xp: `+${MEAL_XP} XP`, icon: BowlFood };
   if (!opts.weighed && !s.sources.weigh) return { href: "/app/progreso", label: "Pesarte", xp: `+${WEIGH_XP} XP`, icon: Scales };
   return null;
 }
 
-export function LevelCard({ s, week, todayIso, training, weighed }: { s: XpSummary; week: { d: string; active: boolean }[]; todayIso: string; training: boolean; weighed: boolean }) {
-  const qa = quickAction(s, { training, weighed });
+export function LevelCard({ s, week, todayIso, training, weighed, nutrition }: { s: XpSummary; week: { d: string; active: boolean }[]; todayIso: string; training: boolean; weighed: boolean; nutrition: boolean }) {
+  const qa = quickAction(s, { training, weighed, nutrition });
   return (
     <section className="card p-4 sm:p-5" aria-labelledby="nivel-t">
       <div className="flex items-center gap-3">

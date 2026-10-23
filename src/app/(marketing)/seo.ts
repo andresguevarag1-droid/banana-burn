@@ -68,7 +68,7 @@ export function appJsonLd() {
       areaServed: AREA,
       url: `${SITE_URL}/#precios`,
       priceSpecification: { "@type": "UnitPriceSpecification", price: p.price[b].toFixed(2), priceCurrency: "USD", billingDuration: b === "mes" ? "P1M" : "P1Y", unitText: b === "mes" ? "mes" : "año" },
-      description: `${p.tagline}. ${usd(p.price[b])} por ${b === "mes" ? "mes" : "año"}.`,
+      description: `${p.tagline}. ${usd(p.price[b])} por ${b === "mes" ? "mes" : "año"}. Incluye: ${p.feats.join("; ")}.${p.excluded.length ? ` No incluye: ${p.excluded.join("; ")}.` : ""}`,
     })),
   );
   return {
@@ -84,7 +84,7 @@ export function appJsonLd() {
     areaServed: AREA,
     image: `${SITE_URL}/brand/mascota.jpg`,
     publisher: { "@id": `${SITE_URL}/#org` },
-    featureList: ["Rutina de gym, casa o sin equipo ajustada a tu nivel", "Peso sugerido para cada serie con progresión automática", "Técnica animada de cada ejercicio", "Coach con IA en español", "Nutrición con comida latina y metas de proteína", "Banana Shield: programa para quienes usan Ozempic, Wegovy o Mounjaro", "Retos, rachas y comunidad"],
+    featureList: ["Rutina de gym, casa o sin equipo ajustada a tu nivel", "Peso sugerido para cada serie con progresión automática", "Técnica animada de cada ejercicio", "Coach con IA en español", "Registro de agua, pasos y sueño", "Retos gratis, rachas, niveles y comunidad", "Plan Entreno + Nutrición: calorías y macros, registro de comidas con comida latina y recetas", "Plan Entreno + Nutrición: Banana Shield, programa para quienes usan Ozempic, Wegovy o Mounjaro", "Retos Premium con pago único, aparte del plan"],
     offers,
   };
 }

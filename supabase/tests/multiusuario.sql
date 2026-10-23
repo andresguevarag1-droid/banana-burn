@@ -1,5 +1,6 @@
 -- Banana Burn · suite multiusuario (aislamiento entre cuentas, comunidad, escalamiento, XP, RPC y carreras)
--- Uso (BD desechable con stub.sql + migraciones 0001→0018, ver README.md). La sección 5b cubre la tienda de retos (0018).
+-- Uso (BD desechable con stub.sql + migraciones 0001→0022, ver README.md). La sección 5b cubre la tienda de retos (0018)
+-- y la 7, el acceso a nutrición por plan (0022).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -530,6 +531,69 @@ select bbtest.ok('cuenta borrada: la venta queda registrada sin dueño y el acce
 -- ───────────── 6. Registro ─────────────
 insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'largo@prueba.test', jsonb_build_object('full_name', repeat('Nombre ', 40)));
 select bbtest.ok('registro con nombre largo no falla (80 máx.)', (select char_length(full_name) <= 80 from public.profiles p join auth.users u on u.id = p.id where u.email = 'largo@prueba.test'));
+
+-- ───────────── 7. Nutrición por plan (0022) ─────────────
+-- N: plan Entreno, registrado hace 30 días. C: Entreno + Nutrición. K: plan Entreno con cortesía vigente (vale como completo).
+-- A y T: prueba de 7 días. S: admin. E: prueba vencida, sin plan. Hasta el 1 de noviembre de 2026 (beta) todos tienen nutrición.
+reset role;
+select bbtest.login(null);
+insert into auth.users (id, email) values
+  ('1a1a1a1a-0000-4000-8000-0000000000a1', 'nico@prueba.test'),
+  ('2b2b2b2b-0000-4000-8000-0000000000b2', 'caro@prueba.test'),
+  ('3c3c3c3c-0000-4000-8000-0000000000c3', 'kike@prueba.test'),
+  ('4d4d4d4d-0000-4000-8000-0000000000d4', 'tere@prueba.test');
+update public.profiles set plan = 'entreno', created_at = now() - interval '30 days' where id in ('1a1a1a1a-0000-4000-8000-0000000000a1', '3c3c3c3c-0000-4000-8000-0000000000c3');
+update public.profiles set plan = 'completo', created_at = now() - interval '30 days' where id = '2b2b2b2b-0000-4000-8000-0000000000b2';
+insert into public.comp_grants (user_id, plan, expires_at) values ('3c3c3c3c-0000-4000-8000-0000000000c3', 'entreno', now() + interval '10 days');
+insert into public.meals (user_id, day, name, kcal) values ('1a1a1a1a-0000-4000-8000-0000000000a1', current_date - 3, 'Arroz con frijoles', 400);
+
+set role anon; select bbtest.login(null);
+select bbtest.fails('anon no llama has_nutrition_access', 'select public.has_nutrition_access()', '42501');
+reset role;
+
+set role authenticated; select bbtest.as_user('2b2b2b2b-0000-4000-8000-0000000000b2');
+select bbtest.fails('RPC interna _has_nutrition_access(N)', $q$ select public._has_nutrition_access('1a1a1a1a-0000-4000-8000-0000000000a1') $q$, '42501');
+select bbtest.ok('nutrición: C (Entreno + Nutrición) tiene acceso', (select public.has_nutrition_access()));
+select bbtest.ok('nutrición: C registra una comida', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal, protein) values (auth.uid(), current_date, 'Arroz con pollo', 650, 40) $q$) = 1);
+select bbtest.ok('nutrición: C edita su comida', bbtest.affected($q$ update public.meals set kcal = 600 where user_id = auth.uid() $q$) = 1);
+select bbtest.ok('nutrición: C guarda un alimento', bbtest.affected($q$ insert into public.saved_foods (user_id, name, kcal) values (auth.uid(), 'Plato del día', 700) $q$) = 1);
+select bbtest.ok('nutrición: C crea una receta', bbtest.affected($q$ insert into public.user_recipes (user_id, name, servings, ingredients, kcal, protein) values (auth.uid(), 'Bowl', 1, '[{"name":"Arroz","qty":1,"kcal":200}]', 200, 4) $q$) = 1);
+select bbtest.fails('nutrición: C no registra comida a nombre de N', $q$ insert into public.meals (user_id, day, name, kcal) values ('1a1a1a1a-0000-4000-8000-0000000000a1', current_date, 'Intruso', 1) $q$, '42501');
+reset role;
+
+set role authenticated; select bbtest.as_user('3c3c3c3c-0000-4000-8000-0000000000c3');
+select bbtest.ok('nutrición: K con cortesía (aunque diga Entreno) tiene acceso, igual que la app', (select public.has_nutrition_access()));
+select bbtest.ok('nutrición: K registra una comida', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Avena', 300) $q$) = 1);
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('nutrición: staff tiene acceso', (select public.has_nutrition_access()));
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('nutrición: A en prueba de 7 días tiene acceso', (select public.has_nutrition_access()));
+reset role;
+-- T: cuenta nueva sin plan (A ya llegó al tope de comidas por día en la sección 4)
+set role authenticated; select bbtest.as_user('4d4d4d4d-0000-4000-8000-0000000000d4');
+select bbtest.ok('nutrición: T en prueba de 7 días registra una comida', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Huevos', 200) $q$) = 1);
+reset role;
+
+set role authenticated; select bbtest.as_user('1a1a1a1a-0000-4000-8000-0000000000a1');
+select bbtest.ok('nutrición: N (Entreno) sí tiene la app', (select public.has_app_access()));
+select bbtest.ok('beta: N (Entreno) tiene nutrición hasta noviembre', (select public.has_nutrition_access())) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
+select bbtest.ok('beta: N registra una comida durante la beta', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Pinto', 350) $q$) = 1) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
+select bbtest.ok('nutrición: N (Entreno) no tiene nutrición', not (select public.has_nutrition_access())) where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('nutrición: N no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Pinto', 350) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('nutrición: N no edita sus comidas viejas', $q$ update public.meals set kcal = 1 where user_id = auth.uid() $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('nutrición: N no guarda alimentos', $q$ insert into public.saved_foods (user_id, name, kcal) values (auth.uid(), 'Plato del día', 700) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('nutrición: N no crea recetas', $q$ insert into public.user_recipes (user_id, name, servings, ingredients, kcal, protein) values (auth.uid(), 'Bowl', 1, '[{"name":"Arroz","qty":1,"kcal":200}]', 200, 4) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.ok('nutrición: N sigue viendo sus comidas guardadas', bbtest.num($q$ select 1 from public.meals where user_id = auth.uid() $q$) >= 1);
+select bbtest.ok('nutrición: N sí registra agua, pasos y sueño', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses, steps, sleep_h) values (auth.uid(), current_date, 6, 8000, 7.5) $q$) = 1);
+select bbtest.ok('nutrición: N puede borrar sus comidas (no da nada de más)', bbtest.affected($q$ delete from public.meals where user_id = auth.uid() and name = 'Arroz con frijoles' $q$) = 1);
+reset role;
+
+set role authenticated; select bbtest.login('E');
+select bbtest.ok('nutrición: E sin plan y prueba vencida no tiene nutrición', not (select public.has_nutrition_access())) where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.fails('nutrición: E no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'x', 1) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+reset role;
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
