@@ -90,6 +90,7 @@ const STATIC: Record<string, { label: string; detail: string; icon: string; kind
   racha30: { label: "Racha de 30", detail: "Un mes sin fallar", icon: "streak", kind: "racha" },
   verificado: { label: "Verificado", detail: "Identidad confirmada por Banana Burn", icon: "shield", kind: "verificado" },
   coleccion: { label: "Coleccionista", detail: "3 o más programas Premium", icon: "bunch", kind: "coleccion" },
+  tester: { label: "Tester de la beta", detail: "Ayudó a probar Banana Burn", icon: "flask", kind: "logro" },
   pr: { label: "Récord personal", detail: "Superó su mejor marca", icon: "trophy", kind: "logro" },
   w10: { label: "10 entrenos", detail: "La constancia gana", icon: "barbell", kind: "logro" },
   w50: { label: "50 entrenos", detail: "Medio centenar de sesiones", icon: "barbell", kind: "logro" },

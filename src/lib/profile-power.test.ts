@@ -99,3 +99,12 @@ describe("insignias junto al nombre (community_flair)", () => {
     expect(toFlair({ tier: 42 }).tier).toBe(5);
   });
 });
+
+describe("insignia de tester (0029)", () => {
+  it("se muestra y se puede destacar si la ganó", () => {
+    expect(toInsignia({ id: "tester" }, 1)).toMatchObject({ label: "Tester de la beta", icon: "flask", kind: "logro" });
+    expect(canFeature([{ id: "tester", kind: "logro" }], "tester")).toBe(true);
+    expect(canFeature([{ id: "nivel", kind: "nivel" }], "tester")).toBe(false);
+    expect(toFlair({ verified: false, tier: 2, total_xp: 100, featured: "tester" }).featured).toMatchObject({ label: "Tester de la beta" });
+  });
+});

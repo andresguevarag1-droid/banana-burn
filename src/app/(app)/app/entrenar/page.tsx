@@ -13,6 +13,7 @@ import { sessionViews } from "@/lib/programs-server";
 import { daysLabel } from "@/lib/programs";
 
 import { LIB_COUNT } from "@/lib/library";
+import { FirstTip } from "@/components/guide/first-tip";
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
@@ -30,11 +31,12 @@ export default async function Entrenar() {
   const p = d.program;
   return (
     <div className="space-y-5 animate-enter">
+      <FirstTip id="entrenar" title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: las cargas suben solas con tu historial." : "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos."}</FirstTip>
       {p ? (
         <>
           {/* Programa activo: su portada, la semana del programa y sus sesiones */}
           <header className="overflow-hidden rounded-[1.75rem] shadow-soft">
-            <ChallengeCover c={{ cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
+            <ChallengeCover c={{ id: p.slug, cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
               <div className={`relative ${coverInk(p.cover)}`}>
                 <p className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />Programa activo</p>
                 <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">{p.title}</h1>

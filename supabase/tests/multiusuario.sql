@@ -1,7 +1,8 @@
 -- Banana Burn · suite multiusuario (aislamiento entre cuentas, comunidad, escalamiento, XP, RPC y carreras)
 -- Uso (BD desechable con stub.sql + migraciones 0001→0026, ver README.md). La sección 5b cubre la tienda de retos (0018),
 -- la 5c los programas (0024), la 7, el acceso a nutrición por plan (0022), la 9, regalos, referidos y escribir datos con plan (0025)
--- y la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026).
+-- la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026), la 11, testers de la beta y "Reportar algo" (0029),
+-- y la 12, la guía de la app (0031).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -473,7 +474,7 @@ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 16);
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 15);
 select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
 select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
 select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
@@ -481,7 +482,7 @@ select bbtest.zero('tienda: el usuario no oculta retos', $q$ update public.chall
 select bbtest.zero('tienda: el usuario no borra retos', $q$ delete from public.challenges_catalog where slug = 'banana-30' $q$);
 select bbtest.ok('plan: el usuario no lee la tabla de planes directo', bbtest.num($q$ select 1 from public.challenge_plans $q$) = 0);
 select bbtest.ok('plan: reto gratis completo', (select (public.challenge_plan('flexiones-30')->>'locked')::boolean = false and jsonb_array_length(public.challenge_plan('flexiones-30')->'days') = 30));
-select bbtest.ok('plan: reto de pago sin comprar = 3 días y bloqueado', (select (public.challenge_plan('abdomen-21')->>'locked')::boolean and jsonb_array_length(public.challenge_plan('abdomen-21')->'days') = 3));
+select bbtest.ok('plan: reto de pago sin comprar = 3 días y bloqueado', (select (public.challenge_plan('sprint-verano-28')->>'locked')::boolean and jsonb_array_length(public.challenge_plan('sprint-verano-28')->'days') = 3));
 select bbtest.ok('plan: nada de un reto oculto en el que no está', public.challenge_plan('movilidad-14') is null);
 select bbtest.fails('compras: el usuario no se crea una compra', $q$ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor) values (auth.uid(), 'abdomen-21', 'pagado', 499, 499) $q$, '42501');
 select bbtest.fails('compras: el usuario no se da acceso a un reto de pago', $q$ insert into public.challenge_entitlements (user_id, challenge_slug, source) values (auth.uid(), 'abdomen-21', 'compra') $q$, '42501');
@@ -567,7 +568,7 @@ select bbtest.ok('programas: los convertidos conservan su precio', (select bool_
 select bbtest.fails('programas: un programa necesita su meta', $q$ update public.challenges_catalog set program = null where slug = 'abdomen-21' $q$, '23514');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 8);
+select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 7);
 select bbtest.ok('sesiones: sin comprar ve la semana 1 (fase 1)', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase = 1 $q$) = 4);
 select bbtest.ok('sesiones: sin comprar no ve las demás fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase > 1 $q$) = 0);
 select bbtest.zero('sesiones: F no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'reconstruccion-8-semanas' $q$);
@@ -603,7 +604,9 @@ select bbtest.ok('dejar: deja el programa en pausa', bbtest.affected($q$ select 
 select bbtest.ok('dejar: queda abandonado', (select status = 'abandonado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
 select bbtest.ok('dejar: lo vuelve a empezar desde cero', public.program_start('gluteos-30', current_date, true) = 'reiniciado');
 -- 0027: experiencias. Cada programa trae su modo; los nuevos se compran aparte; los hábitos manuales viven en daily_logs.
-select bbtest.ok('0027: los 8 programas traen su experiencia', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 8);
+select bbtest.ok('0027: los 7 programas publicados traen su experiencia (abdomen-21 quedó oculto en 0028)', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 7);
+select bbtest.ok('0028: 21 días de abdomen no se ve en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'abdomen-21' $q$) = 0);
+select bbtest.ok('0028: Brazos de Gorila con su modo nuevo', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'brazos-definidos' and title = 'Brazos de Gorila' and cover = 'peel' and program->'experience'->>'mode' = 'Modo gorila' $q$) = 1);
 select bbtest.ok('0027: Glúteos de acero rehecho con 4 sesiones por semana', bbtest.num($q$ select 1 from public.program_sessions where slug = 'gluteos-30' and phase = 2 $q$) = 4);
 select bbtest.fails('0027: Banana Girl sin comprar no empieza', $q$ select public.program_start('banana-girl', current_date, true) $q$, '42501');
 select bbtest.fails('0027: Abdomen marcado sin comprar no empieza', $q$ select public.program_start('abdomen-marcado', current_date, true) $q$, '42501');
@@ -1150,9 +1153,185 @@ select bbtest.fails('tarjeta: la misma tarjeta de ONVO en dos cuentas', $q$ inse
 delete from auth.users where id = 'ab000000-0000-4000-8000-0000000000a6';
 select bbtest.ok('borrado: sin tarjeta ni cobro programado de la cuenta borrada', not exists (select 1 from public.payment_methods where user_id = 'ab000000-0000-4000-8000-0000000000a6') and not exists (select 1 from public.trial_charges where user_id = 'ab000000-0000-4000-8000-0000000000a6'));
 
+-- ───────────── 11. Testers de la beta (0029) ─────────────
+-- Sigue con la beta terminada (sección 9). T1: cuenta de la beta sin tarjeta ni plan (sin acceso hoy). T2: otra igual.
+reset role; select bbtest.login(null);
+insert into auth.users (id, email) values ('7e570000-0000-4000-8000-0000000000a1', 't1@prueba.test'), ('7e570000-0000-4000-8000-0000000000a2', 't2@prueba.test');
+update public.profiles set created_at = public._beta_ends_at() - interval '40 days', onboarded = true, full_name = 'Tina Tester', username = 'tina', visibility = 'publico'
+ where id = '7e570000-0000-4000-8000-0000000000a1';
+update public.profiles set created_at = public._beta_ends_at() - interval '40 days', onboarded = true, full_name = 'Toño', username = 'tono', visibility = 'privado'
+ where id = '7e570000-0000-4000-8000-0000000000a2';
+select bbtest.ok('tester: T1 sin plan después de la beta no tiene la app', not public._has_app_access('7e570000-0000-4000-8000-0000000000a1'));
+
+-- 11a. Nadie fuera de admin y superadmin asigna o quita testers; nadie se edita su estado.
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('tester: un usuario no se hace tester', $q$ select public.admin_set_tester(auth.uid(), 'quiero probar') $q$, '42501');
+select bbtest.fails('tester: un usuario no hace tester a otro', $q$ select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'quiero probar') $q$, '42501');
+select bbtest.fails('tester: un usuario no quita testers', $q$ select public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a1', 'porque sí') $q$, '42501');
+select bbtest.fails('tester: un usuario no usa la función interna', $q$ select public._tester_until(auth.uid()) $q$, '42501');
+select bbtest.fails('tester: un usuario no se inserta una asignación', $q$ insert into public.tester_grants (user_id, expires_at) values (auth.uid(), now() + interval '30 days') $q$, '42501');
+select bbtest.fails('tester: un usuario no se crea acceso de tester', $q$ insert into public.comp_grants (user_id, plan, expires_at, source) values (auth.uid(), 'completo', now() + interval '30 days', 'tester') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.fails('tester: soporte no asigna testers (solo admin)', $q$ select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'probó la app') $q$, '42501');
+select bbtest.fails('tester: soporte no quita testers', $q$ select public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a1', 'probó la app') $q$, '42501');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('tester: anon no asigna testers', $q$ select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'probó la app') $q$, '42501');
+select bbtest.fails('tester: anon no lee asignaciones', $q$ select 1 from public.tester_grants $q$, '42501');
+select bbtest.fails('tester: anon no consulta insignias', $q$ select public.community_testers(array['7e570000-0000-4000-8000-0000000000a1'::uuid]) $q$, '42501');
+reset role;
+
+-- 11b. Admin asigna: 30 días de Entreno + Nutrición, sin tocar rol ni plan, con aviso y auditoría.
+set role authenticated; select bbtest.login('S');
+select bbtest.fails('tester: pide motivo', $q$ select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', '') $q$, 'P0001');
+select bbtest.fails('tester: admin no se hace tester a sí mismo', $q$ select public.admin_set_tester(auth.uid(), 'para probar') $q$, 'P0001');
+select bbtest.fails('tester: usuario inexistente', $q$ select public.admin_set_tester('00000000-0000-4000-8000-000000000000', 'para probar') $q$, 'P0001');
+select bbtest.ok('tester: admin hace tester a T1', (select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'probó la beta desde septiembre')) > 0);
+select bbtest.ok('tester: el panel lo ve en el filtro de testers', bbtest.num($q$ select 1 from public.admin_list_users(null, null, null, 'tester') where id = '7e570000-0000-4000-8000-0000000000a1' and tester_until > now() + interval '29 days' $q$) = 1);
+select bbtest.ok('tester: el mes de tester no cuenta como cortesía en el panel', bbtest.num($q$ select 1 from public.admin_list_users(null, null, null, 'cortesia') where id = '7e570000-0000-4000-8000-0000000000a1' $q$) = 0);
+reset role;
+select bbtest.ok('tester: dura 30 días desde ahora', (select abs(extract(epoch from starts_at - now())) < 60 and expires_at = starts_at + interval '30 days' and revoked_at is null and not renewal
+  from public.tester_grants where user_id = '7e570000-0000-4000-8000-0000000000a1'));
+select bbtest.ok('tester: el acceso sale de comp_grants (completo, origen tester)', (select count(*) = 1 from public.comp_grants g join public.tester_grants t on t.comp_grant_id = g.id
+  where g.user_id = '7e570000-0000-4000-8000-0000000000a1' and g.source = 'tester' and g.plan = 'completo' and g.revoked_at is null and g.expires_at = t.expires_at));
+select bbtest.ok('tester: no cambia el rol ni el plan del perfil', (select role::text = 'free' and plan = 'free' from public.profiles where id = '7e570000-0000-4000-8000-0000000000a1'));
+select bbtest.ok('tester: aviso en la campanita', (select count(*) = 1 from public.notifications where user_id = '7e570000-0000-4000-8000-0000000000a1' and kind = 'tester' and title = 'Eres tester de Banana Burn'));
+select bbtest.ok('tester: queda en auditoría con el admin y el motivo', (select count(*) = 1 from public.audit_log where action = 'user.tester_grant' and actor = bbtest.u('S') and target = '7e570000-0000-4000-8000-0000000000a1' and meta->>'reason' = 'probó la beta desde septiembre'));
+select bbtest.ok('tester: un regalo nuevo para T1 empieza al terminar su mes de tester', (select public._access_covered_until('7e570000-0000-4000-8000-0000000000a1', 'completo') = t.expires_at
+  from public.tester_grants t where t.user_id = '7e570000-0000-4000-8000-0000000000a1'));
+
+-- 11c. T1 con su mes de tester (beta terminada): app y nutrición, ve lo suyo y no puede alargarlo.
+set role authenticated; select bbtest.as_user('7e570000-0000-4000-8000-0000000000a1');
+select bbtest.ok('tester: T1 tiene la app después de la beta', (select public.has_app_access()));
+select bbtest.ok('tester: T1 tiene nutrición', (select public.has_nutrition_access()));
+select bbtest.ok('tester: T1 es tester', (select public.is_tester()));
+select bbtest.ok('tester: T1 registra su peso', bbtest.affected($q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date, 70) $q$) = 1);
+select bbtest.ok('tester: T1 registra comidas', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Avena', 300) $q$) = 1);
+select bbtest.ok('tester: T1 ve su asignación', bbtest.num($q$ select 1 from public.tester_grants where user_id = auth.uid() $q$) = 1);
+select bbtest.zero('tester: T1 no alarga su mes', $q$ update public.tester_grants set expires_at = expires_at + interval '1 day' where user_id = auth.uid() $q$);
+select bbtest.zero('tester: T1 no borra su asignación', $q$ delete from public.tester_grants where user_id = auth.uid() $q$);
+select bbtest.zero('tester: T1 no alarga su acceso', $q$ update public.comp_grants set expires_at = now() + interval '10 years' where user_id = auth.uid() $q$);
+select bbtest.ok('tester: T1 marca vista la bienvenida', (select public.tester_mark_seen()) = 1);
+select bbtest.ok('tester: marcar de nuevo no cambia nada', (select public.tester_mark_seen()) = 0);
+reset role;
+set role authenticated; select bbtest.as_user('7e570000-0000-4000-8000-0000000000a2');
+select bbtest.ok('tester: T2 no ve la asignación de T1', bbtest.num($q$ select 1 from public.tester_grants $q$) = 0);
+select bbtest.ok('tester: T2 no es tester', not (select public.is_tester()));
+select bbtest.ok('tester: T2 sin plan no tiene la app', not (select public.has_app_access()));
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('tester: la comunidad ve la insignia de T1 (perfil público)', bbtest.num($q$ select * from public.community_testers(array['7e570000-0000-4000-8000-0000000000a1', 'a1a1a1a1-0000-4000-8000-0000000000a1']::uuid[]) $q$) = 1);
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.ok('tester: soporte ve el estado de tester en la ficha', bbtest.num($q$ select 1 from public.tester_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' $q$) = 1);
+reset role;
+
+-- 11d. Renovar: 30 días desde ahora, una sola asignación y un solo acceso vigente.
+reset role;
+update public.tester_grants set starts_at = now() - interval '20 days', expires_at = now() + interval '10 days' where user_id = '7e570000-0000-4000-8000-0000000000a1';
+update public.comp_grants set starts_at = now() - interval '20 days', expires_at = now() + interval '10 days' where user_id = '7e570000-0000-4000-8000-0000000000a1' and source = 'tester';
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('tester: admin renueva a T1', (select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'sigue reportando errores')) > 0);
+reset role;
+select bbtest.ok('tester: la renovación vence en 30 días desde ahora', (select count(*) = 1 and bool_and(renewal) and bool_and(abs(extract(epoch from expires_at - (now() + interval '30 days'))) < 60)
+  from public.tester_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' and revoked_at is null));
+select bbtest.ok('tester: la asignación anterior queda cerrada como renovada', (select count(*) = 1 from public.tester_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' and end_kind = 'renovado' and revoked_by = bbtest.u('S')));
+select bbtest.ok('tester: un solo acceso de tester vigente', (select count(*) = 1 from public.comp_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' and source = 'tester' and revoked_at is null));
+select bbtest.ok('tester: aviso de renovación', (select count(*) = 1 from public.notifications where user_id = '7e570000-0000-4000-8000-0000000000a1' and kind = 'tester' and title = 'Renovamos tu mes de tester'));
+
+-- 11e. Al vencer, vuelve a las reglas normales (sin proceso nocturno: solo la fecha).
+update public.tester_grants set starts_at = now() - interval '31 days', expires_at = now() - interval '1 minute' where user_id = '7e570000-0000-4000-8000-0000000000a1' and revoked_at is null;
+update public.comp_grants set starts_at = now() - interval '31 days', expires_at = now() - interval '1 minute' where user_id = '7e570000-0000-4000-8000-0000000000a1' and source = 'tester' and revoked_at is null;
+select bbtest.ok('tester: vencido, T1 ya no tiene la app', not public._has_app_access('7e570000-0000-4000-8000-0000000000a1'));
+select bbtest.ok('tester: vencido, T1 ya no tiene nutrición', not public._has_nutrition_access('7e570000-0000-4000-8000-0000000000a1'));
+set role authenticated; select bbtest.as_user('7e570000-0000-4000-8000-0000000000a1');
+select bbtest.ok('tester: vencido, T1 ya no es tester', not (select public.is_tester()));
+select bbtest.fails('tester: vencido, T1 no registra entrenos', $q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date - 1, 70) $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('tester: vencido, sin insignia en la comunidad', bbtest.num($q$ select * from public.community_testers(array['7e570000-0000-4000-8000-0000000000a1']::uuid[]) $q$) = 0);
+reset role;
+select bbtest.ok('tester: vencido, el panel no lo cuenta como tester', not exists (select 1 from public.tester_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' and revoked_at is null and expires_at > now()));
+
+-- 11f. Quitar antes de tiempo: cierra la asignación y el acceso, con auditoría.
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('tester: admin vuelve a hacer tester a T1 (después de vencer)', (select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'vuelve a probar')) > 0);
+select bbtest.ok('tester: después de vencer no cuenta como renovación', (select not renewal from public.tester_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' and revoked_at is null and expires_at > now()));
+select bbtest.fails('tester: quitar pide motivo', $q$ select public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a1', 'no') $q$, 'P0001');
+select bbtest.ok('tester: admin quita a T1', (select public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a1', 'dejó de probar la app')) = 1);
+select bbtest.ok('tester: quitar de nuevo no cierra nada', (select public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a1', 'dejó de probar la app')) = 0);
+reset role;
+select bbtest.ok('tester: quitado, sin acceso', not public._has_app_access('7e570000-0000-4000-8000-0000000000a1'));
+select bbtest.ok('tester: quitado, el acceso quedó revocado', not exists (select 1 from public.comp_grants where user_id = '7e570000-0000-4000-8000-0000000000a1' and source = 'tester' and revoked_at is null and expires_at > now()));
+select bbtest.ok('tester: quitado, queda en auditoría', (select count(*) = 1 from public.audit_log where action = 'user.tester_revoke' and target = '7e570000-0000-4000-8000-0000000000a1'));
+
+-- 11g. "Reportar algo": la base marca si viene de un tester; nadie lo falsea; el staff cambia el estado.
+set role authenticated; select bbtest.login('S');
+select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a1', 'reportes de prueba');
+reset role;
+set role authenticated; select bbtest.as_user('7e570000-0000-4000-8000-0000000000a1');
+select bbtest.ok('reporte: T1 envía un error', (select public.submit_feedback('error', 'El botón de guardar peso no responde', '/app')) > 0);
+select bbtest.ok('reporte: queda marcado como de tester', (select from_tester and status = 'nuevo' and page = '/app' from public.feedback_reports where user_id = auth.uid()));
+reset role;
+set role authenticated; select bbtest.as_user('7e570000-0000-4000-8000-0000000000a2');
+select bbtest.ok('reporte: T2 envía una idea', (select public.submit_feedback('idea', 'Me gustaría un modo oscuro', 'javascript:alert(1)')) > 0);
+select bbtest.ok('reporte: T2 no es tester y la ruta rara no se guarda', (select not from_tester and page is null from public.feedback_reports where user_id = auth.uid()));
+select bbtest.fails('reporte: T2 no se marca como tester', $q$ insert into public.feedback_reports (user_id, kind, body, from_tester) values (auth.uid(), 'otro', 'soy tester', true) $q$, '42501');
+select bbtest.zero('reporte: T2 no cambia el estado de su reporte', $q$ update public.feedback_reports set status = 'resuelto' where user_id = auth.uid() $q$);
+select bbtest.ok('reporte: T2 no ve reportes ajenos', bbtest.num($q$ select 1 from public.feedback_reports where user_id <> auth.uid() $q$) = 0);
+select bbtest.fails('reporte: tipo inválido', $q$ select public.submit_feedback('queja', 'algo', null) $q$, '22023');
+select bbtest.fails('reporte: texto vacío', $q$ select public.submit_feedback('otro', '  ', null) $q$, 'P0001');
+select bbtest.ok('reporte: máximo 10 por día', bbtest.passes($q$ select public.submit_feedback('otro', 'otra cosa más', null) $q$, 12) = 9);
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.ok('reporte: soporte ve los reportes', bbtest.num($q$ select 1 from public.feedback_reports where user_id in ('7e570000-0000-4000-8000-0000000000a1', '7e570000-0000-4000-8000-0000000000a2') $q$) = 11);
+select bbtest.ok('reporte: soporte marca resuelto', bbtest.affected($q$ update public.feedback_reports set status = 'resuelto' where user_id = '7e570000-0000-4000-8000-0000000000a1' $q$) = 1);
+select bbtest.fails('reporte: soporte no cambia el texto', $q$ update public.feedback_reports set body = 'otro texto' where user_id = '7e570000-0000-4000-8000-0000000000a1' $q$, '42501');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('reporte: anon no envía reportes', $q$ select public.submit_feedback('otro', 'hola hola', null) $q$, '42501');
+reset role;
+-- Borrar la cuenta borra su estado de tester y sus reportes.
+delete from auth.users where id = '7e570000-0000-4000-8000-0000000000a2';
+select bbtest.ok('borrado: sin reportes de la cuenta borrada', not exists (select 1 from public.feedback_reports where user_id = '7e570000-0000-4000-8000-0000000000a2'));
+
 -- Restaurar la beta original (misma fecha que src/lib/plans.ts).
 create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select timestamptz '2026-11-01 06:00:00+00' $$;
 revoke all on function public._beta_ends_at() from public, anon, authenticated;
+
+-- ───────────── 11. Guía de la app (0031) ─────────────
+-- Cada persona marca solo su guía y sus consejos; la fecha la pone el servidor; claves y versiones validadas.
+update public.profiles set guide_version = null, guide_seen_at = null, guide_tips = '{}' where id in (bbtest.u('A'), bbtest.u('B'));
+set role authenticated; select bbtest.login('A');
+select public.guide_mark_seen(1);
+select public.guide_tip_seen('entrenar');
+select public.guide_tip_seen('entrenar');
+select public.guide_tip_seen('nutricion');
+select bbtest.ok('guía: A ve su versión vista', (select guide_version = 1 and guide_seen_at is not null from public.profiles where id = auth.uid()));
+select bbtest.ok('guía: un consejo repetido no se duplica', (select guide_tips = array['entrenar','nutricion'] from public.profiles where id = auth.uid()));
+select public.guide_mark_seen(1);
+select bbtest.ok('guía: marcar una versión vieja no baja la versión', (select guide_version = 1 from public.profiles where id = auth.uid()));
+select bbtest.zero('guía: A no marca la guía de B', $q$ update public.profiles set guide_version = 1, guide_tips = array['entrenar'] where id = bbtest.u('B') $q$);
+select bbtest.fails('guía: versión fuera de rango', $q$ select public.guide_mark_seen(0) $q$, '22023');
+select bbtest.fails('guía: versión nula', $q$ select public.guide_mark_seen(null) $q$, '22023');
+select bbtest.fails('guía: consejo con caracteres raros', $q$ select public.guide_tip_seen('x'',''y') $q$, '22023');
+select bbtest.fails('guía: consejo demasiado largo', $q$ select public.guide_tip_seen(repeat('a', 25)) $q$, '22023');
+select bbtest.fails('guía: versión inválida directo en la tabla', $q$ update public.profiles set guide_version = 500 where id = auth.uid() $q$, '23514');
+select bbtest.fails('guía: consejo inválido directo en la tabla', $q$ update public.profiles set guide_tips = array['Hola Mundo'] where id = auth.uid() $q$, '23514');
+update public.profiles set guide_seen_at = '2099-01-01' where id = auth.uid();
+select bbtest.ok('guía: la fecha de vista la pone el servidor', (select guide_seen_at <= now() + interval '1 minute' from public.profiles where id = auth.uid()));
+select bbtest.fails('guía: A no se sube el rol al marcar la guía', $q$ update public.profiles set guide_version = 1, role = 'superadmin' where id = auth.uid() $q$, '42501');
+reset role;
+select bbtest.ok('guía: B quedó sin tocar', (select guide_version is null and guide_tips = '{}' from public.profiles where id = bbtest.u('B')));
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('guía: B no ve la guía de A como suya', (select guide_version is null from public.profiles where id = auth.uid()));
+select bbtest.fails('guía: 17 consejos no caben', $q$ update public.profiles set guide_tips = array['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q'] where id = auth.uid() $q$, '23514');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('guía: anon no marca guías', $q$ select public.guide_mark_seen(1) $q$, '42501');
+select bbtest.fails('guía: anon no marca consejos', $q$ select public.guide_tip_seen('entrenar') $q$, '42501');
+reset role;
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));

@@ -123,6 +123,16 @@ set role authenticated; select bbtest.login('A');
 select bbtest.ok('comunidad: A ve la insignia destacada de B con su nombre del catálogo', (select featured = 'prog:abdomen-marcado' and featured_label = 'Core de acero' and featured_cover = 'sky' from public.community_flair(array[bbtest.u('B')])));
 reset role;
 
+-- Tester de la beta (0029): la insignia se gana con un mes de tester y se puede destacar.
+insert into public.tester_grants (user_id, starts_at, expires_at) values (bbtest.u('D'), now() - interval '1 day', now() + interval '29 days');
+set role authenticated; select bbtest.login('E');
+select bbtest.fails('insignias: sin mes de tester no destaca Tester', $q$ select public.set_featured_badge('tester') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('D');
+select public.set_featured_badge('tester');
+select bbtest.ok('insignias: tester destaca su insignia Tester', (select featured = 'tester' from public.profile_flair where user_id = auth.uid()));
+reset role;
+
 -- Verificación: fotos en el bucket privado.
 set role authenticated; select bbtest.login('A');
 insert into storage.objects (bucket_id, name) values ('identidad', 'a1a1a1a1-0000-4000-8000-0000000000a1/frente.jpg'), ('identidad', 'a1a1a1a1-0000-4000-8000-0000000000a1/selfie.jpg');

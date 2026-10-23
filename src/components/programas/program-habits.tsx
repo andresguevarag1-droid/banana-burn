@@ -38,7 +38,7 @@ export function ProgramHabits({ mode, icon, habits, food, nutrition }: { mode: s
               <span className="min-w-0 flex-1 text-left">
                 <span className="block text-[15px] font-bold text-ink">{h.label}</span>
                 {h.detail && <span className="block text-xs font-semibold text-muted tabular-nums">{h.detail}</span>}
-                {h.auto && !h.done && h.pct > 0 && <span aria-hidden className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-ink/10"><span className="block h-full rounded-full bg-ember transition-[width] duration-(--dur-fill) ease-out" style={{ width: `${Math.round(h.pct * 100)}%` }} /></span>}
+                {h.auto && !h.done && h.pct > 0 && <span aria-hidden className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-ink/10"><span className="block h-full rounded-full bg-[var(--program,var(--color-ember))] transition-[width] duration-(--dur-fill) ease-out" style={{ width: `${Math.round(h.pct * 100)}%` }} /></span>}
               </span>
               {h.auto && <span className="shrink-0 text-[11px] font-bold text-faint">Automático</span>}
             </>

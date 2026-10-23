@@ -155,6 +155,15 @@ returns int language sql immutable as $$
   select case when p_points >= 250 then 5 when p_points >= 150 then 4 when p_points >= 80 then 3 when p_points >= 30 then 2 else 1 end;
 $$;
 
+/** ¿Fue tester de la beta (0029)? Cuenta un mes de tester empezado que no quitó un admin. Sin 0029: false. */
+create or replace function public._was_tester(p_user uuid)
+returns boolean language plpgsql stable security definer set search_path = public as $$
+begin
+  if to_regclass('public.tester_grants') is null then return false; end if;
+  return exists (select 1 from public.tester_grants t where t.user_id = p_user and t.starts_at <= now() and coalesce(t.end_kind, '') <> 'quitado');
+end $$;
+revoke all on function public._was_tester(uuid) from public, anon, authenticated;
+
 /** Insignias ganadas (id, nombre del catálogo si aplica, ícono, portada, tipo, fecha). La racha solo cuenta para ti. */
 create or replace function public._insignias(p_user uuid)
 returns table (id text, label text, detail text, icon text, cover text, kind text, earned_at timestamptz)
@@ -174,6 +183,7 @@ language sql stable security definer set search_path = public as $$
   union all select 'racha30', null, null, null, null, 'racha', null from st where st.best_streak >= 30
   union all select 'verificado', null, null, null, null, 'verificado', (select reviewed_at from public.identity_verifications where user_id = p_user) from st where st.verified
   union all select 'coleccion', null, null, null, null, 'coleccion', null from st where st.premium_owned >= 3
+  union all select 'tester', null, null, null, null, 'logro', null where public._was_tester(p_user)
   union all select 'pr', null, null, null, null, 'logro', null where exists (select 1 from public.xp_events where user_id = p_user and kind = 'pr')
   union all select 'w10', null, null, null, null, 'logro', null from wk where wk.n >= 10
   union all select 'w50', null, null, null, null, 'logro', null from wk where wk.n >= 50;

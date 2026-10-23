@@ -133,6 +133,12 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
   @starting-style { .sheet-panel { transform: scale(.96); opacity: 0; } }
 }
 
+/* ---------- Guía de la app: cada paso entra con un fundido y un desplazamiento corto en la dirección del avance ---------- */
+@keyframes guide-in { from { opacity: 0; transform: translate3d(var(--guide-dx, 12px), 0, 0); } to { opacity: 1; transform: none; } }
+.guide-step { animation: guide-in var(--dur-base) var(--ease-out) both; }
+/* Consejo de la primera vez */
+.coach-mark { animation: enter var(--dur-base) var(--ease-out) both; }
+
 /* ---------- Toasts: entran y salen por el mismo lado ---------- */
 .toast { transform: none; opacity: 1; transition: transform var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out); }
 .toast[data-side="top"][data-closing] { transform: translateY(-100%); opacity: 0; transition-duration: var(--dur-exit); }
@@ -185,7 +191,7 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
 */
 @media (prefers-reduced-motion: reduce) {
   .animate-floaty, .animate-bounce, .animate-ping, [class*="animate-["] { animation: none !important; }
-  .animate-rise, .animate-enter, .animate-pop, .stagger > * { animation-name: fade !important; animation-duration: var(--dur-fast) !important; }
+  .animate-rise, .animate-enter, .animate-pop, .stagger > *, .guide-step, .coach-mark { animation-name: fade !important; animation-duration: var(--dur-fast) !important; }
   .animate-pulse { animation: none !important; opacity: .7; }
   .animate-spin { animation-duration: 1.6s !important; }
   .sheet-panel, .sheet-panel[data-closing], .toast, .toast[data-closing], .popover, .popover[data-closing] { transform: none !important; }

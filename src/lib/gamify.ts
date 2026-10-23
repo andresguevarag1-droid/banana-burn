@@ -32,8 +32,11 @@ export function streakOf(activeDays: Set<string>, today: string) {
 
 export type Badge = { id: string; icon: string; n: string; d: string; got: boolean };
 
-export function badges(s: { workouts: number; streak: number; prs: number; weighIns: number; lostKg: number }): Badge[] {
+/** `tester`: fue tester de la beta alguna vez (0029). La medalla solo aparece para quien lo fue: nadie la ve bloqueada. */
+export function badges(s: { workouts: number; streak: number; prs: number; weighIns: number; lostKg: number; tester?: boolean }): Badge[] {
+  const extra: Badge[] = s.tester ? [{ id: "tester", icon: "flask", n: "Tester beta", d: "Ayudó a probar Banana Burn en la beta", got: true }] : [];
   return [
+    ...extra,
     { id: "first", icon: "medal", n: "Primer entreno", d: "Completa tu primera sesión", got: s.workouts >= 1 },
     { id: "w10", icon: "barbell", n: "10 entrenos", d: "La constancia gana", got: s.workouts >= 10 },
     { id: "s7", icon: "streak", n: "Racha de 7", d: "7 días seguidos activo", got: s.streak >= 7 },

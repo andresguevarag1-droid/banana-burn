@@ -3,11 +3,12 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, Gift, House, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
 import { Sheet, SheetTitle } from "./sheet";
+import { openGuide } from "./guide/guide-provider";
 
 /** `nutri`: sección de Entreno + Nutrición. En Entreno se ve con candado y abre la invitación a mejorar el plan. */
 type Item = { href: string; label: string; icon: PhosphorIcon | typeof Monkey; hint?: string; nutri?: boolean };
@@ -57,7 +58,7 @@ export function AppNav({ name, staff, nutrition, program = null }: { name: strin
         <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
         {program && (
           <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
-            <span aria-hidden className="size-2 shrink-0 rounded-full bg-banana" />
+            <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-[var(--program,var(--color-banana))]" />
             <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">{program.mode ?? "Programa activo"}</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
           </Link>
         )}
@@ -78,6 +79,8 @@ export function AppNav({ name, staff, nutrition, program = null }: { name: strin
         <div className="mt-auto flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
           <Link href="/app/perfil" className="flex flex-1 min-w-0 items-center gap-3"><span className="grid place-items-center size-9 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
           <span className="flex-1 truncate font-semibold text-ink">{name}</span></Link>
+          {/* Guía de la app: botón compacto para no alargar el menú lateral */}
+          <button type="button" onClick={openGuide} aria-haspopup="dialog" aria-label="Guía de la app" title="Guía de la app" className="tap pressable grid place-items-center size-9 rounded-full text-muted hover:bg-cream hover:text-ink"><Compass className="size-5" weight="duotone" aria-hidden /></button>
           <form action="/auth/salir" method="post"><button className="tap pressable grid place-items-center size-9 rounded-full text-muted hover:bg-cream hover:text-ink" aria-label="Cerrar sesión"><SignOut className="size-4" weight="bold" /></button></form>
         </div>
       </aside>
@@ -117,6 +120,14 @@ export function AppNav({ name, staff, nutrition, program = null }: { name: strin
               </Link>
             </li>
           ); })}
+          <li>
+            {/* La hoja se cierra primero (200 ms) y luego se abre la guía: así no se pisan el bloqueo de scroll ni el foco. */}
+            <button type="button" aria-haspopup="dialog" onClick={() => { setMore(false); setTimeout(openGuide, 220); }} className="pressable flex h-full w-full flex-col gap-2 rounded-2xl border border-line/70 bg-white p-4 text-left text-ink hover:bg-banana-soft">
+              <Compass className="size-6 text-banana-ink" weight="duotone" aria-hidden />
+              <span className="font-extrabold leading-tight">Guía de la app</span>
+              <span className="text-xs text-muted">Cómo usar Banana Burn</span>
+            </button>
+          </li>
           {staff && <li className="col-span-2"><p className="mb-2 text-xs font-bold text-muted">Eres parte del equipo</p><ViewSwitch current="usuario" /></li>}
         </ul>
         <form action="/auth/salir" method="post" className="mt-4"><button className="btn-ghost w-full"><SignOut className="size-5" weight="bold" />Cerrar sesión</button></form>

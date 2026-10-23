@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Banana, BananaCoin, BananaMedal, BananaTrophy, Barbell, BrandIcon, ChatCircle, Clock, DotsThree, Flag, ForkKnife, Lightning, PaperPlaneTilt, Question, Trash, TrendUp, WarningCircle } from "@/components/icons";
 import { Avatar, LevelBadge } from "@/components/community/avatar";
 import { NameFlair } from "@/components/community/flair";
+import { TesterBadge } from "@/components/testers/tester-badge";
 import { addComment, deleteComment, deletePost, getComments, report, toggleKudo, type ReportReason } from "@/app/actions/community";
 import { fmtDuration, fmtNum, fmtVolume, tagDef, timeAgo } from "@/lib/community-view";
 import type { Author, FeedComment, FeedPost } from "@/lib/community";
@@ -47,6 +48,7 @@ function Comment({ c, onDeleted }: { c: FeedComment; onDeleted: (id: string) => 
         <div className="flex-1 min-w-0 rounded-2xl rounded-tl-md bg-cream px-3 py-2">
           <p className="text-sm break-words">
             {href ? <Link href={href} className="font-bold text-ink hover:underline">{c.author.name}</Link> : <b className="text-ink">{c.author.name}</b>}
+            {c.author.tester && <TesterBadge compact className="ml-1.5" />}
             <NameFlair flair={c.author.flair} size="sm" className="ml-1 align-[-3px]" />
             <span className="ml-1.5 text-xs text-faint"><Ago iso={c.at} /></span>
           </p>
@@ -214,7 +216,8 @@ export function PostCard({ p, me, onDeleted }: { p: FeedPost; me: string; onDele
           <p className="flex items-center gap-1.5 min-w-0 overflow-hidden">
             <span className="min-w-[3.5rem] font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}</span>
             <NameFlair flair={p.author.flair} className="shrink-0" />
-            <LevelBadge xp={p.author.xp} compact className={`shrink-0 ${p.author.flair?.tier && p.author.flair.tier > 1 ? "max-[419px]:hidden" : ""}`} />
+            <LevelBadge xp={p.author.xp} compact className={`shrink-0 ${(p.author.flair?.tier && p.author.flair.tier > 1) || p.author.tester ? "max-[419px]:hidden" : ""}`} />
+            {p.author.tester && <TesterBadge compact />}
           </p>
           <p className="text-xs text-muted truncate">{p.author.username && <span>@{p.author.username} </span>}<Ago iso={p.at} /></p>
         </div>

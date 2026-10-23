@@ -10,7 +10,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, Compass, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -20,6 +20,9 @@ import { VerifyCard } from "@/components/perfil/verify-card";
 import { FeaturedBadge, VerifiedMark } from "@/components/community/flair";
 import { insigniaMeta } from "@/lib/profile-power";
 import { money } from "@/lib/copy";
+import { TesterBadge } from "@/components/testers/tester-badge";
+import { getMyTester } from "@/lib/testers-server";
+import { OpenGuideButton } from "@/components/guide/open-guide";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -29,12 +32,13 @@ export const metadata = { title: "Mi perfil" };
 
 const fmtDay = (iso?: string, tz?: string) => { if (!iso) return null; try { return new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: tz }); } catch { return null; } };
 
-export default async function Perfil({ searchParams }: { searchParams: Promise<{ clave?: string }> }) {
+export default async function Perfil({ searchParams }: { searchParams: Promise<{ clave?: string; tester?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
   // En paralelo: el perfil público, el plan, los avisos y las medallas no dependen del atleta.
   const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
-  const [a, data, ent, prefs, power, verif] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null)]);
+  const [a, data, ent, prefs, power, verif, tester] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null)]);
+  const isTester = tester?.phase === "activo" || tester?.phase === "pronto";
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   let cp = { username: "andres", bio: "Bajando de 94 a 85 kg con Banana Burn", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };
   if (!v.demo) cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
@@ -43,7 +47,8 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   const featured = featuredIns ? insigniaMeta(featuredIns.id, { label: featuredIns.label, icon: featuredIns.icon, cover: featuredIns.cover, xp: power.stats.totalXp }) : null;
   const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
   const planTitle = plan ? plan.name : ent.trial ? "Prueba gratis" : "Sin plan";
-  const planText = ent.access === "demo" ? "Modo demo: acceso completo, sin cobros." : ent.access === "comp" ? `Plan de cortesía${ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt, v.tz)}` : ""}, sin cobros.`
+  const planText = isTester && (ent.access === "comp" || ent.access === "demo") ? `Mes de tester de la beta hasta el ${fmtDay(tester!.until ?? undefined, v.tz)}: Entreno + Nutrición, sin cobros.`
+    : ent.access === "demo" ? "Modo demo: acceso completo, sin cobros." : ent.access === "comp" ? `Plan de cortesía${ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt, v.tz)}` : ""}, sin cobros.`
     : ent.access === "staff" ? "Acceso completo por ser parte del equipo."
     : ent.access === "manual" ? "Plan asignado por el equipo de Banana Burn, sin cobros automáticos."
     : plan ? "Pagas con tarjeta de crédito o débito. Cancela cuando quieras."
@@ -75,6 +80,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
           <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-bold">
             <Link href="/app/niveles" className="inline-flex h-7 items-center gap-1 rounded-full bg-banana-soft px-2.5 text-banana-ink hover:bg-banana"><LevelIcon idx={g.level.idx} className="size-3.5" />{g.level.n}, nivel {g.level.idx}</Link>
             <span className="inline-flex h-7 items-center gap-1 rounded-full bg-ember/10 px-2.5 text-ember-ink"><BananaFlame className="size-3.5" />{g.streak.days} {g.streak.days === 1 ? "día" : "días"} de racha</span>
+            {isTester && <TesterBadge />}
           </p>
           <div className="mt-4 space-y-3">
             <TierProgress points={power.points} />
@@ -99,6 +105,12 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
           <Link href="/app/suscripcion" className="btn-ghost h-11 text-sm px-4">{ent.fromSubscription ? "Gestionar" : "Ver planes"}</Link>
         </div>
         <p className="mt-2 text-sm text-muted">{planText}</p>
+      </section>
+
+      <section className="card p-5">
+        <H icon={Compass}>Guía de la app</H>
+        <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}Coach Banana y tu progreso, según tu plan.</p>
+        <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
       </section>
 
       <section className="card p-5">

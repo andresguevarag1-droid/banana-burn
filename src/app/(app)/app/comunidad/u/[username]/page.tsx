@@ -6,6 +6,7 @@ import { getProfileStats, getPublicProfile } from "@/lib/community";
 import { fmtDuration, fmtNum, fmtVolume, plural, publicBadges, timeAgo } from "@/lib/community-view";
 import { PostCard } from "@/components/post-card";
 import { Avatar, LevelBadge } from "@/components/community/avatar";
+import { TesterBadge } from "@/components/testers/tester-badge";
 import { ArrowLeft, BananaTrophy, BrandIcon, Globe, Lock, MonkeyBanana, PencilSimple, Users } from "@/components/icons";
 import { FollowButton } from "../../follow";
 import { ReportUser } from "./report-user";
@@ -65,6 +66,7 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
             {verified && <VerifiedMark className="size-6" />}
             <TierEmblem tier={power?.tier} full />
             <LevelBadge xp={xp} />
+            {p.tester && <TesterBadge />}
           </div>
           {featured && <p className="mt-1.5"><FeaturedBadge f={featured} /></p>}
           <p className="text-sm text-faint">@{p.username}</p>

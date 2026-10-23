@@ -18,6 +18,8 @@ export type Capability =
   | "users.role"          // cambiar rol (con reglas extra, ver checkRoleChange)
   | "users.comp"          // regalar plan de cortesía con vencimiento
   | "users.gift"          // regalar meses (se apilan, con aviso, correo y push). Solo admin: es una decisión de ingresos
+  | "users.tester"        // hacer tester de la beta por 1 mes (o quitarlo). No es un rol de staff: no da permisos del panel
+  | "feedback.manage"     // marcar como visto o resuelto lo que reportan desde la app
   | "referrals.view"      // referidos de un usuario, recompensas y conteos
   | "referrals.manage"    // revocar recompensas por fraude y revisar referidos "en revisión"
   | "users.onboarding"    // reiniciar la bienvenida
@@ -47,6 +49,8 @@ export const MATRIX: Record<Capability, Role[]> = {
   "users.role": PRIVILEGED,
   "users.comp": SUPPORT_ADMIN,
   "users.gift": PRIVILEGED,
+  "users.tester": PRIVILEGED,
+  "feedback.manage": SUPPORT_ADMIN,
   "referrals.view": SUPPORT_ADMIN,
   "referrals.manage": PRIVILEGED,
   "users.onboarding": SUPPORT_ADMIN,

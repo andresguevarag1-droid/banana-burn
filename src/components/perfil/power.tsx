@@ -96,7 +96,8 @@ function ShowcaseCard({ s, mine }: { s: ShowcaseItem; mine: boolean }) {
   return (
     <li className="min-w-0">
       <Link href={`/app/retos/${s.slug}`} className="card pressable block overflow-hidden hover:border-ink/20">
-        <ChallengeCover c={{ cover: s.cover, icon: s.icon }} className="h-20 sm:h-24">
+        <ChallengeCover c={{ id: s.slug, cover: s.cover, icon: s.icon }} className="h-24 sm:h-28" chip={false} sizes="(min-width: 640px) 220px, 50vw">
+          <span aria-hidden className="absolute left-2.5 top-2.5 grid size-9 place-items-center rounded-xl bg-white/95 text-ink shadow-soft"><BrandIcon name={s.icon} className="size-5" /></span>
           <span className={`absolute right-2.5 top-2.5 inline-flex h-6 items-center gap-1 rounded-full px-2 text-[11px] font-extrabold ${done ? "bg-ink text-banana" : "bg-white/90 text-ink"}`}>
             {done ? <><BrandIcon name="medal" weight="fill" aria-hidden className="size-3.5" />Completado</> : mine ? "En tu colección" : "En su colección"}
           </span>
@@ -144,7 +145,7 @@ const KIND_LABEL: Record<Insignia["kind"], string> = { certificado: "Certificado
 export function InsigniaArt({ i, size = "md" }: { i: Pick<Insignia, "icon" | "cover" | "kind">; size?: "sm" | "md" }) {
   const box = size === "sm" ? "size-10 rounded-xl" : "size-12 rounded-2xl";
   if (i.kind === "verificado") return <span className={`grid shrink-0 place-items-center bg-peel/10 ${box}`}><VerifiedMark className="size-7" label={false} /></span>;
-  if (i.cover) return <ChallengeCover c={{ cover: i.cover, icon: i.icon }} className={`shrink-0 ${box}`} chip={false}><span className="absolute inset-0 grid place-items-center"><span className="grid size-8 place-items-center rounded-xl bg-white text-ink shadow-soft"><BrandIcon name={i.icon} aria-hidden className="size-5" /></span></span></ChallengeCover>;
+  if (i.cover) return <ChallengeCover c={{ cover: i.cover, icon: i.icon }} art={false} className={`shrink-0 ${box}`} chip={false}><span className="absolute inset-0 grid place-items-center"><span className="grid size-8 place-items-center rounded-xl bg-white text-ink shadow-soft"><BrandIcon name={i.icon} aria-hidden className="size-5" /></span></span></ChallengeCover>;
   return <span className={`grid shrink-0 place-items-center ${i.kind === "racha" ? "bg-ember/15 text-ember-ink" : i.kind === "coleccion" ? "bg-ink text-banana" : "bg-banana text-ink"} ${box}`}><BrandIcon name={i.icon} aria-hidden className="size-6" /></span>;
 }
 
