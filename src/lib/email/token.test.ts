@@ -36,7 +36,7 @@ describe("plantillas", () => {
   it("las de ciclo de vida llevan baja en HTML y texto", () => {
     const u = "https://bananaburn.app/api/email/baja?token=abc";
     const e = resumenSemanal({ name: "Andrés", workouts: 5, planned: 6, streak: 9, kgStart: 93.8, kgEnd: 93.1, trendPerWeek: -0.6, prs: ["Sentadilla 100 kg"], nextWeek: [{ day: "Lunes", name: "Empuje A" }], unsubscribe: u });
-    expect(e.subject).toContain("-0.7 kg");
+    expect(e.subject).toContain("-0,7 kg");
     expect(e.subject).not.toMatch(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u);
     expect(e.html).toContain(u);
     expect(e.text).toContain(u);
