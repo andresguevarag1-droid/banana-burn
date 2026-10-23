@@ -41,7 +41,7 @@ export async function saveProfile(_: FormState, fd: FormData): Promise<FormState
   const p = await sb.from("profiles").update({ full_name: g("full_name") || null, dob: g("dob"), height_cm: height, sex: g("sex") || "m", onboarded: true, health_consent_at: new Date().toISOString() }).eq("id", v.id);
   if (p.error) return { error: "No se pudo guardar el perfil." };
   await sb.from("goals").update({ active: false }).eq("user_id", v.id).eq("active", true);
-  const r = await sb.from("goals").insert({ user_id: v.id, start_weight: start, goal_weight: goal, goal_date: g("goal_date"), mode: g("mode") === "recomp" ? "recomp" : "acelerada" });
+  const r = await sb.from("goals").insert({ user_id: v.id, start_weight: start, goal_weight: goal, goal_date: g("goal_date"), mode: g("mode") === "recomp" || g("mode") === "fuerza" ? g("mode") : "acelerada" });
   if (r.error) return { error: "No se pudo guardar la meta." };
   await sb.from("weights").upsert({ user_id: v.id, day: todayFor(v).iso, kg: start }, { onConflict: "user_id,day", ignoreDuplicates: true });
   revalidatePath("/app", "layout");
