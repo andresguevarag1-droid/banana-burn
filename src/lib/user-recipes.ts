@@ -13,7 +13,7 @@ export const RECIPE_MAX_ITEMS = 30;
 export const RECIPE_MAX_SERVINGS = 20;
 export const RC = "rc-";
 const r1 = (n: number) => Math.round(n * 10) / 10;
-const fmtG = (g: number) => `${Math.round(g).toLocaleString("es-CO")} g`;
+const fmtG = (g: number) => `${Math.round(g).toLocaleString("es-419")} g`;
 
 /** Ingrediente desde un alimento: por gramos si se dan (y el alimento los permite), si no por porciones. */
 export function ingFrom(f: Food, opt: { qty?: number; grams?: number } = {}): RecipeIng {
@@ -24,7 +24,7 @@ export function ingFrom(f: Food, opt: { qty?: number; grams?: number } = {}): Re
 }
 
 /** Texto corto de la cantidad: "85 g" o "1 unid. × 2". */
-export const ingAmount = (i: RecipeIng) => (i.grams ? fmtG(i.grams) : i.qty === 1 ? i.portion : `${i.portion} × ${i.qty.toLocaleString("es-CO")}`);
+export const ingAmount = (i: RecipeIng) => (i.grams ? fmtG(i.grams) : i.qty === 1 ? i.portion : `${i.portion} × ${i.qty.toLocaleString("es-419")}`);
 
 export function sumIngs(items: RecipeIng[]): Totals {
   const t = items.reduce((a, i) => ({ kcal: a.kcal + i.kcal, protein: a.protein + i.protein, carbs: a.carbs + i.carbs, fat: a.fat + i.fat }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });

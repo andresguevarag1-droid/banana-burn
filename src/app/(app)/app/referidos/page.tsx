@@ -61,8 +61,8 @@ export default async function Referidos() {
             ))}
           </ol>
           <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Amigos activos</dt><dd className="text-2xl font-extrabold tabular-nums">{active.toLocaleString("es-CO")}</dd></div>
-            <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Meses ganados</dt><dd className="text-2xl font-extrabold tabular-nums">{earned.toLocaleString("es-CO")}</dd></div>
+            <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Amigos activos</dt><dd className="text-2xl font-extrabold tabular-nums">{active.toLocaleString("es-419")}</dd></div>
+            <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Meses ganados</dt><dd className="text-2xl font-extrabold tabular-nums">{earned.toLocaleString("es-419")}</dd></div>
           </dl>
         </section>
 

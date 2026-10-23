@@ -49,7 +49,7 @@ export function GiftFields({ cover }: { cover?: GiftCover }) {
       <div>
         <label htmlFor={`${uid}-msg`} className="block text-xs font-bold text-ink mb-1">Mensaje para la persona (opcional)</label>
         <textarea id={`${uid}-msg`} name="message" rows={2} maxLength={GIFT_MESSAGE_MAX} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Lo verá en la app y en el correo" className={textareaSm} />
-        <p className="mt-1 text-right text-xs text-muted tabular-nums" aria-live="polite">{msg.length.toLocaleString("es-CO")} de {GIFT_MESSAGE_MAX.toLocaleString("es-CO")}</p>
+        <p className="mt-1 text-right text-xs text-muted tabular-nums" aria-live="polite">{msg.length.toLocaleString("es-419")} de {GIFT_MESSAGE_MAX.toLocaleString("es-419")}</p>
       </div>
       <div>
         <label htmlFor={`${uid}-reason`} className="block text-xs font-bold text-ink mb-1">Motivo interno</label>

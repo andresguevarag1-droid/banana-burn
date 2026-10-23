@@ -35,7 +35,7 @@ import { getMyTester } from "@/lib/testers-server";
 
 export const metadata = { title: "Hoy" };
 
-const nf = (n: number, d = 1) => n.toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string }> }) {
   const v = (await getViewer())!;

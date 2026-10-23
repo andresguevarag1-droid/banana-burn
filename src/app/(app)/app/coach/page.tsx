@@ -41,7 +41,7 @@ export default async function Coach({ searchParams }: { searchParams: Promise<{ 
     todayLine({ today: { name: d.plan.name, exercises: d.plan.exercises.length, training: isTrainingDay(d.plan) }, yesterday: { name: d.yesterday.name, training: isTrainingDay(d.yesterday) }, trainedToday: g.trainedToday }),
     ...(ent.nutrition ? [protLeft > 0 ? `- Te faltan **${protLeft} g de proteína** hoy.` : `- Proteína del día completa.`] : []),
     g.streak.days > 0 ? `- Llevas **${g.streak.days} ${g.streak.days === 1 ? "día" : "días"} de racha**${g.streak.todayDone ? "" : " (regístrate hoy para no perderla)"}.` : `- Hoy empieza tu racha.`,
-    d.toGo > 0 ? `- Te faltan **${d.toGo.toLocaleString("es-CO", { maximumFractionDigits: 1 })} kg** para tu meta.` : `- Ya llegaste a tu meta de peso.`,
+    d.toGo > 0 ? `- Te faltan **${d.toGo.toLocaleString("es-419", { maximumFractionDigits: 1 })} kg** para tu meta.` : `- Ya llegaste a tu meta de peso.`,
     "¿En qué te ayudo?",
   ];
   const suggest = [

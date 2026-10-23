@@ -26,7 +26,7 @@ const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador 24/7" },
   { href: "/app/retos", label: "Programas y retos", icon: BananaMedal, hint: "Programas Premium y retos gratis" },
   { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
-  { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-CO")} con técnica` },
+  { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1", nutri: true },
   { href: "/app/referidos", label: "Invita y gana", icon: Gift, hint: "1 mes gratis por cada 3 amigos" },
   { href: "/app/soporte", label: "Ayuda y reportes", icon: Lifebuoy, hint: "Reporta un problema y sigue tu caso" },

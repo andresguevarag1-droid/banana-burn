@@ -33,7 +33,7 @@ export function overMessage(over: number, weekDiff?: number): string | null {
   if (weekDiff !== undefined && weekDiff >= 0) return "Hoy comiste más, pero tu semana sigue dentro de la meta. Así se ve un plan sostenible.";
   const steps = stepsFor(over);
   if (steps > 6000) return "Un día alto no borra tu progreso. Mañana una cena ligera y una caminata larga lo equilibran; tu semana es lo que importa.";
-  return `Mañana compensas con +${steps.toLocaleString("es-CO")} pasos o una cena ligera; tu semana es lo que importa.`;
+  return `Mañana compensas con +${steps.toLocaleString("es-419")} pasos o una cena ligera; tu semana es lo que importa.`;
 }
 
 /** Racha de registro de comidas (cualquier comida cuenta). */

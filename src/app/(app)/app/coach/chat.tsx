@@ -57,7 +57,7 @@ function LimitCard({ q, now, coachName }: { q: CoachQuota; now: Date | null; coa
   const month = q.reason === "month";
   const when = q.resetsAt && now ? resetLabel(q.resetsAt, q.reason === "month" ? "month" : "day", now) : null;
   const title = month ? "Usaste tus preguntas del mes" : when?.startsWith("hoy") ? `${coachName} vuelve hoy más tarde` : `${coachName} descansa hasta mañana`;
-  const used = month ? `tus ${q.monthLimit?.toLocaleString("es-CO")} preguntas de este mes` : `tus ${q.dayLimit?.toLocaleString("es-CO")} preguntas de hoy`;
+  const used = month ? `tus ${q.monthLimit?.toLocaleString("es-419")} preguntas de este mes` : `tus ${q.dayLimit?.toLocaleString("es-419")} preguntas de hoy`;
   const more = COACH_LIMITS.completo;
   const upsell = q.tier === "entreno" || q.tier === "prueba";
   return (
@@ -71,7 +71,7 @@ function LimitCard({ q, now, coachName }: { q: CoachQuota; now: Date | null; coa
       </div>
       {upsell && (
         <div className="mt-4 rounded-2xl bg-banana-soft/60 border border-banana/40 p-4">
-          <p className="text-sm text-body text-pretty"><b className="text-ink">¿Necesitas más preguntas?</b> Entreno + Nutrición incluye hasta {more.day} preguntas al día y {more.month!.toLocaleString("es-CO")} al mes, y {coachName} también te ayuda con tu comida.</p>
+          <p className="text-sm text-body text-pretty"><b className="text-ink">¿Necesitas más preguntas?</b> Entreno + Nutrición incluye hasta {more.day} preguntas al día y {more.month!.toLocaleString("es-419")} al mes, y {coachName} también te ayuda con tu comida.</p>
           <Link href="/app/suscripcion" data-cta="coach-cuota-mejorar" className="tap pressable mt-3 inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-white hover:bg-black">Ver Entreno + Nutrición<ArrowRight weight="bold" className="size-4" /></Link>
         </div>
       )}

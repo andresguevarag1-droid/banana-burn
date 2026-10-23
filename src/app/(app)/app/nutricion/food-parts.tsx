@@ -6,9 +6,9 @@ import type { Food } from "@/lib/foods";
 import { byGrams, clampQty, extrasFor, kcalFromMacros, portion } from "@/lib/foods-catalog";
 import { ingAmount, perServing, RECIPE_MAX_SERVINGS, sumIngs, type RecipeIng } from "@/lib/user-recipes";
 
-export const n0 = (n: number) => Math.round(n).toLocaleString("es-CO");
+export const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
 /** Gramos de macros: enteros desde 10, con un decimal por debajo. */
-export const g1 = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10).toLocaleString("es-CO");
+export const g1 = (n: number) => (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10).toLocaleString("es-419");
 const QTY: [string, number][] = [["½", 0.5], ["1", 1], ["1½", 1.5], ["2", 2]];
 
 /** Proteína, carbos y grasa en una línea compacta. */
@@ -43,7 +43,7 @@ export function calcSel(f: Food, sel: Sel): Calc & { label: string; m: number } 
   const g = sel.grams ? byGrams(f, sel.grams) : null;
   if (g) return { ...g, label: `${n0(g.grams)} g`, m: g.grams / (f.gr || 1) };
   const p = portion(f, sel.qty ?? 1);
-  return { ...p, label: p.qty === 1 ? f.p : `${f.p} × ${p.qty.toLocaleString("es-CO")}`, m: p.qty };
+  return { ...p, label: p.qty === 1 ? f.p : `${f.p} × ${p.qty.toLocaleString("es-419")}`, m: p.qty };
 }
 
 /** Panel de porción: ½, 1, 1½, 2 u otra cantidad, o gramos si el alimento los conoce. Macros en vivo. */
@@ -149,7 +149,7 @@ export function PlateBuilder(p: {
                 ) : (
                   <div className="flex items-center gap-1" role="group" aria-label={`Porciones de ${i.name}`}>
                     <button onClick={() => p.setItems((x) => x.map((y, j) => (j === ix ? scaleIng(y, { qty: Math.max(0.25, y.qty - 0.25) }) : y)))} disabled={i.qty <= 0.25} aria-label="Menos" className="tap pressable grid place-items-center size-11 rounded-xl bg-cream text-ink disabled:opacity-40"><Minus weight="bold" className="size-4" /></button>
-                    <span className="w-12 text-center text-sm font-extrabold text-ink tabular-nums">× {i.qty.toLocaleString("es-CO")}</span>
+                    <span className="w-12 text-center text-sm font-extrabold text-ink tabular-nums">× {i.qty.toLocaleString("es-419")}</span>
                     <button onClick={() => p.setItems((x) => x.map((y, j) => (j === ix ? scaleIng(y, { qty: Math.min(10, y.qty + 0.25) }) : y)))} disabled={i.qty >= 10} aria-label="Más" className="tap pressable grid place-items-center size-11 rounded-xl bg-cream text-ink disabled:opacity-40"><Plus weight="bold" className="size-4" /></button>
                   </div>
                 )}

@@ -41,7 +41,7 @@ describe("cifras", () => {
   it("volumen", () => {
     expect(fmtVolume(0)).toBeNull();
     expect(fmtVolume(820)).toBe("820 kg");
-    expect(fmtVolume(7420)).toBe((7.4).toLocaleString("es-CO") + " t");
+    expect(fmtVolume(7420)).toBe((7.4).toLocaleString("es-419") + " t");
   });
   it("duración", () => {
     expect(fmtDuration(null)).toBeNull();

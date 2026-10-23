@@ -187,7 +187,7 @@ export default function Landing() {
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
         <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
-          {([[LIB_COUNT.toLocaleString("es-CO"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
+          {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse">
               <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
               <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-ink">{v}</dd>

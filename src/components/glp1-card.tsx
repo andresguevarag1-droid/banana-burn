@@ -29,7 +29,7 @@ export function Glp1Card({ g, nausea0, demo }: { g: G; nausea0: number; demo: bo
       <p className="mt-3 flex items-center gap-2 font-extrabold text-ink"><ph.I weight="duotone" className="size-5 text-banana-ink" />{ph.t}</p>
       <p className="text-sm text-body">{ph.b}</p>
       <dl className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-        {([[<Egg key="i" weight="duotone" className="size-3.5" />, `${g.perMeal} g`, `proteína × ${g.meals - 1} comidas`], [<BananaFlame key="i" className="size-3.5" />, `≥ ${g.kcalMin.toLocaleString("es-CO")}`, "kcal mínimas"], [<Leaf key="i" weight="duotone" className="size-3.5" />, `${g.fiber} g`, "fibra"], [<Drop key="i" weight="duotone" className="size-3.5" />, `${g.waterL.toLocaleString("es-CO")} L`, "agua"]] as const).map(([icon, v, l]) => (
+        {([[<Egg key="i" weight="duotone" className="size-3.5" />, `${g.perMeal} g`, `proteína × ${g.meals - 1} comidas`], [<BananaFlame key="i" className="size-3.5" />, `≥ ${g.kcalMin.toLocaleString("es-419")}`, "kcal mínimas"], [<Leaf key="i" weight="duotone" className="size-3.5" />, `${g.fiber} g`, "fibra"], [<Drop key="i" weight="duotone" className="size-3.5" />, `${g.waterL.toLocaleString("es-419")} L`, "agua"]] as const).map(([icon, v, l]) => (
           <div key={l} className="rounded-2xl bg-cream p-3"><dt className="flex items-center justify-center gap-1 text-[11px] font-semibold text-muted"><span className="text-banana-ink">{icon}</span>{l}</dt><dd className="text-lg font-extrabold text-ink tabular-nums">{v}</dd></div>
         ))}
       </dl>

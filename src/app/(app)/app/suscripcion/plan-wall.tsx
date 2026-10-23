@@ -71,7 +71,7 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
         {usage && (usage.workouts > 0 || (usage.firstKg != null && usage.lastKg != null)) && (
           <ul className="mt-5 inline-flex flex-wrap justify-center gap-2 text-sm font-semibold text-ink">
             {usage.workouts > 0 && <li className="chip bg-white border border-line"><Barbell weight="duotone" aria-hidden className="size-4 text-banana-ink" />{usage.workouts} {usage.workouts === 1 ? "entreno terminado" : "entrenos terminados"}</li>}
-            {usage.firstKg != null && usage.lastKg != null && <li className="chip bg-white border border-line"><Scales weight="duotone" aria-hidden className="size-4 text-banana-ink" />De {usage.firstKg.toLocaleString("es-CO")} a {usage.lastKg.toLocaleString("es-CO")} kg</li>}
+            {usage.firstKg != null && usage.lastKg != null && <li className="chip bg-white border border-line"><Scales weight="duotone" aria-hidden className="size-4 text-banana-ink" />De {usage.firstKg.toLocaleString("es-419")} a {usage.lastKg.toLocaleString("es-419")} kg</li>}
           </ul>
         )}
         <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted"><Lock weight="bold" className="size-3.5" />No se borra nada mientras decides.</p>

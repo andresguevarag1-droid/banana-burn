@@ -17,7 +17,6 @@ import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { BuyButton } from "@/components/retos/buy-button";
 import { MIN_PARTICIPANTS_SHOWN } from "@/components/retos/store-card";
 import { ArrowLeft, BananaMedal, CalendarCheck, CheckCircle, Clock, Flag, Info, Lock, Shield, Target, Users, WarningCircle } from "@/components/icons";
-import { fixThousands } from "@/lib/num";
 
 type P = { params: Promise<{ slug: string }>; searchParams?: Promise<{ previa?: string }> };
 
@@ -114,7 +113,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
             <li className="chip h-8 bg-white border border-line"><Target weight="duotone" className="size-4" />{DIFFICULTY_LABEL[c.difficulty]}</li>
             <li className="chip h-8 bg-white border border-line"><Clock weight="duotone" className="size-4" />{c.minutes} min al día</li>
             <li className="chip h-8 bg-white border border-line"><CheckCircle weight="duotone" className="size-4" />{VERIFY_LABEL[c.verify]}</li>
-            {n >= MIN_PARTICIPANTS_SHOWN && <li className="chip h-8 bg-white border border-line"><Users weight="duotone" className="size-4" />{n.toLocaleString("es-CO")} personas en el reto</li>}
+            {n >= MIN_PARTICIPANTS_SHOWN && <li className="chip h-8 bg-white border border-line"><Users weight="duotone" className="size-4" />{n.toLocaleString("es-419")} personas en el reto</li>}
           </ul>
 
           <p className="text-[17px] leading-relaxed text-body">{c.desc}</p>
@@ -140,7 +139,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
                 {plan.days.map((d, i) => (
                   <li key={i} className="flex gap-3 border-b border-line p-3.5 last:border-0">
                     <span className={`grid size-9 shrink-0 place-items-center rounded-xl text-sm font-extrabold tabular-nums ${ms.includes(i + 1) ? "bg-ember text-ink" : d.type === "descanso" ? "bg-sky/10 text-sky" : "bg-banana-soft text-banana-ink"}`}>{i + 1}</span>
-                    <span className="min-w-0"><span className="block text-[11px] font-bold uppercase tracking-[.1em] text-muted">{TYPE_LABEL[d.type] ?? "Día"}{ms.includes(i + 1) ? (i + 1 === c.days ? ", día final" : ", hito") : ""}</span><span className="block text-sm font-semibold text-ink">{fixThousands(d.t)}</span></span>
+                    <span className="min-w-0"><span className="block text-[11px] font-bold uppercase tracking-[.1em] text-muted">{TYPE_LABEL[d.type] ?? "Día"}{ms.includes(i + 1) ? (i + 1 === c.days ? ", día final" : ", hito") : ""}</span><span className="block text-sm font-semibold text-ink">{d.t}</span></span>
                   </li>
                 ))}
                 {lockedDays > 0 && (
@@ -162,7 +161,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
             <h2 id="premios-t" className="flex items-center gap-2 font-extrabold text-ink"><BananaMedal className="size-6 text-banana-ink" />Recompensas</h2>
             <ul className="mt-3 space-y-2.5 text-sm">
               {ms.filter((d) => d < c.days).map((d) => <li key={d} className="flex gap-2"><Flag weight="duotone" className="mt-0.5 size-4 shrink-0 text-ember-ink" /><span>Hito del día {d} cumplido: <b>+{MILESTONE_XP} XP</b></span></li>)}
-              <li className="flex gap-2"><BananaMedal className="mt-0.5 size-4 shrink-0 text-banana-ink" /><span>Al terminar: <b>+{c.xp.toLocaleString("es-CO")} XP</b>, medalla <b>{c.badge}</b> y certificado en tu perfil{c.rewardTitle ? <>, más el título <b>{c.rewardTitle}</b></> : ""}</span></li>
+              <li className="flex gap-2"><BananaMedal className="mt-0.5 size-4 shrink-0 text-banana-ink" /><span>Al terminar: <b>+{c.xp.toLocaleString("es-419")} XP</b>, medalla <b>{c.badge}</b> y certificado en tu perfil{c.rewardTitle ? <>, más el título <b>{c.rewardTitle}</b></> : ""}</span></li>
               {c.verify === "manual" && <li className="flex gap-2"><CheckCircle weight="duotone" className="mt-0.5 size-4 shrink-0 text-peel" /><span>Cada día que marcas: <b>+{CHALLENGE_DAY_XP} XP</b></span></li>}
             </ul>
           </section>
@@ -170,7 +169,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
           <section className="card p-5" aria-labelledby="reglas-t">
             <h2 id="reglas-t" className="flex items-center gap-2 font-extrabold text-ink"><Shield weight="duotone" className="size-5 text-sky" />Reglas</h2>
             <ul className="mt-3 space-y-2 text-sm text-body">
-              <li>{c.verify === "manual" ? "Marcas cada día con el botón Hecho, solo el día de hoy." : `Se marca solo: ${VERIFY_LABEL[c.verify].toLowerCase()}${c.verify === "steps" ? ` (${(c.stepsGoal ?? 10000).toLocaleString("es-CO")} pasos)` : ""}.`}</li>
+              <li>{c.verify === "manual" ? "Marcas cada día con el botón Hecho, solo el día de hoy." : `Se marca solo: ${VERIFY_LABEL[c.verify].toLowerCase()}${c.verify === "steps" ? ` (${(c.stepsGoal ?? 10000).toLocaleString("es-419")} pasos)` : ""}.`}</li>
               <li>{graceTotal === 0 ? "Sin comodines: cada día cuenta." : <>Tienes <b>{graceTotal} {graceTotal === 1 ? "comodín" : "comodines"}</b>{perks.extraGrace > 0 ? ` (incluye ${perks.extraGrace} extra por tu nivel)` : ""}: días que puedes fallar sin perder el reto.</>}</li>
               <li>Para la medalla necesitas {c.days - graceTotal} de {c.days} días cumplidos.</li>
               <li>Máximo {MAX_ACTIVE} retos en curso a la vez.</li>

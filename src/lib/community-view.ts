@@ -4,7 +4,7 @@ import { badges, levelOf, type Badge } from "@/lib/gamify";
 import type { Flair } from "@/lib/profile-power";
 import { NUM_LOCALE } from "@/lib/num";
 
-/** Fechas relativas en español latino; las cifras van con NUM_LOCALE (coma decimal). */
+/** Fechas relativas en español latino; las cifras van con NUM_LOCALE (punto decimal, es-419). */
 const LOCALE = "es-419";
 const nf = (n: number, max = 0) => n.toLocaleString(NUM_LOCALE, { maximumFractionDigits: max });
 

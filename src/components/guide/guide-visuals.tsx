@@ -10,7 +10,7 @@ import type { CoverStyle } from "@/lib/challenges";
 import { guideVariant, type GuideInput, type GuideStep } from "@/lib/guide";
 import { PLANS } from "@/lib/plans";
 
-const nf = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 });
+const nf = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 1 });
 
 /** Captura en un teléfono que sale por abajo del recuadro (se ve la parte de arriba de la pantalla). */
 function Shot({ src, alt, badge }: { src: string; alt: string; badge?: React.ReactNode }) {
@@ -165,7 +165,7 @@ export function GuideVisual({ step, input }: { step: GuideStep; input: GuideInpu
       );
     case "programas": {
       // Portadas reales de tres programas (arte de Coach Banana por programa, challenge-art.ts).
-      const main = { id: "gluteos-30", cover: "ember" as CoverStyle, icon: "bolt", title: "Glúteos de acero", mode: "Modo glúteo", habits: ["Activación de glúteo", "Camina 8.000 pasos"] };
+      const main = { id: "gluteos-30", cover: "ember" as CoverStyle, icon: "bolt", title: "Glúteos de acero", mode: "Modo glúteo", habits: ["Activación de glúteo", "Camina 8,000 pasos"] };
       const more = [{ id: "banana-girl", cover: "fresa" as CoverStyle, icon: "sparkle", title: "Banana Girl" }, { id: "abdomen-marcado", cover: "sky" as CoverStyle, icon: "target", title: "Operación Abdomen" }];
       return (
         <div aria-hidden className="grid h-full grid-rows-[1.35fr_1fr] gap-2">

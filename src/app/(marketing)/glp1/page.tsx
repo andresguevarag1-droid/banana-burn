@@ -59,7 +59,7 @@ export default function Glp1Landing() {
       {/* DATOS: alineados a la izquierda, con su fuente */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-16 lg:pt-20">
         <dl className="grid gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x divide-line border-y border-line py-8">
-          {([["~1 de 4", `kg perdidos con ${GLP1} puede ser masa magra si no se protege.`, "¹"], ["1,2 a 1,6 g/kg", "de proteína al día recomiendan los expertos durante la pérdida de peso.", "²"], ["2 días", `de fuerza a la semana como mínimo recomienda la OMS para adultos. Con ${GLP1}, la proteína sola no basta.`, "³"]] as const).map(([v, l, ref], i) => (
+          {([["~1 de 4", `kg perdidos con ${GLP1} puede ser masa magra si no se protege.`, "¹"], ["1.2 a 1.6 g/kg", "de proteína al día recomiendan los expertos durante la pérdida de peso.", "²"], ["2 días", `de fuerza a la semana como mínimo recomienda la OMS para adultos. Con ${GLP1}, la proteína sola no basta.`, "³"]] as const).map(([v, l, ref], i) => (
             <div key={i} className="sm:px-8 sm:first:pl-0 sm:last:pr-0">
               <dt className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink tabular-nums">{v}</dt>
               <dd className="mt-2 text-muted text-pretty">{l}<sup className="ml-0.5">{ref}</sup></dd>

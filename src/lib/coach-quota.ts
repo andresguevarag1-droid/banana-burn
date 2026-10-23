@@ -90,7 +90,7 @@ export function tierFromAccess(x: { app: boolean; nutrition: boolean; access: st
   return "prueba";
 }
 
-const n419 = (n: number) => n.toLocaleString("es-CO");
+const n419 = (n: number) => n.toLocaleString("es-419");
 
 /** Frase del plan (precios, landing, llms.txt): solo números reales de COACH_LIMITS. */
 export function coachPlanFeat(plan: "entreno" | "completo"): string {

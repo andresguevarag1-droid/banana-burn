@@ -51,7 +51,7 @@ export function recommendPlan(u: Pick<TrialUsage, "meals" | "glp1">): "entreno" 
   return u.meals > 0 || u.glp1 ? "completo" : "entreno";
 }
 
-const kgFmt = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 });
+const kgFmt = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 1 });
 
 /** "Llevas 5 entrenos y −1.2 kg". Solo cifras reales y solo si hay algo que contar. */
 export function progressLine(u: Pick<TrialUsage, "workouts" | "firstKg" | "lastKg">): string | null {

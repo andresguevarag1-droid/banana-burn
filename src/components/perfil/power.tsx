@@ -8,7 +8,7 @@ import { TIER_SKIN, VerifiedMark } from "@/components/community/flair";
 import { howToGrow, nextTier, TIERS, tierByIdx, type Insignia } from "@/lib/profile-power";
 import type { Power, ShowcaseItem } from "@/lib/profile-power-server";
 
-const nf = (n: number) => n.toLocaleString("es-CO");
+const nf = (n: number) => n.toLocaleString("es-419");
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" }) : null);
 
 /** Marco de la tarjeta del perfil según el nivel de perfil: más nivel, más presencia. */

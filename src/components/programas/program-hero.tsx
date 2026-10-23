@@ -17,7 +17,7 @@ const fmtDay = (iso: string) => {
   const d = new Date(iso + "T12:00:00");
   return `${DAY_NAMES[d.getDay()]} ${d.getDate()}`;
 };
-const n = (x: number) => x.toLocaleString("es-CO");
+const n = (x: number) => x.toLocaleString("es-419");
 
 /** "Semana 2 de 8, día 2" (el día es la sesión que toca dentro de la semana). */
 export function weekLabel(p: Pick<AthleteProgram, "run">) {

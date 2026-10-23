@@ -143,7 +143,7 @@ describe("balance semanal y mensajes sin culpa", () => {
   it("mensaje empático y concreto cuando el día se pasa", () => {
     expect(overMessage(0)).toBeNull();
     expect(overMessage(-200)).toBeNull();
-    expect(overMessage(80)).toBe(`Mañana compensas con +${(2000).toLocaleString("es-CO")} pasos o una cena ligera; tu semana es lo que importa.`);
+    expect(overMessage(80)).toBe(`Mañana compensas con +${(2000).toLocaleString("es-419")} pasos o una cena ligera; tu semana es lo que importa.`);
     expect(overMessage(80, 500)).toMatch(/semana sigue dentro de la meta/);
     expect(overMessage(1200)).toMatch(/no borra tu progreso/);
     for (const m of [overMessage(80), overMessage(1200), overMessage(300, 10)]) expect(m).not.toMatch(/mal|culpa|fallaste|error/i);

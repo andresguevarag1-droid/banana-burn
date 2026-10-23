@@ -23,7 +23,7 @@ export function t<T>(v: Voice, o: { basico: T; intermedio: T; tecnico: T }): T {
 /** Registro sugerido según la experiencia (en la bienvenida, hasta que la persona elija otro). */
 export const voiceForLevel = (level: string): Voice => (level === "principiante" ? "basico" : level === "avanzado" ? "tecnico" : "intermedio");
 
-const n = (x: number) => x.toLocaleString("es-CO", { maximumFractionDigits: 2 });
+const n = (x: number) => x.toLocaleString("es-419", { maximumFractionDigits: 2 });
 const plural = (k: number, one: string, many: string) => (k === 1 ? one : many);
 
 /* ───────────── Músculos ───────────── */
@@ -48,7 +48,7 @@ export function muscleText(v: Voice, muscle: string): string {
 
 /** "2 min", "90 s": descansos en texto corrido. */
 export function restText(sec: number) {
-  if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-CO", { maximumFractionDigits: 1 })} min`;
+  if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-419", { maximumFractionDigits: 1 })} min`;
   return `${sec} s`;
 }
 
@@ -300,7 +300,7 @@ const BENEFIT: Record<string, Three> = {
   pushB: {
     basico: "Más repeticiones con un poco menos de peso: así se da forma y firmeza a pecho, hombros y piernas.",
     intermedio: "Día de volumen: más repeticiones (8 a 12) para dar forma a pecho, hombros y piernas.",
-    tecnico: "Volumen en empuje y pierna (8-20 reps): más series efectivas por grupo muscular, descansos de 1 a 2,5 min.",
+    tecnico: "Volumen en empuje y pierna (8-20 reps): más series efectivas por grupo muscular, descansos de 1 a 2.5 min.",
   },
   pullB: {
     basico: "Espalda, glúteos y la parte de atrás de las piernas: mejor postura y glúteos más firmes.",

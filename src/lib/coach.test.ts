@@ -53,7 +53,7 @@ describe("coach según el plan", () => {
     expect(d.objetivos_diarios.kcal).toBeGreaterThan(0);
     expect(d.objetivos_diarios.protein).toBeGreaterThan(0);
     expect(d.glp1).not.toBeNull();
-    expect(sys).toContain("1,6-2,2 g/kg");
+    expect(sys).toContain("1.6-2.2 g/kg");
     expect(sys).not.toContain("Plan del atleta: Entreno (sin nutrición)");
   });
 
@@ -66,7 +66,7 @@ describe("coach según el plan", () => {
     expect(d.glp1).toBeNull();
     expect(sys).toContain("Plan del atleta: Entreno (sin nutrición)");
     expect(sys).toContain("parte de Entreno + Nutrición");
-    expect(sys).not.toContain("1,6-2,2 g/kg");
+    expect(sys).not.toContain("1.6-2.2 g/kg");
   });
 });
 

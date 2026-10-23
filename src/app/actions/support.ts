@@ -70,7 +70,7 @@ export async function replyTicket(ticketId: number, body: string): Promise<Suppo
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
   const text = String(body ?? "").trim();
   if (!text) return { ok: false, error: "Escribe tu mensaje." };
-  if (text.length > MESSAGE_MAX) return { ok: false, error: `Tu mensaje puede tener hasta ${MESSAGE_MAX.toLocaleString("es-CO")} caracteres.` };
+  if (text.length > MESSAGE_MAX) return { ok: false, error: `Tu mensaje puede tener hasta ${MESSAGE_MAX.toLocaleString("es-419")} caracteres.` };
   if (!Number.isInteger(ticketId) || ticketId < 1) return { ok: false, error: "No encontramos ese reporte." };
   if (v.demo) return { ok: true, demo: true };
   if (!(await dbRateLimit(adminClient(), `soporte:msg:${keyPart(v.id)}`, 3600, 20))) return { ok: false, error: "Enviaste muchos mensajes seguidos. Espera un momento." };

@@ -101,7 +101,7 @@ export function ticketError(i: TicketInput): string | null {
   if (t < TITLE_MIN) return "Escribe un título corto, por ejemplo: No guarda mi peso.";
   if (t > TITLE_MAX) return `El título puede tener hasta ${TITLE_MAX} caracteres.`;
   if (b < BODY_MIN) return "Cuéntanos un poco más: qué hiciste y qué pasó.";
-  if (b > BODY_MAX) return `La descripción puede tener hasta ${BODY_MAX.toLocaleString("es-CO")} caracteres.`;
+  if (b > BODY_MAX) return `La descripción puede tener hasta ${BODY_MAX.toLocaleString("es-419")} caracteres.`;
   return null;
 }
 

@@ -78,7 +78,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
     meta.adapt ? { icon: Lightning, t: "Cada serie trae su carga exacta: sale de tu historial y sube cuando llegas al tope del rango." }
       : { icon: Lightning, t: "Cada ejercicio trae sus repeticiones o segundos exactos, y suben semana a semana." },
     ...(meta.adapt ? [{ icon: Target, t: "Si entrenas en casa, los ejercicios de máquina cambian por su versión con tu equipo." }] : []),
-    ...(n ? [{ icon: Info, t: ent.nutrition ? `Tus calorías y tu proteína siguen el programa: ${MODE_LABEL[n.mode ?? a.mode].toLowerCase()}${n.proteinPerKg ? `, con ${n.proteinPerKg.toLocaleString("es-CO")} g de proteína por kg` : ""}.` : `El programa ajusta calorías y proteína en ${NUTRITION_PLAN_NAME}. Con tu plan actual, el entreno cambia y tu nutrición no.` }] : []),
+    ...(n ? [{ icon: Info, t: ent.nutrition ? `Tus calorías y tu proteína siguen el programa: ${MODE_LABEL[n.mode ?? a.mode].toLowerCase()}${n.proteinPerKg ? `, con ${n.proteinPerKg.toLocaleString("es-419")} g de proteína por kg` : ""}.` : `El programa ajusta calorías y proteína en ${NUTRITION_PLAN_NAME}. Con tu plan actual, el entreno cambia y tu nutrición no.` }] : []),
     { icon: CalendarCheck, t: "Hoy muestra tu semana del programa, tu avance y el próximo hito, con los colores del programa." },
     ...(x ? [
       { icon: Sparkle, t: `Toda la app entra en ${x.mode}: la cinta del programa te acompaña en cada sección y ${coach.name} responde con su enfoque.` },

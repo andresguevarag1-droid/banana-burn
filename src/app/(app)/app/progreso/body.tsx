@@ -7,7 +7,7 @@ import type { Measure, Photo } from "@/lib/measures";
 import { safeAction } from "@/lib/action-client";
 
 const FIELDS = [["waist", "Cintura", "a la altura del ombligo"], ["neck", "Cuello", "bajo la manzana de Adán"], ["chest", "Pecho", "a la altura de los pezones"], ["arm", "Brazo", "parte más ancha, relajado"], ["thigh", "Muslo", "parte más ancha"], ["hip", "Cadera", "parte más ancha de glúteos"]] as const;
-const nf = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 });
+const nf = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 1 });
 
 export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyFat: number | null; demo: boolean }) {
   const last = history.at(-1), first = history[0];

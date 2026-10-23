@@ -19,7 +19,7 @@ import { ArrowLeft, ArrowRight, BananaMedal, BrandIcon, Camera, Check, CheckCirc
 
 export const metadata = { title: "Avance del programa" };
 
-const nf = (n: number, d = 1) => n.toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmt = (iso: string) => new Date(iso.slice(0, 10) + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" });
 /** "Del 14 al 21 de octubre": sin repetir el mes ni el año cuando son los mismos. */
 const range = (a: string, b: string) => {

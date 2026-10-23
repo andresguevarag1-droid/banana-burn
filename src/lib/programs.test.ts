@@ -352,7 +352,7 @@ describe("hábitos del programa", () => {
     const h = habitsToday(x, log, { checks: ["yo"], proteinTarget: 120, trainedToday: false, sessionDay: true });
     expect(h.map((v) => [v.key, v.done, v.auto])).toEqual([["entreno", false, true], ["pasos", false, true], ["proteina", false, true], ["yo", true, false]]);
     expect(h[1].pct).toBe(0.5);
-    expect(h[1].detail).toBe(`${(4000).toLocaleString("es-CO")} de ${(8000).toLocaleString("es-CO")} pasos`);
+    expect(h[1].detail).toBe(`${(4000).toLocaleString("es-419")} de ${(8000).toLocaleString("es-419")} pasos`);
   });
   it("sin nutrición, la proteína se marca a mano; en día de descanso el entreno es el descanso activo", () => {
     const h = habitsToday(x, log, { checks: ["proteina", "entreno"], proteinTarget: null, trainedToday: false, sessionDay: false });

@@ -159,7 +159,7 @@ describe("copy", () => {
     const lift = liftFact("Remo con barra", [57.5, 60])!;
     expect(lift).toEqual({ name: "Remo con barra", kg: 60, delta: 2.5 });
     const x = { ...ctx, routine: "Espalda de gorila y glúteos", mins: 40, lift };
-    const d = (2.5).toLocaleString("es-CO"); // separador decimal de es-419
+    const d = (2.5).toLocaleString("es-419"); // separador decimal de es-419
     expect(copyFor("recordatorio", x).title).toBe("Coach Banana: hoy toca Espalda de gorila y glúteos, 40 min");
     expect(copyFor("recordatorio", x).body).toBe(`Tu remo con barra subió ${d} kg la última vez.`);
     expect(copyFor("recordatorio", { ...x, voice: "basico" }).body).toBe(`La última vez tu remo con barra subió ${d} kg. Hoy vamos por más.`);

@@ -5,10 +5,13 @@ import { ALL_PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./prog
 import { parseMeta, type ProgramMeta } from "./programs";
 import { RESTYLE } from "./catalog-0028";
 import { FREE_HIDE, FREE_REWORK } from "./catalog-0033";
-import { fixThousands } from "./num";
+import { es419Deep, es419Text } from "./num";
 
 /** Catálogo de respaldo con los nombres, colores y estados de 0028 (la base ya los tiene después de la migración). */
 function restyle(c0: Challenge): Challenge {
+  return es419Deep(restyleRaw(c0));
+}
+function restyleRaw(c0: Challenge): Challenge {
   // 0033: los retos gratis que se quedan, con su plan nuevo; los demás, ocultos.
   const f = FREE_REWORK[c0.id];
   const c: Challenge = f
@@ -68,7 +71,7 @@ export const STATUS_LABEL: Record<ChallengeStatus, string> = { borrador: "Borrad
 const fallbackTask = (verify: Verify, stepsGoal?: number) => ({
   manual: "Cumple el objetivo de hoy y márcalo",
   workout: "Completa cualquier entreno",
-  steps: `Llega a ${(stepsGoal ?? 10000).toLocaleString("es-CO")} pasos (regístralos en Hoy)`,
+  steps: `Llega a ${(stepsGoal ?? 10000).toLocaleString("es-419")} pasos (regístralos en Hoy)`,
   protein: "Llega a tu meta de proteína del día",
   water: "Toma 8 vasos de agua",
 }[verify]);
@@ -76,10 +79,16 @@ const fallbackTask = (verify: Verify, stepsGoal?: number) => ({
 /** Texto del día `day` (1-based). Sin plan, la tarea genérica de su verificación. */
 export function taskFor(plan: DayTask[] | null | undefined, day: number, verify: Verify, stepsGoal?: number, fixed?: string | null) {
   const t = plan?.[Math.max(0, Math.min(plan.length - 1, day - 1))]?.t;
-  return fixThousands(t || fixed || fallbackTask(verify, stepsGoal));
+  return es419Text(t || fixed || fallbackTask(verify, stepsGoal));
 }
 
+/** fromSeed con las cifras de los textos en formato es-419 (la siembra y el panel traen "8.000 pasos" o "0,5 kg"). */
 export function fromSeed(s: SeedChallenge, source: "app" | "admin" = "app"): Challenge {
+  const c = fromSeedRaw(s, source);
+  return c && es419Deep(c);
+}
+
+function fromSeedRaw(s: SeedChallenge, source: "app" | "admin" = "app"): Challenge {
   const p = PROGRAM_SEED_BY_SLUG[s.slug];
   if (p) return fromProgramSeed(p, source);
   return {
@@ -91,7 +100,13 @@ export function fromSeed(s: SeedChallenge, source: "app" | "admin" = "app"): Cha
 }
 
 /** Programa de la siembra (program-seed.ts) como reto del catálogo (modo demo y respaldo). */
+/** fromProgramSeed con las cifras de los textos en formato es-419 (la siembra y el panel traen "8.000 pasos" o "0,5 kg"). */
 export function fromProgramSeed(p: ProgramSeed, source: "app" | "admin" = "app"): Challenge {
+  const c = fromProgramSeedRaw(p, source);
+  return c && es419Deep(c);
+}
+
+function fromProgramSeedRaw(p: ProgramSeed, source: "app" | "admin" = "app"): Challenge {
   const weeks = p.meta.phases.reduce((a, x) => a + x.weeks, 0);
   return {
     id: p.slug, title: p.title, icon: p.icon, days: weeks * 7, desc: p.description, verify: "workout", color: COVER_COLOR[p.cover], xp: p.xp, grace: 0,
@@ -142,7 +157,13 @@ export function parsePlan(x: unknown, days: number): DayTask[] {
  * Convierte una fila del panel en un reto. Las columnas de 0018 mandan; si faltan, se leen las reglas JSON de 0005:
  * `verify`, `tarea` (texto del día), `comodines`, `xp` (o `xpBonus`, máx. 400), `pasosMin` (para steps), `icono`.
  */
+/** fromCatalogRow con las cifras de los textos en formato es-419 (la siembra y el panel traen "8.000 pasos" o "0,5 kg"). */
 export function fromCatalogRow(row: CatalogRow, plan?: DayTask[] | null): Challenge | null {
+  const c = fromCatalogRowRaw(row, plan);
+  return c && es419Deep(c);
+}
+
+function fromCatalogRowRaw(row: CatalogRow, plan?: DayTask[] | null): Challenge | null {
   if (!row?.slug || !/^[a-z0-9-]{2,60}$/.test(row.slug) || !row.title) return null;
   const days = clamp(int(row.days, 0), 1, 365);
   if (!days) return null;
@@ -220,8 +241,8 @@ export function priceMinor(priceUsd: number, discountPct = 0) {
   return Math.max(Math.round(MIN_PRICE_USD * 100), Math.round((base * (100 - d)) / 100));
 }
 
-/** Precio de un reto en USD, con punto decimal como el resto de los precios (copy.ts money): $6.99. */
-export const usd = (minor: number) => `$${(minor / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** Precio de un reto en USD: $6.99, como el resto de los precios (copy.ts money). */
+export const usd = (minor: number) => `$${(minor / 100).toLocaleString("es-419", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Días del plan que puede ver alguien: todos si es gratis o ya lo tiene; si no, los primeros PREVIEW_DAYS. */
 export function visibleDays(c: Pick<Challenge, "priceUsd" | "days">, owned: boolean) {

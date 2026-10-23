@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { execSync } from "node:child_process";
-import { clamp01, fixThousands, frac, nfmt } from "./num";
+import { readFileSync } from "node:fs";
+import { clamp01, es419Deep, es419Text, frac, nfmt } from "./num";
 
 describe("frac y clamp01", () => {
   it("no deja pasar NaN ni Infinity", () => {
@@ -14,24 +15,42 @@ describe("frac y clamp01", () => {
   });
 });
 
-describe("cifras de la marca", () => {
-  it("coma decimal y punto de miles", () => {
-    expect(nfmt(93.14)).toBe("93,1");
-    expect(nfmt(1276)).toBe("1.276");
-    expect(nfmt(2.5, 1, 1)).toBe("2,5");
+describe("cifras en es-419", () => {
+  it("punto decimal y coma de miles", () => {
+    expect(nfmt(93.14)).toBe("93.1");
+    expect(nfmt(1276)).toBe("1,276");
+    expect(nfmt(2.5, 1, 1)).toBe("2.5");
   });
-  it("arregla miles con coma en textos guardados sin tocar decimales", () => {
-    expect(fixThousands("Camina 10,000 pasos hoy")).toBe("Camina 10.000 pasos hoy");
-    expect(fixThousands("1,250,000 pasos")).toBe("1.250.000 pasos");
-    expect(fixThousands("Sube 2,5 kg")).toBe("Sube 2,5 kg");
-    expect(fixThousands("8 vasos, 3 comidas")).toBe("8 vasos, 3 comidas");
+  it("pasa a es-419 los textos guardados con el formato contrario", () => {
+    expect(es419Text("Camina 8.000 pasos hoy")).toBe("Camina 8,000 pasos hoy");
+    expect(es419Text("Bajar unos 0,5 kg por semana")).toBe("Bajar unos 0.5 kg por semana");
+    expect(es419Text("1.250.000 pasos")).toBe("1,250,000 pasos");
+    for (const same of ["10,000 pasos", "93.1 kg", "8 vasos, 3 comidas", "1,2 y 3", "semana 1.2"]) expect(es419Text(same)).toBe(same === "1,2 y 3" ? "1.2 y 3" : same);
   });
-  it("nadie formatea números con es-419 (da 1,276 y 93.1, contra la marca)", () => {
-    const files = execSync("grep -rln --include=*.ts --include=*.tsx 'toLocaleString(\"es-419\"' src || true", { encoding: "utf8" }).split("\n").filter(Boolean);
-    // Solo fechas pueden usar es-419 con toLocaleString (Date): post-card, soporte y admin.
-    const allowed = ["src/components/post-card.tsx", "src/app/(app)/app/soporte/[id]/page.tsx", "src/lib/admin-format.ts", "src/lib/num.test.ts",
-      // Siembras ya aplicadas en las migraciones 0018 y 0033: deben coincidir byte a byte; taskFor() corrige los miles al mostrar.
-      "src/lib/challenge-seed.ts", "src/lib/catalog-0033.ts"];
-    expect(files.filter((f) => !allowed.includes(f))).toEqual([]);
+  it("es419Deep cambia textos y respeta ids, claves y funciones", () => {
+    const task = () => "x";
+    const r = es419Deep({ id: "pasos-1.000", title: "10.000 pasos", plan: [{ t: "0,5 kg", type: "habito" }], task, n: 3 });
+    expect(r).toEqual({ id: "pasos-1.000", title: "10,000 pasos", plan: [{ t: "0.5 kg", type: "habito" }], task, n: 3 });
+  });
+  it("nadie formatea números de la app fuera de es-419", () => {
+    // es-CO (1.276 y 93,1) solo en los correos, que tienen su propio formato.
+    const co = execSync("grep -rln --include=*.ts --include=*.tsx 'es-CO' src || true", { encoding: "utf8" }).split("\n").filter(Boolean);
+    expect(co.filter((f) => !["src/lib/email/templates.ts", "src/lib/num.test.ts"].includes(f))).toEqual([]);
+  });
+  it("sin miles con punto ni decimales con coma escritos a mano en la interfaz", () => {
+    // Siembras ya aplicadas en migraciones (deben coincidir byte a byte): las corrige es419Deep al mostrarlas.
+    const skip = /\.test\.|src\/lib\/email\/|challenge-seed\.ts|catalog-00\d\d\.ts|program-seed\.ts/;
+    const files = execSync("grep -rlE --include=*.ts --include=*.tsx '[0-9]' src", { encoding: "utf8" }).split("\n").filter((f) => f && !skip.test(f));
+    const bad: string[] = [];
+    for (const f of files) {
+      readFileSync(f, "utf8").split("\n").forEach((line, i) => {
+        if (/^\s*(\/\/|\*|\/\*)/.test(line)) return; // comentarios
+        for (const m of line.matchAll(/["'`>]([^"'`<>]*)/g)) {
+          const txt = m[1];
+          if (/(?<![\d.,])\d{1,3}\.\d{3}(?![\d.]*\d)\s*(pasos|kcal|kg|g|ml|XP|ejercicios|alimentos|personas|preguntas)\b/.test(txt) || /(?<![\d.,])\d+,\d{1,2}\s*(kg|g|g\/kg|L|h|km|cm|t|min|kcal|%)(?![\w])/.test(txt)) bad.push(`${f}:${i + 1}: ${txt.slice(0, 60)}`);
+        }
+      });
+    }
+    expect(bad).toEqual([]);
   });
 });

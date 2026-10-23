@@ -17,7 +17,7 @@ import { BananaCoin, BananaFlame, BananaMedal, Barbell, BrandIcon, Calendar, Cam
 
 export const metadata = { title: "Progreso" };
 
-const nf = (n: number, d = 1) => n.toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 /** Encabezado de sección con ícono en mosaico. */
 function H({ icon: I, children }: { icon: PhosphorIcon | typeof Monkey; children: React.ReactNode }) {
@@ -46,7 +46,7 @@ export default async function Progreso() {
     ? { tone: "bg-peel/10", icon: CheckCircle, ink: "text-peel", t: "Llegaste a tu meta", b: "Elige una meta nueva en tu perfil para que el plan siga ajustándose a ti." }
     : { tone: "bg-banana-soft", icon: Target, ink: "text-banana-ink", t: "Tu fecha meta ya pasó", b: "Elige una fecha nueva en tu perfil y recalculamos tu ritmo y tus calorías." };
   else if (rate == null) insight = { tone: "bg-sky/10", icon: Ruler, ink: "text-sky", t: "Calibrando tu ritmo", b: "Pésate al menos 4 mañanas esta semana (al despertar, después del baño). Con eso calculo tu tendencia real." };
-  else if (adj <= -150) insight = { tone: "bg-ember/10", icon: Timer, ink: "text-ember-ink", t: `Vas a ${nf(-rate, 2)} kg/sem, necesitas ${nf(d.needPerWeek, 2)}`, b: `Te bajo ${-adj} kcal al día (≈ ${Math.round(-adj / 4)} g de carbos menos) y súmale 2.000 pasos. Proteína intacta.` };
+  else if (adj <= -150) insight = { tone: "bg-ember/10", icon: Timer, ink: "text-ember-ink", t: `Vas a ${nf(-rate, 2)} kg/sem, necesitas ${nf(d.needPerWeek, 2)}`, b: `Te bajo ${-adj} kcal al día (≈ ${Math.round(-adj / 4)} g de carbos menos) y súmale 2,000 pasos. Proteína intacta.` };
   else if (adj < 0) insight = { tone: "bg-banana-soft", icon: Target, ink: "text-banana-ink", t: `Casi: ${nf(-rate, 2)} de ${nf(d.needPerWeek, 2)} kg/sem`, b: `Vas bien, pero un poco por debajo del ritmo. Ajuste suave: −${-adj} kcal al día (media taza de arroz menos en la cena). Proteína intacta.` };
   else if (adj > 0) insight = { tone: "bg-banana-soft", icon: Lightning, ink: "text-banana-ink", t: `Vas muy rápido: ${nf(-rate, 2)} kg/sem`, b: `Te subo ${adj} kcal para no perder músculo ni fuerza. Lo rápido no dura; lo constante sí.` };
   else insight = { tone: "bg-peel/10", icon: CheckCircle, ink: "text-peel", t: `En ritmo: ${nf(-rate, 2)} kg/sem`, b: `Necesitas ${nf(d.needPerWeek, 2)} kg/sem para llegar a ${nf(a.goalWeight, a.goalWeight % 1 ? 1 : 0)} kg el ${new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long" })}. No cambies nada.` };
@@ -61,7 +61,7 @@ export default async function Progreso() {
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{lost > 0 ? `−${nf(lost)} kg desde que empezaste` : "Tu punto de partida"}</h1>
-          <p className="mt-1 text-muted tabular-nums">Hoy pesas {nf(a.currentWeight)} kg. Tu meta es {a.goalWeight.toLocaleString("es-CO")} kg{d.goalPassed ? ". Tu fecha meta ya pasó: elige una nueva en tu perfil." : ` y faltan ${d.daysLeft} ${d.daysLeft === 1 ? "día" : "días"}.`}</p>
+          <p className="mt-1 text-muted tabular-nums">Hoy pesas {nf(a.currentWeight)} kg. Tu meta es {a.goalWeight.toLocaleString("es-419")} kg{d.goalPassed ? ". Tu fecha meta ya pasó: elige una nueva en tu perfil." : ` y faltan ${d.daysLeft} ${d.daysLeft === 1 ? "día" : "días"}.`}</p>
         </div>
       </header>
 
@@ -88,7 +88,7 @@ export default async function Progreso() {
         {([
           [<Barbell key="i" weight="duotone" className="size-5" />, "bg-banana-soft text-banana-ink", g.workoutsTotal, "entrenos completados"],
           [<BananaFlame key="i" weight="fill" className="size-5" />, "bg-ember/10 text-ember-ink", g.streak.days, g.streak.days === 1 ? "día de racha" : "días de racha"],
-          [<BananaCoin key="i" className="size-5" />, "bg-banana-soft text-banana-ink", g.xp.toLocaleString("es-CO"), "XP total"],
+          [<BananaCoin key="i" className="size-5" />, "bg-banana-soft text-banana-ink", g.xp.toLocaleString("es-419"), "XP total"],
         ] as const).map(([icon, tile, v2, l]) => (
           <div key={l} className="px-2 py-4 flex flex-col items-center text-center"><span aria-hidden className={`grid place-items-center size-9 rounded-xl ${tile}`}>{icon}</span><dt className="order-last text-[11px] font-semibold text-muted">{l}</dt><dd className="mt-1.5 text-2xl font-extrabold text-ink tabular-nums">{v2}</dd></div>
         ))}
@@ -130,7 +130,7 @@ export default async function Progreso() {
             <p className="text-xl font-extrabold text-ink">{g.level.n}</p>
             <ProgressBar value={g.level.progress} min={0.04} className="mt-1.5 h-2.5" fill="bg-ember" label={`Progreso del nivel ${g.level.idx}`} />
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-              <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{g.xp.toLocaleString("es-CO")} XP{g.level.next ? `, faltan ${g.level.toNext} para ${g.level.next.n}` : ""}</span>
+              <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{g.xp.toLocaleString("es-419")} XP{g.level.next ? `, faltan ${g.level.toNext} para ${g.level.next.n}` : ""}</span>
               <span className="inline-flex items-center gap-1"><BananaFlame className="size-3.5 text-ember-ink" />Racha de {g.streak.days} días</span>
             </p>
           </div>
@@ -158,7 +158,7 @@ export default async function Progreso() {
               <li key={i} className="py-3 flex items-center gap-4">
                 {(() => { const f = FUN[(w.fun ?? 0) - 1]; return f ? <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink" title={`Diversión: ${f.l}`}><f.I weight={f.w} className="size-6" /><span className="sr-only">Diversión: {f.l}</span></span> : <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><Barbell weight="duotone" className="size-6" /></span>; })()}
                 <div className="flex-1 min-w-0"><p className="font-bold text-ink">{w.tpl}</p><p className="text-sm text-muted">{new Date(w.d + "T12:00:00").toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "short" })}</p></div>
-                <div className="text-right text-sm tabular-nums">{w.vol > 0 ? <><p className="font-bold text-ink">{w.vol.toLocaleString("es-CO")} kg</p><p className="text-muted">{w.sets} series</p></> : <><p className="font-bold text-ink">{w.sets} series</p>{w.mins ? <p className="text-muted">{w.mins} min</p> : null}</>}</div>
+                <div className="text-right text-sm tabular-nums">{w.vol > 0 ? <><p className="font-bold text-ink">{w.vol.toLocaleString("es-419")} kg</p><p className="text-muted">{w.sets} series</p></> : <><p className="font-bold text-ink">{w.sets} series</p>{w.mins ? <p className="text-muted">{w.mins} min</p> : null}</>}</div>
               </li>
             ))}
           </ul>

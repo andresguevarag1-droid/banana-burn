@@ -54,11 +54,11 @@ describe("registro (voice)", () => {
       for (const n of notes) { expect(n.length).toBeGreaterThan(10); expect(n).not.toMatch(HOUSE); }
       expect(notes[0]).not.toMatch(JARGON); // básico
       // El peso que pide el motor aparece igual en los tres.
-      if (rx.kg != null && rx.type !== "reps" && rx.type !== "hold" && rx.type !== "deload") for (const n of notes) expect(n).toContain(rx.kg.toLocaleString("es-CO"));
+      if (rx.kg != null && rx.type !== "reps" && rx.type !== "hold" && rx.type !== "deload") for (const n of notes) expect(n).toContain(rx.kg.toLocaleString("es-419"));
     }
     const up = cases[1];
     expect(up.type).toBe("up");
-    expect(rxNote("basico", up, cfg, { weighted: true })).toBe(`La vez pasada llegaste a 10 repeticiones: hoy sube a ${(62.5).toLocaleString("es-CO")} kg y vuelve a 6. Así se gana fuerza.`);
+    expect(rxNote("basico", up, cfg, { weighted: true })).toBe(`La vez pasada llegaste a 10 repeticiones: hoy sube a ${(62.5).toLocaleString("es-419")} kg y vuelve a 6. Así se gana fuerza.`);
     expect(rxNote("tecnico", up, cfg, { weighted: true })).toContain("doble progresión");
     expect(rxBadge("basico", "deload")).toBe("Semana suave");
     expect(rxBadge("tecnico", "up")).toBe("Progresión de carga");
@@ -123,7 +123,7 @@ describe("Hoy: el entreno explicado", () => {
     for (const v of ALL) {
       const s = lastTimeLine(v, { name: "Peso muerto rumano", lastKg: 70, lastReps: 10, kg: 72.5, reps: 8, type: "up" });
       expect(s).toContain("70 kg × 10");
-      expect(s).toContain(`${(72.5).toLocaleString("es-CO")} kg`);
+      expect(s).toContain(`${(72.5).toLocaleString("es-419")} kg`);
     }
   });
 });

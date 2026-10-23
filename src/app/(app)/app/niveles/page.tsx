@@ -9,8 +9,8 @@ import { BananaFlame, BananaMedal, Barbell, BowlFood, Check, CheckCircle, Calend
 
 export const metadata = { title: "Niveles" };
 
-const n = (x: number) => x.toLocaleString("es-CO");
-const mult = (m: number) => `x${m.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+const n = (x: number) => x.toLocaleString("es-419");
+const mult = (m: number) => `x${m.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 const DOW = ["D", "L", "M", "M", "J", "V", "S"];
 
 export default async function Niveles() {
