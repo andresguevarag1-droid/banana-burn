@@ -124,6 +124,10 @@ Toda mutación es una server action que valida rol y entrada en el servidor y es
 
 **Para la app:** `src/lib/admin-content.ts` → `getLiveAnnouncements()`, `getChallengeCatalog()`, `getExerciseOverrides()`; componente `<AnnouncementBanner />` en `src/components/admin/announcement-banner.tsx`. Comunidad: insertar en `reports` y filtrar con `public.is_hidden(tipo, id)`.
 
+## Novedades (cada actualización)
+
+**Por cada versión con cambios que la persona nota, agrega una entrada arriba de `src/lib/novedades.ts` con los beneficios escritos para ella** (qué cambió y cómo mejora su experiencia, con el enlace para probarlo). Al entrar a Hoy, quien no la vio recibe "Lo nuevo en Banana Burn" con todo lo que cambió desde su última visita, según su plan; el historial está en `/app/novedades` (Perfil y Más). Lo visto se guarda en `profiles.news_seen` (`0036_novedades.sql`) y el cron avisa por push y campanita a quien no abre la app en 3 días. Reglas de redacción y detalles: [`docs/novedades.md`](docs/novedades.md). Prueba: `npx vitest run src/lib/novedades.test.ts`.
+
 ## Desarrollo
 
 ```bash

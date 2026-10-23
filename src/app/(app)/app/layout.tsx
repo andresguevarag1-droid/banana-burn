@@ -31,6 +31,9 @@ import { runDueForUser } from "@/lib/trial-billing";
 import { GuideProvider } from "@/components/guide/guide-provider";
 import { getGuideState } from "@/lib/guide-server";
 import type { GuideInput } from "@/lib/guide";
+import { NewsLauncher } from "@/components/novedades/news-dialog";
+import { getNewsState } from "@/lib/novedades-server";
+import { NEWS_STAFF_ROLES, newsView } from "@/lib/novedades";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app");
   if (!v.onboarded) redirect("/bienvenida");
-  const [ent, xp, prog, unseen, tester, guide] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false })), getMyTester(v).catch(() => null), getGuideState(v).catch(() => ({ seenVersion: null, tips: [], persisted: false }))]);
+  const [ent, xp, prog, unseen, tester, guide, newsState] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false })), getMyTester(v).catch(() => null), getGuideState(v).catch(() => ({ seenVersion: null, tips: [], persisted: false })), getNewsState(v).catch(() => ({ seenId: null, seenAt: null, createdAt: null, persisted: false }))]);
   // Un regalo creado por la base (recompensa de referidos) todavía sin correo ni push: se manda después de responder.
   // Programa activo: solo con acceso a la app (sin acceso queda guardado y vuelve al renovar).
   const live = prog && ent.app ? prog : null;
@@ -64,6 +67,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     charge: charge ? { kind: charge.kind, phase: charge.phase, plan: charge.plan, amount: charge.amount, chargeAt: charge.chargeAt } : null,
     program: live ? { slug: live.c.id, title: live.c.title, mode: px?.mode ?? null, welcome: px?.welcome ?? null, habits: px?.habits.map((h) => h.label) ?? [], hasTips: Boolean(px?.tips.length), week: live.run.week, weeks: live.run.weeks, cover: live.c.cover, icon: live.c.icon } : null,
   };
+  // Novedades (0036): lo que cambió desde la última visita, según el plan. Espera su turno detrás de la guía y las celebraciones.
+  const news = newsView({ nutrition: ent.nutrition, plan: ent.plan, program: Boolean(live), staff: NEWS_STAFF_ROLES.includes(v.role) }, newsState);
   const banner = bannerFor({ betaLive: betaLive(), fromSubscription: ent.fromSubscription, cardStep, charge, trial: Boolean(trial) });
   return (
     <div className="lg:pl-64" style={live ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
@@ -71,7 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {live && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-[var(--program)]" />}
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
-      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} />
+      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
       <InstallPrompt />
       <TzSync current={v.tz} />
       <ConnectionStatus />
@@ -80,6 +85,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
       <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
       <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
+      <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, week: live.run.week, weeks: live.run.weeks }} />}
         {banner === "beta-add" ? <AddCardBanner />
