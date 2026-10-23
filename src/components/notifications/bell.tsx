@@ -58,7 +58,10 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
+      if (e instanceof KeyboardEvent) {
+        // Escape cierra y devuelve el foco a la campana (si estaba dentro del aviso)
+        if (e.key === "Escape") { setOpen(false); if (box.current?.contains(document.activeElement)) box.current.querySelector<HTMLButtonElement>("button")?.focus(); }
+      } else if (!box.current?.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", close);

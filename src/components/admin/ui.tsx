@@ -21,7 +21,7 @@ export const btnPrimary = `btn-primary h-10! px-4! text-sm! ${press}`;
 export const btnGhost = `btn-ghost h-10! px-4! text-sm! bg-white! ${press}`;
 export const btnDanger = `btn h-10! px-4! text-sm! bg-bad text-white hover:bg-[#A82227] ${press}`;
 /** Acciones de fila en tablas: texto compacto, sin borde, para no llenar la tabla de botones. */
-export const rowAction = "inline-flex h-8 items-center rounded-lg px-2 text-sm font-semibold text-ink hover:bg-paper active:scale-[.97] transition-[background-color,transform] duration-150 ease-out outline-none focus-visible:ring-4 focus-visible:ring-banana/50";
+export const rowAction = "tap inline-flex h-8 items-center rounded-lg px-2 text-sm font-semibold text-ink hover:bg-paper active:scale-[.97] transition-[background-color,transform] duration-150 ease-out outline-none focus-visible:ring-4 focus-visible:ring-banana/50";
 export const rowActionDanger = rowAction.replace("text-ink hover:bg-paper", "text-bad hover:bg-[#FDECEC]");
 export const link = "font-semibold text-ink underline decoration-line underline-offset-2 hover:decoration-ink rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50";
 
@@ -32,7 +32,7 @@ export const link = "font-semibold text-ink underline decoration-line underline-
 export function PageHeader({ title, desc, children, back, meta }: { title: string; desc?: ReactNode; children?: ReactNode; back?: { href: string; label: string }; meta?: ReactNode }) {
   return (
     <header className="space-y-2">
-      {back && <Link href={back.href} className="inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold text-muted hover:text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50"><ArrowLeft className="size-4" aria-hidden />{back.label}</Link>}
+      {back && <Link href={back.href} className="tap inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold text-muted hover:text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50"><ArrowLeft className="size-4" aria-hidden />{back.label}</Link>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-ink break-words text-balance">{title}</h1>
@@ -126,8 +126,9 @@ export function Table({ caption, captionHidden, children, minWidth = 720, classN
   );
 }
 /** Encabezado de columna: sentence case (sin mayúsculas espaciadas), fondo sutil para separar del cuerpo. */
-export const Th = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <th scope="col" className={`bg-[#FCFAF3] px-3 py-2.5 first:pl-4 last:pr-4 text-left text-xs font-semibold text-muted whitespace-nowrap ${className}`}>{children}</th>;
-export const Td = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <td className={`px-3 py-2.5 first:pl-4 last:pr-4 align-middle ${className}`}>{children}</td>;
+export const Th = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <th scope="col" className={`bg-[#FCFAF3] px-3 py-2.5 first:pl-4 last:pr-4 first:sticky first:left-0 first:z-[1] text-left text-xs font-semibold text-muted whitespace-nowrap ${className}`}>{children}</th>;
+export const Td = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <td className={`px-3 py-2.5 first:pl-4 last:pr-4 first:sticky first:left-0 first:z-[1] first:bg-white align-middle ${className}`}>{children}</td>;
+/** La primera columna queda fija al desplazar la tabla de lado (en móvil siempre se sabe de quién es la fila). */
 /** Clases de fila de tabla (borde inferior + hover sutil, que Tailwind ya limita a punteros finos). */
 export const tr = "border-b border-line last:border-0";
 export const trHover = `${tr} hover:bg-paper/50`;
@@ -143,7 +144,7 @@ export function Pagination({ page, total, pageSize, basePath, params }: { page: 
     const s = sp.toString();
     return s ? `${basePath}?${s}` : basePath;
   };
-  const cls = "inline-flex items-center gap-1 h-9 px-3 rounded-full border border-line bg-white text-sm font-semibold text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50";
+  const cls = "inline-flex items-center gap-1 h-11 px-4 rounded-full border border-line bg-white text-sm font-semibold text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50";
   const live = `${cls} hover:bg-paper active:scale-[.97] transition-[background-color,transform] duration-150 ease-out`;
   return (
     <nav aria-label="Paginación" className="flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -168,7 +169,7 @@ export function Field({ label, htmlFor, hint, children, className = "" }: { labe
 }
 
 /** Variante compacta del input de marca para tablas y filtros. */
-export const inputSm = "input h-10! rounded-xl! px-3! text-sm! transition-[border-color,box-shadow,background-color]!";
+export const inputSm = "input h-11! rounded-xl! px-3! text-sm! transition-[border-color,box-shadow,background-color]!";
 export const textareaSm = "input h-auto! py-2 rounded-xl! px-3! text-sm! transition-[border-color,box-shadow,background-color]!";
 
 /**
@@ -211,7 +212,7 @@ export function SubTabs({ label, items }: { label: string; items: { href: string
         {items.map((t) => (
           <li key={t.href}>
             <Link href={t.href} aria-current={t.current ? "page" : undefined}
-              className={`-mb-px inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-t-lg border-b-2 px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${t.current ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
+              className={`-mb-px inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-t-lg border-b-2 px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${t.current ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
               {t.icon && <t.icon className="size-4" aria-hidden />}{t.label}
               {!!t.badge && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[11px] font-bold text-ink tabular-nums">{t.badge}<span className="sr-only"> pendientes</span></span>}
             </Link>

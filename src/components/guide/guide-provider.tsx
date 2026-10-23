@@ -83,7 +83,9 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
 
   const close = useCallback(() => { setOpen(false); remember(); }, [remember]);
 
-  const tipSeen = useCallback((k: TipKey) => !local || seenTips.includes(k) || local.tips.includes(k), [local, seenTips]);
+  // Con estado en el servidor el consejo ya sale en el HTML (sin empujar la página al aparecer); sin él (demo o sin migración),
+  // se espera a leer este dispositivo para no hacerlo parpadear.
+  const tipSeen = useCallback((k: TipKey) => seenTips.includes(k) || (local ? local.tips.includes(k) : !persisted), [local, seenTips, persisted]);
   const dismissTip = useCallback((k: TipKey) => {
     setSeenTips((s) => (s.includes(k) ? s : [...s, k]));
     const cur = readLocal().tips;

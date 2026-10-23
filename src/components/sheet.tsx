@@ -24,14 +24,14 @@ export function SheetTitle({ className = "", children }: { className?: string; c
  * clic en el fondo cierra. Pon `<SheetTitle>` dentro para nombrar el diálogo; si no hay título visible usa `label`.
  * Un elemento con `data-autofocus` recibe el foco inicial; si no, el primer elemento enfocable.
  */
-export function Sheet({ open, onClose, label, className = "", children }: { open: boolean; onClose: () => void; label?: string; className?: string; children: React.ReactNode }) {
+export function Sheet({ open, onClose, label, id, className = "", children }: { open: boolean; onClose: () => void; label?: string; id?: string; className?: string; children: React.ReactNode }) {
   // Sigue montada 200 ms tras cerrar para la salida (más rápida que la entrada de 300 ms)
   const { mounted, closing } = usePresence(open, 200);
   if (!mounted) return null;
-  return <SheetPanel onClose={onClose} label={label} className={className} closing={closing}>{children}</SheetPanel>;
+  return <SheetPanel onClose={onClose} label={label} id={id} className={className} closing={closing}>{children}</SheetPanel>;
 }
 
-function SheetPanel({ onClose, label, className, closing, children }: { onClose: () => void; label?: string; className: string; closing: boolean; children: React.ReactNode }) {
+function SheetPanel({ onClose, label, id, className, closing, children }: { onClose: () => void; label?: string; id?: string; className: string; closing: boolean; children: React.ReactNode }) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const downOnBackdrop = useRef(false);
@@ -91,15 +91,16 @@ function SheetPanel({ onClose, label, className, closing, children }: { onClose:
       >
         <div
           ref={panel}
+          id={id}
           role="dialog"
           aria-modal="true"
           aria-labelledby={label ? undefined : titleId}
           aria-label={label}
           tabIndex={-1}
           data-closing={closing || undefined}
-          className={`sheet-panel relative w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] bg-paper shadow-lift outline-none pb-[max(1.25rem,env(safe-area-inset-bottom))] ${className}`}
+          className={`sheet-panel sheet-fit relative w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] bg-paper shadow-lift outline-none pb-[max(1.25rem,env(safe-area-inset-bottom))] ${className}`}
         >
-          <div className="sticky top-0 z-10 flex h-12 shrink-0 items-start justify-center rounded-t-[2rem] bg-paper pt-3">
+          <div className="sticky top-0 z-10 flex h-12 shrink-0 items-start justify-center bg-paper pt-3">
             <span aria-hidden className="h-1.5 w-10 rounded-full bg-line" />
             <button type="button" onClick={onClose} aria-label="Cerrar" className="pressable absolute right-2 top-2 grid place-items-center size-11 rounded-full text-muted hover:bg-white hover:text-ink">
               <X weight="bold" className="size-5" aria-hidden />

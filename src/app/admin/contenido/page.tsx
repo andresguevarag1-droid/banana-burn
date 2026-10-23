@@ -27,7 +27,7 @@ const SLOT: Record<string, string> = { desayuno: "Desayuno", almuerzo: "Almuerzo
 
 const textarea = textareaSm;
 /** Fila plegable (ejercicio, reto, anuncio): resumen clicable con flecha, sin animación. */
-const summaryRow = "flex cursor-pointer list-none items-center gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden";
+const summaryRow = "flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden";
 /** Contenido del resumen: se envuelve en varias líneas sin arrastrar la flecha, que queda fija a la derecha. */
 const summaryInner = "flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1";
 const Chevron = () => <CaretDown className="size-4 shrink-0 text-faint group-open:rotate-180" aria-hidden />;
@@ -44,7 +44,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
   return (
     <div className="space-y-5">
       <PageHeader title="Contenido" desc={<>Ejercicios, alimentos, recetas y anuncios que ve la app. Los retos se administran en <Link href="/admin/retos" className="font-semibold text-ink underline underline-offset-2">Retos</Link>.</>} />
-      {v.demo && <DemoNotice what="el contenido" />}
+      {v.demo && <DemoNotice what="los contenidos" />}
       <SubTabs label="Tipos de contenido" items={tabs.map((t) => ({ href: `/admin/contenido?tab=${t.key}`, label: t.label, icon: t.icon, current: t.key === tab.key }))} />
       {tab.key === "ejercicios" && <Exercises q={sp.q} />}
       {tab.key === "biblioteca" && <Library sp={sp} />}
@@ -130,7 +130,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
               <tr key={e.id} className={`${tr} align-top`}>
                 <Td>
                   <details className="group">
-                    <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden">
+                    <summary className="block min-h-11 cursor-pointer list-none rounded-lg py-1 outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden">
                       <span className="font-semibold text-ink">{e.n}</span>{ENGINE_IDS.has(e.id) && <> <Badge tone="info">En rutinas</Badge></>}
                       <span className="flex items-center gap-1 text-xs text-muted">{e.en}<span className="ml-2 font-semibold text-ink group-open:hidden">Ver pasos</span><span className="ml-2 hidden font-semibold text-ink group-open:inline">Ocultar pasos</span></span>
                     </summary>
@@ -174,7 +174,7 @@ export default async function Contenido({ searchParams }: { searchParams: Promis
               <tr key={r.id} className={`${tr} align-top`}>
                 <Td>
                   <details className="group">
-                    <summary className="cursor-pointer list-none rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden">
+                    <summary className="block min-h-11 cursor-pointer list-none rounded-lg py-1 outline-none focus-visible:ring-4 focus-visible:ring-banana/50 [&::-webkit-details-marker]:hidden">
                       <span className="inline-flex items-center gap-2 font-semibold text-ink"><BrandIcon name={r.icon} className="size-5 shrink-0 text-banana-ink" />{r.t}</span>
                       <span className="block pl-7 text-xs font-semibold text-muted"><span className="group-open:hidden">Ver ingredientes y pasos</span><span className="hidden group-open:inline">Ocultar</span></span>
                     </summary>

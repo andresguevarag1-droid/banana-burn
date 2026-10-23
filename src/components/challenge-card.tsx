@@ -94,7 +94,7 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
       <ChallengeCover c={{ id: v.c.id, cover: v.c.cover as CoverStyle, icon: v.c.icon }} className={compact ? "h-[5.5rem]" : "h-28"}>
         <div className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 ${compact ? "pl-[4.25rem] pt-3" : "pl-[4.25rem]"}`}>
           <div className="min-w-0 flex-1">
-            <Link href={`/app/retos/${v.c.id}`} className={`block truncate font-extrabold leading-tight hover:underline ${ink} ${compact ? "text-base" : "text-lg"}`}>{v.c.title}</Link>
+            <Link href={`/app/retos/${v.c.id}`} className={`block truncate font-extrabold leading-tight after:absolute after:inset-0 hover:underline ${ink} ${compact ? "text-base" : "text-lg"}`}>{v.c.title}</Link>
             <p className={`text-xs font-bold tabular-nums opacity-85 ${ink}`}>Día {v.day} de {v.c.days}</p>
           </div>
           <span className={`shrink-0 rounded-full bg-white/90 px-2.5 py-1 text-xs font-extrabold tabular-nums text-ink`} aria-hidden>{completed}/{v.c.days}</span>

@@ -69,7 +69,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
             <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">{program.mode ?? "Programa activo"}</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
           </Link>
         )}
-        <nav aria-label="Menú principal" className={`${program ? "mt-6" : "mt-10"} space-y-1`}>
+        <nav aria-label="Menú principal" className={`${program ? "mt-4" : "mt-8"} -mx-2 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-2`}>
           {MAIN.map((it) => { const { href, label, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
               <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}{lockMark(it)}
@@ -82,9 +82,9 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
             </Link>
           ); })}
         </nav>
-        {staff && <ViewSwitch current="usuario" className="mt-6" />}
-        <div className="mt-auto flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
-          <Link href="/app/perfil" className="flex flex-1 min-w-0 items-center gap-3"><span className="grid place-items-center size-9 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
+        {staff && <ViewSwitch current="usuario" compact className="mt-3 shrink-0" />}
+        <div className="mt-3 shrink-0 flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
+          <Link href="/app/perfil" className="pressable -my-1 flex min-h-11 flex-1 min-w-0 items-center gap-3 rounded-xl"><span className="grid place-items-center size-9 rounded-xl bg-banana font-bold text-ink">{name[0]?.toUpperCase()}</span>
           <span className="flex-1 truncate font-semibold text-ink">{name}</span></Link>
           {/* Guía de la app: botón compacto para no alargar el menú lateral */}
           <button type="button" onClick={openGuide} aria-haspopup="dialog" aria-label="Guía de la app" title="Guía de la app" className="tap pressable grid place-items-center size-9 rounded-full text-muted hover:bg-cream hover:text-ink"><Compass className="size-5" weight="duotone" aria-hidden /></button>
@@ -109,7 +109,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
               </Link>
             );
           })}
-          <button type="button" onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more} className={`pressable flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${inMore ? "text-ink" : "text-muted"}`}>
+          <button type="button" onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more} aria-controls={more ? "menu-mas" : undefined} className={`pressable flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${inMore ? "text-ink" : "text-muted"}`}>
             <span className={`relative grid place-items-center h-8 w-12 rounded-full transition ${inMore ? "bg-banana" : ""}`}><DotsThree className="size-6" weight="bold" />
               {newsDot && <span aria-hidden className="absolute right-2 top-0.5 size-2 rounded-full bg-ember ring-2 ring-white" />}
             </span>Más{newsDot && <span className="sr-only"> (hay novedades sin ver)</span>}
@@ -117,12 +117,12 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
         </div>
       </nav>
 
-      <Sheet open={more} onClose={() => setMore(false)} className="px-5">
+      <Sheet id="menu-mas" open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
-        <ul className="mt-4 grid grid-cols-2 gap-2">
+        <ul className="mt-3 grid grid-cols-2 gap-2">
           {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
             <li key={href}>
-              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
+              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-1.5 rounded-2xl p-3.5 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}{newMark(it)}</span>
                 <span className="font-extrabold leading-tight">{label}</span>
                 {hint && <span className={`text-xs ${active(href) ? "text-white/70" : "text-muted"}`}>{hint}</span>}
@@ -131,7 +131,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
           ); })}
           <li>
             {/* La hoja se cierra primero (200 ms) y luego se abre la guía: así no se pisan el bloqueo de scroll ni el foco. */}
-            <button type="button" aria-haspopup="dialog" onClick={() => { setMore(false); setTimeout(openGuide, 220); }} className="pressable flex h-full w-full flex-col gap-2 rounded-2xl border border-line/70 bg-white p-4 text-left text-ink hover:bg-banana-soft">
+            <button type="button" aria-haspopup="dialog" onClick={() => { setMore(false); setTimeout(openGuide, 220); }} className="pressable flex h-full w-full flex-col gap-1.5 rounded-2xl border border-line/70 bg-white p-3.5 text-left text-ink hover:bg-banana-soft">
               <Compass className="size-6 text-banana-ink" weight="duotone" aria-hidden />
               <span className="font-extrabold leading-tight">Guía de la app</span>
               <span className="text-xs text-muted">Cómo usar Banana Burn</span>

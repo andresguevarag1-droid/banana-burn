@@ -27,7 +27,7 @@ export default async function Soporte({ searchParams }: { searchParams: Promise<
   const tab = (s: string, label: string, n: number) => {
     const on = f.status === s;
     return <Link key={s} href={s === "abiertos" ? "/admin/soporte" : `/admin/soporte?status=${s}`} aria-current={on ? "page" : undefined}
-      className={`inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink/25"}`}>{label}<span className={`tabular-nums ${on ? "text-banana" : "text-muted"}`}>{fmtNum(n)}</span></Link>;
+      className={`inline-flex h-11 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink/25"}`}>{label}<span className={`tabular-nums ${on ? "text-banana" : "text-muted"}`}>{fmtNum(n)}</span></Link>;
   };
 
   return (

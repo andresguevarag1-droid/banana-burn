@@ -393,7 +393,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
         </div>
       </section>
 
-      <footer className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+      {/* Fijo abajo: en pantallas bajas el botón siempre queda a la vista, sin tener que buscarlo con scroll. */}
+      <footer className="sticky bottom-0 z-10 border-t border-line/60 bg-paper/95 px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur">
         <div className="mx-auto max-w-md">
           {step < STEPS - 1 ? (
             <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>

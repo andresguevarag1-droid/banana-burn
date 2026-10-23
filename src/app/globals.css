@@ -127,6 +127,13 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
   .sheet-backdrop { opacity: 0; }
   .sheet-panel { transform: translate3d(0,100%,0); }
 }
+/* Nunca más alta que la pantalla: si el contenido no cabe, la hoja hace scroll por dentro (el body está bloqueado)
+   y deja ver un poco del fondo arriba para tocar y cerrar. En capa de componentes para que las utilidades de cada hoja
+   (h-[90dvh], max-h-*, overflow-*) ganen. */
+@layer components {
+  .sheet-fit { max-height: calc(100dvh - max(2.5rem, env(safe-area-inset-top) + 1rem)); overflow-y: auto; overscroll-behavior: contain; }
+  @media (min-width: 40rem) { .sheet-fit { max-height: calc(100dvh - 2rem); } }
+}
 @media (min-width: 40rem) {
   /* En escritorio es un diálogo centrado: aparece desde .96 y queda centrado (sin origen de disparador) */
   .sheet-panel[data-closing] { transform: scale(.97); opacity: 0; }
