@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { publicEnvProblems } from "./src/lib/security/public-env";
+import { cleanUrl } from "./src/lib/env";
 
 // Una llave secreta en una variable NEXT_PUBLIC_ terminaría en el JavaScript del navegador: el build se detiene.
 const envProblems = publicEnvProblems(process.env);
@@ -11,8 +12,10 @@ if (envProblems.length) throw new Error(`Variables de entorno inseguras:\n- ${en
 // (sin dangerouslySetInnerHTML), React escapa todo el contenido de usuarios, y todo lo demás queda restringido a
 // nuestro origen + Supabase + ONVO. Si se agrega un dominio (CDN de media, analítica), agrégalo aquí.
 
+// cleanUrl tolera valores pegados sin https:// o con espacios (un valor raro no debe romper el build ni la CSP).
 const origin = (u?: string) => {
-  try { return u ? new URL(u).origin : null; } catch { return null; }
+  const c = cleanUrl(u);
+  try { return c ? new URL(c).origin : null; } catch { return null; }
 };
 const supabase = origin(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const supabaseWs = supabase ? supabase.replace(/^https:/, "wss:") : null;
