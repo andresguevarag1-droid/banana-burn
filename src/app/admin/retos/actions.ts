@@ -1,4 +1,5 @@
 "use server";
+import { FREE_MAX_DAYS } from "@/lib/catalog-0033";
 // Acciones del panel para la tienda de retos. Cada una: autoriza en el servidor (content.challenges o challenges.grant),
 // valida a mano, muta con el cliente del usuario (RLS de 0018 vuelve a validar) y escribe en auditoría.
 import { revalidatePath } from "next/cache";
@@ -52,6 +53,7 @@ function readForm(fd: FormData) {
   const days = prog ? weeksOf(prog.meta) * 7 : val.int(fd, "days", { label: "Duración", required: true, min: 1, max: 365 })!;
   const verify = prog ? ("workout" as const) : val.oneOf(fd, "verify", VERIFY, { label: "Verificación" });
   const price = val.num(fd, "price_usd", { label: "Precio", min: 0, max: MAX_PRICE_USD }) ?? 0;
+  if (!prog && price === 0 && statusEarly === "publicado" && days > FREE_MAX_DAYS) throw new ValidationError(`Un reto gratis publicado dura como máximo ${FREE_MAX_DAYS} días.`);
   if (price > 0 && price < MIN_PRICE_USD) throw new ValidationError(`El precio mínimo de un reto de pago es $${MIN_PRICE_USD.toFixed(2)} (mínimo de ONVO).`);
   const startMode = val.oneOf(fd, "start_mode", ["libre", "fecha"] as const, { fallback: "libre" });
   const startDate = startMode === "fecha" ? val.date(fd, "start_date", { label: "Fecha de inicio", required: true }) : null;
