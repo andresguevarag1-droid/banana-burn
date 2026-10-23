@@ -36,7 +36,7 @@ export function AccountSettings({ name: n0, email, newPassword }: { name: string
       <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); startName(async () => { const r = await updateName(name).catch(() => fail); setNameMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Nombre actualizado" } : { ok: false, t: r.error ?? "No pudimos guardar." }); if (r.ok) router.refresh(); }); }}>
         <label htmlFor="cuenta-nombre" className="block text-sm font-bold text-ink">Nombre</label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <input id="cuenta-nombre" value={name} onChange={(e) => { setName(e.target.value); setNameMsg(null); }} maxLength={80} autoComplete="name" className="input h-12 text-[16px] flex-1" />
+          <input id="cuenta-nombre" value={name} onChange={(e) => { setName(e.target.value); setNameMsg(null); }} maxLength={80} autoComplete="name" className="input h-12 w-full text-[16px] sm:flex-1" />
           <button disabled={!nameDirty || savingName || name.trim().length < 2} className="btn-primary h-12 px-6 shrink-0">{savingName ? "Guardando…" : "Guardar nombre"}</button>
         </div>
         <Status m={nameMsg} />
@@ -46,7 +46,7 @@ export function AccountSettings({ name: n0, email, newPassword }: { name: string
         <label htmlFor="cuenta-correo" className="block text-sm font-bold text-ink">Correo</label>
         <p className="text-sm text-muted">Ahora: <b className="text-ink break-all">{email}</b></p>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <input id="cuenta-correo" type="email" value={mail} onChange={(e) => { setMail(e.target.value); setMailMsg(null); }} placeholder="nuevo@correo.com" autoComplete="email" inputMode="email" className="input h-12 text-[16px] flex-1" />
+          <input id="cuenta-correo" type="email" value={mail} onChange={(e) => { setMail(e.target.value); setMailMsg(null); }} placeholder="nuevo@correo.com" autoComplete="email" inputMode="email" className="input h-12 w-full text-[16px] sm:flex-1" />
           <button disabled={!mail.trim() || savingMail} className="btn-ghost h-12 px-5 shrink-0"><Envelope weight="bold" className="size-4" />{savingMail ? "Enviando…" : "Cambiar correo"}</button>
         </div>
         <Status m={mailMsg} />

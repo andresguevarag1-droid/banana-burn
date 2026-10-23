@@ -59,8 +59,8 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
             <p className="text-sm text-body">Ya pagaste tu año{fmtDate(current.renewsAt ?? current.endsAt) ? <> hasta el <b>{fmtDate(current.renewsAt ?? current.endsAt)}</b></> : null}. Si cambias a <b>{label(confirm.plan, confirm.billing)}</b>, el nuevo plan empieza hoy con su propio cobro y lo que queda del año <b>no se reembolsa ni se descuenta</b> (no hay prorrateo).</p>
             <p className="text-sm text-muted">Si prefieres no perder ese tiempo, cancela la renovación abajo y elige el nuevo plan cuando termine tu año.</p>
             <div className="flex flex-col sm:flex-row gap-2">
-              <button type="button" onClick={() => setConfirm(null)} className="btn-primary h-11 flex-1">Mejor espero</button>
-              <button type="button" disabled={disabled} onClick={() => { const c = confirm; setConfirm(null); checkout.start(c.plan, c.billing); }} className="btn-ghost h-11 flex-1">Cambiar de todas formas</button>
+              <button type="button" onClick={() => setConfirm(null)} className="btn-primary h-11 sm:flex-1">Mejor espero</button>
+              <button type="button" disabled={disabled} onClick={() => { const c = confirm; setConfirm(null); checkout.start(c.plan, c.billing); }} className="btn-ghost h-11 sm:flex-1">Cambiar de todas formas</button>
             </div>
           </div>
         )}
@@ -171,8 +171,8 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
             ))}
           </ul>
           <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 flex-1">Me quedo como estoy</button>
-            <button type="button" onClick={() => setStep("confirm")} className="btn-ghost h-11 flex-1">No, quiero cancelar</button>
+            <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 sm:flex-1">Me quedo como estoy</button>
+            <button type="button" onClick={() => setStep("confirm")} className="btn-ghost h-11 sm:flex-1">No, quiero cancelar</button>
           </div>
         </>
       )}
@@ -191,8 +191,8 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
           </fieldset>
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 flex-1">Mejor no</button>
-            <button type="button" disabled={busy} onClick={confirm} className="btn h-11 flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Cancelando…</> : "Confirmar cancelación"}</button>
+            <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 sm:flex-1">Mejor no</button>
+            <button type="button" disabled={busy} onClick={confirm} className="btn h-11 sm:flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Cancelando…</> : "Confirmar cancelación"}</button>
           </div>
         </>
       )}
