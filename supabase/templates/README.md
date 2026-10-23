@@ -11,10 +11,11 @@ Pégalas en **Supabase → Authentication → Emails → Templates** (asunto + c
 
 | Plantilla en Supabase | Archivo | Asunto |
 | --- | --- | --- |
-| Magic Link | `magic-link.html` | Tu código para entrar a Banana Burn |
-| Confirm signup | `confirm-signup.html` | Tu código para crear tu cuenta en Banana Burn |
-| Reset Password | `reset-password.html` | Crea tu nueva contraseña de Banana Burn |
-| Change Email Address | `change-email.html` | Confirma tu nuevo correo en Banana Burn |
+| Invite user | `invite.html` | Te invitaron a entrenar con Banana Burn |
+| Magic link or OTP | `magic-link.html` | Tu código para entrar a Banana Burn |
+| Confirm sign up | `confirm-signup.html` | Tu código para crear tu cuenta en Banana Burn |
+| Reset password | `reset-password.html` | Crea tu nueva contraseña de Banana Burn |
+| Change email address | `change-email.html` | Confirma tu nuevo correo en Banana Burn |
 | Reauthentication | `reauthentication.html` | Tu código de seguridad de Banana Burn |
 
 Incluyen el código (`{{ .Token }}`), que es lo que pide la pantalla de entrar, y un enlace con

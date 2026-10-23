@@ -95,11 +95,11 @@ describe("marca y personalización", () => {
   it("las plantillas de Supabase conservan sus variables", async () => {
     const { authTemplates } = await import("./templates");
     const t = authTemplates();
-    expect(t.map((x) => x.file)).toEqual(["magic-link.html", "confirm-signup.html", "reset-password.html", "change-email.html", "reauthentication.html"]);
+    expect(t.map((x) => x.file)).toEqual(["invite.html", "magic-link.html", "confirm-signup.html", "reset-password.html", "change-email.html", "reauthentication.html"]);
     for (const x of t) expect(x.html).toMatch(/\{\{ \.SiteURL \}\}\/email\/(coach|mascota)\.png/);
-    expect(t[0].html).toContain("{{ .Token }}");
-    expect(t[0].html).toContain("token_hash={{ .TokenHash }}&amp;type=email");
-    expect(t[3].html).toContain("{{ .NewEmail }}");
+    expect(t[1].html).toContain("{{ .Token }}");
+    expect(t[1].html).toContain("token_hash={{ .TokenHash }}&amp;type=email");
+    expect(t[4].html).toContain("{{ .NewEmail }}");
   });
   it("cifras con el formato de la marca", async () => {
     const { money, reciboPago } = await import("./templates");
