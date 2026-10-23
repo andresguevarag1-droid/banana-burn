@@ -11,6 +11,7 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
 import { AppTour } from "./app-tour";
+import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
 import { ANIMATED_TECHNIQUES, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_NOTE } from "./content";
 import { LIB_COUNT } from "@/lib/library";
@@ -28,6 +29,17 @@ export const metadata: Metadata = {
 };
 
 const UGC_BASE = "https://d8j0ntlcm91z4.cloudfront.net/user_3KlOTMXim7g88SAyF4A03SG6JZ6/";
+/** Coach Banana en distintas poses (fondo transparente). */
+const POSE = {
+  flex: `${UGC_BASE}hf_20261023_061301_ed14348a-1464-482d-8fee-fbe951fd4d44.png`,
+  bascula: `${UGC_BASE}hf_20261023_061356_83ad4af0-f8c7-4a04-8ff6-090e8e2dd637.png`,
+  barra: `${UGC_BASE}hf_20261023_061358_9ff0ae8e-4afd-4a93-bb85-4207b5a2c361.png`,
+  senala: `${UGC_BASE}hf_20261023_061359_e2ce4b14-b277-48d0-9b21-a0ead0d7a0c3.png`,
+  entrenador: `${UGC_BASE}hf_20261023_061409_d0198d87-fa4d-4ff8-aaec-e30ab735a6e0.png`,
+  salta: `${UGC_BASE}hf_20261023_061411_c121bf5f-06b1-4af8-95a3-2854fcde1109.png`,
+  saluda: `${UGC_BASE}hf_20261023_061412_513c4e96-cb2a-46a6-ad65-6065ac48bb64.png`,
+};
+
 /** Escenas ilustrativas (persona real + Coach Banana en caricatura). No son clientes ni testimonios. */
 const SCENES: [string, string][] = [
   ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te muestra la técnica de cada ejercicio."],
@@ -103,15 +115,11 @@ export default function Landing() {
             <p className="mt-1 text-sm text-ink/75">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
           </div>
 
-          <div className="relative isolate mx-auto h-[540px] w-full max-w-[460px] sm:h-[600px]">
-            <Phone src="/landing/entreno.png" alt="" sizes="220px" className="absolute left-0 top-16 hidden w-[200px] -rotate-6 sm:block" />
-            <Phone src="/landing/hoy2.png" alt="Pantalla de Banana Burn con tus números del día y tu entreno" sizes="(max-width: 640px) 250px, 280px" priority className="absolute left-1/2 top-0 w-[250px] -translate-x-1/2 sm:left-auto sm:right-2 sm:w-[275px] sm:translate-x-0" />
-            <div className="absolute -bottom-4 -left-2 w-[175px] sm:w-[250px] animate-rise [animation-delay:200ms]">
-              <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono entrenador de la app" width={380} height={380} priority className="drop-shadow-xl" />
-            </div>
-            <div className="absolute bottom-24 right-0 rounded-2xl bg-white px-4 py-3 shadow-lift sm:right-auto sm:left-36 sm:bottom-16">
-              <p className="text-xs font-bold text-muted">Serie 3 de 4</p>
-              <p className="text-lg font-extrabold tabular-nums text-ink">20 kg × 10 reps</p>
+          <div className="relative isolate mx-auto h-[600px] w-full max-w-[470px] sm:h-[640px]">
+            <Phone src="/landing/hoy2.png" alt="" sizes="220px" className="absolute left-0 top-10 hidden w-[210px] -rotate-6 opacity-95 sm:block" />
+            <HeroPlayer className="absolute left-1/2 top-0 w-[275px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[300px] sm:translate-x-0" />
+            <div className="absolute -bottom-2 -left-3 w-[165px] sm:w-[230px] animate-rise [animation-delay:200ms]">
+              <Image src={POSE.flex} alt="Coach Banana, el mono entrenador de la app" width={460} height={460} priority sizes="230px" className="drop-shadow-xl" />
             </div>
           </div>
         </div>
@@ -119,7 +127,10 @@ export default function Landing() {
 
       {/* 2. DOLOR: lo que vive quien bajó rápido */}
       <section aria-labelledby="dolor" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <h2 id="dolor" className={`${H2} max-w-3xl`}>¿Bajaste rápido y te pasó esto?</h2>
+        <div className="flex items-end justify-between gap-4">
+          <h2 id="dolor" className={`${H2} max-w-3xl`}>¿Bajaste rápido y te pasó esto?</h2>
+          <Image src={POSE.bascula} alt="Coach Banana mirando una báscula" width={360} height={360} sizes="180px" className="-mb-6 w-28 shrink-0 sm:w-44" />
+        </div>
         <ul className="mt-10 grid gap-4 sm:grid-cols-2">
           {PAINS.map(([t, d]) => (
             <li key={t} className="flex gap-4 rounded-[1.75rem] border border-line bg-white p-6">
@@ -137,7 +148,8 @@ export default function Landing() {
       {/* 3. MÉTODO: recomposición corporal explicada simple */}
       <section aria-labelledby="metodo" className="pt-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="overflow-hidden rounded-[2.25rem] bg-ink p-7 text-white sm:p-12 lg:p-16">
+          <div className="relative overflow-hidden rounded-[2.25rem] bg-ink p-7 text-white sm:p-12 lg:p-16">
+            <Image src={POSE.barra} alt="" width={420} height={420} sizes="260px" className="pointer-events-none absolute -right-6 -top-4 hidden w-56 lg:block xl:w-64" />
             <p className="w-fit rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink">El método</p>
             <h2 id="metodo" className="mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">
               Recomposición corporal: <span className="text-banana">menos grasa, más músculo</span>, al mismo tiempo.
@@ -158,8 +170,13 @@ export default function Landing() {
 
       {/* 4. LA APP POR DENTRO: recorrido interactivo con capturas reales y técnica animada */}
       <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
-        <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira la app por dentro.</h2>
-        <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
+        <div className="flex items-end gap-4">
+          <Image src={POSE.senala} alt="Coach Banana señalando la app" width={360} height={360} sizes="180px" className="-mb-4 w-24 shrink-0 sm:w-40" />
+          <div>
+            <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira la app por dentro.</h2>
+            <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
+          </div>
+        </div>
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
         <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
@@ -178,6 +195,7 @@ export default function Landing() {
           <div>
             <h2 id="entrenador" className={H2}>Todo lo de un entrenador personal. <Marker>Sin pagar sesiones.</Marker></h2>
             <p className={LEAD}>Un entrenador te arma la rutina, te dice cuánto levantar, corrige tu técnica y te empuja a volver. Banana Burn hace eso todos los días, a la hora que entrenes, por menos de lo que cuesta una sola sesión al mes.</p>
+            <Image src={POSE.entrenador} alt="Coach Banana como entrenador personal, con tabla y silbato" width={400} height={400} sizes="220px" className="mt-6 w-40 sm:w-52" />
           </div>
           <ul className="grid gap-3">
             {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando estás listo", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
@@ -193,7 +211,10 @@ export default function Landing() {
 
       {/* 6. CÓMO FUNCIONA */}
       <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
-        <h2 id="como-t" className={`${H2} max-w-3xl`}>Empiezas hoy, en 2 minutos.</h2>
+        <div className="flex items-end justify-between gap-4">
+          <h2 id="como-t" className={`${H2} max-w-3xl`}>Empiezas hoy, en 2 minutos.</h2>
+          <Image src={POSE.saluda} alt="Coach Banana saludando con el celular en la mano" width={360} height={360} sizes="180px" className="-mb-6 w-28 shrink-0 sm:w-44" />
+        </div>
         <ol className="mt-10 grid gap-4 lg:grid-cols-3">
           {STEPS.map(([t, d], i) => (
             <li key={t} className="rounded-[1.75rem] bg-cream p-6 sm:p-7">
@@ -279,7 +300,7 @@ export default function Landing() {
           <ul className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:w-fit sm:grid-cols-2">
             {RISK.map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
           </ul>
-          <Image src="/brand/mascota-sola.webp" alt="" width={260} height={260} className="mx-auto mt-8 w-40 sm:w-52" />
+          <Image src={POSE.salta} alt="" width={420} height={420} sizes="240px" className="mx-auto mt-8 w-44 sm:w-60" />
         </div>
       </section>
 
