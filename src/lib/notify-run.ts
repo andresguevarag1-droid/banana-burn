@@ -11,7 +11,8 @@ import { sendPush, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import * as T from "@/lib/email/templates";
 
-const PAGE = 1000;
+// 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
+const PAGE = 200;
 const CHUNK = 100;
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -19,6 +20,21 @@ type Profile = { id: string; full_name: string | null; train_days: number | null
 export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"; scanned: number; candidates: number; sent: Record<string, number>; push: number; email: number; errors: number; /** Se cortó por tiempo: la próxima corrida sigue (los envíos ya hechos no se repiten). */ partial?: boolean };
 
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+
+const ROWS = 1000; // tope de filas por respuesta de Supabase (max-rows)
+type Page<T> = { data: T[] | null; error: { code?: string } | null };
+
+/** Lee todas las páginas de una consulta (`range` de a 1000) hasta que una venga incompleta. Exportada para pruebas. */
+export async function allPages<T>(page: (from: number, to: number) => PromiseLike<Page<T>>, max = 50_000): Promise<{ data: T[]; error: { code?: string } | null }> {
+  const out: T[] = [];
+  for (let from = 0; from < max; from += ROWS) {
+    const { data, error } = await page(from, from + ROWS - 1);
+    if (error) return { data: out, error };
+    out.push(...(data ?? []));
+    if (!data || data.length < ROWS) break;
+  }
+  return { data: out, error: null };
+}
 
 export function cronMode(): "hourly" | "daily" {
   return cronModeFrom(process.env.NOTIFY_CRON_MODE);
@@ -74,12 +90,14 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const ids = users.map((u) => u.id);
   const utcToday = now.toISOString().slice(0, 10);
   const since = isoMinus(utcToday, 61);
+  // 100 usuarios × 61 días pasan de las 1000 filas que devuelve Supabase por respuesta: se lee por páginas.
+  // Sin esto, alguien activo quedaba fuera del corte, parecía inactivo y recibía "te extrañamos".
   const [wk, dl, ws, logs, subs] = await Promise.all([
-    admin.from("workouts").select("user_id,day").in("user_id", ids).gte("day", since),
-    admin.from("daily_logs").select("user_id,day").in("user_id", ids).gte("day", since),
-    admin.from("weights").select("user_id,day,kg").in("user_id", ids).gte("day", isoMinus(utcToday, 21)),
-    admin.from("notification_log").select("user_id,kind,local_day,pushes").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)),
-    admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids),
+    allPages((a, b) => admin.from("workouts").select("user_id,day").in("user_id", ids).gte("day", since).order("id").range(a, b)),
+    allPages((a, b) => admin.from("daily_logs").select("user_id,day").in("user_id", ids).gte("day", since).order("user_id").order("day").range(a, b)),
+    allPages((a, b) => admin.from("weights").select("user_id,day,kg").in("user_id", ids).gte("day", isoMinus(utcToday, 21)).order("user_id").order("day").range(a, b)),
+    allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,pushes").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)).order("id").range(a, b)),
+    allPages((a, b) => admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids).order("endpoint").range(a, b)),
   ]);
   // Si falla una lectura, el lote se salta: con datos incompletos alguien activo parecería inactivo y recibiría "te extrañamos".
   const failed = [wk, dl, ws, logs, subs].find((r) => r.error);

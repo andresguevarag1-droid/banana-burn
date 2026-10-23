@@ -277,7 +277,7 @@ export async function sweepChallenges(now = new Date(), opts: { deadline?: numbe
   let lastId: number | string | null = null;
   for (;;) {
     if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; break; }
-    let q = db.from("user_challenges").select("*").eq("status", "activo").order("id").limit(500);
+    let q = db.from("user_challenges").select("*").eq("status", "activo").order("id").limit(200); // 200: los ids de usuario viajan en la URL
     if (lastId !== null) q = q.gt("id", lastId);
     const { data, error } = await q;
     if (error) { stats.errors++; logError("cron:retos", "query_failed", { code: error.code }); break; }
@@ -309,7 +309,7 @@ export async function sweepChallenges(now = new Date(), opts: { deadline?: numbe
         if ((await finalize(db, r.user_id, r, c, (ck ?? []).map((x) => x.day as string), today)) !== "activo") stats.closed++;
       } catch (e) { stats.errors++; logError("cron:retos", "row_failed", { kind: errCode(e) }); }
     }
-    if (stats.partial || data.length < 500) break;
+    if (stats.partial || data.length < 200) break;
   }
   return stats;
 }

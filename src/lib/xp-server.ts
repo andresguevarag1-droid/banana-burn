@@ -12,12 +12,9 @@ import { weekDays } from "@/lib/daily";
 import { BONUS_EXCLUDED, levelOf, localDay, nextStreakTier, nextUnlock, perksAt, streakBonus, streakMultiplier, streakOf, weeklyGoalFor, xpByDay, type XpEvent } from "@/lib/gamify";
 import { addDaysIso } from "@/lib/challenges";
 
-/** XP total (una lectura por request; la comparten el layout, Hoy y la tienda). */
-export const getXpTotal = cache(async (v: Viewer): Promise<number> => {
-  if (v.demo) return demoXp(todayFor(v).iso);
-  const { data } = await (await createClient()).from("xp_events").select("xp").eq("user_id", v.id);
-  return ((data ?? []) as { xp: number }[]).reduce((a, r) => a + (r.xp ?? 0), 0);
-});
+// XP total paginado (más de 1000 eventos): vive en xp-total.ts para que daily.ts lo use sin importar este archivo.
+import { getXpTotal } from "@/lib/xp-total";
+export { getXpTotal };
 
 /** Días con actividad (entreno, registro diario o pesaje) de los últimos 90 días: la misma regla que la racha de Hoy. */
 async function activeDays(sb: SupabaseClient, userId: string, today: string) {

@@ -10,6 +10,7 @@ import { BillingError, getOrCreateCustomer } from "@/lib/billing";
 import { fromCatalogRow, openState, priceMinor, type CatalogRow } from "@/lib/challenges";
 import { levelOf, perksAt } from "@/lib/gamify";
 import { todayFor } from "@/lib/today";
+import { sumXp } from "@/lib/xp-total";
 
 const STORE_COLS = "slug,title,description,days,rules,status,price_usd,difficulty,minutes,cover,icon,verify,grace,xp,steps_goal,badge,reward_title,start_mode,start_date,featured,coming_soon,safety_note,sort";
 const log = (msg: string, meta?: Record<string, unknown>) => console.info(JSON.stringify({ scope: "pagos-retos", msg, ...meta }));
@@ -42,8 +43,8 @@ export async function startChallengeCheckout(v: Viewer, slug: string): Promise<{
   const { data: owned } = await db.from("challenge_entitlements").select("challenge_slug").eq("user_id", v.id).eq("challenge_slug", slug).maybeSingle();
   if (owned) throw new BillingError("Ya tienes este reto.", 409);
 
-  const { data: xpRows } = await db.from("xp_events").select("xp").eq("user_id", v.id);
-  const xp = ((xpRows ?? []) as { xp: number }[]).reduce((a, r) => a + (r.xp ?? 0), 0);
+  // Paginado: con más de 1000 eventos una sola lectura daría un nivel (y un descuento) menor al real.
+  const xp = await sumXp(db, v.id).catch(() => 0);
   const discount = perksAt(levelOf(xp).idx).discountPct;
   const listMinor = priceMinor(c.priceUsd, 0);
   const amount = priceMinor(c.priceUsd, discount);
