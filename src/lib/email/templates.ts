@@ -463,14 +463,46 @@ export function testerTerminado(d: { name: string; endedAt: string }): Email {
 }
 
 /** Aviso interno al equipo: llegó un reporte desde la app. Transaccional, solo para el equipo. */
-export function reporteEquipo(d: { name: string; email?: string | null; kind: string; body: string; page?: string | null; tester: boolean; adminUrl: string }): Email {
-  const subject = `${d.tester ? "Reporte de tester" : "Reporte de la app"}: ${d.kind}`;
+export function reporteEquipo(d: { name: string; email?: string | null; kind: string; body: string; page?: string | null; tester: boolean; adminUrl: string; title?: string | null; number?: string | null }): Email {
+  const subject = `${d.tester ? "Reporte de tester" : "Reporte de la app"}: ${d.kind}${d.number ? ` (${d.number})` : ""}${d.title ? `, ${d.title}` : ""}`;
   const preheader = d.body.slice(0, 90);
   const hero: Hero = { eyebrow: d.tester ? "Tester de la beta" : "Reporte", title: esc(subject), lead: `De <b>${esc(d.name)}</b>${d.email ? ` (${esc(d.email)})` : ""}.` };
   const r: [string, string][] = [["Tipo", d.kind], ["Pantalla", d.page || "Sin dato"], ["Tester", d.tester ? "Sí" : "No"]];
   const body = `<blockquote style="margin:0 0 16px;padding:14px 16px;background:${C.soft};border-radius:16px;font-size:16px;line-height:24px;color:${C.ink};white-space:pre-wrap;">${esc(d.body)}</blockquote>` + rows(r) + button("Ver en el panel", d.adminUrl);
   const reason = "Aviso interno del panel de Banana Burn.";
   return { subject, preheader, html: layout({ preheader, hero, body, reason }), text: textLayout([subject, "", `De: ${d.name}${d.email ? ` (${d.email})` : ""}`, "", d.body, "", ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver en el panel: ${abs(d.adminUrl)}`], undefined, reason) };
+}
+
+export type SupportMailKind = "recibido" | "en_proceso" | "respuesta" | "necesita_info" | "resuelto" | "cerrado";
+
+/**
+ * Avisos de "Reportar un problema" (0034): recibido con su número, en proceso, respuesta del equipo, necesitamos más
+ * información, resuelto con el resumen y cerrado. Transaccionales: no llevan enlace de baja. `message` es lo que
+ * escribió el equipo (se escapa siempre); `url` lleva al caso en la app.
+ */
+export function soporteAviso(d: { name: string; kind: SupportMailKind; number: string; title: string; message?: string | null; url: string }): Email {
+  const n = firstName(d.name);
+  const copy: Record<SupportMailKind, { subject: string; hero: string; lead: string; eyebrow: string }> = {
+    recibido: { subject: `Recibimos tu reporte ${d.number}`, hero: "Recibimos tu reporte", eyebrow: "Soporte", lead: `${n}, ya está con el equipo. Te avisamos aquí y en la app cuando lo estemos trabajando y cuando quede resuelto.` },
+    en_proceso: { subject: `Estamos trabajando en tu reporte ${d.number}`, hero: "Estamos trabajando en tu reporte", eyebrow: "Soporte", lead: `${n}, alguien del equipo ya lo está revisando.` },
+    respuesta: { subject: `El equipo respondió tu reporte ${d.number}`, hero: "Te respondimos", eyebrow: "Soporte", lead: `${n}, hay una respuesta del equipo en tu reporte.` },
+    necesita_info: { subject: `Necesitamos más información sobre ${d.number}`, hero: "Necesitamos un dato más", eyebrow: "Soporte", lead: `${n}, para seguir con tu reporte nos falta un detalle. Respóndenos desde la app.` },
+    resuelto: { subject: `Resolvimos tu reporte ${d.number}`, hero: "Tu reporte quedó resuelto", eyebrow: "Soporte", lead: `${n}, esto es lo que hicimos. Si algo sigue igual, puedes reabrirlo desde la app durante 7 días.` },
+    cerrado: { subject: `Cerramos tu reporte ${d.number}`, hero: "Cerramos tu reporte", eyebrow: "Soporte", lead: `${n}, el caso quedó cerrado. Si vuelve a pasar, puedes reabrirlo durante 7 días o crear uno nuevo.` },
+  };
+  const c = copy[d.kind];
+  const r: [string, string][] = [["Reporte", d.number], ["Asunto", d.title]];
+  const quote = d.message ? `<blockquote style="margin:0 0 16px;padding:14px 16px;background:${C.soft};border-radius:16px;font-size:16px;line-height:24px;color:${C.ink};white-space:pre-wrap;">${esc(d.message)}</blockquote>` : "";
+  const body = (d.message ? eyebrow(d.kind === "resuelto" ? "Resumen" : "Mensaje del equipo") + quote : "") + rows(r) + button(d.kind === "necesita_info" || d.kind === "respuesta" ? "Responder en la app" : "Ver mi reporte", d.url) +
+    small(`Puedes seguir todo en Mis reportes, dentro de tu perfil. Si prefieres, escríbenos a ${SUPPORT} con el número ${esc(d.number)}.`);
+  const reason = "Recibes este correo porque enviaste un reporte a Banana Burn.";
+  const coach = d.kind === "resuelto" ? "Gracias por avisarnos. Así la app mejora para todos." : undefined;
+  const hero: Hero = { eyebrow: c.eyebrow, chip: d.number, title: esc(c.hero), lead: esc(c.lead) };
+  return {
+    subject: c.subject, preheader: c.lead,
+    html: layout({ preheader: c.lead, hero, body, reason, coach }),
+    text: textLayout([c.subject, "", c.lead, ...(d.message ? ["", `"${d.message}"`] : []), "", ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver mi reporte: ${abs(d.url)}`], undefined, reason, coach),
+  };
 }
 
 // ───────────── Ciclo de vida (llevan enlace de baja) ─────────────

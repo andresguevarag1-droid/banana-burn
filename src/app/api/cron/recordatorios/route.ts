@@ -3,6 +3,7 @@ import { runReminders } from "@/lib/notify-run";
 import { sweepChallenges } from "@/lib/challenges-server";
 import { deliverPendingGifts } from "@/lib/gifts-server";
 import { deliverTesterNotices } from "@/lib/testers-server";
+import { deliverSupportNotices } from "@/lib/support-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
 import { purgeIdentityFiles } from "@/lib/identity-server";
 import { bearerOk } from "@/lib/security";
@@ -41,5 +42,7 @@ export async function GET(req: Request) {
   const testers = await deliverTesterNotices({ limit: 200 }).catch((e) => { logError("cron:testers", "run_failed", { kind: errCode(e) }); return null; });
   // Verificación de identidad (0030): fotos de lo ya decidido o vencido (30 días) fuera de Storage.
   const identidad = await purgeIdentityFiles({ deadline: t0 + 57_000 }).catch((e) => { logError("cron:identidad", "run_failed", { kind: errCode(e) }); return null; });
-  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad }, { status: stats.ok ? 200 : 500 });
+  // Soporte (0034): correo y push de eventos que no se alcanzaron a avisar al responder (respaldo).
+  const soporte = await deliverSupportNotices({ limit: 200 }).catch((e) => { logError("cron:soporte", "run_failed", { kind: errCode(e) }); return null; });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte }, { status: stats.ok ? 200 : 500 });
 }

@@ -141,8 +141,17 @@ export async function sendTesterEndedEmail(r: Recipient & { grantId: number; end
 }
 
 /** Aviso al equipo de un reporte nuevo desde la app (FEEDBACK_EMAIL o el correo de ayuda). Idempotente por reporte. */
-export async function sendFeedbackToTeam(d: Omit<Parameters<typeof T.reporteEquipo>[0], "adminUrl"> & { reportId: number; userId: string }): Promise<SendResult> {
+export async function sendFeedbackToTeam(d: Omit<Parameters<typeof T.reporteEquipo>[0], "adminUrl"> & { reportId: number; userId: string; ticket?: boolean }): Promise<SendResult> {
   const to = (process.env.FEEDBACK_EMAIL || "hola@bananaburn.app").trim();
-  const { reportId, userId, ...rest } = d;
-  return sendEmail(to, T.reporteEquipo({ ...rest, adminUrl: `/admin/usuarios/${userId}#s-tester` }), { idempotencyKey: `reporte/${reportId}`, tags: { kind: "reporte" } });
+  const { reportId, userId, ticket, ...rest } = d;
+  return sendEmail(to, T.reporteEquipo({ ...rest, adminUrl: ticket ? `/admin/soporte/${reportId}` : `/admin/usuarios/${userId}#s-tester` }), { idempotencyKey: `${ticket ? "caso" : "reporte"}/${reportId}`, tags: { kind: "reporte" } });
+}
+
+/** Aviso de soporte a la persona (0034). Idempotente por evento (`eventId`). Transaccional. */
+export async function sendSupportEmail(r: Recipient & Omit<Parameters<typeof T.soporteAviso>[0], "name"> & { eventId: number }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  const { userId: _u, to: _t, name: _n, eventId, ...d } = r;
+  void _u; void _t; void _n;
+  return sendEmail(to.to, T.soporteAviso({ ...d, name: to.name }), { idempotencyKey: `soporte/${eventId}`, tags: { kind: "soporte" } });
 }

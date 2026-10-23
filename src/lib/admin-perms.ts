@@ -25,6 +25,7 @@ export type Capability =
   | "users.onboarding"    // reiniciar la bienvenida
   | "users.suspend"       // pausar a un usuario en la comunidad (no puede publicar ni comentar)
   | "users.delete"        // borrar una cuenta (misma secuencia que el borrado por el usuario)
+  | "support.tickets"     // soporte: cola de casos, responder, notas internas, estado, prioridad, asignar y ver capturas
   | "users.verify"        // revisar verificaciones de identidad (fotos con enlaces de 60 s, auditadas) y aprobar o rechazar
   | "metrics.revenue"     // MRR, conversión y churn en el resumen
   | "payments.view"
@@ -56,6 +57,7 @@ export const MATRIX: Record<Capability, Role[]> = {
   "users.onboarding": SUPPORT_ADMIN,
   "users.suspend": SUPPORT_ADMIN,
   "users.delete": PRIVILEGED,
+  "support.tickets": SUPPORT_ADMIN, // igual que public.is_support_staff() (0034)
   "users.verify": SUPPORT_ADMIN, // igual que public.is_billing_staff() en admin_identity_* (0030)
   "metrics.revenue": PRIVILEGED,
   "payments.view": SUPPORT_ADMIN,
@@ -73,7 +75,7 @@ export function can(role: Role | null | undefined, cap: Capability): boolean {
   return !!role && MATRIX[cap].includes(role);
 }
 
-export type Section = "resumen" | "usuarios" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria";
+export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria";
 
 /** Una sección es visible si el rol tiene al menos una de sus capacidades. */
 export const SECTION_CAPS: Record<Section, Capability[]> = {
@@ -84,6 +86,7 @@ export const SECTION_CAPS: Record<Section, Capability[]> = {
   retos: ["content.challenges"],
   comunidad: ["community.moderate"],
   verificaciones: ["users.verify"],
+  soporte: ["support.tickets"],
   auditoria: ["audit.view"],
 };
 

@@ -5,6 +5,7 @@ import { ArrowRight, Check, Minus, X } from "@/components/icons";
 import { PLANS, perMonthAnnual } from "@/lib/plans";
 import { GLP1, TRIAL_DAYS, money } from "@/lib/copy";
 import { offer } from "@/lib/offer";
+import { COACH_LIMITS } from "@/lib/coach-quota";
 
 export const [ENTRENO, COMPLETO] = PLANS;
 /** Precio de entrada: Entreno con pago anual, por mes. */
@@ -31,7 +32,7 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   ["Uso Ozempic o Mounjaro. ¿Es para mí?", `Sí. Banana Shield, incluido en ${COMPLETO.name} y en tu prueba gratis, prioriza fuerza y proteína para que lo que bajes sea grasa y no músculo, y baja la intensidad en tu día de inyección. No damos indicaciones sobre tu medicamento: eso lo ves con tu médico.`],
   ["¿Cuánto peso voy a bajar?", "Depende de ti y de tu punto de partida, así que no prometemos un número. Un ritmo sano es de 0.5 a 1 % de tu peso por semana, y Banana Burn mide tu tendencia real para mantenerte en ese rango sin perder músculo."],
   ["¿Cómo cancelo? ¿Hay reembolso?", o.faqCancel],
-  ["¿Qué diferencia hay entre los planes?", "Entreno incluye tu rutina, el peso de cada serie, Coach Banana para tus dudas de entreno, tu progreso, agua, pasos y sueño, la comunidad, los retos gratis y los niveles. Entreno + Nutrición suma tus calorías y macros, el registro de comidas, las recetas, el ajuste semanal según tu peso y Banana Shield. Los retos Premium no vienen en ningún plan: se compran aparte con un pago único."],
+  ["¿Qué diferencia hay entre los planes?", `Entreno incluye tu rutina, el peso de cada serie, Coach Banana para tus dudas de entreno (hasta ${COACH_LIMITS.entreno.day} preguntas al día), tu progreso, agua, pasos y sueño, la comunidad, los retos gratis y los niveles. Entreno + Nutrición suma tus calorías y macros, el registro de comidas, las recetas, el ajuste semanal según tu peso, Banana Shield y Coach Banana también para tu comida (hasta ${COACH_LIMITS.completo.day} preguntas al día). Los retos Premium no vienen en ningún plan: se compran aparte con un pago único.`],
   ["¿Cómo pago?", "Con tarjeta de crédito o débito, procesado por ONVO Pay. Los precios están en dólares (USD) y tu banco hace la conversión si tu tarjeta es en otra moneda."],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras. Los tratamos según nuestra Política de privacidad y la ley de protección de datos de Costa Rica, donde está la empresa."],
   ["¿Es en español de verdad?", "Sí. Banana Burn está en español latino desde el primer día y pensada para Latinoamérica: los ejercicios, el coach y las comidas. No es una app traducida."],

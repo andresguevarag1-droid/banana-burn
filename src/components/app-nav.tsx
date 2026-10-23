@@ -3,7 +3,7 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lifebuoy, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
@@ -28,6 +28,7 @@ const EXTRA: Item[] = [
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1", nutri: true },
   { href: "/app/referidos", label: "Invita y gana", icon: Gift, hint: "1 mes gratis por cada 3 amigos" },
+  { href: "/app/soporte", label: "Ayuda y reportes", icon: Lifebuoy, hint: "Reporta un problema y sigue tu caso" },
 ];
 /** Fuera del menú principal: solo en "Más" (todavía no conecta relojes). */
 const SOON: Item = { href: "/app/conexiones", label: "Relojes", icon: Watch, hint: "Próximamente" };
