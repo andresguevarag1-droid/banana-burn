@@ -5,6 +5,8 @@ import css from "./workout.module.css";
 
 type Props = {
   rows: Row[]; active: number; bw: boolean; unit?: string; restSec: number; plates: number[] | null;
+  /** Sin lastre: en un programa de piso (pilates) el peso corporal no lleva el campo de kilos. */
+  noBallast?: boolean;
   /** Pesos para empezar (calibración o serie sin peso): un toque y listo */
   chips?: { kg: number; label?: string }[] | null;
   onPickKg?: (si: number, kg: number) => void;
@@ -51,7 +53,7 @@ export function DoneRow({ si, row, unit, bw, onUndo }: { si: number; row: Row; u
   );
 }
 
-export function FocusSet({ rows, active, bw, unit, restSec, plates, prev, chips, onPickKg, onStep, onChange, onCopy, onUndo }: Props) {
+export function FocusSet({ rows, active, bw, noBallast = false, unit, restSec, plates, prev, chips, onPickKg, onStep, onChange, onCopy, onUndo }: Props) {
   const r = rows[active];
   const n = rows.length;
   const lastDone = [...rows.slice(0, active)].reverse().find((x) => x.done);
@@ -59,7 +61,7 @@ export function FocusSet({ rows, active, bw, unit, restSec, plates, prev, chips,
   const fromPrev = prev && (String(prev.kg ?? "") !== r.kg || String(prev.reps) !== r.reps) && !same;
   const timed = unit === "s";
   const ul = unit === "s" ? "segundos" : unit === "m" ? "metros" : "reps";
-  const showKg = !(bw && timed);
+  const showKg = !(bw && (timed || noBallast));
   const last = rows.filter((x) => !x.done).length === 1;
 
   return (

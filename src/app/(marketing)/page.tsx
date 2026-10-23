@@ -205,7 +205,7 @@ export default function Landing() {
             <Image src={POSE.entrenador} alt="Coach Banana como entrenador personal, con tabla y silbato" width={400} height={400} sizes="220px" className="mt-6 w-40 sm:w-52" />
           </div>
           <ul className="grid gap-3">
-            {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando estás listo", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
+            {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando ya puedes más", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
               <li key={t} className="flex items-center gap-3 rounded-2xl bg-white p-4 font-bold text-ink shadow-[0_1px_0_var(--color-line)]">
                 <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-banana"><Check weight="bold" className="size-4" /></span>{t}
               </li>

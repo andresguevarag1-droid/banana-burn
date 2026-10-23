@@ -1,7 +1,7 @@
 "use client";
 // Cinta del programa activo en todas las secciones de la app (0027): recuerda en qué modo estás y cuánto llevas.
 // En Hoy no se muestra: allí está el héroe del programa.
-import Image from "next/image";
+import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, BrandIcon } from "@/components/icons";
@@ -17,7 +17,7 @@ export function ProgramRibbon({ p }: { p: RibbonProgram }) {
   return (
     <Link href={`/app/retos/${p.slug}/progreso`} className="pressable mb-5 block overflow-hidden rounded-2xl shadow-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60">
       <ChallengeCover c={{ cover: p.cover, icon: p.icon }} art={false} chip={false} className="flex min-h-12 items-center gap-3 px-4 py-2.5">
-        {p.avatar ? <Image src={p.avatar} alt="" width={36} height={36} sizes="36px" className="size-9 shrink-0 rounded-xl bg-white/70 object-cover" />
+        {p.avatar ? <CoachPic src={p.avatar} size={36} className="size-9 shrink-0 rounded-xl object-cover" iconClassName="size-5" />
           : <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-banana"><BrandIcon name={p.icon} className="size-4.5" /></span>}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-extrabold">{p.title}</span>

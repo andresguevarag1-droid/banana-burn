@@ -35,19 +35,24 @@ export default async function Coach({ searchParams }: { searchParams: Promise<{ 
   if (v.demo) quota = demoQuota(cuota, nivel === "entreno" ? "entreno" : tierFromAccess(ent));
   // Gramos de proteína solo con nutrición: en Entreno no hay meta personal de comida.
   const protLeft = ent.nutrition ? Math.max(0, Math.round(d.t.protein - g.log.protein - sumMeals(meals.today).protein)) : 0;
+  const she = a.sex === "f";
+  const home = a.equipment === "casa" || a.equipment === "ninguno";
+  const ayer = isTrainingDay(d.yesterday) ? `Ayer fue ${d.yesterday.name}, así que ${she ? "vas fresca" : "vas fresco"}.` : `Ayer descansaste, así que ${she ? "llegas fresca" : "llegas fresco"}.`;
   const lines = [
     `¡Hola, ${a.name.split(" ")[0] || a.name}!`,
-    isTrainingDay(d.plan) ? (g.trainedToday ? `Ya hiciste **${d.plan.name}** hoy. Bien ahí.` : `Hoy te toca **${d.plan.name}** (${d.plan.exercises.length} ejercicios). Ayer fue ${d.yesterday.name}, así que vas fresco.`) : `Hoy es **descanso activo**: camina y estira.`,
+    isTrainingDay(d.plan) ? (g.trainedToday ? `Ya hiciste **${d.plan.name}** hoy. Bien ahí.` : `Hoy te toca **${d.plan.name}** (${d.plan.exercises.length} ejercicios). ${ayer}`) : `Hoy es **descanso activo**: camina y estira.`,
     ...(ent.nutrition ? [protLeft > 0 ? `- Te faltan **${protLeft} g de proteína** hoy.` : `- Proteína del día completa.`] : []),
     g.streak.days > 0 ? `- Llevas **${g.streak.days} ${g.streak.days === 1 ? "día" : "días"} de racha**${g.streak.todayDone ? "" : " (regístrate hoy para no perderla)"}.` : `- Hoy empieza tu racha.`,
     d.toGo > 0 ? `- Te faltan **${d.toGo.toLocaleString("es-419", { maximumFractionDigits: 1 })} kg** para tu meta.` : `- Ya llegaste a tu meta de peso.`,
     "¿En qué te ayudo?",
   ];
+  // Sugerencias según dónde entrena: en casa (Pilates, sin equipo) nada de "equipo libre" ni press banca.
+  const first = d.plan.exercises[0]?.name.toLowerCase();
   const suggest = [
-    isTrainingDay(d.plan) ? `No hay equipo libre para ${d.plan.exercises[0]?.name.toLowerCase()}, ¿qué hago?` : "¿Qué hago en mi día de descanso?",
-    ent.nutrition ? (protLeft > 20 ? `Me faltan ${protLeft} g de proteína, ¿qué ceno?` : "¿Qué como antes de entrenar?") : "¿Cómo mejoro mi técnica en sentadilla?",
+    isTrainingDay(d.plan) && first ? (home ? `¿Cómo sé si hago bien ${first}?` : `No hay equipo libre para ${first}, ¿qué hago?`) : "¿Qué hago en mi día de descanso?",
+    ent.nutrition ? (protLeft > 20 ? `Me faltan ${protLeft} g de proteína, ¿qué ceno?` : "¿Qué como antes de entrenar?") : home ? "¿Cómo activo bien el abdomen sin forzar el cuello?" : "¿Cómo mejoro mi técnica en sentadilla?",
     "Siento que me estanqué, ¿qué ajusto?",
-    "Me duele el hombro en press banca",
+    home ? "Me molesta la espalda baja en los abdominales" : "Me duele el hombro en press banca",
   ];
   // Programa activo con su propia coach (Coach Platanita): ella responde, con su retrato y su saludo.
   const coach = d.program ? coachOf(d.program.meta.experience) : null;

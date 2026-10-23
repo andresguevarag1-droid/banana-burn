@@ -31,6 +31,11 @@ export type GuideProgram = {
   hasTips: boolean;
   week: number;
   weeks: number;
+  /** Programa en días (Pilates 30 días): en qué día va y cuántos dura. */
+  day?: number | null;
+  days?: number | null;
+  /** Coach propia del programa (Coach Platanita). Null: Coach Banana. */
+  coach?: string | null;
   cover: string;
   icon: string;
 };
@@ -202,9 +207,10 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
       id: "programa", chapter: "Tu programa", title: `Tu app cambia con ${p.title}`,
       body: p.welcome ?? "Mientras dura tu programa, tu entreno, tus metas y tus consejos salen de él.",
       bullets: [
-        `Vas en la semana ${p.week} de ${p.weeks}. Las sesiones del programa reemplazan tu rutina en Hoy y Entrenar.`,
+        `${p.day && p.days ? `Vas en el día ${p.day} de ${p.days}` : `Vas en la semana ${p.week} de ${p.weeks}`}. Las sesiones del programa reemplazan tu rutina en Hoy y Entrenar.`,
+        ...(p.coach ? [`${p.coach} te acompaña mientras dura: te da la bienvenida, te enseña cada ejercicio y responde tus preguntas en el chat.`] : []),
         ...(p.habits.length ? [`Tus hábitos de cada día: ${listEs(p.habits.map((h) => h.toLowerCase()))}.`] : []),
-        ...(p.hasTips ? ["Cada semana te dejo un consejo nuevo del programa."] : []),
+        ...(p.hasTips ? [p.coach ? `Cada semana ${p.coach} te deja un consejo nuevo del programa.` : "Cada semana te dejo un consejo nuevo del programa."] : []),
         "La app toma los colores y la portada del programa mientras dura.",
       ],
       cta: { href: `/app/retos/${p.slug}/progreso`, label: "Ver mi programa" }, visual: { kind: "programa" },
@@ -219,7 +225,7 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
     bullets: [
       "Toma su color: una franja del programa arriba en cada pantalla y un nombre de modo, como Modo glúteo.",
       "Hoy te muestra la sesión del programa, con entrenos enfocados en su objetivo, por fases y con semana de descarga.",
-      "Hasta 4 hábitos diarios propios y un consejo nuevo de Coach Banana cada semana.",
+      "Hasta 4 hábitos diarios propios y un consejo nuevo de tu coach cada semana.",
       nutri ? "Tu comida también se ajusta al programa: proteína y calorías para su objetivo." : `Con ${COMPLETO.name}, tu comida también se ajusta al programa.`,
       "Al terminar recibes su certificado y tu perfil gana poder.",
     ],

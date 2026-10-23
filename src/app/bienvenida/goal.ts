@@ -3,7 +3,7 @@ export type Goal = "grasa" | "recomp" | "fuerza";
 
 export const GOALS: { id: Goal; t: string; d: string }[] = [
   { id: "grasa", t: "Bajar grasa rápido", d: "Déficit de unas 500 kcal al día, a un ritmo que cuida tu músculo" },
-  { id: "recomp", t: "Bajar grasa y ganar músculo", d: "Déficit suave y fuerza como prioridad, sin obsesionarte con la báscula" },
+  { id: "recomp", t: "Bajar grasa y ganar músculo", d: "Tonificar: déficit suave y fuerza como prioridad, sin obsesionarte con la báscula" },
   { id: "fuerza", t: "Ganar fuerza", d: "Más kilos en la barra; tu meta de peso puede ser igual o mayor a tu peso actual" },
 ];
 

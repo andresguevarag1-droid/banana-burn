@@ -242,6 +242,17 @@ export const durationLabel = (meta: Pick<ProgramMeta, "phases" | "days">) => {
   return d !== w * 7 ? `${d} días` : `${w} ${w === 1 ? "semana" : "semanas"}`;
 };
 
+/** Días del programa que cubre una semana (1-based): "días 8 a 14", "días 29 y 30" o "día 29" (programas en días). */
+export function weekDaysLabel(meta: Pick<ProgramMeta, "phases" | "days">, week: number) {
+  const start = (week - 1) * 7 + 1, end = Math.min(daysOf(meta), week * 7);
+  return end <= start ? `día ${start}` : end === start + 1 ? `días ${start} y ${end}` : `días ${start} a ${end}`;
+}
+
+/** Días que faltan para un hito que cae al final de la semana `week` (programas en días; 0 = hoy es el último día). */
+export function daysToWeekEnd(meta: Pick<ProgramMeta, "phases" | "days">, week: number, effectiveDay: number) {
+  return Math.max(0, Math.min(daysOf(meta), week * 7) - (effectiveDay + 1));
+}
+
 /**
  * Días de entreno dentro de cada semana del programa (0 = el día en que empezó la semana). Reparte las sesiones con
  * descanso entre ellas: 3 días = 0, 2, 4 (lunes, miércoles y viernes si empezaste un lunes).
@@ -278,6 +289,15 @@ export function phaseAt(meta: Pick<ProgramMeta, "phases">, week: number) {
 
 /** Sesiones de una fase, ordenadas por día. */
 export const sessionsOfPhase = (sessions: ProgramSession[], phase: number) => sessions.filter((s) => s.phase === phase).sort((a, b) => a.day - b.day);
+/**
+ * Día del programa (1-based) en que el calendario pone la sesión `day` de la semana `week`: en Pilates 30 días, la
+ * sesión 4 de la semana 2 es el día 12. Sirve para nombrar las sesiones de un programa contado en días.
+ */
+export function programDayOf(def: Pick<ProgramDef, "meta" | "sessions">, week: number, day: number) {
+  const list = sessionsOfPhase(def.sessions, phaseAt(def.meta, week).index);
+  const k = Math.max(0, list.findIndex((s) => s.day === day));
+  return (week - 1) * 7 + (slotsFor(Math.max(1, list.length || def.meta.daysPerWeek))[k] ?? k) + 1;
+}
 /** Sesiones que cuentan para cumplir la semana (las opcionales suman, pero no se exigen). */
 export const requiredPerWeek = (meta: Pick<ProgramMeta, "daysPerWeek">, sessions: ProgramSession[], phase = 1) => {
   const list = sessionsOfPhase(sessions, phase);

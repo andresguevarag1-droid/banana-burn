@@ -10,7 +10,12 @@ export type WeekSessionView = {
   exercises: { id: string; name: string; muscle: string; sets: string; rest: string; tempo?: string; note?: string }[];
 };
 
-export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice }) {
+/**
+ * `dayLabel`: nombre de cada sesión. Por defecto "Día 1, 2, 3" de la semana; un programa contado en días pasa el día
+ * del programa ("Día 12"), así coincide con "Día 12 de 30".
+ */
+export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE, dayLabel }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice; dayLabel?: Record<number, number> }) {
+  const word = (day: number) => `Día ${dayLabel?.[day] ?? day}`;
   const [sel, setSel] = useState(current ?? sessions[0]?.day ?? 1);
   const s = sessions.find((x) => x.day === sel) ?? sessions[0];
   if (!s) return null;
@@ -22,7 +27,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
           return (
             <button key={x.day} type="button" role="tab" aria-selected={on} onClick={() => setSel(x.day)}
               className={`pressable relative min-h-14 rounded-2xl px-1 py-2 text-center ${on ? "bg-ink text-white shadow-lift" : x.optional ? "border border-dashed border-line bg-white/60 text-ink" : "border border-line bg-white text-ink"}`}>
-              <span className={`block text-[11px] font-bold uppercase tracking-[.08em] ${on ? "text-banana" : "text-muted"}`}>{x.optional ? "Extra" : `Día ${x.day}`}</span>
+              <span className={`block text-[11px] font-bold uppercase tracking-[.08em] ${on ? "text-banana" : "text-muted"}`}>{x.optional ? "Extra" : word(x.day)}</span>
               <span className="mt-0.5 block truncate text-xs font-extrabold">{x.title.replace(/^Extra: /, "")}</span>
               {x.done && <span className="absolute -top-1.5 -right-1.5 grid size-[18px] place-items-center rounded-full bg-peel text-white ring-2 ring-paper" role="img" aria-label="Hecha"><Check weight="bold" className="size-2.5" /></span>}
             </button>
@@ -32,7 +37,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
 
       <section key={s.day} role="tabpanel" className="card animate-enter p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-muted">{s.optional ? "Sesión opcional" : `Día ${s.day}`}{s.focus ? `: ${s.focus}` : ""}</p>
+          <p className="text-sm font-semibold text-muted">{s.optional ? "Sesión opcional" : word(s.day)}{s.focus ? `: ${s.focus}` : ""}</p>
           {s.done ? <span className="chip bg-peel text-white"><Check weight="bold" className="size-3.5" />Hecha</span> : <span className="chip bg-cream text-ink"><Clock weight="duotone" className="size-3.5" />{s.mins} min</span>}
         </div>
         <h3 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">{s.title}</h3>

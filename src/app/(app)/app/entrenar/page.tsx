@@ -11,7 +11,8 @@ import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { ProgramWeek } from "@/components/programas/program-week";
 import { weekLabel } from "@/components/programas/program-hero";
 import { sessionViews } from "@/lib/programs-server";
-import { daysLabel } from "@/lib/programs";
+import { daysLabel, programDayOf, weekDaysLabel } from "@/lib/programs";
+import { coachOf } from "@/lib/coaches";
 
 import { LIB_COUNT } from "@/lib/library";
 import { FirstTip } from "@/components/guide/first-tip";
@@ -32,11 +33,15 @@ export default async function Entrenar() {
   const done = g.week.filter((w) => w.active && w.d < d.today.iso && w.d >= mondayOf(d.today.iso)).map((w) => new Date(w.d + "T12:00:00").getDay())
     .concat(doneToday ? [d.today.dow] : []).filter((dow) => d.weekPlan.find((p) => p.dow === dow)?.tpl);
   const p = d.program;
+  // Programa con su propia coach (Coach Platanita): ella da el consejo y presenta el exprés.
+  const pc = p ? coachOf(p.meta.experience) : null;
+  const coach = pc && pc.id !== "banana" ? pc : null;
+  const daysOfWeek = p?.run.byDays ? weekDaysLabel(p.meta, p.run.week) : null;
   return (
     <div className="space-y-5 animate-enter">
-      <FirstTip id="entrenar" title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: las cargas suben solas con tu historial." : t(voice, { basico: "Toca el día de hoy para empezar. Si se te pasa uno, hazlo mañana: Coach Banana mantiene el orden y te dice qué peso usar.", intermedio: "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos.", tecnico: "Sigue el orden de la semana. Si saltas un día, retómalo al siguiente: la progresión de cargas se recalcula con tu historial." })}</FirstTip>
+      <FirstTip id="entrenar" coach={coach} title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: la progresión sube sola con tu historial." : t(voice, { basico: "Toca el día de hoy para empezar. Si se te pasa uno, hazlo mañana: Coach Banana mantiene el orden y te dice qué peso usar.", intermedio: "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos.", tecnico: "Sigue el orden de la semana. Si saltas un día, retómalo al siguiente: la progresión de cargas se recalcula con tu historial." })}</FirstTip>
       {/* Exprés arriba: la salida para los días ocupados (antes quedaba al final y casi nadie la veía). */}
-      <ExpressCard program={!!p} />
+      <ExpressCard program={!!p} coach={coach} />
       {p ? (
         <>
           {/* Programa activo: su portada, la semana del programa y sus sesiones */}
@@ -46,7 +51,7 @@ export default async function Entrenar() {
                 <p className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />Programa activo</p>
                 <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">{p.title}</h1>
                 <p className="mt-1 text-sm font-bold opacity-85">{weekLabel(p)}{p.run.phase.phase.deload && <span className="whitespace-nowrap">, descarga <TreePalm weight="duotone" className="inline size-4 align-[-0.15em]" aria-hidden /></span>}</p>
-                <div className="mt-3 flex gap-1" role="progressbar" aria-valuemin={1} aria-valuemax={p.run.weeks} aria-valuenow={p.run.week} aria-label={`Semana ${p.run.week} de ${p.run.weeks}`}>
+                <div className="mt-3 flex gap-1" role="progressbar" aria-valuemin={1} aria-valuemax={p.run.weeks} aria-valuenow={p.run.week} aria-label={p.run.byDays ? weekLabel(p) : `Semana ${p.run.week} de ${p.run.weeks}`}>
                   {Array.from({ length: p.run.weeks }, (_, i) => i + 1).map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < p.run.week ? (p.cover === "noche" ? "bg-banana" : "bg-ink") : w === p.run.week ? "bg-ember" : "bg-white/30"}`} />)}
                 </div>
               </div>
@@ -54,11 +59,11 @@ export default async function Entrenar() {
             <div className="bg-cream px-5 py-4 sm:px-6">
               <p className="text-sm font-bold text-ink">Fase {p.run.phase.index}: {p.run.phase.phase.name}</p>
               {p.run.phase.phase.focus && <p className="mt-0.5 max-w-[65ch] text-sm text-muted">{p.run.phase.phase.focus}</p>}
-              <p className="mt-2 text-xs font-semibold text-muted">{daysLabel(p.meta, p.run.weekSessions.map((w) => w.session))}. Haz las sesiones en orden; si se te pasa un día, hazla al siguiente. Las cargas suben solas con tu historial.</p>
+              <p className="mt-2 text-xs font-semibold text-muted">{daysLabel(p.meta, p.run.weekSessions.map((w) => w.session))}. Haz las sesiones en orden; si se te pasa un día, hazla al siguiente. La progresión sube sola con tu historial: más peso, repeticiones o segundos.</p>
               <Link href={`/app/retos/${p.slug}/progreso`} className="tap mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ink hover:underline underline-offset-4">Avance y opciones del programa<ArrowRight weight="bold" className="size-4" /></Link>
             </div>
           </header>
-          <ProgramWeek current={p.run.next?.day ?? null} label={`Sesiones de la semana ${p.run.week}`}
+          <ProgramWeek current={p.run.next?.day ?? null} label={daysOfWeek ? `Sesiones de los ${daysOfWeek}` : `Sesiones de la semana ${p.run.week}`} dayLabel={p.run.byDays ? Object.fromEntries(p.run.weekSessions.map((w) => [w.day, programDayOf({ meta: p.meta, sessions: p.run.weekSessions.map((x) => x.session) }, p.run.week, w.day)])) : undefined}
             voice={voice} sessions={sessionViews(p, p.icon, p.run.weekSessions.map((w) => w.session), p.run.week, d.equipment, (day) => p.run.weekSessions.some((w) => w.day === day && w.done), (day) => (day === p.run.next?.day ? "/app/entreno" : `/app/entreno?sesion=${day}`))} />
         </>
       ) : (

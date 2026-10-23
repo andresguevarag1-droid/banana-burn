@@ -19,15 +19,15 @@ function Stepper({ label, value, placeholder, inputMode, disabled, compact, onMi
 }
 
 /** Vista de lista: todas las series a la vista, para quien prefiere anotar a su ritmo. */
-export function ListSets({ rows, active, bw, unit, unitLabel, plates, last, needsKg, pop, onStep, onChange, onToggle, onEffort, timedSlot }: {
-  rows: Row[]; active: number; bw: boolean; unit?: string; unitLabel: string; plates: number[] | null; last: ({ kg: number | null; reps: number } | undefined)[];
+export function ListSets({ rows, active, bw, noBallast = false, unit, unitLabel, plates, last, needsKg, pop, onStep, onChange, onToggle, onEffort, timedSlot }: {
+  rows: Row[]; active: number; bw: boolean; /** Sin campo de lastre para el peso corporal (programa de piso). */ noBallast?: boolean; unit?: string; unitLabel: string; plates: number[] | null; last: ({ kg: number | null; reps: number } | undefined)[];
   /** Ejercicio con carga: no se puede marcar una serie sin peso */
   needsKg?: boolean;
   pop: { si: number; xp: number; k: number } | null;
   onStep: (si: number, f: "kg" | "reps", d: number) => void; onChange: (si: number, f: "kg" | "reps", v: string) => void; onToggle: (si: number) => void; onEffort: (si: number, e: Effort) => void;
   timedSlot?: React.ReactNode;
 }) {
-  const showKg = !(bw && unit === "s");
+  const showKg = !(bw && (unit === "s" || noBallast));
   const kgField = (si: number, r: Row, compact: boolean) => showKg && <Stepper label={bw ? "lastre kg" : "kg"} value={r.kg} placeholder={bw ? "PC" : "0"} inputMode="decimal" disabled={r.done} compact={compact}
     onMinus={() => onStep(si, "kg", -1)} onPlus={() => onStep(si, "kg", 1)} onChange={(v) => onChange(si, "kg", v)} />;
   const repsField = (si: number, r: Row, compact: boolean) => <Stepper label={unitLabel} value={r.reps} inputMode="numeric" disabled={r.done} compact={compact}

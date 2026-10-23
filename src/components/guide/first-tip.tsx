@@ -3,16 +3,19 @@
 // No se muestra mientras la guía está abierta ni antes de saber si ya se vio (sin parpadeo).
 import Image from "next/image";
 import { X } from "@/components/icons";
+import { CoachPic } from "@/components/coach-pic";
 import type { TipKey } from "@/lib/guide";
 import { useGuide } from "./guide-provider";
 
-export function FirstTip({ id, title, children, className = "" }: { id: TipKey; title: string; children: React.ReactNode; className?: string }) {
+/** `coach`: la coach del programa activo (Coach Platanita) da el consejo; sin ella, Coach Banana. */
+export function FirstTip({ id, title, children, className = "", coach = null }: { id: TipKey; title: string; children: React.ReactNode; className?: string; coach?: { name: string; avatar: string } | null }) {
   const g = useGuide();
   if (!g || g.guideOpen || g.tipSeen(id)) return null;
   return (
-    <aside aria-label="Consejo de Coach Banana"
+    <aside aria-label={`Consejo de ${coach?.name ?? "Coach Banana"}`}
       className={`coach-mark flex items-start gap-3 rounded-[1.25rem] bg-ink p-3.5 pr-2 text-white shadow-lift ${className}`}>
-      <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-banana"><Image src="/brand/mascota-sola.webp" alt="" width={44} height={44} className="size-10 object-contain" /></span>
+      {coach ? <CoachPic src={coach.avatar} size={44} className="size-11 shrink-0 rounded-2xl object-cover" />
+        : <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-banana"><Image src="/brand/mascota-sola.webp" alt="" width={44} height={44} className="size-10 object-contain" /></span>}
       <div className="min-w-0 flex-1 py-0.5">
         <p className="font-extrabold text-banana">{title}</p>
         <div className="mt-0.5 text-sm text-white/85 text-pretty">{children}</div>

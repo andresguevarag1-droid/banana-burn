@@ -1,6 +1,7 @@
 import { getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { dashboard, getAthlete } from "@/lib/athlete";
+import { coachOf } from "@/lib/coaches";
 import { getMeals, getNutritionExtras } from "@/lib/meals";
 import Link from "next/link";
 import { FoodLog } from "./food-log";
@@ -41,7 +42,7 @@ export default async function Nutricion() {
   const px = d.program?.meta.experience ?? null;
   return (
     <div className="space-y-5 animate-enter">
-      <FirstTip id="nutricion" title="Registra como comes de verdad">Busca tu comida o arma tu plato. No tiene que ser perfecto: con registrar la mayoría de tus comidas ya ves si vas bien con tus calorías y tu proteína.</FirstTip>
+      <FirstTip id="nutricion" coach={coachOf(px).id === "banana" ? null : coachOf(px)} title="Registra como comes de verdad">Busca tu comida o arma tu plato. No tiene que ser perfecto: con registrar la mayoría de tus comidas ya ves si vas bien con tus calorías y tu proteína.</FirstTip>
       <header>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Comida de hoy</h1>
         <p className="mt-1 text-sm text-muted">Tu meta: {t.kcal.toLocaleString("es-419")} kcal y {t.protein} g de proteína. {px ? `Ajustada a ${d.program!.title}.` : "Se ajusta cada semana con tu peso real."}</p>

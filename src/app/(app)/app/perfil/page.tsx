@@ -7,6 +7,7 @@ import { getNotificationPrefs } from "@/app/actions/notifications";
 import { AccountSettings } from "./account";
 import { getEntitlements } from "@/lib/entitlements";
 import { getAthlete } from "@/lib/athlete";
+import { coachOf } from "@/lib/coaches";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
@@ -112,7 +113,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
 
       <section className="card p-5">
         <H icon={Compass}>Guía de Banana Burn</H>
-        <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}Coach Banana y tu progreso, según tu plan.</p>
+        <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}tu coach y tu progreso, según tu plan.</p>
         <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
       </section>
 
@@ -129,7 +130,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
 
       <section id="lenguaje" className="card p-5 scroll-mt-6">
         <H icon={ChatCircleText}>Cómo te hablo</H>
-        <p className="mt-1 mb-4 text-sm text-muted">Coach Banana te explica el entreno con estas palabras. Las series, las repeticiones y los pesos son los mismos en las tres.</p>
+        <p className="mt-1 mb-4 text-sm text-muted">{coachOf(a.program?.meta.experience).name} te explica el entreno con estas palabras. Las series, las repeticiones y los pesos son los mismos en las tres.</p>
         <VoiceSettings voice={voice} />
       </section>
 

@@ -16,7 +16,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
   plan: PlannedDay; voice: Voice; mins: number; trainedToday: boolean; deload: boolean; dayName: string; yesterday: Mini; tomorrow: Mini;
   /** "La última vez hiciste..." con números reales del historial, o null. */
   lastTime: string | null;
-  readiness: { initial: number; dateKey: string; demo: boolean; suggestSoft: boolean };
+  readiness: { initial: number; dateKey: string; demo: boolean; suggestSoft: boolean; she?: boolean };
 }) {
   const training = isTrainingDay(plan);
   const sets = plan.exercises.reduce((a, e) => a + e.cfg.sets, 0);
@@ -99,7 +99,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
       {trainedToday ? (
         <p className="relative mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." })}</p>
       ) : (
-        <div className="relative mt-5"><Readiness voice={voice} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
+        <div className="relative mt-5"><Readiness voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
       )}
 
       {/* Ayer y mañana, en palabras */}

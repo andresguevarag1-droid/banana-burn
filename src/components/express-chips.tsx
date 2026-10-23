@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
 import { Lightning } from "@/components/icons";
 
@@ -26,12 +27,14 @@ const EXPRESS: [number, string, string][] = [
  * Tarjeta grande de entrenos exprés sin equipo (10/20/30 min) con Coach Banana. Va arriba en Entrenar y en Hoy debajo
  * del entreno del día: es la salida para los días ocupados y cuenta para la racha.
  */
-export function ExpressCard({ program = false, compact = false }: { program?: boolean; compact?: boolean }) {
+/** `coach`: con un programa de Coach Platanita, ella presenta el exprés (su saludo en lugar de la mascota). */
+export function ExpressCard({ program = false, compact = false, coach = null }: { program?: boolean; compact?: boolean; coach?: { name: string; hello: string } | null }) {
   return (
     <section aria-labelledby="expres-t" className="relative overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-soft sm:p-6">
-      <Image src="/brand/mascota-sola.webp" alt="" aria-hidden width={220} height={220} sizes="160px" className="pointer-events-none absolute -right-4 -top-3 w-28 select-none opacity-95 sm:w-36" />
+      {coach ? <span aria-hidden className="pointer-events-none absolute -right-2 -top-1 w-28 select-none sm:w-36"><CoachPic src={coach.hello} size={220} sizes="160px" className="aspect-square w-full rounded-3xl object-contain !bg-transparent" iconClassName="size-12" /></span>
+        : <Image src="/brand/mascota-sola.webp" alt="" aria-hidden width={220} height={220} sizes="160px" className="pointer-events-none absolute -right-4 -top-3 w-28 select-none opacity-95 sm:w-36" />}
       <div className="relative pr-24 sm:pr-32">
-        <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-banana">Coach Banana exprés</p>
+        <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-banana">{coach?.name ?? "Coach Banana"} exprés</p>
         <h2 id="expres-t" className={`mt-1 flex items-start gap-2 font-extrabold tracking-tight text-balance ${compact ? "text-xl" : "text-2xl sm:text-[28px]"}`}>
           <Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Día ocupado? Entrena donde estés
         </h2>

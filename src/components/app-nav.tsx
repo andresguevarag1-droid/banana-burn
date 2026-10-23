@@ -40,8 +40,10 @@ const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
 
 /** `program`: programa activo (0024). Se marca en el menú con un distintivo discreto. */
 /** `news`: novedades sin ver (0036). Pone un punto "Nuevo" en Novedades y en "Más". */
-export function AppNav({ name, staff, nutrition, program = null, news = null }: { name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string; mode?: string | null } | null; news?: { latestId: string | null; unseen: boolean; persisted: boolean } | null }) {
+/** `coachName`: la coach del programa activo (Coach Platanita) reemplaza a Coach Banana en el menú mientras dura. */
+export function AppNav({ name, staff, nutrition, program = null, news = null, coachName = null }: { name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string; mode?: string | null } | null; news?: { latestId: string | null; unseen: boolean; persisted: boolean } | null; coachName?: string | null }) {
   const path = usePathname();
+  const label = (i: Item) => (coachName && i.href === "/app/coach" ? coachName : i.label);
   const newsDot = useNewsDot(news);
   const newMark = (i: Item) => (newsDot && i.href === NEWS_HREF ? <span className="ml-auto rounded-full bg-banana px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-ink">Nuevo<span className="sr-only"> (hay novedades sin ver)</span></span> : null);
   const [more, setMore] = useState(false);
@@ -76,9 +78,9 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
             </Link>
           ); })}
           <div className="my-3 border-t border-line" />
-          {EXTRA.map((it) => { const { href, label, icon: Icon } = it; return (
+          {EXTRA.map((it) => { const { href, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
-              <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}{lockMark(it)}{newMark(it)}
+              <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label(it)}{lockMark(it)}{newMark(it)}
             </Link>
           ); })}
         </nav>

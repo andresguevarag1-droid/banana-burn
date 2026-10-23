@@ -52,14 +52,17 @@ function coachData(a: Athlete, weights: Point[], workouts: { d: string; tpl: str
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
   const ctx = {
     hoy: `${DAY_NAMES[d.today.dow]} ${d.today.iso}`,
-    como_hablarle: coachRule(a.voice ?? "intermedio"),
+    // Con ella, en femenino (lista, cansada, bienvenida): va en "como_hablarle", que las reglas ya piden seguir.
+    como_hablarle: `${coachRule(a.voice ?? "intermedio")}${a.sex === "f" ? " Es mujer: háblale en femenino." : ""}`,
     pais: a.country ? COUNTRY_NAME[a.country] ?? null : null,
-    atleta: { nombre: dataText(a.name, 40), estatura_cm: a.heightCm, peso_actual: a.currentWeight, peso_inicial: a.startWeight, meta: a.goalWeight, fecha_meta: a.goalDate, modo: a.mode },
+    atleta: { nombre: dataText(a.name, 40), sexo: a.sex === "f" ? "mujer" : "hombre", equipo: a.equipment, nivel: a.level, estatura_cm: a.heightCm, peso_actual: a.currentWeight, peso_inicial: a.startWeight, meta: a.goalWeight, fecha_meta: a.goalDate, modo: a.mode },
     plan: nutrition ? "Entreno + Nutrición" : "Entreno",
     objetivos_diarios: nutrition ? d.t : { pasos: d.t.steps, sueno_h: d.t.sleep },
     ritmo_real_kg_sem: rate, ritmo_necesario_kg_sem: d.needPerWeek, semana_programa: d.program ? d.program.run.week : d.week + 1, descarga: d.deload,
     // Programa Premium activo (0024): su entreno reemplaza la rutina normal mientras dure.
-    programa_activo: d.program ? { nombre: dataText(d.program.title, 80), semana: d.program.run.week, semanas: d.program.run.weeks, fase: d.program.run.phase.phase.name, sesiones_hechas: d.program.run.sessionsDone, sesiones_total: d.program.run.sessionsTotal,
+    programa_activo: d.program ? { nombre: dataText(d.program.title, 80), semana: d.program.run.week, semanas: d.program.run.weeks,
+      // Programa en días (Pilates 30 días): el día en que va, para que el coach hable de "día 12 de 30" y no de semanas.
+      ...(d.program.run.byDays ? { dia: `${Math.min(d.program.run.days, d.program.run.effectiveDay + 1)} de ${d.program.run.days}` } : {}), fase: d.program.run.phase.phase.name, sesiones_hechas: d.program.run.sessionsDone, sesiones_total: d.program.run.sessionsTotal,
       // 0027: el enfoque del programa manda sobre el método general mientras dure.
       ...(d.program.meta.experience?.coach && d.program.meta.experience.coach !== "banana" ? { coach: `${coachOf(d.program.meta.experience).name}: mientras dure el programa ese es tu nombre (no Coach Banana); habla como ella, en femenino y con calidez.` } : {}),
       ...(d.program.meta.experience ? { modo: dataText(d.program.meta.experience.mode, 40), enfoque: dataText(d.program.meta.experience.coachFocus, 300), consejo_semana: dataText(tipFor(d.program.meta.experience, d.program.run.week) ?? "", 220), habitos: d.program.meta.experience.habits.map((h) => dataText(h.label, 60)), comida: nutrition ? d.program.meta.experience.food.map((f) => dataText(f, 200)) : undefined } : {}) } : null,

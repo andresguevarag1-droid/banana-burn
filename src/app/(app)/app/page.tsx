@@ -17,6 +17,8 @@ import { ProgramHabits } from "@/components/programas/program-habits";
 import { getProgramChecks } from "@/lib/programs-server";
 import { habitsToday } from "@/lib/programs";
 import { TodayPanel } from "@/components/hoy/today-panel";
+import { coachOf } from "@/lib/coaches";
+import { CoachPic } from "@/components/coach-pic";
 import { hoyFood } from "@/lib/hoy-food";
 import { localHour } from "@/lib/recipes";
 import { WeekCard } from "@/components/hoy/week-card";
@@ -55,6 +57,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const habits = px && d.program ? habitsToday(px, { ...g.log, protein: g.log.protein + eaten.protein }, { checks, proteinTarget: ent.nutrition ? d.t.protein : null, trainedToday: g.trainedToday || d.program.run.today === "hecho", sessionDay: d.program.run.today === "entreno" }) : null;
   const food = px?.food.length ? px.food[d.program!.run.effectiveDay % px.food.length] : null;
   const { plan, t } = d;
+  // Con un programa de Coach Platanita, ella firma la tarjeta del coach (y el resto de Hoy).
+  const coach = coachOf(px);
   // Comida de hoy: lo que comió por tiempo de comida y la recomendación para el siguiente (solo con nutrición).
   const meal = ent.nutrition ? hoyFood({ meals: meals.today, hour: localHour(new Date(), v.tz), todayIso: d.today.iso, eaten: { kcal: eaten.kcal + g.log.kcal, protein: eaten.protein + g.log.protein }, target: { kcal: t.kcal, protein: t.protein } }) : null;
   const training = isTrainingDay(plan);
@@ -89,15 +93,15 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       {/* Sin programa: el entreno de hoy va primero y a todo lo ancho (con imágenes de cada ejercicio). */}
       {!d.program && <WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
-        readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} />}
+        readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} />}
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal! } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
+        <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
         {/* Con un programa activo, su héroe reemplaza al entreno de hoy; sin programa, aquí va el exprés */}
-        {d.program ? <ProgramHero p={d.program} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <ExpressCard program={false} compact />}
+        {d.program ? <ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <ExpressCard program={false} compact />}
       </div>
-      {d.program && !g.trainedToday && <ExpressCard program compact />}
+      {d.program && !g.trainedToday && <ExpressCard program compact coach={coach.id === "banana" ? null : coach} />}
       {px && habits && d.program && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
       {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
@@ -133,8 +137,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         </section>
       {/* Coach */}
         <Link href="/app/coach" className="card p-4 flex gap-3 items-center self-start">
-        <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
-        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{hoyTip({ dow: d.today.dow, training, proteinLeft: t.protein - g.log.protein - eaten.protein, trained: g.trainedToday, nutrition: ent.nutrition })}</p></div>
+        {coach.id === "banana" ? <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
+          : <CoachPic src={coach.avatar} size={48} className="size-12 shrink-0 rounded-2xl object-cover" />}
+        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">{coach.name}</p><p className="text-[15px] text-ink leading-snug">{d.program && training && !g.trainedToday ? "Pregúntame antes de empezar: cómo se hace un ejercicio, qué hacer si algo te molesta o qué comer después." : hoyTip({ dow: d.today.dow, training, proteinLeft: t.protein - g.log.protein - eaten.protein, trained: g.trainedToday, nutrition: ent.nutrition })}</p></div>
         <CaretRight weight="bold" className="size-5 text-faint shrink-0" />
       </Link>
       </div>
