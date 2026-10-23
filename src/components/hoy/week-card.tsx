@@ -60,7 +60,7 @@ export function WeekCard({ s, week, sched, todayIso, training, weighed, streak, 
 
       <div className="mt-4 border-t border-line pt-4">
         <div className="flex items-center gap-3">
-          <Link href="/app/niveles" className="pressable shrink-0 rounded-xl" aria-label="Ver mis niveles"><LevelBadge idx={s.level.idx} size="sm" /></Link>
+          <Link href="/app/niveles" className="tap pressable shrink-0 rounded-xl" aria-label="Ver mis niveles"><LevelBadge idx={s.level.idx} size="sm" /></Link>
           <div className="min-w-0 flex-1">
             <p className="flex items-baseline justify-between gap-2 text-sm"><span className="truncate font-extrabold text-ink">Nivel {s.level.idx}: {s.level.n}</span><span className="shrink-0 text-xs font-bold tabular-nums text-muted">+{n(s.today.xp)} XP hoy</span></p>
             <ProgressBar value={s.level.progress} min={0.04} className="mt-1.5 h-2" fill="bg-banana" track="bg-banana-soft" label={`${n(s.total)} XP`} />

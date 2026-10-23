@@ -55,7 +55,7 @@ export default async function Referidos() {
           <h2 id="ref-progreso" className="text-lg font-extrabold">{prog.text}</h2>
           <ol className="mt-4 grid grid-cols-3 gap-2" aria-label={`${prog.have} de ${prog.need} amigos activos para tu próximo mes gratis`}>
             {Array.from({ length: prog.need }, (_, i) => (
-              <li key={i} className={`grid h-14 place-items-center rounded-2xl text-sm font-extrabold transition-colors duration-200 ease-out ${i < prog.have ? "bg-ink text-banana" : "border-2 border-dashed border-ink/25 text-muted"}`}>
+              <li key={i} className={`grid h-14 place-items-center rounded-2xl text-sm font-extrabold transition-colors duration-200 ease-out ${i < prog.have ? "bg-ink text-banana" : "border-2 border-dashed border-ink/25 text-body"}`}>
                 {i < prog.have ? "Activo" : `Amigo ${i + 1}`}
               </li>
             ))}
