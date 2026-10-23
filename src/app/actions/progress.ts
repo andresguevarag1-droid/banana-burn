@@ -49,8 +49,10 @@ export async function deletePhoto(id: string) {
   if (!/^[0-9]{1,18}$/.test(String(id))) return { ok: false };
   const { data } = await sb.from("progress_photos").select("path").eq("id", Number(id)).eq("user_id", v.id).maybeSingle();
   if (!data) return { ok: false };
-  await sb.storage.from("progreso").remove([data.path as string]);
-  await sb.from("progress_photos").delete().eq("id", Number(id)).eq("user_id", v.id);
+  // Primero el registro (lo que se ve); el archivo después. Si el archivo falla, queda privado y sin enlace.
+  const { error } = await sb.from("progress_photos").delete().eq("id", Number(id)).eq("user_id", v.id);
+  if (error) return { ok: false };
+  await sb.storage.from("progreso").remove([data.path as string]).catch(() => null);
   revalidatePath("/app/progreso");
   return { ok: true };
 }

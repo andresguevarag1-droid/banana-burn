@@ -3,8 +3,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CheckCircle, Lock, Ruler, Trash, TrendDown, TrendUp, WarningCircle } from "@/components/icons";
 import { saveMeasures, addPhoto, deletePhoto } from "@/app/actions/progress";
-import { createClient } from "@/lib/supabase/client";
 import type { Measure, Photo } from "@/lib/measures";
+import { safeAction } from "@/lib/action-client";
 
 const FIELDS = [["waist", "Cintura", "a la altura del ombligo"], ["neck", "Cuello", "bajo la manzana de Adán"], ["chest", "Pecho", "a la altura de los pezones"], ["arm", "Brazo", "parte más ancha, relajado"], ["thigh", "Muslo", "parte más ancha"], ["hip", "Cadera", "parte más ancha de glúteos"]] as const;
 const nf = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 1 });
@@ -32,7 +32,7 @@ export function Measures({ history, bodyFat, demo }: { history: Measure[]; bodyF
           e.preventDefault();
           const fd = new FormData(e.currentTarget);
           const input = Object.fromEntries(FIELDS.map(([k]) => [k, Number(String(fd.get(k) || "").replace(",", ".")) || null]));
-          start(async () => { const r = await saveMeasures(input); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Medidas guardadas, +15 XP" } : { ok: false, t: r.error ?? "No pudimos guardar tus medidas. Intenta de nuevo." }); if (r.ok) { setOpen(false); router.refresh(); } });
+          start(async () => { const r = await safeAction(saveMeasures(input)); setMsg(r.ok ? { ok: true, t: r.demo ? "Demo: no se guardó." : "Medidas guardadas, +15 XP" } : { ok: false, t: r.error ?? "No pudimos guardar tus medidas. Intenta de nuevo." }); if (r.ok) { setOpen(false); router.refresh(); } });
         }}>
           <p className="text-xs text-muted">Con cinta métrica, en la mañana, sin apretar. Solo llena las que quieras.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -85,6 +85,14 @@ export function Photos({ photos, userId, demo }: { photos: Photo[]; userId: stri
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [local, setLocal] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  async function remove(id: string) {
+    if (deleting) return;
+    setDeleting(id); setErr(null);
+    const r = await safeAction(deletePhoto(id));
+    setDeleting(null);
+    if (r.ok) router.refresh(); else setErr("No pudimos borrar la foto. Intenta de nuevo.");
+  }
   const [cmp, setCmp] = useState(50);
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -99,19 +107,23 @@ export function Photos({ photos, userId, demo }: { photos: Photo[]; userId: stri
     try {
       const ext = (f.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
       const path = `${userId}/${new Date().toISOString().slice(0, 10)}-${pose}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await createClient().storage.from("progreso").upload(path, f, { contentType: f.type, upsert: false });
+      // El cliente de Supabase se carga solo al subir una foto: no pesa en la carga de Progreso.
+      const { createClient } = await import("@/lib/supabase/client");
+      const bucket = createClient().storage.from("progreso");
+      const { error } = await bucket.upload(path, f, { contentType: f.type, upsert: false });
       if (error) throw error;
-      const r = await addPhoto(path, pose);
-      if (!r.ok) throw new Error();
+      const r = await safeAction(addPhoto(path, pose));
+      // Sin registro la foto no se vería nunca: se borra del almacenamiento para no dejarla huérfana.
+      if (!r.ok) { await bucket.remove([path]).catch(() => null); throw new Error(); }
       router.refresh();
-    } catch { setErr("No se pudo subir la foto. Intenta de nuevo."); }
+    } catch { setErr(typeof navigator !== "undefined" && !navigator.onLine ? "Sin conexión. Sube la foto cuando tengas señal." : "No se pudo subir la foto. Intenta de nuevo."); }
     finally { setBusy(false); }
   }
 
   return (
     <div>
       <div className="flex gap-1.5" role="tablist" aria-label="Pose">
-        {(["frente", "lado", "espalda"] as const).map((p) => <button key={p} role="tab" aria-selected={pose === p} onClick={() => setPose(p)} className={`chip h-9 px-4 capitalize ${pose === p ? "bg-ink text-white" : "bg-cream text-ink"}`}>{p}</button>)}
+        {(["frente", "lado", "espalda"] as const).map((p) => <button key={p} role="tab" aria-selected={pose === p} onClick={() => setPose(p)} className={`tap chip h-9 px-4 capitalize ${pose === p ? "bg-ink text-white" : "bg-cream text-ink"}`}>{p}</button>)}
       </div>
 
       {before && after && before.id !== after.id ? (
@@ -149,8 +161,8 @@ export function Photos({ photos, userId, demo }: { photos: Photo[]; userId: stri
           {photos.slice(0, 12).map((p) => (
             <li key={p.id} className="relative aspect-[3/4] overflow-hidden rounded-xl bg-cream">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {p.url && <img src={p.url} alt={`${p.pose}, ${p.d}`} className="size-full object-cover" />}
-              <button onClick={async () => { await deletePhoto(p.id); router.refresh(); }} className="tap pressable absolute top-1 right-1 grid place-items-center size-7 rounded-full bg-ink/60 text-white hover:bg-ink/80" aria-label={`Borrar foto del ${p.d}`}><Trash weight="bold" className="size-3.5" /></button>
+              {p.url && <img src={p.url} alt={`${p.pose}, ${p.d}`} loading="lazy" decoding="async" className={`size-full object-cover ${deleting === p.id ? "opacity-40" : ""}`} />}
+              <button onClick={() => remove(p.id)} disabled={!!deleting} aria-busy={deleting === p.id} className="tap pressable absolute top-1 right-1 grid place-items-center size-7 rounded-full bg-ink/60 text-white hover:bg-ink/80 disabled:opacity-60" aria-label={`Borrar foto del ${p.d}`}><Trash weight="bold" className="size-3.5" /></button>
             </li>
           ))}
         </ul>

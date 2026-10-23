@@ -16,6 +16,7 @@ import { Toast } from "@/components/toast";
 import { ProgressBar } from "@/components/progress-bar";
 import { useSticky } from "@/components/use-presence";
 import { Sheet, SheetTitle } from "@/components/sheet";
+import { safeAction } from "@/lib/action-client";
 
 type Targets = { kcal: number; protein: number; carbs: number; fat: number };
 type Extras = { week: { day: string; kcal: number }[]; mealDays: string[]; xpToday: number; saved: SavedFood[]; recipes?: UserRecipe[] };
@@ -149,7 +150,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     try { navigator.vibrate?.(20); } catch { /* */ }
     setToast({ ok: true, t: xp ? `${label}, ${n0(temp.kcal)} kcal. +${xp} XP` : `${label}, ${n0(temp.kcal)} kcal. Registrado` });
     start(async () => {
-      const r = await addMeal(req);
+      const r = await safeAction(addMeal(req));
       if (r.ok && r.item) {
         setItems((x) => x.map((i) => (i.id === temp.id ? r.item! : i)));
         if (!demo && typeof r.xpCount === "number") setXpCount(Math.min(MEAL_XP_DAILY_MAX, r.xpCount));
@@ -208,7 +209,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
       const tmp: SavedFood = { ...food, id: `tmp-${Date.now()}` };
       setSaved((x) => [tmp, ...x]);
       start(async () => {
-        const r = await saveFood(food);
+        const r = await safeAction(saveFood(food));
         if (r.ok && r.food) setSaved((x) => x.map((s) => (s.id === tmp.id ? r.food! : s)));
         else setSaved((x) => x.filter((s) => s.id !== tmp.id));
       });
@@ -220,7 +221,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     const prev = saved;
     setSaved((x) => x.filter((s) => s.id !== id));
     setToast({ ok: true, t: `Quitaste ${f.n} de Mis comidas` });
-    start(async () => { const r = await deleteSavedFood(id); if (!r.ok) setSaved(prev); });
+    start(async () => { const r = await safeAction(deleteSavedFood(id)); if (!r.ok) { setSaved(prev); setToast({ ok: false, t: "No pudimos quitarla. Intenta de nuevo." }); } });
   }
 
   // ───── Plato y recetas ─────
@@ -238,7 +239,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     const name = (plate.name.trim() || autoName).slice(0, 80);
     const editId = plate.editId;
     start(async () => {
-      const r = await saveRecipe({ id: editId ?? undefined, name, servings: plate.servings, items: plate.items });
+      const r = await safeAction(saveRecipe({ id: editId ?? undefined, name, servings: plate.servings, items: plate.items }));
       if (!r.ok || !r.recipe) { setToast({ ok: false, t: r.error ?? "No pudimos guardar la receta. Intenta de nuevo." }); return; }
       setRecipes((x) => (editId ? x.map((y) => (y.id === editId ? r.recipe! : y)) : [r.recipe!, ...x]));
       setToast({ ok: true, t: editId ? "Receta actualizada" : "Guardada en Mis recetas" });
@@ -257,7 +258,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     setRecipes((x) => x.filter((y) => y.id !== id));
     if (plate.editId === id) { setPlate(EMPTY_PLATE); setView("list"); }
     setToast({ ok: true, t: `Eliminaste ${r?.name ?? "la receta"}` });
-    start(async () => { const res = await deleteRecipe(id); if (!res.ok) { setRecipes(prev); setToast({ ok: false, t: "No pudimos eliminarla. Intenta de nuevo." }); } });
+    start(async () => { const res = await safeAction(deleteRecipe(id)); if (!res.ok) { setRecipes(prev); setToast({ ok: false, t: "No pudimos eliminarla. Intenta de nuevo." }); } });
   }
 
   /** Vuelve a guardar un alimento borrado (nuevo id) en su mismo lugar de la lista. */
@@ -266,7 +267,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     setItems((x) => [...x.slice(0, at), temp, ...x.slice(at)]);
     setToast(null);
     start(async () => {
-      const r = await copyMeals([row(item)]);
+      const r = await safeAction(copyMeals([row(item)]));
       if (r.ok && r.items?.[0]) setItems((x) => x.map((i) => (i.id === temp.id ? r.items![0] : i)));
       else { setItems((x) => x.filter((i) => i.id !== temp.id)); setToast({ ok: false, t: "No pudimos recuperarlo. Agrégalo de nuevo." }); }
     });
@@ -278,7 +279,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     setEditing(null);
     setToast({ ok: true, t: `Quitaste ${item.name}`, undo: () => restore(item, at) });
     start(async () => {
-      const r = await removeMeal(item.id);
+      const r = await safeAction(removeMeal(item.id));
       if (!r.ok) { setItems((x) => [...x.slice(0, at), item, ...x.slice(at)]); setToast({ ok: false, t: "No pudimos quitarlo. Intenta de nuevo." }); }
     });
   }
@@ -289,11 +290,11 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
     const next = scaled(item, qn);
     setItems((x) => x.map((i) => (i.id === item.id ? next : i)));
     start(async () => {
-      const r = await copyMeals([row(next)]);
+      const r = await safeAction(copyMeals([row(next)]));
       const created = r.ok ? r.items?.[0] : undefined;
       if (!created) { setItems((x) => x.map((i) => (i.id === item.id ? item : i))); setToast({ ok: false, t: "No pudimos cambiar la porción. Intenta de nuevo." }); return; }
-      const del = await removeMeal(item.id);
-      if (!del.ok) { await removeMeal(created.id); setItems((x) => x.map((i) => (i.id === item.id ? item : i))); setToast({ ok: false, t: "No pudimos cambiar la porción. Intenta de nuevo." }); return; }
+      const del = await safeAction(removeMeal(item.id));
+      if (!del.ok) { await safeAction(removeMeal(created.id)); setItems((x) => x.map((i) => (i.id === item.id ? item : i))); setToast({ ok: false, t: "No pudimos cambiar la porción. Intenta de nuevo." }); return; }
       setItems((x) => x.map((i) => (i.id === item.id ? created : i)));
       setEditing((e) => (e === item.id ? created.id : e));
     });
@@ -301,7 +302,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
 
   function copyYesterday() {
     start(async () => {
-      const r = await copyMeals(yesterday.map(row));
+      const r = await safeAction(copyMeals(yesterday.map(row)));
       if (r.ok && r.items) { setItems((x) => [...x, ...r.items!]); setToast({ ok: true, t: `Copiado: ${r.items.length} alimentos de ayer` }); }
       else setToast({ ok: false, t: "No pudimos copiar lo de ayer. Intenta de nuevo." });
     });

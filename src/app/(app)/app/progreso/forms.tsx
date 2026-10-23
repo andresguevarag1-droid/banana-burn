@@ -1,4 +1,5 @@
 "use client";
+import { netMessage } from "@/lib/action-client";
 import { useActionState } from "react";
 import { logWeight, saveProfile, type FormState } from "./actions";
 import type { Athlete } from "@/lib/athlete";
@@ -10,7 +11,7 @@ function Msg({ s }: { s: FormState }) {
 }
 
 export function WeightForm({ last }: { last: number }) {
-  const [s, act, pending] = useActionState(logWeight, {});
+  const [s, act, pending] = useActionState((st: FormState, fd: FormData) => logWeight(st, fd).catch((): FormState => ({ error: netMessage() })), {});
   return (
     <form action={act} className="space-y-3">
       <div className="flex gap-2">
@@ -27,7 +28,7 @@ function F({ label, ...p }: { label: string } & React.InputHTMLAttributes<HTMLIn
 }
 
 export function ProfileForm({ a }: { a: Athlete }) {
-  const [s, act, pending] = useActionState(saveProfile, {});
+  const [s, act, pending] = useActionState((st: FormState, fd: FormData) => saveProfile(st, fd).catch((): FormState => ({ error: netMessage() })), {});
   return (
     <form action={act} className="grid gap-4 sm:grid-cols-2">
       <F label="Nombre" name="full_name" defaultValue={a.name} />

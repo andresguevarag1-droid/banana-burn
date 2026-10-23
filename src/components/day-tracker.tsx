@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { BananaFlame, Check, Drop, Egg, Footprints, Moon, Plus } from "@/components/icons";
-import { setDaily, type DailyField } from "@/app/actions/daily";
+import type { DailyField } from "@/app/actions/daily";
+import { useDailySave } from "@/components/use-daily-save";
 import type { DailyLog } from "@/lib/daily";
 import { sumMeals, type MealItem } from "@/lib/meals-shared";
 
@@ -21,7 +22,7 @@ export function DayTracker({ initial, base: base0, target, dateKey, demo }: { in
   const key = `bb.daily.${dateKey}`;
   const [log, setLog] = useState<DailyLog>(initial);
   const [edit, setEdit] = useState<DailyField | null>(null);
-  const [, start] = useTransition();
+  const daily = useDailySave();
 
   // Demo: Nutrición guarda las comidas en este navegador; Hoy suma desde la misma fuente para que ambas cuadren.
   const [base, setBase] = useState(base0);
@@ -41,7 +42,8 @@ export function DayTracker({ initial, base: base0, target, dateKey, demo }: { in
     setLog(next);
     try { navigator.vibrate?.(15); } catch { /* */ }
     if (demo) { try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* */ } return; }
-    start(() => { setDaily(field, next[field] ?? 0); });
+    const prev = log[field];
+    daily.save(field, next[field] ?? 0, () => setLog((l) => (l[field] === next[field] ? { ...l, [field]: prev } : l)));
   }
 
   const items: { f: DailyField; label: string; icon: React.ReactNode; color: string; val: number; goal: number; unit: string; fmt: (n: number) => string; quick: [string, number][] }[] = [
@@ -54,6 +56,7 @@ export function DayTracker({ initial, base: base0, target, dateKey, demo }: { in
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      {daily.toast}
       {items.map((it) => {
         const pct = it.val / it.goal;
         // Calorías: llegar a la meta no es un logro ni pasarse un fracaso; el anillo solo muestra cuánto va.

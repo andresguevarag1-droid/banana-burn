@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check, CheckCircle, Drop, Footprints, Lock, Moon, Plus } from "@/components/icons";
-import { setDaily, type DailyField } from "@/app/actions/daily";
+import type { DailyField } from "@/app/actions/daily";
+import { useDailySave } from "@/components/use-daily-save";
 import type { DailyLog } from "@/lib/daily";
 import { sumMeals, type MealItem } from "@/lib/meals-shared";
 import { ProgressBar } from "@/components/progress-bar";
@@ -53,7 +54,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
   const key = `bb.daily.${dateKey}`;
   const [log, setLog] = useState<DailyLog>(initial);
   const [base, setBase] = useState<Macros>(nutrition?.base ?? ZERO);
-  const [, start] = useTransition();
+  const daily = useDailySave();
   const hasNutrition = nutrition !== null;
 
   // Demo: Nutrición guarda las comidas en este navegador; Hoy suma desde la misma fuente para que ambas cuadren.
@@ -72,7 +73,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
     setLog(next);
     try { navigator.vibrate?.(15); } catch { /* */ }
     if (demo) { try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* */ } return; }
-    start(() => { setDaily(field, next[field] ?? 0); });
+    daily.save(field, next[field] ?? 0, () => setLog((l) => (l[field] === next[field] ? { ...l, [field]: cur } : l)));
   }
 
   const small: { f: DailyField; label: string; icon: React.ReactNode; val: number; goal: number; unit: string; step: number; stepLabel: string; fmt: (n: number) => string }[] = [
@@ -83,6 +84,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
 
   return (
     <div className="space-y-3">
+      {daily.toast}
       {nutrition ? <Numbers n={nutrition} log={log} base={base} onAdd={add} /> : <NutritionTeaser />}
 
       <div className="grid grid-cols-3 gap-2.5">

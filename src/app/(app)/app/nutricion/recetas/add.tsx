@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { copyMeals } from "@/app/actions/meals";
 import type { MealItem } from "@/lib/meals-shared";
 import { ArrowCounterClockwise, Check, CircleNotch, Plus } from "@/components/icons";
+import { safeAction } from "@/lib/action-client";
 
 type NewItem = Omit<MealItem, "id">;
 
@@ -12,7 +13,7 @@ export function AddRecipe({ item, dateKey, demo, base = [] }: { item: NewItem; d
   const [pending, start] = useTransition();
   function add() {
     start(async () => {
-      const r = await copyMeals([item]);
+      const r = await safeAction(copyMeals([item]));
       if (r.ok && demo && r.items) {
         try {
           const key = `bb.meals.${dateKey}`, s = localStorage.getItem(key);

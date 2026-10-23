@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/env";
 import { getEntitlements } from "@/lib/entitlements";
+import { todayFor } from "@/lib/today";
 
 export async function updateTraining(input: { days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; mode: "acelerada" | "recomp" | "fuerza"; level: "principiante" | "intermedio" | "avanzado"; minutes: number | null }) {
   const v = await getViewer();
@@ -27,7 +28,7 @@ export async function updateGlp1(input: { on: boolean; med: "semaglutida" | "tir
   const { data: prev } = await sb.from("profiles").select("glp1,glp1_since").eq("id", v.id).maybeSingle();
   const { error } = await sb.from("profiles").update({
     glp1: input.on, glp1_med: input.on ? input.med : null, glp1_injection_dow: input.on ? input.dow : null,
-    glp1_since: input.on ? (prev?.glp1 ? prev.glp1_since : new Date().toISOString().slice(0, 10)) : null,
+    glp1_since: input.on ? (prev?.glp1 ? prev.glp1_since : todayFor(v).iso) : null, // "hoy" en la zona del usuario, no en UTC
   }).eq("id", v.id);
   if (error) return { ok: false, error: "No se pudo guardar." };
   revalidatePath("/app", "layout");

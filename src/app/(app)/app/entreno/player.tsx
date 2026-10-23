@@ -502,7 +502,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     const h = (e: Event) => { const d = (e as CustomEvent<OutboxEvent>).detail; if (!sending.current && d?.id === outId && d.result) onSaved(d.result); };
     window.addEventListener(OUTBOX_EVENT, h);
     return () => window.removeEventListener(OUTBOX_EVENT, h);
-  }); // eslint-disable-line react-hooks/exhaustive-deps -- usa el estado más reciente en cada render
+  }); // sin dependencias a propósito: se vuelve a suscribir en cada render con el estado más reciente
 
   const finishTour = useCallback(() => {
     setTour(false); store.set(TOUR_KEY, 1);

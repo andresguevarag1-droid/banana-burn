@@ -14,6 +14,7 @@ import { intentPath, type CheckoutIntent } from "@/lib/checkout-intent";
 import { PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
+import { safeAction } from "@/lib/action-client";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -156,7 +157,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     if (!full) return;
     setErr(null);
     start(async () => {
-      const r = await completeOnboarding(full);
+      const r = await safeAction(completeOnboarding(full));
       if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
       setStep(STEPS);
     });
