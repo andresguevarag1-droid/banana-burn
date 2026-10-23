@@ -1,7 +1,8 @@
 -- Banana Burn · suite multiusuario (aislamiento entre cuentas, comunidad, escalamiento, XP, RPC y carreras)
 -- Uso (BD desechable con stub.sql + migraciones 0001→0026, ver README.md). La sección 5b cubre la tienda de retos (0018),
 -- la 5c los programas (0024), la 7, el acceso a nutrición por plan (0022), la 9, regalos, referidos y escribir datos con plan (0025)
--- la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026), y la 11, testers de la beta y "Reportar algo" (0029).
+-- la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026), la 11, testers de la beta y "Reportar algo" (0029),
+-- y la 12, la guía de la app (0031).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -1298,6 +1299,39 @@ select bbtest.ok('borrado: sin reportes de la cuenta borrada', not exists (selec
 -- Restaurar la beta original (misma fecha que src/lib/plans.ts).
 create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select timestamptz '2026-11-01 06:00:00+00' $$;
 revoke all on function public._beta_ends_at() from public, anon, authenticated;
+
+-- ───────────── 11. Guía de la app (0031) ─────────────
+-- Cada persona marca solo su guía y sus consejos; la fecha la pone el servidor; claves y versiones validadas.
+update public.profiles set guide_version = null, guide_seen_at = null, guide_tips = '{}' where id in (bbtest.u('A'), bbtest.u('B'));
+set role authenticated; select bbtest.login('A');
+select public.guide_mark_seen(1);
+select public.guide_tip_seen('entrenar');
+select public.guide_tip_seen('entrenar');
+select public.guide_tip_seen('nutricion');
+select bbtest.ok('guía: A ve su versión vista', (select guide_version = 1 and guide_seen_at is not null from public.profiles where id = auth.uid()));
+select bbtest.ok('guía: un consejo repetido no se duplica', (select guide_tips = array['entrenar','nutricion'] from public.profiles where id = auth.uid()));
+select public.guide_mark_seen(1);
+select bbtest.ok('guía: marcar una versión vieja no baja la versión', (select guide_version = 1 from public.profiles where id = auth.uid()));
+select bbtest.zero('guía: A no marca la guía de B', $q$ update public.profiles set guide_version = 1, guide_tips = array['entrenar'] where id = bbtest.u('B') $q$);
+select bbtest.fails('guía: versión fuera de rango', $q$ select public.guide_mark_seen(0) $q$, '22023');
+select bbtest.fails('guía: versión nula', $q$ select public.guide_mark_seen(null) $q$, '22023');
+select bbtest.fails('guía: consejo con caracteres raros', $q$ select public.guide_tip_seen('x'',''y') $q$, '22023');
+select bbtest.fails('guía: consejo demasiado largo', $q$ select public.guide_tip_seen(repeat('a', 25)) $q$, '22023');
+select bbtest.fails('guía: versión inválida directo en la tabla', $q$ update public.profiles set guide_version = 500 where id = auth.uid() $q$, '23514');
+select bbtest.fails('guía: consejo inválido directo en la tabla', $q$ update public.profiles set guide_tips = array['Hola Mundo'] where id = auth.uid() $q$, '23514');
+update public.profiles set guide_seen_at = '2099-01-01' where id = auth.uid();
+select bbtest.ok('guía: la fecha de vista la pone el servidor', (select guide_seen_at <= now() + interval '1 minute' from public.profiles where id = auth.uid()));
+select bbtest.fails('guía: A no se sube el rol al marcar la guía', $q$ update public.profiles set guide_version = 1, role = 'superadmin' where id = auth.uid() $q$, '42501');
+reset role;
+select bbtest.ok('guía: B quedó sin tocar', (select guide_version is null and guide_tips = '{}' from public.profiles where id = bbtest.u('B')));
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('guía: B no ve la guía de A como suya', (select guide_version is null from public.profiles where id = auth.uid()));
+select bbtest.fails('guía: 17 consejos no caben', $q$ update public.profiles set guide_tips = array['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q'] where id = auth.uid() $q$, '23514');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('guía: anon no marca guías', $q$ select public.guide_mark_seen(1) $q$, '42501');
+select bbtest.fails('guía: anon no marca consejos', $q$ select public.guide_tip_seen('entrenar') $q$, '42501');
+reset role;
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));

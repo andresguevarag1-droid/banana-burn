@@ -10,7 +10,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, Compass, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { getCompletedChallenges } from "@/lib/challenges-server";
 import { Certificates } from "@/components/retos/certificates";
@@ -18,6 +18,7 @@ import { FRAME_RING } from "@/components/levels/level-badge";
 import { money } from "@/lib/copy";
 import { TesterBadge } from "@/components/testers/tester-badge";
 import { getMyTester } from "@/lib/testers-server";
+import { OpenGuideButton } from "@/components/guide/open-guide";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -76,6 +77,12 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
           <Link href="/app/suscripcion" className="btn-ghost h-11 text-sm px-4">{ent.fromSubscription ? "Gestionar" : "Ver planes"}</Link>
         </div>
         <p className="mt-2 text-sm text-muted">{planText}</p>
+      </section>
+
+      <section className="card p-5">
+        <H icon={Compass}>Guía de la app</H>
+        <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}Coach Banana y tu progreso, según tu plan.</p>
+        <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
       </section>
 
       <section className="card p-5">

@@ -13,6 +13,7 @@ import { sessionViews } from "@/lib/programs-server";
 import { daysLabel } from "@/lib/programs";
 
 import { LIB_COUNT } from "@/lib/library";
+import { FirstTip } from "@/components/guide/first-tip";
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
@@ -30,6 +31,7 @@ export default async function Entrenar() {
   const p = d.program;
   return (
     <div className="space-y-5 animate-enter">
+      <FirstTip id="entrenar" title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: las cargas suben solas con tu historial." : "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos."}</FirstTip>
       {p ? (
         <>
           {/* Programa activo: su portada, la semana del programa y sus sesiones */}

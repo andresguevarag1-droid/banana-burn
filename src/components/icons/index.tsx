@@ -14,6 +14,6 @@ export {
   Watch, X, Sun, Globe, Grains, Lightbulb, SunHorizon, Wine, Moon as Night, Medal, Play, Pause, SkipForward, SpeakerHigh, SpeakerSlash, Calendar, CalendarCheck, PersonSimpleRun,
   Carrot, Cookie, Leaf, Coffee, Pill, Syringe, Smiley, SmileyMeh, SmileySad, Star, Eye, EyeSlash, PencilSimple, DotsThree, Link, Export,
   ArrowSquareOut, ArrowUUpLeft, CookingPot, Flask, OrangeSlice, Bed, Books, Confetti, FlagCheckered, PersonArmsSpread, PersonSimpleWalk, PushPin, TreePalm, List,
-  WifiSlash, CloudArrowUp, ArrowsClockwise, Bug, ChatCircleText,
+  WifiSlash, CloudArrowUp, ArrowsClockwise, Bug, ChatCircleText, Compass,
 } from "@phosphor-icons/react/dist/ssr";
 export type { Icon as PhosphorIcon, IconWeight } from "@phosphor-icons/react";
