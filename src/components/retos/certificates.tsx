@@ -5,7 +5,8 @@ import { ChallengeCover } from "./cover";
 
 const fmt = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric" });
 
-export function Certificates({ done, title = "Medallas y certificados", empty = "Termina tu primer reto para ganar tu medalla y tu certificado." }: { done: { c: Challenge; at: string }[]; title?: string; empty?: string }) {
+/** `span`: duración a mostrar (los programas dicen "8 semanas"; los retos, sus días). */
+export function Certificates({ done, title = "Medallas y certificados", empty = "Termina tu primer reto para ganar tu medalla y tu certificado." }: { done: { c: Challenge; at: string; span?: string }[]; title?: string; empty?: string }) {
   return (
     <section className="card p-5" aria-labelledby="certs-t">
       <h2 id="certs-t" className="flex items-center gap-2 font-extrabold text-ink"><BananaMedal className="size-6 text-banana-ink" />{title}</h2>
@@ -17,9 +18,9 @@ export function Certificates({ done, title = "Medallas y certificados", empty = 
                 <span className="absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl bg-white text-banana-ink shadow-soft"><BrandIcon name={d.c.icon} className="size-6" /></span>
               </ChallengeCover>
               <div className="p-3">
-                <p className="text-[11px] font-bold uppercase tracking-[.12em] text-banana-ink">Certificado de reto</p>
+                <p className="text-[11px] font-bold uppercase tracking-[.12em] text-banana-ink">{d.c.kind === "programa" ? "Certificado de programa" : "Certificado de reto"}</p>
                 <p className="font-extrabold leading-tight text-ink">{d.c.badge}</p>
-                <p className="mt-0.5 text-xs text-muted">{d.c.title}: {d.c.days} días, completado el {fmt(d.at)}</p>
+                <p className="mt-0.5 text-xs text-muted">{d.c.title}: {d.span ?? `${d.c.days} días`}, completado el {fmt(d.at)}</p>
               </div>
             </li>
           ))}

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getViewer } from "@/lib/supabase/server";
-import { getCatalog, getMyChallenges, getOwned, getParticipants, getPlan, levelPerks } from "@/lib/challenges-server";
+import { createClient, getViewer, STAFF } from "@/lib/supabase/server";
+import { fromCatalogRow, isProgram, type CatalogRow } from "@/lib/challenges";
+import { ProgramDetail } from "@/components/programas/program-detail";
+import { getProgramStates } from "@/lib/programs-server";
+import { getCatalog, getMyChallenges, getOwned, getParticipants, getPlan, levelPerks, STORE_COLS_24 } from "@/lib/challenges-server";
 import { todayMetrics } from "@/lib/metrics";
 import { todayFor } from "@/lib/today";
 import { getEntitlements } from "@/lib/entitlements";
@@ -15,7 +18,7 @@ import { BuyButton } from "@/components/retos/buy-button";
 import { MIN_PARTICIPANTS_SHOWN } from "@/components/retos/store-card";
 import { ArrowLeft, BananaMedal, CalendarCheck, CheckCircle, Clock, Flag, Info, Lock, Shield, Target, Users, WarningCircle } from "@/components/icons";
 
-type P = { params: Promise<{ slug: string }> };
+type P = { params: Promise<{ slug: string }>; searchParams?: Promise<{ previa?: string }> };
 
 export async function generateMetadata({ params }: P) {
   const { slug } = await params;
@@ -27,13 +30,25 @@ export async function generateMetadata({ params }: P) {
 const fmtStart = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
 const TYPE_LABEL: Record<string, string> = { reps: "Repeticiones", tiempo: "Tiempo", pasos: "Pasos", entreno: "Entreno", habito: "Hábito", nutricion: "Comida", descanso: "Descanso" };
 
-export default async function RetoDetalle({ params }: P) {
+export default async function RetoDetalle({ params, searchParams }: P) {
   const { slug } = await params;
+  const sp = (await searchParams) ?? {};
   const v = (await getViewer())!;
   const today = todayFor(v).iso;
   const [catalog, owned, participants, perks, mine, ent] = await Promise.all([getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), todayMetrics(v).then((m) => getMyChallenges(v, m)), getEntitlements(v)]);
-  const c = catalog.get(slug);
+  const staff = STAFF.includes(v.role);
+  let c = catalog.get(slug);
+  // Vista previa del panel ("Ver como usuario"): el staff ve también borradores y ocultos, como alguien sin compra.
+  if (!c && staff && sp.previa) {
+    const { data } = v.demo ? { data: null } : await (await createClient()).from("challenges_catalog").select(STORE_COLS_24).eq("slug", slug).maybeSingle();
+    c = data ? fromCatalogRow(data as CatalogRow) ?? undefined : undefined;
+  }
   const myActive = mine.active.find((m) => m.c.id === slug);
+  if (c && isProgram(c)) {
+    const mineP = (await getProgramStates(v)).some((s) => s.slug === slug);
+    if (c.status !== "publicado" && !mineP && !(staff && sp.previa)) notFound();
+    return <ProgramDetail v={v} c={c} preview={staff && !!sp.previa} />;
+  }
   if (!c || (c.status !== "publicado" && !myActive)) notFound();
 
   const isOwned = owned.has(c.id);

@@ -111,8 +111,18 @@ export function weekIndex(startMonday: string, on: Date): number {
 
 export const isDeloadWeek = (week: number) => week > 0 && (week + 1) % 6 === 0;
 
-export type PlannedExercise = { id: ExerciseId; name: string; muscle: string; cfg: SlotCfg };
-export type PlannedDay = { dow: number; tpl: TemplateId | null; name: string; tag: string; icon: string; exercises: PlannedExercise[]; cardio?: string; mins?: number };
+export type PlannedExercise = { id: ExerciseId; name: string; muscle: string; cfg: SlotCfg; tempo?: string; note?: string };
+/** Ejercicio de un programa: del motor o de la biblioteca ("ds:0739"). */
+export type ProgramPlannedExercise = Omit<PlannedExercise, "id"> & { id: ExerciseId | `ds:${string}` };
+export type PlannedDay = {
+  dow: number; tpl: TemplateId | null; name: string; tag: string; icon: string; exercises: PlannedExercise[]; cardio?: string; mins?: number;
+  /** Sesión de un programa (0024): plantilla con la que se guarda (p:slug:semana.día) y sus ejercicios tal cual. */
+  key?: string;
+  program?: { slug: string; title: string; week: number; day: number; weeks: number; deload: boolean; exercises: ProgramPlannedExercise[] };
+};
+
+/** ¿Es un día de entreno? (plantilla del motor o sesión de un programa). */
+export const isTrainingDay = (p: Pick<PlannedDay, "tpl" | "key">) => !!p.tpl || !!p.key;
 
 /** Rutina de un día: las variantes rotan cada semana, así nada se repite. */
 export type PlanOpts = { equipment?: Equipment; level?: Level; minutes?: number };

@@ -38,7 +38,9 @@ export function coachSystem(a: Athlete, weights: Point[], workouts: { d: string;
     atleta: { nombre: dataText(a.name, 40), edad_aprox: undefined, estatura_cm: a.heightCm, peso_actual: a.currentWeight, peso_inicial: a.startWeight, meta: a.goalWeight, fecha_meta: a.goalDate, modo: a.mode },
     plan: nutrition ? "Entreno + Nutrición" : "Entreno",
     objetivos_diarios: nutrition ? d.t : { pasos: d.t.steps, sueno_h: d.t.sleep },
-    ritmo_real_kg_sem: rate, ritmo_necesario_kg_sem: d.needPerWeek, semana_programa: d.week + 1, descarga: d.deload,
+    ritmo_real_kg_sem: rate, ritmo_necesario_kg_sem: d.needPerWeek, semana_programa: d.program ? d.program.run.week : d.week + 1, descarga: d.deload,
+    // Programa Premium activo (0024): su entreno reemplaza la rutina normal mientras dure.
+    programa_activo: d.program ? { nombre: dataText(d.program.title, 80), semana: d.program.run.week, semanas: d.program.run.weeks, fase: d.program.run.phase.phase.name, sesiones_hechas: d.program.run.sessionsDone, sesiones_total: d.program.run.sessionsTotal } : null,
     rutina_hoy: { nombre: d.plan.name, ejercicios: d.plan.exercises.map((e) => `${e.name} ${e.cfg.sets}x${e.cfg.lo}-${e.cfg.hi}`), cardio: d.plan.cardio },
     ayer: d.yesterday.name, manana: d.tomorrow.name,
     semana: d.weekPlan.map((p) => `${DAY_NAMES[p.dow]}: ${p.name}`),

@@ -95,8 +95,8 @@ export default async function Progreso() {
       </dl>
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
-        <section className="card p-5"><div className="mb-3"><H icon={Ruler}>Medidas</H></div><Measures history={measures} bodyFat={bf} demo={v.demo} /></section>
-        <section className="card p-5"><div className="mb-3"><H icon={Camera}>Fotos de progreso</H></div><Photos photos={photos} userId={v.id} demo={v.demo} /></section>
+        <section id="medidas" className="card p-5 scroll-mt-6"><div className="mb-3"><H icon={Ruler}>Medidas</H></div><Measures history={measures} bodyFat={bf} demo={v.demo} /></section>
+        <section id="fotos" className="card p-5 scroll-mt-6"><div className="mb-3"><H icon={Camera}>Fotos de progreso</H></div><Photos photos={photos} userId={v.id} demo={v.demo} /></section>
       </div>
 
       <section>
@@ -167,7 +167,7 @@ export default async function Progreso() {
 
       <details id="meta" className="card group scroll-mt-6" open={!a.complete}>
         <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><CaretDown weight="bold" className="size-5 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
-        <div className="px-5 pb-5"><ProfileForm a={a} /></div>
+        <div className="px-5 pb-5"><ProfileForm a={{ ...a, program: null, programNutrition: null }} /></div>
       </details>
     </div>
   );

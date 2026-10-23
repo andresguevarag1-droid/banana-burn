@@ -6,7 +6,7 @@ export const EXPORT_BY_USER = [
   "goals", "weights", "measurements", "daily_logs", "meals", "workouts", "workout_sets", "coach_messages", "xp_events", "coach_usage",
   "subscriptions", "billing_customers", "payment_events", "comp_grants",
   "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
-  "user_challenges", "challenge_checkins", "challenge_milestones", "challenge_purchases", "challenge_entitlements",
+  "user_challenges", "challenge_checkins", "challenge_milestones", "challenge_purchases", "challenge_entitlements", "user_programs",
   "device_interest", "posts", "comments", "kudos",
 ] as const;
 

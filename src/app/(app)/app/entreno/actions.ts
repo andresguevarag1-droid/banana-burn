@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
-import { creditChallenges } from "@/lib/challenges-server";
+import { creditChallenges, getCatalog } from "@/lib/challenges-server";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { workoutXp } from "@/lib/gamify";
@@ -10,6 +10,7 @@ import { EX, type ExerciseId } from "@/lib/engine";
 import { getLibEx } from "@/lib/library";
 import { normalizeWorkout, serverPrs, workoutTiming, type Finished } from "./validate";
 import { errCode, logError } from "@/lib/log";
+import { parseProgramTemplate, weeksOf } from "@/lib/programs";
 
 const nameOf = (id: string) => (id.startsWith("ds:") ? getLibEx(id.slice(3))?.n : EX[id as ExerciseId]?.n) ?? id;
 
@@ -111,6 +112,12 @@ async function save(input: Finished): Promise<SaveResult> {
     postId = post ? String(post.id) : undefined;
   }
   await creditChallenges(v).catch(() => null);
+  // Última semana de un programa: si con esta sesión ya hizo todas, se cierra con su certificado (la RPC lo vuelve a validar).
+  const pt = parseProgramTemplate(w.template);
+  if (pt && !repeat) {
+    const pc = (await getCatalog(false)).get(pt.slug);
+    if (pc?.program && pt.week >= weeksOf(pc.program)) await sb.rpc("program_finish", { p_slug: pt.slug, p_day: day }).then(() => null, () => null);
+  }
   revalidatePath("/app", "layout");
   return { ok: true, postId, xp, prNames, repeat };
 }

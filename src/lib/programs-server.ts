@@ -1,0 +1,181 @@
+// Programas en el servidor: estado de la persona, sesiones (con la RLS de 0024), sesiones hechas y la rutina del día.
+// La lógica pura (semana, día, pausas, nutrición) vive en programs.ts y está probada en programs.test.ts.
+import "server-only";
+import { cache } from "react";
+import { createClient, type Viewer } from "@/lib/supabase/server";
+import { mondayOf, todayFor } from "@/lib/today";
+import { EX, e1rm, isTrainingDay, type Equipment, type ExerciseId, type PlannedDay } from "@/lib/engine";
+import { TECH } from "@/lib/engine/technique";
+import { animFor, es, getLibEx, MUSCLE } from "@/lib/library";
+import { getCatalog, getOwned } from "@/lib/challenges-server";
+import { isProgram, type Challenge, type CoverStyle } from "@/lib/challenges";
+import { PROGRAM_SEED_BY_SLUG } from "@/lib/program-seed";
+import {
+  addDays, calendarSlot, parseProgramTemplate, parseSession, plannedFromSession, resolveProgram, restDay, restLabel, setsLabel,
+  type DoneSession, type ExInfo, type ProgramDef, type ProgramMeta, type ProgramRun, type ProgramSession, type ProgramState, type ProgramStatus,
+} from "@/lib/programs";
+
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+/** Nombre, músculo y equipo de un ejercicio del motor o de la biblioteca. */
+export function exInfo(id: string): ExInfo | null {
+  if (id.startsWith("ds:")) {
+    const x = getLibEx(id.slice(3));
+    return x ? { name: x.n, muscle: cap(es(MUSCLE, x.t)), eq: x.eq } : null;
+  }
+  const e = EX[id as ExerciseId];
+  return e ? { name: e.n, muscle: e.m } : null;
+}
+/** ¿Existe el ejercicio? (validación del panel). */
+export const knownExercise = (id: string) => exInfo(id) !== null;
+/** Animación de técnica del mono para un ejercicio (null si no hay una que se parezca). */
+export function exAnim(id: string): string | null {
+  if (id.startsWith("ds:")) { const x = getLibEx(id.slice(3)); return x ? animFor(x) : null; }
+  return TECH[id]?.anim ?? null;
+}
+
+// ───────────── Estado ─────────────
+
+type UpRow = { slug: string; status: string; started_on: string; paused_on: string | null; paused_days: number | null; completed_at: string | null };
+const STATUSES: ProgramStatus[] = ["activo", "pausado", "abandonado", "completado"];
+const toState = (r: UpRow): ProgramState => ({
+  slug: r.slug, status: STATUSES.includes(r.status as ProgramStatus) ? (r.status as ProgramStatus) : "abandonado", startedOn: String(r.started_on).slice(0, 10),
+  pausedOn: r.paused_on ? String(r.paused_on).slice(0, 10) : null, pausedDays: Number(r.paused_days ?? 0), completedAt: r.completed_at,
+});
+
+/** Demo: Andrés empezó el programa insignia hace 9 días (semana 2) y lleva 4 sesiones hechas. */
+export const DEMO_PROGRAM = "reconstruccion-8-semanas";
+const demoStart = (today: string) => addDays(today, -9);
+function demoDone(today: string): DoneSession[] {
+  const s = demoStart(today);
+  return [[1, 1, 0], [1, 2, 1], [1, 3, 3], [2, 1, 7]].map(([week, day, off]) => ({ week, day, on: addDays(s, off) }));
+}
+
+/** Programas de la persona (todos los estados). Sin la migración 0024: ninguno. */
+export const getProgramStates = cache(async (v: Viewer): Promise<ProgramState[]> => {
+  if (v.demo) return [{ slug: DEMO_PROGRAM, status: "activo", startedOn: demoStart(todayFor(v).iso), pausedOn: null, pausedDays: 0, completedAt: null }];
+  const { data, error } = await (await createClient()).from("user_programs").select("slug,status,started_on,paused_on,paused_days,completed_at").eq("user_id", v.id).order("updated_at", { ascending: false });
+  if (error) return [];
+  return ((data ?? []) as UpRow[]).map(toState);
+});
+
+/** Sesiones que quien mira puede leer (RLS: la fase 1 para todos; todo con la compra, si lo empezó o si es staff). */
+export const getProgramSessions = cache(async (v: Viewer, slug: string): Promise<ProgramSession[]> => {
+  if (v.demo) {
+    const seed = PROGRAM_SEED_BY_SLUG[slug];
+    if (!seed) return [];
+    const full = (await getOwned(v)).has(slug) || seed.priceUsd === 0;
+    return seed.sessions.filter((s) => full || s.phase === 1);
+  }
+  const { data, error } = await (await createClient()).from("program_sessions").select("phase,day,title,focus,optional,exercises").eq("slug", slug).order("phase").order("day");
+  if (error) return [];
+  return (data ?? []).map(parseSession).filter((s): s is ProgramSession => !!s);
+});
+
+/** Sesiones hechas desde `since` (entrenos guardados con la plantilla del programa). */
+export async function getProgramDone(v: Viewer, slug: string, since: string): Promise<DoneSession[]> {
+  if (v.demo) return slug === DEMO_PROGRAM ? demoDone(todayFor(v).iso) : [];
+  const { data } = await (await createClient()).from("workouts").select("day,template").eq("user_id", v.id).like("template", `p:${slug}:%`).gte("day", since).order("day").limit(500);
+  const out: DoneSession[] = [];
+  for (const r of (data ?? []) as { day: string; template: string }[]) {
+    const t = parseProgramTemplate(String(r.template ?? ""));
+    if (t && t.slug === slug) out.push({ week: t.week, day: t.day, on: String(r.day).slice(0, 10) });
+  }
+  return out;
+}
+
+export type ProgramChallenge = Challenge & { kind: "programa"; program: ProgramMeta };
+export type LoadedProgram = { c: ProgramChallenge; def: ProgramDef; state: ProgramState; done: DoneSession[]; run: ProgramRun };
+
+/** Carga un programa de la persona con su estado y qué toca hoy. Null si ya no existe o no tiene sesiones visibles. */
+export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedProgram | null> {
+  const c = (await getCatalog(v.demo)).get(st.slug);
+  if (!c || !isProgram(c)) return null;
+  const sessions = await getProgramSessions(v, st.slug);
+  if (!sessions.length) return null;
+  const done = await getProgramDone(v, st.slug, st.startedOn);
+  const def: ProgramDef = { slug: c.id, title: c.title, meta: c.program, sessions };
+  return { c, def, state: st, done, run: resolveProgram(def, st, done, todayFor(v).iso) };
+}
+
+/** El programa activo (uno como máximo). */
+export const getActiveProgram = cache(async (v: Viewer): Promise<LoadedProgram | null> => {
+  const st = (await getProgramStates(v)).find((s) => s.status === "activo");
+  return st ? loadProgram(v, st) : null;
+});
+
+// ───────────── Rutina del día para el resto de la app ─────────────
+
+/** Lo que el programa activo le pone a Hoy, Entrenar, el reproductor y el coach. Datos planos (viajan al cliente). */
+export type AthleteProgram = {
+  slug: string; title: string; cover: CoverStyle; icon: string; meta: ProgramMeta; state: ProgramState; run: ProgramRun;
+  plan: PlannedDay; weekPlan: PlannedDay[]; sched: Record<number, boolean>; yesterday: PlannedDay; tomorrow: PlannedDay;
+};
+
+export function programContext(p: LoadedProgram, eq: Equipment, today: { iso: string; dow: number }): AthleteProgram {
+  const { c, def, state, run } = p;
+  const dowOf = (iso: string) => new Date(iso + "T12:00:00").getDay();
+  const at = (iso: string): PlannedDay => {
+    const slot = calendarSlot(def, state, today.iso, iso);
+    return slot ? plannedFromSession(def, c.icon, slot.session, slot.week, dowOf(iso), eq, exInfo) : restDay(dowOf(iso));
+  };
+  let plan: PlannedDay;
+  if (run.today === "entreno" && run.next) plan = plannedFromSession(def, c.icon, run.next.session, run.next.week, today.dow, eq, exInfo);
+  else if (run.today === "hecho") {
+    const d = p.done.filter((x) => x.on === today.iso).at(-1);
+    const s = d ? def.sessions.find((x) => x.phase === run.phase.index && x.day === d.day) : undefined;
+    plan = s && d ? plannedFromSession(def, c.icon, s, d.week, today.dow, eq, exInfo) : restDay(today.dow);
+  } else plan = restDay(today.dow, run.today === "semana-completa" ? "Semana del programa completa. Camina y estira" : "Camina 8-12k pasos y estira 10 min");
+  const mon = mondayOf(today.iso);
+  const weekPlan = [0, 1, 2, 3, 4, 5, 6].map((i) => at(addDays(mon, i)));
+  return {
+    slug: c.id, title: c.title, cover: c.cover, icon: c.icon, meta: c.program, state, run, plan, weekPlan,
+    sched: Object.fromEntries(weekPlan.map((d) => [d.dow, isTrainingDay(d)])), yesterday: at(addDays(today.iso, -1)), tomorrow: at(addDays(today.iso, 1)),
+  };
+}
+
+// ───────────── Progreso del programa ─────────────
+
+export type LiftGain = { id: string; name: string; unit: "kg" | "reps" | "s"; first: number; last: number; firstOn: string; lastOn: string };
+
+/**
+ * Fuerza en los ejercicios clave desde que empezó el programa: la mejor serie de la primera sesión contra la de la
+ * última. Con carga, 1RM estimado (kg); sin carga, repeticiones o segundos.
+ */
+export async function getLiftGains(v: Viewer, ids: string[], since: string, units: Record<string, "kg" | "reps" | "s">): Promise<LiftGain[]> {
+  if (!ids.length) return [];
+  let rows: { exercise: string; kg: number | null; reps: number; day: string }[] = [];
+  if (v.demo) {
+    // Demo: la misma historia que demo-story (subidas pequeñas y constantes), solo para ver la pantalla.
+    const base: Record<string, number> = { bench: 88, rdl: 96, dbrow: 32, "ds:1409": 90 };
+    const t = todayFor(v).iso;
+    rows = ids.filter((id) => base[id]).flatMap((id) => [{ exercise: id, kg: base[id], reps: 10, day: addDays(t, -9) }, { exercise: id, kg: Math.round(base[id] * 1.04 * 2) / 2, reps: 10, day: addDays(t, -2) }]);
+  } else {
+    const { data } = await (await createClient()).from("workout_sets").select("exercise,kg,reps,workouts!inner(day)").eq("user_id", v.id).in("exercise", ids).gte("workouts.day", since).limit(2000);
+    rows = ((data ?? []) as unknown as { exercise: string; kg: number | null; reps: number | null; workouts: { day: string } }[]).map((r) => ({ exercise: r.exercise, kg: r.kg == null ? null : Number(r.kg), reps: Number(r.reps ?? 0), day: r.workouts.day }));
+  }
+  const out: LiftGain[] = [];
+  for (const id of ids) {
+    const unit = units[id] ?? "kg";
+    const byDay = new Map<string, number>();
+    for (const r of rows.filter((x) => x.exercise === id)) {
+      const val = unit === "kg" ? (r.kg && r.reps ? e1rm(r.kg, r.reps) : 0) : r.reps;
+      if (val > 0) byDay.set(r.day, Math.max(byDay.get(r.day) ?? 0, val));
+    }
+    const days = [...byDay.keys()].sort();
+    if (!days.length) continue;
+    out.push({ id, name: exInfo(id)?.name ?? id, unit, first: byDay.get(days[0])!, last: byDay.get(days.at(-1)!)!, firstOn: days[0], lastOn: days.at(-1)! });
+  }
+  return out;
+}
+
+/** Sesiones listas para mostrar (Entrenar y la vista previa de la tienda), ya adaptadas al equipo de la persona. */
+export function sessionViews(def: Pick<ProgramDef, "slug" | "title" | "meta">, icon: string, sessions: ProgramSession[], week: number, eq: Equipment, done: (day: number) => boolean, href: (day: number) => string | null) {
+  return sessions.map((s) => {
+    const p = plannedFromSession(def, icon, s, week, 0, eq, exInfo);
+    return {
+      day: s.day, title: s.title, focus: s.focus, optional: !!s.optional, done: done(s.day), mins: p.mins ?? 45, href: href(s.day),
+      exercises: (p.program?.exercises ?? []).map((e) => ({ id: e.id, name: e.name, muscle: e.muscle, sets: setsLabel(e.cfg), rest: restLabel(e.cfg.rest), tempo: e.tempo, note: e.note })),
+    };
+  });
+}

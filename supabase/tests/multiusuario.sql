@@ -1,6 +1,6 @@
 -- Banana Burn · suite multiusuario (aislamiento entre cuentas, comunidad, escalamiento, XP, RPC y carreras)
--- Uso (BD desechable con stub.sql + migraciones 0001→0022, ver README.md). La sección 5b cubre la tienda de retos (0018)
--- y la 7, el acceso a nutrición por plan (0022).
+-- Uso (BD desechable con stub.sql + migraciones 0001→0024, ver README.md). La sección 5b cubre la tienda de retos (0018),
+-- la 5c los programas (0024) y la 7, el acceso a nutrición por plan (0022).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -441,12 +441,15 @@ begin perform set_config('request.jwt.claims', json_build_object('sub', id, 'rol
 update public.challenges_catalog set status = 'oculto' where slug = 'movilidad-14';
 update public.challenges_catalog set status = 'borrador' where slug = 'sin-azucar-7';
 update public.challenges_catalog set status = 'archivado' where slug = 'pasos-14';
+-- Desde 0024 los retos Premium de entreno son programas: para probar un reto de hábitos de pago se crea uno aquí.
+insert into public.challenges_catalog (slug, title, days, rules, status, price_usd, verify, grace, xp, badge) values ('reto-pago-prueba', 'Reto de pago de prueba', 14, '{}'::jsonb, 'publicado', 2.99, 'manual', 1, 150, 'Prueba');
+insert into public.challenge_plans (slug, days) select 'reto-pago-prueba', jsonb_agg(jsonb_build_object('t', 'Día ' || g, 'type', 'habito')) from generate_series(1, 14) g;
 -- Una compra y un acceso de G (escritos por el servidor, como el webhook).
 insert into public.challenge_purchases (user_id, challenge_slug, status, amount_minor, list_price_minor, provider_payment_intent_id) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'pagado', 699, 699, 'pi_test_g');
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 11);
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 13);
 select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
 select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
 select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
@@ -460,7 +463,7 @@ select bbtest.fails('compras: el usuario no se crea una compra', $q$ insert into
 select bbtest.fails('compras: el usuario no se da acceso a un reto de pago', $q$ insert into public.challenge_entitlements (user_id, challenge_slug, source) values (auth.uid(), 'abdomen-21', 'compra') $q$, '42501');
 select bbtest.ok('compras: no ve compras ni accesos de otros', bbtest.num($q$ select 1 from public.challenge_purchases $q$) = 0 and bbtest.num($q$ select 1 from public.challenge_entitlements $q$) = 0);
 select bbtest.zero('compras: no marca pagada una compra ajena', $q$ update public.challenge_purchases set status = 'reembolsado' $q$);
-select bbtest.fails('unirse: reto de pago sin comprarlo', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'abdomen-21') $q$, '42501');
+select bbtest.fails('unirse: reto de pago sin comprarlo', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'reto-pago-prueba') $q$, '42501');
 select bbtest.fails('unirse: reto oculto', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'movilidad-14') $q$, '22023');
 select bbtest.fails('unirse: reto en borrador', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'sin-azucar-7') $q$, '22023');
 select bbtest.fails('unirse: reto con fecha que aún no abre', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'sprint-verano-28') $q$, 'P0001');
@@ -491,23 +494,23 @@ select bbtest.ok('nivel: con 955 XP (Banana madura) el reto nuevo trae +1 comod�
 reset role;
 
 -- Compra confirmada por el webhook (servidor): ahora sí se une al reto de pago
-insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'abdomen-21', 'compra');
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'reto-pago-prueba', 'compra');
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('unirse: reto de pago comprado', bbtest.affected($q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'abdomen-21') $q$) = 1);
-select bbtest.ok('plan: reto comprado se ve completo', (select (public.challenge_plan('abdomen-21')->>'locked')::boolean = false and jsonb_array_length(public.challenge_plan('abdomen-21')->'days') = 21));
+select bbtest.ok('unirse: reto de pago comprado', bbtest.affected($q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'reto-pago-prueba') $q$) = 1);
+select bbtest.ok('plan: reto comprado se ve completo', (select (public.challenge_plan('reto-pago-prueba')->>'locked')::boolean = false and jsonb_array_length(public.challenge_plan('reto-pago-prueba')->'days') = 14));
 select bbtest.ok('acceso: ve su propio acceso', bbtest.num($q$ select 1 from public.challenge_entitlements where user_id = auth.uid() $q$) = 1);
 reset role;
 -- Un reto ya en curso que el admin oculta: quien está inscrito sigue viendo su definición y su plan
-update public.challenges_catalog set status = 'oculto' where slug = 'abdomen-21';
+update public.challenges_catalog set status = 'oculto' where slug = 'reto-pago-prueba';
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('oculto: el inscrito conserva su reto (my_challenge_defs)', bbtest.num($q$ select 1 from public.my_challenge_defs() where slug = 'abdomen-21' and jsonb_array_length(plan) = 21 $q$) = 1);
-select bbtest.ok('oculto: ya no está en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'abdomen-21' $q$) = 0);
+select bbtest.ok('oculto: el inscrito conserva su reto (my_challenge_defs)', bbtest.num($q$ select 1 from public.my_challenge_defs() where slug = 'reto-pago-prueba' and jsonb_array_length(plan) = 14 $q$) = 1);
+select bbtest.ok('oculto: ya no está en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'reto-pago-prueba' $q$) = 0);
 reset role;
-update public.challenges_catalog set status = 'publicado' where slug = 'abdomen-21';
+update public.challenges_catalog set status = 'publicado' where slug = 'reto-pago-prueba';
 
 -- Staff: admin (S) edita y regala; soporte (P) regala pero no edita el catálogo
 set role authenticated; select bbtest.login('S');
-select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 14);
+select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 16);
 select bbtest.ok('panel: admin cambia el estado', bbtest.affected($q$ update public.challenges_catalog set status = 'publicado' where slug = 'movilidad-14' $q$) = 1);
 select bbtest.ok('panel: active queda sincronizado con publicado', (select active from public.challenges_catalog where slug = 'movilidad-14') and not (select active from public.challenges_catalog where slug = 'sin-azucar-7'));
 select bbtest.ok('panel: admin edita el plan', bbtest.affected($q$ update public.challenge_plans set days = days where slug = 'movilidad-14' $q$) = 1);
@@ -527,6 +530,108 @@ reset role;
 delete from auth.users where id = '0a0a0a0a-0000-4000-8000-00000000000a';
 select bbtest.ok('cuenta borrada: la venta queda registrada sin dueño y el acceso se va', (select user_id is null from public.challenge_purchases where provider_payment_intent_id = 'pi_test_g')
   and not exists (select 1 from public.challenge_entitlements where user_id = '0a0a0a0a-0000-4000-8000-00000000000a'));
+
+-- ───────────── 5c. Programas (0024) ─────────────
+-- F (prueba vigente) compra programas; A intenta tocar lo de F; S (admin) edita; E (prueba vencida) no empieza.
+reset role;
+select bbtest.login(null);
+select bbtest.ok('programas: la siembra trae 5 programas con sesiones', (select count(*) = 5 from public.challenges_catalog where kind = 'programa')
+  and (select count(distinct slug) = 5 from public.program_sessions));
+select bbtest.ok('programas: los retos de hábitos siguen siendo retos', (select kind = 'reto' from public.challenges_catalog where slug = 'banana-30') and (select kind = 'reto' from public.challenges_catalog where slug = 'sprint-verano-28'));
+select bbtest.ok('programas: el insignia cuesta $9.99 y dura 8 semanas', (select price_usd = 9.99 and public._program_weeks(program) = 8 from public.challenges_catalog where slug = 'reconstruccion-8-semanas'));
+select bbtest.ok('programas: los convertidos conservan su precio', (select bool_and(price_usd = case slug when 'abdomen-21' then 4.99 when 'gluteos-30' then 6.99 when 'dominadas-desde-cero' then 7.99 else 9.99 end) from public.challenges_catalog where slug in ('abdomen-21','gluteos-30','dominadas-desde-cero','pierde-3kg-6-semanas')));
+select bbtest.fails('programas: un programa necesita su meta', $q$ update public.challenges_catalog set program = null where slug = 'abdomen-21' $q$, '23514');
+
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 5);
+select bbtest.ok('sesiones: sin comprar ve la semana 1 (fase 1)', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase = 1 $q$) = 4);
+select bbtest.ok('sesiones: sin comprar no ve las demás fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase > 1 $q$) = 0);
+select bbtest.zero('sesiones: F no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'reconstruccion-8-semanas' $q$);
+select bbtest.zero('sesiones: F no borra sesiones', $q$ delete from public.program_sessions where slug = 'reconstruccion-8-semanas' $q$);
+select bbtest.fails('sesiones: F no crea sesiones', $q$ insert into public.program_sessions (slug, phase, day, title) values ('reconstruccion-8-semanas', 8, 6, 'Trampa') $q$, '42501');
+select bbtest.fails('estado: F no inserta su estado directo', $q$ insert into public.user_programs (user_id, slug, started_on) values (auth.uid(), 'reconstruccion-8-semanas', current_date) $q$, '42501');
+select bbtest.fails('empezar: sin comprar el programa', $q$ select public.program_start('reconstruccion-8-semanas', current_date) $q$, '42501');
+select bbtest.fails('empezar: un reto de hábitos no es programa', $q$ select public.program_start('banana-30', current_date) $q$, '22023');
+select bbtest.fails('empezar: fecha que no es hoy en ninguna zona', $q$ select public.program_start('reconstruccion-8-semanas', current_date + 5) $q$, '22023');
+select bbtest.fails('unirse: un programa no se une como reto', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'reconstruccion-8-semanas') $q$, 'P0001');
+reset role;
+-- El webhook (servidor) confirma dos compras de F.
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values
+  ('0f0f0f0f-0000-4000-8000-00000000000f', 'reconstruccion-8-semanas', 'compra'), ('0f0f0f0f-0000-4000-8000-00000000000f', 'gluteos-30', 'compra'),
+  ('0f0f0f0f-0000-4000-8000-00000000000f', 'abdomen-21', 'cortesia');
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('empezar: con la compra empieza', public.program_start('reconstruccion-8-semanas', current_date) = 'empezado');
+select bbtest.ok('empezar: dos veces no duplica', public.program_start('reconstruccion-8-semanas', current_date) = 'activo');
+select bbtest.ok('empezar: una sola fila', bbtest.num($q$ select 1 from public.user_programs where user_id = auth.uid() $q$) = 1);
+select bbtest.ok('sesiones: con la compra ve todas las fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' $q$) = 16);
+select bbtest.fails('estado: F no se adelanta el inicio', $q$ update public.user_programs set started_on = current_date - 60 where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('un activo: empezar otro sin pausar falla', $q$ select public.program_start('gluteos-30', current_date) $q$, 'P0001');
+select bbtest.ok('un activo: pausando el actual empieza el otro', public.program_start('gluteos-30', current_date, true) = 'empezado');
+select bbtest.ok('un activo: el anterior quedó en pausa con su avance', (select status = 'pausado' and paused_on is not null from public.user_programs where user_id = auth.uid() and slug = 'reconstruccion-8-semanas'));
+select bbtest.ok('un activo: solo uno activo', bbtest.num($q$ select 1 from public.user_programs where user_id = auth.uid() and status = 'activo' $q$) = 1);
+select bbtest.ok('pausa: F pausa el activo', bbtest.affected($q$ select public.program_pause('gluteos-30', current_date) $q$) = 1);
+select bbtest.ok('pausa: queda en pausa', (select status = 'pausado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
+select bbtest.fails('pausa: no pausa lo que no está activo', $q$ select public.program_pause('gluteos-30', current_date) $q$, 'P0001');
+select bbtest.ok('reanudar: vuelve a activo', public.program_start('reconstruccion-8-semanas', current_date) = 'reanudado');
+select bbtest.ok('reanudar: sin perder el inicio', (select status = 'activo' and started_on = current_date and paused_on is null from public.user_programs where user_id = auth.uid() and slug = 'reconstruccion-8-semanas'));
+select bbtest.fails('terminar: antes del final no hay certificado', $q$ select public.program_finish('reconstruccion-8-semanas', current_date) $q$, 'P0001');
+select bbtest.ok('dejar: deja el programa en pausa', bbtest.affected($q$ select public.program_leave('gluteos-30') $q$) = 1);
+select bbtest.ok('dejar: queda abandonado', (select status = 'abandonado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
+select bbtest.ok('dejar: lo vuelve a empezar desde cero', public.program_start('gluteos-30', current_date, true) = 'reiniciado');
+select bbtest.ok('programas: my_program_defs trae los suyos', bbtest.num($q$ select 1 from public.my_program_defs() $q$) = 2);
+reset role;
+-- A no ve ni toca lo de F.
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('aislamiento: A no ve el estado de F', bbtest.num($q$ select 1 from public.user_programs where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' $q$) = 0);
+select bbtest.fails('aislamiento: A no pausa el programa de F', $q$ select public.program_pause('gluteos-30', current_date) $q$, 'P0001');
+select bbtest.zero('aislamiento: A no edita el estado de F', $q$ update public.user_programs set status = 'completado' where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' $q$);
+select bbtest.zero('aislamiento: A no borra el estado de F', $q$ delete from public.user_programs where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' $q$);
+select bbtest.fails('panel: A no ve las estadísticas de programas', $q$ select * from public.admin_program_stats() $q$, '42501');
+reset role;
+select bbtest.ok('aislamiento: el estado de F sigue intacto', (select count(*) = 1 from public.user_programs where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' and slug = 'gluteos-30' and status = 'activo'));
+-- Terminar por calendario: el servidor mueve el inicio 60 días atrás (más de 8 semanas).
+update public.user_programs set status = 'pausado', paused_on = current_date where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' and slug = 'gluteos-30';
+update public.user_programs set status = 'activo', started_on = current_date - 60, paused_on = null, paused_days = 0 where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' and slug = 'reconstruccion-8-semanas';
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('terminar: al final del calendario da el certificado', public.program_finish('reconstruccion-8-semanas', current_date));
+select bbtest.ok('terminar: queda completado', (select status = 'completado' and completed_at is not null from public.user_programs where user_id = auth.uid() and slug = 'reconstruccion-8-semanas'));
+select bbtest.ok('empezar: 21 días de abdomen (cortesía)', public.program_start('abdomen-21', current_date) = 'empezado');
+reset role;
+-- Terminar por sesiones: las 9 sesiones obligatorias del programa de abdomen (3 semanas x 3 días), guardadas hoy.
+insert into public.workouts (user_id, day, template, started_at) select '0f0f0f0f-0000-4000-8000-00000000000f', current_date, 'p:abdomen-21:' || w || '.' || d, clock_timestamp() + (w * 10 + d) * interval '1 second' from generate_series(1, 3) w, generate_series(1, 2) d;
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.fails('terminar: faltan sesiones (6 de 9)', $q$ select public.program_finish('abdomen-21', current_date) $q$, 'P0001');
+reset role;
+insert into public.workouts (user_id, day, template, started_at) select '0f0f0f0f-0000-4000-8000-00000000000f', current_date, 'p:abdomen-21:' || w || '.3', clock_timestamp() + w * interval '1 minute' from generate_series(1, 3) w;
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('terminar: con todas las sesiones da el certificado', public.program_finish('abdomen-21', current_date));
+reset role;
+-- Programa oculto después de empezarlo: quien lo tiene sigue viendo su definición y sus sesiones.
+update public.challenges_catalog set status = 'oculto' where slug = 'gluteos-30';
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('oculto: el programa sigue en my_program_defs', bbtest.num($q$ select 1 from public.my_program_defs() where slug = 'gluteos-30' $q$) = 1);
+select bbtest.ok('oculto: sus sesiones siguen visibles', bbtest.num($q$ select 1 from public.program_sessions where slug = 'gluteos-30' $q$) > 3);
+reset role;
+update public.challenges_catalog set status = 'publicado' where slug = 'gluteos-30';
+-- Staff: admin edita sesiones y ve conteos; soporte no edita.
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('panel: admin edita una sesión', bbtest.affected($q$ update public.program_sessions set focus = focus where slug = 'abdomen-21' and phase = 1 and day = 1 $q$) = 1);
+select bbtest.ok('panel: admin ve conteos de programas', (select completed = 1 from public.admin_program_stats() where slug = 'reconstruccion-8-semanas'));
+select bbtest.ok('panel: admin ve el estado (staff)', bbtest.num($q$ select 1 from public.user_programs $q$) >= 3);
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.zero('panel: soporte no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'abdomen-21' $q$);
+reset role;
+-- Anónimo no llama nada; E (prueba vencida, sin plan) no empieza aunque tenga el programa.
+set role anon; select bbtest.login(null);
+select bbtest.fails('anon: no empieza programas', $q$ select public.program_start('abdomen-21', current_date) $q$, '42501');
+select bbtest.zero('anon: no lee sesiones', $q$ select 1 from public.program_sessions $q$);
+reset role;
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values (bbtest.u('E'), 'abdomen-21', 'cortesia');
+set role authenticated; select bbtest.login('E');
+select bbtest.fails('empezar: sin plan ni prueba no empieza', $q$ select public.program_start('abdomen-21', current_date) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.ok('beta: E empieza durante la beta', public.program_start('abdomen-21', current_date) = 'empezado') where not (now() >= timestamptz '2026-11-01 06:00:00+00');
+reset role;
 
 -- ───────────── 6. Registro ─────────────
 insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'largo@prueba.test', jsonb_build_object('full_name', repeat('Nombre ', 40)));

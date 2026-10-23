@@ -36,7 +36,7 @@ export const EXERCISE_ID = /^(ds:)?[A-Za-z0-9_]{1,40}$/;
 /** El navegador manda el entreno: acotamos tamaños y valores antes de tocar la base de datos. */
 export function normalizeWorkout(w: Finished): Finished | null {
   if (!w || typeof w !== "object" || !Array.isArray(w.exercises) || w.exercises.length > 30) return null;
-  if (typeof w.template !== "string" || !/^[A-Za-z0-9 _.:áéíóúñÁÉÍÓÚÑ+-]{1,60}$/.test(w.template)) return null;
+  if (typeof w.template !== "string" || !/^[A-Za-z0-9 _.:áéíóúñÁÉÍÓÚÑ+-]{1,80}$/.test(w.template)) return null;
   const exercises: Finished["exercises"] = [];
   for (const e of w.exercises) {
     if (!e || typeof e.id !== "string" || !EXERCISE_ID.test(e.id) || !Array.isArray(e.sets) || e.sets.length > 12) return null;

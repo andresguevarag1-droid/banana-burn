@@ -4,7 +4,8 @@ import { requireSection } from "@/lib/admin-auth";
 import { can } from "@/lib/admin-perms";
 import { listAdminChallenges } from "@/lib/admin-retos";
 import { STATUS_LABEL, usd, type ChallengeStatus } from "@/lib/challenges";
-import { Badge, DemoNotice, Empty, MigrationNotice, Nil, PageHeader, SubTabs, Table, Td, Th, btnPrimary, fmtNum, trHover } from "@/components/admin/ui";
+import { weeksOf } from "@/lib/programs";
+import { Badge, DemoNotice, Empty, MigrationNotice, Nil, PageHeader, SubTabs, Table, Td, Th, btnGhost, btnPrimary, fmtNum, trHover } from "@/components/admin/ui";
 import { ChallengeCover } from "@/components/retos/cover";
 import { MoveButtons, QuickActions } from "./row-actions";
 
@@ -24,6 +25,7 @@ export default async function AdminRetos({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-5">
       <PageHeader title="Retos" desc="La tienda de retos: crea, edita, ordena, oculta y vende retos. Lo publicado aparece en la app al instante." >
+        <Link href="/admin/retos/nuevo?tipo=programa" className={btnGhost}><Plus weight="bold" className="size-4" />Nuevo programa</Link>
         <Link href="/admin/retos/nuevo" className={btnPrimary}><Plus weight="bold" className="size-4" />Nuevo reto</Link>
       </PageHeader>
       {v.demo && <DemoNotice what="los retos (sin personas ni ventas reales)" />}
@@ -42,13 +44,13 @@ export default async function AdminRetos({ searchParams }: { searchParams: Promi
                 <Td>
                   <Link href={`/admin/retos/${c.uuid}`} className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
                     <span className="w-14 shrink-0 overflow-hidden rounded-xl"><ChallengeCover c={c} className="h-10 w-14" chip={false} /></span>
-                    <span className="min-w-44"><span className="block font-semibold text-ink hover:underline">{c.title}</span><span className="block text-xs text-muted">{c.id}, {c.days} días{c.featured ? ", destacado" : ""}</span></span>
+                    <span className="min-w-44"><span className="block font-semibold text-ink hover:underline">{c.title}</span><span className="block text-xs text-muted">{c.id}, {c.kind === "programa" && c.program ? `programa de ${weeksOf(c.program)} semanas` : `${c.days} días`}{c.featured ? ", destacado" : ""}</span></span>
                   </Link>
                 </Td>
                 <Td><Badge tone={TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge></Td>
                 <Td className="tabular-nums">{c.priceUsd > 0 ? usd(Math.round(c.priceUsd * 100)) : <span className="text-[#17703A] font-semibold">Gratis</span>}</Td>
-                <Td className="text-right tabular-nums">{stats ? fmtNum(stats.active) : <Nil />}</Td>
-                <Td className="text-right tabular-nums">{stats ? fmtNum(stats.completed) : <Nil />}</Td>
+                <Td className="text-right tabular-nums">{stats ? fmtNum(stats.program ? stats.program.active : stats.active) : <Nil />}</Td>
+                <Td className="text-right tabular-nums">{stats ? fmtNum(stats.program ? stats.program.completed : stats.completed) : <Nil />}</Td>
                 {sales && <><Td className="text-right tabular-nums">{stats?.purchases != null ? fmtNum(stats.purchases) : <Nil />}{stats?.comps ? <span className="block text-[11px] text-muted">{stats.comps} de cortesía</span> : null}</Td><Td className="text-right tabular-nums">{stats?.revenueMinor != null ? usd(stats.revenueMinor) : <Nil />}</Td></>}
                 <Td className="whitespace-nowrap text-right"><span className="inline-flex items-center gap-1"><Link href={`/admin/retos/${c.uuid}`} className="inline-flex h-10 items-center rounded-lg px-2 text-sm font-semibold text-ink hover:bg-paper">Editar</Link><QuickActions id={c.uuid} status={c.status} /></span></Td>
               </tr>
