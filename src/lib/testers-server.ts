@@ -133,7 +133,22 @@ export async function deliverTesterNotices(opts: { userId?: string; limit?: numb
 // ───────────── Panel ─────────────
 
 export type AdminTesterGrant = TesterGrantRow & { granted_by: string | null; granted_by_name?: string; revoked_by: string | null };
-export type FeedbackRow = { id: number; user_id: string; kind: string; body: string; page: string | null; from_tester: boolean; status: string; created_at: string; name?: string };
+/** Reporte de la app. `ticket`: viene de soporte (0034) y se gestiona en /admin/soporte; si no, es un reporte de 0029. */
+export type FeedbackRow = { id: number; user_id: string; kind: string; body: string; page: string | null; from_tester: boolean; status: string; created_at: string; name?: string; ticket?: boolean };
+
+type Sb = Awaited<ReturnType<typeof createClient>>;
+/** Reportes desde soporte (0034); sin esa migración, los de feedback_reports (0029). */
+async function loadFeedback(sb: Sb, userId?: string, limit = 30): Promise<{ data: FeedbackRow[]; error: boolean }> {
+  let q = sb.from("support_tickets").select("id,user_id,category,title,status,from_tester,created_at,context").order("created_at", { ascending: false }).limit(limit);
+  if (userId) q = q.eq("user_id", userId);
+  const t = await q;
+  if (!t.error) return { error: false, data: ((t.data ?? []) as { id: number; user_id: string; category: string; title: string; status: string; from_tester: boolean; created_at: string; context: Record<string, string> | null }[])
+    .map((x) => ({ id: x.id, user_id: x.user_id, kind: x.category, body: x.title, page: x.context?.page ?? null, from_tester: x.from_tester, status: x.status, created_at: x.created_at, ticket: true })) };
+  let f = sb.from("feedback_reports").select("id,user_id,kind,body,page,from_tester,status,created_at").order("created_at", { ascending: false }).limit(limit);
+  if (userId) f = f.eq("user_id", userId);
+  const r = await f;
+  return { error: !!r.error, data: (r.data ?? []) as FeedbackRow[] };
+}
 
 export type TesterAdmin = { grants: AdminTesterGrant[]; feedback: FeedbackRow[]; unavailable?: boolean };
 
@@ -161,14 +176,14 @@ export async function getTesterAdmin(v: Viewer, userId: string): Promise<TesterA
   const sb = await createClient();
   const [g, f] = await Promise.all([
     sb.from("tester_grants").select(`${TESTER_COLS},granted_by,revoked_by`).eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
-    sb.from("feedback_reports").select("id,user_id,kind,body,page,from_tester,status,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
+    loadFeedback(sb, userId, 30),
   ]);
   if (g.error) return { grants: [], feedback: [], unavailable: true };
   const grants = (g.data ?? []) as AdminTesterGrant[];
   const ids = [...new Set(grants.map((x) => x.granted_by).filter(Boolean))] as string[];
   const { data: names } = ids.length ? await sb.from("profiles").select("id,full_name").in("id", ids) : { data: [] };
   const nm = new Map(((names ?? []) as { id: string; full_name: string | null }[]).map((x) => [x.id, x.full_name || "Sin nombre"]));
-  return { grants: grants.map((x) => ({ ...x, granted_by_name: x.granted_by ? nm.get(x.granted_by) : undefined })), feedback: (f.data ?? []) as FeedbackRow[] };
+  return { grants: grants.map((x) => ({ ...x, granted_by_name: x.granted_by ? nm.get(x.granted_by) : undefined })), feedback: f.data };
 }
 
 export type TesterListRow = { id: string; name: string; email: string | null; starts_at: string; expires_at: string; reports: number };
@@ -190,11 +205,11 @@ export async function getTesterOverview(v: Viewer): Promise<{ testers: TesterLis
   const nowIso = new Date().toISOString();
   const [g, f] = await Promise.all([
     sb.from("tester_grants").select("user_id,starts_at,expires_at").is("revoked_at", null).lte("starts_at", nowIso).gt("expires_at", nowIso).order("expires_at").limit(300),
-    sb.from("feedback_reports").select("id,user_id,kind,body,page,from_tester,status,created_at").order("created_at", { ascending: false }).limit(60),
+    loadFeedback(sb, undefined, 60),
   ]);
   if (g.error) return { testers: [], feedback: [], unavailable: true };
   const grants = (g.data ?? []) as { user_id: string; starts_at: string; expires_at: string }[];
-  const fb = (f.data ?? []) as FeedbackRow[];
+  const fb = f.data;
   const ids = [...new Set([...grants.map((x) => x.user_id), ...fb.map((x) => x.user_id)])];
   const { data: acc } = ids.length ? await sb.from("profiles").select("id,full_name").in("id", ids) : { data: [] };
   const nm = new Map(((acc ?? []) as { id: string; full_name: string | null }[]).map((x) => [x.id, x.full_name || "Sin nombre"]));

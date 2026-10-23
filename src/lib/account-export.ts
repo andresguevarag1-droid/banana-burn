@@ -7,7 +7,7 @@ export const EXPORT_BY_USER = [
   "subscriptions", "billing_customers", "payment_events", "comp_grants", "trial_charges",
   "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
   "user_challenges", "challenge_checkins", "challenge_milestones", "challenge_purchases", "challenge_entitlements", "user_programs",
-  "device_interest", "posts", "comments", "kudos", "referral_codes", "tester_grants", "feedback_reports", "profile_flair", "identity_verifications",
+  "device_interest", "posts", "comments", "kudos", "referral_codes", "tester_grants", "feedback_reports", "support_tickets", "profile_flair", "identity_verifications",
 ] as const;
 
 /**

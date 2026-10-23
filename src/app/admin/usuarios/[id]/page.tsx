@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Flask, Gift, Lock, ArrowCounterClockwise as RotateCcw, Trash, UserGear as UserCog, ShieldWarning } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
+import { CATEGORY_LABEL, STATUS_LABEL, type SupportCategory, type SupportStatus } from "@/lib/support";
 import { ACTIVITY_LABEL, getUserDetail, PLAN_LABEL, statusOf } from "@/lib/admin";
-import { assignableRoles, can, PRIVILEGED, ROLE_LABEL } from "@/lib/admin-perms";
+import { assignableRoles, can, PRIVILEGED, ROLE_LABEL, canSee } from "@/lib/admin-perms";
 import { isUuid } from "@/lib/admin-validate";
 import { addDays } from "@/lib/admin-kpis";
 import { crToday } from "@/lib/today";
@@ -153,11 +154,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 {tester.feedback.length ? (
                   <ul className="space-y-2">{tester.feedback.map((f) => (
                     <li key={f.id} className="rounded-xl border border-line px-3 py-2.5 text-sm">
-                      <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{FEEDBACK_KIND_LABEL[f.kind as FeedbackKind] ?? f.kind}
-                        <Badge tone={f.status === "resuelto" ? "good" : f.status === "visto" ? "muted" : "warn"}>{FEEDBACK_STATUS_LABEL[f.status] ?? f.status}</Badge>{f.from_tester && <Badge tone="info">Tester</Badge>}</p>
+                      <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{FEEDBACK_KIND_LABEL[f.kind as FeedbackKind] ?? CATEGORY_LABEL[f.kind as SupportCategory] ?? f.kind}
+                        <Badge tone={f.status === "resuelto" || f.status === "cerrado" ? "good" : f.status === "visto" || f.status === "en_proceso" ? "muted" : "warn"}>{FEEDBACK_STATUS_LABEL[f.status] ?? STATUS_LABEL[f.status as SupportStatus] ?? f.status}</Badge>{f.from_tester && <Badge tone="info">Tester</Badge>}</p>
                       <p className="mt-1 whitespace-pre-wrap break-words text-body text-pretty">{f.body}</p>
                       <MetaList className="mt-1" items={[fmtDateTime(f.created_at), f.page && `En ${f.page}`]} />
-                      {can(v.role, "feedback.manage") && f.status !== "resuelto" && (
+                      {f.ticket && canSee(v.role, "soporte") && <Link href={`/admin/soporte/${f.id}`} className={`mt-2 ${rowAction}`}>Abrir el caso</Link>}
+                      {!f.ticket && can(v.role, "feedback.manage") && f.status !== "resuelto" && (
                         <ActionForm action={setFeedbackStatus} className="mt-2 flex flex-wrap gap-1">
                           <input type="hidden" name="id" value={f.id} />
                           <input type="hidden" name="status" value="resuelto" />

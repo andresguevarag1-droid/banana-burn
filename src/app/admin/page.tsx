@@ -2,13 +2,14 @@ import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
 import { getDashboard } from "@/lib/admin";
 import { delta, pct, RETENTION_WINDOWS, type Cell } from "@/lib/admin-kpis";
-import { can, SECTION_CAPS, type Section } from "@/lib/admin-perms";
+import { can, canSee, SECTION_CAPS, type Section } from "@/lib/admin-perms";
+import { openSupportCount } from "@/lib/support-server";
 import { BarChart, LineChart } from "@/components/admin/charts";
 import { DemoNotice, Empty, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDate, fmtNum, fmtPct, link, money, panel, tr } from "@/components/admin/ui";
 
 export const metadata = { title: "Resumen" };
 
-const SECTION_NAME: Record<Section, string> = { resumen: "Resumen", usuarios: "Usuarios", pagos: "Pagos", contenido: "Contenido", retos: "Retos", comunidad: "Comunidad", verificaciones: "Verificaciones", auditoria: "Auditoría" };
+const SECTION_NAME: Record<Section, string> = { resumen: "Resumen", usuarios: "Usuarios", pagos: "Pagos", contenido: "Contenido", retos: "Retos", comunidad: "Comunidad", verificaciones: "Verificaciones", soporte: "Soporte", auditoria: "Auditoría" };
 
 function RetCell({ c }: { c: Cell }) {
   if (c.rate === null) return <span className="text-xs text-muted" title={`${c.eligible} de la cohorte ya cumplieron esta ventana`}>En curso</span>;
@@ -24,7 +25,7 @@ function RetCell({ c }: { c: Cell }) {
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ sin_acceso?: string }> }) {
   const v = await requireSection("resumen");
   const { sin_acceso } = await searchParams;
-  const d = await getDashboard(v);
+  const [d, support] = await Promise.all([getDashboard(v), canSee(v.role, "soporte") ? openSupportCount(v).catch(() => null) : Promise.resolve(null)]);
   const dNew = delta(d.new_7, d.new_prev_7);
   const workouts = d.series.map((s) => ({ day: s.day, n: s.workouts }));
   const signups = d.series.map((s) => ({ day: s.day, n: s.signups }));
@@ -38,6 +39,13 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       {sin_acceso && sin_acceso in SECTION_CAPS && <Notice tone="warn" title={`Tu rol no tiene acceso a ${SECTION_NAME[sin_acceso as Section]}`}>Pide a un admin si necesitas permiso.</Notice>}
       {d.source === "demo" && <DemoNotice what="las métricas" />}
       {d.source === "fallback" && <Notice tone="warn" title="Cálculo directo (sin funciones de KPIs)">Aplica 0005_admin.sql para calcular en la base de datos; mientras tanto se calcula desde lecturas directas (puede ser lento con muchos usuarios).</Notice>}
+      {support && (
+        <Link href="/admin/soporte" className={`${panel} flex flex-wrap items-center gap-x-6 gap-y-2 p-4 outline-none transition-colors duration-150 hover:bg-white focus-visible:ring-4 focus-visible:ring-banana/50`}>
+          <span className="min-w-0 flex-1"><span className="block text-base font-bold text-ink">Soporte</span><span className="block text-sm text-muted">Reportes de las personas: responde, cambia el estado y les avisamos.</span></span>
+          <span className="tabular-nums"><b className="text-2xl font-extrabold text-ink">{fmtNum(support.open)}</b> <span className="text-sm text-muted">{support.open === 1 ? "caso abierto" : "casos abiertos"}</span></span>
+          {support.late > 0 && <span className="chip h-7 bg-[#FDECEC] text-[#B4232A] tabular-nums">{fmtNum(support.late)} sin respuesta en 24 h</span>}
+        </Link>
+      )}
       {d.users_total === 0 && <Empty title="Todavía no hay usuarios">Cuando alguien cree su cuenta, sus métricas aparecen aquí.</Empty>}
 
       <section aria-labelledby="kpi-usuarios" className="space-y-2.5">

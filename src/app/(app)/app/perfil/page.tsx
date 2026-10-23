@@ -10,7 +10,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, Compass, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, Compass, Lifebuoy, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -132,6 +132,15 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
       </section>
 
       <section className="card p-5"><NotificationSettings initial={prefs} /></section>
+
+      <section id="ayuda" className="card p-5 scroll-mt-6" aria-labelledby="ayuda-t">
+        <h2 id="ayuda-t" className="flex items-center gap-2 font-extrabold text-ink"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><Lifebuoy weight="duotone" className="size-5" /></span>Ayuda y soporte</h2>
+        <p className="mt-2 text-sm text-muted text-pretty">¿Algo falla o tienes un problema con tu cuenta o un cobro? Repórtalo y sigue tu caso: te avisamos cuando lo recibimos, cuando lo trabajamos y cuando queda resuelto.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href="/app/soporte/nuevo?origen=perfil&desde=/app/perfil" className="btn-primary h-11 px-4 text-sm">Reportar un problema</Link>
+          <Link href="/app/soporte" className="btn-ghost h-11 px-4 text-sm">Mis reportes</Link>
+        </div>
+      </section>
 
       <section id="comunidad" className="card p-5 scroll-mt-6">
         <H icon={Users} className="mb-4">Perfil en la comunidad</H>

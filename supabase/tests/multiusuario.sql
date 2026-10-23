@@ -1402,6 +1402,119 @@ select bbtest.fails('guía: anon no marca guías', $q$ select public.guide_mark_
 select bbtest.fails('guía: anon no marca consejos', $q$ select public.guide_tip_seen('entrenar') $q$, '42501');
 reset role;
 
+-- ───────────── 12. Soporte: casos, conversación y estados (0034) ─────────────
+-- A y B: personas. P: soporte. S: admin. K: coach (staff sin soporte).
+reset role; select bbtest.login(null);
+insert into auth.users (id, email) values ('c0ac0000-0000-4000-8000-0000000000c0', 'coach@prueba.test');
+update public.profiles set role = 'coach' where id = 'c0ac0000-0000-4000-8000-0000000000c0';
+create function bbtest.tk(t text) returns bigint language sql security definer as $$ select max(id) from public.support_tickets where title = t $$;
+grant execute on function bbtest.tk(text) to public;
+
+-- 12a. La persona crea su caso: solo lo suyo, contexto limpio, captura de su carpeta.
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('soporte: A crea un caso', (select public.support_create_ticket('app', 'No guarda mi peso', 'Toco guardar y se queda cargando la pantalla de Hoy.', '{"page":"/app","version":"abc","device":"iPhone, Safari","plan":"completo","email":"a@x.com","peso":90}'::jsonb)) > 0);
+select bbtest.ok('soporte: el contexto solo guarda llaves permitidas (sin correo ni datos de salud)', (select context ? 'page' and context ? 'device' and not context ? 'email' and not context ? 'peso' and status = 'recibido' and priority = 'normal' from public.support_tickets where id = bbtest.tk('No guarda mi peso')));
+select bbtest.ok('soporte: aviso de recibido en la campanita', (select count(*) = 1 from public.notifications where user_id = auth.uid() and kind = 'soporte' and title like 'Recibimos tu reporte BB-%'));
+select bbtest.ok('soporte: A ve el evento de creado', bbtest.num($q$ select 1 from public.support_events where kind = 'creado' and ticket_id = bbtest.tk('No guarda mi peso') $q$) = 1);
+select bbtest.ok('soporte: A sube una captura a su carpeta', bbtest.affected($q$ insert into storage.objects (bucket_id, name) values ('soporte', 'a1a1a1a1-0000-4000-8000-0000000000a1/captura1.png') $q$) = 1);
+select bbtest.fails('soporte: A no sube a la carpeta de B', $q$ insert into storage.objects (bucket_id, name) values ('soporte', 'b2b2b2b2-0000-4000-8000-0000000000b2/x.png') $q$, '42501');
+select bbtest.fails('soporte: A no crea subcarpetas', $q$ insert into storage.objects (bucket_id, name) values ('soporte', 'a1a1a1a1-0000-4000-8000-0000000000a1/x/y.png') $q$, '42501');
+select bbtest.fails('soporte: A no adjunta una captura ajena', $q$ select public.support_create_ticket('app', 'Captura ajena', 'Intento adjuntar algo que no es mío.', '{}'::jsonb, 'b2b2b2b2-0000-4000-8000-0000000000b2/x.png') $q$, 'P0001');
+select bbtest.fails('soporte: A no adjunta una captura que no existe', $q$ select public.support_create_ticket('app', 'Sin captura', 'La captura no está en el almacenamiento.', '{}'::jsonb, 'a1a1a1a1-0000-4000-8000-0000000000a1/nada.png') $q$, 'P0001');
+select bbtest.ok('soporte: A crea un caso con su captura', (select public.support_create_ticket('pagos', 'Me cobraron dos veces', 'Veo dos cargos iguales en mi tarjeta este mes.', '{}'::jsonb, 'a1a1a1a1-0000-4000-8000-0000000000a1/captura1.png')) > 0);
+select bbtest.fails('soporte: categoría inválida', $q$ select public.support_create_ticket('quejas', 'Título válido', 'Descripción suficientemente larga.') $q$, '22023');
+select bbtest.fails('soporte: título corto', $q$ select public.support_create_ticket('otro', 'ay', 'Descripción suficientemente larga.') $q$, 'P0001');
+select bbtest.fails('soporte: descripción corta', $q$ select public.support_create_ticket('otro', 'Título válido', 'corta') $q$, 'P0001');
+select bbtest.fails('soporte: A no crea casos directo en la tabla', $q$ insert into public.support_tickets (user_id, category, title, body) values (auth.uid(), 'otro', 'Directo', 'Directo a la tabla sin pasar por la función.') $q$, '42501');
+select bbtest.zero('soporte: A no cambia el estado de su caso', $q$ update public.support_tickets set status = 'resuelto' where user_id = auth.uid() $q$);
+select bbtest.zero('soporte: A no cambia la prioridad de su caso', $q$ update public.support_tickets set priority = 'urgente' where user_id = auth.uid() $q$);
+select bbtest.fails('soporte: A no escribe como equipo', $q$ insert into public.support_messages (ticket_id, author, author_kind, body) values (bbtest.tk('No guarda mi peso'), auth.uid(), 'equipo', 'hola') $q$, '42501');
+select bbtest.fails('soporte: A no usa las funciones del equipo (responder)', $q$ select public.admin_support_reply(bbtest.tk('No guarda mi peso'), 'me respondo', false, null) $q$, '42501');
+select bbtest.fails('soporte: A no usa las funciones del equipo (estado)', $q$ select public.admin_support_update(bbtest.tk('No guarda mi peso'), 'resuelto') $q$, '42501');
+select bbtest.fails('soporte: A no pide capturas como equipo', $q$ select public.admin_support_file(bbtest.tk('No guarda mi peso')) $q$, '42501');
+select bbtest.ok('soporte: A responde en su caso abierto', (select public.support_reply(bbtest.tk('No guarda mi peso'), 'Pasa también en la computadora.')) > 0);
+select bbtest.ok('soporte: máximo 5 casos por hora', bbtest.passes($q$ select public.support_create_ticket('otro', 'Uno más', 'Otro reporte para probar el límite.') $q$, 6) = 3);
+reset role;
+
+-- 12b. Aislamiento: B no ve ni toca lo de A.
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('soporte: B no ve casos de A', bbtest.num($q$ select 1 from public.support_tickets where user_id = bbtest.u('A') $q$) = 0);
+select bbtest.ok('soporte: B no ve mensajes de A', bbtest.num($q$ select 1 from public.support_messages m join public.support_tickets t on t.id = m.ticket_id where t.user_id = bbtest.u('A') $q$) = 0 and bbtest.num($q$ select 1 from public.support_messages $q$) = 0);
+select bbtest.ok('soporte: B no ve eventos de A', bbtest.num($q$ select 1 from public.support_events $q$) = 0);
+select bbtest.ok('soporte: B no ve capturas de A', bbtest.num($q$ select 1 from storage.objects where bucket_id = 'soporte' $q$) = 0);
+select bbtest.fails('soporte: B no responde en el caso de A', $q$ select public.support_reply(bbtest.tk('No guarda mi peso'), 'intruso') $q$, '42501');
+select bbtest.fails('soporte: B no cierra el caso de A', $q$ select public.support_user_action(bbtest.tk('No guarda mi peso'), 'confirmar') $q$, '42501');
+select bbtest.zero('soporte: B no borra la captura de A', $q$ delete from storage.objects where bucket_id = 'soporte' $q$);
+reset role;
+set role authenticated; select bbtest.as_user('c0ac0000-0000-4000-8000-0000000000c0');
+select bbtest.ok('soporte: un coach no ve casos (no es del equipo de soporte)', bbtest.num($q$ select 1 from public.support_tickets $q$) = 0);
+select bbtest.fails('soporte: un coach no responde casos', $q$ select public.admin_support_reply(bbtest.tk('No guarda mi peso'), 'hola', false, null) $q$, '42501');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('soporte: anon no crea casos', $q$ select public.support_create_ticket('otro', 'Anónimo', 'Intento sin sesión, no debería pasar.') $q$, '42501');
+select bbtest.fails('soporte: anon no lee casos', $q$ select 1 from public.support_tickets $q$, '42501');
+reset role;
+
+-- 12c. Equipo: responde, notas internas ocultas, estados válidos, asignación y prioridad.
+set role authenticated; select bbtest.login('P');
+select bbtest.ok('soporte: soporte ve los casos de A', bbtest.num($q$ select 1 from public.support_tickets where user_id = bbtest.u('A') $q$) >= 2);
+select bbtest.ok('soporte: soporte responde (pasa a en proceso)', (select public.admin_support_reply(bbtest.tk('No guarda mi peso'), '¿Desde qué versión pasa?', false, null)) > 0);
+select bbtest.ok('soporte: nota interna', (select public.admin_support_reply(bbtest.tk('No guarda mi peso'), 'Revisar logs del 22, posible tarjeta duplicada', true, null)) > 0);
+select bbtest.fails('soporte: una nota interna no cambia el estado', $q$ select public.admin_support_reply(bbtest.tk('No guarda mi peso'), 'nota', true, 'resuelto') $q$, 'P0001');
+select public.admin_support_update(bbtest.tk('No guarda mi peso'), 'necesita_info');
+select bbtest.ok('soporte: pide más información', (select status = 'necesita_info' from public.support_tickets where id = bbtest.tk('No guarda mi peso')));
+select bbtest.fails('soporte: no se asigna a alguien fuera del equipo', $q$ select public.admin_support_update(bbtest.tk('No guarda mi peso'), null, null, bbtest.u('A')) $q$, 'P0001');
+select bbtest.fails('soporte: no se asigna a un coach', $q$ select public.admin_support_update(bbtest.tk('No guarda mi peso'), null, null, 'c0ac0000-0000-4000-8000-0000000000c0') $q$, 'P0001');
+select public.admin_support_update(bbtest.tk('No guarda mi peso'), null, 'alta', bbtest.u('S'));
+select bbtest.ok('soporte: prioridad y asignación guardadas', (select priority = 'alta' and assigned_to = bbtest.u('S') and first_response_at is not null and status = 'necesita_info' from public.support_tickets where id = bbtest.tk('No guarda mi peso')));
+select bbtest.fails('soporte: prioridad inválida', $q$ select public.admin_support_update(bbtest.tk('No guarda mi peso'), null, 'maxima') $q$, '22023');
+select bbtest.ok('soporte: soporte pide la captura', (select public.admin_support_file(bbtest.tk('Me cobraron dos veces'))) = 'a1a1a1a1-0000-4000-8000-0000000000a1/captura1.png');
+select bbtest.fails('soporte: un caso sin captura', $q$ select public.admin_support_file(bbtest.tk('No guarda mi peso')) $q$, 'P0001');
+reset role;
+select bbtest.ok('soporte: cada acción del equipo queda en auditoría (también ver la captura)', (select count(distinct action) = 4 from public.audit_log where actor = bbtest.u('P') and action in ('support.reply', 'support.note', 'support.update', 'support.file_view')));
+select bbtest.ok('soporte: avisos a la persona por respuesta y por estado (no por nota, asignación ni prioridad)', (select count(*) = 2 from public.notifications where user_id = bbtest.u('A') and kind = 'soporte' and title not like 'Recibimos%'));
+select bbtest.ok('soporte: eventos pendientes de correo solo para lo que la persona debe saber', (select count(*) from public.support_events e join public.support_tickets t on t.id = e.ticket_id where t.user_id = bbtest.u('A') and e.notified_at is null and e.kind in ('asignado', 'prioridad')) = 0);
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('soporte: A ve la respuesta pública pero no la nota interna', bbtest.num($q$ select 1 from public.support_messages where ticket_id = bbtest.tk('No guarda mi peso') and author_kind = 'equipo' $q$) = 1
+  and bbtest.num($q$ select 1 from public.support_messages where internal $q$) = 0);
+select bbtest.ok('soporte: A no ve asignación ni prioridad en la línea de tiempo', bbtest.num($q$ select 1 from public.support_events where kind in ('asignado', 'prioridad') $q$) = 0);
+select bbtest.ok('soporte: A responde lo que le pidieron', (select public.support_reply(bbtest.tk('No guarda mi peso'), 'Desde la versión de ayer.')) > 0);
+select bbtest.ok('soporte: y el caso vuelve a en proceso', (select status = 'en_proceso' from public.support_tickets where id = bbtest.tk('No guarda mi peso')));
+reset role;
+
+-- 12d. Resolver con resumen, confirmar, reabrir hasta 7 días.
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('soporte: admin resuelve con un resumen (una respuesta pública)', (select public.admin_support_reply(bbtest.tk('No guarda mi peso'), 'Corregimos el guardado del peso. Ya funciona.', false, 'resuelto')) > 0);
+select bbtest.fails('soporte: de resuelto no se pasa a necesita información', $q$ select public.admin_support_update(bbtest.tk('No guarda mi peso'), 'necesita_info') $q$, 'P0001');
+reset role;
+select bbtest.ok('soporte: resuelto con fecha', (select status = 'resuelto' and resolved_at is not null from public.support_tickets where id = bbtest.tk('No guarda mi peso')));
+select bbtest.ok('soporte: un solo aviso al resolver (el del estado, con el resumen)', (select count(*) = 1 from public.notifications where user_id = bbtest.u('A') and title like 'Resolvimos tu reporte%'));
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('soporte: A no escribe en un caso resuelto sin reabrir', $q$ select public.support_reply(bbtest.tk('No guarda mi peso'), 'otra cosa') $q$, 'P0001');
+select bbtest.ok('soporte: A lo reabre', (select public.support_user_action(bbtest.tk('No guarda mi peso'), 'reabrir')) = 'recibido');
+select bbtest.ok('soporte: A confirma que se resolvió', (select public.support_user_action(bbtest.tk('No guarda mi peso'), 'confirmar')) = 'cerrado');
+select bbtest.fails('soporte: acción inválida', $q$ select public.support_user_action(bbtest.tk('No guarda mi peso'), 'borrar') $q$, '22023');
+reset role;
+update public.support_tickets set closed_at = now() - interval '8 days', resolved_at = now() - interval '8 days' where id = bbtest.tk('No guarda mi peso');
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('soporte: después de 7 días no se reabre', $q$ select public.support_user_action(bbtest.tk('No guarda mi peso'), 'reabrir') $q$, 'P0001');
+reset role;
+
+-- 12e. Reportes de 0029 copiados como casos (sin perder nada) y borrado de cuenta.
+select bbtest.ok('soporte: los reportes de "Reportar algo" pasan a ser casos', (select public._support_import_feedback()) > 0);
+select bbtest.ok('soporte: cada reporte tiene su caso', not exists (select 1 from public.feedback_reports f where not exists (select 1 from public.support_tickets t where t.legacy_feedback_id = f.id)));
+select bbtest.ok('soporte: copiar de nuevo no duplica', (select public._support_import_feedback()) = 0);
+select bbtest.ok('soporte: los casos copiados conservan si eran de tester', not exists (select 1 from public.feedback_reports f join public.support_tickets t on t.legacy_feedback_id = f.id where t.from_tester <> f.from_tester));
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('soporte: una persona no copia reportes', $q$ select public._support_import_feedback() $q$, '42501');
+reset role;
+insert into auth.users (id, email) values ('50900000-0000-4000-8000-0000000000a1', 'borra@prueba.test');
+set role authenticated; select bbtest.as_user('50900000-0000-4000-8000-0000000000a1');
+select public.support_create_ticket('cuenta', 'Quiero borrar', 'Voy a borrar mi cuenta después de esto.');
+reset role;
+delete from auth.users where id = '50900000-0000-4000-8000-0000000000a1';
+select bbtest.ok('borrado: sin casos de la cuenta borrada', not exists (select 1 from public.support_tickets where user_id = '50900000-0000-4000-8000-0000000000a1'));
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$
