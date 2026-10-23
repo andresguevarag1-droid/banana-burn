@@ -4,7 +4,7 @@ import { requireSection } from "@/lib/admin-auth";
 import { can } from "@/lib/admin-perms";
 import { listAdminChallenges } from "@/lib/admin-retos";
 import { STATUS_LABEL, usd, type ChallengeStatus } from "@/lib/challenges";
-import { weeksOf } from "@/lib/programs";
+import { durationLabel } from "@/lib/programs";
 import { Badge, DemoNotice, Empty, MigrationNotice, Nil, PageHeader, SubTabs, Table, Td, Th, btnGhost, btnPrimary, fmtNum, trHover } from "@/components/admin/ui";
 import { ChallengeCover } from "@/components/retos/cover";
 import { MoveButtons, QuickActions } from "./row-actions";
@@ -44,7 +44,7 @@ export default async function AdminRetos({ searchParams }: { searchParams: Promi
                 <Td>
                   <Link href={`/admin/retos/${c.uuid}`} className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
                     <span className="w-14 shrink-0 overflow-hidden rounded-xl"><ChallengeCover c={c} className="h-10 w-14" chip={false} /></span>
-                    <span className="min-w-44"><span className="block font-semibold text-ink hover:underline">{c.title}</span><span className="block text-xs text-muted">{c.id}, {c.kind === "programa" && c.program ? `programa de ${weeksOf(c.program)} semanas` : `${c.days} días`}{c.featured ? ", destacado" : ""}</span></span>
+                    <span className="min-w-44"><span className="block font-semibold text-ink hover:underline">{c.title}</span><span className="block text-xs text-muted">{c.id}, {c.kind === "programa" && c.program ? `programa de ${durationLabel(c.program)}` : `${c.days} días`}{c.featured ? ", destacado" : ""}</span></span>
                   </Link>
                 </Td>
                 <Td><Badge tone={TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge></Td>

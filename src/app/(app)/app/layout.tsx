@@ -34,6 +34,7 @@ import type { GuideInput } from "@/lib/guide";
 import { NewsLauncher } from "@/components/novedades/news-dialog";
 import { getNewsState } from "@/lib/novedades-server";
 import { NEWS_STAFF_ROLES, newsView } from "@/lib/novedades";
+import { coachOf } from "@/lib/coaches";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
       <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
-        {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, week: live.run.week, weeks: live.run.weeks }} />}
+        {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: coachOf(live.c.program.experience).id !== "banana" ? coachOf(live.c.program.experience).avatar : null }} />}
         {banner === "beta-add" ? <AddCardBanner />
           : banner === "beta-scheduled" && charge ? <ScheduledBanner charge={charge} tz={v.tz} />
           : banner === "failed" && charge ? <FailedBanner charge={charge} tz={v.tz} />

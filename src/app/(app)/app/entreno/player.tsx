@@ -33,7 +33,7 @@ import { outboxId } from "@/lib/offline-queue";
 import { hookLine } from "@/lib/engine";
 import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, t, type Voice } from "@/lib/voice";
 
-export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
+export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
 export type Gam = { xp: number; streak: number; todayDone: boolean };
 type Mode = "normal" | "suave" | "fuerte";
 type Rest = { end: number; total: number } | null;
@@ -729,8 +729,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
         <div className={`mx-auto max-w-xl px-4 pt-4 ${rest && !restOpen ? "pb-28" : "pb-6"}`}>
           {/* Ejercicio: el mosaico abre la técnica; el único botón al lado es Cambiar */}
           <section key={ex.id} className="flex gap-3 items-stretch animate-enter">
-            <button onClick={() => setSheet("tech")} className="pressable relative shrink-0 w-[88px] min-h-[104px] rounded-3xl bg-banana overflow-hidden" aria-label={`Ver técnica de ${ex.name}`}>
-              {ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-11 text-ink/80" />}
+            <button onClick={() => setSheet("tech")} className={`pressable relative shrink-0 w-[88px] min-h-[104px] rounded-3xl overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver técnica de ${ex.name}`}>
+              {ex.art ? <Image src={ex.art} alt="" fill sizes="88px" className="object-contain pb-4" /> : ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-11 text-ink/80" />}
               <span className="absolute bottom-1.5 inset-x-0 text-[10px] font-bold text-ink/75">Ver técnica</span>
             </button>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -870,7 +870,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           )}
           {shownSheet === "tech" && ex.tech && (
             <div className="space-y-4">
-              {ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} mus={ex.tech.mus} cues={ex.tech.cues.length ? ex.tech.cues : undefined} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>}
+              {ex.art ? <div className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-[1.5rem] bg-[#F3E8FF]"><Image src={ex.art} alt={`Así se hace: ${ex.name}`} fill sizes="360px" className="object-contain" /></div>
+                : ex.tech.anim && <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} mus={ex.tech.mus} cues={ex.tech.cues.length ? ex.tech.cues : undefined} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>}
               <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
               {ex.tech.mus && <p className="text-sm text-muted">{ex.tech.mus}</p>}
               {ex.tech.how.length > 0 && <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>}

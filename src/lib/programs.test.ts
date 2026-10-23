@@ -373,3 +373,59 @@ describe("hábitos del programa", () => {
     expect(parseExperience({ mode: "" })).toBeNull();
   });
 });
+
+// ───────────── 0037: Pilates en casa 30 días con Coach Platanita ─────────────
+import { PROGRAM_SEED_3, program0037Sql } from "./program-seed";
+import { COACHES, coachArt, coachOf } from "./coaches";
+import { daysOf, durationLabel } from "./programs";
+
+const sql37 = readFileSync(new URL("../../supabase/migrations/0037_pilates_platanita.sql", import.meta.url), "utf8");
+
+describe("0037: Pilates en casa 30 días", () => {
+  const p = PROGRAM_SEED_3[0];
+  it("la siembra de 0037 es la de program-seed.ts (regenerar con scripts/gen-programas-seed.ts --0037)", () => {
+    expect(sql37).toContain(program0037Sql().trim());
+    expect(sql37).toContain("'lila'");
+  });
+  it("dura 30 días exactos: 4 semanas de 5 sesiones y un cierre en los días 29 y 30", () => {
+    expect(weeksOf(p.meta)).toBe(5);
+    expect(daysOf(p.meta)).toBe(30);
+    expect(durationLabel(p.meta)).toBe("30 días");
+    for (const ph of [1, 2, 3, 4]) expect(p.sessions.filter((s) => s.phase === ph).length).toBe(5);
+    expect(p.sessions.filter((s) => s.phase === 5).length).toBe(1);
+    expect(sql37).toContain("'pilates-casa-30', 'Pilates en casa 30 días'");
+    expect(sql37).toMatch(/'pilates-casa-30', 'Pilates en casa 30 días', '[^']+', 30,/);
+  });
+  it("calendario: el día 29 toca la prueba final y el día 31 ya terminó", () => {
+    const def = { meta: p.meta, sessions: p.sessions };
+    const st = { status: "activo" as const, startedOn: "2026-11-01", pausedOn: null, pausedDays: 0 };
+    const d29 = resolveProgram(def, st, [], "2026-11-29");
+    expect(d29.week).toBe(5);
+    expect(d29.today).toBe("entreno");
+    expect(d29.next?.session.title).toMatch(/Prueba final/);
+    expect(d29.byDays).toBe(true);
+    expect(resolveProgram(def, st, [], "2026-11-30").today).not.toBe("terminado");
+    expect(resolveProgram(def, st, [], "2026-12-01").today).toBe("terminado");
+    expect(calendarSlot(def, st, "2026-11-01", "2026-12-01")).toBeNull();
+  });
+  it("solo con tapete, mini banda y toalla: sin pesas ni máquinas", () => {
+    for (const s of p.sessions) for (const e of s.exercises) {
+      const eq = e.id.startsWith("ds:") ? exInfo(e.id)?.eq ?? "?" : ["glutebridge", "bicycle", "ytw", "plank"].includes(e.id) ? "body weight" : "?";
+      expect(["body weight", "band", "resistance band"].includes(eq), `${s.title} ${e.id} ${eq}`).toBe(true);
+    }
+  });
+  it("Coach Platanita acompaña el programa y aparece en cada ejercicio", () => {
+    expect(p.meta.experience?.coach).toBe("platanita");
+    const c = coachOf(p.meta.experience);
+    expect(c.name).toBe("Coach Platanita");
+    for (const s of p.sessions) for (const e of s.exercises) expect(coachArt(c, e.id), `${s.title} ${e.id}`).toBeTruthy();
+    expect(PROGRAM_SEED_BY_SLUG["banana-girl"].meta.experience?.coach).toBe("platanita");
+    expect(sql37).toContain(`jsonb_set(program, '{experience,coach}', '"platanita"'::jsonb) where slug = 'banana-girl'`);
+    expect(coachOf(null)).toBe(COACHES.banana);
+  });
+  it("days fuera de rango se ignora", () => {
+    const m = { ...p.meta, days: 40 };
+    expect(daysOf(m)).toBe(35);
+    expect(parseMeta(JSON.parse(JSON.stringify(m)))?.days).toBeUndefined();
+  });
+});

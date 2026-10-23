@@ -1,5 +1,6 @@
 // Héroe del programa activo en Hoy: reemplaza la tarjeta genérica de "Rutina de hoy" mientras hay un programa.
 // Portada del programa, "Semana 2 de 8, día 2", la sesión de hoy, el avance y el próximo hito. Servidor.
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Monkey, Pause, TreePalm, TrendUp } from "@/components/icons";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
@@ -8,6 +9,7 @@ import { Readiness } from "@/components/readiness";
 import { DAY_NAMES } from "@/lib/engine";
 import type { AthleteProgram } from "@/lib/programs-server";
 import { tipFor } from "@/lib/programs";
+import { coachOf } from "@/lib/coaches";
 import { ExerciseTiles } from "@/components/hoy/exercise-tiles";
 import { DEFAULT_VOICE, sessionLine, setsLegend, t, type Voice } from "@/lib/voice";
 
@@ -20,6 +22,7 @@ const n = (x: number) => x.toLocaleString("es-419");
 /** "Semana 2 de 8, día 2" (el día es la sesión que toca dentro de la semana). */
 export function weekLabel(p: Pick<AthleteProgram, "run">) {
   const r = p.run;
+  if (r.byDays) return `Día ${Math.min(r.days, r.effectiveDay + 1)} de ${r.days}`;
   const day = r.next?.day ?? r.weekSessions.filter((w) => w.done).length;
   return `Semana ${r.week} de ${r.weeks}${day ? `, día ${day}` : ""}`;
 }
@@ -30,6 +33,7 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
   const plan = p.plan;
   const session = r.today === "entreno" && plan.program;
   const x = p.meta.experience;
+  const coach = coachOf(x);
   // Primer día: la bienvenida del programa; después, el consejo de Coach Banana de esa semana.
   const first = r.sessionsDone === 0 && r.week === 1 && !!x?.welcome;
   const tip = first ? x!.welcome : tipFor(x, r.week);
@@ -53,8 +57,10 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
       <div className="bg-cream p-5 sm:p-6">
         {tip && r.today !== "terminado" && (
           <div className="mb-4 flex items-start gap-3 rounded-2xl bg-white p-3 shadow-[0_1px_0_var(--color-line)]">
-            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-xl bg-banana text-ink"><Monkey weight="duotone" className="size-5" /></span>
-            <p className="min-w-0 text-sm text-body"><b className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana-ink">{first ? "Bienvenida" : `Coach Banana, semana ${r.week}`}</b>{tip}</p>
+            {coach.id === "banana"
+              ? <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-xl bg-banana text-ink"><Monkey weight="duotone" className="size-5" /></span>
+              : <Image src={coach.avatar} alt="" width={48} height={48} sizes="48px" className="size-12 shrink-0 rounded-2xl bg-[#F3E8FF] object-cover" />}
+            <p className="min-w-0 text-sm text-body"><b className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana-ink">{first ? `Bienvenida, ${coach.name}` : `${coach.name}, semana ${r.week}`}</b>{tip}</p>
           </div>
         )}
         {session ? (
@@ -63,7 +69,7 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
             <h3 className="mt-0.5 text-2xl font-extrabold tracking-tight text-ink">{plan.name}</h3>
             <p className="mt-1 text-sm font-semibold text-ink/70 tabular-nums">{sessionLine(voice, { exercises: plan.exercises.length, mins })}{plan.program?.deload ? t(voice, { basico: ", más liviano esta semana", intermedio: ", con carga de descarga", tecnico: ", descarga" }) : ""}</p>
             {lastTime && !trainedToday && <p className="mt-3 flex items-start gap-1.5 rounded-2xl bg-ink px-3 py-2.5 text-sm font-semibold leading-snug text-banana"><TrendUp weight="bold" className="mt-0.5 size-4 shrink-0" aria-hidden />{lastTime}</p>}
-            <div className="mt-3"><ExerciseTiles exercises={plan.program!.exercises} voice={voice} label="Ejercicios de la sesión" /></div>
+            <div className="mt-3"><ExerciseTiles exercises={plan.program!.exercises} voice={voice} label="Ejercicios de la sesión" art={coach.exercise} /></div>
             {setsLegend(voice) && !trainedToday && <p className="mt-2 text-xs font-semibold text-ink/70">{setsLegend(voice)}</p>}
             {trainedToday ? (
               <p className="mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />Ya entrenaste hoy. La sesión del programa sigue lista para cuando quieras.</p>
@@ -73,7 +79,7 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
           <p className="flex items-start gap-2.5 text-ink"><CheckCircle weight="fill" className="mt-0.5 size-6 shrink-0 text-peel" /><span><b className="block text-lg font-extrabold">Sesión de hoy completada</b><span className="text-sm text-muted">{r.nextOn ? `Tu próxima sesión es el ${fmtDay(r.nextOn)}.` : "Descansa y come bien."}</span></span></p>
         ) : r.today === "terminado" ? (
           <div>
-            <p className="flex items-start gap-2.5 text-ink"><Flag weight="duotone" className="mt-0.5 size-6 shrink-0 text-ember-ink" /><span><b className="block text-lg font-extrabold">Terminaste las {r.weeks} semanas</b><span className="text-sm text-muted">Cierra el programa para recibir tu certificado y comparar con tu día 1.</span></span></p>
+            <p className="flex items-start gap-2.5 text-ink"><Flag weight="duotone" className="mt-0.5 size-6 shrink-0 text-ember-ink" /><span><b className="block text-lg font-extrabold">{r.byDays ? `Terminaste los ${r.days} días` : `Terminaste las ${r.weeks} semanas`}</b><span className="text-sm text-muted">Cierra el programa para recibir tu certificado y comparar con tu día 1.</span></span></p>
             <Link href={`/app/retos/${p.slug}/progreso`} className="btn-primary mt-4 h-12 w-full sm:w-auto px-6">Ver mi certificado<ArrowRight weight="bold" className="size-5" /></Link>
           </div>
         ) : r.today === "pausado" ? (

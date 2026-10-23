@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowCounterClockwise, ArrowRight, ArrowUp, ChatCircle, Moon, Monkey, Plus, WarningCircle } from "@/components/icons";
@@ -13,7 +14,11 @@ const SINCE_KEY = "bb.coach.since";
 /** El coach habla con íconos de marca, no con emojis: limpiamos cualquiera que traiga el modelo. */
 const noEmoji = (t: string) => t.replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu, "").replace(/[ \t]{2,}/g, " ");
 
-function CoachAvatar() {
+/** Coach del programa activo (Coach Platanita); sin programa con coach propio, Coach Banana. */
+export type ChatPersona = { name: string; avatar: string } | null;
+
+function CoachAvatar({ persona }: { persona: ChatPersona }) {
+  if (persona) return <Image src={persona.avatar} alt="" width={36} height={36} sizes="36px" className="size-9 shrink-0 rounded-xl bg-[#F3E8FF] object-cover" />;
   return <span aria-hidden className="grid place-items-center size-9 shrink-0 rounded-xl bg-ink text-banana"><Monkey className="size-6" /></span>;
 }
 function UserAvatar({ name }: { name: string }) {
@@ -48,10 +53,10 @@ function QuotaLine({ q }: { q: CoachQuota }) {
 }
 
 /** Sin preguntas: cuándo vuelve el coach y, solo si aplica, la diferencia real con Entreno + Nutrición. */
-function LimitCard({ q, now }: { q: CoachQuota; now: Date | null }) {
+function LimitCard({ q, now, coachName }: { q: CoachQuota; now: Date | null; coachName: string }) {
   const month = q.reason === "month";
   const when = q.resetsAt && now ? resetLabel(q.resetsAt, q.reason === "month" ? "month" : "day", now) : null;
-  const title = month ? "Usaste tus preguntas del mes" : when?.startsWith("hoy") ? "Coach Banana vuelve hoy más tarde" : "Coach Banana descansa hasta mañana";
+  const title = month ? "Usaste tus preguntas del mes" : when?.startsWith("hoy") ? `${coachName} vuelve hoy más tarde` : `${coachName} descansa hasta mañana`;
   const used = month ? `tus ${q.monthLimit?.toLocaleString("es-419")} preguntas de este mes` : `tus ${q.dayLimit?.toLocaleString("es-419")} preguntas de hoy`;
   const more = COACH_LIMITS.completo;
   const upsell = q.tier === "entreno" || q.tier === "prueba";
@@ -66,7 +71,7 @@ function LimitCard({ q, now }: { q: CoachQuota; now: Date | null }) {
       </div>
       {upsell && (
         <div className="mt-4 rounded-2xl bg-banana-soft/60 border border-banana/40 p-4">
-          <p className="text-sm text-body text-pretty"><b className="text-ink">¿Necesitas más preguntas?</b> Entreno + Nutrición incluye hasta {more.day} preguntas al día y {more.month!.toLocaleString("es-419")} al mes, y Coach Banana también te ayuda con tu comida.</p>
+          <p className="text-sm text-body text-pretty"><b className="text-ink">¿Necesitas más preguntas?</b> Entreno + Nutrición incluye hasta {more.day} preguntas al día y {more.month!.toLocaleString("es-419")} al mes, y {coachName} también te ayuda con tu comida.</p>
           <Link href="/app/suscripcion" data-cta="coach-cuota-mejorar" className="tap pressable mt-3 inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-white hover:bg-black">Ver Entreno + Nutrición<ArrowRight weight="bold" className="size-4" /></Link>
         </div>
       )}
@@ -74,7 +79,8 @@ function LimitCard({ q, now }: { q: CoachQuota; now: Date | null }) {
   );
 }
 
-export function Chat({ initial, opener, suggest, name, configured = true, quota: quota0 = null, demo = false }: { initial: Msg[]; opener: string; suggest: string[]; name: string; configured?: boolean; quota?: CoachQuota | null; demo?: boolean }) {
+export function Chat({ initial, opener, suggest, name, configured = true, quota: quota0 = null, demo = false, persona = null }: { initial: Msg[]; opener: string; suggest: string[]; name: string; configured?: boolean; quota?: CoachQuota | null; demo?: boolean; persona?: ChatPersona }) {
+  const coachName = persona?.name ?? "Coach Banana";
   const [quota, setQuota] = useState<CoachQuota | null>(quota0);
   // La hora de renovación se muestra en la hora del navegador: solo después de montar (el servidor no la conoce).
   const [now, setNow] = useState<Date | null>(null);
@@ -159,8 +165,9 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
   return (
     <div className="flex flex-col min-h-[calc(100dvh-9rem)] lg:min-h-[calc(100dvh-6rem)]">
       <header className="flex items-center gap-3 pb-4 border-b border-line">
-        <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey weight="fill" className="size-8 [--bb-icon-bg:var(--color-ink)]" /></span>
-        <div className="flex-1 min-w-0"><h1 className="text-xl font-extrabold text-ink">Coach Banana</h1><p className="text-sm text-muted">Conoce tu plan, tu peso y tus entrenos</p><p className="text-xs text-muted">Puede equivocarse y no sustituye el consejo médico.</p></div>
+        {persona ? <Image src={persona.avatar} alt="" width={48} height={48} sizes="48px" priority className="size-12 shrink-0 rounded-2xl bg-[#F3E8FF] object-cover" />
+          : <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey weight="fill" className="size-8 [--bb-icon-bg:var(--color-ink)]" /></span>}
+        <div className="flex-1 min-w-0"><h1 className="text-xl font-extrabold text-ink">{coachName}</h1><p className="text-sm text-muted">Conoce tu plan, tu peso y tus entrenos</p><p className="text-xs text-muted">Puede equivocarse y no sustituye el consejo médico.</p></div>
         {configured && msgs.length > 0 && (
           <button type="button" onClick={newConversation} disabled={busy} className="tap pressable inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-3 h-11 text-sm font-bold text-ink hover:bg-cream disabled:opacity-40">
             <Plus weight="bold" className="size-4" /><span className="hidden sm:inline">Nueva conversación</span><span className="sm:hidden">Nueva</span>
@@ -171,14 +178,14 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
       <div className="flex-1 py-5 space-y-4" aria-live="polite" aria-busy={busy}>
         {configured ? (
           <div className="flex items-end gap-2 justify-start animate-enter">
-            <CoachAvatar />
+            <CoachAvatar persona={persona} />
             <div className="max-w-[85%] rounded-3xl rounded-bl-lg px-4 py-3 text-[15px] leading-relaxed space-y-1 bg-banana-soft/70 border border-banana/40 text-body"><Rich text={opener} /></div>
           </div>
         ) : (
           <div className="card p-6 text-center animate-enter" role="status">
             <span className="mx-auto grid place-items-center size-14 rounded-2xl bg-banana-soft text-banana-ink" aria-hidden><Monkey className="size-9" /></span>
             <p className="mt-3 text-lg font-extrabold text-ink">El coach se está configurando</p>
-            <p className="mt-1 text-sm text-muted text-pretty">Estamos terminando de conectar a Coach Banana. Mientras tanto, tu rutina, tus cargas y tu plan siguen funcionando como siempre.</p>
+            <p className="mt-1 text-sm text-muted text-pretty">Estamos terminando de conectar a {coachName}. Mientras tanto, tu rutina, tus cargas y tu plan siguen funcionando como siempre.</p>
           </div>
         )}
         {configured && fresh && !out && (
@@ -188,7 +195,7 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
         )}
         {msgs.map((m, i) => (
           <div key={i} className={`flex items-end gap-2 animate-enter ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            {m.role === "assistant" && <CoachAvatar />}
+            {m.role === "assistant" && <CoachAvatar persona={persona} />}
             <div className={`max-w-[80%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed space-y-1 ${m.role === "user" ? "bg-ink text-white rounded-br-lg" : "bg-white border border-line text-body rounded-bl-lg"}`}>
               {m.content ? (m.role === "user" ? m.content : <Rich text={m.content} />) : <span className="inline-flex gap-1 py-1" role="status" aria-label="El coach está escribiendo">{[0, 1, 2].map((d) => <span key={d} className="size-2 rounded-full bg-faint animate-bounce motion-reduce:animate-none" style={{ animationDelay: `${d * 120}ms` }} />)}</span>}
             </div>
@@ -210,7 +217,7 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
             </div>
           </div>
         )}
-        {configured && out && quota && <LimitCard q={quota} now={now} />}
+        {configured && out && quota && <LimitCard q={quota} now={now} coachName={coachName} />}
         <div ref={end} />
       </div>
 

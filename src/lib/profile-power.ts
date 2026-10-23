@@ -2,7 +2,7 @@
 // La misma regla vive en la base (0030: _power_points, _power_tier, _insignias). Si cambias una, cambia la otra.
 import { levelOf, LEVELS } from "@/lib/gamify";
 
-export type CoverName = "banana" | "ember" | "sky" | "peel" | "noche" | "selva" | "fresa";
+export type CoverName = "banana" | "ember" | "sky" | "peel" | "noche" | "selva" | "fresa" | "lila";
 
 /** Lo que mueve el poder del perfil. Todo sale de la base: compras, programas, retos, XP, racha y verificación. */
 export type PowerStats = {
@@ -95,7 +95,7 @@ const STATIC: Record<string, { label: string; detail: string; icon: string; kind
   w10: { label: "10 entrenos", detail: "La constancia gana", icon: "barbell", kind: "logro" },
   w50: { label: "50 entrenos", detail: "Medio centenar de sesiones", icon: "barbell", kind: "logro" },
 };
-const COVERS: CoverName[] = ["banana", "ember", "sky", "peel", "noche", "selva", "fresa"];
+const COVERS: CoverName[] = ["banana", "ember", "sky", "peel", "noche", "selva", "fresa", "lila"];
 const asCover = (x: unknown): CoverName | null => (COVERS.includes(x as CoverName) ? (x as CoverName) : null);
 const KINDS: InsigniaKind[] = ["certificado", "medalla", "nivel", "racha", "verificado", "coleccion", "logro"];
 

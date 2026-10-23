@@ -10,7 +10,7 @@
 //     en reserva al empezar, descansos largos en los básicos.
 //   - Solo ejercicios que existen: ids del motor (src/lib/engine/data.ts) o de la biblioteca ("ds:0739").
 //   - Nada de promesas: el texto describe lo que haces, no resultados garantizados.
-import type { ProgramExercise, ProgramExperience, ProgramMeta, ProgramSession } from "./programs";
+import { daysOf, type ProgramExercise, type ProgramExperience, type ProgramMeta, type ProgramSession } from "./programs";
 import type { CoverStyle, Difficulty } from "./challenge-seed";
 
 export type ProgramSeed = {
@@ -505,6 +505,67 @@ function bananaGirl(): ProgramSession[] {
   return [...p1, ...p2, ...brilla];
 }
 
+// ───────────── Pilates en casa 30 días (0037): Coach Platanita ─────────────
+// Pilates de piso (mat) con tapete, una mini banda y una toalla. 5 sesiones cortas por semana durante 4 semanas y un cierre
+// de 2 días (29 y 30). Principios del método: respiración, centro (core) activo, columna neutra y control en cada repetición.
+// Progresión: más repeticiones y segundos, y variantes más difíciles (puente con marcha, a una pierna, teaser).
+function pilates(): ProgramSession[] {
+  const P = "2-1-2";
+  const wk = (p: number) => {
+    const r = (lo: number, hi: number) => [lo + (p - 1) * 2, hi + (p - 1) * 2] as const;
+    const s2 = p >= 3 ? 3 : 2;
+    const bridge = p === 1 ? "glutebridge" : p === 2 ? "ds:3561" : "ds:3645";
+    const bridgeNote = p === 1 ? "Sube vértebra por vértebra y aprieta el glúteo 2 s arriba." : p === 2 ? "Cadera quieta mientras marchas: no la dejes caer." : "Por pierna. Cadera nivelada, sin girar.";
+    const [a, b] = r(8, 10), [c, d] = r(10, 12), [t1, t2] = [20 + (p - 1) * 10, 30 + (p - 1) * 10];
+    return [
+      ses(p, 1, "Centro: tu core se enciende", "Respira, pelvis neutra y abdomen hacia adentro. La base de todo el pilates.", [
+        x("ds:3147", 2, 10, 12, 20, { tempo: P, note: "Exhala al pegar la espalda baja al tapete." }),
+        x("ds:1422", s2, a, b, 30, { tempo: P, note: "Despega la columna como un collar de perlas." }),
+        x("ds:0276", s2, a, b, 30, { tempo: P, note: "Por lado. La espalda baja nunca se despega." }),
+        x(p >= 3 ? "ds:1014" : "ds:0872", 2, p >= 3 ? 6 : a, p >= 3 ? 8 : b, 30, { tempo: P, note: p >= 3 ? "Teaser: sube en V con la banda en los pies; baja despacio." : "Sube la cadera con el abdomen, no con impulso." }),
+        x("ds:1363", 2, 6, 8, 20, { tempo: "3-1-3", note: "Redondea la espalda hacia adelante y crece al volver." }),
+      ]),
+      ses(p, 2, "Glúteo y piernas de bailarina", "Puentes y series de lado para glúteo firme y piernas largas.", [
+        x(bridge, s2, c, d, 30, { tempo: "2-2-1", note: bridgeNote }),
+        x("ds:0710", s2, c, d + 4, 20, { tempo: P, note: "Por lado. Pierna larga y punta del pie al frente." }),
+        x("ds:3667", 2, c, d, 20, { tempo: P, note: "Por lado. Eleva la pierna de abajo unos centímetros." }),
+        x("ds:3006", s2, 15, 20, 30, { note: "Mini banda arriba de las rodillas. Abre y controla al cerrar." }),
+        x("ds:1358", 1, 30, 45, 0, { unit: "s", note: "Por lado. Respira lento y suelta." }),
+      ]),
+      ses(p, 3, "Postura y brazos", "Espalda fuerte, hombros abajo y brazos firmes sin pesas.", [
+        x("plank", s2, t1, t2, 30, { unit: "s", note: "Una línea de la cabeza a los talones." }),
+        x("ds:3433", 2, t1, t2, 30, { unit: "s", note: "Natación: brazo y pierna contrarios, cuello largo." }),
+        x("ytw", 2, 8, 10, 30, { tempo: P, note: "Aprieta entre los omóplatos; el cuello relajado." }),
+        x("ds:0705", 2, t1 - 5, t2 - 5, 30, { unit: "s", note: "Por lado. Hombro sobre el codo y cuello largo." }),
+        x("ds:2329", 2, 6, 8, 20, { tempo: P, note: "Por lado. Gira desde la cintura, cadera quieta." }),
+      ]),
+      ses(p, 4, "Cintura y oblicuos", "Rotaciones y planchas laterales para una cintura definida.", [
+        x("bicycle", s2, c, d + 4, 30, { tempo: P, note: "Criss-cross: gira el pecho, no solo el codo." }),
+        x("ds:0705", 2, t1 - 5, t2 - 5, 30, { unit: "s", note: "Por lado. Cadera arriba, en línea." }),
+        x("ds:0459", 2, t1, t2, 30, { unit: "s", note: "Tijeras pequeñas y rápidas; espalda baja pegada." }),
+        x("ds:2329", 2, 6, 8, 20, { tempo: P, note: "Por lado." }),
+        x("ds:0276", 2, a, b, 30, { tempo: P, note: "Por lado." }),
+      ]),
+      ses(p, 5, "Flujo completo", "Todo el cuerpo en un flujo suave, de la cabeza a los pies.", [
+        x("ds:1422", 2, a, b, 20, { tempo: P }),
+        x(bridge, 2, c, d, 30, { tempo: "2-2-1", note: bridgeNote }),
+        x("ds:0710", 2, c, d, 20, { note: "Por lado." }),
+        x("plank", 2, t1, t2, 30, { unit: "s" }),
+        x(p >= 3 ? "ds:1014" : "ds:0276", 2, p >= 3 ? 6 : a, p >= 3 ? 8 : b, 30, { tempo: P, note: p >= 3 ? "Teaser con banda." : "Por lado." }),
+        x("ds:1363", 1, 6, 8, 0, { tempo: "3-1-3" }),
+      ]),
+    ];
+  };
+  const final = ses(5, 1, "Prueba final: tus 30 días", "Repite lo que hiciste el día 1 y compara: segundos en plancha, repeticiones y cómo te sientes.", [
+    x("plank", 1, 30, 120, 60, { unit: "s", note: "Sostén todo lo que puedas con buena técnica y anota tu tiempo." }),
+    x("ds:1014", 2, 6, 10, 45, { tempo: P, note: "Teaser con banda: tu movimiento estrella." }),
+    x("ds:3645", 2, 10, 14, 30, { tempo: "2-2-1", note: "Por pierna." }),
+    x("ds:0705", 2, 30, 45, 30, { unit: "s", note: "Por lado." }),
+    x("ds:1363", 1, 6, 8, 0, { tempo: "3-1-3", note: "Respira y celebra." }),
+  ]);
+  return [...[1, 2, 3, 4].flatMap(wk), final];
+}
+
 // ───────────── Glúteos de acero v2 (0027): especialización completa de glúteo ─────────────
 // Cada sesión es de glúteo: empuje de cadera (hip thrust), sentadilla y zancada profundas (glúteo estirado),
 // bisagra de cadera y abducción para la parte alta. 3 sesiones y 1 exprés opcional en casa.
@@ -624,6 +685,28 @@ const BANANA_GIRL: ProgramMeta = {
   keyLifts: ["ds:1409", "goblet", "rdl"],
   nutrition: { mode: "recomp", proteinPerKg: 1.6, note: "Déficit pequeño y proteína suficiente: tonificas sin pasar hambre." },
   previewExercise: "rdl",
+};
+
+const PILATES: ProgramMeta = {
+  phases: [
+    { name: "Respira y conecta", weeks: 1, focus: "Aprende la respiración de pilates, la pelvis neutra y a encender tu centro." },
+    { name: "Centro fuerte", weeks: 1, focus: "Más repeticiones y segundos. Tu core empieza a sostenerte en todo." },
+    { name: "Esculpe", weeks: 1, focus: "Variantes más difíciles: puente a una pierna y teaser con banda." },
+    { name: "Fluye", weeks: 1, focus: "Más volumen y control: cada movimiento se siente más fácil y más firme." },
+    { name: "Brilla", weeks: 1, focus: "Días 29 y 30: tu prueba final y la comparación con tu día 1." },
+  ],
+  daysPerWeek: 5, days: 30, sessionMinutes: 25, level: "principiante", equipment: "En casa: tapete, mini banda y una toalla", adapt: false,
+  who: "Para chicas que quieren entrenar en casa, sin gimnasio ni pesas, con sesiones cortas que se sienten bien y se notan: abdomen plano, glúteo firme y mejor postura.",
+  result: "Pilates de piso 5 días por semana durante 30 días: centro, glúteo y piernas, postura y brazos, cintura y un flujo completo.",
+  outcomes: [
+    "Sesiones de 20 a 30 minutos en tu sala",
+    "Solo un tapete, una mini banda y una toalla",
+    "Core más fuerte y mejor postura desde la primera semana",
+    "Prueba final para comparar con tu día 1",
+  ],
+  keyLifts: ["plank", "ds:1014"],
+  nutrition: { mode: "recomp", proteinPerKg: 1.6, note: "Déficit pequeño y proteína suficiente: te desinflamas y tonificas sin pasar hambre." },
+  previewExercise: "glutebridge",
 };
 
 /** Lo que cada programa cambia en la app mientras está activo. Para los de 0024 se agrega en 0027 sin pisar ediciones del panel. */
@@ -795,9 +878,34 @@ export const EXPERIENCES: Record<string, ProgramExperience> = {
     restDay: "Descanso activo: 20 minutos de caminata y 10 de estiramiento",
     food: ["Proteína en cada comida, empezando por el desayuno: huevos, yogur griego o queso.", "Déficit pequeño: tonificas sin pasar hambre ni perder energía.", "Hierro y calcio cuentan: frijoles, hojas verdes, lácteos y carnes magras.", "Antes de entrenar, una fruta o un pan con algo de proteína."],
   },
+  "pilates-casa-30": {
+    mode: "Modo Pilates",
+    welcome: "Hola, soy Coach Platanita. Treinta días de pilates en tu sala, a tu ritmo y sin pesas. Extiende tu tapete: hoy empezamos juntas.",
+    habits: [
+      { key: "entreno", label: "Tu sesión de pilates", kind: "entreno" },
+      { key: "agua", label: "Toma 8 vasos de agua", kind: "agua", target: 8 },
+      { key: "postura", label: "3 pausas de postura: hombros atrás y abdomen adentro", kind: "check" },
+      { key: "sueno", label: "Duerme 7 horas", kind: "sueno", target: 7 },
+    ],
+    tips: [
+      "Semana 1: inhala por la nariz y exhala por la boca al hacer el esfuerzo. Si respiras bien, tu abdomen trabaja solo.",
+      "Semana 2: piensa en llevar el ombligo hacia la columna, sin aguantar el aire. Ese es tu centro.",
+      "Semana 3: lento es más difícil y más efectivo. Si un movimiento se siente fácil, hazlo en el doble de tiempo.",
+      "Semana 4: ya lo tienes. Practica tus pausas de postura en el trabajo, en el carro y frente al celular.",
+      "Días 29 y 30: tu prueba final. Anota tu plancha, toma tu foto y mira todo lo que cambiaste en 30 días.",
+    ],
+    coachFocus: "Pilates de piso en casa para chicas: respiración, core, glúteo, postura y cintura con tapete, mini banda y toalla. Tono cálido, femenino y cercano, sin presión por el peso.",
+    restDay: "Descanso activo: 20 minutos de caminata y 5 de estiramiento suave",
+    food: ["Proteína en cada comida: huevos, yogur griego, pollo, frijoles o queso.", "Para sentirte menos inflamada: agua, fibra y menos ultraprocesados.", "Déficit pequeño: tonificas sin pasar hambre.", "Si entrenas en la mañana, una fruta o un yogur antes basta."],
+    coach: "platanita",
+  },
 };
 
-const withX = (slug: string, meta: ProgramMeta): ProgramMeta => (EXPERIENCES[slug] ? { ...meta, experience: EXPERIENCES[slug] } : meta);
+/** Coach Platanita acompaña Banana Girl desde 0037 (en 0027 no tenía coach propia; esa siembra queda igual). */
+const COACH_0037: Record<string, "platanita"> = { "banana-girl": "platanita" };
+const withX = (slug: string, meta: ProgramMeta): ProgramMeta => (EXPERIENCES[slug] ? { ...meta, experience: COACH_0037[slug] ? { ...EXPERIENCES[slug], coach: COACH_0037[slug] } : EXPERIENCES[slug] } : meta);
+/** La meta como la sembró 0027 (sin la coach que agregó 0037). */
+const as0027 = (p: ProgramSeed): ProgramSeed => (COACH_0037[p.slug] && p.meta.experience ? { ...p, meta: { ...p.meta, experience: EXPERIENCES[p.slug] } } : p);
 
 /** Programas nuevos de 0027 (se insertan; después manda el panel). */
 export const PROGRAM_SEED_2: ProgramSeed[] = [
@@ -818,13 +926,22 @@ export const PROGRAM_SEED_2: ProgramSeed[] = [
     meta: withX("banana-girl", BANANA_GIRL), sessions: bananaGirl() },
 ];
 
+/** Programas nuevos de 0037 (se insertan; después manda el panel). */
+export const PROGRAM_SEED_3: ProgramSeed[] = [
+  { ...base, slug: "pilates-casa-30", title: "Pilates en casa 30 días", insert: true, featured: true, sort: 12, priceUsd: 6.99, cover: "lila", icon: "sparkle", difficulty: "facil", minutes: 25,
+    description: "30 días de pilates en tu sala con Coach Platanita: abdomen, glúteo, postura y cintura en sesiones de 20 a 30 minutos, con solo un tapete, una mini banda y una toalla.",
+    badge: "Pilates 30 días", rewardTitle: "Centro de acero", xp: 350,
+    safetyNote: "Si estás embarazada, tuviste un parto reciente, tienes diástasis abdominal o dolor de espalda, consulta con tu médico antes de empezar.",
+    meta: withX("pilates-casa-30", PILATES), sessions: pilates() },
+];
+
 /** Todos los programas de la siembra con su experiencia (catálogo de respaldo y modo demo). */
-export const ALL_PROGRAM_SEED: ProgramSeed[] = [...PROGRAM_SEED.map((p) => { const u = PROGRAM_UPGRADES[p.slug]; const q2 = u ? { ...p, ...u } : p; return { ...q2, meta: withX(p.slug, q2.meta) }; }), ...PROGRAM_SEED_2];
+export const ALL_PROGRAM_SEED: ProgramSeed[] = [...PROGRAM_SEED.map((p) => { const u = PROGRAM_UPGRADES[p.slug]; const q2 = u ? { ...p, ...u } : p; return { ...q2, meta: withX(p.slug, q2.meta) }; }), ...PROGRAM_SEED_2, ...PROGRAM_SEED_3];
 export const PROGRAM_SEED_BY_SLUG: Record<string, ProgramSeed> = Object.fromEntries(ALL_PROGRAM_SEED.map((p) => [p.slug, p]));
 
 /** Bloque de siembra de 0027: programas nuevos y la experiencia de los de 0024 (solo si todavía no tienen una). */
 export function program0027Sql() {
-  const out = [programSeedSql(PROGRAM_SEED_2).replace("-- ───────────── 6. Siembra (generada con scripts/gen-programas-seed.ts; no pisa lo editado en el panel) ─────────────", "-- ───────────── Siembra de programas nuevos (generada con scripts/gen-programas-seed.ts --0027) ─────────────").replace(/-- Retos Premium que pasan a ser programas[^\n]*\n/, "")];
+  const out = [programSeedSql(PROGRAM_SEED_2.map(as0027)).replace("-- ───────────── 6. Siembra (generada con scripts/gen-programas-seed.ts; no pisa lo editado en el panel) ─────────────", "-- ───────────── Siembra de programas nuevos (generada con scripts/gen-programas-seed.ts --0027) ─────────────").replace(/-- Retos Premium que pasan a ser programas[^\n]*\n/, "")];
   out.push("-- Programas de 0024 rehechos en 0027 (enfoque completo en su objetivo). Mismo slug: las compras siguen valiendo.");
   for (const [slug, u] of Object.entries(PROGRAM_UPGRADES)) {
     const weeks = u.meta.phases.reduce((a, x) => a + x.weeks, 0);
@@ -857,7 +974,7 @@ export function programSeedSql(seed: ProgramSeed[] = PROGRAM_SEED) {
   for (const p of seed.filter((s) => s.insert)) {
     out.push(
       "insert into public.challenges_catalog (slug, title, description, days, rules, status, price_usd, difficulty, minutes, cover, icon, verify, grace, xp, badge, reward_title, start_mode, featured, coming_soon, safety_note, sort, kind, program) values",
-      `  (${[q(p.slug), q(p.title), q(p.description), p.meta.phases.reduce((a, x) => a + x.weeks, 0) * 7, "'{}'::jsonb", "'publicado'", p.priceUsd.toFixed(2), q(p.difficulty), p.minutes, q(p.cover), q(p.icon), "'workout'", 0, p.xp, q(p.badge), q(p.rewardTitle), "'libre'", p.featured, false, q(p.safetyNote), p.sort, "'programa'", j(p.meta)].join(", ")})`,
+      `  (${[q(p.slug), q(p.title), q(p.description), daysOf(p.meta), "'{}'::jsonb", "'publicado'", p.priceUsd.toFixed(2), q(p.difficulty), p.minutes, q(p.cover), q(p.icon), "'workout'", 0, p.xp, q(p.badge), q(p.rewardTitle), "'libre'", p.featured, false, q(p.safetyNote), p.sort, "'programa'", j(p.meta)].join(", ")})`,
       "on conflict (slug) do nothing;",
     );
   }
@@ -869,4 +986,12 @@ export function programSeedSql(seed: ProgramSeed[] = PROGRAM_SEED) {
   out.push(seed.flatMap((p) => p.sessions.map((s) => `  (${[q(p.slug), s.phase, s.day, q(s.title), q(s.focus), !!s.optional, j(s.exercises)].join(", ")})`)).join(",\n"));
   out.push("on conflict (slug, phase, day) do nothing;", "");
   return out.join("\n");
+}
+
+/** Bloque de siembra de 0037: Pilates en casa 30 días y Coach Platanita en Banana Girl (sin pisar el panel). */
+export function program0037Sql() {
+  const out = [programSeedSql(PROGRAM_SEED_3).replace("-- ───────────── 6. Siembra (generada con scripts/gen-programas-seed.ts; no pisa lo editado en el panel) ─────────────", "-- Siembra (generada con scripts/gen-programas-seed.ts --0037)").replace(/-- Retos Premium que pasan a ser programas[^\n]*\n/, "")];
+  out.push("-- Coach Platanita también acompaña Banana Girl (solo si su experiencia todavía no eligió coach).");
+  out.push(`update public.challenges_catalog set program = jsonb_set(program, '{experience,coach}', '"platanita"'::jsonb) where slug = 'banana-girl' and kind = 'programa' and program ? 'experience' and not (program->'experience' ? 'coach');`);
+  return out.join("\n") + "\n";
 }

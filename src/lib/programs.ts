@@ -37,6 +37,11 @@ export type ProgramMeta = {
   phases: ProgramPhase[];
   /** Sesiones por semana (incluye las opcionales). */
   daysPerWeek: number;
+  /**
+   * Duración exacta en días cuando no son semanas completas (reto de 30 días: 5 semanas, la última de 2 días).
+   * Entre (semanas - 1) x 7 + 1 y semanas x 7. Sin esto, dura semanas x 7.
+   */
+  days?: number;
   sessionMinutes: number;
   level: ProgramLevel;
   /** Equipo, en texto para la persona ("Gimnasio, con versión para casa"). */
@@ -79,7 +84,11 @@ export type ProgramExperience = {
   restDay: string;
   /** Cómo comer en este programa (máximo 4 líneas). Se muestra en Nutrición y en Hoy. */
   food: string[];
+  /** Quién acompaña el programa: Coach Banana (por defecto) o Coach Platanita (programas de chicas). */
+  coach?: CoachId;
 };
+export type CoachId = "banana" | "platanita";
+export const COACH_IDS: CoachId[] = ["banana", "platanita"];
 export const HABIT_KINDS: HabitKind[] = ["pasos", "agua", "sueno", "proteina", "entreno", "check"];
 export const HABIT_KIND_LABEL: Record<HabitKind, string> = { pasos: "Pasos", agua: "Vasos de agua", sueno: "Horas de sueño", proteina: "Proteína del día", entreno: "Sesión del programa", check: "Lo marca la persona" };
 export const HABIT_KEY = /^[a-z0-9-]{1,24}$/;
@@ -132,6 +141,13 @@ export function parseSession(x: unknown): ProgramSession | null {
   return { phase, day, title: txt(o.title, 60) || `Día ${day}`, focus: txt(o.focus, 120), ...(o.optional === true ? { optional: true } : {}), exercises };
 }
 
+/** `days` válido para esas fases (o nada si son semanas completas). */
+function daysField(phases: ProgramPhase[], v: unknown): { days?: number } {
+  const w = clampN(phases.reduce((a, p) => a + p.weeks, 0), 1, MAX_WEEKS);
+  const d = int(v, 0);
+  return d > (w - 1) * 7 && d < w * 7 ? { days: d } : {};
+}
+
 export function parseMeta(x: unknown): ProgramMeta | null {
   if (!x || typeof x !== "object") return null;
   const o = x as Record<string, unknown>;
@@ -147,7 +163,7 @@ export function parseMeta(x: unknown): ProgramMeta | null {
   const experience = parseExperience(o.experience);
   const list = (v: unknown, max: number, len: number) => (Array.isArray(v) ? v : []).map((s) => txt(s, len)).filter(Boolean).slice(0, max);
   return {
-    phases, daysPerWeek: clampN(int(o.daysPerWeek, 3), 1, MAX_DAYS_PER_WEEK), sessionMinutes: clampN(int(o.sessionMinutes, 45), 5, 180),
+    phases, daysPerWeek: clampN(int(o.daysPerWeek, 3), 1, MAX_DAYS_PER_WEEK), ...daysField(phases, o.days), sessionMinutes: clampN(int(o.sessionMinutes, 45), 5, 180),
     level: LEVELS.includes(o.level as ProgramLevel) ? (o.level as ProgramLevel) : "todos", equipment: txt(o.equipment, 80) || "Gimnasio", adapt: o.adapt !== false,
     who: txt(o.who, 400), result: txt(o.result, 400), outcomes: list(o.outcomes, 8, 160),
     keyLifts: (Array.isArray(o.keyLifts) ? o.keyLifts : []).filter((s): s is string => typeof s === "string" && PROGRAM_EXERCISE_ID.test(s)).slice(0, 4),
@@ -176,7 +192,8 @@ export function parseExperience(x: unknown): ProgramExperience | null {
   }
   const tips = (Array.isArray(o.tips) ? o.tips : []).map((t) => txt(t, 220)).filter(Boolean).slice(0, MAX_TIPS);
   const food = (Array.isArray(o.food) ? o.food : []).map((t) => txt(t, 200)).filter(Boolean).slice(0, 4);
-  return { mode, welcome: txt(o.welcome, 280), habits, tips, coachFocus: txt(o.coachFocus, 300), restDay: txt(o.restDay, 140), food };
+  const coach = o.coach === "platanita" ? ({ coach: "platanita" } as const) : {};
+  return { mode, welcome: txt(o.welcome, 280), habits, tips, coachFocus: txt(o.coachFocus, 300), restDay: txt(o.restDay, 140), food, ...coach };
 }
 
 /** Consejo de la semana (1-based); el último se repite. */
@@ -214,6 +231,16 @@ export const daysBetween = (a: string, b: string) => Math.round((isoDate(b) - is
 export const addDays = (iso: string, n: number) => { const d = new Date(iso.slice(0, 10) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 export const weeksOf = (meta: Pick<ProgramMeta, "phases">) => clampN(meta.phases.reduce((a, p) => a + p.weeks, 0), 1, MAX_WEEKS);
+/** Días que dura el programa: `days` si lo trae (reto de 30 días), si no semanas x 7. */
+export const daysOf = (meta: Pick<ProgramMeta, "phases" | "days">) => {
+  const w = weeksOf(meta);
+  return meta.days && meta.days > (w - 1) * 7 && meta.days < w * 7 ? meta.days : w * 7;
+};
+/** Duración para la persona: "30 días" o "6 semanas". */
+export const durationLabel = (meta: Pick<ProgramMeta, "phases" | "days">) => {
+  const d = daysOf(meta), w = weeksOf(meta);
+  return d !== w * 7 ? `${d} días` : `${w} ${w === 1 ? "semana" : "semanas"}`;
+};
 
 /**
  * Días de entreno dentro de cada semana del programa (0 = el día en que empezó la semana). Reparte las sesiones con
@@ -262,6 +289,8 @@ export type WeekSession = { day: number; session: ProgramSession; done: boolean;
 export type Milestone = { label: string; week: number; left: number; final: boolean };
 export type ProgramRun = {
   weeks: number; week: number; dayInWeek: number; effectiveDay: number;
+  /** Días totales del programa; `byDays`: se cuenta en días (reto de 30 días) y no en semanas. */
+  days: number; byDays: boolean;
   phase: ReturnType<typeof phaseAt>;
   /** Sesiones de esta semana, con las hechas marcadas. */
   weekSessions: WeekSession[];
@@ -286,7 +315,7 @@ export type ProgramRun = {
 export function resolveProgram(def: Pick<ProgramDef, "meta" | "sessions">, s: Pick<ProgramState, "status" | "startedOn" | "pausedOn" | "pausedDays">, done: DoneSession[], today: string): ProgramRun {
   const weeks = weeksOf(def.meta);
   const eff = effectiveDay(s, today);
-  const ended = eff >= weeks * 7;
+  const ended = eff >= daysOf(def.meta);
   const week = clampN(Math.floor(eff / 7) + 1, 1, weeks);
   const dayInWeek = ended ? 6 : eff % 7;
   const phase = phaseAt(def.meta, week);
@@ -342,7 +371,7 @@ export function resolveProgram(def: Pick<ProgramDef, "meta" | "sessions">, s: Pi
   const milestone = m ? { ...m, left: m.week - week } : null;
 
   return {
-    weeks, week, dayInWeek, effectiveDay: eff, phase, weekSessions, next, today: kind, nextOn,
+    weeks, week, dayInWeek, effectiveDay: eff, days: daysOf(def.meta), byDays: daysOf(def.meta) !== weeks * 7, phase, weekSessions, next, today: kind, nextOn,
     required, sessionsTotal, sessionsDone, extrasDone, sessionsMissed, pct: sessionsTotal ? sessionsDone / sessionsTotal : 0,
     canFinish: s.status === "activo" && (ended || (sessionsTotal > 0 && sessionsDone >= sessionsTotal)), milestone,
   };
@@ -394,9 +423,13 @@ export function programErrors(meta: ProgramMeta | null, sessions: ProgramSession
   if (total > MAX_WEEKS) out.push(`El programa dura ${total} semanas; el máximo es ${MAX_WEEKS}.`);
   if (!meta.who) out.push("Escribe para quién es el programa.");
   if (!meta.result) out.push("Escribe el resultado que busca el programa.");
+  // Programa en días (reto de 30 días): la última semana es corta y lleva solo las sesiones que caben en sus días.
+  const shortLast = daysOf(meta) - (weeksOf(meta) - 1) * 7;
   meta.phases.forEach((p, i) => {
     const ss = sessionsOfPhase(sessions, i + 1);
-    for (let d = 1; d <= meta.daysPerWeek; d++) {
+    const last = i === meta.phases.length - 1 && shortLast < 7 && p.weeks === 1;
+    if (last && ss.length > shortLast) out.push(`Fase ${i + 1} (${p.name}): solo caben ${shortLast} sesiones en sus ${shortLast} días.`);
+    for (let d = 1; d <= (last ? Math.max(1, Math.min(ss.length, shortLast)) : meta.daysPerWeek); d++) {
       const s = ss.find((x) => x.day === d);
       if (!s || !s.exercises.length) out.push(`Fase ${i + 1} (${p.name}), día ${d}: la sesión no tiene ejercicios.`);
     }
@@ -471,8 +504,7 @@ export const restDay = (dow: number, text = "Camina 8-12k pasos y estira 10 min"
 export function calendarSlot(def: Pick<ProgramDef, "meta" | "sessions">, s: Pick<ProgramState, "status" | "startedOn" | "pausedOn" | "pausedDays">, today: string, date: string) {
   if (s.status !== "activo") return null;
   const e = effectiveDay(s, today) + daysBetween(today, date);
-  const weeks = weeksOf(def.meta);
-  if (e < 0 || e >= weeks * 7) return null;
+  if (e < 0 || e >= daysOf(def.meta)) return null;
   const week = Math.floor(e / 7) + 1, off = e % 7;
   const list = sessionsOfPhase(def.sessions, phaseAt(def.meta, week).index);
   const k = slotsFor(Math.max(1, list.length || def.meta.daysPerWeek)).indexOf(off);

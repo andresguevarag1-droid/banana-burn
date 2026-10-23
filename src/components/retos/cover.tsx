@@ -15,12 +15,14 @@ const STYLE: Record<CoverStyle, { bg: string; ink: string; dots: string; chip: s
   noche: { bg: "bg-[linear-gradient(135deg,#3A3120_0%,#1B1505_70%,#0D0A02_100%)]", ink: "text-banana", dots: "rgb(255 214 10 / .12)", chip: "bg-banana text-ink", scrim: "#0D0A02" },
   selva: { bg: "bg-[linear-gradient(135deg,#FFD60A_0%,#B8C93A_45%,#3F6B0E_100%)]", ink: "text-ink", dots: "rgb(27 21 5 / .10)", chip: "bg-ink text-banana", scrim: "#FFD60A" },
   // Banana Girl: fresa con banana. Texto ink (contraste 11:1 sobre el rosa más oscuro).
+  // Pilates en casa (Coach Platanita): lila con rosa. Texto ink sobre fondo claro.
+  lila: { bg: "bg-[linear-gradient(135deg,#F3E8FF_0%,#E2C8FF_45%,#FFC2DD_100%)]", ink: "text-ink", dots: "rgb(27 21 5 / .08)", chip: "bg-ink text-[#E2C8FF]", scrim: "#F3E8FF" },
   fresa: { bg: "bg-[linear-gradient(135deg,#FFE45C_0%,#FFC2D1_45%,#FF9DB5_100%)]", ink: "text-ink", dots: "rgb(27 21 5 / .09)", chip: "bg-ink text-[#FFC2D1]", scrim: "#FFE45C" },
 };
 
 export const coverInk = (s: CoverStyle) => STYLE[s].ink;
 /** Color de acento de cada portada: con un programa activo tiñe la franja superior de la app, la cinta y las barras de sus hábitos. */
-export const COVER_ACCENT: Record<CoverStyle, string> = { banana: "#FFD60A", ember: "#F2A100", sky: "#B88A1E", peel: "#5C8A1E", noche: "#FFD60A", selva: "#9BBF2E", fresa: "#FF8FAB" };
+export const COVER_ACCENT: Record<CoverStyle, string> = { banana: "#FFD60A", ember: "#F2A100", sky: "#B88A1E", peel: "#5C8A1E", noche: "#FFD60A", selva: "#9BBF2E", fresa: "#FF8FAB", lila: "#B98AF0" };
 
 /** `art={false}` fuerza la composición CSS (cintas y miniaturas). `sizes`: ancho que ocupa la portada, para la imagen. */
 export function ChallengeCover({ c, className = "h-28", children, chip = true, art = true, sizes = "(min-width: 768px) 480px, 100vw" }: { c: Pick<Challenge, "cover" | "icon"> & { id?: string }; className?: string; children?: ReactNode; chip?: boolean; art?: boolean; sizes?: string }) {

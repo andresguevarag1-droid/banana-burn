@@ -6,6 +6,7 @@ import { ALTS, BARBELL, EX, HOME, SLOTS, e1rm, expressDay, forEquipment, planDay
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
 import { plannedFromSession } from "@/lib/programs";
+import { coachArt, coachOf } from "@/lib/coaches";
 import { exInfo } from "@/lib/programs-server";
 import { cap, loadKindOf } from "@/components/workout/logic";
 import { Player, type PlayerExercise } from "./player";
@@ -103,6 +104,9 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       if (option > 0) preswap = { slot, option };
     }
   }
+  // Programa con su propia coach (Coach Platanita): ella aparece haciendo cada ejercicio que tiene ilustración.
+  const coach = plan.program && prog ? coachOf(prog.meta.experience) : null;
+  if (coach && coach.id !== "banana") for (const list of options) for (const o of list) o.art = coachArt(coach, o.id);
   const template = plan.key ?? plan.tpl ?? (expres ? `expres${expres}` : "descanso");
   const title = plan.name;
   const doneToday = options.length > 0 && doneTemplates.includes(template);

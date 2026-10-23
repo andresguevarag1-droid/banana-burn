@@ -10,6 +10,7 @@ export const CHALLENGE_ART: Record<string, string> = {
   "abdomen-marcado": art("hf_20261023_173052_ba5f517c-4bb3-460b-bc02-0cd541f9559d"),
   "brazos-definidos": art("hf_20261023_173126_1516ee48-9b82-47b6-8d03-00005c80e4df"),
   "banana-girl": art("hf_20261023_173126_b3b4dbbf-f973-4104-b4c3-bf1b79b2cbb5"),
+  "pilates-casa-30": art("hf_20261023_211803_efcae25f-dcd2-496b-8443-c7656e7f3037"),
   "dominadas-desde-cero": art("hf_20261023_173153_8398b29a-131c-4fda-9248-cb2aeddde375"),
   "pierde-3kg-6-semanas": art("hf_20261023_173154_f80d7a16-b4b2-415e-a016-98729e55030e"),
   // Retos de hábitos

@@ -5,7 +5,7 @@ import { getActiveProgram, getProgramSessions, getProgramStates, type ProgramCha
 import { todayMetrics } from "@/lib/metrics";
 import { todayFor } from "@/lib/today";
 import { MAX_ACTIVE, isProgram, storeSection, type Challenge, type StoreSection } from "@/lib/challenges";
-import { daysLabel, weeksOf } from "@/lib/programs";
+import { daysLabel, durationLabel } from "@/lib/programs";
 import { toEndedView, toView } from "@/lib/challenge-view";
 import { ChallengeCard, EndedChallengeCard } from "@/components/challenge-card";
 import { StoreCard } from "@/components/retos/store-card";
@@ -43,7 +43,7 @@ export default async function Retos() {
   const certs = [
     ...done,
     ...states.filter((s) => s.status === "completado" && s.completedAt).map((s) => ({ c: catalog.get(s.slug), at: String(s.completedAt).slice(0, 10) }))
-      .filter((x): x is { c: Challenge; at: string } => !!x.c && isProgram(x.c)).map((x) => ({ ...x, span: `${weeksOf(x.c.program!)} semanas` })),
+      .filter((x): x is { c: Challenge; at: string } => !!x.c && isProgram(x.c)).map((x) => ({ ...x, span: durationLabel(x.c.program!) })),
   ];
   const card = (c: Challenge) => <StoreCard key={c.id} className="w-[80%] max-w-80 shrink-0 snap-start focus-visible:ring-4 focus-visible:ring-banana/60 sm:w-auto sm:max-w-none" c={c} owned={owned.has(c.id)} participants={participants.get(c.id)} discountPct={perks.discountPct} active={activeIds.has(c.id)} />;
   const ap = activeProgram;
