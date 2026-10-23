@@ -1,4 +1,4 @@
--- 0020: el dueño queda como superadmin sin importar el orden (registro antes o después de las migraciones).
+-- 0020: sube a superadmin la cuenta del dueño si ya existe.
 -- Idempotente. Ejecútalo completo en el editor SQL de Supabase.
 
 -- 1. Si la cuenta ya existe: subirla a superadmin ahora (crea el perfil si faltara).
@@ -14,19 +14,10 @@ where u.id = p.id
   and lower(u.email) = 'andresguevarag@hotmail.com'
   and p.role is distinct from 'superadmin';
 
--- 2. Si la cuenta se crea (o se vuelve a crear) después: el registro la deja como superadmin.
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public as $$
-begin
-  insert into public.profiles (id, full_name, role)
-  values (
-    new.id,
-    nullif(left(btrim(coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', '')), 80), ''),
-    case when lower(new.email) = 'andresguevarag@hotmail.com' then 'superadmin'::public.app_role else 'free'::public.app_role end
-  )
-  on conflict (id) do nothing;
-  return new;
-end $$;
+-- 2. (Retirado en 0023) Antes este archivo hacía que cualquier cuenta NUEVA con el correo del dueño naciera superadmin.
+--    El registro de la app crea cuentas sin verificar el correo, así que eso permitía a cualquiera quedarse con el rol
+--    si la cuenta del dueño no existía. Ahora toda cuenta nueva es 'free' (ver 0023_seguridad_2.sql).
+--    Corre el paso 1 solo justo después de crear TÚ la cuenta y de entrar con ella.
 
 -- Comprobación: debe devolver una fila con role = superadmin.
 select u.email, p.role, p.plan, p.onboarded
