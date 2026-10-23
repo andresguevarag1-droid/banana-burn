@@ -29,7 +29,7 @@ describe("registro (voice)", () => {
     for (const s of basico) expect(s).not.toMatch(JARGON);
     expect(rirText("tecnico", 2)).toBe("RIR 2");
     expect(tempoText("tecnico", "3-1-1")).toBe("tempo 3-1-1");
-    expect(rirText("basico", 2)).toBe("deja 2 repeticiones en el tanque");
+    expect(rirText("basico", 2)).toBe("detente cuando aún puedas hacer 2 más");
     expect(tempoText("basico", "3-1-1")).toBe("baja lento contando 3, aguanta 1 y sube con fuerza");
     expect(rirText("intermedio", 2)).toBe("RIR 2: te quedan 2 reps en reserva");
     expect(coachRule("basico")).toContain("palabras simples");
