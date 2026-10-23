@@ -1,4 +1,9 @@
 import type { NextConfig } from "next";
+import { publicEnvProblems } from "./src/lib/security/public-env";
+
+// Una llave secreta en una variable NEXT_PUBLIC_ terminaría en el JavaScript del navegador: el build se detiene.
+const envProblems = publicEnvProblems(process.env);
+if (envProblems.length) throw new Error(`Variables de entorno inseguras:\n- ${envProblems.join("\n- ")}`);
 
 // ───────────── Cabeceras de seguridad ─────────────
 // CSP pragmática: Next (App Router) inyecta scripts inline para hidratar, y las páginas de marketing son estáticas,

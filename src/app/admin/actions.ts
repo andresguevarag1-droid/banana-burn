@@ -15,6 +15,7 @@ import { EX } from "@/lib/engine/data";
 import { FOODS } from "@/lib/foods";
 import { demoWorld } from "@/lib/admin-demo";
 import { fmtDate } from "@/lib/admin-format";
+import { errInfo } from "@/lib/security/log";
 
 export type ActionState = { ok: boolean; message: string; at?: number } | null;
 
@@ -33,7 +34,7 @@ async function run(cap: Capability, fd: FormData, fn: (ctx: Ctx, fd: FormData) =
     return await fn({ v: auth.v, sb: auth.v.demo ? null : await createClient() }, fd);
   } catch (e) {
     if (e instanceof ValidationError) return fail(e.message);
-    console.error("[admin action]", e);
+    console.error("[admin action]", errInfo(e));
     return fail("No se pudo completar la acción. Intenta de nuevo.");
   }
 }
@@ -50,7 +51,7 @@ function pgMessage(e: { code?: string; message?: string } | null): string | null
 
 async function audit(sb: SB, v: Viewer, action: string, target: string, meta: Record<string, unknown> = {}) {
   const { error } = await sb.from("audit_log").insert({ actor: v.id, action, target, meta });
-  if (error) console.error("[audit]", error);
+  if (error) console.error("[audit]", errInfo(error));
   return !error;
 }
 
@@ -338,7 +339,7 @@ export async function deleteUserAccount(_: ActionState, fd: FormData): Promise<A
     }
   } catch (e) {
     if (e instanceof ValidationError) return fail(e.message);
-    console.error("[admin action] borrar cuenta", e);
+    console.error("[admin action] borrar cuenta", errInfo(e));
     return fail("No se pudo completar la acción. Intenta de nuevo.");
   }
   revalidatePath("/admin/usuarios");

@@ -11,3 +11,13 @@ export function signupError(email: unknown, password: unknown): string | null {
   if (password.length > 72) return "Usa como máximo 72 caracteres.";
   return null;
 }
+
+/**
+ * Resultado de signInWithPassword. Supabase Auth compara la contraseña antes de revisar la confirmación del correo, así
+ * que "unconfirmed" solo llega con la contraseña correcta. Cualquier otro error cuenta como credenciales malas.
+ */
+export function loginOutcome(error: { code?: string; message?: string } | null | undefined): "ok" | "unconfirmed" | "bad" {
+  if (!error) return "ok";
+  if (error.code === "email_not_confirmed" || /email not confirmed/i.test(error.message ?? "")) return "unconfirmed";
+  return "bad";
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { WEBHOOK_HEADER, parseEvent, verifyWebhook } from "@/lib/onvo";
 import { processWebhook } from "@/lib/billing";
+import { errInfo } from "@/lib/security/log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     if (r.status === "error") return NextResponse.json({ ok: false }, { status: 500 });
     return NextResponse.json({ ok: true, result: r.status });
   } catch (e) {
-    console.error("[pagos] webhook", evt.type, e);
+    console.error("[pagos] webhook", evt.type, errInfo(e));
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

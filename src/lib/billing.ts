@@ -7,6 +7,7 @@ import type { Viewer } from "@/lib/supabase/server";
 import type { SubscriptionRow } from "@/lib/entitlements";
 import { PLANS, type Billing, type PlanId } from "@/lib/plans";
 import { sendPaymentFailed, sendPaymentReceipt, sendSubscriptionCanceled } from "@/lib/email";
+import { errInfo } from "@/lib/security/log";
 import {
   OnvoError, actionForEvent, cancelSubscription, createCustomer, createSubscription, estimatePeriodEnd, eventKey,
   expectedAmountMinor, fetchSubscriptionState, priceIdFor, profilePlanFor, type OnvoEvent,
@@ -98,7 +99,7 @@ export async function cancelAtPeriodEnd(v: Viewer, reason?: string): Promise<{ e
       } catch (e) {
         // 404 = ya no existe en ONVO -> seguimos; otros errores sí detienen.
         if (!(e instanceof OnvoError && e.status === 404)) {
-          log("error cancelando en ONVO", { userId: v.id, subscriptionId: r.provider_subscription_id, error: String(e) });
+          log("error cancelando en ONVO", { userId: v.id, subscriptionId: r.provider_subscription_id, error: errInfo(e) });
           throw new BillingError("No pudimos cancelar con el procesador de pagos. Intenta de nuevo o escríbenos.", 502);
         }
       }
@@ -141,7 +142,7 @@ async function syncProfilePlan(db: SupabaseClient, userId: string) {
 async function cancelOthers(db: SupabaseClient, keep: SubscriptionRow) {
   const { data } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", keep.user_id).neq("id", keep.id).in("status", ["active", "trialing", "past_due", "incomplete"]);
   for (const r of (data as SubscriptionRow[] | null) ?? []) {
-    if (r.provider_subscription_id) await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: String(e) }));
+    if (r.provider_subscription_id) await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: errInfo(e) }));
     await db.from("subscriptions").update({ status: r.status === "incomplete" ? "expired" : "canceled", cancel_at_period_end: false, canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", r.id);
     log("plan anterior reemplazado", { userId: keep.user_id, replaced: r.provider_subscription_id, by: keep.provider_subscription_id });
   }

@@ -14,4 +14,8 @@ describe("cleanEvent", () => {
     const e = cleanEvent({ name: "page_view", props: { path: "x".repeat(500), nested: { a: 1 }, "Bad-Key": "y", nan: Number.NaN } });
     expect(e?.props).toEqual({ path: "x".repeat(120) });
   });
+  it("descarta textos con datos personales (correo, teléfono, cédula)", () => {
+    const e = cleanEvent({ name: "cta_click", props: { cta: "hero", email: "ana@correo.com", tel: "+506 8888-1234", ced: "1-2345-6789", n: 3 } });
+    expect(e?.props).toEqual({ cta: "hero", n: 3 });
+  });
 });

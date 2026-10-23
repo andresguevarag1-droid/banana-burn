@@ -595,6 +595,62 @@ select bbtest.ok('nutrición: E sin plan y prueba vencida no tiene nutrición', 
 select bbtest.fails('nutrición: E no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'x', 1) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
 reset role;
 
+-- ───────────── 8. Segunda auditoría (0023) ─────────────
+-- 8a. Registro: el correo del dueño ya no da superadmin (el registro de la app no verifica el correo).
+reset role;
+select bbtest.login(null);
+delete from auth.users where lower(email) = 'andresguevarag@hotmail.com';
+insert into auth.users (id, email) values ('7e7e7e7e-0000-4000-8000-00000000007e', 'AndresGuevaraG@hotmail.com');
+select bbtest.ok('registro: el correo del dueño nace como free, no superadmin', (select role::text = 'free' from public.profiles where id = '7e7e7e7e-0000-4000-8000-00000000007e'));
+insert into auth.users (id, email, raw_user_meta_data) values ('7f7f7f7f-0000-4000-8000-00000000007f', 'nuevo@prueba.test', '{"role":"superadmin","full_name":"Nuevo"}');
+select bbtest.ok('registro: los metadatos del cliente no ponen rol', (select role::text = 'free' and full_name = 'Nuevo' from public.profiles where id = '7f7f7f7f-0000-4000-8000-00000000007f'));
+select bbtest.ok('registro: handle_new_user no menciona correos', not exists (select 1 from pg_proc where proname = 'handle_new_user' and prosrc ilike '%@%'));
+
+-- 8b. Límites de frecuencia en la base: solo service_role.
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('rate_hit: un usuario no la llama', $q$ select public.rate_hit('signup:ip:1.2.3.4', 60, 5) $q$, '42501');
+select bbtest.zero('rate_limits: un usuario no lee', $q$ select * from public.rate_limits $q$);
+select bbtest.fails('rate_limits: un usuario no escribe', $q$ insert into public.rate_limits (key, window_start, n) values ('x', now(), 0) $q$, '42501');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('rate_hit: anon no la llama', $q$ select public.rate_hit('signup:ip:1.2.3.4', 60, 5) $q$, '42501');
+reset role;
+set role service_role; select bbtest.login(null);
+select bbtest.ok('rate_hit: dentro del máximo', public.rate_hit('test:a', 3600, 2) and public.rate_hit('test:a', 3600, 2));
+select bbtest.ok('rate_hit: corta al pasar el máximo', not public.rate_hit('test:a', 3600, 2));
+select bbtest.ok('rate_hit: otra clave no se afecta', public.rate_hit('test:b', 3600, 2));
+select bbtest.fails('rate_hit: valida la ventana', $q$ select public.rate_hit('test:c', 0, 2) $q$, '22023');
+select bbtest.fails('rate_hit: valida la clave', $q$ select public.rate_hit('', 60, 2) $q$, '22023');
+reset role;
+-- Un JWT de usuario no puede usarla aunque el rol de base fuera service_role.
+set role service_role; select bbtest.login('A');
+select bbtest.fails('rate_hit: con sesión de usuario no', $q$ select public.rate_hit('test:d', 60, 2) $q$, '42501');
+reset role;
+
+-- 8c. Borrado de cuenta: scrub_deleted_user quita datos personales que sobreviven a la cascada.
+select bbtest.login(null);
+insert into auth.users (id, email) values ('8a8a8a8a-0000-4000-8000-00000000008a', 'borrar@prueba.test');
+update public.profiles set username = 'borrable', visibility = 'publico' where id = '8a8a8a8a-0000-4000-8000-00000000008a';
+insert into public.payment_events (event_key, type, user_id, amount_minor, currency, payload)
+  values ('evt_borrar', 'payment-intent.succeeded', '8a8a8a8a-0000-4000-8000-00000000008a', 999, 'USD', '{"data":{"customer":{"email":"borrar@prueba.test","name":"Persona Borrable"}}}');
+insert into public.posts (user_id, kind, body, visibility) values ('8a8a8a8a-0000-4000-8000-00000000008a', 'text', 'texto que se va a borrar', 'publico');
+insert into public.reports (target_type, target_id, reporter, reason, excerpt)
+  select 'post', id::text, bbtest.u('B'), 'spam', 'texto que se va a borrar' from public.posts where user_id = '8a8a8a8a-0000-4000-8000-00000000008a';
+insert into public.reports (target_type, target_id, reporter, reason, excerpt) values ('user', '8a8a8a8a-0000-4000-8000-00000000008a', bbtest.u('D'), 'otro', '@borrable bio');
+insert into public.reports (target_type, target_id, reporter, reason, details, excerpt) values ('user', bbtest.u('B')::text, '8a8a8a8a-0000-4000-8000-00000000008a', 'acoso', 'detalle escrito por la persona', '@beto');
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('scrub_deleted_user: un usuario no la llama', $q$ select public.scrub_deleted_user('8a8a8a8a-0000-4000-8000-00000000008a') $q$, '42501');
+reset role;
+set role service_role; select bbtest.login(null);
+select public.scrub_deleted_user('8a8a8a8a-0000-4000-8000-00000000008a');
+reset role;
+select bbtest.ok('borrado: el webhook guardado ya no trae correo ni nombre', (select payload::text not like '%borrar@prueba.test%' and payload::text not like '%Borrable%' and amount_minor = 999 and currency = 'USD' from public.payment_events where event_key = 'evt_borrar'));
+select bbtest.ok('borrado: sin extractos de su contenido ni de su perfil', not exists (select 1 from public.reports where excerpt in ('texto que se va a borrar', '@borrable bio')));
+select bbtest.ok('borrado: sin el texto de sus reportes', not exists (select 1 from public.reports where details = 'detalle escrito por la persona'));
+select bbtest.ok('borrado: los reportes de otras personas siguen intactos', (select count(*) >= 1 from public.reports where excerpt = '@beto'));
+delete from auth.users where id in ('8a8a8a8a-0000-4000-8000-00000000008a', '7e7e7e7e-0000-4000-8000-00000000007e', '7f7f7f7f-0000-4000-8000-00000000007f');
+select bbtest.ok('borrado: el registro contable del pago queda sin dueño', (select user_id is null from public.payment_events where event_key = 'evt_borrar'));
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$
