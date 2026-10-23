@@ -108,7 +108,7 @@ export const NOVEDADES: Release[] = [
       },
       {
         title: "7 días gratis con tarjeta desde el 1 de noviembre",
-        benefit: "Las cuentas nuevas guardan su tarjeta para empezar 7 días gratis: ese día no se cobra nada, el día 7 se cobra el plan y te avisamos 2 días antes. Si estás en la beta, tu acceso gratis llega hasta el 31 de octubre; si guardas tu tarjeta antes, el primer cobro es al terminar la beta. Puedes cancelar desde Suscripción.",
+        benefit: "Las cuentas nuevas guardan su tarjeta para empezar 7 días gratis: ese día no se cobra nada, el día 7 se cobra el plan y te avisamos 2 días antes. Si estás en la beta, tu acceso gratis llega hasta el 31 de octubre; si guardas tu tarjeta antes, el primer cobro es al terminar la beta. Puedes cancelar desde Mi plan.",
         icon: "shield", href: "/app/suscripcion", cta: "Ver mi plan",
       },
       {

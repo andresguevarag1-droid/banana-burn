@@ -61,7 +61,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
           <NotificationBell />
         </header>
       )}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
         <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell side="start" /></div>
         {program && (
           <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
