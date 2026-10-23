@@ -6,7 +6,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { attributeReferral } from "@/lib/referrals-server";
 
 /** Tipos de enlace de correo aceptados (lista cerrada) → tipo de verifyOtp. */
-const OTP_TYPES = { email: "email", magiclink: "email", signup: "signup", recovery: "recovery" } as const;
+const OTP_TYPES = { email: "email", magiclink: "email", signup: "signup", recovery: "recovery", email_change: "email_change" } as const;
 /** Después de un enlace de recuperación siempre se va a fijar la contraseña nueva. */
 const RESET_PATH = "/entrar/nueva-clave";
 

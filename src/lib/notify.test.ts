@@ -151,7 +151,8 @@ describe("filtro de horas relevantes", () => {
 describe("copy", () => {
   const ctx = { name: "Andrés Guevara", routine: "Empuje A", mins: 55, streak: 4, day: WED };
   it("recordatorio nombra la rutina", () => {
-    expect(copyFor("recordatorio", ctx).title).toBe("Hoy te toca Empuje A");
+    expect(copyFor("recordatorio", ctx).title).toBe("Andrés, hoy te toca Empuje A");
+    expect(copyFor("recordatorio", { ...ctx, name: "" }).title).toBe("Hoy te toca Empuje A");
   });
   it("nunca culpa ni avergüenza", () => {
     const bad = /(fallaste|decepcion|vergüenza|flojo|perezos|no tienes excusa|abandon|culpa)/i;

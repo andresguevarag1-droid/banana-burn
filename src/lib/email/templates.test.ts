@@ -48,3 +48,54 @@ describe("correo de regalo", () => {
     expect(bienvenida({ name: "Ana" }).text).not.toMatch(/\bIA\b/);
   });
 });
+
+describe("marca y personalización", () => {
+  const unsubscribe = "https://bananaburn.app/api/email/baja?token=x";
+  it("todos los correos llevan encabezado de marca, botón banana y firma de Coach Banana", async () => {
+    const T = await import("./templates");
+    const all = [
+      T.bienvenida({ name: "Ana" }),
+      T.planListo({ ...base, startWeight: 75 }),
+      T.reciboPago({ name: "Ana", plan: "Entreno", amount: 9.99 }),
+      T.pagoFallido({ name: "Ana", plan: "Entreno", amount: 9.99 }),
+      T.suscripcionCancelada({ name: "Ana", plan: "Entreno" }),
+      T.recordatorio({ name: "Ana", routine: "Pierna", streak: 3, unsubscribe }),
+      T.rachaEnPeligro({ name: "Ana", streak: 4, unsubscribe }),
+      T.resumenSemanal({ name: "Ana", workouts: 3, planned: 4, streak: 5, prs: [], nextWeek: [], unsubscribe }),
+      T.reactivacion({ name: "Ana", days: 3, routine: "Pierna", trainingDay: true, unsubscribe }),
+    ];
+    for (const e of all) {
+      expect(e.html).toContain("/email/coach.png");
+      expect(e.html).toContain("background:#FFD60A;border:2px solid #1B1505");
+      expect(e.text).toContain("Coach Banana");
+      expect(e.text + e.html).not.toMatch(/cédula|pura vida|[\u{1F300}-\u{1FAFF}]/u);
+    }
+  });
+  it("calcula el avance hacia la meta (bajar y subir de peso)", async () => {
+    const { goalProgress, goalLine } = await import("./templates");
+    expect(goalProgress({ start: 94, current: 90, goal: 85 })).toMatchObject({ pct: 44, left: 5, moved: 4, reached: false, losing: true });
+    expect(goalProgress({ start: 60, current: 63, goal: 66 })).toMatchObject({ pct: 50, left: 3, losing: false });
+    expect(goalProgress({ start: 94, current: 84.5, goal: 85 })?.reached).toBe(true);
+    expect(goalLine({ start: 94, current: 90, goal: 85 })).toBe("Te faltan 5.0 kg para tus 85.0 kg");
+    expect(goalLine(null)).toBe("");
+  });
+  it("el recordatorio y el resumen muestran la meta cuando existe", async () => {
+    const T = await import("./templates");
+    const goal = { start: 94, current: 90.2, goal: 85, date: "2026-12-31" };
+    const r = T.recordatorio({ name: "Andrés Guevara", routine: "Empuje", streak: 0, goal, unsubscribe });
+    expect(r.subject).toBe("Andrés, hoy te toca Empuje: tus cargas ya están listas");
+    expect(r.html).toContain("Tu meta");
+    expect(r.text).toContain("Te faltan 5.2 kg");
+    const w = T.resumenSemanal({ name: "Andrés", workouts: 4, planned: 4, streak: 9, prs: [], nextWeek: [], goal, unsubscribe });
+    expect(w.html).toContain("3.8 kg menos");
+  });
+  it("las plantillas de Supabase conservan sus variables", async () => {
+    const { authTemplates } = await import("./templates");
+    const t = authTemplates();
+    expect(t.map((x) => x.file)).toEqual(["magic-link.html", "confirm-signup.html", "reset-password.html", "change-email.html", "reauthentication.html"]);
+    for (const x of t) expect(x.html).toContain("{{ .SiteURL }}/email/coach.png");
+    expect(t[0].html).toContain("{{ .Token }}");
+    expect(t[0].html).toContain("token_hash={{ .TokenHash }}&amp;type=email");
+    expect(t[3].html).toContain("{{ .NewEmail }}");
+  });
+});
