@@ -98,6 +98,14 @@ export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedPr
   return { c, def, state: st, done, run: resolveProgram(def, st, done, todayFor(v).iso) };
 }
 
+/** Hábitos marcados a mano hoy en el programa (0027). Sin la columna todavía: ninguno, sin romper Hoy. */
+export async function getProgramChecks(v: Viewer, day: string): Promise<string[]> {
+  if (v.demo) return ["activacion"];
+  const { data, error } = await (await createClient()).from("daily_logs").select("program_checks").eq("user_id", v.id).eq("day", day).maybeSingle();
+  if (error) return [];
+  return ((data?.program_checks as string[] | null) ?? []).filter((k) => typeof k === "string");
+}
+
 /** El programa activo (uno como máximo). */
 export const getActiveProgram = cache(async (v: Viewer): Promise<LoadedProgram | null> => {
   const st = (await getProgramStates(v)).find((s) => s.status === "activo");
