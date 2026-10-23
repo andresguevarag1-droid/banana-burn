@@ -1,6 +1,6 @@
 -- Banana Burn · suite multiusuario (aislamiento entre cuentas, comunidad, escalamiento, XP, RPC y carreras)
--- Uso (BD desechable con stub.sql + migraciones 0001→0022, ver README.md). La sección 5b cubre la tienda de retos (0018)
--- y la 7, el acceso a nutrición por plan (0022).
+-- Uso (BD desechable con stub.sql + migraciones 0001→0025, ver README.md). La sección 5b cubre la tienda de retos (0018),
+-- la 7, el acceso a nutrición por plan (0022) y la 9, regalos, referidos y escribir datos con plan (0025).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -650,6 +650,257 @@ select bbtest.ok('borrado: sin el texto de sus reportes', not exists (select 1 f
 select bbtest.ok('borrado: los reportes de otras personas siguen intactos', (select count(*) >= 1 from public.reports where excerpt = '@beto'));
 delete from auth.users where id in ('8a8a8a8a-0000-4000-8000-00000000008a', '7e7e7e7e-0000-4000-8000-00000000007e', '7f7f7f7f-0000-4000-8000-00000000007f');
 select bbtest.ok('borrado: el registro contable del pago queda sin dueño', (select user_id is null from public.payment_events where event_key = 'evt_borrar'));
+
+-- ───────────── 9. Regalos, referidos y acceso con plan (0025) ─────────────
+-- Para probar las reglas normales HOY, esta sección da por terminada la beta (solo en esta BD de pruebas) y la
+-- restaura al final. _beta_ends_at() es el único lugar donde vive la fecha.
+reset role; select bbtest.login(null);
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() - interval '1 day' $$;
+-- Personas: R invita (Gmail), Q1-Q7 referidas nuevas, X misma bandeja que R (alias), V paga Completo, H sin plan.
+insert into auth.users (id, email) values
+  ('9a000000-0000-4000-8000-0000000000a0', 'rita.gomez@gmail.com'),
+  ('9a000000-0000-4000-8000-0000000000a1', 'quique@gmail.com'), ('9a000000-0000-4000-8000-0000000000a2', 'quela@hotmail.com'),
+  ('9a000000-0000-4000-8000-0000000000a3', 'quino@yahoo.com'), ('9a000000-0000-4000-8000-0000000000a4', 'queta@outlook.com'),
+  ('9a000000-0000-4000-8000-0000000000a5', 'quima@icloud.com'), ('9a000000-0000-4000-8000-0000000000a6', 'quito@proton.me'),
+  ('9a000000-0000-4000-8000-0000000000a7', 'quila@gmail.com'), ('9a000000-0000-4000-8000-0000000000a8', 'Rita.Gomez+banana@googlemail.com'),
+  ('9a000000-0000-4000-8000-0000000000a9', 'quiro@gmail.com'),
+  ('9a000000-0000-4000-8000-0000000000b0', 'vale@prueba.test'), ('9a000000-0000-4000-8000-0000000000b1', 'hugo@prueba.test');
+update public.profiles set created_at = now() - interval '60 days', onboarded = true, full_name = 'Rita Gómez' where id = '9a000000-0000-4000-8000-0000000000a0';
+update public.profiles set full_name = n from (values ('a1','Quique'),('a2','Quela'),('a3','Quino'),('a4','Queta'),('a5','Quima'),('a6','Quito'),('a7','Lucía'),('a9','Quiro')) v(k, n)
+  where id = ('9a000000-0000-4000-8000-0000000000' || k)::uuid;
+update public.profiles set created_at = now() - interval '90 days', onboarded = true where id in ('9a000000-0000-4000-8000-0000000000b0', '9a000000-0000-4000-8000-0000000000b1');
+insert into public.subscriptions (user_id, status, plan, billing, provider_subscription_id, current_period_start, current_period_end)
+  values ('9a000000-0000-4000-8000-0000000000b0', 'active', 'completo', 'mes', 'sub_vale', now() - interval '10 days', now() + interval '20 days');
+update public.profiles set plan = 'completo' where id = '9a000000-0000-4000-8000-0000000000b0';
+
+-- 9a. Sin plan después de la beta: no escribe entrenos, pesos ni registro diario (lee y borra lo suyo).
+set role authenticated; select bbtest.login('E');
+select bbtest.ok('acceso: E sin plan después de la beta no tiene la app', not (select public.has_app_access()));
+select bbtest.fails('acceso: E no registra un entreno', $q$ insert into public.workouts (user_id, day, template, started_at) values (auth.uid(), current_date, 'pierna', now()) $q$, '42501');
+select bbtest.fails('acceso: E no anota su peso', $q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date, 80) $q$, '42501');
+select bbtest.fails('acceso: E no anota agua', $q$ insert into public.daily_logs (user_id, day, water_glasses) values (auth.uid(), current_date, 3) $q$, '42501');
+select bbtest.fails('acceso: E no anota medidas', $q$ insert into public.measurements (user_id, day, waist) values (auth.uid(), current_date, 80) $q$, '42501');
+select bbtest.fails('acceso: E no sube fotos', $q$ insert into storage.objects (bucket_id, name) values ('progreso', auth.uid() || '/muro.jpg') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000b1');
+select bbtest.ok('acceso: H (prueba vencida) ve sus datos aunque no tenga plan', bbtest.num($q$ select 1 from public.profiles where id = auth.uid() $q$) = 1);
+reset role;
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a1');
+select bbtest.ok('acceso: Q1 en sus 7 días de prueba sí registra', bbtest.affected($q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date - 1, 70) $q$) = 1);
+reset role;
+
+-- 9b. Regalos: solo admin, se apilan, respetan el plan, avisan y quedan en auditoría.
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('regalo: un usuario no regala meses', $q$ select public.admin_gift_months(auth.uid(), 'completo', 12, null, 'yo mismo') $q$, '42501');
+select bbtest.fails('regalo: un usuario no regala en lote', $q$ select public.admin_gift_months_bulk(array[auth.uid()], 'completo', 12, null, 'yo mismo') $q$, '42501');
+select bbtest.fails('regalo: un usuario no usa la función interna', $q$ select public._gift_grant(auth.uid(), 'completo', 12, 'regalo', null, null) $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.fails('regalo: soporte no regala meses (solo admin)', $q$ select public.admin_gift_months('f6f6f6f6-0000-4000-8000-0000000000f6', 'completo', 3, null, 'compensación') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.fails('regalo: pide motivo', $q$ select public.admin_gift_months('f6f6f6f6-0000-4000-8000-0000000000f6', 'completo', 3, null, '') $q$, 'P0001');
+select bbtest.fails('regalo: máximo 24 meses', $q$ select public.admin_gift_months('f6f6f6f6-0000-4000-8000-0000000000f6', 'completo', 25, null, 'demasiado') $q$, '22023');
+select bbtest.fails('regalo: plan válido', $q$ select public.admin_gift_months('f6f6f6f6-0000-4000-8000-0000000000f6', 'oro', 3, null, 'plan raro') $q$, '22023');
+select bbtest.ok('regalo: admin regala 3 meses de Completo a E', (select public.admin_gift_months('f6f6f6f6-0000-4000-8000-0000000000f6', 'completo', 3, 'Gracias por entrenar con nosotros', 'cliente fiel')) > 0);
+select bbtest.ok('regalo: admin regala 1 mes de Entreno a E (se apila)', (select public.admin_gift_months('f6f6f6f6-0000-4000-8000-0000000000f6', 'entreno', 1, null, 'segundo regalo')) > 0);
+select bbtest.ok('regalo: admin regala 2 meses a V, que ya paga', (select public.admin_gift_months('9a000000-0000-4000-8000-0000000000b0', 'completo', 2, null, 'promo')) > 0);
+select bbtest.ok('regalo: en lote (repetidos cuentan una vez, cuentas borradas se saltan)', (select public.admin_gift_months_bulk(array['9a000000-0000-4000-8000-0000000000b1', '0a0a0a0a-0000-4000-8000-00000000000a', '9a000000-0000-4000-8000-0000000000b1']::uuid[], 'entreno', 1, null, 'campaña')) = 1);
+select bbtest.fails('regalo: lote de más de 200', $q$ select public.admin_gift_months_bulk((select array_agg(gen_random_uuid()) from generate_series(1, 201)), 'entreno', 1, null, 'demasiados') $q$, 'P0001');
+reset role;
+select bbtest.ok('regalo: el primero empieza hoy y dura 3 meses', (select abs(extract(epoch from starts_at - now())) < 60 and expires_at = starts_at + interval '3 months' and months = 3 and source = 'regalo'
+  from public.comp_grants where user_id = 'f6f6f6f6-0000-4000-8000-0000000000f6' and source = 'regalo' and plan = 'completo'));
+select bbtest.ok('regalo: el segundo empieza cuando termina el primero', (select g2.starts_at = g1.expires_at and g2.expires_at = g1.expires_at + interval '1 month'
+  from public.comp_grants g1, public.comp_grants g2 where g1.user_id = 'f6f6f6f6-0000-4000-8000-0000000000f6' and g1.source = 'regalo' and g1.plan = 'completo'
+   and g2.user_id = g1.user_id and g2.source = 'regalo' and g2.plan = 'entreno'));
+select bbtest.ok('regalo: con suscripción pagada empieza al terminar el periodo pagado', (select g.starts_at = s.current_period_end and g.expires_at = s.current_period_end + interval '2 months'
+  from public.comp_grants g join public.subscriptions s on s.user_id = g.user_id where g.user_id = '9a000000-0000-4000-8000-0000000000b0' and g.source = 'regalo'));
+select bbtest.ok('regalo: no toca el plan del perfil', (select plan = 'free' from public.profiles where id = 'f6f6f6f6-0000-4000-8000-0000000000f6'));
+select bbtest.ok('regalo: el motivo interno no queda en la fila que ve la persona', not exists (select 1 from public.comp_grants where source = 'regalo' and reason in ('cliente fiel', 'segundo regalo', 'promo', 'campaña')));
+select bbtest.ok('regalo: cada regalo queda en auditoría con el admin', (select count(*) = 4 from public.audit_log where action = 'user.gift' and actor = bbtest.u('S')));
+select bbtest.ok('regalo: aviso en la campanita', (select count(*) = 2 from public.notifications where user_id = 'f6f6f6f6-0000-4000-8000-0000000000f6' and kind = 'regalo' and title like 'Te regalaron%'));
+set role authenticated; select bbtest.login('E');
+select bbtest.ok('regalo: E ya tiene la app', (select public.has_app_access()));
+select bbtest.ok('regalo: E tiene nutrición (regalo de Completo)', (select public.has_nutrition_access()));
+select bbtest.ok('regalo: E registra su entreno', bbtest.affected($q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date, 79) $q$) = 1);
+select bbtest.ok('regalo: E ve sus 2 regalos y su mensaje', (select count(*) = 2 and bool_or(message = 'Gracias por entrenar con nosotros') from public.comp_grants where user_id = auth.uid() and source = 'regalo'));
+select bbtest.zero('regalo: E no se marca un regalo más largo', $q$ update public.comp_grants set expires_at = now() + interval '10 years' where user_id = auth.uid() $q$);
+select bbtest.fails('regalo: E no se crea un regalo', $q$ insert into public.comp_grants (user_id, plan, expires_at, source) values (auth.uid(), 'completo', now() + interval '1 year', 'regalo') $q$, '42501');
+select bbtest.ok('regalo: E marca vistos sus regalos', (select public.gifts_mark_seen()) = 2);
+select bbtest.ok('regalo: marcar de nuevo no cambia nada', (select public.gifts_mark_seen()) = 0);
+reset role;
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000b1');
+select bbtest.ok('regalo: H con regalo de Entreno tiene la app', (select public.has_app_access()));
+select bbtest.ok('regalo: H con regalo de Entreno no tiene nutrición', not (select public.has_nutrition_access()));
+select bbtest.fails('regalo: H no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'x', 1) $q$, '42501');
+select bbtest.ok('regalo: H no ve los regalos de E', bbtest.num($q$ select 1 from public.comp_grants where user_id = 'f6f6f6f6-0000-4000-8000-0000000000f6' $q$) = 0);
+select bbtest.ok('regalo: marcar vistos solo toca los propios', (select public.gifts_mark_seen()) = 1);
+reset role;
+-- Una cortesía de las de siempre ya no revoca los regalos.
+set role authenticated; select bbtest.login('P');
+select public.admin_grant_comp('f6f6f6f6-0000-4000-8000-0000000000f6', 'entreno', now() + interval '10 days', 'cortesía de soporte');
+reset role;
+select bbtest.ok('regalo: una cortesía nueva no revoca regalos', (select count(*) = 2 from public.comp_grants where user_id = 'f6f6f6f6-0000-4000-8000-0000000000f6' and source = 'regalo' and revoked_at is null));
+-- Al vencer, el plan del perfil no queda pegado en un plan pagado vencido.
+update public.subscriptions set status = 'canceled', current_period_end = now() - interval '5 days' where user_id = '9a000000-0000-4000-8000-0000000000b0';
+select bbtest.ok('cortesías: restaurar no deja un plan pagado vencido', public._restore_plan_after_comp('9a000000-0000-4000-8000-0000000000b0', 'completo') = 'free');
+
+-- 9c. Referidos: código propio, nadie escribe atribuciones ni recompensas por la API.
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a0');
+select bbtest.ok('referidos: R obtiene su código (8 caracteres)', (select public.my_referral_code()) ~ '^[a-hjkmnp-z2-9]{8}$');
+select bbtest.ok('referidos: el código es siempre el mismo', (select public.my_referral_code()) = (select public.my_referral_code()));
+select bbtest.ok('referidos: R lee su fila de código', bbtest.num($q$ select 1 from public.referral_codes where user_id = auth.uid() $q$) = 1);
+select bbtest.fails('referidos: R no se atribuye referidos', $q$ insert into public.referrals (referrer, referred, code) values (auth.uid(), 'a1a1a1a1-0000-4000-8000-0000000000a1', 'abcdefgh') $q$, '42501');
+select bbtest.fails('referidos: R no llama la atribución del servidor', $q$ select public.referral_attribute('a1a1a1a1-0000-4000-8000-0000000000a1', 'abcdefgh') $q$, '42501');
+select bbtest.fails('referidos: R no se marca compra anual', $q$ select public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a1') $q$, '42501');
+select bbtest.fails('referidos: R no escribe recompensas', $q$ insert into public.referral_rewards (referrer, group_no, months, plan) values (auth.uid(), 99, 3, 'completo') $q$, '42501');
+select bbtest.fails('referidos: R no cambia su código', $q$ update public.referral_codes set code = 'zzzzzzzz' where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('referidos: R no lee las señales de red', $q$ select * from public.referral_signals $q$, '42501');
+select bbtest.fails('referidos: R no lee la tabla de referidos directo', $q$ select * from public.referrals $q$, '42501');
+select bbtest.fails('referidos: R no guarda su red', $q$ select public.referral_touch(auth.uid(), repeat('a', 22)) $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('referidos: A no ve el código de R', bbtest.num($q$ select 1 from public.referral_codes where user_id = '9a000000-0000-4000-8000-0000000000a0' $q$) = 0);
+select bbtest.fails('referidos: A no lee la ficha de referidos', $q$ select public.admin_referral_overview('9a000000-0000-4000-8000-0000000000a0') $q$, '42501');
+select bbtest.fails('referidos: A no lee conteos del panel', $q$ select * from public.admin_referral_counts(array['9a000000-0000-4000-8000-0000000000a0']::uuid[]) $q$, '42501');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('referidos: anon no atribuye', $q$ select public.referral_attribute('9a000000-0000-4000-8000-0000000000a1', 'abcdefgh') $q$, '42501');
+reset role;
+
+-- 9d. Atribución (como el servidor con service_role): una vez, nunca a sí misma, solo cuentas nuevas.
+create table bbtest.kv (k text primary key, v text);
+grant all on bbtest.kv to public;
+insert into bbtest.kv select 'code', code from public.referral_codes where user_id = '9a000000-0000-4000-8000-0000000000a0';
+create function bbtest.code() returns text language sql stable as $$ select v from bbtest.kv where k = 'code' $$;
+create function bbtest.h(s text) returns text language sql immutable as $$ select rpad(s, 22, 'x') $$;
+set role service_role; select bbtest.login(null);
+select public.referral_touch('9a000000-0000-4000-8000-0000000000a0', bbtest.h('red-de-rita'));
+select bbtest.ok('atribución: Q1 queda registrada', public.referral_attribute('9a000000-0000-4000-8000-0000000000a1', bbtest.code(), bbtest.h('mail-q1'), bbtest.h('red-1')) = 'registrado');
+select bbtest.ok('atribución: no se vuelve a atribuir', public.referral_attribute('9a000000-0000-4000-8000-0000000000a1', bbtest.code(), bbtest.h('mail-q1b'), bbtest.h('red-1')) = 'ya_atribuido');
+select bbtest.ok('atribución: nadie se refiere a sí mismo', public.referral_attribute('9a000000-0000-4000-8000-0000000000a0', bbtest.code(), null, null) = 'auto_referido');
+select bbtest.ok('atribución: una cuenta vieja no se atribuye', public.referral_attribute('f6f6f6f6-0000-4000-8000-0000000000f6', bbtest.code(), null, null) = 'cuenta_vieja');
+select bbtest.ok('atribución: código con formato inválido', public.referral_attribute('9a000000-0000-4000-8000-0000000000a2', 'x''; drop table referrals; --', null, null) = 'codigo_invalido');
+select bbtest.ok('atribución: código que no existe', public.referral_attribute('9a000000-0000-4000-8000-0000000000a2', 'zzzzzzzz', null, null) = 'codigo_desconocido');
+select bbtest.ok('atribución: el mismo correo con alias se descarta', public.referral_attribute('9a000000-0000-4000-8000-0000000000a8', bbtest.code(), bbtest.h('mail-x'), bbtest.h('red-x')) = 'descartado');
+select bbtest.ok('atribución: misma red y mismo dominio que quien invita queda en revisión', public.referral_attribute('9a000000-0000-4000-8000-0000000000a7', upper(bbtest.code()), bbtest.h('mail-q7'), bbtest.h('red-de-rita')) = 'sospechoso');
+select bbtest.ok('atribución: Q2 a Q6 registrados', (select bool_and(public.referral_attribute(('9a000000-0000-4000-8000-0000000000' || k)::uuid, bbtest.code(), bbtest.h('mail-' || k), bbtest.h('red-' || k)) = 'registrado') from unnest(array['a2','a3','a4','a5','a6']) k));
+select bbtest.ok('atribución: el mismo correo (aunque se borre la cuenta) no se atribuye dos veces', public.referral_attribute('9a000000-0000-4000-8000-0000000000a9', bbtest.code(), bbtest.h('mail-a2'), bbtest.h('red-9')) = 'correo_repetido');
+reset role;
+set role service_role; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a0');
+select bbtest.fails('atribución: un JWT de usuario no la usa aunque el rol fuera service_role', $q$ select public.referral_attribute('9a000000-0000-4000-8000-0000000000a9', 'abcdefgh') $q$, '42501');
+reset role;
+select bbtest.ok('atribución: 8 filas para R (incluye descartado y en revisión)', (select count(*) = 8 from public.referrals where referrer = '9a000000-0000-4000-8000-0000000000a0'));
+
+-- 9e. Calificación y recompensas: grupos de 3, 1 mes o 3 si alguien del grupo compró anual. Sin doble conteo.
+select bbtest.login(null);
+update public.profiles set onboarded = true where id in ('9a000000-0000-4000-8000-0000000000a1', '9a000000-0000-4000-8000-0000000000a2', '9a000000-0000-4000-8000-0000000000a3',
+  '9a000000-0000-4000-8000-0000000000a4', '9a000000-0000-4000-8000-0000000000a5', '9a000000-0000-4000-8000-0000000000a6', '9a000000-0000-4000-8000-0000000000a7');
+select bbtest.ok('calificación: terminar la bienvenida sola no califica', (select count(*) = 0 from public.referrals where status = 'calificado'));
+-- El peso de la bienvenida tampoco cuenta como día activo (Q1 ya anotó peso en 9a).
+select bbtest.ok('calificación: anotar peso no califica', (select status = 'registrado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a1'));
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a1');
+select bbtest.ok('calificación: Q1 anota agua', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses) values (auth.uid(), current_date, 4) $q$) = 1);
+reset role;
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a2');
+select bbtest.ok('calificación: Q2 empieza un entreno', bbtest.affected($q$ insert into public.workouts (user_id, day, template, started_at) values (auth.uid(), current_date, 'pierna', now()) $q$) = 1);
+reset role;
+select bbtest.ok('calificación: un entreno sin terminar no califica', (select status = 'registrado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a2'));
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a2');
+select bbtest.ok('calificación: Q2 termina el entreno', bbtest.affected($q$ update public.workouts set finished_at = now() where user_id = auth.uid() $q$) = 1);
+reset role;
+select bbtest.ok('calificación: Q1 y Q2 calificados, sin recompensa todavía', (select count(*) = 2 from public.referrals where status = 'calificado') and not exists (select 1 from public.referral_rewards));
+-- Q3 pasó sus 7 días sin actividad: ya no califica.
+update public.profiles set created_at = now() - interval '9 days' where id = '9a000000-0000-4000-8000-0000000000a3';
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a3');
+select bbtest.ok('calificación: Q3 fuera de plazo no puede escribir', bbtest.affected($q$ insert into public.daily_logs (user_id, day, steps) values (auth.uid(), current_date, 9000) $q$) = -1);
+reset role;
+select bbtest.login(null);
+insert into public.daily_logs (user_id, day, steps) values ('9a000000-0000-4000-8000-0000000000a3', current_date, 9000);
+select bbtest.ok('calificación: actividad después de los 7 días no califica', (select status = 'registrado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a3'));
+-- Q4 califica: grupo 1 completo (Q1, Q2, Q4) = 1 mes.
+insert into public.daily_logs (user_id, day, sleep_h) values ('9a000000-0000-4000-8000-0000000000a4', current_date, 7.5);
+select bbtest.ok('recompensa: el grupo 1 completo da 1 mes', (select count(*) = 1 and min(months) = 1 and min(group_no) = 1 from public.referral_rewards where referrer = '9a000000-0000-4000-8000-0000000000a0'));
+select bbtest.ok('recompensa: 1 regalo de referidos para R, de 1 mes', (select count(*) = 1 and min(months) = 1 from public.comp_grants where user_id = '9a000000-0000-4000-8000-0000000000a0' and source = 'referido'));
+select bbtest.ok('recompensa: los 3 del grupo quedan marcados', (select count(*) = 3 from public.referrals where referrer = '9a000000-0000-4000-8000-0000000000a0' and group_no = 1));
+select bbtest.ok('recompensa: volver a liquidar no paga de nuevo', public._referral_settle('9a000000-0000-4000-8000-0000000000a0') = 0 and (select count(*) = 1 from public.referral_rewards));
+-- Q2 compra anual (webhook): el grupo 1 sube a trimestre, una sola vez.
+set role service_role; select bbtest.login(null);
+select bbtest.ok('anual: el grupo 1 sube a trimestre', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a2') = 'trimestre');
+select bbtest.ok('anual: la renovación del año no suma de nuevo', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a2') = 'sin_cambio');
+select bbtest.ok('anual: otra compra anual del mismo grupo no suma', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a1') = 'sin_cambio');
+reset role;
+select bbtest.ok('anual: el grupo 1 vale 3 meses en total (1 + 2)', (select months = 3 and upgraded_at is not null and cardinality(grant_ids) = 2 from public.referral_rewards where group_no = 1)
+  and (select sum(months) = 3 from public.comp_grants where user_id = '9a000000-0000-4000-8000-0000000000a0' and source = 'referido'));
+-- Grupo 2 con compra anual ANTES de completarse: da 3 meses de una vez.
+set role service_role; select bbtest.login(null);
+select bbtest.ok('anual: Q5 compra anual antes de calificar (queda anotado)', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a5') = 'anotado');
+reset role;
+insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000a5', current_date, 2), ('9a000000-0000-4000-8000-0000000000a6', current_date, 2);
+select bbtest.ok('recompensa: con 2 de 3 el grupo 2 todavía no paga', (select count(*) = 1 from public.referral_rewards));
+-- Q7 estaba en revisión: el admin lo aprueba y completa el grupo 2.
+set role authenticated; select bbtest.login('P');
+select bbtest.fails('revisión: soporte no aprueba referidos', $q$ select public.admin_review_referral((select 1::bigint), true, 'ok') $q$, '42501');
+reset role;
+insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000a7', current_date, 2);
+select bbtest.ok('revisión: en revisión no califica aunque entrene', (select status = 'sospechoso' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a7'));
+insert into bbtest.kv select 'q7', id::text from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a7';
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('revisión: el admin aprueba a Q7', public.admin_review_referral((select v::bigint from bbtest.kv where k = 'q7'), true, 'es su hermana, lo confirmó por correo') = 'registrado');
+select bbtest.fails('revisión: no se revisa dos veces', $q$ select public.admin_review_referral((select v::bigint from bbtest.kv where k = 'q7'), true, 'otra vez') $q$, 'P0001');
+reset role;
+select bbtest.ok('recompensa: el grupo 2 (con anual) da 3 meses de una vez', (select months = 3 and upgraded_at is null and cardinality(grant_ids) = 1 from public.referral_rewards where group_no = 2));
+select bbtest.ok('recompensa: los regalos de R se apilan uno tras otro', (select bool_and(ok) from (
+  select starts_at >= lag(expires_at) over (order by starts_at) or lag(expires_at) over (order by starts_at) is null as ok
+  from public.comp_grants where user_id = '9a000000-0000-4000-8000-0000000000a0' and source = 'referido') t));
+select bbtest.ok('recompensa: aviso en la campanita de R', (select count(*) >= 3 from public.notifications where user_id = '9a000000-0000-4000-8000-0000000000a0' and kind = 'referido'));
+select bbtest.ok('auditoría: la aprobación queda registrada', (select count(*) = 1 from public.audit_log where action = 'referral.approve'));
+
+-- 9f. Lo que ve quien invita: inicial y estado, nada más.
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a0');
+select bbtest.ok('mis referidos: R ve sus 8 referidos', bbtest.num($q$ select * from public.my_referrals() $q$) = 8);
+select bbtest.ok('mis referidos: solo iniciales (una letra)', (select bool_and(char_length(initial) = 1) from public.my_referrals()));
+select bbtest.ok('mis referidos: sin correo ni ids', not exists (select 1 from public.my_referrals() r where to_jsonb(r)::text ~ '@|[0-9a-f]{8}-[0-9a-f]{4}'));
+select bbtest.ok('mis referidos: Q3 aparece como vencido', (select count(*) = 1 from public.my_referrals() where expired));
+select bbtest.ok('mis referidos: compras anuales marcadas (Q1, Q2, Q5)', (select count(*) = 3 from public.my_referrals() where annual));
+select bbtest.ok('mis referidos: R ve sus 2 recompensas', bbtest.num($q$ select 1 from public.referral_rewards where referrer = auth.uid() $q$) = 2);
+reset role;
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a1');
+select bbtest.ok('mis referidos: Q1 no ve las recompensas de R', bbtest.num($q$ select 1 from public.referral_rewards $q$) = 0);
+select bbtest.ok('mis referidos: Q1 no tiene referidos propios', bbtest.num($q$ select * from public.my_referrals() $q$) = 0);
+reset role;
+
+-- 9g. Panel: soporte lee, solo admin revoca. La revocación quita los meses y no se vuelve a pagar.
+set role authenticated; select bbtest.login('P');
+select bbtest.ok('panel: soporte lee la ficha de referidos', (select jsonb_array_length(public.admin_referral_overview('9a000000-0000-4000-8000-0000000000a0') -> 'referrals')) = 8);
+select bbtest.ok('panel: conteos por usuario', (select total = 8 and qualified = 6 and rewards = 2 from public.admin_referral_counts(array['9a000000-0000-4000-8000-0000000000a0']::uuid[])));
+select bbtest.fails('panel: soporte no revoca recompensas', $q$ select public.admin_revoke_referral_reward((select 1::bigint), 'fraude') $q$, '42501');
+reset role;
+insert into bbtest.kv select 'g1', id::text from public.referral_rewards where group_no = 1;
+set role authenticated; select bbtest.login('S');
+select bbtest.fails('panel: revocar pide motivo', $q$ select public.admin_revoke_referral_reward((select v::bigint from bbtest.kv where k = 'g1'), '') $q$, 'P0001');
+select public.admin_revoke_referral_reward((select v::bigint from bbtest.kv where k = 'g1'), 'cuentas falsas confirmadas');
+select bbtest.fails('panel: no se revoca dos veces', $q$ select public.admin_revoke_referral_reward((select v::bigint from bbtest.kv where k = 'g1'), 'otra vez') $q$, 'P0001');
+reset role;
+select bbtest.login(null);
+select bbtest.ok('revocación: los meses del grupo 1 quedan revocados', (select count(*) = 2 from public.comp_grants where id = any((select grant_ids from public.referral_rewards where group_no = 1)::bigint[]) and revoked_at is not null));
+select bbtest.ok('revocación: los referidos del grupo 1 ya no cuentan', (select count(*) = 3 from public.referrals where group_no = 1 and status = 'descartado'));
+select bbtest.ok('revocación: liquidar de nuevo no paga el grupo revocado', public._referral_settle('9a000000-0000-4000-8000-0000000000a0') = 0 and (select count(*) = 2 from public.referral_rewards));
+select bbtest.ok('revocación: la compra anual de un grupo revocado no suma', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a4') = 'sin_cambio');
+select bbtest.ok('auditoría: la revocación queda registrada', (select count(*) = 1 from public.audit_log where action = 'referral.reward_revoke' and actor = bbtest.u('S')));
+
+-- 9h. Borrado de la cuenta referida: la fila queda sin dueño ni red, y su correo no se puede volver a atribuir.
+delete from auth.users where id = '9a000000-0000-4000-8000-0000000000a6';
+select bbtest.ok('borrado: la fila de referido queda sin dueño y sin red', (select referred is null and ip_hash is null and email_hash is not null from public.referrals where email_hash = bbtest.h('mail-a6')));
+set role service_role; select bbtest.login(null);
+select bbtest.ok('borrado: recrear la cuenta con el mismo correo no se vuelve a atribuir', public.referral_attribute('9a000000-0000-4000-8000-0000000000a9', bbtest.code(), bbtest.h('mail-a6'), null) = 'correo_repetido');
+reset role;
+-- Los triggers nunca bloquean el registro del usuario aunque fallen las recompensas.
+select bbtest.ok('triggers: actividad de alguien sin referido no hace nada', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000b0', current_date, 1) $q$) = 1);
+
+-- Restaurar la beta original (misma fecha que src/lib/plans.ts).
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select timestamptz '2026-11-01 06:00:00+00' $$;
+revoke all on function public._beta_ends_at() from public, anon, authenticated;
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));

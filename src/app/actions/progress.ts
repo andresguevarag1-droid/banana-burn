@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
+import { accessError } from "@/lib/entitlements";
 import { todayFor } from "@/lib/today";
 
 const PHOTO_PATH = /^[0-9a-f-]{36}\/[A-Za-z0-9_-][A-Za-z0-9._-]{0,119}$/;
@@ -18,6 +19,8 @@ export async function saveMeasures(input: Partial<Record<(typeof FIELDS)[number]
   }
   if (!Object.keys(row).length) return { ok: false, error: "Anota al menos una medida." };
   if (v.demo) return { ok: true, demo: true };
+  const denied = await accessError(v, "app");
+  if (denied) return { ok: false, error: denied };
   const sb = await createClient();
   const day = todayFor(v).iso;
   const { data: had } = await sb.from("measurements").select("day").eq("user_id", v.id).eq("day", day).maybeSingle();
@@ -33,6 +36,7 @@ export async function addPhoto(path: string, pose: string) {
   if (!v || v.demo) return { ok: false };
   // Ruta dentro de la carpeta del usuario, sin subcarpetas ni "..": igual que el CHECK de 0012.
   if (typeof path !== "string" || !PHOTO_PATH.test(path) || path.includes("..") || !path.startsWith(`${v.id}/`) || !["frente", "lado", "espalda"].includes(pose)) return { ok: false };
+  if (await accessError(v, "app")) return { ok: false };
   const sb = await createClient();
   const day = todayFor(v).iso;
   const { count: before } = await sb.from("progress_photos").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("day", day);

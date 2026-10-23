@@ -10,8 +10,13 @@ import { crToday } from "@/lib/today";
 import { actionLabel } from "@/lib/admin-format";
 import { ActivityStrip, Sparkline } from "@/components/admin/charts";
 import { ConfirmAction } from "@/components/admin/action-form";
-import { Badge, DemoNotice, MetaList, Nil, Notice, PageHeader, PlanText, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, fmtNum, inputSm, link, money, panel, rowActionDanger, textareaSm, tr } from "@/components/admin/ui";
+import { Badge, DemoNotice, MetaList, Nil, Notice, PageHeader, PlanText, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, fmtNum, inputSm, link, money, panel, rowAction, rowActionDanger, textareaSm, tr } from "@/components/admin/ui";
 import { changeRole, deleteUserAccount, grantComp, resetOnboarding, revokeComp, setSuspended } from "../../actions";
+import { giftMonths, reviewReferral, revokeReferralReward } from "../../regalos-actions";
+import { GiftFields, type GiftCover } from "@/components/admin/gift-fields";
+import { getReferralOverview, REFERRAL_FLAG_LABEL, REFERRAL_STATUS_LABEL } from "@/lib/admin-referrals";
+import { GIFT_STATUS_LABEL, giftStatus, monthsLabel } from "@/lib/gifts";
+import { BETA_ENDS_AT } from "@/lib/plans";
 
 export const metadata = { title: "Ficha de usuario" };
 
@@ -39,7 +44,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const v = await requireSection("usuarios");
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const d = await getUserDetail(v, id);
+  const [d, refs] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id)]);
   if (!d) notFound();
   const a = d.account;
   const today = crToday().iso;
@@ -48,7 +53,17 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const roleOptions = assignableRoles(v.role).filter((r) => r !== a.role);
   const targetPrivileged = PRIVILEGED.includes(a.role);
   const canChangeRole = can(v.role, "users.role") && !isSelf && (v.role === "superadmin" || !targetPrivileged);
-  const activeComp = d.billing?.comps.find((c) => !c.revoked_at && Date.parse(c.expires_at) > Date.now());
+  const isGift = (c: { source?: string | null }) => c.source === "regalo" || c.source === "referido";
+  const comps = d.billing?.comps.filter((c) => !isGift(c)) ?? [];
+  const gifts = d.billing?.comps.filter(isGift) ?? [];
+  const activeComp = comps.find((c) => !c.revoked_at && Date.parse(c.expires_at) > Date.now());
+  const renewing = d.billing?.subs.find((s) => (s.status === "active" || s.status === "trialing") && !s.cancel_at_period_end && s.current_period_end && Date.parse(s.current_period_end) > Date.now());
+  // Mismos datos que usa la base para apilar el regalo (vista previa en el formulario; la base decide la fecha final).
+  const cover: GiftCover | undefined = d.billing ? {
+    createdAt: a.created_at, betaEndsAt: BETA_ENDS_AT, renewsAt: renewing?.current_period_end ?? null,
+    comps: d.billing.comps.map((c) => ({ plan: c.plan, source: c.source ?? "cortesia", starts_at: c.starts_at, expires_at: c.expires_at, revoked_at: c.revoked_at })),
+    subs: d.billing.subs.map((s) => ({ plan: s.plan ?? null, status: s.status ?? "", current_period_end: s.current_period_end ?? null, cancel_at_period_end: s.cancel_at_period_end ?? false })),
+  } : undefined;
   const health = d.health;
 
   return (
@@ -128,8 +143,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 {d.billing.subs.length > 0 && can(v.role, "payments.view") && a.full_name && <Link href={`/admin/pagos?q=${encodeURIComponent(a.full_name)}`} className={`inline-block text-sm ${link}`}>Ver en Pagos</Link>}
                 <div>
                   <h3 className="text-sm font-bold text-ink mb-2">Cortesías</h3>
-                  {d.billing.comps.length ? (
-                    <ul className="space-y-2">{d.billing.comps.map((c) => {
+                  {comps.length ? (
+                    <ul className="space-y-2">{comps.map((c) => {
                       const live = !c.revoked_at && Date.parse(c.expires_at) > Date.now();
                       return (
                         <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2.5 text-sm">
@@ -144,9 +159,88 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                     })}</ul>
                   ) : <p className="text-sm text-muted">Sin cortesías.</p>}
                 </div>
+                <div>
+                  <h3 className="text-sm font-bold text-ink mb-2">Regalos y recompensas</h3>
+                  {gifts.length ? (
+                    <ul className="space-y-2">{gifts.map((g) => {
+                      const st = giftStatus(g);
+                      return (
+                        <li key={g.id} className="rounded-xl border border-line px-3 py-2.5 text-sm">
+                          <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
+                            {monthsLabel(g.months ?? 1)} de {PLAN[g.plan] ?? g.plan}
+                            <Badge tone={st === "activo" ? "good" : st === "programado" ? "info" : st === "revocado" ? "bad" : "muted"}>{GIFT_STATUS_LABEL[st]}</Badge>
+                            {g.source === "referido" && <Badge tone="warn">Referidos</Badge>}
+                          </p>
+                          <MetaList className="mt-0.5" items={[`Del ${fmtDate(g.starts_at)} al ${fmtDate(g.expires_at)}`, g.granted_by_name && `Por ${g.granted_by_name}`]} />
+                          {g.message && <p className="mt-1 text-xs text-muted text-pretty">Mensaje: {g.message}</p>}
+                        </li>);
+                    })}</ul>
+                  ) : <p className="text-sm text-muted">Sin regalos.</p>}
+                </div>
               </>
             ) : <Restricted what="facturación" />}
           </Section>
+
+          {refs && (
+            <Section title="Referidos" id="s-referidos">
+              {refs.unavailable ? <p className="text-sm text-muted">Falta aplicar la migración 0025_regalos_referidos.sql.</p> : (<>
+                <dl className="grid grid-cols-3 divide-x divide-line rounded-xl bg-paper/60">
+                  {([["Invitados", refs.referrals.length], ["Activos", refs.referrals.filter((r) => r.status === "calificado").length], ["Meses ganados", refs.rewards.filter((w) => !w.revoked_at).reduce((n, w) => n + w.months, 0)]] as const).map(([l, n]) => (
+                    <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
+                  ))}
+                </dl>
+                <dl>
+                  <Row k="Código">{refs.code ? <code className="font-mono text-xs font-normal">{refs.code}</code> : <Nil />}</Row>
+                  <Row k="Lo invitó">{refs.referred_by ? <Link href={`/admin/usuarios/${refs.referred_by.id}`} className={link}>{refs.referred_by.name || "Sin nombre"}</Link> : <Nil />}</Row>
+                </dl>
+                {refs.referrals.length > 0 && (
+                  <ul className="space-y-2">{refs.referrals.map((r) => (
+                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2.5 text-sm">
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
+                          {r.user_id ? <Link href={`/admin/usuarios/${r.user_id}`} className={link}>{r.name || "Sin nombre"}</Link> : "Cuenta borrada"}
+                          <Badge tone={r.status === "calificado" ? "good" : r.status === "sospechoso" ? "warn" : "muted"}>{REFERRAL_STATUS_LABEL[r.status] ?? r.status}</Badge>
+                          {r.annual && <Badge tone="info">Compró anual</Badge>}
+                        </p>
+                        <MetaList className="mt-0.5" items={[`Se registró el ${fmtDate(r.created_at)}`, r.group_no && `Grupo ${r.group_no}`, r.flag && (REFERRAL_FLAG_LABEL[r.flag] ?? r.flag)]} />
+                      </div>
+                      {r.status === "sospechoso" && can(v.role, "referrals.manage") && (
+                        <div className="flex gap-1">
+                          <ConfirmAction action={reviewReferral} triggerClassName={rowAction} trigger="Aprobar" title="Aprobar referido" hidden={{ target: a.id, referral: r.id, decision: "aprobar" }} confirmLabel="Aprobar"
+                            description="Vuelve a contar para las recompensas de esta persona cuando cumpla las condiciones.">
+                            <div><label htmlFor={`ra-${r.id}`} className="block text-xs font-bold text-ink mb-1">Motivo</label><input id={`ra-${r.id}`} name="reason" required minLength={4} maxLength={300} className={inputSm} /></div>
+                          </ConfirmAction>
+                          <ConfirmAction action={reviewReferral} danger triggerClassName={rowActionDanger} trigger="Descartar" title="Descartar referido" hidden={{ target: a.id, referral: r.id, decision: "descartar" }} confirmLabel="Descartar"
+                            description="No contará para recompensas.">
+                            <div><label htmlFor={`rd-${r.id}`} className="block text-xs font-bold text-ink mb-1">Motivo</label><input id={`rd-${r.id}`} name="reason" required minLength={4} maxLength={300} className={inputSm} /></div>
+                          </ConfirmAction>
+                        </div>
+                      )}
+                    </li>
+                  ))}</ul>
+                )}
+                <div>
+                  <h3 className="text-sm font-bold text-ink mb-2">Recompensas</h3>
+                  {refs.rewards.length ? (
+                    <ul className="space-y-2">{refs.rewards.map((w) => (
+                      <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2.5 text-sm">
+                        <div className="min-w-0">
+                          <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">Grupo {w.group_no}: {monthsLabel(w.months)} de {PLAN[w.plan] ?? w.plan} {w.revoked_at ? <Badge tone="bad">Revocada</Badge> : <Badge tone="good">Entregada</Badge>}</p>
+                          <MetaList className="mt-0.5" items={[fmtDate(w.created_at), w.upgraded_at && "Subió a trimestre por una compra anual", w.revoke_reason]} />
+                        </div>
+                        {!w.revoked_at && can(v.role, "referrals.manage") && (
+                          <ConfirmAction action={revokeReferralReward} danger triggerClassName={rowActionDanger} trigger="Revocar" title="Revocar recompensa por fraude" hidden={{ target: a.id, reward: w.id }} confirmLabel="Revocar"
+                            description="Quita los meses de esta recompensa y los referidos de su grupo dejan de contar. No se puede deshacer.">
+                            <div><label htmlFor={`rw-${w.id}`} className="block text-xs font-bold text-ink mb-1">Motivo</label><input id={`rw-${w.id}`} name="reason" required minLength={4} maxLength={300} placeholder="p. ej. cuentas creadas por la misma persona" className={inputSm} /></div>
+                          </ConfirmAction>
+                        )}
+                      </li>
+                    ))}</ul>
+                  ) : <p className="text-sm text-muted">Sin recompensas todavía.</p>}
+                </div>
+              </>)}
+            </Section>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -180,6 +274,16 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                       <input id="cg-reason" name="reason" required minLength={4} maxLength={300} placeholder="p. ej. influencer, compensación por falla" className={inputSm} /></div>
                   </ConfirmAction>
                 ) : <p className="text-sm text-muted">Solo soporte y admin otorgan cortesías.</p>}
+              </div>
+
+              <div className="space-y-2 border-t border-line pt-4">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><Gift className="size-4" aria-hidden />Regalar meses</h3>
+                {can(v.role, "users.gift") ? (
+                  <ConfirmAction action={giftMonths} trigger="Regalar meses" title={`Regalar meses a ${a.full_name || "este usuario"}`} hidden={{ target: a.id }} confirmLabel="Regalar"
+                    description="Se suma al final del acceso que ya tenga (nada se recorta). Le llega un aviso en la app, una ventana de celebración, un correo y una notificación si las activó.">
+                    <GiftFields cover={cover} />
+                  </ConfirmAction>
+                ) : <p className="text-sm text-muted">Solo admin y superadmin regalan meses.</p>}
               </div>
 
               <div className="space-y-2 border-t border-line pt-4">

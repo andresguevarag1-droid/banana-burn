@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { creditChallenges } from "@/lib/challenges-server";
 import { createClient, getViewer } from "@/lib/supabase/server";
+import { accessError } from "@/lib/entitlements";
 import { todayFor } from "@/lib/today";
 import { workoutXp } from "@/lib/gamify";
 import { getHistory } from "@/lib/history";
@@ -19,6 +20,8 @@ export async function saveWorkout(input: Finished): Promise<SaveResult> {
   const w = normalizeWorkout(input);
   if (!w) return { ok: false, error: "Datos del entreno inválidos." };
   if (v.demo) return { ok: true, demo: true };
+  const denied = await accessError(v, "app"); // sin plan ni prueba: no se guarda (la base lo repite con RLS, 0025)
+  if (denied) return { ok: false, error: denied };
   const sb = await createClient();
   const day = todayFor(v).iso;
   // El servidor recalcula XP y récords con su propio reloj y el historial guardado: no confiamos en lo que manda el navegador.

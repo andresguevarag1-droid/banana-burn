@@ -3,7 +3,7 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, House, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, Gift, House, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
@@ -21,11 +21,12 @@ const MAIN: Item[] = [
   { href: "/app/comunidad", label: "Comunidad", icon: Users },
 ];
 const EXTRA: Item[] = [
-  { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador con IA" },
+  { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador 24/7" },
   { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Tienda: gratis y Premium" },
   { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1", nutri: true },
+  { href: "/app/referidos", label: "Invita y gana", icon: Gift, hint: "1 mes gratis por cada 3 amigos" },
 ];
 /** Fuera del menú principal: solo en "Más" (todavía no conecta relojes). */
 const SOON: Item = { href: "/app/conexiones", label: "Relojes", icon: Watch, hint: "Próximamente" };

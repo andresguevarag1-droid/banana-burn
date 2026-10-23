@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { ArrowLeft, Info, Receipt } from "@/components/icons";
+import { ArrowLeft, Gift, Info, Receipt } from "@/components/icons";
+import { getMyGifts } from "@/lib/gifts-server";
+import { GIFT_STATUS_LABEL, type GiftStatus } from "@/lib/gifts";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements, type Entitlements } from "@/lib/entitlements";
 import { isOnvoConfigured } from "@/lib/onvo";
@@ -30,7 +32,7 @@ type Payment = { id: number; provider_payment_intent_id: string | null; received
 export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
-  const ent = await getEntitlements(v);
+  const [ent, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
   const payments = isOnvoConfigured() && !v.demo;
   const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent((await cookies()).get(INTENT_COOKIE)?.value);
 
@@ -98,7 +100,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         </dl>
         {ent.status === "past_due" && <p role="alert" className="mt-4 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm text-bad font-semibold">No pudimos cobrar tu renovación. ONVO reintentará; revisa que tu tarjeta tenga fondos o elige un plan de nuevo para pagar con otro método.</p>}
         {ent.status === "canceling" && <p className="mt-4 text-sm text-muted">Cancelaste la renovación. Sigues con acceso completo hasta el {fmtDate(ent.endsAt)}; no habrá más cobros.</p>}
-        {ent.access === "comp" && <p className="mt-4 text-sm text-muted">Es un plan de cortesía{ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt)}` : ""}; no tiene cobros automáticos.</p>}
+        {ent.access === "comp" && <p className="mt-4 text-sm text-muted">Es un plan regalado{ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt)}` : ""}; no tiene cobros automáticos.</p>}
         {(ent.access === "manual" || ent.access === "staff") && !v.demo && <p className="mt-4 text-sm text-muted">Este plan fue asignado por el equipo de Banana Burn; no tiene cobros automáticos.</p>}
       </section>
 
@@ -108,6 +110,28 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         payments={payments}
         demo={v.demo}
       />
+
+      {gifts.length > 0 && (
+        <section className="card p-5 sm:p-6" aria-labelledby="regalos">
+          <h2 id="regalos" className="font-extrabold text-ink flex items-center gap-2"><Gift weight="duotone" className="size-5 text-banana-ink" />Regalos recibidos</h2>
+          {v.demo && <p className="mt-1 text-xs text-muted">Ejemplo del modo demo.</p>}
+          <ul className="mt-3 divide-y divide-line">
+            {gifts.map((g) => (
+              <li key={g.id} className="py-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold text-ink text-pretty">{g.title}</p>
+                    <p className="text-xs text-muted">{g.status === "programado" ? `Empieza el ${fmtDate(g.startsAt)} y termina el ${fmtDate(g.expiresAt)}` : `Del ${fmtDate(g.startsAt)} al ${fmtDate(g.expiresAt)}`}{g.source === "referido" ? ". Por invitar amigos" : ""}</p>
+                  </div>
+                  <span className={`chip shrink-0 ${GIFT_TONE[g.status]}`}>{GIFT_STATUS_LABEL[g.status]}</span>
+                </div>
+                {g.message && <p className="mt-2 rounded-2xl bg-banana-soft px-3 py-2 text-ink text-pretty">{g.message}</p>}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-faint">Los regalos se suman al final del acceso que ya tenías y no tienen cobros. <Link href="/app/referidos" className="underline">Invita amigos y gana más meses.</Link></p>
+        </section>
+      )}
 
       <section className="card p-5 sm:p-6" aria-labelledby="historial">
         <h2 id="historial" className="font-extrabold text-ink flex items-center gap-2"><Receipt weight="duotone" className="size-5" />Pagos</h2>
@@ -131,6 +155,8 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
     </div>
   );
 }
+
+const GIFT_TONE: Record<GiftStatus, string> = { activo: "bg-peel/10 text-peel", programado: "bg-banana-soft text-banana-ink", terminado: "bg-line text-muted", revocado: "bg-line text-muted" };
 
 function Item({ k, v }: { k: string; v: string }) {
   return <div className="rounded-2xl bg-paper p-3"><dt className="text-xs font-semibold text-muted">{k}</dt><dd className="font-bold text-ink">{v}</dd></div>;

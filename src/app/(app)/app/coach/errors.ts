@@ -13,6 +13,7 @@ export function errorFor(status: number | null, body = ""): ChatError {
   if (status === null) return { text: "No pudimos conectar con el coach. Revisa tu conexión e intenta de nuevo.", retry: true };
   if (status === 401) return { text: "Tu sesión expiró. Vuelve a entrar para seguir hablando con el coach.", retry: false };
   if (status === 403) return { text: "No pudimos verificar esta página. Recárgala e intenta de nuevo.", retry: false };
+  if (status === 402) return { text: server || "Tu prueba gratis terminó. Elige un plan para seguir hablando con el coach.", retry: false };
   if (status === 413) return { text: "Tu mensaje es muy largo. Resúmelo un poco y vuelve a enviarlo.", retry: false };
   if (status === 400) return { text: "No pudimos leer tu mensaje. Escríbelo de nuevo.", retry: false };
   if (status === 429) return { text: "Vas muy rápido. Espera un momento e intenta de nuevo.", retry: true };

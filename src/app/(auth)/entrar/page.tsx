@@ -6,6 +6,8 @@ import { FunnelTracker } from "@/components/analytics";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getViewer } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { REF_COOKIE, normalizeCode } from "@/lib/referrals";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
@@ -24,6 +26,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   const signup = (await searchParams).modo === "registro";
   // Con sesión abierta no rebotamos a la app: mostramos con qué cuenta estás y dejamos cambiarla.
   const v = isSupabaseConfigured ? await getViewer() : null;
+  const invited = signup && !v && !!normalizeCode((await cookies()).get(REF_COOKIE)?.value);
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
       <FunnelTracker view="page_view" props={{ screen: signup ? "registro" : "entrar" }} />
@@ -44,7 +47,10 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
                 </form>
               </div>
             ) : (
-              <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} /></Suspense>
+              <>
+                {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />Llegaste con una invitación. Crea tu cuenta y entrena gratis {TRIAL_DAYS} días.</p>}
+                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} /></Suspense>
+              </>
             )}
           </div>
         </main>

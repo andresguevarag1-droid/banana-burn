@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
 import { ACTIVITY_LABEL, BILLING_LABEL, listUsers, PAGE_SIZE, PLAN_LABEL, statusOf, USER_STATUS } from "@/lib/admin";
-import { ROLE_LABEL, ROLES } from "@/lib/admin-perms";
+import { can, ROLE_LABEL, ROLES } from "@/lib/admin-perms";
+import { getReferralCounts } from "@/lib/admin-referrals";
+import { giftMonthsBulk } from "../regalos-actions";
+import { ConfirmAction } from "@/components/admin/action-form";
+import { GiftFields } from "@/components/admin/gift-fields";
+import { GIFT_BULK_MAX } from "@/lib/gifts";
 import { crToday } from "@/lib/today";
 import { CaretRight } from "@/components/icons";
-import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, Nil, Notice, PageHeader, Pagination, RoleBadge, SubStatus, Table, Td, Th, ago, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, trHover } from "@/components/admin/ui";
+import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, Nil, Notice, PageHeader, Pagination, RoleBadge, SubStatus, Table, Td, Th, ago, btnGhost, fmtDate, fmtNum, fw, inputSm, panel, textareaSm, trHover } from "@/components/admin/ui";
 
 export const metadata = { title: "Usuarios" };
 
@@ -23,12 +28,34 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
     page: Math.max(1, Number(sp.page) || 1),
   };
   const { rows, total, limited } = await listUsers(v, f);
+  const refCounts = await getReferralCounts(v, rows.map((u) => u.id));
+  const showRefs = can(v.role, "referrals.view");
   const today = crToday().iso;
   const filtered = !!(f.q || f.plan || f.role || f.status || f.from || f.to);
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Usuarios" desc="Busca por nombre, correo o ID y abre la ficha para ver detalle y acciones." />
+      <PageHeader title="Usuarios" desc="Busca por nombre, correo o ID y abre la ficha para ver detalle y acciones.">
+        {can(v.role, "users.gift") && (
+          <ConfirmAction action={giftMonthsBulk} trigger="Regalar meses en lote" title="Regalar meses a varias personas" hidden={{}} confirmLabel="Regalar"
+            description={`Marca personas de esta página o pega sus ID (máximo ${GIFT_BULK_MAX}). Cada regalo se suma al final del acceso de cada persona, con aviso, correo y notificación.`}>
+            {rows.length > 0 && (
+              <fieldset className="min-w-0 max-h-48 overflow-y-auto rounded-xl border border-line p-2">
+                <legend className="px-1 text-xs font-bold text-ink">Personas de esta página</legend>
+                {rows.map((u) => (
+                  <label key={u.id} className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-paper">
+                    <input type="checkbox" name="ids" value={u.id} className="size-4 accent-[#1B1505]" />
+                    <span className="min-w-0 truncate">{u.full_name || "Sin nombre"}{u.email ? <span className="text-muted"> ({u.email})</span> : null}</span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            <div><label htmlFor="bulk-ids" className="block text-xs font-bold text-ink mb-1">O pega los ID (uno por línea)</label>
+              <textarea id="bulk-ids" name="pasted" rows={2} className={textareaSm} placeholder="00000000-0000-4000-8000-000000000000" /></div>
+            <GiftFields />
+          </ConfirmAction>
+        )}
+      </PageHeader>
       {v.demo && <DemoNotice what="los usuarios" />}
       {limited && <Notice tone="warn" title="Búsqueda limitada">Sin 0005_admin.sql no se puede buscar por correo ni filtrar por actividad.</Notice>}
 
@@ -60,7 +87,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-ink">{u.full_name || "Sin nombre"}</p>
                   {u.email && <p className="truncate text-xs text-muted">{u.email}</p>}
-                  <MetaList className="mt-1.5" items={[<Badge key="a" tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge>, PLAN_LABEL[u.plan] ?? u.plan, limited ? null : ago(u.last_active, today)]} />
+                  <MetaList className="mt-1.5" items={[<Badge key="a" tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge>, PLAN_LABEL[u.plan] ?? u.plan, limited ? null : ago(u.last_active, today), refCounts.get(u.id) ? `${fmtNum(refCounts.get(u.id)!.total)} referidos` : null]} />
                 </div>
                 <CaretRight className="size-4 shrink-0 text-faint" aria-hidden />
               </Link>
@@ -70,7 +97,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
       </ul>
       <Table caption={`Usuarios${filtered ? " (filtrados)" : ""}: ${fmtNum(total)}`} captionHidden minWidth={860} className="hidden md:block">
         <thead className="border-b border-line">
-          <tr><Th>Usuario</Th><Th>Rol</Th><Th>Plan</Th><Th>Suscripción</Th><Th>Actividad</Th><Th>Última actividad</Th><Th className="text-right">Alta</Th></tr>
+          <tr><Th>Usuario</Th><Th>Rol</Th><Th>Plan</Th><Th>Suscripción</Th><Th>Actividad</Th><Th>Última actividad</Th>{showRefs && <Th className="text-right">Referidos</Th>}<Th className="text-right">Alta</Th></tr>
         </thead>
         <tbody>
           {rows.map((u) => {
@@ -90,6 +117,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                 <Td><SubStatus status={u.sub_status} /></Td>
                 <Td><Badge tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge></Td>
                 <Td className="text-muted whitespace-nowrap">{limited ? <Nil /> : ago(u.last_active, today)}</Td>
+                {showRefs && <Td className="text-right tabular-nums whitespace-nowrap">{refCounts.get(u.id) ? <span title="Invitados, activos y recompensas"><b className="text-ink">{fmtNum(refCounts.get(u.id)!.total)}</b><span className="text-muted"> ({fmtNum(refCounts.get(u.id)!.qualified)} activos, {fmtNum(refCounts.get(u.id)!.rewards)} premios)</span></span> : <Nil />}</Td>}
                 <Td className="text-right text-muted whitespace-nowrap">{fmtDate(u.created_at)}</Td>
               </tr>
             );

@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getViewer, createClient } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
 import { getEntitlements } from "@/lib/entitlements";
+import { APP_LOCKED_MSG } from "@/lib/plan-access";
 import { getProgress } from "@/lib/progress";
 import { coachSystem, demoReply, safetyCheck, sanitizeMessages, stripEmoji } from "@/lib/coach";
 import { clientIp, isSameOrigin, memoryRateLimit } from "@/lib/security";
@@ -46,6 +47,10 @@ export async function POST(req: Request) {
   // Las respuestas de seguridad (urgencias) nunca se bloquean ni gastan cupo.
   const urgent = safetyCheck(last.content, v.country);
   if (urgent) return new Response(textStream(fake(urgent)), { headers });
+  // El coach es parte del plan (las respuestas de urgencia de arriba nunca se bloquean): sin plan ni prueba vigente no
+  // responde ni gasta cupo. coach_consume (0013) lo repite en la base.
+  const ent = await getEntitlements(v);
+  if (!ent.app) return new Response(APP_LOCKED_MSG, { status: 402, headers: { ...headers, "X-Coach-State": "locked" } });
 
   // Sin llave de Anthropic: con cuentas reales el coach aún no está listo (no se gasta cupo ni se responden frases de ejemplo);
   // en modo demo se mantienen las respuestas de ejemplo.
@@ -73,7 +78,7 @@ export async function POST(req: Request) {
     return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? "", v.country))), { headers });
   }
 
-  const [a, p, ent] = await Promise.all([getAthlete(v), getProgress(v), getEntitlements(v)]);
+  const [a, p] = await Promise.all([getAthlete(v), getProgress(v)]);
   const client = new Anthropic({ apiKey: key });
   const stream = client.messages.stream({
     model: process.env.COACH_MODEL || "claude-sonnet-5-5",

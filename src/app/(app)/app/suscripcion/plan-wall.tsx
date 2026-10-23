@@ -9,9 +9,10 @@ import { FunnelTracker } from "@/components/analytics";
 import { createClient } from "@/lib/supabase/client";
 import { progressLine, recommendPlan, type TrialUsage } from "@/lib/copy";
 
-/** Rutas que siempre se pueden abrir sin plan: la cuenta y el pago. */
-export const ALWAYS_OPEN = ["/app/perfil", "/app/suscripcion"];
-export const isAlwaysOpen = (path: string) => ALWAYS_OPEN.some((p) => path === p || path.startsWith(p + "/"));
+import { isAlwaysOpen } from "@/lib/access-gate";
+
+/** Rutas que siempre se pueden abrir sin plan (la cuenta, el pago e "Invita y gana"): ver access-gate.ts. */
+export { ALWAYS_OPEN, isAlwaysOpen } from "@/lib/access-gate";
 
 /**
  * Lo que la persona hizo en su prueba, leído con su propia sesión (RLS: solo sus filas).
@@ -35,7 +36,8 @@ async function loadUsage(): Promise<TrialUsage | null> {
 /**
  * Muro de planes: la prueba gratis terminó y no hay plan vigente. Nada se borra; perfil y suscripción siguen abiertos.
  * Muestra lo que la persona ya logró (cifras reales) y destaca el plan que encaja con lo que usó.
- * El acceso real lo valida el servidor (entitlements y has_app_access en la base de datos); esto es la pantalla.
+ * El acceso real lo valida el servidor: el middleware no ejecuta las secciones pagadas sin acceso (access-gate.ts), las acciones
+ * piden `ent.app` y la base lo repite con RLS (has_app_access). Esto es la pantalla.
  */
 export function PlanGate({ locked, trialEndedOn, children }: { locked: boolean; trialEndedOn: string | null; children: React.ReactNode }) {
   const path = usePathname();

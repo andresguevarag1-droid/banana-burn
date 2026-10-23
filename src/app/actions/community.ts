@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
+import { APP_LOCKED_MSG } from "@/lib/plan-access";
 import { getComments as loadComments, getCommunityMe, getTodayWorkout, POST_MAX, summarizeWorkout, type FeedComment, type FeedPost, type PostData } from "@/lib/community";
 import { isPostTag, type PostTag } from "@/lib/community-view";
 import { todayFor } from "@/lib/today";
@@ -91,6 +92,7 @@ export async function toggleKudo(postId: string, on: boolean): Promise<Res> {
   if (v?.demo) return { ok: true };
   const pid = postIdOf(postId);
   if (!v || pid === null) return { ok: false, error: "No pudimos guardar tu banana." };
+  if (!(await getEntitlements(v)).app) return { ok: false, error: APP_LOCKED_MSG };
   const sb = await createClient();
   const r = on ? await sb.from("kudos").upsert({ post_id: pid, user_id: v.id }, { onConflict: "post_id,user_id", ignoreDuplicates: true }) : await sb.from("kudos").delete().eq("post_id", pid).eq("user_id", v.id);
   return r.error ? { ok: false, error: dbError(r.error, "No pudimos guardar tu banana. Intenta de nuevo.") } : { ok: true };
@@ -115,6 +117,8 @@ export async function getComments(postId: string): Promise<{ ok: boolean; commen
   const v = await getViewer();
   if (!v || typeof postId !== "string" || postId.length > 30) return { ok: false, comments: [] };
   if (!v.demo && postIdOf(postId) === null) return { ok: false, comments: [] };
+  // Leer la comunidad es parte del plan: sin plan ni prueba no se devuelven comentarios de nadie.
+  if (!(await getEntitlements(v)).app) return { ok: false, comments: [] };
   return { ok: true, comments: await loadComments(v, postId) };
 }
 
@@ -149,6 +153,7 @@ export async function setFollow(userId: string, on: boolean): Promise<Res> {
   if (!v || userId === v.id) return { ok: false, error: "No pudimos actualizar a quién sigues." };
   if (v.demo) return { ok: true };
   if (!isUuid(userId)) return { ok: false, error: "No pudimos actualizar a quién sigues." };
+  if (!(await getEntitlements(v)).app) return { ok: false, error: APP_LOCKED_MSG };
   const sb = await createClient();
   const r = on ? await sb.from("follows").upsert({ follower: v.id, followee: userId }, { onConflict: "follower,followee", ignoreDuplicates: true }) : await sb.from("follows").delete().eq("follower", v.id).eq("followee", userId);
   if (r.error) return { ok: false, error: dbError(r.error, on ? "No pudimos seguir a esta persona. Puede que su perfil sea privado." : "No pudimos dejar de seguir. Intenta de nuevo.") };

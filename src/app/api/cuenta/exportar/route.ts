@@ -29,6 +29,10 @@ export async function GET() {
     out.follows = { sigues: fl1.data ?? [], te_siguen: fl2.data ?? [] };
     out.reports = rp.data ?? [];
     out.push_subscriptions = push.data ?? [];
+    // Referidos (0025): a quién invitaste (solo inicial y estado), tus recompensas y lo que guardamos para evitar abusos.
+    const [mine, rewards] = await Promise.all([sb.rpc("my_referrals"), sb.from("referral_rewards").select("group_no,months,plan,created_at,upgraded_at,revoked_at").eq("referrer", v.id)]);
+    out.referidos = { invitados: mine.data ?? [], recompensas: rewards.data ?? [] };
+    out.referral_signals = "Para evitar abusos guardamos una firma (HMAC) del prefijo de tu red al abrir Invita y gana. No guardamos tu IP.";
     const photos = (out.progress_photos as { path?: string }[] | undefined) ?? [];
     const paths = Array.isArray(photos) ? photos.map((p) => p.path).filter((p): p is string => typeof p === "string") : [];
     if (paths.length) {

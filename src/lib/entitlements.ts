@@ -2,7 +2,8 @@
 // Política (decidida por el dueño):
 //   - Prueba gratis de TRIAL_DAYS días con TODO incluido, sin tarjeta, desde profiles.created_at.
 //   - Después: plan "entreno" = entreno, coach, comunidad, retos y progreso; plan "completo" = todo (incluye nutrición y Banana Shield).
-//   - Cortesías vigentes y staff = completo.
+//   - Cortesías vigentes (source 'cortesia') y staff = completo.
+//   - Regalos de meses (source 'regalo' o 'referido', 0025): respetan su plan y se apilan (empiezan al terminar lo que ya había).
 //   - Sin plan y sin prueba vigente: la app muestra el muro de planes (no se borra nada).
 // La base de datos repite la regla de acceso en public.has_app_access() (0013/0021) para el coach y la comunidad,
 // y la de nutrición en public.has_nutrition_access() (0022) para comidas, Mis comidas y Mis recetas.
@@ -13,6 +14,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { BETA_ENDS_AT, TRIAL_DAYS, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
 import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
+import { bestLiveComp, compChainEnd, compPlan } from "@/lib/gifts";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -41,7 +43,7 @@ export type Entitlements = {
   renewsAt?: string;
   /** Fin del acceso pagado (si se canceló o falló el pago). ISO. */
   endsAt?: string;
-  /** Vencimiento de la cortesía vigente. ISO. */
+  /** Fin del acceso continuo por cortesías y regalos (incluye regalos apilados que siguen). ISO. */
   compEndsAt?: string;
   /** ¿El plan viene de una suscripción de ONVO (vs. cortesía, staff o asignado a mano)? */
   fromSubscription: boolean;
@@ -63,7 +65,8 @@ export type SubscriptionRow = {
   created_at: string;
 };
 
-export type CompRow = { plan: string; previous_plan: string | null; starts_at: string; expires_at: string; revoked_at: string | null; created_at: string };
+/** `source`: 'cortesia' (panel, vale como completo), 'regalo' o 'referido' (respetan su plan). Sin 0025 no viene: cortesía. */
+export type CompRow = { plan: string; previous_plan: string | null; starts_at: string; expires_at: string; revoked_at: string | null; created_at: string; source?: string | null };
 
 const DEMO_ENT: Entitlements = { plan: "completo", access: "demo", app: true, nutrition: true, locked: false, trial: null, status: "demo", fromSubscription: false };
 const DAY = 864e5;
@@ -120,9 +123,9 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
     endsAt = status === "canceling" || status === "past_due" || status === "canceled" || status === "expired" ? end : undefined;
   }
 
-  // 2) Cortesía vigente: completo (política del dueño).
-  const comp = comps.filter((c) => compLive(c, now)).sort((a, b) => b.expires_at.localeCompare(a.expires_at))[0];
-  const compPlan: PlanId | "free" = comp ? "completo" : "free";
+  // 2) Cortesía o regalo vigente: la cortesía vale como completo (política del dueño); un regalo, según su plan.
+  const comp = bestLiveComp(comps.filter((c) => compLive(c, now)), now);
+  const giftPlan: PlanId | "free" = comp ? compPlan(comp) : "free";
 
   // 3) Staff: completo.
   const staffPlan: PlanId | "free" = STAFF.includes(i.role as Role) ? "completo" : "free";
@@ -135,7 +138,7 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
     manualPlan = profilePlan(lastComp ? lastComp.previous_plan : i.profilePlan);
   }
 
-  const candidates: [PlanId | "free", AccessSource][] = [[subPlan, "subscription"], [compPlan, "comp"], [staffPlan, "staff"], [manualPlan, "manual"]];
+  const candidates: [PlanId | "free", AccessSource][] = [[subPlan, "subscription"], [giftPlan, "comp"], [staffPlan, "staff"], [manualPlan, "manual"]];
   const [plan, source] = candidates.reduce((best, c) => (rank(c[0]) > rank(best[0]) ? c : best), ["free", "none"] as [PlanId | "free", AccessSource]);
 
   const created = i.createdAt ? Date.parse(i.createdAt) : NaN;
@@ -145,7 +148,7 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime() && !(ownEnd > betaEnd);
   const trialEnd = beta ? new Date(betaEnd) : Number.isFinite(ownEnd) ? new Date(ownEnd) : null;
   const trialLive = !!trialEnd && trialEnd.getTime() > now.getTime();
-  const base = { status, billing, renewsAt, endsAt, compEndsAt: comp?.expires_at, trialEndsAt: trialEnd?.toISOString(), fromSubscription: source === "subscription" };
+  const base = { status, billing, renewsAt, endsAt, compEndsAt: comp ? compChainEnd(comps, now) : undefined, trialEndsAt: trialEnd?.toISOString(), fromSubscription: source === "subscription" };
 
   if (plan !== "free") return { ...base, plan, access: source, app: true, nutrition: plan === "completo", locked: false, trial: null };
   if (trialLive) {
@@ -167,15 +170,26 @@ export async function getSubscriptions(userId: string): Promise<SubscriptionRow[
   return (data as SubscriptionRow[] | null) ?? [];
 }
 
+const COMP_COLS = "plan,previous_plan,starts_at,expires_at,revoked_at,created_at";
+
+/** Cortesías y regalos del usuario (RLS: solo los propios). Sin 0025 (no existe `source`) lee las columnas de antes. */
+async function loadComps(sb: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<CompRow[]> {
+  const q = (cols: string) => sb.from("comp_grants").select(cols).eq("user_id", userId).order("created_at", { ascending: false }).limit(30);
+  const first = await q(`${COMP_COLS},source`);
+  if (!first.error) return (first.data as unknown as CompRow[] | null) ?? [];
+  const legacy = await q(COMP_COLS);
+  return (legacy.data as unknown as CompRow[] | null) ?? [];
+}
+
 /** Una sola lectura por request (layout + página piden lo mismo). */
 const load = cache(async (userId: string, role: string, viewerPlan: string): Promise<Entitlements> => {
   const sb = await createClient();
   const [rows, prof, comps] = await Promise.all([
     getSubscriptions(userId),
     sb.from("profiles").select("created_at").eq("id", userId).maybeSingle(),
-    sb.from("comp_grants").select("plan,previous_plan,starts_at,expires_at,revoked_at,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+    loadComps(sb, userId),
   ]);
-  const ent = entitlementsFrom({ profilePlan: viewerPlan, role, createdAt: (prof.data?.created_at as string | undefined) ?? null, subs: rows, comps: (comps.data as CompRow[] | null) ?? [] });
+  const ent = entitlementsFrom({ profilePlan: viewerPlan, role, createdAt: (prof.data?.created_at as string | undefined) ?? null, subs: rows, comps });
   // Suscripción vencida y el perfil aún dice plan pagado: lo bajamos a `free` (nunca sube: eso solo lo hace el webhook).
   if (ent.access !== "comp" && ent.access !== "staff" && rows.length && pickCurrent(rows) && profilePlanFor(pickCurrent(rows)!) === "free" && (viewerPlan === "entreno" || viewerPlan === "completo")) {
     const admin = adminClient();

@@ -126,13 +126,19 @@ async function setProfilePlan(db: SupabaseClient, userId: string, plan: "entreno
   if (error) throw new Error(`profiles.plan: ${error.message}`);
 }
 
-/** Recalcula el plan del perfil a partir de TODAS sus suscripciones y cortesías vigentes (el mejor plan gana). */
+/**
+ * Recalcula el plan del perfil a partir de TODAS sus suscripciones y cortesías vigentes (el mejor plan gana).
+ * Los regalos y recompensas por referidos (0025) no cuentan: la app y la base los leen directo de comp_grants, y si
+ * subieran el plan del perfil nadie lo bajaría al vencer.
+ */
 async function syncProfilePlan(db: SupabaseClient, userId: string) {
+  const now = new Date().toISOString();
   const [{ data }, { data: comps }] = await Promise.all([
     db.from("subscriptions").select(SUB_COLS).eq("user_id", userId),
-    db.from("comp_grants").select("plan").eq("user_id", userId).is("revoked_at", null).gt("expires_at", new Date().toISOString()),
+    db.from("comp_grants").select("*").eq("user_id", userId).is("revoked_at", null).gt("expires_at", now).lte("starts_at", now),
   ]);
-  const plans: string[] = [...((data as SubscriptionRow[] | null) ?? []).map((r) => profilePlanFor(r)), ...((comps as { plan: string }[] | null) ?? []).map((c) => c.plan)];
+  const legacy = ((comps as { plan: string; source?: string | null }[] | null) ?? []).filter((c) => !c.source || c.source === "cortesia");
+  const plans: string[] = [...((data as SubscriptionRow[] | null) ?? []).map((r) => profilePlanFor(r)), ...legacy.map((c) => c.plan)];
   const plan = plans.includes("completo") ? "completo" : plans.includes("entreno") ? "entreno" : "free";
   await setProfilePlan(db, userId, plan);
   return plan;
@@ -161,7 +167,19 @@ async function activate(db: SupabaseClient, row: SubscriptionRow, a: { periodSta
   if (error) throw new Error(`subscriptions: ${error.message}`);
   const updated = { ...row, status: "active", current_period_end: keepEnd };
   await cancelOthers(db, updated);
-  return syncProfilePlan(db, row.user_id);
+  const plan = await syncProfilePlan(db, row.user_id);
+  if (row.billing === "anual") await referralAnnualPaid(db, row.user_id);
+  return plan;
+}
+
+/**
+ * Referidos: una compra ANUAL confirmada por este webhook (único camino) puede subir la recompensa de quien invitó de
+ * 1 mes a un trimestre. Idempotente en la base (renovaciones y reintentos no suman). Nunca hace fallar el webhook.
+ */
+async function referralAnnualPaid(db: SupabaseClient, userId: string) {
+  const { data, error } = await db.rpc("referral_annual_paid", { p_user: userId });
+  if (error && !["PGRST202", "42883"].includes(error.code ?? "")) log("referidos: no se pudo anotar la compra anual", { userId, code: error.code ?? null });
+  else if (data && data !== "sin_cambio") log("referidos: compra anual", { userId, result: String(data) });
 }
 
 /**

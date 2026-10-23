@@ -87,3 +87,12 @@ export async function sendSubscriptionCanceled(r: Recipient & { plan: string; ac
   if (!to) return skip();
   return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
 }
+
+/** Regalo de meses o recompensa por referidos. Idempotente por regalo (`grantId`). Transaccional. */
+export async function sendGiftEmail(r: Recipient & Omit<Parameters<typeof T.regalo>[0], "name"> & { grantId: number }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  const { userId: _u, to: _t, name: _n, grantId, ...g } = r;
+  void _u; void _t; void _n;
+  return sendEmail(to.to, T.regalo({ ...g, name: to.name }), { idempotencyKey: `regalo/${grantId}`, tags: { kind: g.source } });
+}

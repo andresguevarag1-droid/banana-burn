@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
+import { accessError } from "@/lib/entitlements";
 import { todayFor } from "@/lib/today";
 
 export type FormState = { ok?: string; error?: string };
@@ -12,6 +13,8 @@ export async function logWeight(_: FormState, fd: FormData): Promise<FormState> 
   if (!(kg >= 30 && kg <= 300)) return { error: "Peso inválido." };
   const kgTxt = kg.toLocaleString("es-419", { maximumFractionDigits: 1 });
   if (v.demo) return { ok: `Anotamos ${kgTxt} kg (demo, no se guarda).` };
+  const denied = await accessError(v, "app");
+  if (denied) return { error: denied };
   const sb = await createClient();
   const day = todayFor(v).iso;
   const { data: had } = await sb.from("weights").select("day").eq("user_id", v.id).eq("day", day).maybeSingle();
