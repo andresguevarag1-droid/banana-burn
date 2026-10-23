@@ -26,6 +26,26 @@ export const voiceForLevel = (level: string): Voice => (level === "principiante"
 const n = (x: number) => x.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 const plural = (k: number, one: string, many: string) => (k === 1 ? one : many);
 
+/* ───────────── Músculos ───────────── */
+
+// En básico, los nombres anatómicos pasan a partes del cuerpo que cualquiera reconoce. Los compuestos van primero.
+const PLAIN_MUSCLE: [RegExp, string][] = ([
+  ["deltoides posterior", "parte de atrás del hombro"], ["deltoides", "hombros"], ["isquiotibiales", "parte de atrás del muslo"],
+  ["cuádriceps", "parte de adelante del muslo"], ["aductores", "parte interna del muslo"], ["abductores", "parte externa de la cadera"],
+  ["dorsales", "espalda"], ["trapecios", "parte alta de la espalda"], ["romboides", "espalda alta"], ["pectorales", "pecho"],
+  ["tríceps", "parte de atrás del brazo"], ["oblicuos", "costados del abdomen"], ["core", "abdomen y zona media"], ["tibiales", "espinillas"],
+  ["sóleo", "pantorrillas"], ["serrato", "costados del pecho"],
+] as const).map(([k, v]) => [new RegExp(`(^|[^\\p{L}])${k}(?![\\p{L}])`, "giu"), v]);
+
+/** Músculo como se muestra según el registro: en básico, "isquiotibiales" se lee "parte de atrás del muslo". */
+export function muscleText(v: Voice, muscle: string): string {
+  if (v !== "basico" || !muscle) return muscle;
+  let out = muscle;
+  for (const [re, plain] of PLAIN_MUSCLE) out = out.replace(re, (_m, pre: string) => pre + plain);
+  // Respeta la mayúscula inicial del original ("Isquiotibiales" -> "Parte de atrás del muslo").
+  return /^\p{Lu}/u.test(muscle) ? out.charAt(0).toUpperCase() + out.slice(1) : out;
+}
+
 /** "2 min", "90 s": descansos en texto corrido. */
 export function restText(sec: number) {
   if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-CO", { maximumFractionDigits: 1 })} min`;

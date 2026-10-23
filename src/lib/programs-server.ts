@@ -193,7 +193,7 @@ export function sessionViews(def: Pick<ProgramDef, "slug" | "title" | "meta">, i
     const p = plannedFromSession(def, icon, s, week, 0, eq, exInfo);
     return {
       day: s.day, title: s.title, focus: s.focus, optional: !!s.optional, done: done(s.day), mins: p.mins ?? 45, href: href(s.day),
-      exercises: (p.program?.exercises ?? []).map((e) => ({ id: e.id, name: e.name, muscle: e.muscle, sets: setsLabel(e.cfg), rest: restLabel(e.cfg.rest), tempo: e.tempo, note: e.note })),
+      exercises: (p.program?.exercises ?? []).map((e) => ({ id: e.id, name: e.name, muscle: e.muscle, sets: setsLabel(e.cfg), cfg: { sets: e.cfg.sets, lo: e.cfg.lo, hi: e.cfg.hi, unit: e.cfg.unit }, rest: restLabel(e.cfg.rest), tempo: e.tempo, note: e.note })),
     };
   });
 }

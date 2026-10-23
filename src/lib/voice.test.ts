@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_VOICE, VOICES, dayTag, lastTimeLine, readinessEffects, sessionBenefit, coachRule, effortHints, isVoice, modeNote, parseVoice, readinessTips, rirText, rxBadge, rxNote, sessionLine, setsReps, strengthCue, t, tempoText, voiceForLevel, whyItMatters, type Voice } from "./voice";
+import { DEFAULT_VOICE, VOICES, dayTag, lastTimeLine, readinessEffects, sessionBenefit, coachRule, effortHints, isVoice, modeNote, muscleText, parseVoice, readinessTips, rirText, rxBadge, rxNote, sessionLine, setsReps, strengthCue, t, tempoText, voiceForLevel, whyItMatters, type Voice } from "./voice";
 import { DEFAULT_WEEK, TPL, hookLine, planDay, prescribe, type TemplateId } from "./engine";
 
 const ALL: Voice[] = ["basico", "intermedio", "tecnico"];
@@ -128,3 +128,16 @@ describe("Hoy: el entreno explicado", () => {
   });
 });
 
+
+describe("muscleText: músculos según el registro", () => {
+  it("en básico, partes del cuerpo que cualquiera reconoce", () => {
+    expect(muscleText("basico", "Isquiotibiales")).toBe("Parte de atrás del muslo");
+    expect(muscleText("basico", "brazos, hombros y core")).toBe("brazos, hombros y abdomen y zona media");
+    expect(muscleText("basico", "Deltoides posterior")).toBe("Parte de atrás del hombro");
+    expect(muscleText("basico", "glúteos")).toBe("glúteos");
+  });
+  it("intermedio y técnico no cambian", () => {
+    expect(muscleText("intermedio", "Isquiotibiales")).toBe("Isquiotibiales");
+    expect(muscleText("tecnico", "core")).toBe("core");
+  });
+});
