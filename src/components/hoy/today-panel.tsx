@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ArrowRight, Check, CheckCircle, Drop, Footprints, Lock, Moon, Plus } from "@/components/icons";
+import type { HoyFood } from "@/lib/hoy-food";
 import type { DailyField } from "@/app/actions/daily";
 import { useDailySave } from "@/components/use-daily-save";
 import type { DailyLog } from "@/lib/daily";
@@ -13,7 +15,7 @@ import { clamp01 } from "@/lib/num";
 type Macros = { kcal: number; protein: number; carbs: number; fat: number };
 type Habits = { steps: number; sleep: number; water: number };
 /** Calorías y macros de hoy: solo llegan con nutrición (Entreno + Nutrición, prueba o beta). */
-export type NutritionNumbers = { base: Macros; target: Macros; mode: GoalMode };
+export type NutritionNumbers = { base: Macros; target: Macros; mode: GoalMode; meal: HoyFood };
 export type GoalMode = "acelerada" | "recomp" | "fuerza";
 
 const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
@@ -55,6 +57,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
   const key = `bb.daily.${dateKey}`;
   const [log, setLog] = useState<DailyLog>(initial);
   const [base, setBase] = useState<Macros>(nutrition?.base ?? ZERO);
+  const [meal, setMeal] = useState<HoyFood | null>(nutrition?.meal ?? null);
   const daily = useDailySave();
   const hasNutrition = nutrition !== null;
 
@@ -64,7 +67,11 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
     try {
       const s = localStorage.getItem(key); if (s) setLog(JSON.parse(s));
       const m = hasNutrition ? localStorage.getItem(`bb.meals.${dateKey}`) : null;
-      if (m) setBase(sumMeals(JSON.parse(m) as MealItem[]));
+      if (m) {
+        const list = JSON.parse(m) as MealItem[];
+        setBase(sumMeals(list));
+        setMeal((cur) => cur && { ...cur, slots: cur.slots.map((x) => { const it = list.filter((i) => i.slot === x.slot); return { ...x, items: it.map((i) => i.name), kcal: Math.round(it.reduce((a, i) => a + i.kcal, 0)), protein: Math.round(it.reduce((a, i) => a + i.protein, 0)) }; }) });
+      }
     } catch { /* */ }
   }, [demo, key, dateKey, hasNutrition]);
 
@@ -86,7 +93,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
   return (
     <div className="space-y-3">
       {daily.toast}
-      {nutrition ? <Numbers n={nutrition} log={log} base={base} onAdd={add} /> : <NutritionTeaser />}
+      {nutrition ? <Numbers n={{ ...nutrition, meal: meal ?? nutrition.meal }} log={log} base={base} /> : <NutritionTeaser />}
 
       <div className="grid grid-cols-3 gap-2.5">
         {small.map((it) => {
@@ -111,7 +118,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
 }
 
 /** Calorías y macros de hoy (solo con nutrición). */
-function Numbers({ n, log, base, onAdd }: { n: NutritionNumbers; log: DailyLog; base: Macros; onAdd: (field: DailyField, delta: number) => void }) {
+function Numbers({ n, log, base }: { n: NutritionNumbers; log: DailyLog; base: Macros }) {
   const t = n.target;
   const kcal = log.kcal + base.kcal, protein = log.protein + base.protein;
   const left = t.kcal - kcal;
@@ -151,13 +158,6 @@ function Numbers({ n, log, base, onAdd }: { n: NutritionNumbers; log: DailyLog; 
             </div>
             <ProgressBar value={protein / t.protein} className="mt-2 h-3" track="bg-white/10" fill="bg-banana" label={`Proteína: ${n0(protein)} de ${n0(t.protein)} gramos`} />
             <p className="mt-2 text-xs text-white/75">{proteinLeft > 0 ? `Te faltan ${n0(proteinLeft)} g. La proteína protege tu músculo mientras bajas grasa.` : "Meta de proteína cumplida. Tu músculo te lo agradece."}</p>
-            <div className="mt-2.5 flex gap-1.5">
-              {[20, 30].map((g) => (
-                <button key={g} type="button" onClick={() => onAdd("protein", g)} className="tap pressable inline-flex h-11 flex-1 items-center justify-center gap-1 rounded-xl bg-white/10 text-sm font-bold hover:bg-white/15">
-                  <Plus weight="bold" className="size-3.5" />{g} g
-                </button>
-              ))}
-            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {macros.map((m) => (
@@ -172,8 +172,64 @@ function Numbers({ n, log, base, onAdd }: { n: NutritionNumbers; log: DailyLog; 
         </div>
       </div>
 
+      <MealToday meal={n.meal} />
+
       <p className="relative mt-4 border-t border-white/10 pt-3 text-xs text-white/75">{WHY[n.mode]} <Link href="/app/nutricion" className="font-bold text-banana underline-offset-4 hover:underline">Ver mi plan de comidas<ArrowRight weight="bold" className="ml-0.5 inline size-3" /></Link></p>
     </section>
+  );
+}
+
+/**
+ * Comida de hoy: qué comió en cada tiempo de comida (o que falta registrarlo) y lo que Coach Banana le recomienda
+ * para el siguiente, calculado en el servidor con lo que le falta del día y la hora local.
+ */
+function MealToday({ meal }: { meal: HoyFood }) {
+  const nx = meal.next;
+  return (
+    <div className="relative mt-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-base font-extrabold">¿Qué has comido hoy?</h3>
+        <Link href="/app/nutricion" className="tap text-xs font-bold text-banana underline-offset-4 hover:underline">Registrar comida</Link>
+      </div>
+      <ul className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {meal.slots.map((s) => {
+          const has = s.items.length > 0;
+          return (
+            <li key={s.slot}>
+              <Link href="/app/nutricion" aria-label={has ? `${s.label}: ${s.items.join(", ")}` : `${s.label}: registrar`}
+                className={`pressable flex h-full min-h-[5.5rem] flex-col rounded-2xl p-3 ${has ? "bg-white/[.07] hover:bg-white/10" : "border border-dashed border-white/20 hover:border-white/40"}`}>
+                <span className="flex items-center justify-between gap-1 text-xs font-bold text-white/75">{s.label}{has && <CheckCircle weight="fill" aria-hidden className="size-4 text-banana" />}</span>
+                {has ? (
+                  <>
+                    <span className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white">{s.items.join(", ")}</span>
+                    <span className="mt-auto pt-1 text-[11px] font-semibold tabular-nums text-white/70">{n0(s.kcal)} kcal, {n0(s.protein)} g proteína</span>
+                  </>
+                ) : (
+                  <span className={`mt-auto inline-flex items-center gap-1 pt-2 text-sm font-bold ${s.open ? "text-banana" : "text-white/55"}`}>
+                    {s.open ? <><Plus weight="bold" className="size-3.5" />Anotar</> : "Sin registrar"}
+                  </span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      {nx ? (
+        <div className="mt-3 flex gap-3 rounded-2xl bg-banana p-3.5 text-ink">
+          <Image src="/brand/mascota-sola.webp" alt="" width={56} height={56} className="size-14 shrink-0 object-contain" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-ink/75">Coach Banana te recomienda. {nx.when}:</p>
+            <p className="mt-0.5 text-[17px] font-extrabold leading-tight text-balance">{nx.title}</p>
+            <p className="mt-1 text-xs font-semibold tabular-nums text-ink/80">{n0(nx.kcal)} kcal y {n0(nx.protein)} g de proteína{nx.portions !== 1 ? ` (${nx.portions.toLocaleString("es-419")} porciones)` : ""}</p>
+            {nx.others.length > 0 && <p className="mt-1 text-xs text-ink/75">También te sirve: {nx.others.join(" o ")}.</p>}
+            <Link href="/app/nutricion/recetas" className="tap pressable mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-extrabold text-banana">Ver la receta<ArrowRight weight="bold" className="size-3.5" /></Link>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 rounded-2xl bg-white/[.07] p-3.5 text-sm text-white/85">Ya cubriste lo que necesitabas hoy. Si te da hambre, elige fruta, yogur natural o vegetales.</p>
+      )}
+    </div>
   );
 }
 
