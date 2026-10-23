@@ -93,7 +93,7 @@ export default async function Retos() {
         <section className="space-y-3" aria-labelledby="sec-programas">
           <div>
             <h2 id="sec-programas" className="flex items-center gap-2 text-xl font-extrabold text-ink"><Sparkle weight="duotone" className="size-5 text-banana-ink" />Programas</h2>
-            <p className="max-w-[65ch] text-sm text-muted">Al empezarlo, tu entreno de cada día sale del programa: ejercicios, series, descansos y cargas que suben solas. Pago único, aparte de tu plan.{perks.discountPct > 0 ? ` Tu nivel ${perks.level.n} te da ${perks.discountPct}% de descuento.` : ""}</p>
+            <p className="max-w-[65ch] text-sm text-muted">Al empezarlo, tu entreno de cada día sale del programa: ejercicios, series, descansos y cargas que suben solas. Pago único, aparte de tu plan.{perks.discountPct > 0 ? ` Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento.` : ""}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
             {programs.map((c, i) => <ProgramCard key={c.id} c={c} big={i === 0 && c.featured} owned={owned.has(c.id)} discountPct={perks.discountPct} status={(stateOf.get(c.id)?.status as "activo" | "pausado" | "completado" | undefined) ?? null} days={days.get(c.id) ?? ""} />)}

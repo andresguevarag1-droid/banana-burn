@@ -54,7 +54,7 @@ export function offer(now = new Date()): Offer {
       pricingIntro: (s) => `Pruébalo ${TRIAL_DAYS} días gratis con todo incluido y sin tarjeta. Después eliges tu plan; con el pago anual ahorras ${s} %.`,
       pricingTrial: "En la prueba tienes todo incluido y no pedimos tarjeta.",
       faqTrial: (n) => `Creas tu cuenta y tienes ${TRIAL_DAYS} días con todo incluido: entreno, Coach Banana, nutrición y Banana Shield. No pedimos tarjeta, así que no hay cobros sorpresa. Al terminar eliges Entreno o ${n}; si todavía no eliges, tu progreso queda guardado para cuando vuelvas.`,
-      faqCancel: "Durante la prueba no hay nada que cancelar, porque no pedimos tarjeta. Si ya pagas un plan, lo cancelas cuando quieras desde Mi suscripción y conservas el acceso hasta el final del periodo pagado. Además tienes 8 días hábiles de derecho de retracto desde la compra.",
+      faqCancel: "Durante la prueba no hay nada que cancelar, porque no pedimos tarjeta. Si ya pagas un plan, lo cancelas cuando quieras desde Mi plan y conservas el acceso hasta el final del periodo pagado. Además tienes 8 días hábiles de derecho de retracto desde la compra.",
       guarantee: [`${TRIAL_DAYS} días gratis, sin tarjeta`, "Pruebas todo antes de pagar, incluida la nutrición y Banana Shield. Como no pedimos tarjeta, no hay cobros sorpresa cuando termina."],
       signupChecks: ["Sin tarjeta", "Sin cobros automáticos"],
       signupLine: "Sin tarjeta. Al terminar eliges si sigues.",

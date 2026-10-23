@@ -38,7 +38,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6 animate-rise">
-      <Link href="/app/suscripcion" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver a Mi suscripción</Link>
+      <Link href="/app/suscripcion" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver a Mi plan</Link>
       <FunnelTracker view="checkout_view" props={{ plan: plan.id, billing: row.billing as string }} />
       <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Activa {plan.name}</h1>
 
@@ -71,7 +71,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         <OnvoPayForm publicKey={publicKey} subscriptionId={s} customerId={row.provider_customer_id ?? undefined} />
         <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-body">
           <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Procesado por ONVO Pay. Banana Burn no ve ni guarda tu tarjeta. Cobro en dólares (USD).</span></li>
-          <li className="flex gap-2.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Cancelas cuando quieras desde Mi suscripción, sin llamadas. Conservas el acceso hasta el final del periodo pagado.</span></li>
+          <li className="flex gap-2.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Cancelas cuando quieras desde Mi plan, sin llamadas. Conservas el acceso hasta el final del periodo pagado.</span></li>
           <li className="flex gap-2.5"><Scroll weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">8 días hábiles de derecho de retracto. Lee los <Link href="/terminos#planes" className="font-semibold text-ink underline underline-offset-2">Términos</Link> y <Link href="/terminos#reembolsos" className="font-semibold text-ink underline underline-offset-2">reembolsos y retracto</Link>.</span></li>
         </ul>
       </section>

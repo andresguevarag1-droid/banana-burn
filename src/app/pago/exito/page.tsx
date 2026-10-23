@@ -44,7 +44,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
 
   if (!confirmed && !pending) {
     return (
-      <Card icon={<MagnifyingGlass weight="duotone" className="size-8" />} title="No encontramos un pago" body="No vemos un pago reciente en tu cuenta. Si acabas de pagar, revisa Mi suscripción en unos minutos; si no, elige tu plan cuando quieras.">
+      <Card icon={<MagnifyingGlass weight="duotone" className="size-8" />} title="No encontramos un pago" body="No vemos un pago reciente en tu cuenta. Si acabas de pagar, revisa Mi plan en unos minutos; si no, elige tu plan cuando quieras.">
         <div className="flex flex-col sm:flex-row gap-2 justify-center">
           <Link href="/app/suscripcion" className="btn-primary">Ver mi suscripción</Link>
           <Link href="/precios" className="btn-ghost">Ver planes</Link>
@@ -78,7 +78,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
         {nutrition ? <Step n={3}>Pésate mañana en ayunas para que tus calorías se ajusten a ti cada semana.</Step> : <Step n={3}>Pésate mañana en ayunas para ver tu progreso real.</Step>}
       </ol>
       {nutrition === false && <p className="text-sm text-muted text-pretty">Tu plan incluye entreno, coach, progreso, agua, pasos y sueño, comunidad y retos gratis. La nutrición y Banana Shield están en Entreno + Nutrición; tus comidas guardadas no se borran.</p>}
-      <p className="text-xs text-muted text-pretty">{renews ? `Se renueva el ${renews}. ` : ""}Cancelas cuando quieras desde <Link href="/app/suscripcion" className="font-semibold text-ink underline underline-offset-2">Mi suscripción</Link>, donde también quedan tus recibos.</p>
+      <p className="text-xs text-muted text-pretty">{renews ? `Se renueva el ${renews}. ` : ""}Cancelas cuando quieras desde <Link href="/app/suscripcion" className="font-semibold text-ink underline underline-offset-2">Mi plan</Link>, donde también quedan tus recibos.</p>
     </Card>
   );
 }

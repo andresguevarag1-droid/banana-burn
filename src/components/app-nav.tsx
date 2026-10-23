@@ -120,7 +120,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null }: 
       <Sheet id="menu-mas" open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-3 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
+          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Mi plan", icon: CreditCard, hint: "Plan, tarjeta y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
             <li key={href}>
               <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-1.5 rounded-2xl p-3.5 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}{newMark(it)}</span>

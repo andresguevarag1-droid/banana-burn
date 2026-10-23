@@ -110,10 +110,10 @@ export const LEVEL_PERKS: Perk[] = [
   { kind: "marco", text: "Marco verde Pintona para tu perfil", frame: "pintona" },
   { kind: "comodin", text: "+1 comodín en cada reto que empieces" },
   { kind: "marco", text: "Marco dorado para tu perfil", frame: "dorado" },
-  { kind: "descuento", text: "10% de descuento en retos Premium" },
+  { kind: "descuento", text: "10 % de descuento en retos Premium" },
   { kind: "comodin", text: "+1 comodín más en tus retos (2 en total)" },
-  { kind: "descuento", text: "15% de descuento en retos Premium y marco con corona", frame: "corona" },
-  { kind: "descuento", text: "20% de descuento en retos Premium y marco King Kong", frame: "kong" },
+  { kind: "descuento", text: "15 % de descuento en retos Premium y marco con corona", frame: "corona" },
+  { kind: "descuento", text: "20 % de descuento en retos Premium y marco King Kong", frame: "kong" },
 ];
 
 /** Umbrales de XP que dan comodines extra (los repite public._level_bonus_grace en 0018). */

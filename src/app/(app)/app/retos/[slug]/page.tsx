@@ -70,7 +70,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
   else if (paid && !isOwned && open !== "cerrado") cta = (
     <>
       <BuyButton slug={c.id} label={`Comprar por ${usd(finalMinor)}`} />
-      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct}% de descuento. ` : ""}Pago único con tarjeta en USD, procesado por ONVO Pay.{open === "pronto" ? " Puedes comprarlo ya y empezarlo cuando abra." : ""}</p>
+      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento. ` : ""}Pago único con tarjeta en USD, procesado por ONVO Pay.{open === "pronto" ? " Puedes comprarlo ya y empezarlo cuando abra." : ""}</p>
     </>
   );
   else if (open === "pronto") cta = <p className="rounded-2xl bg-sky/10 p-3 text-center text-sm font-bold text-sky">{c.startDate ? `Abre el ${fmtStart(c.startDate)}` : "Muy pronto"}</p>;
