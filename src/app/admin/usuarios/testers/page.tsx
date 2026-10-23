@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
-import { can } from "@/lib/admin-perms";
+import { CATEGORY_LABEL, STATUS_LABEL, type SupportCategory, type SupportStatus } from "@/lib/support";
+import { can, canSee } from "@/lib/admin-perms";
 import { getTesterOverview } from "@/lib/testers-server";
 import { daysLeftLabel, FEEDBACK_KIND_LABEL, FEEDBACK_STATUS_LABEL, testerDaysLeft, type FeedbackKind } from "@/lib/testers";
 import { setFeedbackStatus } from "../../testers-actions";
@@ -64,13 +65,14 @@ export default async function TestersPage() {
             <li key={f.id} className="rounded-xl border border-line px-3 py-2.5 text-sm">
               <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
                 <Link href={`/admin/usuarios/${f.user_id}#s-tester`} className={link}>{f.name ?? "Sin nombre"}</Link>
-                <span className="text-muted font-normal">{FEEDBACK_KIND_LABEL[f.kind as FeedbackKind] ?? f.kind}</span>
-                <Badge tone={f.status === "resuelto" ? "good" : f.status === "visto" ? "muted" : "warn"}>{FEEDBACK_STATUS_LABEL[f.status] ?? f.status}</Badge>
+                <span className="text-muted font-normal">{FEEDBACK_KIND_LABEL[f.kind as FeedbackKind] ?? CATEGORY_LABEL[f.kind as SupportCategory] ?? f.kind}</span>
+                <Badge tone={f.status === "resuelto" || f.status === "cerrado" ? "good" : f.status === "visto" || f.status === "en_proceso" ? "muted" : "warn"}>{FEEDBACK_STATUS_LABEL[f.status] ?? STATUS_LABEL[f.status as SupportStatus] ?? f.status}</Badge>
                 {f.from_tester && <Badge tone="info">Tester</Badge>}
               </p>
               <p className="mt-1 whitespace-pre-wrap break-words text-body text-pretty">{f.body}</p>
               <MetaList className="mt-1" items={[fmtDateTime(f.created_at), f.page && `En ${f.page}`]} />
-              {manage && f.status !== "resuelto" && (
+              {f.ticket && canSee(v.role, "soporte") && <Link href={`/admin/soporte/${f.id}`} className={`mt-2 ${rowAction}`}>Abrir el caso</Link>}
+              {!f.ticket && manage && f.status !== "resuelto" && (
                 <ActionForm action={setFeedbackStatus} className="mt-2 flex flex-wrap gap-1">
                   <input type="hidden" name="id" value={f.id} />
                   <input type="hidden" name="status" value={f.status === "nuevo" ? "visto" : "resuelto"} />

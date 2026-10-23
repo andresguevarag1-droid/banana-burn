@@ -34,6 +34,13 @@ describe("matriz de permisos", () => {
     expect(vis("superadmin")).toHaveLength(7);
     expect(vis("free")).toEqual([]);
   });
+  it("soporte: la cola de casos es de soporte, admin y superadmin (coach no)", () => {
+    expect(canSee("support", "soporte")).toBe(true);
+    expect(canSee("admin", "soporte")).toBe(true);
+    expect(canSee("superadmin", "soporte")).toBe(true);
+    expect(canSee("coach", "soporte")).toBe(false);
+    expect(can("free", "support.tickets")).toBe(false);
+  });
   it("regalar meses y gestionar referidos: solo admin y superadmin; soporte solo mira referidos", () => {
     for (const r of ["coach", "support", "free", "pro"] as Role[]) {
       expect(can(r, "users.gift")).toBe(false);

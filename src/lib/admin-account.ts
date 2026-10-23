@@ -68,6 +68,19 @@ export async function deleteAccountData(admin: SupabaseClient, userId: string, s
     return { ok: false, status: 500, step: "photos", error: "No pudimos borrar las fotos de tu verificación. Intenta de nuevo o escríbenos a hola@bananaburn.app." };
   }
 
+  // 2c) Capturas de soporte (bucket privado 'soporte', 0034). Los casos se borran en cascada; las capturas, aquí.
+  //     Si falla no se detiene el borrado: quedan en una carpeta sin dueño que nadie puede leer (solo service_role).
+  try {
+    for (let guard = 0; guard < 5; guard++) {
+      const { data: files, error } = await admin.storage.from("soporte").list(userId, { limit: 100 });
+      if (error || !files?.length) break;
+      const { error: rmErr } = await admin.storage.from("soporte").remove(files.map((f) => `${userId}/${f.name}`));
+      if (rmErr || files.length < 100) break;
+    }
+  } catch {
+    console.error(JSON.stringify({ scope, msg: "no se pudieron borrar las capturas de soporte", userId }));
+  }
+
   // 3) Lo que sobrevive a la cascada (registro contable y moderación) se queda sin datos personales (0023).
   //    Si la función aún no existe en la base, se sigue: borrar la cuenta pesa más que este paso.
   try {

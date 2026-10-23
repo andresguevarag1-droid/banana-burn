@@ -18,6 +18,7 @@ async function pendingVerifications(demo: boolean): Promise<number> {
   return error ? 0 : ((data ?? []) as unknown[]).length;
 }
 import { setDemoRole } from "./actions";
+import { openSupportCount } from "@/lib/support-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: { default: "Admin", template: "%s | Admin Banana Burn" }, robots: { index: false, follow: false } };
@@ -25,6 +26,7 @@ export const metadata = { title: { default: "Admin", template: "%s | Admin Banan
 const NAV: (Omit<NavItem, "badge"> & { key: Section })[] = [
   { key: "resumen", href: "/admin", label: "Resumen" },
   { key: "usuarios", href: "/admin/usuarios", label: "Usuarios" },
+  { key: "soporte", href: "/admin/soporte", label: "Soporte" },
   { key: "pagos", href: "/admin/pagos", label: "Pagos" },
   { key: "contenido", href: "/admin/contenido", label: "Contenido" },
   { key: "retos", href: "/admin/retos", label: "Retos" },
@@ -37,8 +39,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const v = await getAdminViewer();
   if (!v) redirect("/entrar?next=/admin");
   if (!isStaff(v.role)) redirect("/app");
-  const [reports, verifs] = await Promise.all([canSee(v.role, "comunidad") ? openReportsCount(v) : 0, canSee(v.role, "verificaciones") ? pendingVerifications(v.demo).catch(() => 0) : 0]);
-  const items: NavItem[] = NAV.filter((n) => canSee(v.role, n.key)).map((n) => ({ ...n, badge: n.key === "comunidad" ? reports : n.key === "verificaciones" ? verifs : undefined }));
+  const [reports, verifs, tickets] = await Promise.all([canSee(v.role, "comunidad") ? openReportsCount(v) : 0, canSee(v.role, "verificaciones") ? pendingVerifications(v.demo).catch(() => 0) : 0, canSee(v.role, "soporte") ? openSupportCount(v).then((c) => c.open).catch(() => 0) : 0]);
+  const items: NavItem[] = NAV.filter((n) => canSee(v.role, n.key)).map((n) => ({ ...n, badge: n.key === "comunidad" ? reports : n.key === "verificaciones" ? verifs : n.key === "soporte" ? tickets : undefined }));
 
   return (
     <div className="min-h-dvh bg-[#FAF7EE]">

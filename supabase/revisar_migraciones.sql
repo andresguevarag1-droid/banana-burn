@@ -24,6 +24,7 @@ from (values
   (19,'0030_perfil_insignias.sql',    to_regclass('public.identity_verifications') is not null and to_regclass('public.profile_flair') is not null and to_regprocedure('public.community_flair(uuid[])') is not null and to_regprocedure('public.identity_purge_due(integer)') is not null and exists (select 1 from storage.buckets where id = 'identidad' and not public)),
   (20,'0031_guia.sql',                exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'guide_tips') and to_regprocedure('public.guide_mark_seen(integer)') is not null and to_regprocedure('public.guide_tip_seen(text)') is not null),
   (21,'0032_coach_cuota.sql',        to_regclass('public.coach_quota_tickets') is not null and to_regprocedure('public.coach_take_quota(text)') is not null and to_regprocedure('public.coach_refund_quota(uuid)') is not null and to_regprocedure('public.coach_quota_status()') is not null and to_regprocedure('public.admin_coach_usage(uuid)') is not null),
-  (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check'))
+  (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check')),
+  (23,'0034_soporte.sql',             to_regclass('public.support_tickets') is not null and to_regclass('public.support_messages') is not null and to_regclass('public.support_events') is not null and to_regprocedure('public.support_create_ticket(text,text,text,jsonb,text)') is not null and exists (select 1 from storage.buckets where id = 'soporte' and not public))
 ) as m(orden, archivo, aplicada)
 order by m.orden;
