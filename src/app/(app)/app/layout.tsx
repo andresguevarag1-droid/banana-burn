@@ -25,6 +25,9 @@ import { AddCardBanner, FailedBanner, ProcessingBanner, ScheduledBanner } from "
 import { bannerFor } from "@/lib/trial";
 import { demoCardState } from "@/lib/trial-demo";
 import { runDueForUser } from "@/lib/trial-billing";
+import { GuideProvider } from "@/components/guide/guide-provider";
+import { getGuideState } from "@/lib/guide-server";
+import type { GuideInput } from "@/lib/guide";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app");
   if (!v.onboarded) redirect("/bienvenida");
-  const [ent, xp, prog, unseen] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false }))]);
+  const [ent, xp, prog, unseen, guide] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false })), getGuideState(v).catch(() => ({ seenVersion: null, tips: [], persisted: false }))]);
   // Un regalo creado por la base (recompensa de referidos) todavía sin correo ni push: se manda después de responder.
   // Programa activo: solo con acceso a la app (sin acceso queda guardado y vuelve al renovar).
   const live = prog && ent.app ? prog : null;
@@ -46,6 +49,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const cardStep = cs ? cs.cardStep : ent.cardStep ?? "none";
   const trial = cs ? cs.trial : ent.trial;
   if (!v.demo && ent.charge && (ent.charge.due || ent.charge.remind || ent.charge.phase === "procesando")) after(() => runDueForUser(v.id).then(() => {}));
+  // Guía de la app: cambia con el plan, la prueba y el programa activo (lib/guide.ts).
+  const px = live?.c.program.experience ?? null;
+  const guideInput: GuideInput = {
+    name: v.name, plan: ent.plan, nutrition: ent.nutrition, cardStep,
+    trial: trial ? { beta: Boolean(trial.beta), endsAt: trial.endsAt, daysLeft: trial.daysLeft } : null,
+    charge: charge ? { kind: charge.kind, phase: charge.phase, plan: charge.plan, amount: charge.amount, chargeAt: charge.chargeAt } : null,
+    program: live ? { slug: live.c.id, title: live.c.title, mode: px?.mode ?? null, welcome: px?.welcome ?? null, habits: px?.habits.map((h) => h.label) ?? [], hasTips: Boolean(px?.tips.length), week: live.run.week, weeks: live.run.weeks, cover: live.c.cover, icon: live.c.icon } : null,
+  };
   const banner = bannerFor({ betaLive: betaLive(), fromSubscription: ent.fromSubscription, cardStep, charge, trial: Boolean(trial) });
   return (
     <div className="lg:pl-64">
@@ -58,6 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <UpdatePrompt version={deployId()} />
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
+      <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={ent.locked} busy={unseen.gifts.length > 0} demo={v.demo} tz={v.tz}>
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, week: live.run.week, weeks: live.run.weeks }} />}
         {banner === "beta-add" ? <AddCardBanner />
@@ -69,6 +81,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           : null}
         <PlanGate locked={ent.locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null} cardStep={cardStep} chargePhase={charge?.phase ?? null}>{children}</PlanGate>
       </main>
+      </GuideProvider>
     </div>
   );
 }
