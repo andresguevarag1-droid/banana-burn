@@ -74,11 +74,40 @@ export async function sendPaymentReceipt(r: Recipient & Pay): Promise<SendResult
 }
 
 /** Webhook ONVO: cobro rechazado. También deja un aviso en la campanita. */
-export async function sendPaymentFailed(r: Recipient & Pay & { retryDate?: string | null; updateUrl?: string }): Promise<SendResult> {
+export async function sendPaymentFailed(r: Recipient & Pay & { retryDate?: string | null; updateUrl?: string; paused?: boolean }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  if (to.userId) await notifyInApp(to.userId, { kind: "pago_fallido", title: "Tu pago no pasó", body: "Actualiza tu método de pago para seguir sin pausa.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/perfil" });
+  if (to.userId) await notifyInApp(to.userId, r.paused
+    ? { kind: "pago_fallido", title: "No pudimos cobrar tu plan", body: "Cambia tu tarjeta para seguir. Tu progreso sigue guardado.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/suscripcion" }
+    : { kind: "pago_fallido", title: "Tu pago no pasó", body: "Actualiza tu método de pago para seguir sin pausa.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/perfil" });
   return sendEmail(to.to, T.pagoFallido({ ...r, name: to.name }), { idempotencyKey: r.reference ? `pago_fallido/${r.reference}` : undefined, tags: { kind: "pago_fallido" } });
+}
+
+type ChargeMail = Omit<T.ChargeMailData, "name">;
+
+/** Al guardar la tarjeta (prueba de 7 días o fin de la beta). Una vez por cobro programado (`chargeId`). */
+export async function sendTrialStarted(r: Recipient & ChargeMail & { chargeId: number }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  const { userId: _u, to: _t, name: _n, chargeId, ...d } = r;
+  void _u; void _t; void _n;
+  return sendEmail(to.to, T.pruebaIniciada({ ...d, name: to.name }), { idempotencyKey: `prueba_iniciada/${chargeId}`, tags: { kind: "prueba_iniciada" } });
+}
+
+/** Día 5: "En 2 días se cobra tu plan". Idempotente por cobro (`chargeId`); el cron además lo reclama con reminder_sent_at. */
+export async function sendChargeReminder(r: Recipient & ChargeMail & { chargeId: number }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  const { userId: _u, to: _t, name: _n, chargeId, ...d } = r;
+  void _u; void _t; void _n;
+  return sendEmail(to.to, T.recordatorioCobro({ ...d, name: to.name }), { idempotencyKey: `recordatorio_cobro/${chargeId}`, tags: { kind: "recordatorio_cobro" } });
+}
+
+/** Canceló el cobro programado antes de que llegara. */
+export async function sendChargeCanceled(r: Recipient & { plan: string; accessUntil?: string | null; cardKept: boolean; chargeId: number }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  return sendEmail(to.to, T.cobroCancelado({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, cardKept: r.cardKept }), { idempotencyKey: `cobro_cancelado/${r.chargeId}`, tags: { kind: "cobro_cancelado" } });
 }
 
 /** Webhook ONVO / cancelación desde la app. */

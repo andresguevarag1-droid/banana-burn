@@ -12,10 +12,11 @@ const TONE = {
 
 /**
  * Aviso de la prueba gratis dentro de la app. Cambia en el día 1 (bienvenida), días 5 y 6 (quedan pocos días)
- * y día 7 (último día). Lleva directo a elegir plan; como no hay tarjeta, no hay cobros sorpresa.
+ * y día 7 (último día). Con tarjeta guardada (desde el fin de la beta) dice cuánto y cuándo se cobra y que se puede
+ * cancelar sin costo hasta el día 7; lleva a Mi plan, donde están la fecha, el monto y el botón para cancelar.
  */
-export function TrialBanner({ daysLeft }: { daysLeft: number }) {
-  const n = trialNudge(daysLeft);
+export function TrialBanner({ daysLeft, charge }: { daysLeft: number; charge?: { amount: number; canceled: boolean } | null }) {
+  const n = trialNudge(daysLeft, undefined, charge);
   const t = TONE[n.tone];
   const Icon = n.tone === "start" ? Gift : Clock;
   return (

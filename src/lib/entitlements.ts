@@ -1,6 +1,9 @@
 // Qué puede usar cada usuario. Úsalo SOLO en código de servidor.
 // Política (decidida por el dueño):
-//   - Prueba gratis de TRIAL_DAYS días con TODO incluido, sin tarjeta, desde profiles.created_at.
+//   - Hasta BETA_ENDS_AT (1 nov 2026, beta): todo gratis para todos, sin tarjeta.
+//   - Desde BETA_ENDS_AT: prueba gratis de TRIAL_DAYS días con TODO incluido, SOLO para cuentas nuevas y con la tarjeta
+//     guardada en ONVO; el día 7 se cobra el plan elegido (trial.ts, trial-billing.ts, 0026). Las cuentas de la beta no
+//     tienen días extra: muro hasta que guardan tarjeta y pagan.
 //   - Después: plan "entreno" = entreno, coach, comunidad, retos y progreso; plan "completo" = todo (incluye nutrición y Banana Shield).
 //   - Cortesías vigentes (source 'cortesia') y staff = completo.
 //   - Regalos de meses (source 'regalo' o 'referido', 0025): respetan su plan y se apilan (empiezan al terminar lo que ya había).
@@ -12,10 +15,11 @@ import { logError } from "@/lib/log";
 import { cache } from "react";
 import { createClient, STAFF, type Role, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
-import { BETA_ENDS_AT, TRIAL_DAYS, type Billing, type PlanId } from "@/lib/plans";
+import { BETA_ENDS_AT, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
 import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
 import { bestLiveComp, compChainEnd, compPlan } from "@/lib/gifts";
+import { cardStepFor, chargeView, signedUpInBeta, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -48,6 +52,12 @@ export type Entitlements = {
   compEndsAt?: string;
   /** ¿El plan viene de una suscripción de ONVO (vs. cortesía, staff o asignado a mano)? */
   fromSubscription: boolean;
+  /** Primer cobro con la tarjeta guardada (prueba de 7 días, fin de la beta o inmediato). */
+  charge?: ChargeView | null;
+  /** Tarjeta guardada (solo marca, últimos 4 y vencimiento). */
+  card?: { brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null; active: boolean } | null;
+  /** Qué ofrece la pantalla para agregar tarjeta (trial.ts). */
+  cardStep?: CardStep;
 };
 
 export type SubscriptionRow = {
@@ -69,7 +79,7 @@ export type SubscriptionRow = {
 /** `source`: 'cortesia' (panel, vale como completo), 'regalo' o 'referido' (respetan su plan). Sin 0025 no viene: cortesía. */
 export type CompRow = { plan: string; previous_plan: string | null; starts_at: string; expires_at: string; revoked_at: string | null; created_at: string; source?: string | null };
 
-const DEMO_ENT: Entitlements = { plan: "completo", access: "demo", app: true, nutrition: true, locked: false, trial: null, status: "demo", fromSubscription: false };
+const DEMO_ENT: Entitlements = { plan: "completo", access: "demo", app: true, nutrition: true, locked: false, trial: null, status: "demo", fromSubscription: false, charge: null, card: null, cardStep: "none" };
 const DAY = 864e5;
 
 /** Plan del perfil → plan de producto (`pro` histórico = completo). */
@@ -101,6 +111,10 @@ export type AccessInput = {
   now?: Date;
   /** Fin del período de prueba del servicio (por defecto BETA_ENDS_AT). */
   betaEndsAt?: string;
+  /** Primer cobro programado (public.trial_charges, 0026). */
+  trialCharge?: TrialChargeRow | null;
+  /** Tarjeta guardada (public.payment_methods, 0026). */
+  card?: CardRow | null;
 };
 
 /** Regla de acceso, pura y testeada. */
@@ -142,17 +156,23 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const candidates: [PlanId | "free", AccessSource][] = [[subPlan, "subscription"], [giftPlan, "comp"], [staffPlan, "staff"], [manualPlan, "manual"]];
   const [plan, source] = candidates.reduce((best, c) => (rank(c[0]) > rank(best[0]) ? c : best), ["free", "none"] as [PlanId | "free", AccessSource]);
 
-  const created = i.createdAt ? Date.parse(i.createdAt) : NaN;
-  const ownEnd = Number.isFinite(created) ? created + TRIAL_DAYS * DAY : NaN;
-  const betaEnd = Date.parse(i.betaEndsAt ?? BETA_ENDS_AT);
-  // Durante la beta nadie se bloquea: la prueba dura al menos hasta que termina la beta.
-  const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime() && !(ownEnd > betaEnd);
-  const trialEnd = beta ? new Date(betaEnd) : Number.isFinite(ownEnd) ? new Date(ownEnd) : null;
-  const trialLive = !!trialEnd && trialEnd.getTime() > now.getTime();
-  const base = { status, billing, renewsAt, endsAt, compEndsAt: comp ? compChainEnd(comps, now) : undefined, trialEndsAt: trialEnd?.toISOString(), fromSubscription: source === "subscription" };
+  const betaEndsAt = i.betaEndsAt ?? BETA_ENDS_AT;
+  const betaEnd = Date.parse(betaEndsAt);
+  const tc = i.trialCharge ?? null;
+  // Durante la beta nadie se bloquea. Después, la prueba de 7 días es la de la tarjeta guardada (cuentas nuevas).
+  const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime();
+  const cardTrial = !beta && trialLive(tc, i.card, i.createdAt, now, betaEndsAt);
+  const trialEnd = beta ? new Date(betaEnd) : cardTrial ? new Date(tc!.trial_ends_at) : null;
+  const live = !!trialEnd && trialEnd.getTime() > now.getTime();
+  // Para el muro: cuándo terminó el acceso gratis (la prueba con tarjeta, o la beta para las cuentas de la beta).
+  const endedAt = trialEnd ?? (tc?.kind === "prueba" ? new Date(tc.trial_ends_at) : signedUpInBeta(i.createdAt, betaEndsAt) && Number.isFinite(betaEnd) ? new Date(betaEnd) : null);
+  const charge = chargeView(tc, now);
+  const card = i.card ? { brand: i.card.brand, last4: i.card.last4, expMonth: i.card.exp_month, expYear: i.card.exp_year, active: i.card.status === "active" } : null;
+  const cardStep = cardStepFor({ paidAccess: plan !== "free", createdAt: i.createdAt, row: tc, now, betaEndsAt });
+  const base = { status, billing, renewsAt, endsAt, compEndsAt: comp ? compChainEnd(comps, now) : undefined, trialEndsAt: endedAt?.toISOString(), fromSubscription: source === "subscription", charge, card, cardStep };
 
   if (plan !== "free") return { ...base, plan, access: source, app: true, nutrition: plan === "completo", locked: false, trial: null };
-  if (trialLive) {
+  if (live) {
     const daysLeft = Math.max(1, Math.ceil((trialEnd!.getTime() - now.getTime()) / DAY));
     return { ...base, plan: "free", access: "trial", app: true, nutrition: true, locked: false, trial: { endsAt: trialEnd!.toISOString(), daysLeft, ...(beta ? { beta: true } : {}) } };
   }
@@ -172,6 +192,16 @@ export async function getSubscriptions(userId: string): Promise<SubscriptionRow[
 }
 
 const COMP_COLS = "plan,previous_plan,starts_at,expires_at,revoked_at,created_at";
+const CHARGE_READ = "id,user_id,idem_key,kind,plan,billing,amount_minor,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
+
+/** Cobro programado y tarjeta (RLS: solo lo propio; de la tarjeta solo marca, últimos 4 y vencimiento). Sin 0026: nada. */
+async function loadCardTrial(sb: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<{ trialCharge: TrialChargeRow | null; card: CardRow | null }> {
+  const [t, c] = await Promise.all([
+    sb.from("trial_charges").select(CHARGE_READ).eq("user_id", userId).maybeSingle(),
+    sb.from("payment_methods").select("brand,last4,exp_month,exp_year,status").eq("user_id", userId).maybeSingle(),
+  ]);
+  return { trialCharge: t.error ? null : ((t.data as TrialChargeRow | null) ?? null), card: c.error ? null : ((c.data as CardRow | null) ?? null) };
+}
 
 /** Cortesías y regalos del usuario (RLS: solo los propios). Sin 0025 (no existe `source`) lee las columnas de antes. */
 async function loadComps(sb: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<CompRow[]> {
@@ -185,12 +215,13 @@ async function loadComps(sb: Awaited<ReturnType<typeof createClient>>, userId: s
 /** Una sola lectura por request (layout + página piden lo mismo). */
 const load = cache(async (userId: string, role: string, viewerPlan: string): Promise<Entitlements> => {
   const sb = await createClient();
-  const [rows, prof, comps] = await Promise.all([
+  const [rows, prof, comps, ct] = await Promise.all([
     getSubscriptions(userId),
     sb.from("profiles").select("created_at").eq("id", userId).maybeSingle(),
     loadComps(sb, userId),
+    loadCardTrial(sb, userId),
   ]);
-  const ent = entitlementsFrom({ profilePlan: viewerPlan, role, createdAt: (prof.data?.created_at as string | undefined) ?? null, subs: rows, comps });
+  const ent = entitlementsFrom({ profilePlan: viewerPlan, role, createdAt: (prof.data?.created_at as string | undefined) ?? null, subs: rows, comps, ...ct });
   // Suscripción vencida y el perfil aún dice plan pagado: lo bajamos a `free` (nunca sube: eso solo lo hace el webhook).
   if (ent.access !== "comp" && ent.access !== "staff" && rows.length && pickCurrent(rows) && profilePlanFor(pickCurrent(rows)!) === "free" && (viewerPlan === "entreno" || viewerPlan === "completo")) {
     const admin = adminClient();

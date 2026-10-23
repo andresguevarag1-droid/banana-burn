@@ -19,6 +19,9 @@ export async function GET() {
       const { data, error } = await sb.from(t).select("*").eq("user_id", v.id);
       out[t] = error ? { error: "no disponible" } : data ?? [];
     }
+    // Tarjeta guardada (0026): solo lo que guardamos y la persona puede leer. El número de la tarjeta lo tiene ONVO.
+    const card = await sb.from("payment_methods").select("brand,last4,exp_month,exp_year,status,created_at,updated_at").eq("user_id", v.id);
+    out.payment_methods = card.error ? { error: "no disponible" } : card.data ?? [];
     const [fl1, fl2, rp, push] = await Promise.all([
       sb.from("follows").select("*").eq("follower", v.id),
       sb.from("follows").select("*").eq("followee", v.id),

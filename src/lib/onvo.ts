@@ -9,6 +9,12 @@ import "server-only";
 //   Suscripciones  https://docs.onvopay.com/en/payments/subscriptions.md        POST /v1/subscriptions (items[{priceId,quantity}], paymentBehavior)
 //                  https://docs.onvopay.com/en/api/obtener-un-cargo-recurrente.md  GET /v1/subscriptions/{id}
 //                  https://docs.onvopay.com/en/api/cancelar-un-cargo-recurrente.md DELETE /v1/subscriptions/{id}
+//                  (sin paymentBehavior + paymentMethodId = cobra el primer periodo de inmediato: primer cobro de la prueba)
+//                  https://docs.onvopay.com/en/api/obtener-los-cargos-recurrentes-de-un-cliente GET /v1/customers/{id}/subscriptions
+//   Tarjetas       https://docs.onvopay.com/en/api/crear-un-metodo-de-pago      POST /v1/payment-methods (NAVEGADOR, llave publicable)
+//                  https://docs.onvopay.com/en/api/obtener-un-metodo-de-pago    GET /v1/payment-methods/{id}
+//                  https://docs.onvopay.com/en/api/desconectar-un-metodo-de-pago POST /v1/payment-methods/{id}/detach
+//                  (verificar-un-metodo-de-pago es para cuentas bancarias que piden confirmación manual: no se usa con tarjetas)
 //   SDK web        https://docs.onvopay.com/en/integrations/sdk.md              paymentType "subscription" + subscriptionId
 //   Webhooks       https://docs.onvopay.com/en/webhooks.md                      cabecera X-Webhook-Secret (prefijo webhook_secret_)
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -145,6 +151,99 @@ export function createSubscription(input: { customerId: string; plan: PlanId; bi
     items: [{ priceId, quantity: 1 }],
     metadata: { userId: input.userId, plan: input.plan, billing: input.billing },
   });
+}
+
+/**
+ * Primer cobro después de la prueba: crea la suscripción CON `paymentMethodId` y SIN `paymentBehavior`, así ONVO crea la
+ * primera factura y la cobra de inmediato con la tarjeta guardada (comportamiento por defecto documentado en
+ * https://docs.onvopay.com/en/payments/subscriptions.md). ONVO no documenta pruebas gratis nativas ni una llave de
+ * idempotencia: la idempotencia es nuestra (trial_charges) y `metadata.trialKey` + `metadata.attempt` permiten reconocer
+ * la suscripción si la respuesta se pierde (listCustomerSubscriptions). Nunca se reintenta sola (POST).
+ */
+export function createChargedSubscription(input: { customerId: string; paymentMethodId: string; plan: PlanId; billing: Billing; userId: string; trialKey: string; attempt: number }) {
+  const priceId = priceIdFor(input.plan, input.billing);
+  if (!priceId) throw new OnvoError(`Falta el precio de ONVO para ${input.plan}/${input.billing}`, 503);
+  const name = PLANS.find((p) => p.id === input.plan)!.name;
+  return onvo<OnvoSubscription>("POST", "/v1/subscriptions", {
+    customerId: input.customerId,
+    paymentMethodId: input.paymentMethodId,
+    description: `Banana Burn · ${name} (${input.billing === "mes" ? "mensual" : "anual"})`,
+    items: [{ priceId, quantity: 1 }],
+    metadata: { userId: input.userId, plan: input.plan, billing: input.billing, trialKey: input.trialKey, attempt: String(input.attempt) },
+  });
+}
+
+/**
+ * GET /v1/customers/{id}/subscriptions (https://docs.onvopay.com/en/api/obtener-los-cargos-recurrentes-de-un-cliente).
+ * La forma de la respuesta no está documentada: aceptamos un arreglo o `{ data: [...] }` y leemos `metadata` de forma defensiva.
+ */
+export async function listCustomerSubscriptions(customerId: string): Promise<OnvoSubscription[]> {
+  const r = await onvo<unknown>("GET", `/v1/customers/${encodeURIComponent(customerId)}/subscriptions`);
+  return listOf<OnvoSubscription>(r);
+}
+
+/** Lista de ONVO: arreglo directo o `{ data: [...] }`. Pura (testeada). */
+export function listOf<T extends { id: string }>(r: unknown): T[] {
+  const arr = Array.isArray(r) ? r : r && typeof r === "object" && Array.isArray((r as { data?: unknown }).data) ? (r as { data: unknown[] }).data : [];
+  return arr.filter((x): x is T => !!x && typeof x === "object" && typeof (x as { id?: unknown }).id === "string");
+}
+
+/** ¿Esta suscripción de ONVO es la de este intento de cobro? (metadata que pusimos al crearla). Pura (testeada). */
+export function matchesAttempt(sub: OnvoSubscription, trialKey: string, attempt: number): boolean {
+  const md = sub.metadata && typeof sub.metadata === "object" ? (sub.metadata as Record<string, unknown>) : null;
+  return !!md && md.trialKey === trialKey && String(md.attempt) === String(attempt);
+}
+
+/** Estados con los que ONVO podría responder una suscripción cuyo primer cobro ya se sabe rechazado (no documentados). */
+const FIRST_CHARGE_FAILED = new Set(["incomplete_expired", "unpaid", "past_due", "canceled", "cancelled", "failed"]);
+export const firstChargeFailed = (sub: OnvoSubscription) => typeof sub.status === "string" && FIRST_CHARGE_FAILED.has(sub.status.toLowerCase());
+
+// ───────────────────────── Tarjetas guardadas ─────────────────────────
+
+/**
+ * Método de pago de ONVO (esquema PaymentMethod de openapi.yaml): id, customerId, status (awaiting_authorization,
+ * requires-verification, active, detached, suspended, ada-rejected), type y `card` { brand (visa|mastercard), last4, expMonth, expYear }.
+ */
+export type OnvoPaymentMethod = { id: string; customerId?: string | null; status?: string; type?: string; card?: { brand?: string; last4?: string; expMonth?: number; expYear?: number } | null; [k: string]: unknown };
+
+/** GET /v1/payment-methods/{id} (https://docs.onvopay.com/en/api/obtener-un-metodo-de-pago). Con la llave secreta. */
+export function getPaymentMethod(id: string) {
+  return onvo<OnvoPaymentMethod>("GET", `/v1/payment-methods/${encodeURIComponent(id)}`);
+}
+
+/**
+ * POST /v1/payment-methods/{id}/detach (https://docs.onvopay.com/en/api/desconectar-un-metodo-de-pago).
+ * La documentación no dice qué llave usa ni el cuerpo: usamos la secreta y sin cuerpo.
+ */
+export function detachPaymentMethod(id: string) {
+  return onvo<OnvoPaymentMethod | null>("POST", `/v1/payment-methods/${encodeURIComponent(id)}/detach`);
+}
+
+export type SavedCard = { paymentMethodId: string; customerId: string; brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null };
+
+/**
+ * Valida una tarjeta que el navegador acaba de crear en ONVO antes de guardarla (pura, testeada). Los datos salen de ONVO
+ * (servidor a servidor), nunca del navegador: el cliente solo manda el ID.
+ * - Debe ser una tarjeta (`type: card`), del cliente de ONVO de esta persona y estar `active`.
+ * - `requires-verification` u otros estados no sirven para cobrar sin la persona presente.
+ */
+export function checkPaymentMethod(pm: OnvoPaymentMethod | null | undefined, expectedCustomerId: string): { ok: true; card: SavedCard } | { ok: false; reason: "no_existe" | "otro_cliente" | "no_es_tarjeta" | "no_activa" } {
+  if (!pm || typeof pm.id !== "string" || !pm.id) return { ok: false, reason: "no_existe" };
+  if (pm.customerId !== expectedCustomerId) return { ok: false, reason: "otro_cliente" };
+  if (pm.type && pm.type !== "card") return { ok: false, reason: "no_es_tarjeta" };
+  if ((pm.status ?? "").toLowerCase() !== "active") return { ok: false, reason: "no_activa" };
+  const c = pm.card && typeof pm.card === "object" ? pm.card : {};
+  const brand = typeof c.brand === "string" && /^[a-z_]{1,20}$/.test(c.brand.toLowerCase()) ? c.brand.toLowerCase() : null;
+  const last4 = typeof c.last4 === "string" && /^\d{4}$/.test(c.last4) ? c.last4 : null;
+  const mm = Number(c.expMonth), yy = Number(c.expYear);
+  return {
+    ok: true,
+    card: {
+      paymentMethodId: pm.id, customerId: expectedCustomerId, brand, last4,
+      expMonth: Number.isInteger(mm) && mm >= 1 && mm <= 12 ? mm : null,
+      expYear: Number.isInteger(yy) && yy >= 2000 && yy <= 2100 ? yy : null,
+    },
+  };
 }
 
 /** GET /v1/subscriptions/{id} */

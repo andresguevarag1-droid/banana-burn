@@ -1,7 +1,7 @@
 // Borrado de cuentas (derecho de supresión). Una sola secuencia para el usuario (/api/cuenta/borrar) y el panel.
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cancelSubscription, OnvoError } from "@/lib/onvo";
+import { cancelSubscription, detachPaymentMethod, OnvoError } from "@/lib/onvo";
 
 const BUCKET = "progreso";
 
@@ -28,6 +28,13 @@ export async function deleteAccountData(admin: SupabaseClient, userId: string, s
         return { ok: false, status: 502, step: "subscriptions", error: "No pudimos cancelar la suscripción con el procesador de pagos. Intenta de nuevo o escríbenos a hola@bananaburn.app." };
       }
     }
+  }
+
+  // 1b) Tarjeta guardada (0026): el cobro programado cae en cascada con la cuenta (no se cobra nada); la tarjeta se
+  //     desconecta en ONVO. Si ONVO no responde, se sigue: sin cuenta ni cobro programado nadie la vuelve a usar.
+  const { data: card } = await admin.from("payment_methods").select("provider_payment_method_id,status").eq("user_id", userId).maybeSingle();
+  if (card?.status === "active" && card.provider_payment_method_id) {
+    await detachPaymentMethod(card.provider_payment_method_id as string).catch(() => console.error(JSON.stringify({ scope, msg: "no se pudo desconectar la tarjeta en ONVO antes de borrar", userId })));
   }
 
   // 2) Fotos de progreso (paginado).

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Minus, X } from "@/components/icons";
 import { PLANS, perMonthAnnual } from "@/lib/plans";
 import { GLP1, TRIAL_DAYS, money } from "@/lib/copy";
+import { offer } from "@/lib/offer";
 
 export const [ENTRENO, COMPLETO] = PLANS;
 /** Precio de entrada: Entreno con pago anual, por mes. */
@@ -15,26 +16,31 @@ export const SIGNUP_GLP1 = `${SIGNUP}&programa=glp1&plan=${COMPLETO.id}&pago=anu
 export const TRIAL_CTA = "Crear mi plan gratis";
 /** Técnicas con animación de Coach Banana (hojas de fotogramas en src/lib/exercise-frames.ts). */
 export const ANIMATED_TECHNIQUES = TECHNIQUE_COUNT;
-export const TRIAL_NOTE = `${TRIAL_DAYS} días gratis con todo incluido. Sin tarjeta.`;
+/** Nota de la prueba bajo los botones de registro. Según la fecha (offer.ts): se calcula en cada render, nunca al cargar el módulo. */
+export const trialNote = (now = new Date()) => offer(now).note;
 
-export const FAQ: (readonly [string, string])[] = [
-  ["¿Cómo funciona la prueba gratis?", `Creas tu cuenta y tienes ${TRIAL_DAYS} días con todo incluido: entreno, Coach Banana, nutrición y Banana Shield. No pedimos tarjeta, así que no hay cobros sorpresa. Al terminar eliges Entreno o ${COMPLETO.name}; si todavía no eliges, tu progreso queda guardado para cuando vuelvas.`],
+/** Preguntas frecuentes. Las de la prueba y la cancelación cambian solas con el fin de la beta (offer.ts). */
+export const faq = (now = new Date()): (readonly [string, string])[] => {
+  const o = offer(now);
+  return [
+  ["¿Cómo funciona la prueba gratis?", o.faqTrial(COMPLETO.name)],
   ["¿Por qué pagar si hay rutinas gratis en internet?", `Una rutina gratis no sabe cuánto levantaste ayer, cuánto tiempo tienes hoy ni qué comiste. Banana Burn ajusta tu plan en cada sesión y cada semana. Pruébalo ${TRIAL_DAYS} días gratis y decide; con el plan anual son ${FROM} al mes.`],
   ["No tengo tiempo. ¿Me sirve?", "Sí. Eliges cuántos minutos tienes por sesión, de 15 a 60, y en los días apretados hay entrenos exprés de 10, 20 o 30 minutos sin equipo."],
   ["¿Sirve si entreno en casa o sin equipo?", "Sí. Eliges gym, casa (mancuernas o bandas) o sin equipo, y el plan cambia los ejercicios por variantes que puedes hacer con lo que tienes."],
   ["¿Necesito experiencia en el gym?", "No. Cada ejercicio trae animación y guía de técnica. La primera semana es de calibración: la app aprende tus pesos."],
   ["Uso Ozempic o Mounjaro. ¿Es para mí?", `Sí. Banana Shield, incluido en ${COMPLETO.name} y en tu prueba gratis, prioriza fuerza y proteína para que lo que bajes sea grasa y no músculo, y baja la intensidad en tu día de inyección. No damos indicaciones sobre tu medicamento: eso lo ves con tu médico.`],
   ["¿Cuánto peso voy a bajar?", "Depende de ti y de tu punto de partida, así que no prometemos un número. Un ritmo sano es de 0.5 a 1 % de tu peso por semana, y la app mide tu tendencia real para mantenerte en ese rango sin perder músculo."],
-  ["¿Cómo cancelo? ¿Hay reembolso?", "Durante la prueba no hay nada que cancelar, porque no pedimos tarjeta. Si ya pagas un plan, lo cancelas cuando quieras desde Mi suscripción y conservas el acceso hasta el final del periodo pagado. Además tienes 8 días hábiles de derecho de retracto desde la compra."],
+  ["¿Cómo cancelo? ¿Hay reembolso?", o.faqCancel],
   ["¿Qué diferencia hay entre los planes?", "Entreno incluye tu rutina, el peso de cada serie, Coach Banana para tus dudas de entreno, tu progreso, agua, pasos y sueño, la comunidad, los retos gratis y los niveles. Entreno + Nutrición suma tus calorías y macros, el registro de comidas, las recetas, el ajuste semanal según tu peso y Banana Shield. Los retos Premium no vienen en ningún plan: se compran aparte con un pago único."],
   ["¿Cómo pago?", "Con tarjeta de crédito o débito, procesado por ONVO Pay. Los precios están en dólares (USD) y tu banco hace la conversión si tu tarjeta es en otra moneda."],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras. Los tratamos según nuestra Política de privacidad y la ley de protección de datos de Costa Rica, donde está la empresa."],
   ["¿Es en español de verdad?", "Sí. Banana Burn está en español latino desde el primer día y pensada para Latinoamérica: los ejercicios, el coach y las comidas. No es una app traducida."],
   ["¿Tengo que descargarla de una tienda?", "No. Es una app web: la abres en el navegador y la instalas en tu pantalla de inicio, en iPhone o Android."],
-];
+  ];
+};
 
 /** Preguntas de /precios: las de dinero primero. */
-export const PRICING_FAQ = [0, 7, 8, 1, 5, 10].map((i) => FAQ[i]);
+export const pricingFaq = (now = new Date()) => { const f = faq(now); return [0, 7, 8, 1, 5, 10].map((i) => f[i]); };
 
 type Mark = true | false | string;
 const PAY_ROW = "Cómo se paga";
@@ -105,7 +111,7 @@ export function FaqCta({ href = SIGNUP, cta }: { href?: string; cta: string }) {
   return (
     <div className="mt-8 hidden lg:block rounded-3xl bg-banana-soft p-6">
       <p className="font-extrabold text-ink text-balance">La mejor respuesta es probarlo.</p>
-      <p className="mt-1 text-sm text-ink/75 text-pretty">{TRIAL_NOTE} Sin cobros automáticos al terminar.</p>
+      <p className="mt-1 text-sm text-ink/75 text-pretty">{trialNote()}{offer().faqCtaExtra}</p>
       <Link href={href} data-cta={cta} className="mt-4 btn-primary h-12 px-5">{TRIAL_CTA} <ArrowRight className="size-4" /></Link>
     </div>
   );

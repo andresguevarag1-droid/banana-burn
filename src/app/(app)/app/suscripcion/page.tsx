@@ -10,6 +10,9 @@ import { PLANS, usd } from "@/lib/plans";
 import { INTENT_COOKIE, decodeIntent, parseIntent } from "@/lib/checkout-intent";
 import { SubscriptionManager } from "./manager";
 import { FunnelTracker } from "@/components/analytics";
+import { CardPanel } from "./card-panel";
+import { betaDates } from "@/components/beta-notice";
+import { demoCardState } from "@/lib/trial-demo";
 
 export const metadata = { title: "Mi suscripción" };
 
@@ -29,12 +32,18 @@ const STATUS: Record<Entitlements["status"], { label: string; cls: string }> = {
 
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };
 
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
-  const [ent, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
+  const [real, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
+  // Modo demo: estado de ejemplo de la tarjeta (?demo=beta|prueba|nueva|fallo|procesando|cancelado), sin llamar a ONVO.
+  const jar = await cookies();
+  const cs = v.demo ? demoCardState(sp.demo ?? jar.get("bb_demo_tarjeta")?.value) : null;
+  const ent: Entitlements = cs ? { ...real, charge: cs.charge, card: cs.card, cardStep: cs.cardStep, trial: cs.trial, locked: cs.locked, plan: "free", status: "none", access: cs.locked ? "none" : "trial", app: !cs.locked, nutrition: !cs.locked } : real;
+  const charge = ent.charge ?? null;
+  const cardStep = ent.cardStep ?? "none";
   const payments = isOnvoConfigured() && !v.demo;
-  const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent((await cookies()).get(INTENT_COOKIE)?.value);
+  const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent(jar.get(INTENT_COOKIE)?.value);
 
   // Historial: pagos confirmados por webhook (datos reales de ONVO guardados en payment_events).
   let history: Payment[] = [];
@@ -79,14 +88,19 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
       {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}
       {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos todavía no están activos. Si necesitas activar tu plan, escríbenos a <a className="underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>.</p>}
-      {ent.trial && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Tu prueba gratis termina el {fmtDay(ent.trial.endsAt)}.</b> Tienes todo incluido hasta entonces y no hay cobros automáticos, porque no pedimos tarjeta. El plan de pago empieza el día que pagas; si prefieres, elígelo en tu último día y sigues sin cortes.</p>}
-      {ent.locked && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
+      {ent.trial?.beta && !charge && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Estás en la versión de prueba: todo incluido gratis hasta el {betaDates().lastFree}.</b> Todavía no guardaste una tarjeta, así que no hay ningún cobro programado. Desde el {betaDates().firstPaid} la app se paga.</p>}
+      {ent.locked && cardStep !== "trial" && charge?.phase !== "procesando" && charge?.phase !== "reintento" && charge?.phase !== "fallido" && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>{cardStep === "pay" && !charge ? "La versión de prueba terminó" : "Tu prueba gratis terminó"}{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
+
+      {(cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
+        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid}
+          initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />
+      )}
 
       <section className="card p-5 sm:p-6" aria-labelledby="plan-actual">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-muted">Tu plan actual</p>
-            <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : ent.trial ? "Prueba gratis (todo incluido)" : "Sin plan"}</h2>
+            <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : ent.trial?.beta ? "Versión de prueba (todo incluido)" : ent.trial ? "Prueba gratis (todo incluido)" : "Sin plan"}</h2>
             {price !== null && <p className="text-muted"><b className="text-ink tabular-nums">{usd(price)}</b> {ent.billing === "anual" ? "/año" : "/mes"}</p>}
           </div>
           <span className={`chip shrink-0 ${st.cls}`}>{st.label}</span>
@@ -104,12 +118,13 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         {(ent.access === "manual" || ent.access === "staff") && !v.demo && <p className="mt-4 text-sm text-muted">Este plan fue asignado por el equipo de Banana Burn; no tiene cobros automáticos.</p>}
       </section>
 
-      <SubscriptionManager
+      {/* Con la prueba con tarjeta (o el cobro programado o en curso) se elige y cambia el plan arriba: aquí no se cobra hoy. */}
+      {!(cardStep === "trial" || (charge && (charge.phase === "programado" || charge.phase === "procesando" || (charge.phase === "cancelado" && cardStep === "none")))) && <SubscriptionManager
         current={{ plan: ent.plan, billing: ent.fromSubscription ? ent.billing ?? null : null, status: ent.status, endsAt: ent.endsAt ?? ent.renewsAt ?? null, renewsAt: ent.renewsAt ?? null, fromSubscription: ent.fromSubscription, cancellable: ent.fromSubscription && (ent.status === "active" || ent.status === "past_due" || ent.status === "trialing") }}
         intent={intent}
         payments={payments}
         demo={v.demo}
-      />
+      />}
 
       {gifts.length > 0 && (
         <section className="card p-5 sm:p-6" aria-labelledby="regalos">

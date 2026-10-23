@@ -123,20 +123,88 @@ export function reciboPago(d: PaymentData): Email {
   };
 }
 
-export function pagoFallido(d: PaymentData & { retryDate?: string | null; updateUrl?: string }): Email {
+/** `paused`: el acceso queda en pausa mientras tanto (primer cobro después de la prueba). Si no, se mantiene (renovación). */
+export function pagoFallido(d: PaymentData & { retryDate?: string | null; updateUrl?: string; paused?: boolean }): Email {
   const n = firstName(d.name);
   const total = money(d.amount, d.currency);
   const url = d.updateUrl ?? "/app/perfil";
-  const subject = "No pudimos procesar tu pago. Se arregla en 1 minuto";
-  const preheader = `Tu cobro de ${total} no pasó. Actualiza tu método de pago y sigues entrenando sin pausa.`;
-  const body = h1("Tu pago no pasó") +
+  const subject = d.paused ? "No pudimos cobrar tu plan. Cambia tu tarjeta para seguir" : "No pudimos procesar tu pago. Se arregla en 1 minuto";
+  const preheader = d.paused ? `Tu cobro de ${total} no pasó. Tu acceso queda en pausa hasta que se pague; tu progreso sigue guardado.` : `Tu cobro de ${total} no pasó. Actualiza tu método de pago y sigues entrenando sin pausa.`;
+  const meanwhile = d.paused ? "Mientras tanto tu acceso queda en pausa. No se borra nada: tu plan y tu progreso siguen guardados." : "Mientras tanto mantienes tu acceso.";
+  const retry = d.retryDate ? `Lo volveremos a intentar una vez el ${longDate(d.retryDate)}.` : d.paused ? "No haremos más intentos automáticos." : "";
+  const body = h1(d.paused ? "No pudimos cobrar tu plan" : "Tu pago no pasó") +
     p(`Hola ${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó. Pasa seguido: tarjeta vencida, límite o bloqueo de compras en línea.`) +
-    p(d.retryDate ? `Lo volveremos a intentar el <b>${esc(longDate(d.retryDate))}</b>. Mientras tanto mantienes tu acceso.` : "Mientras tanto mantienes tu acceso.") +
-    button("Actualizar método de pago", url) + p(`<span style="font-size:14px;color:${C.muted};">Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.</span>`);
+    p(`${retry ? `<b>${esc(retry)}</b> ` : ""}${esc(meanwhile)}`) +
+    button(d.paused ? "Cambiar mi tarjeta" : "Actualizar método de pago", url) + p(`<span style="font-size:14px;color:${C.muted};">Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.</span>`);
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque hubo un problema con el pago de tu suscripción." }),
-    text: textLayout([`Hola ${n}, no pudimos cobrar ${total} de tu plan ${d.plan}.`, d.retryDate ? `Lo volveremos a intentar el ${longDate(d.retryDate)}. Mientras tanto mantienes tu acceso.` : "Mientras tanto mantienes tu acceso.", "", `Actualiza tu método de pago: ${abs(url)}`, "Aceptamos tarjetas de crédito y débito."]),
+    text: textLayout([`Hola ${n}, no pudimos cobrar ${total} de tu plan ${d.plan}.`, [retry, meanwhile].filter(Boolean).join(" "), "", `${d.paused ? "Cambia tu tarjeta" : "Actualiza tu método de pago"}: ${abs(url)}`, "Aceptamos tarjetas de crédito y débito."]),
+  };
+}
+
+/** Datos del primer cobro programado (prueba de 7 días o fin de la beta). */
+export type ChargeMailData = { name: string; plan: string; amount: number; currency?: string; chargeAt: string; kind: "prueba" | "beta" | "inmediato"; card?: string | null };
+
+/** Al guardar la tarjeta: confirma que hoy no se cobra, cuánto y cuándo se cobra, y cómo cancelar. Transaccional. */
+export function pruebaIniciada(d: ChargeMailData): Email {
+  const n = firstName(d.name);
+  const total = money(d.amount, d.currency);
+  const when = longDate(d.chargeAt);
+  const beta = d.kind === "beta";
+  const subject = beta ? `Tarjeta guardada: tu plan se cobra el ${when}` : "Tu prueba gratis de 7 días empezó";
+  const preheader = beta ? `Hoy no te cobramos. El ${when} se cobra ${total}, salvo que canceles antes.` : `Hoy no te cobramos. El día 7 (${when}) se cobra ${total}, salvo que canceles antes.`;
+  const r: [string, string][] = [["Plan", d.plan], ["Hoy", money(0, d.currency)], ["Se cobra el", when], ["Monto", total]];
+  if (d.card) r.push(["Tarjeta", d.card]);
+  const body = badge(beta ? "Tarjeta guardada" : "Prueba gratis", C.banana) +
+    h1(beta ? "Listo, tu tarjeta quedó guardada" : `${esc(n)}, tu prueba gratis empezó`) +
+    p(beta ? `Hoy no te cobramos. Sigues con todo incluido hasta que termine la versión de prueba. El <b>${esc(when)}</b> se cobra tu plan, salvo que canceles antes.` : `<b>7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, salvo que canceles antes.</b> Tienes todo incluido mientras tanto.`) +
+    rows(r) + p("Te avisaremos 2 días antes del cobro. Para cancelar sin costo entra a Mi plan antes de esa fecha: no se cobra nada y conservas el acceso hasta el final de la prueba.") +
+    button("Ver mi plan", "/app/suscripcion");
+  const reason = "Recibes este correo porque guardaste una tarjeta en Banana Burn.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, body, reason }),
+    text: textLayout([subject, "", beta ? `Hoy no te cobramos. El ${when} se cobra ${total} de ${d.plan}, salvo que canceles antes.` : `7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, salvo que canceles antes.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", "Te avisaremos 2 días antes. Cancela sin costo desde Mi plan antes de esa fecha.", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
+  };
+}
+
+/** Día 5: aviso de que en 2 días se cobra el plan. Transaccional (importa para la honestidad y para evitar contracargos). */
+export function recordatorioCobro(d: ChargeMailData): Email {
+  const n = firstName(d.name);
+  const total = money(d.amount, d.currency);
+  const when = longDate(d.chargeAt);
+  const beta = d.kind === "beta";
+  const line = beta ? `En 2 días se cobra tu plan de ${total}, el ${when}. Puedes cancelar sin costo antes de esa fecha.` : `En 2 días se cobra tu plan de ${total}. Puedes cancelar sin costo hasta el día 7.`;
+  const subject = `En 2 días se cobra tu plan de ${total}`;
+  const r: [string, string][] = [["Plan", d.plan], ["Se cobra el", when], ["Monto", total]];
+  if (d.card) r.push(["Tarjeta", d.card]);
+  const body = h1(`${esc(n)}, en 2 días se cobra tu plan`) + p(esc(line)) + rows(r) +
+    p("Si quieres seguir, no tienes que hacer nada. Si no, cancela desde Mi plan: no se cobra nada y tu progreso queda guardado.") +
+    button("Ver o cancelar mi plan", "/app/suscripcion");
+  const reason = "Recibes este aviso porque tienes un cobro programado en Banana Burn.";
+  return {
+    subject, preheader: line,
+    html: layout({ preheader: line, body, reason }),
+    text: textLayout([`${n}, ${line}`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver o cancelar: ${abs("/app/suscripcion")}`], undefined, reason),
+  };
+}
+
+/** Canceló el cobro programado antes de que llegara: no se cobra y conserva el acceso hasta el final de la prueba. */
+export function cobroCancelado(d: { name: string; plan: string; accessUntil?: string | null; cardKept: boolean }): Email {
+  const n = firstName(d.name);
+  const subject = "Cancelaste tu plan: no se te cobrará";
+  const preheader = d.accessUntil ? `Sigues con acceso hasta el ${longDate(d.accessUntil)}. No se hará ningún cobro.` : "No se hará ningún cobro.";
+  const body = h1("Listo, no se te cobrará") +
+    p(`${esc(n)}, cancelaste <b>${esc(d.plan)}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.`) +
+    (d.accessUntil ? p(`Sigues con todo incluido hasta el <b>${esc(longDate(d.accessUntil))}</b>.`) : "") +
+    p(d.cardKept ? "Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan." : "Quitamos tu tarjeta guardada.") +
+    p("Tus entrenos y tu progreso quedan guardados. Si vuelves, retomas donde ibas.") + button("Ver mi plan", "/app/suscripcion");
+  const reason = "Recibes este correo como confirmación de un cambio en tu plan.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, body, reason }),
+    text: textLayout([`${n}, cancelaste ${d.plan} antes del cobro. No se hará ningún cargo.`, d.accessUntil ? `Sigues con acceso hasta el ${longDate(d.accessUntil)}.` : "", d.cardKept ? "Tu tarjeta sigue guardada; puedes quitarla desde Mi plan." : "Quitamos tu tarjeta guardada.", "", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
   };
 }
 

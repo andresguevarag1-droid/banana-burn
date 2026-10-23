@@ -40,7 +40,8 @@ function GoogleG() {
   );
 }
 
-export function LoginForm({ configured, googleEnabled = false }: { configured: boolean; googleEnabled?: boolean }) {
+/** `signupChecks`: las dos marcas bajo el registro según la fecha (offer.ts, las calcula el servidor para no depender del reloj del teléfono). */
+export function LoginForm({ configured, googleEnabled = false, signupChecks = ["Sin tarjeta", "Sin cobros automáticos"] }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string] }) {
   const params = useSearchParams();
   const router = useRouter();
   const isSignup = params.get("modo") === "registro";
@@ -215,8 +216,7 @@ export function LoginForm({ configured, googleEnabled = false }: { configured: b
             <button disabled={busy || !email || (method === "password" && !password)} data-cta={isSignup ? `registro-${method}` : `entrar-${method}`} className="btn-primary w-full h-13">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : method === "password" ? <Lock weight="duotone" className="size-5" /> : <Envelope weight="duotone" className="size-5" />}{method === "password" ? (isSignup ? "Empezar mi prueba gratis" : "Entrar") : "Enviarme un código"}</button>
             {isSignup && (
               <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-1 text-xs font-semibold text-muted">
-                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Sin tarjeta</li>
-                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Sin cobros automáticos</li>
+                {signupChecks.map((t) => <li key={t} className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />{t}</li>)}
                 <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Tu plan en 2 minutos</li>
               </ul>
             )}

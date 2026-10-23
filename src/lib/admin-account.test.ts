@@ -5,7 +5,7 @@ import { deleteAccountData } from "./admin-account";
 /** Cliente falso que anota el orden de las llamadas. */
 function fakeAdmin(opts: { scrubError?: boolean } = {}) {
   const calls: string[] = [];
-  const query = { select: () => query, eq: () => query, in: async () => ({ data: [] }) };
+  const query = { select: () => query, eq: () => query, in: async () => ({ data: [] }), maybeSingle: async () => ({ data: null }) };
   const admin = {
     from: () => query,
     storage: { from: () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ error: null }) }) },
@@ -25,5 +25,21 @@ describe("deleteAccountData (borrado completo)", () => {
     const { admin, calls } = fakeAdmin({ scrubError: true });
     expect(await deleteAccountData(admin, "u2")).toEqual({ ok: true });
     expect(calls.at(-1)).toBe("deleteUser:u2");
+  });
+});
+
+describe("deleteAccountData con tarjeta guardada (0026)", () => {
+  it("intenta desconectar la tarjeta en ONVO y, aunque ONVO no responda, borra la cuenta (el cobro programado cae en cascada)", async () => {
+    const calls: string[] = [];
+    const query = { select: () => query, eq: () => query, in: async () => ({ data: [] }), maybeSingle: async () => ({ data: { provider_payment_method_id: "pm_1", status: "active" } }) };
+    const admin = {
+      from: (t: string) => { calls.push(`from:${t}`); return query; },
+      storage: { from: () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ error: null }) }) },
+      rpc: async () => ({ error: null }),
+      auth: { admin: { deleteUser: async (id: string) => { calls.push(`deleteUser:${id}`); return { error: null }; } } },
+    } as unknown as SupabaseClient;
+    expect(await deleteAccountData(admin, "u3")).toEqual({ ok: true });
+    expect(calls).toContain("from:payment_methods");
+    expect(calls.at(-1)).toBe("deleteUser:u3");
   });
 });

@@ -13,20 +13,25 @@ import { StickyCta } from "./sticky-cta";
 import { AppTour } from "./app-tour";
 import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
-import { ANIMATED_TECHNIQUES, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_NOTE } from "./content";
+import { ANIMATED_TECHNIQUES, Compare, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, faq } from "./content";
+import { offer } from "@/lib/offer";
 import { LIB_COUNT } from "@/lib/library";
 
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
 const CTA = "Empezar gratis";
 
 const TITLE = "Banana Burn: reconstruye tu cuerpo después de bajar de peso";
-const DESCRIPTION = `La app de recomposición corporal que reemplaza a tu entrenador personal: rutina exacta, el peso de cada serie y ejercicios con técnica animada. Prueba ${TRIAL_DAYS} días gratis, sin tarjeta.`;
+/** Descripción según la fecha (offer.ts): la prueba sin tarjeta hasta el fin de la beta, con tarjeta después. */
+const description = () => `La app de recomposición corporal que reemplaza a tu entrenador personal: rutina exacta, el peso de cada serie y ejercicios con técnica animada. ${offer().seo}`;
 
-export const metadata: Metadata = {
-  title: { absolute: TITLE },
-  description: DESCRIPTION,
-  ...social({ title: TITLE, description: DESCRIPTION, path: "/", og: { t: "Bajaste de peso. Ahora reconstruye tu cuerpo.", s: "Tu entrenador personal en el celular, con rutina de recomposición corporal.", v: "gym" } }),
-};
+export function generateMetadata(): Metadata {
+  const d = description();
+  return {
+    title: { absolute: TITLE },
+    description: d,
+    ...social({ title: TITLE, description: d, path: "/", og: { t: "Bajaste de peso. Ahora reconstruye tu cuerpo.", s: "Tu entrenador personal en el celular, con rutina de recomposición corporal.", v: "gym" } }),
+  };
+}
 
 const UGC_BASE = "https://d8j0ntlcm91z4.cloudfront.net/user_3KlOTMXim7g88SAyF4A03SG6JZ6/";
 /** Coach Banana en distintas poses (fondo transparente). */
@@ -76,8 +81,8 @@ const FOR_WHO: { icon: typeof Syringe; t: string; d: string }[] = [
   { icon: BowlFood, t: "Quieres mantener lo que lograste", d: "El músculo es lo que te ayuda a no recuperar lo que tanto te costó bajar." },
 ];
 
-const RISK: [typeof Lock, string][] = [
-  [CreditCard, "Sin tarjeta y sin cobros automáticos"],
+const risk = (): [typeof Lock, string][] => [
+  [CreditCard, offer().riskLine],
   [ArrowCounterClockwise, "Cancelas cuando quieras"],
   [Scroll, "8 días hábiles de retracto al pagar"],
   [Lock, "Pago seguro con ONVO Pay"],
@@ -87,11 +92,13 @@ const H2 = "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] t
 const LEAD = "mt-5 text-lg sm:text-xl text-muted leading-relaxed text-pretty max-w-[58ch]";
 
 export default function Landing() {
+  const o = offer();
+  const faqItems = faq();
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(appJsonLd())} />
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(orgJsonLd())} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(faqItems))} />
 
       {/* 1. HERO: qué es, para quién y la promesa, con la app y el mono a la vista */}
       <section id="hero" className="relative overflow-hidden bg-banana">
@@ -111,7 +118,7 @@ export default function Landing() {
               <Link href={SIGNUP} data-cta="hero" className="pressable inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
               <a href="#por-dentro" data-cta="hero-tour" className="tap hidden sm:inline-flex items-center font-bold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver la app por dentro</a>
             </div>
-            <p className="mt-4 text-sm font-semibold text-ink">{TRIAL_NOTE} Después, desde {FROM} al mes.</p>
+            <p className="mt-4 text-sm font-semibold text-ink">{o.note} {o.from(FROM)}</p>
             <p className="mt-1 text-sm text-ink/75">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
           </div>
 
@@ -180,7 +187,7 @@ export default function Landing() {
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
         <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
-          {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, "gratis, sin tarjeta"]] as const).map(([v, l]) => (
+          {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse">
               <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
               <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-ink">{v}</dd>
@@ -284,27 +291,27 @@ export default function Landing() {
       <section id="precios" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
         <div className="mx-auto mb-10 max-w-3xl text-center">
           <h2 className={H2}>Menos que una sesión con un entrenador.</h2>
-          <p className="mt-4 text-lg text-muted text-pretty">Pruébalo {TRIAL_DAYS} días gratis con todo incluido y sin tarjeta. Después eliges tu plan; con el pago anual ahorras {SAVE} %.</p>
+          <p className="mt-4 text-lg text-muted text-pretty">{o.pricingIntro(SAVE)}</p>
         </div>
-        <Pricing />
+        <Pricing trialGuarantee={o.guarantee} />
       </section>
 
-      <Faq id="faq" items={FAQ} aside={<FaqCta cta="faq" />} />
+      <Faq id="faq" items={faqItems} aside={<FaqCta cta="faq" />} />
 
       {/* 11. CTA FINAL con el mono */}
       <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
         <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-0 pt-14 text-center sm:px-16 sm:pt-16">
           <h2 className={`${H2} mx-auto max-w-3xl`}>Tu cuerpo nuevo empieza con el primer entreno.</h2>
           <Link href={SIGNUP} data-cta="final" className="pressable mt-8 inline-flex h-14 items-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
-          <p className="mt-4 text-sm font-semibold text-ink/80">{TRIAL_NOTE} Después, desde {FROM} al mes.</p>
+          <p className="mt-4 text-sm font-semibold text-ink/80">{o.note} {o.from(FROM)}</p>
           <ul className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:w-fit sm:grid-cols-2">
-            {RISK.map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
+            {risk().map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
           </ul>
           <Image src={POSE.salta} alt="" width={420} height={420} sizes="240px" className="mx-auto mt-8 w-44 sm:w-60" />
         </div>
       </section>
 
-      <StickyCta note={TRIAL_NOTE}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={o.note}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }
