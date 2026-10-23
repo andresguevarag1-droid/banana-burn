@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Banana, BananaFlame, Barbell, BowlFood, Check, Clock, CreditCard, Lock, MonkeyBanana, Scales, Scroll, ShieldCheck, Syringe, Target, X,
+  ArrowCounterClockwise, ArrowRight, Barbell, BowlFood, Check, CreditCard, Lock, MonkeyBanana, Scales, Scroll, ShieldCheck, Syringe, X,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
@@ -10,93 +10,60 @@ import { PLANS, annualSavingPct } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
+import { AppTour } from "./app-tour";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
-import { ANIMATED_TECHNIQUES, COMPLETO, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_CTA, TRIAL_NOTE } from "./content";
+import { ANIMATED_TECHNIQUES, Compare, FAQ, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, TRIAL_NOTE } from "./content";
 import { LIB_COUNT } from "@/lib/library";
 
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
+const CTA = "Empezar gratis";
 
-const TITLE = "Banana Burn: entrenador personal con IA para bajar grasa";
-const DESCRIPTION = `Rutina de gym o casa, el peso exacto de cada serie y comida latina de verdad, ajustados cada semana a tu peso real. Prueba ${TRIAL_DAYS} días gratis, sin tarjeta.`;
+const TITLE = "Banana Burn: reconstruye tu cuerpo después de bajar de peso";
+const DESCRIPTION = `La app de recomposición corporal que reemplaza a tu entrenador personal: rutina exacta, el peso de cada serie y ejercicios con técnica animada. Prueba ${TRIAL_DAYS} días gratis, sin tarjeta.`;
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
-  ...social({ title: TITLE, description: DESCRIPTION, path: "/", og: { t: "Baja grasa sin perder músculo", s: "Tu coach con IA te dice qué entrenar, cuánto levantar y qué comer.", v: "gym" } }),
+  ...social({ title: TITLE, description: DESCRIPTION, path: "/", og: { t: "Bajaste de peso. Ahora reconstruye tu cuerpo.", s: "Tu entrenador personal en el celular, con rutina de recomposición corporal.", v: "gym" } }),
 };
 
-/* Entrada tipo quiz: /entrar guarda `objetivo` y `programa` en cookies y /bienvenida arranca con esa meta elegida. */
-const GOALS: { label: string; href: string; cta: string; icon: React.ComponentType<{ weight?: "duotone"; className?: string; "aria-hidden"?: boolean }> }[] = [
-  { label: "Bajar grasa rápido", href: `${SIGNUP}&objetivo=grasa`, cta: "quiz-grasa", icon: BananaFlame },
-  { label: "Bajar grasa y ganar músculo", href: `${SIGNUP}&objetivo=recomp`, cta: "quiz-recomp", icon: Scales },
-  { label: "Ganar fuerza", href: `${SIGNUP}&objetivo=fuerza`, cta: "quiz-fuerza", icon: Barbell },
-  { label: "Uso Ozempic o Mounjaro", href: SIGNUP_GLP1, cta: "quiz-glp1", icon: Syringe },
-];
-
-const PAINS = [
-  ["Llegas al gym y no sabes qué hacer.", "Das vueltas, copias al de la máquina de al lado y te vas con la sensación de que no sirvió de nada."],
-  ["Tu rutina es genérica y nunca cambia.", "El PDF o el video de TikTok no saben cuánto levantaste la semana pasada ni cuánto tiempo tienes hoy."],
-  ["La dieta no se parece a lo que comes.", "Te piden salmón, quinoa y kale. Tú comes arroz con pollo, frijoles, tortillas o patacones, y se puede bajar de peso así."],
-] as const;
-
-const STEPS = [
-  ["/landing/objetivo.png", "Cuéntanos tu objetivo", "Tu peso, tu meta, cuántos días entrenas, con qué equipo (gym, casa o nada) y cuánto tiempo tienes. Toma unos 2 minutos."],
-  ["/landing/hoy2.png", "Abre la app y haz lo que toca hoy", "Tu rutina del día con series, repeticiones y el peso de cada serie. ¿Día apretado? Hay entrenos exprés de 10, 20 o 30 minutos."],
-  ["/landing/progreso.png", "Registra y deja que se ajuste solo", "Si completas tus repeticiones, sube el peso. Cada semana el plan lee tu peso real y corrige el rumbo."],
-] as const;
-
-/** La app explicada en cuatro partes, con el plan que incluye cada una (coherente con PLANS). */
-const PARTS: { icon: React.ComponentType<{ weight?: "duotone"; className?: string; "aria-hidden"?: boolean }>; t: string; d: string; plan: "todos" | "completo" }[] = [
-  { icon: Barbell, t: "Entrena", d: "Tu rutina del día con series, repeticiones y el peso exacto. Animación de técnica en cada ejercicio y entrenos exprés de 10 a 30 minutos.", plan: "todos" },
-  { icon: BowlFood, t: "Come", d: "Tus calorías y tu proteína del día, calculadas para ti. Registras lo que comes, incluso comida rápida, con más de 1.200 alimentos y platos latinos.", plan: "completo" },
-  { icon: Scales, t: "Mide", d: "Tu tendencia de peso, medidas, fotos y fuerza. Ves si avanzas aunque la báscula suba y baje un día.", plan: "todos" },
-  { icon: MonkeyBanana, t: "No lo dejes", d: "Coach con IA que responde tus dudas, niveles, rachas, retos gratis y una comunidad que entrena contigo.", plan: "todos" },
-];
-
-type Feature = { src: string; alt: string; title: string; body: string; points: string[]; tag?: string };
-const FEATURES: Feature[] = [
-  {
-    src: "/landing/entreno.png", alt: "Pantalla de entrenamiento con el peso y las repeticiones de cada serie",
-    title: "Entras al gym sabiendo exactamente qué levantar.",
-    body: "Cada serie trae el peso y las repeticiones que te tocan. Si las completas, la próxima vez sube. Si te estancas, el plan ajusta.",
-    points: ["Gym, casa o sin equipo, de 15 a 60 minutos por sesión", "Animación de técnica en cada ejercicio", "Rutina distinta cada día y accesorios que rotan cada semana", "Descanso cronometrado y récords personales"],
-  },
-  {
-    src: "/landing/nutricion.png", alt: "Pantalla de comida con calorías y proteína restantes del día",
-    title: "Bajas de peso comiendo arroz con pollo.",
-    body: "Calorías y proteína calculadas para ti, con la comida que ya comes. Registras tu almuerzo en dos toques y ves cuánto te queda del día.",
-    points: ["Comida latina de verdad: arroz con pollo, frijoles, tortillas, ceviche, patacones, arepas", "Recetas e ideas de menú para cada día", "Tus calorías se ajustan cada semana con tu peso real"],
-    tag: `Incluido en ${COMPLETO.name}`,
-  },
-  {
-    src: "/landing/progreso.png", alt: "Pantalla de progreso con la tendencia de peso",
-    title: "Ves tu progreso real aunque la báscula se ponga terca.",
-    body: "El peso sube y baja por agua y sal. Banana Burn te muestra la tendencia, que es lo que cuenta, junto con tu fuerza, tus medidas y tus fotos.",
-    points: ["Tendencia de peso, no el número del día", "Medidas y fotos de progreso privadas", "Fuerza por ejercicio, semana a semana"],
-  },
-];
-
 const UGC_BASE = "https://d8j0ntlcm91z4.cloudfront.net/user_3KlOTMXim7g88SAyF4A03SG6JZ6/";
-const MASCOT = `${UGC_BASE}hf_20261022_085342_da17b2e2-18ea-4b15-9242-6fbc69476315.png`;
 /** Escenas ilustrativas (persona real + Coach Banana en caricatura). No son clientes ni testimonios. */
 const SCENES: [string, string][] = [
-  ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te muestra la técnica de cada ejercicio con animación."],
+  ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te muestra la técnica de cada ejercicio."],
   ["hf_20261022_155001_e82f1d0e-5f20-4eba-9039-6f62a9d79152", "En la casa: sin equipo y sin excusas."],
-  ["hf_20261022_155041_f2cc4028-cb3a-48a8-ade4-3d6edcbbf98f", "En la cocina: comida latina que cuadra con tu meta."],
-  ["hf_20261022_155041_44c51456-065c-44b4-95dc-135b1585a69a", "En el parque: te marca el ritmo."],
   ["hf_20261022_155042_171fc15e-6a39-489f-a615-de397a0bcec2", "A cualquier edad: cargas a tu nivel."],
   ["hf_20261022_155003_11f3b250-6cbe-4354-ab64-49e1d65832ec", "Cada récord se celebra."],
 ];
 
-/** Cifras reales del producto (la biblioteca se cuenta en el build). */
-const FACTS: [string, string][] = [
-  [LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía en la biblioteca"],
-  [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"],
-  ["10 min", "el entreno exprés más corto, sin equipo"],
-  [`${TRIAL_DAYS} días`, "gratis con todo incluido, sin tarjeta"],
+/** Lo que vive quien bajó rápido de peso. */
+const PAINS: [string, string][] = [
+  ["La báscula bajó, pero te ves flácido.", "Bajaste kilos y aun así no te gusta lo que ves en el espejo. Falta firmeza."],
+  ["Perdiste fuerza y energía.", "Subir escaleras o cargar las bolsas cuesta más que antes. Eso también es músculo que se fue."],
+  ["Te da miedo recuperar todo.", "Sin músculo, tu cuerpo gasta menos y es más fácil volver a subir."],
+  ["Un entrenador cuesta demasiado.", "Pagar sesiones cada semana no está en el presupuesto, y en internet nadie te dice qué hacer a ti."],
 ];
 
-/** Objeciones que se resuelven junto al CTA final. */
+/** Los tres pilares del método. */
+const PILLARS: { n: string; t: string; d: string }[] = [
+  { n: "01", t: "Fuerza que sube cada semana", d: "Cada serie trae el peso exacto. Si completas tus repeticiones, la próxima vez sube. Así le pides al cuerpo que reconstruya músculo." },
+  { n: "02", t: "Ejercicios novedosos, a tu nivel", d: "Variantes que rotan cada semana para que no te estanques, con técnica animada por Coach Banana. En gym, en casa o sin equipo." },
+  { n: "03", t: "Proteína suficiente, con tu comida", d: "Sin proteína no hay músculo. Con Entreno + Nutrición sabes cuánta comer y la registras con la comida latina que ya comes." },
+];
+
+const STEPS: [string, string][] = [
+  ["Cuéntanos de dónde vienes", "Tu peso, tu meta, cuántos días puedes entrenar y con qué equipo. Toma 2 minutos."],
+  ["Recibe tu rutina de recomposición", "Tu plan de la semana, con cada ejercicio, series, repeticiones y el peso que te toca."],
+  ["Entrena y deja que se ajuste solo", "Registras tus series y el plan sube las cargas. Cada semana lee tu peso real y corrige el rumbo."],
+];
+
+const FOR_WHO: { icon: typeof Syringe; t: string; d: string }[] = [
+  { icon: Syringe, t: "Usaste Ozempic o Mounjaro", d: `Con ${GLP1} se baja rápido y el músculo sufre. Banana Shield lo protege.` },
+  { icon: Scales, t: "Hiciste una dieta muy estricta", d: "Bajaste mucho en poco tiempo y quieres verte firme, no solo más delgado." },
+  { icon: Barbell, t: "Nunca has entrenado fuerza", d: "Empiezas desde cero, con técnica guiada y cargas a tu nivel." },
+  { icon: BowlFood, t: "Quieres mantener lo que lograste", d: "El músculo es lo que te ayuda a no recuperar lo que tanto te costó bajar." },
+];
+
 const RISK: [typeof Lock, string][] = [
   [CreditCard, "Sin tarjeta y sin cobros automáticos"],
   [ArrowCounterClockwise, "Cancelas cuando quieras"],
@@ -104,8 +71,8 @@ const RISK: [typeof Lock, string][] = [
   [Lock, "Pago seguro con ONVO Pay"],
 ];
 
-const H2 = "text-4xl sm:text-5xl font-extrabold tracking-tight text-ink text-balance";
-const LEAD = "mt-4 text-lg text-muted leading-relaxed text-pretty max-w-[60ch]";
+const H2 = "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-ink text-balance";
+const LEAD = "mt-5 text-lg sm:text-xl text-muted leading-relaxed text-pretty max-w-[58ch]";
 
 export default function Landing() {
   return (
@@ -114,248 +81,209 @@ export default function Landing() {
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(orgJsonLd())} />
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
 
-      {/* 1. HERO: resultado + mecanismo + para quién, un CTA y confianza inmediata */}
-      <section id="hero" className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 lg:pt-0 pb-14 lg:pb-0 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-10 items-center lg:min-h-[min(calc(100dvh-4rem),760px)]">
-        <div className="animate-rise lg:py-10">
-          <h1 className="text-[2.6rem] leading-[1.03] sm:text-6xl lg:text-[3.5rem] font-extrabold tracking-[-0.035em] text-ink text-balance">
-            Baja grasa sin perder músculo. <Marker>Tu coach IA te dice qué hacer hoy.</Marker>
-          </h1>
-          <p className="mt-6 text-lg sm:text-xl text-muted max-w-[34rem] leading-relaxed text-pretty">
-            Banana Burn es una app en tu celular que <b className="text-ink">te arma la rutina</b> (gym, casa o sin equipo), <b className="text-ink">te dice cuánto peso levantar</b> en cada serie y <b className="text-ink">cuánto comer</b> con comida latina. Cada semana se ajusta sola a tu peso real.
-          </p>
-          <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <Link href={SIGNUP} data-cta="hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
-            <a href="#como-funciona" data-cta="hero-secundario" className="tap hidden sm:inline-flex items-center font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver cómo funciona</a>
+      {/* 1. HERO: qué es, para quién y la promesa, con la app y el mono a la vista */}
+      <section id="hero" className="relative overflow-hidden bg-banana">
+        <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 size-[28rem] rounded-full bg-white/25 blur-3xl" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:pb-20 lg:pt-16">
+          <div className="animate-rise">
+            <p className="inline-flex items-center gap-2 rounded-full bg-ink px-3.5 py-1.5 text-sm font-bold text-banana">
+              <Barbell weight="duotone" aria-hidden className="size-4" />Recomposición corporal
+            </p>
+            <h1 className="mt-5 text-[2.75rem] leading-[1.02] sm:text-6xl lg:text-[4.25rem] font-extrabold tracking-[-0.04em] text-ink text-balance">
+              Bajaste de peso. Ahora reconstruye tu cuerpo.
+            </h1>
+            <p className="mt-6 max-w-[34rem] text-lg sm:text-xl leading-relaxed text-ink/85 text-pretty">
+              Banana Burn es <b className="text-ink">tu entrenador personal en el celular</b>. Una rutina de recomposición corporal para personas que bajaron rápido de peso: recuperas firmeza y fuerza mientras sigues bajando grasa.
+            </p>
+            <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <Link href={SIGNUP} data-cta="hero" className="pressable inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
+              <a href="#por-dentro" data-cta="hero-tour" className="tap hidden sm:inline-flex items-center font-bold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver la app por dentro</a>
+            </div>
+            <p className="mt-4 text-sm font-semibold text-ink">{TRIAL_NOTE} Después, desde {FROM} al mes.</p>
+            <p className="mt-1 text-sm text-ink/75">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
           </div>
-          <p className="mt-5 text-sm font-semibold text-ink">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
-          <p className="mt-1 text-sm text-muted">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-semibold text-ink underline underline-offset-4">Entrar</Link></p>
-          <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-            {([[Clock, "Tu plan listo en 2 minutos"], [ArrowCounterClockwise, "Cancela cuando quieras"]] as const).map(([I, t]) => (
-              <li key={t} className="inline-flex items-center gap-1.5"><I weight="duotone" aria-hidden className="size-4 text-banana-ink" />{t}</li>
-            ))}
-          </ul>
-        </div>
 
-        <div className="relative isolate grid place-items-center py-10 sm:py-12 lg:py-0 lg:h-[min(calc(100dvh-8rem),680px)]">
-          <div aria-hidden className="absolute inset-0 sm:inset-x-8 lg:inset-x-0 lg:inset-y-6 -z-10 rounded-[2rem] bg-banana" />
-          <Banana aria-hidden weight="fill" className="absolute right-6 bottom-6 -z-10 size-40 text-ink opacity-[.07] rotate-12" />
-          <Phone src="/landing/entreno.png" alt="" className="hidden md:block absolute w-[190px] left-[8%] top-[16%] -rotate-6" />
-          <Phone src="/landing/hoy2.png" alt="Pantalla Hoy de Banana Burn con la rutina del día y la racha" className="relative w-[230px] sm:w-[260px] lg:w-[clamp(220px,calc((100dvh-12rem)*0.44),280px)] md:translate-x-14" priority />
+          <div className="relative isolate mx-auto h-[540px] w-full max-w-[460px] sm:h-[600px]">
+            <Phone src="/landing/entreno.png" alt="" sizes="220px" className="absolute left-0 top-16 hidden w-[200px] -rotate-6 sm:block" />
+            <Phone src="/landing/hoy2.png" alt="Pantalla de Banana Burn con tus números del día y tu entreno" sizes="(max-width: 640px) 250px, 280px" priority className="absolute left-1/2 top-0 w-[250px] -translate-x-1/2 sm:left-auto sm:right-2 sm:w-[275px] sm:translate-x-0" />
+            <div className="absolute -bottom-4 -left-2 w-[175px] sm:w-[250px] animate-rise [animation-delay:200ms]">
+              <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono entrenador de la app" width={380} height={380} priority className="drop-shadow-xl" />
+            </div>
+            <div className="absolute bottom-24 right-0 rounded-2xl bg-white px-4 py-3 shadow-lift sm:right-auto sm:left-36 sm:bottom-16">
+              <p className="text-xs font-bold text-muted">Serie 3 de 4</p>
+              <p className="text-lg font-extrabold tabular-nums text-ink">20 kg × 10 reps</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* 2. QUIZ: micro-compromiso, cada objetivo entra directo al registro */}
-      <section aria-labelledby="objetivo" className="border-y border-line bg-cream">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-10">
-          <div>
-            <h2 id="objetivo" className="text-2xl font-extrabold tracking-tight text-ink">¿Qué quieres lograr?</h2>
-            <p className="mt-1 text-sm text-muted">Elige uno y empieza tu prueba gratis de {TRIAL_DAYS} días.</p>
+      {/* 2. DOLOR: lo que vive quien bajó rápido */}
+      <section aria-labelledby="dolor" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+        <h2 id="dolor" className={`${H2} max-w-3xl`}>¿Bajaste rápido y te pasó esto?</h2>
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2">
+          {PAINS.map(([t, d]) => (
+            <li key={t} className="flex gap-4 rounded-[1.75rem] border border-line bg-white p-6">
+              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-banana-soft text-ink"><X weight="bold" className="size-4" /></span>
+              <div>
+                <p className="text-xl font-extrabold text-ink text-balance">{t}</p>
+                <p className="mt-1.5 leading-relaxed text-muted text-pretty">{d}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-6 max-w-[62ch] text-lg font-semibold text-ink text-pretty">No es tu culpa. Cuando bajas de peso muy rápido, una parte de lo que pierdes es músculo. La buena noticia: el músculo se recupera.</p>
+      </section>
+
+      {/* 3. MÉTODO: recomposición corporal explicada simple */}
+      <section aria-labelledby="metodo" className="pt-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="overflow-hidden rounded-[2.25rem] bg-ink p-7 text-white sm:p-12 lg:p-16">
+            <p className="w-fit rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink">El método</p>
+            <h2 id="metodo" className="mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">
+              Recomposición corporal: <span className="text-banana">menos grasa, más músculo</span>, al mismo tiempo.
+            </h2>
+            <p className="mt-5 max-w-[60ch] text-lg leading-relaxed text-white/80 text-pretty">No se trata de bajar más kilos. Se trata de que lo que queda sea músculo firme. Por eso cada rutina de Banana Burn está hecha para reconstruir, no solo para sudar.</p>
+            <ol className="mt-10 grid gap-4 lg:grid-cols-3">
+              {PILLARS.map((p) => (
+                <li key={p.n} className="rounded-[1.5rem] bg-white/[.06] p-6">
+                  <p className="text-4xl font-extrabold tabular-nums text-banana">{p.n}</p>
+                  <h3 className="mt-3 text-xl font-extrabold text-balance">{p.t}</h3>
+                  <p className="mt-2 leading-relaxed text-white/75 text-pretty">{p.d}</p>
+                </li>
+              ))}
+            </ol>
           </div>
-          <ul className="mt-5 flex flex-wrap gap-3">
-            {GOALS.map(({ label, href, cta, icon: I }) => (
-              <li key={cta}>
-                <Link href={href} data-cta={cta} className="pressable group inline-flex items-center gap-2.5 h-12 pl-3 pr-4 rounded-full border-2 border-line bg-white font-bold text-[15px] text-ink hover:border-ink">
-                  <span className="grid place-items-center size-8 rounded-full bg-banana-soft text-banana-ink transition-colors duration-150 group-hover:bg-banana group-hover:text-ink"><I weight="duotone" aria-hidden className="size-5" /></span>
-                  {label}
-                </Link>
+        </div>
+      </section>
+
+      {/* 4. LA APP POR DENTRO: recorrido interactivo con capturas reales y técnica animada */}
+      <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
+        <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira la app por dentro.</h2>
+        <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
+        <AppTour />
+        <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
+        <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
+          {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, "gratis, sin tarjeta"]] as const).map(([v, l]) => (
+            <div key={l} className="flex flex-col-reverse">
+              <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
+              <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-ink">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {/* 5. ENTRENADOR VS APP */}
+      <section aria-labelledby="entrenador" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+        <div className="grid items-center gap-8 lg:grid-cols-[1fr_1fr] lg:gap-14">
+          <div>
+            <h2 id="entrenador" className={H2}>Todo lo de un entrenador personal. <Marker>Sin pagar sesiones.</Marker></h2>
+            <p className={LEAD}>Un entrenador te arma la rutina, te dice cuánto levantar, corrige tu técnica y te empuja a volver. Banana Burn hace eso todos los días, a la hora que entrenes, por menos de lo que cuesta una sola sesión al mes.</p>
+          </div>
+          <ul className="grid gap-3">
+            {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando estás listo", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
+              <li key={t} className="flex items-center gap-3 rounded-2xl bg-white p-4 font-bold text-ink shadow-[0_1px_0_var(--color-line)]">
+                <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-banana"><Check weight="bold" className="size-4" /></span>{t}
               </li>
             ))}
           </ul>
-          {/* Prueba honesta: cifras reales del producto, no usuarios ni reseñas. */}
-          <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
-            {FACTS.map(([v, l]) => (
-              <div key={l} className="flex flex-col-reverse">
-                <dt className="mt-0.5 text-sm text-muted text-pretty">{l}</dt>
-                <dd className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink tabular-nums">{v}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </section>
 
-      {/* 4. CÓMO FUNCIONA: 3 pasos concretos con pantallas reales */}
-      <section id="como-funciona" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
-        <h2 className={`${H2} max-w-2xl`}>Tu plan listo hoy. Tus resultados, semana a semana.</h2>
-        <ol className="mt-12 grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-x-16 lg:gap-y-0">
-          {STEPS.map(([src, t, d], i) => (
-            <li key={t} className={`grid grid-cols-[auto_1fr] gap-x-5 gap-y-6 sm:grid-cols-[auto_1fr_180px] sm:items-center lg:col-start-1 lg:grid-cols-[auto_1fr] lg:border-b lg:border-line lg:py-8 lg:first:pt-0 ${i === 0 ? "lg:row-start-1" : i === 1 ? "lg:row-start-2" : "lg:row-start-3"}`}>
-              <span aria-hidden className="grid place-items-center size-11 rounded-full bg-ink text-banana text-lg font-extrabold tabular-nums">{i + 1}</span>
-              <div>
-                <h3 className="text-xl font-extrabold text-ink text-balance">{t}</h3>
-                <p className="mt-1.5 text-muted leading-relaxed text-pretty max-w-[52ch]">{d}</p>
-              </div>
-              <Phone src={src} alt={`Paso ${i + 1}: ${t}`} sizes="200px" className="col-span-2 sm:col-span-1 justify-self-center w-[180px] lg:hidden" />
+      <Compare />
+
+      {/* 6. CÓMO FUNCIONA */}
+      <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
+        <h2 id="como-t" className={`${H2} max-w-3xl`}>Empiezas hoy, en 2 minutos.</h2>
+        <ol className="mt-10 grid gap-4 lg:grid-cols-3">
+          {STEPS.map(([t, d], i) => (
+            <li key={t} className="rounded-[1.75rem] bg-cream p-6 sm:p-7">
+              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-ink text-xl font-extrabold tabular-nums text-banana">{i + 1}</span>
+              <h3 className="mt-4 text-xl font-extrabold text-ink text-balance">{t}</h3>
+              <p className="mt-2 leading-relaxed text-muted text-pretty">{d}</p>
             </li>
           ))}
-          <li aria-hidden className="hidden lg:block lg:col-start-2 lg:row-start-1 lg:row-span-3">
-            <div className="relative isolate h-full min-h-[560px] rounded-[2rem] bg-cream border border-line overflow-hidden">
-              <Phone src="/landing/objetivo.png" alt="" sizes="220px" className="absolute w-[210px] left-[6%] top-12 -rotate-6" />
-              <Phone src="/landing/progreso.png" alt="" sizes="220px" className="absolute w-[210px] right-[6%] top-12 rotate-6" />
-              <Phone src="/landing/hoy2.png" alt="" sizes="260px" className="absolute w-[240px] left-1/2 -translate-x-1/2 top-24" />
-            </div>
-          </li>
         </ol>
       </section>
 
-      {/* 2c. QUÉ INCLUYE: la app en cuatro partes, y qué plan trae cada una */}
-      <section aria-labelledby="incluye" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
-        <h2 id="incluye" className={`${H2} max-w-3xl`}>Todo lo que hace la app por ti, en un solo lugar.</h2>
-        <p className={LEAD}>Sin saber de gym ni de nutrición: abres la app, ves lo que toca hoy y lo haces.</p>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PARTS.map(({ icon: I, t, d, plan }) => (
-            <li key={t} className="card flex flex-col p-5">
-              <span className="grid size-12 place-items-center rounded-2xl bg-banana text-ink"><I weight="duotone" aria-hidden className="size-7" /></span>
-              <h3 className="mt-4 text-xl font-extrabold text-ink">{t}</h3>
-              <p className="mt-1.5 flex-1 text-muted leading-relaxed text-pretty">{d}</p>
-              <p className={`mt-4 w-fit rounded-full px-3 py-1 text-xs font-bold ${plan === "todos" ? "bg-cream text-ink" : "bg-ink text-banana"}`}>{plan === "todos" ? "En todos los planes" : `Solo en ${COMPLETO.name}`}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* 3. PROBLEMA: la realidad del gym en LATAM, y la salida */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-16 items-start">
-        <div className="lg:sticky lg:top-24">
-          <h2 className={H2}>Si el gym no te ha funcionado, no es falta de ganas.</h2>
-          <p className={LEAD}>Te falta un plan que piense por ti. Banana Burn decide qué entrenar, cuánto levantar y qué comer, con lo que ya tienes y con la comida que ya comes.</p>
+      {/* 7. COACH BANANA: el mono que te acompaña */}
+      <section aria-labelledby="mono" className="pt-24">
+        <div className="mx-auto grid max-w-6xl items-end gap-4 px-4 sm:px-6 lg:grid-cols-[1.2fr_1fr]">
+          <h2 id="mono" className={H2}>Conoce a Coach Banana.</h2>
+          <p className="max-w-[52ch] text-lg leading-relaxed text-muted text-pretty">El mono de la app te enseña la técnica, te marca el ritmo y celebra cada récord contigo. En el gym, en la casa o en el parque.</p>
         </div>
-        <ul className="border-t border-line">
-          {PAINS.map(([t, d]) => (
-            <li key={t} className="flex gap-4 border-b border-line py-6">
-              <span aria-hidden className="grid place-items-center size-9 shrink-0 rounded-full bg-ember/10 text-ember-ink"><X weight="bold" className="size-4" /></span>
-              <div>
-                <p className="text-lg font-extrabold text-ink text-balance">{t}</p>
-                <p className="mt-1 text-muted leading-relaxed text-pretty max-w-[60ch]">{d}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* 3b. COACH EN ACCIÓN: escenas con el mono entrenando a gente real (ilustrativas) */}
-      <section aria-labelledby="coach-accion" className="pt-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-4 lg:grid-cols-[1.2fr_1fr] lg:items-end">
-          <h2 id="coach-accion" className={H2}>Un coach que no te quita el ojo de encima.</h2>
-          <p className="text-lg text-muted leading-relaxed text-pretty max-w-[52ch]">Coach Banana te muestra la técnica de cada ejercicio con animación, te marca el tempo y te avisa cuándo volver a la barra. En el gym, en la casa o en el parque.</p>
-        </div>
-        <ul tabIndex={0} aria-label="Escenas de Coach Banana entrenando" className="mt-10 flex gap-3 overflow-x-auto outline-none focus-visible:ring-2 focus-visible:ring-ink snap-x snap-mandatory px-4 pb-2 [scrollbar-width:none] sm:mx-auto sm:max-w-6xl sm:px-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
-          {SCENES.map(([id, t], i) => (
-            <li key={id} className={`relative shrink-0 w-[78%] snap-center overflow-hidden rounded-[1.5rem] bg-cream aspect-[4/5] sm:w-auto ${i === 0 ? "lg:col-span-2 lg:row-span-2 lg:aspect-auto" : ""}`}>
-              <Image src={`${UGC_BASE}${id}.png`} alt={t} fill sizes={i === 0 ? "(min-width: 1024px) 760px, 80vw" : "(min-width: 1024px) 380px, 80vw"} className="object-cover" />
+        <ul tabIndex={0} aria-label="Escenas de Coach Banana entrenando" className="mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-ink sm:mx-auto sm:grid sm:max-w-6xl sm:grid-cols-2 sm:overflow-visible sm:px-6 lg:grid-cols-4">
+          {SCENES.map(([id, t]) => (
+            <li key={id} className="relative aspect-[4/5] w-[78%] shrink-0 snap-center overflow-hidden rounded-[1.5rem] bg-banana sm:w-auto">
+              <Image src={`${UGC_BASE}${id}.png`} alt={t} fill sizes="(min-width: 1024px) 280px, 80vw" className="object-cover" />
               <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pb-4 pt-12 text-[15px] font-bold leading-snug text-white text-balance">{t}</p>
             </li>
           ))}
         </ul>
-        <p className="mx-auto max-w-6xl px-4 sm:px-6 mt-3 text-xs text-faint">Escenas ilustrativas creadas para mostrar cómo te acompaña el coach.</p>
+        <p className="mx-auto mt-3 max-w-6xl px-4 text-xs text-faint sm:px-6">Escenas ilustrativas creadas para mostrar cómo te acompaña Coach Banana.</p>
       </section>
 
-      {/* 5. RESULTADOS, NO FUNCIONES: titular de beneficio + pantalla que lo prueba */}
-      <section aria-label="Lo que logras con Banana Burn" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 space-y-20 lg:space-y-28">
-        {FEATURES.map((f, i) => (
-          <div key={f.src} className="grid gap-10 lg:grid-cols-2 lg:gap-16 items-center">
-            <div className={i % 2 ? "lg:order-2" : ""}>
-              {f.tag && <span className="chip bg-ink text-white"><BowlFood weight="duotone" aria-hidden className="size-4 text-banana" />{f.tag}</span>}
-              <h2 className={`${f.tag ? "mt-4 " : ""}text-3xl sm:text-[2.6rem] sm:leading-[1.1] font-extrabold tracking-tight text-ink text-balance`}>{f.title}</h2>
-              <p className={LEAD}>{f.body}</p>
-              <ul className="mt-6 space-y-3">
-                {f.points.map((p) => <li key={p} className="flex gap-3 text-[17px] text-ink"><Check weight="bold" aria-hidden className="mt-0.5 size-5 shrink-0 text-peel" /><span className="text-pretty">{p}</span></li>)}
-              </ul>
-            </div>
-            <div className={`relative isolate grid place-items-center rounded-[2rem] py-10 sm:py-14 ${i === 1 ? "bg-ink" : i === 2 ? "bg-cream border border-line" : "bg-banana"}`}>
-              <Phone src={f.src} alt={f.alt} sizes="(max-width: 640px) 240px, 280px" className="w-[230px] sm:w-[270px]" />
-            </div>
-          </div>
-        ))}
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <article className="flex flex-col rounded-[2rem] bg-banana-soft overflow-hidden">
-            <div className="p-7 sm:p-10">
-              <h2 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Un coach que te contesta a las 11 de la noche.</h2>
-              <p className="mt-3 text-ink/80 leading-relaxed text-pretty max-w-[52ch]">Pregúntale qué cambiar si te duele el hombro, si no hay máquina libre o si te estancaste. Conoce tu plan y tus entrenos.</p>
-              <p className="mt-3 text-sm text-ink/70 text-pretty">Es IA: puede equivocarse y no sustituye consejo médico.</p>
-            </div>
-            <div className="mt-auto h-[300px] overflow-hidden px-10"><Phone src="/landing/coach.png" alt="Chat con el Coach Banana" sizes="280px" className="mx-auto w-[260px]" /></div>
-          </article>
-          <article className="flex flex-col rounded-[2rem] bg-ink text-white overflow-hidden">
-            <div className="p-7 sm:p-10">
-              <h2 className="text-3xl font-extrabold tracking-tight text-balance">Vuelves mañana porque engancha.</h2>
-              <p className="mt-3 text-white/80 leading-relaxed text-pretty max-w-[52ch]">Rachas, niveles, retos de 30 días y una comunidad donde compartes tus entrenos al estilo Strava. Constancia sin fuerza de voluntad.</p>
-              <p className="mt-3 text-sm text-white/70">Captura con perfiles de demostración.</p>
-            </div>
-            <div className="mt-auto h-[300px] overflow-hidden px-10"><Phone src="/landing/comunidad.png" alt="Comunidad de Banana Burn con entrenos compartidos" sizes="280px" className="mx-auto w-[260px]" /></div>
-          </article>
-        </div>
-        <p className="text-sm text-muted">Capturas reales de la app en modo demo, con datos de ejemplo.</p>
-      </section>
-
-      {/* 6. COMPARACIÓN honesta */}
-      <Compare />
-
-      {/* 7. SEGMENTO GLP-1 */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
-        <Link href="/glp1" data-cta="glp1-banda" className="group grid gap-6 sm:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_auto] items-center rounded-[2rem] border-2 border-ink bg-white p-6 sm:p-10 transition-shadow duration-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana">
-          <span className="grid place-items-center size-16 rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" aria-hidden className="size-9" /></span>
-          <div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">¿Usas Ozempic o Mounjaro? Protege tu músculo.</h2>
-            <p className="mt-3 text-lg text-muted max-w-2xl text-pretty">Banana Shield: fuerza y proteína pensadas para personas en {GLP1}, con modo suave en tu día de inyección y porciones que sí te entran.</p>
-          </div>
-          <span className="inline-flex items-center gap-2 font-bold text-ink sm:col-start-2 lg:col-start-auto">Conocer Banana Shield <ArrowRight weight="bold" className="size-5 transition-transform duration-200 ease-[cubic-bezier(.23,1,.32,1)] group-hover:translate-x-1" /></span>
+      {/* 8. PARA QUIÉN */}
+      <section aria-labelledby="para-quien" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+        <h2 id="para-quien" className={`${H2} max-w-3xl`}>Hecho para ti si…</h2>
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {FOR_WHO.map(({ icon: I, t, d }) => (
+            <li key={t} className="flex flex-col rounded-[1.75rem] border border-line bg-white p-6">
+              <span className="grid size-12 place-items-center rounded-2xl bg-banana text-ink"><I weight="duotone" aria-hidden className="size-7" /></span>
+              <h3 className="mt-4 text-xl font-extrabold text-ink text-balance">{t}</h3>
+              <p className="mt-1.5 leading-relaxed text-muted text-pretty">{d}</p>
+            </li>
+          ))}
+        </ul>
+        <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="group mt-4 grid items-center gap-4 rounded-[1.75rem] bg-ink p-6 text-white sm:grid-cols-[auto_1fr_auto] sm:p-8 transition-shadow duration-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana">
+          <span className="grid size-14 place-items-center rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" aria-hidden className="size-8" /></span>
+          <span>
+            <span className="block text-2xl font-extrabold text-balance">Banana Shield, para personas en {GLP1}</span>
+            <span className="mt-1 block text-white/75 text-pretty">Fuerza y proteína para no perder músculo, con modo suave en tu día de inyección.</span>
+          </span>
+          <span className="inline-flex items-center gap-2 font-bold text-banana">Empezar con Banana Shield <ArrowRight weight="bold" className="size-5 transition-transform duration-200 ease-[cubic-bezier(.23,1,.32,1)] group-hover:translate-x-1" /></span>
         </Link>
       </section>
 
-      {/* 8. FUNDADOR: autoridad y cercanía, sin testimonios inventados ni fotos de stock (no hay foto del fundador: va la mascota) */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
-        <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr] lg:gap-14 items-center rounded-[2rem] bg-ink text-white p-7 sm:p-12">
+      {/* 9. FUNDADOR: historia real, sin testimonios inventados */}
+      <section className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+        <div className="grid items-center gap-8 rounded-[2rem] bg-banana-soft p-7 sm:p-12 lg:grid-cols-[1.6fr_1fr] lg:gap-14">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">De 94 a 85 kg antes del 31 de diciembre.</h2>
-            <p className="mt-4 text-lg text-white/80 leading-relaxed text-pretty max-w-[60ch]">Soy Andrés, el fundador, y soy el usuario #1 de Banana Burn. La construí porque ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
-            <p className="mt-4 text-white/80 leading-relaxed text-pretty max-w-[60ch]">Banana Burn está en beta: la estamos puliendo con sus primeros usuarios. Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-semibold text-banana underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
-            <dl className="mt-8 grid grid-cols-3 divide-x divide-white/15 border-t border-white/15 pt-6 max-w-lg">
-              {[["−9 kg", "mi meta"], ["4 días", "de gym por semana"], ["185 g", "de proteína al día"]].map(([v, l]) => (
-                <div key={l} className="px-4 first:pl-0 last:pr-0 flex flex-col-reverse">
-                  <dt className="mt-1 text-sm text-white/75 text-pretty">{l}</dt>
-                  <dd className="text-2xl sm:text-3xl font-extrabold text-banana tabular-nums"><span className="whitespace-nowrap">{v}</span></dd>
-                </div>
-              ))}
-            </dl>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">La hice porque yo la necesitaba.</h2>
+            <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink/80 text-pretty">Soy Andrés, el fundador, y soy el usuario número 1. Mi meta: de 94 a 85 kg antes del 31 de diciembre, sin perder músculo. Ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
+            <p className="mt-4 max-w-[60ch] leading-relaxed text-ink/80 text-pretty">Banana Burn está en versión de prueba y la estamos puliendo con sus primeros usuarios. Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
           </div>
-          <figure className="order-first lg:order-none flex items-center gap-4 lg:flex-col lg:items-stretch">
-            <div className="relative isolate w-24 sm:w-32 lg:w-full lg:max-w-[340px] lg:mx-auto aspect-square shrink-0 overflow-hidden rounded-[1.5rem] lg:rounded-[1.75rem] bg-banana">
-              <MonkeyBanana aria-hidden className="absolute inset-0 m-auto size-1/2 text-ink/25 -z-10" />
-              <Image src={MASCOT} alt="Coach Banana, el chimpancé mascota de Banana Burn" fill sizes="(min-width: 1024px) 340px, 128px" className="object-cover" />
-            </div>
-            <figcaption className="text-sm text-white/70 text-pretty lg:text-center">Coach Banana, el entrenador que te acompaña en la app.</figcaption>
-          </figure>
+          <div className="relative mx-auto aspect-square w-48 overflow-hidden rounded-[1.75rem] bg-banana lg:w-full lg:max-w-[300px]">
+            <MonkeyBanana aria-hidden className="absolute inset-0 m-auto size-1/2 text-ink/25" />
+            <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono de Banana Burn" fill sizes="(min-width: 1024px) 300px, 192px" className="object-contain" />
+          </div>
         </div>
       </section>
 
-      {/* 9. PRECIOS con anual anclado + reversión de riesgo */}
-      <section id="precios" className="mx-auto max-w-6xl px-4 sm:px-6 pt-24 scroll-mt-20">
-        <div className="text-center max-w-3xl mx-auto mb-10">
-          <h2 className={H2}>Pruébalo {TRIAL_DAYS} días gratis. Después, elige tu plan.</h2>
-          <p className="mt-4 text-lg text-muted text-pretty">En la prueba tienes todo incluido y no pedimos tarjeta. Los dos planes traen tu rutina diaria, la progresión automática y el coach IA; con el pago anual ahorras {SAVE} %.</p>
+      {/* 10. PRECIOS */}
+      <section id="precios" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
+        <div className="mx-auto mb-10 max-w-3xl text-center">
+          <h2 className={H2}>Menos que una sesión con un entrenador.</h2>
+          <p className="mt-4 text-lg text-muted text-pretty">Pruébalo {TRIAL_DAYS} días gratis con todo incluido y sin tarjeta. Después eliges tu plan; con el pago anual ahorras {SAVE} %.</p>
         </div>
         <Pricing />
       </section>
 
-      {/* 10. OBJECIONES */}
       <Faq id="faq" items={FAQ} aside={<FaqCta cta="faq" />} />
 
-      {/* 11. CTA FINAL */}
-      <section data-sticky-hide className="mx-auto max-w-6xl px-4 sm:px-6 pt-24">
-        <div className="rounded-[2rem] bg-banana px-6 py-14 sm:p-16 text-center">
-          <Target weight="duotone" aria-hidden className="mx-auto size-12 text-ink" />
-          <h2 className={`${H2} mt-4 max-w-3xl mx-auto`}>Mañana entras al gym sabiendo exactamente qué hacer.</h2>
-          <Link href={SIGNUP} data-cta="final" className="mt-8 btn-primary h-14 px-8 text-base">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
-          <p className="mt-4 text-sm font-semibold text-ink/80">{TRIAL_NOTE} Después, desde {FROM} al mes con el plan anual.</p>
-          <ul className="mt-8 mx-auto grid max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:grid-cols-2 sm:w-fit">
+      {/* 11. CTA FINAL con el mono */}
+      <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+        <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-0 pt-14 text-center sm:px-16 sm:pt-16">
+          <h2 className={`${H2} mx-auto max-w-3xl`}>Tu cuerpo nuevo empieza con el primer entreno.</h2>
+          <Link href={SIGNUP} data-cta="final" className="pressable mt-8 inline-flex h-14 items-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
+          <p className="mt-4 text-sm font-semibold text-ink/80">{TRIAL_NOTE} Después, desde {FROM} al mes.</p>
+          <ul className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:w-fit sm:grid-cols-2">
             {RISK.map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
           </ul>
+          <Image src="/brand/mascota-sola.webp" alt="" width={260} height={260} className="mx-auto mt-8 w-40 sm:w-52" />
         </div>
       </section>
 
-      <StickyCta note={TRIAL_NOTE}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 px-5 shrink-0">Crear mi plan <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={TRIAL_NOTE}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }
-

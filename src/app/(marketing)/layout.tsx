@@ -9,8 +9,8 @@ import { GLP1, TRIAL_DAYS } from "@/lib/copy";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  openGraph: { siteName: "Banana Burn", locale: "es_419", type: "website", images: [ogImage("Baja grasa sin perder músculo", "Tu entrenador personal con IA, en español y para toda Latinoamérica.")] },
-  twitter: { card: "summary_large_image", images: [ogImage("Baja grasa sin perder músculo", "Tu entrenador personal con IA, en español y para toda Latinoamérica.").url] },
+  openGraph: { siteName: "Banana Burn", locale: "es_419", type: "website", images: [ogImage("Baja grasa sin perder músculo", "Tu entrenador personal en el celular, con rutina de recomposición corporal.")] },
+  twitter: { card: "summary_large_image", images: [ogImage("Baja grasa sin perder músculo", "Tu entrenador personal en el celular, con rutina de recomposición corporal.").url] },
 };
 
 const NAV = [

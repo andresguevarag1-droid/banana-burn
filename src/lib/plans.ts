@@ -9,13 +9,13 @@ export type Billing = "mes" | "anual";
  */
 export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: boolean; price: Record<Billing, number>; feats: string[]; excluded: string[] }[] = [
   {
-    id: "entreno", name: "Entreno", tagline: "Tu entrenador personal con IA", nutrition: false,
+    id: "entreno", name: "Entreno", tagline: "Tu entrenador personal en el celular", nutrition: false,
     price: { mes: 9.99, anual: 59.99 },
     feats: [
       "Rutina hecha a tu nivel, tiempo y equipo",
       "Reproductor con animaciones de técnica y biblioteca de ejercicios",
       "Progresión automática de cargas y entrenos exprés",
-      "Coach IA 24/7 para tu entreno y tus hábitos",
+      "Coach Banana resuelve tus dudas de entreno 24/7",
       "Progreso de peso, medidas, fuerza y fotos",
       "Registro de agua, pasos y sueño",
       "Comunidad y retos gratis",
@@ -33,7 +33,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
       "Recetas latinas y Menú flash con lo que te falta hoy",
       "Ajuste semanal según tu peso real",
       "Banana Shield para personas en GLP-1",
-      "Coach IA también para tu comida",
+      "Coach Banana también para tu comida",
     ],
     excluded: [],
   },

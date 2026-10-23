@@ -74,7 +74,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
       <Link href="/app/entreno" data-cta="exito-entreno" className="btn-banana w-full h-14 text-base">Ir a mi entreno de hoy<ArrowRight weight="bold" className="size-5" /></Link>
       <ol className="text-left space-y-3 text-[15px] border-t border-line pt-5">
         <Step n={1}>Haz tu rutina de hoy: cada serie trae su peso.</Step>
-        {nutrition ? <Step n={2}>Registra tu próxima comida en <b>Nutrición</b>: ya tienes tus calorías y macros.</Step> : <Step n={2}>Pregúntale al <b>Coach IA</b> cualquier duda de técnica.</Step>}
+        {nutrition ? <Step n={2}>Registra tu próxima comida en <b>Nutrición</b>: ya tienes tus calorías y macros.</Step> : <Step n={2}>Pregúntale a <b>Coach Banana</b> cualquier duda de técnica.</Step>}
         {nutrition ? <Step n={3}>Pésate mañana en ayunas para que tus calorías se ajusten a ti cada semana.</Step> : <Step n={3}>Pésate mañana en ayunas para ver tu progreso real.</Step>}
       </ol>
       {nutrition === false && <p className="text-sm text-muted text-pretty">Tu plan incluye entreno, coach, progreso, agua, pasos y sueño, comunidad y retos gratis. La nutrición y Banana Shield están en Entreno + Nutrición; tus comidas guardadas no se borran.</p>}

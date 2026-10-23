@@ -3,7 +3,7 @@ import "@fontsource-variable/plus-jakarta-sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Banana Burn: Tu entrenador con IA", template: "%s | Banana Burn" },
+  title: { default: "Banana Burn: tu entrenador personal en el celular", template: "%s | Banana Burn" },
   description: "Baja grasa y gana fuerza con un plan de gym que cambia cada día, se adapta a tu progreso y habla tu idioma. Hecho en Costa Rica para toda Latinoamérica.",
   applicationName: "Banana Burn",
 };

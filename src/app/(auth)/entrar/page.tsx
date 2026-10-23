@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 /** Lo que trae la prueba gratis: se muestra junto al registro en escritorio. Cifras reales del producto. */
 const TRIAL_INCLUDES = [
   "Rutina diaria con el peso exacto de cada serie",
-  "Coach IA que conoce tu plan, a cualquier hora",
+  "Rutina de recomposición corporal hecha para ti",
   "Calorías y macros con comida latina de verdad",
   "Banana Shield si usas Ozempic o Mounjaro",
 ];

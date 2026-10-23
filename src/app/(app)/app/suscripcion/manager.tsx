@@ -129,7 +129,7 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
   if (billing === "mes") offers.push({ key: `${plan}.anual`, title: `Pásate a anual y ahorra ${annualSavingPct(p)} %`, body: `${usd(p.price.anual)}/año en vez de ${usd(p.price.mes * 12)} pagando mes a mes.`, plan, billing: "anual" });
   if (plan === "completo") {
     const e = planOf("entreno");
-    offers.push({ key: `entreno.${billing}`, title: `Quédate con Entreno por ${usd(e.price[billing])}${billing === "anual" ? "/año" : "/mes"}`, body: "Mantén tus rutinas, progreso y Coach IA; solo dejas el plan de nutrición.", plan: "entreno", billing });
+    offers.push({ key: `entreno.${billing}`, title: `Quédate con Entreno por ${usd(e.price[billing])}${billing === "anual" ? "/año" : "/mes"}`, body: "Mantén tus rutinas, progreso y Coach Banana; solo dejas el plan de nutrición.", plan: "entreno", billing });
   }
 
   async function confirm() {

@@ -34,7 +34,7 @@ async function dataUrl(url: string, type: string, ms = 2500): Promise<string | n
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const title = clip(searchParams.get("t"), 90, "Baja grasa sin perder músculo");
-  const sub = clip(searchParams.get("s"), 120, "Tu entrenador personal con IA, en español y para toda Latinoamérica.");
+  const sub = clip(searchParams.get("s"), 120, "Tu entrenador personal en el celular, con rutina de recomposición corporal.");
   const scene = SCENES[searchParams.get("v") ?? "gym"] ?? SCENES.gym;
   const dir = join(process.cwd(), "src/app/og");
   const pub = join(process.cwd(), "public");

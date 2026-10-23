@@ -15,7 +15,7 @@ export function ogImage(t: string, s: string, v: OgScene = "gym") {
 
 /** Metadatos sociales por página. Next reemplaza `openGraph` completo por página, así que se arma aquí entero. */
 export function social({ title, description, path, og }: { title: string; description: string; path: string; og?: { t: string; s: string; v?: OgScene } }): Metadata {
-  const img = ogImage(og?.t ?? "Baja grasa sin perder músculo", og?.s ?? "Tu entrenador personal con IA, en español y para toda Latinoamérica.", og?.v);
+  const img = ogImage(og?.t ?? "Baja grasa sin perder músculo", og?.s ?? "Tu entrenador personal en el celular, con rutina de recomposición corporal.", og?.v);
   return {
     alternates: { canonical: path, languages: { "es-419": path, "x-default": path } },
     openGraph: { title, description, url: path, siteName: "Banana Burn", locale: "es_419", type: "website", images: [img] },
@@ -80,11 +80,11 @@ export function appJsonLd() {
     operatingSystem: "Web, iOS, Android",
     inLanguage: "es-419",
     url: SITE_URL,
-    description: "Entrenador personal con IA en español: rutina de gym o casa ajustada a tu nivel, progresión automática de cargas, nutrición con comida latina y seguimiento de progreso. Para toda Latinoamérica.",
+    description: "App de recomposición corporal en español que reemplaza al entrenador personal: rutina de gym o casa ajustada a tu nivel, progresión automática de cargas, nutrición con comida latina y seguimiento de progreso. Para toda Latinoamérica.",
     areaServed: AREA,
     image: `${SITE_URL}/brand/mascota.jpg`,
     publisher: { "@id": `${SITE_URL}/#org` },
-    featureList: ["Rutina de gym, casa o sin equipo ajustada a tu nivel", "Peso sugerido para cada serie con progresión automática", "Técnica animada de cada ejercicio", "Coach con IA en español", "Registro de agua, pasos y sueño", "Retos gratis, rachas, niveles y comunidad", "Plan Entreno + Nutrición: calorías y macros, registro de comidas con comida latina y recetas", "Plan Entreno + Nutrición: Banana Shield, programa para quienes usan Ozempic, Wegovy o Mounjaro", "Retos Premium con pago único, aparte del plan"],
+    featureList: ["Rutina de gym, casa o sin equipo ajustada a tu nivel", "Peso sugerido para cada serie con progresión automática", "Técnica animada de cada ejercicio", "Coach Banana resuelve tus dudas en español", "Registro de agua, pasos y sueño", "Retos gratis, rachas, niveles y comunidad", "Plan Entreno + Nutrición: calorías y macros, registro de comidas con comida latina y recetas", "Plan Entreno + Nutrición: Banana Shield, programa para quienes usan Ozempic, Wegovy o Mounjaro", "Retos Premium con pago único, aparte del plan"],
     offers,
   };
 }

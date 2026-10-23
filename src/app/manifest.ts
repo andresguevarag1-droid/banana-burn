@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Banana Burn: Tu entrenador con IA",
+    name: "Banana Burn",
     short_name: "Banana Burn",
-    description: "Tu rutina de gym de hoy, tu comida y tu progreso, con un coach IA en español. Hecho en Costa Rica para toda Latinoamérica.",
+    description: "Tu rutina de gym de hoy, tu comida y tu progreso, con rutina de recomposición corporal. Hecho en Costa Rica para toda Latinoamérica.",
     start_url: "/app",
     scope: "/",
     display: "standalone",

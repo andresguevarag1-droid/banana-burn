@@ -73,15 +73,15 @@ function textLayout(lines: string[], unsubscribe?: string, reason?: string) {
 export function bienvenida(d: { name: string }): Email {
   const n = firstName(d.name);
   const subject = `Bienvenido a Banana Burn, ${n}. Tu plan te espera`;
-  const preheader = "Tu entrenador con IA ya está listo. Te toma 2 minutos armar tu plan.";
+  const preheader = "Tu entrenador personal ya está listo. Te toma 2 minutos armar tu plan.";
   const body = h1(`¡Hola, ${esc(n)}!`) +
-    p("Ya tienes tu entrenador personal con IA. Aquí no hay rutinas genéricas: cada sesión trae las cargas calculadas para ti y se ajusta según cómo te va.") +
+    p("Ya tienes tu entrenador personal en el celular. Aquí no hay rutinas genéricas: cada sesión trae las cargas calculadas para ti y se ajusta según cómo te va.") +
     list([`${dot()}<b>Rutina del día</b> lista para el gym o la casa`, `${dot(C.ember)}<b>Racha y niveles</b> para que entrenar sea un juego`, `${dot(C.peel)}<b>Comida latina</b> con proteína y calorías claras, incluida en tu prueba gratis`, `${dot(C.ink)}<b>Coach IA</b> que conoce tus datos`]) +
     p("Termina tu perfil en 2 minutos y te armamos el plan.") + button("Armar mi plan", "/bienvenida");
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque creaste una cuenta en Banana Burn." }),
-    text: textLayout([`¡Hola, ${n}!`, "", "Ya tienes tu entrenador personal con IA: rutina del día con cargas calculadas, racha y niveles, un Coach IA que conoce tus datos y, en tu prueba gratis, comida latina con proteína y calorías claras.", "", `Arma tu plan en 2 minutos: ${abs("/bienvenida")}`], undefined, "Recibes este correo porque creaste una cuenta en Banana Burn."),
+    text: textLayout([`¡Hola, ${n}!`, "", "Ya tienes tu entrenador personal en el celular: rutina del día con cargas calculadas, racha y niveles, un Coach IA que conoce tus datos y, en tu prueba gratis, comida latina con proteína y calorías claras.", "", `Arma tu plan en 2 minutos: ${abs("/bienvenida")}`], undefined, "Recibes este correo porque creaste una cuenta en Banana Burn."),
   };
 }
 
