@@ -41,7 +41,7 @@ export default async function Glp1Guide() {
   const g = d.glp1 ?? glp1Targets({ kg: a.currentWeight, goalKg: a.goalWeight, heightCm: a.heightCm, age: ageOn(a.dob), sex: a.sex });
   const [ms, prog] = await Promise.all([getMeasures(v), getProgress(v)]);
   const bf = (m?: (typeof ms)[number]) => (m ? navyBodyFat({ sex: a.sex, heightCm: a.heightCm, waist: m.waist, neck: m.neck, hip: m.hip }) : null);
-  const changes = MAIN_LIFTS.map((k) => { const p = prog.lifts[k] ?? []; return p.length > 1 ? (p.at(-1)!.v - p[0].v) / p[0].v * 100 : null; }).filter((x): x is number => x != null);
+  const changes = MAIN_LIFTS.map((k) => { const p = prog.lifts[k] ?? []; return p.length > 1 && p[0].v > 0 ? (p.at(-1)!.v - p[0].v) / p[0].v * 100 : null; }).filter((x): x is number => x != null);
   // Cada medición se compara con el peso registrado más cercano a SU fecha (no con el peso inicial de la meta ni el de hoy).
   const first = ms[0], last = ms.at(-1);
   const near = !v.demo && first && last && ms.length > 1 ? [...prog.weights, ...(await weightsAround(v.id, first.d)), ...(await weightsAround(v.id, last.d))] : prog.weights;

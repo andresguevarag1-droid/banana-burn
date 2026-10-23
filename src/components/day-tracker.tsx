@@ -5,6 +5,7 @@ import type { DailyField } from "@/app/actions/daily";
 import { useDailySave } from "@/components/use-daily-save";
 import type { DailyLog } from "@/lib/daily";
 import { sumMeals, type MealItem } from "@/lib/meals-shared";
+import { frac } from "@/lib/num";
 
 type Target = { kcal: number; protein: number; steps: number; sleep: number; water: number };
 
@@ -58,7 +59,7 @@ export function DayTracker({ initial, base: base0, target, dateKey, demo }: { in
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       {daily.toast}
       {items.map((it) => {
-        const pct = it.val / it.goal;
+        const pct = frac(it.val, it.goal);
         // Calorías: llegar a la meta no es un logro ni pasarse un fracaso; el anillo solo muestra cuánto va.
         const done = it.f !== "kcal" && pct >= 1;
         return (

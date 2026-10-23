@@ -15,7 +15,7 @@ export function NutriProgress({ today, todayKcal, hasToday, xpCount, mealDays, w
   const daysLogged = new Set(hasToday ? [...mealDays, today] : mealDays).size;
   const honesto = nutritionBadges({ streak: streak.days, daysLogged }).find((b) => b.id === "honesto")!;
   const bal = weeklyBalance(todayKcal > 0 ? [...week, { day: today, kcal: todayKcal }] : week, targetKcal, today);
-  const max = Math.max(targetKcal * 1.4, ...bal.week.map((d) => d.kcal));
+  const max = Math.max(1, targetKcal * 1.4, ...bal.week.map((d) => d.kcal));
   const xpLeft = MEAL_XP_DAILY_MAX - Math.min(MEAL_XP_DAILY_MAX, xpCount);
 
   return (

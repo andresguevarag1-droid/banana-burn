@@ -134,7 +134,7 @@ export default async function Hoy() {
           <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
             <div><p className="text-lg font-extrabold tabular-nums text-ink">{kgLost >= 0.05 ? `−${nf(kgLost)}` : kgLost <= -0.05 ? `+${nf(-kgLost)}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{kgLost <= -0.05 ? "kg desde el inicio" : "kg perdidos"}</p></div>
             <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(d.toGo)}</p><p className="text-[11px] font-semibold text-muted">kg a la meta</p></div>
-            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">días</p></div>
+            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.goalPassed ? "0" : d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">{d.goalPassed ? "fecha meta vencida" : d.daysLeft === 1 ? "día" : "días"}</p></div>
           </div>
         </section>
       {/* Coach */}

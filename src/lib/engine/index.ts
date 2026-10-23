@@ -83,6 +83,18 @@ export function weeklyTrend(weights: { d: string; kg: number }[]): number | null
 }
 
 /** Ajuste calórico semanal según tendencia vs ritmo necesario. */
+/**
+ * Días a la meta y ritmo necesario, sin valores absurdos: con la fecha meta vencida (o inválida) no se pide
+ * "35 kg por semana"; se marca `goalPassed` y el ritmo necesario queda en 0. Nunca NaN ni Infinity.
+ */
+export function goalPace(goalDate: string, today: Date, toGo: number): { daysLeft: number; needPerWeek: number; goalPassed: boolean } {
+  const raw = Math.round((new Date(goalDate + "T12:00:00").getTime() - today.getTime()) / 864e5);
+  const goalPassed = !Number.isFinite(raw) || raw <= 0;
+  const daysLeft = goalPassed ? 0 : raw;
+  const need = goalPassed || !(toGo > 0) ? 0 : toGo / (daysLeft / 7);
+  return { daysLeft, needPerWeek: Number.isFinite(need) ? Math.round(need * 100) / 100 : 0, goalPassed };
+}
+
 export function kcalAdjustment(rate: number | null, needPerWeek: number): number {
   if (rate == null) return 0;
   const lost = -rate;

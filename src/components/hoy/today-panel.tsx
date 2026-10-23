@@ -8,6 +8,7 @@ import type { DailyLog } from "@/lib/daily";
 import { sumMeals, type MealItem } from "@/lib/meals-shared";
 import { ProgressBar } from "@/components/progress-bar";
 import { PLANS } from "@/lib/plans";
+import { clamp01 } from "@/lib/num";
 
 type Macros = { kcal: number; protein: number; carbs: number; fat: number };
 type Habits = { steps: number; sleep: number; water: number };
@@ -31,7 +32,7 @@ function Ring({ v, size, stroke, track, color, children }: { v: number; size: nu
       <svg width={size} height={size} className="absolute inset-0 -rotate-90" aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c}
-          strokeDashoffset={c * (1 - Math.min(1, Math.max(0.001, v)))} style={{ transition: "stroke-dashoffset var(--dur-fill) var(--ease-out)" }} />
+          strokeDashoffset={c * (1 - clamp01(v, 0.001))} style={{ transition: "stroke-dashoffset var(--dur-fill) var(--ease-out)" }} />
       </svg>
       <div className="relative text-center">{children}</div>
     </div>
