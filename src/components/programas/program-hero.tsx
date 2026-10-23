@@ -1,13 +1,15 @@
 // Héroe del programa activo en Hoy: reemplaza la tarjeta genérica de "Rutina de hoy" mientras hay un programa.
 // Portada del programa, "Semana 2 de 8, día 2", la sesión de hoy, el avance y el próximo hito. Servidor.
 import Link from "next/link";
-import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Monkey, Pause, TreePalm } from "@/components/icons";
+import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Monkey, Pause, TreePalm, TrendUp } from "@/components/icons";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { ProgressBar } from "@/components/progress-bar";
 import { Readiness } from "@/components/readiness";
 import { DAY_NAMES } from "@/lib/engine";
 import type { AthleteProgram } from "@/lib/programs-server";
-import { setsLabel, tipFor } from "@/lib/programs";
+import { tipFor } from "@/lib/programs";
+import { ExerciseTiles } from "@/components/hoy/exercise-tiles";
+import { DEFAULT_VOICE, sessionLine, setsLegend, t, type Voice } from "@/lib/voice";
 
 const fmtDay = (iso: string) => {
   const d = new Date(iso + "T12:00:00");
@@ -22,7 +24,7 @@ export function weekLabel(p: Pick<AthleteProgram, "run">) {
   return `Semana ${r.week} de ${r.weeks}${day ? `, día ${day}` : ""}`;
 }
 
-export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { p: AthleteProgram; trainedToday: boolean; energy: number; dateKey: string; demo: boolean; mins: number }) {
+export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voice = DEFAULT_VOICE, lastTime = null }: { p: AthleteProgram; trainedToday: boolean; energy: number; dateKey: string; demo: boolean; mins: number; voice?: Voice; lastTime?: string | null }) {
   const ink = coverInk(p.cover);
   const r = p.run;
   const plan = p.plan;
@@ -59,13 +61,13 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins }: { 
           <>
             <p className="text-sm font-semibold text-muted">Hoy {DAY_NAMES[new Date(dateKey + "T12:00:00").getDay()]}, sesión del programa</p>
             <h3 className="mt-0.5 text-2xl font-extrabold tracking-tight text-ink">{plan.name}</h3>
-            <p className="mt-1 text-sm font-semibold text-ink/70 tabular-nums">{plan.exercises.length} ejercicios en unos {mins} min{plan.program?.deload ? ", con carga de descarga" : ""}</p>
-            <ul className="mt-3 flex flex-wrap gap-1.5">
-              {plan.program!.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white text-ink text-[13px] border border-line">{e.name} <span className="text-ink/70">{setsLabel(e.cfg)}</span></li>)}
-            </ul>
+            <p className="mt-1 text-sm font-semibold text-ink/70 tabular-nums">{sessionLine(voice, { exercises: plan.exercises.length, mins })}{plan.program?.deload ? t(voice, { basico: ", más liviano esta semana", intermedio: ", con carga de descarga", tecnico: ", descarga" }) : ""}</p>
+            {lastTime && !trainedToday && <p className="mt-3 flex items-start gap-1.5 rounded-2xl bg-ink px-3 py-2.5 text-sm font-semibold leading-snug text-banana"><TrendUp weight="bold" className="mt-0.5 size-4 shrink-0" aria-hidden />{lastTime}</p>}
+            <div className="mt-3"><ExerciseTiles exercises={plan.program!.exercises} voice={voice} label="Ejercicios de la sesión" /></div>
+            {setsLegend(voice) && !trainedToday && <p className="mt-2 text-xs font-semibold text-ink/70">{setsLegend(voice)}</p>}
             {trainedToday ? (
               <p className="mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />Ya entrenaste hoy. La sesión del programa sigue lista para cuando quieras.</p>
-            ) : <div className="mt-5"><Readiness initial={energy} dateKey={dateKey} demo={demo} mins={mins} /></div>}
+            ) : <div className="mt-5"><Readiness voice={voice} initial={energy} dateKey={dateKey} demo={demo} mins={mins} /></div>}
           </>
         ) : r.today === "hecho" ? (
           <p className="flex items-start gap-2.5 text-ink"><CheckCircle weight="fill" className="mt-0.5 size-6 shrink-0 text-peel" /><span><b className="block text-lg font-extrabold">Sesión de hoy completada</b><span className="text-sm text-muted">{r.nextOn ? `Tu próxima sesión es el ${fmtDay(r.nextOn)}.` : "Descansa y come bien."}</span></span></p>

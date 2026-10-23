@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_VOICE, VOICES, coachRule, effortHints, isVoice, modeNote, parseVoice, readinessTips, rirText, rxBadge, rxNote, sessionLine, setsReps, strengthCue, t, tempoText, voiceForLevel, whyItMatters, type Voice } from "./voice";
+import { DEFAULT_VOICE, VOICES, dayTag, lastTimeLine, readinessEffects, sessionBenefit, coachRule, effortHints, isVoice, modeNote, parseVoice, readinessTips, rirText, rxBadge, rxNote, sessionLine, setsReps, strengthCue, t, tempoText, voiceForLevel, whyItMatters, type Voice } from "./voice";
 import { DEFAULT_WEEK, TPL, hookLine, planDay, prescribe, type TemplateId } from "./engine";
 
 const ALL: Voice[] = ["basico", "intermedio", "tecnico"];
@@ -104,3 +104,27 @@ describe("nombres y ganchos de los entrenos", () => {
     expect(planDay(0, 0).hook).toMatch(/^Hoy /); // descanso activo
   });
 });
+
+describe("Hoy: el entreno explicado", () => {
+  it("cada plantilla dice qué hace por ti, sin repetir el gancho y sin jerga en básico", () => {
+    for (const [id, tpl] of Object.entries(TPL)) for (const v of ALL) {
+      const b = sessionBenefit(v, id)!;
+      expect(b, `${id} ${v}`).toBeTruthy();
+      expect(b).not.toMatch(HOUSE);
+      expect(b.startsWith(tpl.hook.slice(0, 20))).toBe(false);
+      if (v === "basico") expect(b).not.toMatch(JARGON);
+    }
+    expect(sessionBenefit("basico", null)).toBeNull();
+    expect(dayTag("basico", "Volumen")).toBe("día para dar forma");
+    expect(dayTag("tecnico", "Volumen")).toBe("día de volumen");
+    for (const e of readinessEffects("basico")) expect(e).not.toMatch(JARGON);
+  });
+  it("la última vez: mismos números en los tres registros", () => {
+    for (const v of ALL) {
+      const s = lastTimeLine(v, { name: "Peso muerto rumano", lastKg: 70, lastReps: 10, kg: 72.5, reps: 8, type: "up" });
+      expect(s).toContain("70 kg × 10");
+      expect(s).toContain(`${(72.5).toLocaleString("es-419")} kg`);
+    }
+  });
+});
+

@@ -262,3 +262,78 @@ export function coachRule(v: Voice) {
     tecnico: "Usa lenguaje técnico preciso (RIR, tempo, doble progresión, volumen por grupo muscular, e1RM) sin explicar lo básico.",
   });
 }
+
+/* ───────────── Hoy: qué hace por ti el entreno de hoy ───────────── */
+
+type Three = { basico: string; intermedio: string; tecnico: string };
+const BENEFIT: Record<string, Three> = {
+  pushA: {
+    basico: "Piernas, pecho y hombros con un peso que sube cada semana: más fuerza para todo, de cargar las bolsas a subir escaleras.",
+    intermedio: "Día de fuerza: pocas repeticiones y más peso en los ejercicios grandes de piernas, pecho y hombros. Es lo que más cuida tu músculo mientras bajas grasa.",
+    tecnico: "Fuerza en compuestos de pierna y empuje (5-10 reps), prioridad a la carga y descansos de 2,5 a 3 min.",
+  },
+  pullA: {
+    basico: "Espalda y brazos: te paras más derecho, la espalda se ve más firme y los brazos se notan.",
+    intermedio: "Día de fuerza de espalda: peso muerto, jalones y remo con más peso y descansos largos, más bíceps al final.",
+    tecnico: "Fuerza en bisagra y tracción vertical y horizontal (4-10 reps), descansos de 2 a 3 min, bíceps como accesorio.",
+  },
+  pushB: {
+    basico: "Más repeticiones con un poco menos de peso: así se da forma y firmeza a pecho, hombros y piernas.",
+    intermedio: "Día de volumen: más repeticiones (8 a 12) para dar forma a pecho, hombros y piernas.",
+    tecnico: "Volumen en empuje y pierna (8-20 reps): más series efectivas por grupo muscular, descansos de 1 a 2,5 min.",
+  },
+  pullB: {
+    basico: "Espalda, glúteos y la parte de atrás de las piernas: mejor postura y glúteos más firmes.",
+    intermedio: "Día de volumen de espalda y glúteos: más repeticiones para espalda, glúteos y la parte de atrás de las piernas.",
+    tecnico: "Volumen de tracción y cadena posterior (6-20 reps): rumano, tracción supina, remo y deltoides posterior.",
+  },
+  core: {
+    basico: "Abdomen y caminata en subida: quemas grasa y tus piernas descansan para el próximo entreno.",
+    intermedio: "Día ligero: abdomen firme y una caminata inclinada que quema grasa sin cansarte para el próximo entreno.",
+    tecnico: "Sesión ligera: core anti-extensión y cargadas, más 20 min de cardio LISS en inclinación.",
+  },
+  pump: {
+    basico: "Brazos y hombros con descansos cortos y un reto al final: sales con los brazos inflados.",
+    intermedio: "Día ligero de bombeo: series de 10 a 20 con descansos cortos para brazos y hombros, y un reto final.",
+    tecnico: "Bombeo metabólico (10-20 reps, 45-60 s de descanso) para brazos y deltoides, con finisher.",
+  },
+};
+
+/** Lo que el entreno de hoy hace por la persona, en su registro. Null si no hay texto para esa plantilla. */
+export function sessionBenefit(v: Voice, tpl: string | null | undefined): string | null {
+  return tpl && BENEFIT[tpl] ? t(v, BENEFIT[tpl]) : null;
+}
+
+/** Etiqueta del día ("día de volumen" es jerga: en básico se dice qué significa). */
+export function dayTag(v: Voice, tag: string) {
+  const k = tag.toLowerCase();
+  if (k === "volumen") return t(v, { basico: "día para dar forma", intermedio: "día de volumen", tecnico: "día de volumen" });
+  if (k === "fuerza") return t(v, { basico: "día de fuerza", intermedio: "día de fuerza", tecnico: "día de fuerza" });
+  if (k === "ligero") return t(v, { basico: "día ligero", intermedio: "día ligero", tecnico: "sesión ligera" });
+  return k;
+}
+
+/** Explicación previa del check-in: qué cambia cada opción, antes de tocarla. */
+export function readinessEffects(v: Voice): [string, string, string] {
+  return [
+    t(v, { basico: "Una serie menos y más liviano", intermedio: "−1 serie, RIR 3", tecnico: "−1 serie, RIR 3" }),
+    t(v, { basico: "Tu plan tal cual", intermedio: "El plan, RIR 1-2", tecnico: "Plan, RIR 1-2" }),
+    t(v, { basico: "Una repetición extra", intermedio: "+1 rep al final", tecnico: "+1 rep top set" }),
+  ];
+}
+
+/** "La última vez hiciste 60 kg × 10, hoy intenta 62,5 kg" con los números del motor. */
+export function lastTimeLine(v: Voice, o: { name: string; lastKg: number; lastReps: number; kg: number | null; reps: number; type: RxType }) {
+  const last = `${n(o.lastKg)} kg × ${o.lastReps}`;
+  const ex = o.name[0].toLowerCase() + o.name.slice(1);
+  const goal = o.type === "up" && o.kg != null ? { basico: `hoy intenta ${n(o.kg)} kg`, intermedio: `hoy toca ${n(o.kg)} kg`, tecnico: `hoy subes a ${n(o.kg)} kg` }
+    : o.type === "reset" && o.kg != null ? { basico: `hoy bajas a ${n(o.kg)} kg para volver a subir`, intermedio: `hoy reinicias a ${n(o.kg)} kg`, tecnico: `reinicio a ${n(o.kg)} kg` }
+    : o.type === "deload" && o.kg != null ? { basico: `hoy vas más liviano, con ${n(o.kg)} kg`, intermedio: `hoy descarga con ${n(o.kg)} kg`, tecnico: `descarga a ${n(o.kg)} kg` }
+    : o.type === "hold" ? { basico: "hoy repite y hazlo más limpio", intermedio: "hoy consolida el mismo peso", tecnico: "hoy consolidación" }
+    : { basico: `hoy intenta ${o.reps} repeticiones`, intermedio: `hoy busca ${o.reps} reps`, tecnico: `hoy objetivo ${o.reps} reps` };
+  return t(v, {
+    basico: `La última vez hiciste ${ex} con ${last}: ${goal.basico}.`,
+    intermedio: `La última vez: ${ex}, ${last}. ${goal.intermedio[0].toUpperCase()}${goal.intermedio.slice(1)}.`,
+    tecnico: `${o.name}: ${last} la última sesión, ${goal.tecnico}.`,
+  });
+}
