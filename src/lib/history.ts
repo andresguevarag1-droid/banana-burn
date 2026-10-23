@@ -10,6 +10,8 @@ const DEMO: History = {
   ohp: [[{ kg: 45, reps: 7 }, { kg: 45, reps: 7 }, { kg: 45, reps: 6 }]],
   deadlift: [[{ kg: 120, reps: 5 }, { kg: 120, reps: 5 }, { kg: 120, reps: 4 }]],
   row: [[{ kg: 60, reps: 8 }, { kg: 60, reps: 8 }, { kg: 60, reps: 7 }]],
+  rdl: [[{ kg: 70, reps: 10 }, { kg: 70, reps: 10 }, { kg: 70, reps: 10 }]],
+  dbrow: [[{ kg: 24, reps: 10 }, { kg: 24, reps: 9 }, { kg: 24, reps: 9 }]],
 };
 
 export async function getHistory(v: Viewer, ids: string[]): Promise<History> {

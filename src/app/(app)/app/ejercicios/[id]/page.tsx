@@ -8,6 +8,8 @@ import { TECH } from "@/lib/engine/technique";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { RichTip } from "@/components/rich-tip";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Barbell, Check, Monkey } from "@/components/icons";
+import { getVoice } from "@/lib/voice-server";
+import { strengthCue } from "@/lib/voice";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const e = getLibEx((await params).id);
@@ -19,7 +21,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
   const e = getLibEx(id);
   if (!e) notFound();
   const v = (await getViewer())!;
-  const a = await getAthlete(v);
+  const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
   const ours = Object.entries(DS_ID).find(([, d]) => d === id)?.[0];
   const tech = ours ? TECH[ours] : null;
   const gif = mediaUrl(e);
@@ -78,7 +80,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
         <ol className="mt-3 space-y-2">{(tech?.how ?? e.s).map((s, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{s}</span></li>)}</ol>
         {tech?.cues && <div className="mt-4 flex flex-wrap gap-2">{tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel"><Check weight="bold" className="size-3.5" />{c}</span>)}</div>}
         {tech?.mono && <p className="mt-3 flex gap-2.5 rounded-2xl bg-cream p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={tech.mono} /></span></p>}
-        <p className="mt-4 text-xs text-muted">{isStrength(e) ? "Tempo 3-1-1: baja en 3 s, pausa 1 s, sube con fuerza. " : ""}Si sientes dolor (no ardor muscular), para y consulta.</p>
+        <p className="mt-4 text-xs text-muted">{isStrength(e) ? `${strengthCue(voice)} ` : ""}Si sientes dolor (no ardor muscular), para y consulta.</p>
       </section>
       <section className="card p-5">
         <h2 className="font-extrabold text-ink">Músculos</h2>

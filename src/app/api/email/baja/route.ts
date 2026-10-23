@@ -41,7 +41,7 @@ function page(title: string, body: string, status = 200) {
   return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
 }
 
-const invalid = () => page("Enlace no válido", `<p style="line-height:1.6;">Este enlace de baja no es válido o está incompleto. Puedes ajustar tus correos desde tu perfil en la app.</p>`, 400);
+const invalid = () => page("Enlace no válido", `<p style="line-height:1.6;">Este enlace de baja no es válido o está incompleto. Puedes ajustar tus correos desde tu perfil en Banana Burn.</p>`, 400);
 
 /** Baja con un clic desde el enlace del correo: ?token=… firmado con EMAIL_UNSUB_SECRET. */
 export async function GET(req: Request) {

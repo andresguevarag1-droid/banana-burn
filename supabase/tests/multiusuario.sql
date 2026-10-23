@@ -1414,6 +1414,25 @@ select bbtest.fails('guía: anon no marca guías', $q$ select public.guide_mark_
 select bbtest.fails('guía: anon no marca consejos', $q$ select public.guide_tip_seen('entrenar') $q$, '42501');
 reset role;
 
+-- ───────────── 14. Cómo te hablo (0035) ─────────────
+-- Cada persona elige su registro (básico, intermedio o técnico) solo en su fila; otro valor no entra.
+update public.profiles set lenguaje = 'intermedio' where id in (bbtest.u('A'), bbtest.u('B'));
+select bbtest.ok('lenguaje: por defecto intermedio', (select bool_and(lenguaje = 'intermedio') from public.profiles));
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('lenguaje: A elige básico', bbtest.affected($q$ update public.profiles set lenguaje = 'basico' where id = auth.uid() $q$) = 1);
+select bbtest.ok('lenguaje: A lee su registro', (select lenguaje = 'basico' from public.profiles where id = auth.uid()));
+select bbtest.ok('lenguaje: A cambia a técnico', bbtest.affected($q$ update public.profiles set lenguaje = 'tecnico' where id = auth.uid() $q$) = 1);
+select bbtest.zero('lenguaje: A no cambia el registro de B', $q$ update public.profiles set lenguaje = 'tecnico' where id = bbtest.u('B') $q$);
+select bbtest.fails('lenguaje: valor inventado', $q$ update public.profiles set lenguaje = 'experto' where id = auth.uid() $q$, '23514');
+select bbtest.fails('lenguaje: vacío no entra', $q$ update public.profiles set lenguaje = null where id = auth.uid() $q$, '23502');
+select bbtest.fails('lenguaje: A no se sube el rol al cambiar el registro', $q$ update public.profiles set lenguaje = 'basico', role = 'superadmin' where id = auth.uid() $q$, '42501');
+reset role;
+select bbtest.ok('lenguaje: B quedó en intermedio', (select lenguaje = 'intermedio' from public.profiles where id = bbtest.u('B')));
+select bbtest.ok('lenguaje: A quedó en técnico', (select lenguaje = 'tecnico' from public.profiles where id = bbtest.u('A')));
+set role anon; select bbtest.login(null);
+select bbtest.zero('lenguaje: anon no cambia registros', $q$ update public.profiles set lenguaje = 'basico' $q$);
+reset role;
+update public.profiles set lenguaje = 'intermedio' where id = bbtest.u('A');
 -- ───────────── 12. Cupo de Coach Banana por plan (0032) ─────────────
 -- Topes por día y mes según el plan, sin pasarse, sin editar contadores, staff sin límite (contado), devolución con
 -- ticket, y la beta encendida y apagada (se fija aquí y se restaura al final).

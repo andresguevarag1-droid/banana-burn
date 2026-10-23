@@ -126,7 +126,7 @@ export default function Landing() {
             <Phone src="/landing/hoy2.png" alt="" sizes="220px" className="absolute left-0 top-10 hidden w-[210px] -rotate-6 opacity-95 sm:block" />
             <HeroPlayer className="absolute left-1/2 top-0 w-[275px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[300px] sm:translate-x-0" />
             <div className="absolute -bottom-2 -left-3 w-[165px] sm:w-[230px] animate-rise [animation-delay:200ms]">
-              <Image src={POSE.flex} alt="Coach Banana, el mono entrenador de la app" width={460} height={460} priority sizes="230px" className="drop-shadow-xl" />
+              <Image src={POSE.flex} alt="Coach Banana, el entrenador de Banana Burn" width={460} height={460} priority sizes="230px" className="drop-shadow-xl" />
             </div>
           </div>
         </div>
@@ -178,9 +178,9 @@ export default function Landing() {
       {/* 4. LA APP POR DENTRO: recorrido interactivo con capturas reales y técnica animada */}
       <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
         <div className="flex items-end gap-4">
-          <Image src={POSE.senala} alt="Coach Banana señalando la app" width={360} height={360} sizes="180px" className="-mb-4 w-24 shrink-0 sm:w-40" />
+          <Image src={POSE.senala} alt="Coach Banana señalando las pantallas de Banana Burn" width={360} height={360} sizes="180px" className="-mb-4 w-24 shrink-0 sm:w-40" />
           <div>
-            <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira la app por dentro.</h2>
+            <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira Banana Burn por dentro.</h2>
             <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
           </div>
         </div>
@@ -237,7 +237,7 @@ export default function Landing() {
       <section aria-labelledby="mono" className="pt-24">
         <div className="mx-auto grid max-w-6xl items-end gap-4 px-4 sm:px-6 lg:grid-cols-[1.2fr_1fr]">
           <h2 id="mono" className={H2}>Conoce a Coach Banana.</h2>
-          <p className="max-w-[52ch] text-lg leading-relaxed text-muted text-pretty">El mono de la app te enseña la técnica, te marca el ritmo y celebra cada récord contigo. En el gym, en la casa o en el parque.</p>
+          <p className="max-w-[52ch] text-lg leading-relaxed text-muted text-pretty">Coach Banana te enseña la técnica, te marca el ritmo y celebra cada récord contigo. En el gym, en la casa o en el parque.</p>
         </div>
         <ul tabIndex={0} aria-label="Escenas de Coach Banana entrenando" className="mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-ink sm:mx-auto sm:grid sm:max-w-6xl sm:grid-cols-2 sm:overflow-visible sm:px-6 lg:grid-cols-4">
           {SCENES.map(([id, t]) => (

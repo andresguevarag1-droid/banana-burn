@@ -116,6 +116,8 @@ export type PlannedExercise = { id: ExerciseId; name: string; muscle: string; cf
 export type ProgramPlannedExercise = Omit<PlannedExercise, "id"> & { id: ExerciseId | `ds:${string}` };
 export type PlannedDay = {
   dow: number; tpl: TemplateId | null; name: string; tag: string; icon: string; exercises: PlannedExercise[]; cardio?: string; mins?: number;
+  /** Una línea que da ganas de entrenar (Hoy, Entrenar, reproductor y recordatorios). Sin minutos: se agregan con `hookLine`. */
+  hook?: string;
   /** Sesión de un programa (0024): plantilla con la que se guarda (p:slug:semana.día) y sus ejercicios tal cual. */
   key?: string;
   program?: { slug: string; title: string; week: number; day: number; weeks: number; deload: boolean; exercises: ProgramPlannedExercise[] };
@@ -158,7 +160,7 @@ export function personalize(exs: PlannedExercise[], level: Level = "intermedio",
 export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay {
   const o: PlanOpts = typeof opts === "string" ? { equipment: opts } : opts;
   const tplId = schedule[dow];
-  if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", icon: "palm", exercises: [], cardio: "Camina 8-12k pasos y estira 10 min" };
+  if (!tplId) return { dow, tpl: null, name: "Descanso activo", tag: "Recuperación", icon: "palm", exercises: [], cardio: "Camina 8-12k pasos y estira 10 min", hook: "Hoy tu músculo crece: camina, estira y recupérate" };
   const t = TPL[tplId];
   const raw = t.ex.map((cfg) => {
     const base = (cfg.id ?? SLOTS[cfg.slot!][week % SLOTS[cfg.slot!].length]) as ExerciseId;
@@ -169,7 +171,7 @@ export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts
   const seen = new Set<string>();
   const exercises = personalize(raw.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))), o.level, o.minutes);
   const mins = estimateMinutes(exercises) + (t.cardio ? 10 : 0);
-  return { dow, tpl: tplId, name: t.n, tag: t.tag, icon: t.icon, exercises, cardio: t.cardio, mins };
+  return { dow, tpl: tplId, name: t.n, hook: t.hook, tag: t.tag, icon: t.icon, exercises, cardio: t.cardio, mins };
 }
 
 /** Entreno exprés de 10/20/30 min sin equipo: series por tiempo, descansos cortos, cuerpo completo. */
@@ -186,7 +188,13 @@ export function expressDay(minutes: number, seed = 0): PlannedDay {
   const work = 40, rest = 20;
   const sets = Math.max(2, Math.floor(((m - 2) * 60) / (nEx * (work + rest))));
   const exercises = picked.map((id) => ({ id, name: EX[id].n, muscle: EX[id].m, cfg: { id, sets, lo: work - 10, hi: work, rest, unit: "s" as const } }));
-  return { dow: -1, tpl: null, name: `Exprés ${m} min`, tag: "Sin equipo", icon: "bolt", exercises, mins: m, cardio: undefined };
+  return { dow: -1, tpl: null, name: `Exprés ${m} min`, hook: "Hoy sudas cuerpo completo en 2 × 2 m, sin equipo, y sumas a tu racha", tag: "Sin equipo", icon: "bolt", exercises, mins: m, cardio: undefined };
+}
+
+/** "Hoy construyes la fuerza base de piernas, pecho y hombros: 52 minutos." */
+export function hookLine(hook: string | undefined, mins?: number | null): string | null {
+  if (!hook) return null;
+  return mins ? `${hook}: ${mins} minutos.` : `${hook}.`;
 }
 
 export function planWeek(week: number, schedule = DEFAULT_WEEK, opts: PlanOpts | Equipment = {}): PlannedDay[] {

@@ -7,6 +7,7 @@ import { Confetti } from "@/components/confetti";
 import { ProgressBar } from "@/components/progress-bar";
 import { Sheet, SheetTitle } from "@/components/sheet";
 import { cap, clock, plural, volumeText } from "./logic";
+import { DEFAULT_VOICE, t, type Voice } from "@/lib/voice";
 import { drawStory, downloadBlob, shareStory } from "./story-card";
 import { useReducedMotion } from "./device";
 import { GoldBanana } from "./ui";
@@ -25,7 +26,8 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback }: {
+export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE }: {
+  voice?: Voice;
   title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
   /** XP de un entreno completo como este (para estimar cuántos faltan al próximo nivel) */
   perWorkout?: number;
@@ -112,7 +114,7 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
               <div className="mt-2 flex gap-1.5" role="img" aria-label={`${bananas.got} de ${bananas.total} ejercicios completos`}>
                 {Array.from({ length: bananas.total }, (_, i) => i < bananas.got ? <GoldBanana key={i} className="size-8" pop /> : <span key={i} aria-hidden className="inline-grid size-8 opacity-30"><GoldBanana className="size-8" /></span>)}
               </div>
-              {volume > 0 && <p className="mt-2 text-sm text-muted">Moviste <span className="font-bold text-ink tabular-nums">{volumeText(volume)}</span> en total.</p>}
+              {volume > 0 && <p className="mt-2 text-sm text-muted">{t(voice, { basico: "Sumando todas tus repeticiones, levantaste", intermedio: "Moviste", tecnico: "Volumen total (kg × reps):" })} <span className="font-bold text-ink tabular-nums">{volumeText(volume)}</span>{t(voice, { basico: " en total.", intermedio: " en total.", tecnico: "." })}</p>}
             </div>
             <div className={`border-t border-line p-4 ${leveled ? "bg-banana-soft/70" : ""}`}>
               {leveled && <p className="mb-2 text-xs font-extrabold text-banana-ink">Nivel nuevo desbloqueado</p>}

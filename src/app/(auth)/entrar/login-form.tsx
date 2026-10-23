@@ -82,8 +82,8 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
       <div className="space-y-5">
         <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Modo demo</h1>
-        <p className="text-muted">Estamos abriendo cuentas por invitación muy pronto. Mientras tanto, explora la app completa con datos de ejemplo.</p>
-        <Link href="/app" className="btn-primary w-full">Explorar la app</Link>
+        <p className="text-muted">Estamos abriendo cuentas por invitación muy pronto. Mientras tanto, explora Banana Burn completa con datos de ejemplo.</p>
+        <Link href="/app" className="btn-primary w-full">Explorar Banana Burn</Link>
       </div>
     );
   }

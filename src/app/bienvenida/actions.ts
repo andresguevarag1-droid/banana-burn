@@ -6,8 +6,11 @@ import { sendPlanReadyEmail } from "@/lib/email";
 import { ageOn, planDay, scheduleFor, targets } from "@/lib/engine";
 import { goalError } from "./goal";
 import { getEntitlements } from "@/lib/entitlements";
+import { cookies } from "next/headers";
+import { isVoice, type Voice } from "@/lib/voice";
+import { DEMO_VOICE_COOKIE } from "@/lib/voice-server";
 
-export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string };
+export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string; /** "Cómo te hablo" (0035). */ voice?: Voice };
 
 export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
@@ -16,7 +19,10 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   if (!o.consent) return { ok: false, error: "Necesitamos tu consentimiento para procesar tus datos de salud." };
   const valid = typeof o.name === "string" && ["m", "f"].includes(o.sex) && ["grasa", "recomp", "fuerza"].includes(o.goal) && typeof o.glp1 === "boolean" && /^\d{4}-\d{2}-\d{2}$/.test(o.dob) && /^\d{4}-\d{2}-\d{2}$/.test(o.goalDate) && o.heightCm >= 120 && o.heightCm <= 230 && o.weight >= 35 && o.weight <= 300 && o.goalWeight >= 35 && o.goalWeight <= 300 && [3, 4, 5, 6].includes(o.days) && ["gym", "casa", "mixto", "ninguno"].includes(o.equipment) && ["principiante", "intermedio", "avanzado"].includes(o.level) && [15, 20, 30, 45, 60].includes(o.minutes) && ageOn(o.dob) >= 18 && goalError({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, heightCm: o.heightCm }) === null && ["semaglutida", "tirzepatida", "liraglutida", "otro"].includes(o.glp1Med) && (o.glp1Dow == null || (o.glp1Dow >= 0 && o.glp1Dow <= 6));
   if (!valid) return { ok: false, error: goalError({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, heightCm: o.heightCm }) ?? "Revisa los datos ingresados." };
-  if (v.demo) return { ok: true };
+  if (v.demo) {
+    if (isVoice(o.voice)) (await cookies()).set(DEMO_VOICE_COOKIE, o.voice, { path: "/", sameSite: "lax", maxAge: 3600 });
+    return { ok: true };
+  }
   const sb = await createClient();
   const { data: before } = await sb.from("profiles").select("onboarded").eq("id", v.id).maybeSingle();
   const p = await sb.from("profiles").update({
@@ -24,6 +30,8 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
     onboarded: true, health_consent_at: new Date().toISOString(),
   }).eq("id", v.id);
   if (p.error) return { ok: false, error: "No se pudo guardar tu perfil." };
+  // Aparte: si 0035 todavía no corrió, el registro queda en intermedio y la bienvenida sigue sin error.
+  if (isVoice(o.voice)) await sb.from("profiles").update({ lenguaje: o.voice }).eq("id", v.id).then(() => null, () => null);
   await sb.from("goals").update({ active: false }).eq("user_id", v.id).eq("active", true);
   const g = await sb.from("goals").insert({ user_id: v.id, start_weight: o.weight, goal_weight: o.goalWeight, goal_date: o.goalDate, mode: o.goal === "grasa" ? "acelerada" : o.goal === "fuerza" ? "fuerza" : "recomp" });
   if (g.error) return { ok: false, error: "No se pudo guardar tu meta." };

@@ -4,6 +4,9 @@ import { createClient, getViewer } from "@/lib/supabase/server";
 import { SITE_URL } from "@/lib/env";
 import { getEntitlements } from "@/lib/entitlements";
 import { todayFor } from "@/lib/today";
+import { cookies } from "next/headers";
+import { isVoice } from "@/lib/voice";
+import { DEMO_VOICE_COOKIE } from "@/lib/voice-server";
 
 export async function updateTraining(input: { days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; mode: "acelerada" | "recomp" | "fuerza"; level: "principiante" | "intermedio" | "avanzado"; minutes: number | null }) {
   const v = await getViewer();
@@ -14,6 +17,22 @@ export async function updateTraining(input: { days: number; equipment: "gym" | "
   const a = await sb.from("profiles").update({ train_days: input.days, equipment: input.equipment, level: input.level, session_minutes: input.minutes }).eq("id", v.id);
   const b = await sb.from("goals").update({ mode: input.mode }).eq("user_id", v.id).eq("active", true);
   if (a.error || b.error) return { ok: false, error: "No se pudo guardar." };
+  revalidatePath("/app", "layout");
+  return { ok: true };
+}
+
+/** "Cómo te hablo" (0035): básico, intermedio o técnico. En demo se recuerda en una cookie para esta sesión. */
+export async function updateVoice(voice: unknown): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
+  const v = await getViewer();
+  if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  if (!isVoice(voice)) return { ok: false, error: "Elige una de las tres opciones." };
+  if (v.demo) {
+    (await cookies()).set(DEMO_VOICE_COOKIE, voice, { path: "/", sameSite: "lax", maxAge: 3600 });
+    return { ok: true, demo: true };
+  }
+  const sb = await createClient();
+  const { error } = await sb.from("profiles").update({ lenguaje: voice }).eq("id", v.id);
+  if (error) return { ok: false, error: "No se pudo guardar. Intenta de nuevo." };
   revalidatePath("/app", "layout");
   return { ok: true };
 }

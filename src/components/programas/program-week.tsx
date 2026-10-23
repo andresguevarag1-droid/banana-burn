@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Clock, Info, Lock, Repeat } from "@/components/icons";
+import { DEFAULT_VOICE, t, tempoLabel, type Voice } from "@/lib/voice";
 
 export type WeekSessionView = {
   day: number; title: string; focus: string; optional: boolean; done: boolean; mins: number; href: string | null;
   exercises: { id: string; name: string; muscle: string; sets: string; rest: string; tempo?: string; note?: string }[];
 };
 
-export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana" }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string }) {
+export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice }) {
   const [sel, setSel] = useState(current ?? sessions[0]?.day ?? 1);
   const s = sessions.find((x) => x.day === sel) ?? sessions[0];
   if (!s) return null;
@@ -40,7 +41,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
             <li key={`${e.id}-${i}`} className="rounded-2xl bg-cream px-3.5 py-3">
               <div className="flex items-center gap-3">
                 <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-sm font-bold text-white">{i + 1}</span>
-                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[e.muscle, `descanso ${e.rest}`, e.tempo ? `tempo ${e.tempo}` : ""].filter(Boolean).join(", ")}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[e.muscle, `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${e.rest}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
                 <p className="shrink-0 whitespace-nowrap font-extrabold tabular-nums text-ink">{e.sets}</p>
               </div>
               {e.note && <p className="mt-2 flex gap-1.5 pl-11 text-xs text-body"><Info weight="duotone" className="mt-px size-3.5 shrink-0 text-banana-ink" />{e.note}</p>}

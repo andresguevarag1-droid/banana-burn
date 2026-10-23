@@ -64,7 +64,7 @@ function demo(v: Viewer) {
   const t = todayFor(v).iso;
   const weights: Point[] = demoWeights(t);
   const done = demoWorkouts(t);
-  // Fuerza: los 5 básicos de Pierna y empuje A (sentadilla, banca, militar) y Tracción A (peso muerto, remo), en los días que los hizo.
+  // Fuerza: los 5 básicos de pushA (sentadilla, banca, militar) y pullA (peso muerto, remo), en los días que los hizo.
   const base: [string, string, number, number][] = [["squat", "pushA", 96, 0.09], ["bench", "pushA", 88, 0.045], ["deadlift", "pullA", 130, 0.07], ["ohp", "pushA", 50, 0.02], ["row", "pullA", 64, 0.055]];
   const lifts: Lift[] = base.map(([id, tpl, b, g]) => {
     const days = done.filter((w) => w.tplId === tpl).map((w) => w.d).reverse();

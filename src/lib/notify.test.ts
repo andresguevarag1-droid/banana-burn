@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cronModeFrom, tzLabel, DEFAULT_PREFS, MAX_PUSHES_PER_DAY, copyFor, decide, inQuietHours, isRelevantHour, localClock, type DecideInput, type Prefs } from "./notify";
+import { cronModeFrom, tzLabel, DEFAULT_PREFS, MAX_PUSHES_PER_DAY, copyFor, liftFact, liftLine, decide, inQuietHours, isRelevantHour, localClock, type DecideInput, type Prefs } from "./notify";
 
 // Costa Rica = UTC−6 todo el año. 2026-10-19 es lunes, 2026-10-21 miércoles.
 const cr = (isoDay: string, hour: number, minute = 0) => new Date(Date.UTC(+isoDay.slice(0, 4), +isoDay.slice(5, 7) - 1, +isoDay.slice(8, 10), hour + 6, minute));
@@ -150,9 +150,30 @@ describe("filtro de horas relevantes", () => {
 
 describe("copy", () => {
   const ctx = { name: "Andrés Guevara", routine: "Empuje A", mins: 55, streak: 4, day: WED };
-  it("recordatorio nombra la rutina", () => {
-    expect(copyFor("recordatorio", ctx).title).toBe("Andrés, hoy te toca Empuje A");
-    expect(copyFor("recordatorio", { ...ctx, name: "" }).title).toBe("Hoy te toca Empuje A");
+  it("recordatorio: Coach Banana nombra el entreno y sus minutos", () => {
+    expect(copyFor("recordatorio", ctx).title).toBe("Coach Banana: hoy toca Empuje A, 55 min");
+    expect(copyFor("recordatorio", { ...ctx, routine: "Bombeo Banana: brazos y hombros" }).title).toBe("Coach Banana: hoy toca Bombeo Banana, 55 min");
+    expect(copyFor("recordatorio", { ...ctx, mins: undefined, name: "" }).title).toBe("Coach Banana: hoy toca Empuje A");
+  });
+  it("recordatorio con un dato real de la última vez, en el registro de la persona", () => {
+    const lift = liftFact("Remo con barra", [57.5, 60])!;
+    expect(lift).toEqual({ name: "Remo con barra", kg: 60, delta: 2.5 });
+    const x = { ...ctx, routine: "Espalda de gorila y glúteos", mins: 40, lift };
+    const d = (2.5).toLocaleString("es-419"); // separador decimal de es-419
+    expect(copyFor("recordatorio", x).title).toBe("Coach Banana: hoy toca Espalda de gorila y glúteos, 40 min");
+    expect(copyFor("recordatorio", x).body).toBe(`Tu remo con barra subió ${d} kg la última vez.`);
+    expect(copyFor("recordatorio", { ...x, voice: "basico" }).body).toBe(`La última vez tu remo con barra subió ${d} kg. Hoy vamos por más.`);
+    expect(copyFor("recordatorio", { ...x, voice: "tecnico" }).body).toBe(`Remo con barra: +${d} kg en tu última sesión (60 kg).`);
+    // Sin subida: el último peso y una meta concreta.
+    expect(liftLine("intermedio", liftFact("Press banca", [60, 60])!)).toBe("Última vez: press banca con 60 kg. Hoy toca superarlo.");
+    expect(liftFact("Press banca", [])).toBeNull();
+    expect(liftFact("Press banca", [0])).toBeNull();
+  });
+  it("recordatorio sin dato: el cuerpo cambia con el registro, nunca con jerga en básico", () => {
+    for (const day of ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]) {
+      const b = copyFor("recordatorio", { ...ctx, day, voice: "basico", hook: "Hoy armas una espalda ancha" }).body;
+      expect(b).not.toMatch(/\bRIR\b|tempo|e1RM|doble progresión/i);
+    }
   });
   it("nunca culpa ni avergüenza", () => {
     const bad = /(fallaste|decepcion|vergüenza|flojo|perezos|no tienes excusa|abandon|culpa)/i;

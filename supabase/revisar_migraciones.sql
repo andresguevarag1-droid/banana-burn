@@ -26,6 +26,7 @@ from (values
   (21,'0032_coach_cuota.sql',        to_regclass('public.coach_quota_tickets') is not null and to_regprocedure('public.coach_take_quota(text)') is not null and to_regprocedure('public.coach_refund_quota(uuid)') is not null and to_regprocedure('public.coach_quota_status()') is not null and to_regprocedure('public.admin_coach_usage(uuid)') is not null),
   (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check')),
   (23,'0034_soporte.sql',             to_regclass('public.support_tickets') is not null and to_regclass('public.support_messages') is not null and to_regclass('public.support_events') is not null and to_regprocedure('public.support_create_ticket(text,text,text,jsonb,text)') is not null and exists (select 1 from storage.buckets where id = 'soporte' and not public)),
+  (24,'0035_lenguaje.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'lenguaje') and exists (select 1 from pg_constraint where conname = 'profiles_lenguaje_check')),
   (25,'0036_novedades.sql',          exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'news_seen') and to_regprocedure('public.news_mark_seen(text)') is not null)
 ) as m(orden, archivo, aplicada)
 order by m.orden;

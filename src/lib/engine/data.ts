@@ -77,16 +77,17 @@ export const SLOTS: Record<string, ExerciseId[]> = {
 };
 
 export type SlotCfg = { id?: ExerciseId; slot?: string; sets: number; lo: number; hi: number; rest: number; unit?: Unit };
-export type Template = { n: string; tag: string; light?: boolean; mins?: number; cardio?: string; finisher?: boolean; icon: string; ex: SlotCfg[] };
+/** `n`: nombre que se ve (los ids pushA, pullA... no cambian: así se guardan en workouts.template). `hook`: una línea que da ganas de entrenar. */
+export type Template = { n: string; hook: string; tag: string; light?: boolean; mins?: number; cardio?: string; finisher?: boolean; icon: string; ex: SlotCfg[] };
 export type TemplateId = "pushA" | "pullA" | "pushB" | "pullB" | "core" | "pump";
 
 export const TPL: Record<TemplateId, Template> = {
-  pushA: { n: "Pierna y empuje A", tag: "Fuerza", icon: "barbell", ex: [{ id: "squat", sets: 4, lo: 5, hi: 8, rest: 180 }, { id: "bench", sets: 4, lo: 6, hi: 10, rest: 150 }, { id: "ohp", sets: 3, lo: 6, hi: 10, rest: 150 }, { slot: "pushA_acc", sets: 2, lo: 8, hi: 12, rest: 90 }] },
-  pullA: { n: "Tracción A", tag: "Fuerza", icon: "gorilla", ex: [{ id: "deadlift", sets: 3, lo: 4, hi: 6, rest: 180 }, { id: "pullup", sets: 4, lo: 5, hi: 10, rest: 150 }, { id: "row", sets: 3, lo: 6, hi: 10, rest: 120 }, { slot: "pullA_acc", sets: 2, lo: 8, hi: 12, rest: 75 }] },
-  pushB: { n: "Pierna y empuje B", tag: "Volumen", icon: "bunch", ex: [{ id: "incline", sets: 4, lo: 8, hi: 12, rest: 120 }, { slot: "pushB_leg", sets: 3, lo: 8, hi: 12, rest: 150 }, { id: "dbpress", sets: 3, lo: 8, hi: 12, rest: 120 }, { slot: "pushB_acc", sets: 3, lo: 12, hi: 20, rest: 60 }] },
-  pullB: { n: "Tracción B", tag: "Volumen", icon: "streak", ex: [{ id: "rdl", sets: 3, lo: 8, hi: 10, rest: 150 }, { id: "chinup", sets: 4, lo: 6, hi: 12, rest: 120 }, { id: "dbrow", sets: 3, lo: 8, hi: 12, rest: 90 }, { slot: "pullB_acc", sets: 2, lo: 12, hi: 20, rest: 60 }] },
-  core: { n: "Core + Cardio", tag: "Ligero", icon: "target", light: true, mins: 40, ex: [{ slot: "core_hang", sets: 3, lo: 8, hi: 15, rest: 60 }, { slot: "core_plank", sets: 3, lo: 30, hi: 60, rest: 45, unit: "s" }, { slot: "core_carry", sets: 3, lo: 30, hi: 40, rest: 60, unit: "m" }], cardio: "20 min de caminata inclinada (10-12 %) a ritmo de conversación" },
-  pump: { n: "Bombeo + Reto", tag: "Ligero", icon: "bolt", light: true, mins: 35, finisher: true, ex: [{ slot: "pump_push", sets: 3, lo: 10, hi: 20, rest: 60 }, { slot: "pump_arm", sets: 3, lo: 10, hi: 15, rest: 60 }, { slot: "pump_sh", sets: 3, lo: 12, hi: 20, rest: 45 }] },
+  pushA: { n: "Fuerza total: piernas, pecho y hombros", hook: "Hoy construyes la fuerza base de piernas, pecho y hombros", tag: "Fuerza", icon: "barbell", ex: [{ id: "squat", sets: 4, lo: 5, hi: 8, rest: 180 }, { id: "bench", sets: 4, lo: 6, hi: 10, rest: 150 }, { id: "ohp", sets: 3, lo: 6, hi: 10, rest: 150 }, { slot: "pushA_acc", sets: 2, lo: 8, hi: 12, rest: 90 }] },
+  pullA: { n: "Espalda ancha y bíceps fuertes", hook: "Hoy armas una espalda ancha y unos bíceps que se notan", tag: "Fuerza", icon: "gorilla", ex: [{ id: "deadlift", sets: 3, lo: 4, hi: 6, rest: 180 }, { id: "pullup", sets: 4, lo: 5, hi: 10, rest: 150 }, { id: "row", sets: 3, lo: 6, hi: 10, rest: 120 }, { slot: "pullA_acc", sets: 2, lo: 8, hi: 12, rest: 75 }] },
+  pushB: { n: "Piernas de acero y pecho firme", hook: "Hoy esculpes piernas firmes, pecho y hombros con más repeticiones", tag: "Volumen", icon: "bunch", ex: [{ id: "incline", sets: 4, lo: 8, hi: 12, rest: 120 }, { slot: "pushB_leg", sets: 3, lo: 8, hi: 12, rest: 150 }, { id: "dbpress", sets: 3, lo: 8, hi: 12, rest: 120 }, { slot: "pushB_acc", sets: 3, lo: 12, hi: 20, rest: 60 }] },
+  pullB: { n: "Espalda de gorila y glúteos", hook: "Hoy trabajas toda la parte de atrás, de la espalda a los glúteos", tag: "Volumen", icon: "streak", ex: [{ id: "rdl", sets: 3, lo: 8, hi: 10, rest: 150 }, { id: "chinup", sets: 4, lo: 6, hi: 12, rest: 120 }, { id: "dbrow", sets: 3, lo: 8, hi: 12, rest: 90 }, { slot: "pullB_acc", sets: 2, lo: 12, hi: 20, rest: 60 }] },
+  core: { n: "Abdomen y quema", hook: "Hoy aprietas el abdomen y quemas grasa caminando en subida", tag: "Ligero", icon: "target", light: true, mins: 40, ex: [{ slot: "core_hang", sets: 3, lo: 8, hi: 15, rest: 60 }, { slot: "core_plank", sets: 3, lo: 30, hi: 60, rest: 45, unit: "s" }, { slot: "core_carry", sets: 3, lo: 30, hi: 40, rest: 60, unit: "m" }], cardio: "20 min de caminata inclinada (10-12 %) a ritmo de conversación" },
+  pump: { n: "Bombeo Banana: brazos y hombros", hook: "Hoy llenas brazos y hombros con descansos cortos y un reto final", tag: "Ligero", icon: "bolt", light: true, mins: 35, finisher: true, ex: [{ slot: "pump_push", sets: 3, lo: 10, hi: 20, rest: 60 }, { slot: "pump_arm", sets: 3, lo: 10, hi: 15, rest: 60 }, { slot: "pump_sh", sets: 3, lo: 12, hi: 20, rest: 45 }] },
 };
 
 /** Semana por defecto: 1=lunes … 6=sábado; domingo descanso. */

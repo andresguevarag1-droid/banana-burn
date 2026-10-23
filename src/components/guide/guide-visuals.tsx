@@ -79,7 +79,7 @@ export function GuideVisual({ step, input }: { step: GuideStep; input: GuideInpu
           <div className="relative overflow-hidden rounded-[1.5rem] bg-banana p-4">
             <BrandIcon name="barbell" className="absolute -right-6 -top-6 size-32 rotate-12 text-ink opacity-[.09]" />
             <span className="relative block text-xs font-semibold text-ink/75">Hoy lunes, día de fuerza</span>
-            <span className="relative mt-0.5 block text-2xl font-extrabold leading-tight text-ink">Pierna y empuje A</span>
+            <span className="relative mt-0.5 block text-2xl font-extrabold leading-tight text-ink">Fuerza total: piernas, pecho y hombros</span>
             <span className="relative mt-2.5 flex flex-wrap gap-1.5">
               {["Sentadilla 3×8-12", "Press inclinado 3×8-12", "Remo 3×10-12"].map((x) => <span key={x} className="chip h-7 bg-white/70 text-[12px] text-ink">{x}</span>)}
             </span>
@@ -94,7 +94,7 @@ export function GuideVisual({ step, input }: { step: GuideStep; input: GuideInpu
         </div>
       );
     case "semana": {
-      const days = [["Lunes", "Pierna y empuje A", "hecho"], ["Martes", "Tirón A", "hecho"], ["Jueves", "Pierna y empuje B", "hoy"], ["Viernes", "Tirón B", ""]];
+      const days = [["Lunes", "Fuerza total", "hecho"], ["Martes", "Espalda ancha y bíceps", "hecho"], ["Jueves", "Piernas de acero", "hoy"], ["Viernes", "Espalda de gorila", ""]];
       return (
         <div aria-hidden className="flex h-full flex-col justify-center gap-2.5 rounded-[1.75rem] bg-banana-soft p-4 sm:gap-3 sm:p-6">
           <div>

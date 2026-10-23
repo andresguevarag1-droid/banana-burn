@@ -42,12 +42,15 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
     if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
   }
   // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
-  const startOnCard = v.demo && cardRequired && (await searchParams).vista === "tarjeta";
+  const vista = (await searchParams).vista;
+  const startOnCard = v.demo && cardRequired && vista === "tarjeta";
+  // Solo demo: ?vista=lenguaje abre el paso de experiencia y "Cómo te hablo" para revisarlo.
+  const startOnVoice = v.demo && vista === "lenguaje";
 
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardRequired={cardRequired} payments={isOnvoConfigured()} startOnCard={startOnCard} betaFirstPaid={betaDates().firstPaid} />
+      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardRequired={cardRequired} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} />
     </>
   );
 }

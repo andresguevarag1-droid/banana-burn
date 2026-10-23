@@ -10,6 +10,8 @@ import { exInfo } from "@/lib/programs-server";
 import { cap, loadKindOf } from "@/components/workout/logic";
 import { Player, type PlayerExercise } from "./player";
 import { templatesDoneToday } from "./done-today";
+import { getVoice } from "@/lib/voice-server";
+import { modeNote, programTempoNote, rxNote } from "@/lib/voice";
 
 export const metadata = { title: "Entreno" };
 
@@ -18,7 +20,7 @@ const isEngine = (id: string): id is ExerciseId => Object.hasOwn(EX, id);
 export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string }> }) {
   const { dia, modo, expres, repetir, cambiar, por, sesion } = await searchParams;
   const v = (await getViewer())!;
-  const a = await getAthlete(v);
+  const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
   const d = dashboard(a);
   const n = Number(dia);
   const prog = d.program;
@@ -59,18 +61,20 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
 
   /** Tempo y nota del programa delante de la indicación del motor. */
   const withProgramNote = (rx: Prescription, s: (typeof slots)[number]): Prescription => {
-    const pre = [s.tempo ? `Tempo ${s.tempo}.` : "", s.note ?? ""].filter(Boolean).join(" ");
+    const pre = [s.tempo ? programTempoNote(voice, s.tempo) : "", s.note ?? ""].filter(Boolean).join(" ");
     return pre ? { ...rx, note: `${pre} ${rx.note}` } : rx;
   };
   const mode = (rx: Prescription): Prescription => {
-    if (modo === "suave" && rx.type !== "deload") return { ...rx, sets: Math.max(2, rx.sets - 1), reps: rx.reps.slice(0, Math.max(2, rx.sets - 1)), note: `Modo suave: una serie menos y 3 reps en reserva. ${rx.note}` };
-    if (modo === "fuerte" && rx.type !== "cal") return { ...rx, note: `Día fuerte: busca 1 rep extra en la última serie. ${rx.note}` };
+    if (modo === "suave" && rx.type !== "deload") return { ...rx, sets: Math.max(2, rx.sets - 1), reps: rx.reps.slice(0, Math.max(2, rx.sets - 1)), note: `${modeNote(voice, "suave")} ${rx.note}` };
+    if (modo === "fuerte" && rx.type !== "cal") return { ...rx, note: `${modeNote(voice, "fuerte")} ${rx.note}` };
     return rx;
   };
+  /** La indicación del motor dicha en el registro de la persona (mismos números). */
+  const voiced = (rx: Prescription, cfg: SlotCfg, inc: number): Prescription => ({ ...rx, note: rxNote(voice, rx, cfg, { weighted: inc > 0 }) });
   const build = (id: ExerciseId, cfg: SlotCfg, s: (typeof slots)[number]): PlayerExercise => {
     const h = hist[id] ?? [];
     const best = Math.max(0, ...h.flat().map((x) => (x.kg ? e1rm(x.kg, x.reps) : 0)));
-    const rx = mode(withProgramNote(prescribe(id, cfg, h, { deload: d.deload }), s));
+    const rx = mode(withProgramNote(voiced(prescribe(id, cfg, h, { deload: d.deload }), cfg, EX[id].inc), s));
     return { id, name: EX[id].n, muscle: EX[id].m, cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), load: loadKindOf(id, { inc: EX[id].inc }), rx, best, lastSets: h.at(-1) ?? null };
   };
   // Ejercicio de la biblioteca: hereda la animación del ejercicio del plan si es una variante, o la del patrón.
@@ -78,7 +82,7 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     const id = `ds:${x.id}`, h = hist[id] ?? [], inc = incFor(x.eq);
     const best = Math.max(0, ...h.flat().map((r) => (r.kg ? e1rm(r.kg, r.reps) : 0)));
     return { id, name: x.n, muscle: s.muscle || cap(esLib(MUSCLE, x.t)), cfg: s.cfg, bw: inc === 0, barbell: x.eq === "barbell" || x.eq === "olympic barbell", load: loadKindOf(id, { inc, eq: x.eq }),
-      rx: mode(withProgramNote(prescribe(id, s.cfg, h, { deload: d.deload, inc }), s)), best, lastSets: h.at(-1) ?? null,
+      rx: mode(withProgramNote(voiced(prescribe(id, s.cfg, h, { deload: d.deload, inc }), s.cfg, inc), s)), best, lastSets: h.at(-1) ?? null,
       tech: { anim: fallbackAnim ?? animFor(x) ?? "", mus: cap([x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(", ")), how: x.s, cues: [], err: [], mono: "" } };
   };
   const options = slots.map((s, i) => {
@@ -102,6 +106,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const template = plan.key ?? plan.tpl ?? (expres ? `expres${expres}` : "descanso");
   const title = plan.name;
   const doneToday = options.length > 0 && doneTemplates.includes(template);
-  return <Player template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player voice={voice} hook={plan.hook} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
 }

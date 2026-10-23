@@ -1,12 +1,17 @@
 import Link from "next/link";
-import { ArrowRight, BananaFlame, BananaTrophy, BrandIcon, CaretRight, CheckCircle, Monkey, PersonSimpleWalk, Scales, TreePalm } from "@/components/icons";
+import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
-import { DAY_NAMES, isTrainingDay } from "@/lib/engine";
+import { DAY_NAMES, EX, isTrainingDay, prescribe, type SlotCfg } from "@/lib/engine";
+import { getHistory } from "@/lib/history";
+import { WorkoutHero } from "@/components/hoy/workout-hero";
+import type { Viewer } from "@/lib/supabase/server";
+import { getVoice } from "@/lib/voice-server";
+import { lastTimeLine, type Voice } from "@/lib/voice";
 import { ProgramHero } from "@/components/programas/program-hero";
 import { ProgramHabits } from "@/components/programas/program-habits";
 import { getProgramChecks } from "@/lib/programs-server";
@@ -14,7 +19,6 @@ import { habitsToday } from "@/lib/programs";
 import { TodayPanel } from "@/components/hoy/today-panel";
 import { WeekCard } from "@/components/hoy/week-card";
 import { WeighIn } from "@/components/weigh-in";
-import { Readiness } from "@/components/readiness";
 import { ExpressCard } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
 import { EnablePush } from "@/components/notifications/enable-push";
@@ -36,7 +40,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
   const demoTester = v.demo ? (await searchParams).tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
-  const [a, meals, ent, xs, tester] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null)]);
+  const [a, meals, ent, xs, tester, voice] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
@@ -53,6 +57,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = plan.mins ?? (training ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;
+  // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
+  const lastTime = training && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
 
   return (
     <div className="space-y-5 animate-enter">
@@ -77,48 +83,17 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
 
 
+      {/* Sin programa: el entreno de hoy va primero y a todo lo ancho (con imágenes de cada ejercicio). */}
+      {!d.program && <WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+        readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} />}
+
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
-        {/* Rutina de hoy: con un programa activo, su héroe la reemplaza */}
-        {d.program ? <ProgramHero p={d.program} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /> : <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-banana-soft border border-banana" : training ? "bg-banana" : "card"}`}>
-          {training && !g.trainedToday && <BrandIcon name={plan.icon} aria-hidden className="absolute -right-8 -top-8 size-44 text-ink opacity-[.09] rotate-12 select-none pointer-events-none" />}
-          <div className="relative flex items-center gap-3.5">
-            <span className={`grid place-items-center size-14 sm:size-16 shrink-0 rounded-2xl ${g.trainedToday ? "bg-ink text-banana" : training ? "bg-ink text-banana shadow-lift" : "bg-banana-soft text-banana-ink"}`}>
-              {g.trainedToday ? <CheckCircle weight="duotone" className="size-8 sm:size-9" /> : <BrandIcon name={plan.icon} className="size-8 sm:size-9" />}
-            </span>
-            <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-semibold text-ink/75">
-                <span>Hoy {DAY_NAMES[d.today.dow]}, {/^(fuerza|volumen)$/i.test(plan.tag) ? `día de ${plan.tag.toLowerCase()}` : plan.tag.toLowerCase()}</span>
-                {d.deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
-              </p>
-              <h2 className="mt-1 text-[28px] sm:text-[32px] leading-none font-extrabold tracking-tight text-ink">{plan.name}</h2>
-            </div>
-          </div>
-          {training ? (
-            <>
-              {!g.trainedToday && <p className="relative mt-3 rounded-2xl bg-white/60 px-3 py-2 text-sm text-ink"><b>Por qué importa:</b> entrenar fuerza hace que lo que bajes sea grasa y no músculo. Es la parte que más cambia tu cuerpo.</p>}
-              <p className="relative mt-2 text-sm font-semibold text-ink/70 tabular-nums">{plan.exercises.length} ejercicios en unos {mins} min{plan.cardio ? ", más cardio al final" : ""}</p>
-              <ul className="relative mt-4 flex flex-wrap gap-1.5">
-                {plan.exercises.map((e) => <li key={e.id} className="chip h-8 bg-white/70 text-ink text-[13px]">{e.name} <span className="text-ink/70">{e.cfg.sets}×{e.cfg.lo}-{e.cfg.hi}</span></li>)}
-              </ul>
-              {g.trainedToday ? (
-                <p className="relative mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0" />Entreno de hoy completado. Descansa y come bien.</p>
-              ) : (
-                <div className="relative mt-5"><Readiness suggestSoft={d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post"} initial={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /></div>
-              )}
-            </>
-          ) : (
-            <p className="relative mt-4 flex items-start gap-2 text-ink/80"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 mt-0.5 text-banana-ink" /><span>{plan.cardio}. Tu músculo crece hoy.</span></p>
-          )}
-          <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-ink/75">
-            <span className="inline-flex items-center gap-1.5">Ayer <BrandIcon name={d.yesterday.icon} className="size-4" /> {d.yesterday.name}</span>
-            <span className="inline-flex items-center gap-1.5">Mañana <BrandIcon name={d.tomorrow.icon} className="size-4" /> {d.tomorrow.name}</span>
-          </div>
-        </section>}
-
+        {/* Con un programa activo, su héroe reemplaza al entreno de hoy; sin programa, aquí va el exprés */}
+        {d.program ? <ProgramHero p={d.program} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <ExpressCard program={false} compact />}
       </div>
-      {!g.trainedToday && <ExpressCard program={!!d.program} compact />}
+      {d.program && !g.trainedToday && <ExpressCard program compact />}
       {px && habits && d.program && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
       {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
@@ -164,4 +139,23 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
     </div>
   );
+}
+
+/** Lo que hizo la última vez en el primer ejercicio con peso de hoy y lo que toca ahora (mismos números que el reproductor). */
+async function lastTimeFor(v: Viewer, voice: Voice, exs: { id: string; name: string; cfg: SlotCfg }[], deload: boolean): Promise<string | null> {
+  const weighted = exs.filter((e) => (EX[e.id as keyof typeof EX]?.inc ?? 0) > 0).slice(0, 4);
+  if (!weighted.length) return null;
+  try {
+    const hist = await getHistory(v, weighted.map((e) => e.id));
+    for (const e of weighted) {
+      const h = hist[e.id];
+      const last = h?.at(-1);
+      if (!last?.length) continue;
+      const top = last.reduce((a, b) => ((b.kg ?? 0) > (a.kg ?? 0) || ((b.kg ?? 0) === (a.kg ?? 0) && b.reps > a.reps) ? b : a));
+      if (!top.kg) continue;
+      const rx = prescribe(e.id, e.cfg, h, { deload });
+      return lastTimeLine(voice, { name: e.name, lastKg: top.kg, lastReps: top.reps, kg: rx.kg, reps: rx.reps[0] ?? e.cfg.lo, type: rx.type });
+    }
+  } catch { /* sin historial: sin la línea */ }
+  return null;
 }

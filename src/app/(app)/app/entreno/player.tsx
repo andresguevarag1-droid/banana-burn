@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning, WifiSlash } from "@/components/icons";
 import { platesPerSide, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
@@ -29,6 +30,8 @@ import type { SaveResult } from "./actions";
 import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/components/offline/outbox";
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
+import { hookLine } from "@/lib/engine";
+import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, t, type Voice } from "@/lib/voice";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
 export type Gam = { xp: number; streak: number; todayDone: boolean };
@@ -60,7 +63,11 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap }: {
+export function Player({ template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins }: {
+  /** "Cómo te hablo": registro del lenguaje (mismos números en los tres). */
+  voice?: Voice;
+  /** Línea de Coach Banana que presenta el entreno y sus minutos. */
+  hook?: string; mins?: number | null;
   template: string; title: string; icon: string; cardio?: string; options: PlayerExercise[][]; dateKey: string; mode?: Mode; doneToday?: boolean; repeat?: boolean; gam: Gam;
   /** Cambio pedido desde la biblioteca ("Cambiar por este"): ejercicio `slot` pasa a la opción `option`. */
   preswap?: { slot: number; option: number } | null;
@@ -188,6 +195,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const streakNext = gam.todayDone ? gam.streak : gam.streak + 1;
   const bananas = { got: rows.filter((r) => r.length && r.every((s) => s.done)).length, total: rows.length };
   const setWord = interval ? "intervalos" : "series";
+  const hints = effortHints(voice);
 
   /* ---------- Voz y sonido ---------- */
   const speak = useCallback((t: string, interrupt = false) => { if (prefs.voice) say(t, { interrupt }); }, [prefs.voice]);
@@ -349,7 +357,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     setRestInfo({
       levelUp: lvUp ? { idx: lvUp.idx, n: lvUp.n } : null, milestone: msText, fact, finish: finishLine,
       goal: g ? { idx: g.level.idx, progress: g.level.progress, text: levelGoalText(g, setWord) } : null,
-      setNo: ex.cfg.unit === "s" ? null : si + 1, effort: null, xp, xpKey: t, combo: c, pr: isPr && !rushed ? ex.name : null,
+      setNo: ex.cfg.unit === "s" ? null : si + 1, effort: null, hints, xp, xpKey: t, combo: c, pr: isPr && !rushed ? ex.name : null,
       rushed: rushed && !noXp, tip: tipCombo ? "combo" : tipXp ? "xp" : null,
       finished: finishedEx ? ex.name : null, bananas: { got: nextRows.filter((r) => r.every((s) => s.done)).length, total: nextRows.length },
       next: {
@@ -452,8 +460,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const ivNextName = ivTarget ? exercises[ivTarget.ex]?.name ?? "" : "";
   const alarm = interval
     ? (iv.phase === "prep" || iv.phase === "rest") && iv.paused == null ? { at: iv.end, t: "A trabajar", b: ivNextName } : { at: null, t: "", b: "" }
-    : rest ? { at: rest.end, t: "Descanso terminado", b: ivNextName ? `Sigue: ${ivNextName}` : "Vuelve a la app para seguir" }
-    : work ? { at: work.end, t: "Serie terminada", b: "Vuelve a la app para seguir" } : { at: null, t: "", b: "" };
+    : rest ? { at: rest.end, t: "Descanso terminado", b: ivNextName ? `Sigue: ${ivNextName}` : "Vuelve a Banana Burn para seguir" }
+    : work ? { at: work.end, t: "Serie terminada", b: "Vuelve a Banana Burn para seguir" } : { at: null, t: "", b: "" };
   useHiddenAlarm(phase === "play" ? alarm.at : null, alarm.t, alarm.b);
 
   /* ---------- Resumen y guardado ---------- */
@@ -543,7 +551,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
   if (phase === "saved") {
     return <Recap title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
-      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} />;
+      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} />;
   }
 
   if (phase === "summary") {
@@ -576,7 +584,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
                   ))}
                 </dl>
                 {noXp && <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">Ya habías hecho este entreno hoy: esta repetición queda en tu historial, pero no suma XP.</p>}
-                {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} {setWord}. Puedes terminar igual; el motor lo toma en cuenta.</p>}
+                {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} {setWord}. Puedes terminar igual; Coach Banana lo toma en cuenta.</p>}
                 {last && lastSet && (
                   <fieldset className="mt-3 card p-5">
                     <legend className="sr-only">Esfuerzo de la última serie</legend>
@@ -589,7 +597,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
                           <button key={e.id} type="button" onClick={() => setEffort(lastSet.ex, lastSet.si, e.id)} aria-pressed={on}
                             className={`pressable flex flex-col items-center justify-center gap-0.5 min-h-16 rounded-2xl px-1 text-center ${on ? "bg-ink text-white" : "bg-cream text-ink hover:bg-banana-soft"}`}>
                             <span className="inline-flex items-center gap-1 text-[15px] font-extrabold">{on && <Check weight="bold" className="size-4" />}{e.label}</span>
-                            <span className={`text-[11px] font-semibold leading-tight ${on ? "text-white/75" : "text-muted"}`}>{e.hint}</span>
+                            <span className={`text-[11px] font-semibold leading-tight ${on ? "text-white/75" : "text-muted"}`}>{hints[e.id]}</span>
                           </button>
                         );
                       })}
@@ -665,7 +673,9 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   }
 
   /* ---------- Reproductor ---------- */
-  const [badge, badgeCls, BadgeIcon] = RX_BADGE[ex.rx.type];
+  const [, badgeCls, BadgeIcon] = RX_BADGE[ex.rx.type];
+  const badge = rxBadge(voice, ex.rx.type);
+  const intro = hookLine(hook, mins);
   const unit = unitLbl(ex.cfg.unit);
   const allDoneHere = here.every((r) => r.done);
   const plates = ex.barbell && activeSet >= 0 ? platesPerSide(num(here[activeSet].kg)) : null;
@@ -683,7 +693,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const tourSteps: TourStep[] = [
     timed
       ? { target: "done", title: "Empieza la serie", body: "Toca Iniciar: cuenta 3 segundos para que te acomodes y luego el tiempo de trabajo. Al terminar se marca sola." }
-      : { target: "done", title: "Marca la serie", body: "Haz las reps y toca Hecho. Si levantaste otro peso, cámbialo antes con los botones grandes." },
+      : { target: "done", title: "Marca la serie", body: t(voice, { basico: "Haz las repeticiones y toca Hecho. Si usaste otro peso, cámbialo antes con los botones grandes.", intermedio: "Haz las reps y toca Hecho. Si levantaste otro peso, cámbialo antes con los botones grandes.", tecnico: "Completa la serie y toca Hecho. Ajusta antes la carga real si cambió." }) },
     { target: "rest", title: "Descansa", body: "Al marcar arranca el descanso con cuenta regresiva. Te avisamos con sonido y vibración cuando toca seguir." },
     { target: "swap", title: "¿Máquina ocupada?", body: "Toca Cambiar y elige otro ejercicio del mismo patrón. Tus series se ajustan solas." },
   ];
@@ -734,6 +744,16 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
             </div>
           </section>
           <p className="mt-3 text-[13px] leading-snug text-muted">{ex.rx.note}</p>
+
+          {/* Coach Banana presenta el entreno antes de la primera serie */}
+          {doneSets === 0 && intro && (
+            <div className="mt-3 flex items-center gap-3 rounded-[1.25rem] bg-ink p-3 pr-4 text-white">
+              <span aria-hidden className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-banana">
+                <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="object-cover origin-[52%_4%] scale-[2.5]" />
+              </span>
+              <p className="min-w-0"><span className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">Coach Banana</span><span className="block text-sm font-bold leading-snug text-pretty">{intro}</span></p>
+            </div>
+          )}
 
           {doneSets === 0 && !noXp && (() => {
             const fin = finishValue(xpState(0, 0));
@@ -792,8 +812,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
             )}
           </div>
 
-          {!focus && <p className="mt-3 text-center text-xs text-muted">{ex.cfg.unit ? `Técnica limpia, descanso ${restLabel(ex.cfg.rest)}` : `Tempo 3-1-1, 1 a 2 reps en reserva, descanso ${restLabel(ex.cfg.rest)}`}</p>}
-          {focus && !ex.cfg.unit && <p className="mt-3 text-center text-xs text-muted">Tempo 3-1-1: baja en 3 s, pausa 1, sube en 1. Deja 1 o 2 reps en reserva.</p>}
+          {!focus && <p className="mt-3 text-center text-xs text-muted">{strengthCue(voice, { rest: ex.cfg.rest, unit: ex.cfg.unit })}</p>}
+          {focus && !ex.cfg.unit && <p className="mt-3 text-center text-xs text-muted">{strengthCue(voice)}</p>}
           {nextEx === null && cardio && <p className="mt-3 card p-4 flex items-center gap-2.5 text-sm font-semibold text-ink"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 text-banana-ink" />Al final: {cardio}</p>}
         </div>
       </div>

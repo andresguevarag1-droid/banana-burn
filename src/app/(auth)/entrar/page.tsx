@@ -70,8 +70,8 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
           </div>
         ) : (
           <blockquote className="relative max-w-md">
-            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight">“Hoy te toca Empuje A. Ayer fue descanso, mañana Tracción. Sube 2.5 kg en banca.”</p>
-            <p className="mt-6 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Tu coach Banana Burn, cada mañana</p>
+            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight">“Hoy toca Piernas de acero y pecho firme. Ayer descansaste. Tu sentadilla sube 2,5 kg.”</p>
+            <p className="mt-6 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Coach Banana, cada mañana</p>
           </blockquote>
         )}
       </aside>

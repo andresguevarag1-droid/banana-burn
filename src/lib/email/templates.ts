@@ -507,16 +507,16 @@ export function soporteAviso(d: { name: string; kind: SupportMailKind; number: s
 
 // ───────────── Ciclo de vida (llevan enlace de baja) ─────────────
 
-export function recordatorio(d: { name: string; routine: string; mins?: number; exercises?: string[]; streak: number; goal?: Goal | null; unsubscribe: string }): Email {
+export function recordatorio(d: { name: string; routine: string; mins?: number; exercises?: string[]; streak: number; goal?: Goal | null; unsubscribe: string; /** Línea de Coach Banana del entreno ("Hoy armas una espalda ancha..."). */ hook?: string; /** Dato real de la última sesión, ya en el registro de la persona. */ fact?: string | null }): Email {
   const n = firstName(d.name);
-  const subject = `${n}, hoy te toca ${d.routine}: tus cargas ya están listas`;
+  const subject = `${n}, hoy te toca ${d.routine.replace(/:.*$/, "")}: tus cargas ya están listas`;
   const gl = goalLine(d.goal);
   const preheader = d.streak >= 2 ? `Vas ${d.streak} días seguidos. Tus cargas de hoy ya están listas.` : gl ? `${gl}. Hoy sumas una sesión más.` : "Tus cargas de hoy ya están calculadas. Solo falta que llegues.";
   const ex = (d.exercises ?? []).slice(0, 5);
-  const coach = d.streak >= 7 ? `${d.streak} días sin fallar. Eso ya es un hábito.`
+  const coach = d.fact ? d.fact : d.streak >= 7 ? `${d.streak} días sin fallar. Eso ya es un hábito.`
     : d.streak >= 2 ? `No rompas la racha. Hoy vamos por el día ${d.streak + 1}.`
     : "Lo difícil es llegar. De lo demás me encargo yo.";
-  const hero: Hero = { eyebrow: "Entreno de hoy", chip: d.streak >= 2 ? `Racha de ${d.streak} días` : undefined, title: `${esc(n)}, hoy te toca ${esc(d.routine)}`, lead: d.mins ? `Son unos ${d.mins} minutos. Ya calculamos cuánto levantar en cada serie.` : "Ya calculamos cuánto levantar en cada serie." };
+  const hero: Hero = { eyebrow: "Entreno de hoy", chip: d.streak >= 2 ? `Racha de ${d.streak} días` : undefined, title: `${esc(n)}, hoy te toca ${esc(d.routine)}`, lead: `${d.hook ? `${esc(d.hook)}. ` : ""}${d.mins ? `Son unos ${d.mins} minutos. Ya calculamos cuánto levantar en cada serie.` : "Ya calculamos cuánto levantar en cada serie."}` };
   const body =
     (ex.length ? eyebrow("Tu sesión").replace("margin:22px", "margin:0") + list(ex.map((e) => `${dot()}${esc(e)}`)) : "") +
     goalCard(d.goal) +

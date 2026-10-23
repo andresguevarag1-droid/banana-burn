@@ -66,6 +66,16 @@ export const NOVEDADES: Release[] = [
         icon: "medal", href: "/app/retos", cta: "Ver los retos", image: { reto: "agua-21" },
       },
       {
+        title: "Tu entreno de hoy, más claro y con ganas",
+        benefit: "Los entrenos tienen nombres que dicen qué trabajas (como Piernas de acero y pecho firme) y la tarjeta de Hoy muestra cada ejercicio con Coach Banana, cuántas series haces y lo que levantaste la vez pasada.",
+        icon: "monkey", href: "/app", cta: "Ver mi entreno",
+      },
+      {
+        title: "Coach Banana te habla como prefieras",
+        benefit: "Elige en Perfil si quieres explicaciones básicas, intermedias o técnicas. Los números son los mismos; cambia cómo te lo explicamos.",
+        icon: "sparkle", href: "/app/perfil", cta: "Elegir cómo te hablo",
+      },
+      {
         title: "Reporta un problema y sigue tu caso",
         benefit: "Si algo falla, cuéntanoslo desde Ayuda y reportes. Recibes un número de caso y te avisamos cuando lo recibimos, cuando lo estamos trabajando y cuando queda resuelto.",
         icon: "flag", href: "/app/soporte", cta: "Reportar un problema",

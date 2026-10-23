@@ -18,7 +18,7 @@ export default function Cancelado() {
         <Link href="/app/suscripcion" className="btn-primary">Intentar de nuevo</Link>
         <Link href="/precios" className="btn-ghost">Ver planes</Link>
       </div>
-      <Link href="/app" className="tap inline-block text-sm font-semibold text-muted underline underline-offset-2 transition-colors duration-150 hover:text-ink">Volver a la app</Link>
+      <Link href="/app" className="tap inline-block text-sm font-semibold text-muted underline underline-offset-2 transition-colors duration-150 hover:text-ink">Volver a Banana Burn</Link>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, Compass, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -23,6 +23,8 @@ import { money } from "@/lib/copy";
 import { TesterBadge } from "@/components/testers/tester-badge";
 import { getMyTester } from "@/lib/testers-server";
 import { OpenGuideButton } from "@/components/guide/open-guide";
+import { VoiceSettings } from "./voice-settings";
+import { getVoice } from "@/lib/voice-server";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -38,6 +40,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   // En paralelo: el perfil público, el plan, los avisos y las medallas no dependen del atleta.
   const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
   const [a, data, ent, prefs, power, verif, tester] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null)]);
+  const voice = await getVoice(v);
   const isTester = tester?.phase === "activo" || tester?.phase === "pronto";
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   let cp = { username: "andres", bio: "Bajando de 94 a 85 kg con Banana Burn", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };
@@ -108,7 +111,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
       </section>
 
       <section className="card p-5">
-        <H icon={Compass}>Guía de la app</H>
+        <H icon={Compass}>Guía de Banana Burn</H>
         <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}Coach Banana y tu progreso, según tu plan.</p>
         <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
       </section>
@@ -122,6 +125,12 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
       <section className="card p-5">
         <H icon={Barbell} className="mb-4">Mi plan de entreno</H>
         <TrainingSettings days={a.trainDays} equipment={a.equipment} mode={a.mode} level={a.level} minutes={a.minutes} />
+      </section>
+
+      <section id="lenguaje" className="card p-5 scroll-mt-6">
+        <H icon={ChatCircleText}>Cómo te hablo</H>
+        <p className="mt-1 mb-4 text-sm text-muted">Coach Banana te explica el entreno con estas palabras. Las series, las repeticiones y los pesos son los mismos en las tres.</p>
+        <VoiceSettings voice={voice} />
       </section>
 
       <section id="glp1" className="card p-5 scroll-mt-6">

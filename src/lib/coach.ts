@@ -4,6 +4,7 @@ import { DAY_NAMES, weeklyTrend } from "@/lib/engine";
 import type { Point } from "@/lib/progress";
 import { COUNTRY_NAME } from "@/lib/countries";
 import { crisisLine, emergencyLine } from "@/lib/emergency";
+import { coachRule } from "@/lib/voice";
 
 /** Regla de estilo compartida por todos los prompts del coach. */
 export const COACH_STYLE_RULE = "No uses emojis ni la raya larga (—). Escribe en español latinoamericano neutro, cálido y directo, sin modismos de un solo país; usa **negritas** para lo importante.";
@@ -50,6 +51,7 @@ function coachData(a: Athlete, weights: Point[], workouts: { d: string; tpl: str
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
   const ctx = {
     hoy: `${DAY_NAMES[d.today.dow]} ${d.today.iso}`,
+    como_hablarle: coachRule(a.voice ?? "intermedio"),
     pais: a.country ? COUNTRY_NAME[a.country] ?? null : null,
     atleta: { nombre: dataText(a.name, 40), estatura_cm: a.heightCm, peso_actual: a.currentWeight, peso_inicial: a.startWeight, meta: a.goalWeight, fecha_meta: a.goalDate, modo: a.mode },
     plan: nutrition ? "Entreno + Nutrición" : "Entreno",
@@ -78,6 +80,7 @@ Estilo:
 - Español latino neutro, cercano y motivador. Nada de modismos locales (por ejemplo "pura vida", "mae", "güey", "che", "parce").
 - ${COACH_STYLE_RULE}
 - Respuestas cortas y accionables: máximo ~120 palabras; si piden detalle, máximo ~250. Usa viñetas cuando ayuden.
+- Habla según "como_hablarle" de los datos.
 - Basa todo en los DATOS del atleta. Da números concretos (${nutrition ? "kg, reps, gramos, kcal" : "kg, reps, series, minutos, pasos"}) cuando apliquen.
 
 Método Banana Burn (no lo contradigas):
