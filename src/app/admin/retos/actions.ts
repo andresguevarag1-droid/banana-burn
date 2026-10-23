@@ -7,6 +7,11 @@ import * as val from "@/lib/admin-validate";
 import { ValidationError } from "@/lib/admin-validate";
 import { audit, DEMO_MSG, fail, ok, pgMessage, run } from "@/lib/admin-action-kit";
 import { COVERS, ICONS, MAX_CHALLENGE_XP, MAX_PRICE_USD, MIN_PRICE_USD, parsePlan, type ChallengeStatus } from "@/lib/challenges";
+import { parseMeta, parseSession, programErrors, weeksOf, type ProgramMeta, type ProgramSession } from "@/lib/programs";
+import { authorize } from "@/lib/admin-auth";
+import { EX } from "@/lib/engine";
+import { searchLibrary, MUSCLE, es as esLib } from "@/lib/library";
+import { knownExercise } from "@/lib/programs-server";
 import type { ActionState } from "../actions";
 
 const STATUSES: ChallengeStatus[] = ["borrador", "publicado", "oculto", "archivado"];
@@ -19,17 +24,39 @@ const refresh = (slug?: string) => {
   if (slug) revalidatePath(`/app/retos/${slug}`);
 };
 
+/** Programa (0024): meta y sesiones del editor. Sin ejercicios inexistentes; para publicar, nada vacío. */
+function readProgram(fd: FormData, publish: boolean): { meta: ProgramMeta; sessions: ProgramSession[] } {
+  let meta: ProgramMeta | null, sessions: ProgramSession[];
+  try {
+    meta = parseMeta(JSON.parse(val.text(fd, "program", { max: 60_000 }) || "null"));
+    const raw = JSON.parse(val.text(fd, "sessions", { max: 200_000 }) || "[]");
+    sessions = (Array.isArray(raw) ? raw : []).map(parseSession).filter((x): x is ProgramSession => !!x);
+  } catch { throw new ValidationError("El programa no es válido. Recarga la página e intenta de nuevo."); }
+  if (!meta) throw new ValidationError("Define al menos una fase con sus semanas.");
+  const m = meta;
+  // Solo las sesiones que existen en el calendario (fases y días por semana actuales).
+  sessions = sessions.filter((x) => x.phase <= m.phases.length && x.day <= m.daysPerWeek);
+  const errs = programErrors(m, sessions, knownExercise);
+  const bad = errs.filter((e) => /no existen|clave/.test(e));
+  if (bad.length) throw new ValidationError(bad[0]);
+  if (publish && errs.length) throw new ValidationError(`Para publicar el programa: ${errs.slice(0, 2).join(" ")}${errs.length > 2 ? ` (y ${errs.length - 2} más)` : ""}`);
+  return { meta: m, sessions };
+}
+
 /** Lee y valida el formulario del editor. Pura respecto a la BD (lanza ValidationError con mensajes en español). */
 function readForm(fd: FormData) {
   const title = val.text(fd, "title", { label: "Título", required: true, min: 3, max: 80 });
-  const days = val.int(fd, "days", { label: "Duración", required: true, min: 1, max: 365 })!;
-  const verify = val.oneOf(fd, "verify", VERIFY, { label: "Verificación" });
+  const kind = val.oneOf(fd, "kind", ["reto", "programa"] as const, { fallback: "reto" });
+  const statusEarly = val.oneOf(fd, "status", STATUSES, { label: "Estado" });
+  const prog = kind === "programa" ? readProgram(fd, statusEarly === "publicado") : null;
+  const days = prog ? weeksOf(prog.meta) * 7 : val.int(fd, "days", { label: "Duración", required: true, min: 1, max: 365 })!;
+  const verify = prog ? ("workout" as const) : val.oneOf(fd, "verify", VERIFY, { label: "Verificación" });
   const price = val.num(fd, "price_usd", { label: "Precio", min: 0, max: MAX_PRICE_USD }) ?? 0;
   if (price > 0 && price < MIN_PRICE_USD) throw new ValidationError(`El precio mínimo de un reto de pago es $${MIN_PRICE_USD.toFixed(2)} (mínimo de ONVO).`);
   const startMode = val.oneOf(fd, "start_mode", ["libre", "fecha"] as const, { fallback: "libre" });
   const startDate = startMode === "fecha" ? val.date(fd, "start_date", { label: "Fecha de inicio", required: true }) : null;
-  const status = val.oneOf(fd, "status", STATUSES, { label: "Estado" });
-  const grace = val.int(fd, "grace", { label: "Comodines", min: 0, max: 60 }) ?? 0;
+  const status = statusEarly;
+  const grace = prog ? 0 : val.int(fd, "grace", { label: "Comodines", min: 0, max: 60 }) ?? 0;
   if (grace >= days) throw new ValidationError("Los comodines deben ser menos que los días del reto.");
   const icon = val.text(fd, "icon", { max: 24 }) || "medal";
   if (!ICONS.includes(icon)) throw new ValidationError("Ícono inválido.");
@@ -37,7 +64,7 @@ function readForm(fd: FormData) {
   if (onvo && !/^[A-Za-z0-9_\-]+$/.test(onvo)) throw new ValidationError("El ID de precio de ONVO solo lleva letras, números, guiones y guiones bajos.");
   let plan: ReturnType<typeof parsePlan>;
   try { plan = parsePlan(JSON.parse(val.text(fd, "plan", { max: 200_000 }) || "[]"), days); } catch { throw new ValidationError("El plan día a día no es válido."); }
-  if (status === "publicado" && plan.length < days) throw new ValidationError(`Para publicar, el plan debe tener los ${days} días (tiene ${plan.length}). Usa los ayudantes para rellenarlo.`);
+  if (!prog && status === "publicado" && plan.length < days) throw new ValidationError(`Para publicar, el plan debe tener los ${days} días (tiene ${plan.length}). Usa los ayudantes para rellenarlo.`);
   return {
     row: {
       title, days, verify, status, icon, grace,
@@ -55,9 +82,27 @@ function readForm(fd: FormData) {
       featured: val.bool(fd, "featured"), coming_soon: val.bool(fd, "coming_soon"),
       safety_note: val.text(fd, "safety_note", { label: "Nota de seguridad", max: 600 }) || null,
       sort: val.int(fd, "sort", { label: "Orden", min: 0, max: 9999 }) ?? 0,
+      ...(prog ? { kind, program: prog.meta } : { kind }),
     },
-    plan,
+    plan, prog,
   };
+}
+
+/** Guarda las sesiones de un programa: inserta o actualiza las del editor y borra las que ya no están. */
+async function saveSessions(sb: NonNullable<Parameters<Parameters<typeof run>[2]>[0]["sb"]>, slug: string, sessions: ProgramSession[], by: string) {
+  const now = new Date().toISOString();
+  if (sessions.length) {
+    const { error } = await sb.from("program_sessions").upsert(sessions.map((x) => ({ slug, phase: x.phase, day: x.day, title: x.title, focus: x.focus, optional: !!x.optional, exercises: x.exercises, updated_by: by, updated_at: now })), { onConflict: "slug,phase,day" });
+    if (error) return error;
+  }
+  const { data: have } = await sb.from("program_sessions").select("phase,day").eq("slug", slug);
+  const keep = new Set(sessions.map((x) => `${x.phase}.${x.day}`));
+  for (const r of (have ?? []) as { phase: number; day: number }[]) {
+    if (keep.has(`${r.phase}.${r.day}`)) continue;
+    const { error } = await sb.from("program_sessions").delete().eq("slug", slug).eq("phase", r.phase).eq("day", r.day);
+    if (error) return error;
+  }
+  return null;
 }
 
 export async function saveStoreChallenge(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -65,7 +110,7 @@ export async function saveStoreChallenge(_: ActionState, fd: FormData): Promise<
   const res = await run("content.challenges", fd, async ({ v, sb }) => {
     const id = val.text(fd, "id", { max: 64 });
     if (id && sb && !val.isUuid(id)) return fail("Reto inválido.");
-    const { row, plan } = readForm(fd);
+    const { row, plan, prog } = readForm(fd);
     if (!sb) return ok(`Reto ${id ? "guardado" : "creado"}${DEMO_MSG}`);
     let slug: string, uuid: string;
     if (id) {
@@ -80,9 +125,17 @@ export async function saveStoreChallenge(_: ActionState, fd: FormData): Promise<
       if (error) return fail(pgMessage(error));
       slug = data.slug; uuid = data.id;
     }
-    const { error: pe } = await sb.from("challenge_plans").upsert({ slug, days: plan, updated_by: v.id, updated_at: new Date().toISOString() }, { onConflict: "slug" });
-    if (pe) return fail(pgMessage(pe));
-    await audit(sb, v, id ? "challenge.update" : "challenge.create", `challenge:${slug}`, { title: row.title, status: row.status, price_usd: row.price_usd, days: row.days, plan_days: plan.length });
+    if (prog) {
+      const se = await saveSessions(sb, slug, prog.sessions, v.id);
+      if (se) return fail(pgMessage(se));
+    } else {
+      const { error: pe } = await sb.from("challenge_plans").upsert({ slug, days: plan, updated_by: v.id, updated_at: new Date().toISOString() }, { onConflict: "slug" });
+      if (pe) return fail(pgMessage(pe));
+    }
+    await audit(sb, v, id ? "challenge.update" : "challenge.create", `challenge:${slug}`, {
+      title: row.title, status: row.status, price_usd: row.price_usd, days: row.days, kind: row.kind,
+      ...(prog ? { weeks: weeksOf(prog.meta), sessions: prog.sessions.length, exercises: prog.sessions.reduce((a, x) => a + x.exercises.length, 0), nutrition: prog.meta.nutrition?.mode ?? null } : { plan_days: plan.length }),
+    });
     refresh(slug);
     if (!id) created = uuid;
     return ok(id ? "Reto guardado. Quedó en auditoría." : "Reto creado. Quedó en auditoría.");
@@ -98,9 +151,17 @@ export async function setChallengeStatus(_: ActionState, fd: FormData): Promise<
     if (!sb) return ok(`Estado cambiado a ${status}${DEMO_MSG}`);
     if (!val.isUuid(id)) return fail("Reto inválido.");
     if (status === "publicado") {
-      const { data: c } = await sb.from("challenges_catalog").select("slug,days").eq("id", id).maybeSingle();
-      const { data: p } = c ? await sb.from("challenge_plans").select("days").eq("slug", c.slug).maybeSingle() : { data: null };
-      if (!c || parsePlan(p?.days, c.days).length < c.days) return fail("Para publicar, completa el plan de todos los días en el editor.");
+      const first = await sb.from("challenges_catalog").select("slug,days,kind,program").eq("id", id).maybeSingle();
+      const { data: c } = first.error ? await sb.from("challenges_catalog").select("slug,days").eq("id", id).maybeSingle() : first;
+      const cc = c as { slug: string; days: number; kind?: string; program?: unknown } | null;
+      if (cc?.kind === "programa") {
+        const { data: ss } = await sb.from("program_sessions").select("phase,day,title,focus,optional,exercises").eq("slug", cc.slug);
+        const errs = programErrors(parseMeta(cc.program), (ss ?? []).map(parseSession).filter((x): x is ProgramSession => !!x), knownExercise);
+        if (errs.length) return fail(`Para publicar el programa: ${errs[0]}`);
+      } else {
+        const { data: p } = cc ? await sb.from("challenge_plans").select("days").eq("slug", cc.slug).maybeSingle() : { data: null };
+        if (!cc || parsePlan(p?.days, cc.days).length < cc.days) return fail("Para publicar, completa el plan de todos los días en el editor.");
+      }
     }
     const { data, error } = await sb.from("challenges_catalog").update({ status, updated_by: v.id }).eq("id", id).select("slug,title").single();
     if (error) return fail(pgMessage(error));
@@ -128,6 +189,10 @@ export async function duplicateChallenge(_: ActionState, fd: FormData): Promise<
     if (e2) return fail(pgMessage(e2));
     const { data: p } = await sb.from("challenge_plans").select("days").eq("slug", src.slug).maybeSingle();
     if (p) await sb.from("challenge_plans").insert({ slug, days: p.days, updated_by: v.id });
+    if (src.kind === "programa") {
+      const { data: ss } = await sb.from("program_sessions").select("phase,day,title,focus,optional,exercises").eq("slug", src.slug);
+      if (ss?.length) await sb.from("program_sessions").insert(ss.map((x) => ({ ...x, slug, updated_by: v.id })));
+    }
     await audit(sb, v, "challenge.duplicate", `challenge:${slug}`, { from: src.slug });
     refresh();
     created = ins.id as string;
@@ -182,4 +247,19 @@ export async function grantChallenge(_: ActionState, fd: FormData): Promise<Acti
     refresh(slug);
     return ok("Reto regalado. Ya puede empezarlo. Quedó en auditoría.");
   });
+}
+
+export type ExerciseHit = { id: string; name: string; muscle: string; eq: string };
+
+/** Buscador de ejercicios del editor de programas: primero los del motor, después la biblioteca. Solo editores. */
+export async function searchExercises(q: string): Promise<ExerciseHit[]> {
+  const auth = await authorize("content.challenges");
+  if (!auth.ok || typeof q !== "string") return [];
+  const t = q.trim().slice(0, 40);
+  if (t.length < 2) return [];
+  const norm = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const nq = norm(t);
+  const engine = Object.entries(EX).filter(([id, e]) => norm(e.n).includes(nq) || id === t).slice(0, 6).map(([id, e]) => ({ id, name: e.n, muscle: e.m, eq: "Motor" }));
+  const lib = searchLibrary({ q: t, per: 12 }).items.map((x) => ({ id: `ds:${x.id}`, name: x.n, muscle: esLib(MUSCLE, x.t), eq: x.eq }));
+  return [...engine, ...lib].slice(0, 14);
 }

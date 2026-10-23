@@ -30,6 +30,8 @@ export function workoutName(tpl: string) {
   const m = /^expres(\d+)$/.exec(tpl);
   if (m) return `Exprés ${m[1]} min`;
   if (tpl === "descanso") return "Descanso activo";
+  const pm = /^p:[a-z0-9-]+:(\d{1,2})\.(\d)$/.exec(tpl);
+  if (pm) return `Programa: semana ${pm[1]}, día ${pm[2]}`;
   return tpl;
 }
 

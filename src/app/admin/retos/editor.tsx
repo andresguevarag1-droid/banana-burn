@@ -7,11 +7,15 @@ import { Field, btnGhost, inputSm, panel, textareaSm } from "@/components/admin/
 import { ChallengeCover } from "@/components/retos/cover";
 import { COVERS, COVER_LABEL, DIFFICULTY_LABEL, ICONS, MAX_CHALLENGE_XP, STATUS_LABEL, VERIFY_LABEL, type CoverStyle, type DayTask, type TaskType } from "@/lib/challenges";
 import { saveStoreChallenge } from "./actions";
+import { EMPTY_META, ProgramEditor } from "./program-editor";
+import { weeksOf, type ProgramMeta, type ProgramSession } from "@/lib/programs";
 
 export type EditorValue = {
   uuid?: string; slug?: string; title: string; desc: string; days: number; verify: string; stepsGoal?: number; icon: string; cover: CoverStyle;
   difficulty: string; minutes: number; grace: number; xp: number; badge: string; rewardTitle: string | null; priceUsd: number; onvoPriceId: string | null;
   startMode: "libre" | "fecha"; startDate: string | null; featured: boolean; comingSoon: boolean; safetyNote: string | null; status: string; sort: number; plan: DayTask[];
+  /** Programa (0024): tipo, meta, sesiones y nombres de sus ejercicios. */
+  kind: "reto" | "programa"; program: ProgramMeta | null; sessions: ProgramSession[]; names: Record<string, string>;
 };
 
 const TYPES: { v: TaskType; l: string }[] = [
@@ -29,6 +33,8 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
   const [verify, setVerify] = useState(init.verify);
   const [startMode, setStartMode] = useState(init.startMode);
   const [price, setPrice] = useState(String(init.priceUsd || ""));
+  const [kind, setKind] = useState(init.kind);
+  const isProg = kind === "programa";
   // Ayudantes
   const [cycle, setCycle] = useState(7);
   const [tpl, setTpl] = useState("{n} flexiones en total hoy");
@@ -52,6 +58,16 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
   return (
     <form action={action} className="space-y-5">
       {init.uuid && <input type="hidden" name="id" value={init.uuid} />}
+      <input type="hidden" name="kind" value={kind} />
+      <fieldset className={`${panel} flex flex-wrap items-center gap-3 p-4 sm:p-5`}>
+        <legend className="sr-only">Tipo</legend>
+        <p className="mr-auto min-w-0 text-sm text-muted"><b className="text-ink">Tipo.</b> Un reto es un hábito diario con check-in. Un programa reemplaza la rutina de la persona mientras dura.</p>
+        {(["reto", "programa"] as const).map((k) => (
+          <label key={k} className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-transform duration-150 ease-out active:scale-[.97] ${kind === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-ink"}`}>
+            <input type="radio" name="kind-ui" value={k} checked={kind === k} onChange={() => setKind(k)} className="sr-only" />{k === "reto" ? "Reto de hábitos" : "Programa de entreno"}
+          </label>
+        ))}
+      </fieldset>
       <input type="hidden" name="plan" value={JSON.stringify(rows.filter((r) => r.t.trim()).length === days ? rows : rows.slice(0, rows.findIndex((r) => !r.t.trim()) < 0 ? days : rows.findIndex((r) => !r.t.trim())))} />
 
       <section className={`${panel} grid gap-4 p-4 sm:p-5 md:grid-cols-[1fr_16rem]`} aria-labelledby={`ed-basic-${k}`}>
@@ -65,12 +81,13 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
             <select id={`st-${k}`} name="status" defaultValue={init.status} className={sel}>{Object.entries(STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
           </Field>
           <Field label="Descripción" htmlFor={`d-${k}`} className="sm:col-span-2"><textarea id={`d-${k}`} name="description" rows={3} maxLength={600} defaultValue={init.desc} className={textareaSm} /></Field>
-          <Field label="Duración (días)" htmlFor={`dd-${k}`}><input id={`dd-${k}`} name="days" type="number" required min={1} max={365} value={days} onChange={(e) => resize(Number(e.target.value))} className={inputSm} /></Field>
+          {isProg ? <p className="self-end pb-2 text-sm text-muted">La duración sale de las fases del programa{init.program ? ` (${weeksOf(init.program)} semanas al abrir)` : ""}.</p>
+            : <Field label="Duración (días)" htmlFor={`dd-${k}`}><input id={`dd-${k}`} name="days" type="number" required min={1} max={365} value={days} onChange={(e) => resize(Number(e.target.value))} className={inputSm} /></Field>}
           <Field label="Minutos al día" htmlFor={`m-${k}`}><input id={`m-${k}`} name="minutes" type="number" required min={1} max={240} defaultValue={init.minutes} className={inputSm} /></Field>
           <Field label="Dificultad" htmlFor={`df-${k}`}><select id={`df-${k}`} name="difficulty" defaultValue={init.difficulty} className={sel}>{Object.entries(DIFFICULTY_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
-          <Field label="Cómo se cumple" htmlFor={`v-${k}`}><select id={`v-${k}`} name="verify" value={verify} onChange={(e) => setVerify(e.target.value)} className={sel}>{Object.entries(VERIFY_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
-          {verify === "steps" && <Field label="Meta de pasos" htmlFor={`sg-${k}`}><input id={`sg-${k}`} name="steps_goal" type="number" min={1000} max={50000} step={500} defaultValue={init.stepsGoal ?? 10000} className={inputSm} /></Field>}
-          <Field label="Comodines" htmlFor={`g-${k}`} hint="Días que se pueden fallar"><input id={`g-${k}`} name="grace" type="number" min={0} max={60} defaultValue={init.grace} className={inputSm} /></Field>
+          {!isProg && <Field label="Cómo se cumple" htmlFor={`v-${k}`}><select id={`v-${k}`} name="verify" value={verify} onChange={(e) => setVerify(e.target.value)} className={sel}>{Object.entries(VERIFY_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>}
+          {!isProg && verify === "steps" && <Field label="Meta de pasos" htmlFor={`sg-${k}`}><input id={`sg-${k}`} name="steps_goal" type="number" min={1000} max={50000} step={500} defaultValue={init.stepsGoal ?? 10000} className={inputSm} /></Field>}
+          {!isProg && <Field label="Comodines" htmlFor={`g-${k}`} hint="Días que se pueden fallar"><input id={`g-${k}`} name="grace" type="number" min={0} max={60} defaultValue={init.grace} className={inputSm} /></Field>}
           <Field label="Orden" htmlFor={`o-${k}`} hint="Menor = más arriba"><input id={`o-${k}`} name="sort" type="number" min={0} max={9999} defaultValue={init.sort} className={inputSm} /></Field>
         </div>
         <div className="space-y-3">
@@ -96,7 +113,9 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
         {!canSell && Number(price) > 0 && <p className="text-xs text-muted sm:col-span-2 lg:col-span-4">Las ventas y compradores de este reto los ven soporte, admin y superadmin.</p>}
       </section>
 
-      <section className={`${panel} p-4 sm:p-5`} aria-labelledby={`plan-${k}`}>
+      {isProg && <ProgramEditor init={init.program ?? EMPTY_META} sessions={init.sessions} names={init.names} />}
+
+      <section hidden={isProg} className={`${panel} p-4 sm:p-5`} aria-labelledby={`plan-${k}`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id={`plan-${k}`} className="font-extrabold text-ink">Plan día a día</h2>
           <p className={`text-sm font-semibold tabular-nums ${filled === days ? "text-[#17703A]" : "text-muted"}`}>{filled} de {days} días con tarea</p>

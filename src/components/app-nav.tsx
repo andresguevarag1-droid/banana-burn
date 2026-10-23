@@ -22,7 +22,7 @@ const MAIN: Item[] = [
 ];
 const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador con IA" },
-  { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Tienda: gratis y Premium" },
+  { href: "/app/retos", label: "Programas y retos", icon: BananaMedal, hint: "Programas Premium y retos gratis" },
   { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1", nutri: true },
@@ -32,7 +32,8 @@ const SOON: Item = { href: "/app/conexiones", label: "Relojes", icon: Watch, hin
 /** Barra inferior en móvil: 4 secciones + Coach al centro + "Más". */
 const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
 
-export function AppNav({ name, staff, nutrition }: { name: string; staff: boolean; nutrition: boolean }) {
+/** `program`: programa activo (0024). Se marca en el menú con un distintivo discreto. */
+export function AppNav({ name, staff, nutrition, program = null }: { name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string } | null }) {
   const path = usePathname();
   const [more, setMore] = useState(false);
   useEffect(() => setMore(false), [path]);
@@ -53,7 +54,13 @@ export function AppNav({ name, staff, nutrition }: { name: string; staff: boolea
       )}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
         <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
-        <nav aria-label="Menú principal" className="mt-10 space-y-1">
+        {program && (
+          <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
+            <span aria-hidden className="size-2 shrink-0 rounded-full bg-banana" />
+            <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">Programa activo</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
+          </Link>
+        )}
+        <nav aria-label="Menú principal" className={`${program ? "mt-6" : "mt-10"} space-y-1`}>
           {MAIN.map((it) => { const { href, label, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
               <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}{lockMark(it)}
@@ -85,7 +92,9 @@ export function AppNav({ name, staff, nutrition }: { name: string; staff: boolea
             );
             return (
               <Link key={href} href={href} aria-current={on ? "page" : undefined} className={`pressable flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${on ? "text-ink" : "text-muted"}`}>
-                <span className={`grid place-items-center h-8 w-12 rounded-full transition ${on ? "bg-banana" : ""}`}><Icon className="size-5" weight={on ? "fill" : "duotone"} /></span>{label}
+                <span className={`relative grid place-items-center h-8 w-12 rounded-full transition ${on ? "bg-banana" : ""}`}><Icon className="size-5" weight={on ? "fill" : "duotone"} />
+                  {program && href === "/app/entrenar" && <span aria-hidden className="absolute right-2 top-0.5 size-2 rounded-full bg-ember ring-2 ring-white" />}
+                </span>{label}{program && href === "/app/entrenar" && <span className="sr-only"> (programa activo: {program.title})</span>}
               </Link>
             );
           })}
@@ -98,7 +107,7 @@ export function AppNav({ name, staff, nutrition }: { name: string; staff: boolea
       <Sheet open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-4 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : it.hint; return (
+          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
             <li key={href}>
               <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}</span>

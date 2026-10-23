@@ -1,6 +1,8 @@
 // Retos: tienda (gratis y Premium), plan día a día y estado. El catálogo vive en la BD (challenges_catalog, 0018) y lo edita
 // el admin en /admin/retos; challenge-seed.ts es la siembra inicial y el respaldo si la base aún no tiene la migración.
 import { SEED, type ChallengeStatus, type CoverStyle, type DayTask, type Difficulty, type SeedChallenge, type Verify } from "./challenge-seed";
+import { PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./program-seed";
+import { parseMeta, type ProgramMeta } from "./programs";
 export type { ChallengeStatus, CoverStyle, DayTask, Difficulty, TaskType, Verify } from "./challenge-seed";
 
 export type Challenge = {
@@ -17,7 +19,13 @@ export type Challenge = {
   status: ChallengeStatus; sort: number;
   /** Plan día a día visible para quien mira (null = no cargado o bloqueado). */
   plan: DayTask[] | null;
+  /** "reto" = hábito con check-in diario; "programa" = plan de entreno que toma el control de la app (0024). */
+  kind: ChallengeKind;
+  /** Meta pública del programa (fases, días por semana, para quién...). Solo en programas. */
+  program: ProgramMeta | null;
 };
+export type ChallengeKind = "reto" | "programa";
+export const isProgram = (c: Pick<Challenge, "kind" | "program">): c is Challenge & { kind: "programa"; program: ProgramMeta } => c.kind === "programa" && !!c.program;
 
 /** Estado de un reto. `activo` sigue en curso; los demás son finales. */
 export type Outcome = "activo" | "completado" | "fallido" | "vencido";
@@ -56,17 +64,30 @@ export function taskFor(plan: DayTask[] | null | undefined, day: number, verify:
 }
 
 export function fromSeed(s: SeedChallenge, source: "app" | "admin" = "app"): Challenge {
+  const p = PROGRAM_SEED_BY_SLUG[s.slug];
+  if (p) return fromProgramSeed(p, source);
   return {
     id: s.slug, title: s.title, icon: s.icon, days: s.days, desc: s.description, verify: s.verify, color: COVER_COLOR[s.cover], xp: s.xp, grace: s.grace,
     stepsGoal: s.stepsGoal, source, priceUsd: s.priceUsd, cover: s.cover, difficulty: s.difficulty, minutes: s.minutes, badge: s.badge, rewardTitle: s.rewardTitle,
     startMode: s.startMode, startDate: s.startDate, featured: s.featured, comingSoon: s.comingSoon, safetyNote: s.safetyNote, status: "publicado", sort: s.sort,
-    plan: s.plan, task: (d) => taskFor(s.plan, d, s.verify, s.stepsGoal),
+    plan: s.plan, task: (d) => taskFor(s.plan, d, s.verify, s.stepsGoal), kind: "reto", program: null,
+  };
+}
+
+/** Programa de la siembra (program-seed.ts) como reto del catálogo (modo demo y respaldo). */
+export function fromProgramSeed(p: ProgramSeed, source: "app" | "admin" = "app"): Challenge {
+  const weeks = p.meta.phases.reduce((a, x) => a + x.weeks, 0);
+  return {
+    id: p.slug, title: p.title, icon: p.icon, days: weeks * 7, desc: p.description, verify: "workout", color: COVER_COLOR[p.cover], xp: p.xp, grace: 0,
+    source, priceUsd: p.priceUsd, cover: p.cover, difficulty: p.difficulty, minutes: p.minutes, badge: p.badge, rewardTitle: p.rewardTitle,
+    startMode: "libre", startDate: null, featured: p.featured, comingSoon: false, safetyNote: p.safetyNote, status: "publicado", sort: p.sort,
+    plan: null, task: () => "Haz la sesión del programa", kind: "programa", program: p.meta,
   };
 }
 
 /** Los 6 retos con los que nació la app (sus ids se guardan en user_challenges desde 0008). */
 export const BASE_IDS = ["banana-30", "flexiones-30", "plancha-30", "pasos-30", "proteina-21", "agua-21"];
-export const SEED_CHALLENGES: Challenge[] = SEED.map((s) => fromSeed(s));
+export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p))];
 export const CHALLENGES: Challenge[] = SEED_CHALLENGES.filter((c) => BASE_IDS.includes(c.id));
 export const CHALLENGE_BY_ID: Record<string, Challenge> = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
 
@@ -78,6 +99,8 @@ export type CatalogRow = {
   status?: string | null; price_usd?: number | string | null; difficulty?: string | null; minutes?: number | null; cover?: string | null; icon?: string | null;
   verify?: string | null; grace?: number | null; xp?: number | null; steps_goal?: number | null; badge?: string | null; reward_title?: string | null;
   start_mode?: string | null; start_date?: string | null; featured?: boolean | null; coming_soon?: boolean | null; safety_note?: string | null; sort?: number | null;
+  /** 0024 */
+  kind?: string | null; program?: unknown;
 };
 const VERIFY: Verify[] = ["manual", "workout", "steps", "protein", "water"];
 const DIFFS: Difficulty[] = ["facil", "media", "dificil"];
@@ -130,8 +153,14 @@ export function fromCatalogRow(row: CatalogRow, plan?: DayTask[] | null): Challe
     minutes: clamp(int(row.minutes, 10), 1, 240), badge: str(row.badge, 60) ?? row.title.slice(0, 60), rewardTitle: str(row.reward_title, 40),
     startMode: start ? "fecha" : "libre", startDate: start, featured: !!row.featured, comingSoon: !!row.coming_soon, safetyNote: str(row.safety_note, 600),
     status: STATUSES.includes(row.status as ChallengeStatus) ? (row.status as ChallengeStatus) : "publicado", sort: int(row.sort, 0),
-    plan: pl,
+    plan: pl, ...kindOf(row),
   };
+}
+
+/** Programa (0024) solo si la fila lo dice y su meta es válida; si no, reto de siempre. */
+function kindOf(row: CatalogRow): { kind: ChallengeKind; program: ProgramMeta | null } {
+  const meta = row.kind === "programa" ? parseMeta(row.program) : null;
+  return meta ? { kind: "programa", program: meta } : { kind: "reto", program: null };
 }
 
 /** Catálogo efectivo sin la migración 0018: el base, con los retos del panel agregados (o reemplazando al base con el mismo id). */
@@ -143,7 +172,7 @@ export function mergeCatalog(rows: CatalogRow[]): Challenge[] {
 
 // ───────────── Tienda ─────────────
 
-export type StoreSection = "gratis" | "premium" | "proximamente";
+export type StoreSection = "programas" | "gratis" | "premium" | "proximamente";
 export const isPaid = (c: Pick<Challenge, "priceUsd">) => c.priceUsd > 0;
 
 /** ¿Se puede empezar hoy? Retos con fecha fija: solo en su ventana de inscripción. */
@@ -158,8 +187,9 @@ export function openState(c: Pick<Challenge, "startMode" | "startDate" | "coming
  * Sección de la tienda en la que aparece un reto, o null si no se muestra.
  * Solo los publicados se ven (borrador, oculto y archivado nunca); los cerrados solo los ve quien ya está o lo compró.
  */
-export function storeSection(c: Pick<Challenge, "status" | "priceUsd" | "startMode" | "startDate" | "comingSoon">, today: string): StoreSection | null {
+export function storeSection(c: Pick<Challenge, "status" | "priceUsd" | "startMode" | "startDate" | "comingSoon"> & { kind?: ChallengeKind }, today: string): StoreSection | null {
   if (c.status !== "publicado") return null;
+  if (c.kind === "programa") return c.comingSoon ? "proximamente" : "programas";
   const o = openState(c, today);
   if (o === "pronto") return "proximamente";
   if (o === "cerrado") return null;

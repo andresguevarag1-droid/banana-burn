@@ -6,7 +6,8 @@ import { getDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
-import { DAY_NAMES } from "@/lib/engine";
+import { DAY_NAMES, isTrainingDay } from "@/lib/engine";
+import { ProgramHero } from "@/components/programas/program-hero";
 import { TodayPanel } from "@/components/hoy/today-panel";
 import { WeekCard } from "@/components/hoy/week-card";
 import { WeighIn } from "@/components/weigh-in";
@@ -36,7 +37,7 @@ export default async function Hoy() {
     getXpSummary(v),
   ]);
   const { plan, t } = d;
-  const training = !!plan.tpl;
+  const training = isTrainingDay(plan);
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = plan.mins ?? (training ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;
@@ -65,9 +66,9 @@ export default async function Hoy() {
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: a.mode } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
-        {/* Rutina de hoy */}
-        <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-banana-soft border border-banana" : training ? "bg-banana" : "card"}`}>
+        <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
+        {/* Rutina de hoy: con un programa activo, su héroe la reemplaza */}
+        {d.program ? <ProgramHero p={d.program} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} /> : <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-banana-soft border border-banana" : training ? "bg-banana" : "card"}`}>
           {training && !g.trainedToday && <BrandIcon name={plan.icon} aria-hidden className="absolute -right-8 -top-8 size-44 text-ink opacity-[.09] rotate-12 select-none pointer-events-none" />}
           <div className="relative flex items-center gap-3.5">
             <span className={`grid place-items-center size-14 sm:size-16 shrink-0 rounded-2xl ${g.trainedToday ? "bg-ink text-banana" : training ? "bg-ink text-banana shadow-lift" : "bg-banana-soft text-banana-ink"}`}>
@@ -102,7 +103,7 @@ export default async function Hoy() {
             <span className="inline-flex items-center gap-1.5">Ayer <BrandIcon name={d.yesterday.icon} className="size-4" /> {d.yesterday.name}</span>
             <span className="inline-flex items-center gap-1.5">Mañana <BrandIcon name={d.tomorrow.icon} className="size-4" /> {d.tomorrow.name}</span>
           </div>
-        </section>
+        </section>}
 
       </div>
       {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}

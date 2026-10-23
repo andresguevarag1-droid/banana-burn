@@ -1,0 +1,261 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import {
+  adaptId, addDays, calendarSlot, daysLabel, effectiveDay, parseMeta, parseProgramTemplate, parseSession, phaseAt, programErrors, programNutrition,
+  programTemplate, resolveProgram, resumePausedDays, startPlan, weeksOf, withProgramProtein, type DoneSession, type ProgramMeta, type ProgramSession, type ProgramState,
+} from "./programs";
+import { PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, programSeedSql } from "./program-seed";
+import { exInfo, knownExercise } from "./programs-server";
+import { SEED_CHALLENGES, fromCatalogRow, storeSection } from "./challenges";
+import { targets } from "./engine";
+
+const sql = readFileSync(new URL("../../supabase/migrations/0024_programas.sql", import.meta.url), "utf8");
+const recon = PROGRAM_SEED_BY_SLUG["reconstruccion-8-semanas"];
+const def = { meta: recon.meta, sessions: recon.sessions };
+const START = "2026-10-05"; // lunes
+const st = (o: Partial<ProgramState> = {}): ProgramState => ({ slug: recon.slug, status: "activo", startedOn: START, pausedOn: null, pausedDays: 0, completedAt: null, ...o });
+const done = (list: [number, number, number][]): DoneSession[] => list.map(([week, day, off]) => ({ week, day, on: addDays(START, off) }));
+
+describe("0024 coincide con el código", () => {
+  it("la siembra de la migración es la de program-seed.ts (regenerar con scripts/gen-programas-seed.ts)", () => {
+    expect(sql).toContain(programSeedSql().trim());
+  });
+  it("precios: se conservan los de 0018 y el insignia cuesta $9.99", () => {
+    expect(Object.fromEntries(PROGRAM_SEED.map((p) => [p.slug, p.priceUsd]))).toEqual({
+      "reconstruccion-8-semanas": 9.99, "gluteos-30": 6.99, "dominadas-desde-cero": 7.99, "abdomen-21": 4.99, "pierde-3kg-6-semanas": 9.99,
+    });
+  });
+});
+
+describe("siembra de programas", () => {
+  it("todos los ejercicios (y sus alternativas de casa) existen en el motor o la biblioteca", () => {
+    for (const p of PROGRAM_SEED) for (const s of p.sessions) for (const e of s.exercises) {
+      expect(knownExercise(e.id), `${p.slug} ${e.id}`).toBe(true);
+      if (e.home) expect(knownExercise(e.home), `${p.slug} ${e.home}`).toBe(true);
+    }
+  });
+  it("cada programa se puede publicar (fases con sesiones completas, ejercicios clave presentes)", () => {
+    for (const p of PROGRAM_SEED) expect(programErrors(p.meta, p.sessions, knownExercise), p.slug).toEqual([]);
+  });
+  it("la meta guardada en la base vuelve igual al leerla", () => {
+    for (const p of PROGRAM_SEED) {
+      expect(parseMeta(JSON.parse(JSON.stringify(p.meta)))).toEqual(p.meta);
+      for (const s of p.sessions) expect(parseSession(JSON.parse(JSON.stringify(s)))).toEqual(s);
+    }
+  });
+  it("duraciones: 8, 6, 6, 3 y 6 semanas; descarga en los de 8 semanas o más", () => {
+    expect(PROGRAM_SEED.map((p) => weeksOf(p.meta))).toEqual([8, 6, 6, 3, 6]);
+    for (const p of PROGRAM_SEED.filter((x) => weeksOf(x.meta) >= 8)) expect(p.meta.phases.some((f) => f.deload)).toBe(true);
+  });
+  it("volumen sensato: entre 10 y 20 series duras por semana en los músculos grandes del insignia (fase de construcción)", () => {
+    const groups: Record<string, string[]> = {
+      cuadriceps: ["squat", "goblet", "bulgarian", "ds:0739"], espalda: ["lat", "dbrow", "ds:0861", "row", "invrow"], pecho: ["bench", "incline", "pushup", "floorpress"],
+      gluteo: ["ds:1409", "rdl", "bulgarian", "squat"],
+    };
+    const required = recon.sessions.filter((x) => x.phase === 2 && !x.optional);
+    for (const [g, ids] of Object.entries(groups)) {
+      const n = required.reduce((a, s) => a + s.exercises.filter((e) => ids.includes(e.id)).reduce((b, e) => b + e.sets, 0), 0);
+      expect(n, g).toBeGreaterThanOrEqual(10); expect(n, g).toBeLessThanOrEqual(20);
+    }
+  });
+  it("el insignia: 3 sesiones obligatorias y 1 opcional por semana", () => {
+    expect(daysLabel(recon.meta, recon.sessions)).toBe("3 a 4 días por semana");
+    expect(daysLabel(PROGRAM_SEED_BY_SLUG["gluteos-30"].meta, PROGRAM_SEED_BY_SLUG["gluteos-30"].sessions)).toBe("3 días por semana");
+  });
+  it("en el catálogo de respaldo los programas convertidos y el insignia son programas; los hábitos siguen siendo retos", () => {
+    const by = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
+    for (const p of PROGRAM_SEED) expect(by[p.slug]?.kind, p.slug).toBe("programa");
+    expect(by["banana-30"].kind).toBe("reto");
+    expect(by["sprint-verano-28"].kind).toBe("reto");
+    expect(storeSection(by["reconstruccion-8-semanas"], "2026-10-23")).toBe("programas");
+  });
+  it("una fila de la base con kind 'programa' pero sin meta válida se lee como reto", () => {
+    const row = { slug: "x-prog", title: "X", description: null, days: 21, rules: null, kind: "programa", program: { phases: [] } };
+    expect(fromCatalogRow(row)?.kind).toBe("reto");
+    expect(fromCatalogRow({ ...row, program: recon.meta })?.kind).toBe("programa");
+  });
+});
+
+describe("plantillas", () => {
+  it("se guardan como p:<slug>:<semana>.<día> y se leen de vuelta", () => {
+    const t = programTemplate(recon.slug, 2, 3);
+    expect(t).toBe("p:reconstruccion-8-semanas:2.3");
+    expect(parseProgramTemplate(t)).toEqual({ slug: recon.slug, week: 2, day: 3 });
+    expect(parseProgramTemplate("pushA")).toBeNull();
+    expect(t.length).toBeLessThanOrEqual(80);
+  });
+});
+
+describe("qué entreno toca hoy", () => {
+  it("día de inicio: semana 1, día 1, toca entreno", () => {
+    const r = resolveProgram(def, st(), [], START);
+    expect(r).toMatchObject({ week: 1, weeks: 8, dayInWeek: 0, today: "entreno", sessionsDone: 0, sessionsTotal: 24, sessionsMissed: 0 });
+    expect(r.next?.day).toBe(1);
+    expect(r.next?.session.title).toBe("Cuerpo completo A");
+  });
+  it("tras la sesión 1, el día siguiente toca la 2 (4 días: offsets 0, 1, 3, 4)", () => {
+    const r = resolveProgram(def, st(), done([[1, 1, 0]]), addDays(START, 1));
+    expect(r.today).toBe("entreno");
+    expect(r.next?.day).toBe(2);
+  });
+  it("si ya hizo una sesión hoy, no le pide otra", () => {
+    const r = resolveProgram(def, st(), done([[1, 1, 0]]), START);
+    expect(r.today).toBe("hecho");
+    expect(r.nextOn).toBe(addDays(START, 1));
+  });
+  it("día sin sesión planeada y al día: descanso, con la fecha de la próxima", () => {
+    const r = resolveProgram(def, st(), done([[1, 1, 0], [1, 2, 1]]), addDays(START, 2));
+    expect(r.today).toBe("descanso");
+    expect(r.nextOn).toBe(addDays(START, 3));
+    expect(r.next?.day).toBe(3);
+  });
+  it("si se le pasó un día, se pone al corriente al siguiente (sin dos sesiones el mismo día)", () => {
+    const r = resolveProgram(def, st(), done([[1, 1, 0]]), addDays(START, 2));
+    expect(r.today).toBe("entreno");
+    expect(r.next?.day).toBe(2);
+  });
+  it("obligatorias primero; la opcional después; semana completa al terminar todas", () => {
+    const three = done([[1, 1, 0], [1, 2, 1], [1, 3, 3]]);
+    expect(resolveProgram(def, st(), three, addDays(START, 4)).next).toMatchObject({ day: 4 });
+    expect(resolveProgram(def, st(), three, addDays(START, 4)).weekSessions.find((w) => w.day === 4)?.optional).toBe(true);
+    const four = done([[1, 1, 0], [1, 2, 1], [1, 3, 3], [1, 4, 4]]);
+    const r = resolveProgram(def, st(), four, addDays(START, 5));
+    expect(r.today).toBe("semana-completa");
+    expect(r.nextOn).toBe(addDays(START, 7));
+    expect(r.extrasDone).toBe(1);
+    expect(r.sessionsDone).toBe(3);
+  });
+  it("semana y día: el día 9 es la semana 2, con 'día 2' si hizo la 1", () => {
+    const r = resolveProgram(def, st(), done([[1, 1, 0], [1, 2, 1], [1, 3, 3], [2, 1, 7]]), addDays(START, 9));
+    expect(r.week).toBe(2);
+    expect(r.dayInWeek).toBe(2);
+    expect(r.next?.day).toBe(2);
+    expect(r.phase.index).toBe(1);
+  });
+  it("las sesiones de semanas pasadas que no hizo cuentan como perdidas", () => {
+    const r = resolveProgram(def, st(), done([[1, 1, 0]]), addDays(START, 8));
+    expect(r.week).toBe(2);
+    expect(r.sessionsMissed).toBe(2);
+  });
+  it("la semana 7 es de descarga y la 8 de cierre", () => {
+    expect(phaseAt(recon.meta, 7)).toMatchObject({ index: 3, startWeek: 7, endWeek: 7 });
+    expect(phaseAt(recon.meta, 7).phase.deload).toBe(true);
+    expect(resolveProgram(def, st(), [], addDays(START, 6 * 7)).phase.phase.deload).toBe(true);
+    expect(resolveProgram(def, st(), [], addDays(START, 7 * 7)).phase.phase.name).toBe("Cierre");
+  });
+  it("lo hecho antes de este inicio (una corrida anterior) no cuenta", () => {
+    const old: DoneSession[] = [{ week: 1, day: 1, on: addDays(START, -30) }];
+    expect(resolveProgram(def, st(), old, START).sessionsDone).toBe(0);
+  });
+  it("al terminar el calendario se puede cerrar; antes, solo con todas las sesiones", () => {
+    expect(resolveProgram(def, st(), [], addDays(START, 55)).canFinish).toBe(false);
+    const end = resolveProgram(def, st(), [], addDays(START, 56));
+    expect(end).toMatchObject({ today: "terminado", canFinish: true, week: 8 });
+    const all: DoneSession[] = [];
+    for (let w = 1; w <= 8; w++) for (const d of [1, 2, 3]) all.push({ week: w, day: d, on: addDays(START, (w - 1) * 7 + d) });
+    expect(resolveProgram(def, st(), all, addDays(START, 54)).canFinish).toBe(true);
+  });
+  it("próximo hito: fin de la fase actual, y el certificado al final", () => {
+    expect(resolveProgram(def, st(), [], START).milestone).toMatchObject({ label: "Fin de la fase 1: Base y técnica", week: 3, left: 2 });
+    expect(resolveProgram(def, st(), [], addDays(START, 7 * 7)).milestone).toMatchObject({ final: true, week: 8, left: 0 });
+  });
+});
+
+describe("pausa y reanudación", () => {
+  it("en pausa la semana no avanza", () => {
+    const paused = st({ status: "pausado", pausedOn: addDays(START, 10) });
+    expect(effectiveDay(paused, addDays(START, 40))).toBe(10);
+    expect(resolveProgram(def, paused, [], addDays(START, 40))).toMatchObject({ week: 2, today: "pausado" });
+  });
+  it("al reanudar, los días en pausa se descuentan y sigue donde iba", () => {
+    const pausedDays = resumePausedDays({ pausedOn: addDays(START, 10), pausedDays: 0 }, addDays(START, 24));
+    expect(pausedDays).toBe(14);
+    const resumed = st({ pausedDays });
+    expect(effectiveDay(resumed, addDays(START, 24))).toBe(10);
+    expect(resolveProgram(def, resumed, [], addDays(START, 24)).week).toBe(2);
+    // Dos pausas se suman.
+    expect(resumePausedDays({ pausedOn: addDays(START, 30), pausedDays: 14 }, addDays(START, 33))).toBe(17);
+  });
+  it("el calendario de la semana sigue la pausa: nada planeado mientras está en pausa", () => {
+    expect(calendarSlot(def, st({ status: "pausado", pausedOn: START }), START, START)).toBeNull();
+    expect(calendarSlot(def, st(), START, START)).toMatchObject({ week: 1, day: 1 });
+    expect(calendarSlot(def, st(), START, addDays(START, 2))).toBeNull(); // miércoles de descanso
+    expect(calendarSlot(def, st(), START, addDays(START, 3))).toMatchObject({ week: 1, day: 3 });
+    expect(calendarSlot(def, st(), START, addDays(START, -1))).toBeNull();
+    expect(calendarSlot(def, st(), START, addDays(START, 56))).toBeNull();
+  });
+});
+
+describe("un solo programa activo", () => {
+  const states = [{ slug: "a", status: "activo" as const }, { slug: "b", status: "pausado" as const }, { slug: "c", status: "abandonado" as const }];
+  it("empezar otro con uno activo pide pausar el actual", () => {
+    expect(startPlan(states, "d")).toEqual({ conflict: "a", action: "empezar" });
+  });
+  it("reanudar uno en pausa también choca con el activo", () => {
+    expect(startPlan(states, "b")).toEqual({ conflict: "a", action: "reanudar" });
+  });
+  it("el activo no choca consigo mismo; uno abandonado se reinicia", () => {
+    expect(startPlan(states, "a")).toEqual({ conflict: null, action: "activo" });
+    expect(startPlan(states.slice(1), "c")).toEqual({ conflict: null, action: "reiniciar" });
+  });
+});
+
+describe("nutrición del programa", () => {
+  const meta = recon.meta;
+  it("solo se aplica con nutrición: un programa nunca la da", () => {
+    expect(programNutrition(meta, { nutrition: false })).toBeNull();
+    expect(programNutrition(meta, { nutrition: true })).toEqual(meta.nutrition);
+    expect(programNutrition({ nutrition: null }, { nutrition: true })).toBeNull();
+    expect(programNutrition(PROGRAM_SEED_BY_SLUG["abdomen-21"].meta, { nutrition: true })).toBeNull();
+  });
+  it("cambia el modo de calorías y la proteína (g por kg), y recalcula carbohidratos", () => {
+    const base = targets({ kg: 80, heightCm: 175, age: 30, mode: "acelerada" });
+    const recomp = targets({ kg: 80, heightCm: 175, age: 30, mode: "recomp" });
+    const n = programNutrition(PROGRAM_SEED_BY_SLUG["gluteos-30"].meta, { nutrition: true })!;
+    expect(n.mode).toBe("fuerza");
+    const t = withProgramProtein(targets({ kg: 80, heightCm: 175, age: 30, mode: n.mode }), n, 80);
+    expect(t.kcal).toBeGreaterThan(base.kcal);
+    expect(t.protein).toBe(145); // 1,8 g x 80 kg = 144, redondeado a 5
+    expect(t.carbs).toBe(Math.round((t.kcal - t.protein * 4 - t.fat * 9) / 4));
+    expect(recomp.kcal).toBeGreaterThan(base.kcal);
+    expect(withProgramProtein(base, null, 80)).toEqual(base);
+  });
+});
+
+describe("validación del panel", () => {
+  const meta: ProgramMeta = { ...recon.meta, phases: [{ name: "Base", weeks: 2 }], daysPerWeek: 2, keyLifts: [] };
+  const s = (day: number, ex: ProgramSession["exercises"]): ProgramSession => ({ phase: 1, day, title: `Día ${day}`, focus: "", exercises: ex });
+  it("no se publica con sesiones vacías", () => {
+    const errs = programErrors(meta, [s(1, [{ id: "squat", sets: 3, lo: 8, hi: 10, rest: 90 }]), s(2, [])], knownExercise);
+    expect(errs.join(" ")).toMatch(/día 2: la sesión no tiene ejercicios/);
+  });
+  it("ni con un día sin sesión, ni con ejercicios que no existen", () => {
+    expect(programErrors(meta, [s(1, [{ id: "squat", sets: 3, lo: 8, hi: 10, rest: 90 }])], knownExercise).join(" ")).toMatch(/día 2/);
+    expect(programErrors(meta, [s(1, [{ id: "ds:9999", sets: 3, lo: 8, hi: 10, rest: 90 }]), s(2, [{ id: "noexiste", sets: 3, lo: 8, hi: 10, rest: 90 }])], knownExercise).join(" ")).toMatch(/no existen/);
+  });
+  it("completo: sin errores", () => {
+    expect(programErrors(meta, [s(1, [{ id: "squat", sets: 3, lo: 8, hi: 10, rest: 90 }]), s(2, [{ id: "ds:0739", sets: 3, lo: 10, hi: 15, rest: 90 }])], knownExercise)).toEqual([]);
+  });
+  it("el saneado acota series, rangos, tempo e ids", () => {
+    expect(parseSession({ phase: 1, day: 1, title: "x", exercises: [{ id: "squat", sets: 40, lo: 12, hi: 5, rest: 9999, tempo: "lento" }, { id: "<script>" }] })?.exercises)
+      .toEqual([{ id: "squat", sets: 10, lo: 12, hi: 12, rest: 600 }]);
+    expect(parseSession({ phase: 9, day: 1 })).toBeNull();
+  });
+});
+
+describe("adaptación al equipo", () => {
+  const info = (id: string) => exInfo(id);
+  it("en el gimnasio no cambia nada", () => {
+    expect(adaptId({ id: "squat" }, "gym", true, info)).toBe("squat");
+    expect(adaptId({ id: "ds:0739", home: "goblet" }, "gym", true, info)).toBe("ds:0739");
+  });
+  it("en casa: los del motor usan su versión de casa; los de máquina, su alternativa", () => {
+    expect(adaptId({ id: "squat" }, "casa", true, info)).toBe("goblet");
+    expect(adaptId({ id: "ds:0739", home: "goblet" }, "casa", true, info)).toBe("goblet");
+    expect(adaptId({ id: "ds:0381", home: "lunge" }, "casa", true, info)).toBe("ds:0381"); // mancuernas: se queda
+    expect(adaptId({ id: "ds:0381", home: "lunge" }, "ninguno", true, info)).toBe("lunge");
+  });
+  it("un programa que no se adapta (dominadas) deja sus ejercicios", () => {
+    expect(adaptId({ id: "lat" }, "ninguno", false, info)).toBe("lat");
+  });
+});

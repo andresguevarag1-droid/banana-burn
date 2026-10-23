@@ -33,6 +33,8 @@ export function metAuto(c: Challenge, m: Metrics) {
 
 /** Columnas de la tienda (0018). */
 export const STORE_COLS = "slug,title,description,days,rules,status,price_usd,difficulty,minutes,cover,icon,verify,grace,xp,steps_goal,badge,reward_title,start_mode,start_date,featured,coming_soon,safety_note,sort";
+/** Con los programas (0024): tipo y meta. */
+export const STORE_COLS_24 = `${STORE_COLS},kind,program`;
 type DefRow = CatalogRow & { plan?: unknown };
 
 /**
@@ -42,10 +44,13 @@ type DefRow = CatalogRow & { plan?: unknown };
 export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Challenge>> => {
   if (demo) return new Map(SEED_CHALLENGES.map((c) => [c.id, c]));
   const sb = await createClient();
-  const [{ data, error }, mine] = await Promise.all([
-    sb.from("challenges_catalog").select(STORE_COLS).order("sort").order("created_at"),
+  const [first, mine, progs] = await Promise.all([
+    sb.from("challenges_catalog").select(STORE_COLS_24).order("sort").order("created_at"),
     sb.rpc("my_challenge_defs"),
+    sb.rpc("my_program_defs"),
   ]);
+  // Base sin 0024: la tienda de 0018 sin programas.
+  const { data, error } = first.error ? await sb.from("challenges_catalog").select(STORE_COLS).order("sort").order("created_at") : first;
   if (error) {
     // Base sin 0018: catálogo de 0005 (solo activos) sobre el base.
     const { data: old, error: e2 } = await sb.from("challenges_catalog").select("slug,title,description,days,rules").eq("active", true).order("sort");
@@ -53,13 +58,19 @@ export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Chall
   }
   const out = new Map<string, Challenge>();
   for (const row of (data ?? []) as CatalogRow[]) { const c = fromCatalogRow(row); if (c) out.set(c.id, c); }
-  for (const row of ((mine.data ?? []) as DefRow[])) { const c = fromCatalogRow(row, parsePlan(row.plan, row.days)); if (c) out.set(c.id, c); }
+  for (const row of ((mine.data ?? []) as DefRow[])) {
+    // my_challenge_defs no trae el tipo: si la fila publicada ya dijo que es programa, se conserva.
+    const prev = out.get(row.slug);
+    const c = fromCatalogRow(prev?.kind === "programa" ? { ...row, kind: "programa", program: prev.program } : row, parsePlan(row.plan, row.days));
+    if (c) out.set(c.id, c);
+  }
+  for (const row of ((progs.error ? [] : progs.data ?? []) as CatalogRow[])) { if (out.has(row.slug)) continue; const c = fromCatalogRow(row); if (c) out.set(c.id, c); }
   return out;
 });
 
 /** Retos de pago que el usuario tiene (compra o cortesía). */
 export const getOwned = cache(async (v: Viewer): Promise<Set<string>> => {
-  if (v.demo) return new Set(["abdomen-21"]);
+  if (v.demo) return new Set(["abdomen-21", "reconstruccion-8-semanas"]);
   const { data } = await (await createClient()).from("challenge_entitlements").select("challenge_slug").eq("user_id", v.id);
   return new Set(((data ?? []) as { challenge_slug: string }[]).map((r) => r.challenge_slug));
 });
@@ -298,7 +309,8 @@ export async function sweepChallenges(now = new Date()): Promise<{ users: number
 
 /** Todo el catálogo (también ocultos y archivados: quien ya está inscrito debe poder terminar). */
 async function catalogForCron(db: SupabaseClient) {
-  const { data, error } = await db.from("challenges_catalog").select(STORE_COLS);
+  const first = await db.from("challenges_catalog").select(STORE_COLS_24);
+  const { data, error } = first.error ? await db.from("challenges_catalog").select(STORE_COLS) : first;
   if (error) {
     const { data: old, error: e2 } = await db.from("challenges_catalog").select("slug,title,description,days,rules").eq("active", true);
     return new Map(mergeCatalog(e2 ? [] : ((old ?? []) as CatalogRow[])).map((c) => [c.id, c]));

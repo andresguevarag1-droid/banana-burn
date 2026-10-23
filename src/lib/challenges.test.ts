@@ -109,7 +109,9 @@ describe("tienda de retos: visibilidad", () => {
     expect(SEED_CHALLENGES.length).toBeGreaterThanOrEqual(14);
     expect(SEED_CHALLENGES.filter((c) => c.priceUsd > 0).length).toBeGreaterThanOrEqual(4);
     expect(SEED_CHALLENGES.filter((c) => c.priceUsd === 0).length).toBeGreaterThanOrEqual(6);
-    for (const c of SEED_CHALLENGES) {
+    // Los programas (0024) no tienen plan día a día: tienen sesiones (programs.test.ts).
+    for (const c of SEED_CHALLENGES.filter((x) => x.kind === "programa")) expect(c.program?.phases.length).toBeGreaterThan(0);
+    for (const c of SEED_CHALLENGES.filter((x) => x.kind === "reto")) {
       expect(c.plan).toHaveLength(c.days);
       for (const d of c.plan!) expect(d.t).not.toMatch(/[—·]/);
       expect(c.xp).toBeLessThanOrEqual(400);

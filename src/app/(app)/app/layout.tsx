@@ -12,6 +12,7 @@ import { levelOf } from "@/lib/gamify";
 import { TrialBanner } from "./suscripcion/trial-banner";
 import { BetaBanner } from "@/components/beta-notice";
 import { betaLive } from "@/lib/plans";
+import { getActiveProgram } from "@/lib/programs-server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +22,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app");
   if (!v.onboarded) redirect("/bienvenida");
-  const [ent, xp] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null)]);
+  const [ent, xp, prog] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null)]);
   return (
     <div className="lg:pl-64">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
-      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} />
+      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={prog && ent.app ? { slug: prog.c.id, title: prog.c.title } : null} />
       <InstallPrompt />
       <TzSync current={v.tz} />
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
