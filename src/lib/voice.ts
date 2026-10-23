@@ -160,7 +160,9 @@ export function readinessTips(v: Voice, program = false): [string, string, strin
 
 export type RxType = "cal" | "up" | "reps" | "hold" | "reset" | "deload";
 
-export function rxBadge(v: Voice, type: RxType) {
+/** `unit` "s": ejercicio por tiempo (plancha): la progresión es en segundos, no "+1 rep" ni "sube carga". */
+export function rxBadge(v: Voice, type: RxType, unit?: string) {
+  if (unit === "s" && (type === "reps" || type === "up")) return t(v, { basico: "Unos segundos más", intermedio: "+ segundos", tecnico: "Progresión de tiempo" });
   const L: Record<RxType, { basico: string; intermedio: string; tecnico: string }> = {
     cal: { basico: "Primer día", intermedio: "Calibración", tecnico: "Calibración" },
     up: { basico: "Sube el peso", intermedio: "Sube carga", tecnico: "Progresión de carga" },

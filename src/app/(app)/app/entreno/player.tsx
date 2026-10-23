@@ -681,7 +681,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
   /* ---------- Reproductor ---------- */
   const [, badgeCls, BadgeIcon] = RX_BADGE[ex.rx.type];
-  const badge = rxBadge(voice, ex.rx.type);
+  const badge = rxBadge(voice, ex.rx.type, ex.cfg.unit);
   const intro = introText ?? hookLine(hook, mins);
   const unit = unitLbl(ex.cfg.unit);
   const allDoneHere = here.every((r) => r.done);
@@ -862,6 +862,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       {/* Descanso */}
       {restP.mounted && shownRest && shownInfo && (
         <RestScreen left={rest ? restLeft : 0} total={shownRest.total} info={shownInfo} closing={restP.closing}
+          minimizeLabel={ex.bw && !ex.load ? "Ajustar la serie" : "Ajustar pesos"}
           onEffort={(e) => restTarget.current && setEffort(restTarget.current.ex, restTarget.current.si, e)}
           onAdjust={(d) => setRest((r) => r && (d > 0 ? { end: r.end + d * 1000, total: r.total + d } : { ...r, end: r.end + d * 1000 }))}
           onSkip={cancelRest}
@@ -891,7 +892,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               {ex.tech.how.length > 0 && <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>}
               {ex.tech.cues.length > 0 && <div className="flex flex-wrap gap-2">{ex.tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel"><Check weight="bold" className="size-3.5" />{c}</span>)}</div>}
               {ex.tech.err.length > 0 && <div className="space-y-1">{ex.tech.err.map((c) => <p key={c} className="flex gap-1.5 text-sm text-ember-ink"><X weight="bold" className="mt-0.5 size-4 shrink-0" />{c}</p>)}</div>}
-              {ex.tech.mono && <p className="flex gap-2.5 rounded-2xl bg-white p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={ex.tech.mono} /></span></p>}
+              {ex.tech.mono && <p className="flex gap-2.5 rounded-2xl bg-white p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={coach ? ex.tech.mono.replaceAll("Coach Banana", coach.name) : ex.tech.mono} /></span></p>}
               {canSpeak() && ex.tech.how.length > 0 && <button onClick={() => say([ex.name, ...ex.tech!.how].join(". "), { interrupt: true })} className="btn-ghost w-full"><SpeakerHigh weight="bold" className="size-5" />Escuchar los pasos</button>}
               <button onClick={() => setSheet(null)} className="btn-primary w-full">Entendido</button>
             </div>

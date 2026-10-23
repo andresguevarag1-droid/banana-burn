@@ -94,7 +94,7 @@ export default async function ProgramaAvance({ params }: { params: Promise<{ slu
         {[
           { l: "Cumplimiento", v: `${Math.round(run.pct * 100)} %`, h: "de las sesiones del programa" },
           { l: "Sesiones hechas", v: `${run.sessionsDone}`, h: `de ${run.sessionsTotal}${run.extrasDone ? `, más ${run.extrasDone} extra` : ""}` },
-          { l: "Perdidas", v: `${run.sessionsMissed}`, h: run.sessionsMissed ? (run.byDays ? "en días que ya pasaron" : "en semanas que ya pasaron") : "ninguna, vas al día" },
+          { l: "Perdidas", v: `${run.sessionsMissed}`, h: run.sessionsMissed ? (run.byDays ? "en días que ya pasaron" : "en semanas que ya pasaron") : st.status === "completado" ? "ninguna" : "ninguna, vas al día" },
           run.byDays ? { l: "Día", v: `${Math.min(run.days, run.effectiveDay + 1)} de ${run.days}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` } : { l: "Semana", v: `${Math.min(run.week, weeks)} de ${weeks}`, h: `fase ${run.phase.index}: ${run.phase.phase.name}` },
         ].map((k) => (
           <div key={k.l} className="card p-4"><p className="text-xs font-bold text-muted">{k.l}</p><p className="mt-1 text-2xl font-extrabold tabular-nums text-ink">{k.v}</p><p className="text-xs text-muted">{k.h}</p></div>

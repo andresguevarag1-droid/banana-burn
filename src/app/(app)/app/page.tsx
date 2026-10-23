@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Scales } from "@/components/icons";
+import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily, greetingAt } from "@/lib/daily";
@@ -14,7 +14,7 @@ import { getVoice } from "@/lib/voice-server";
 import { lastTimeLine, type Voice } from "@/lib/voice";
 import { ProgramHero } from "@/components/programas/program-hero";
 import { ProgramHabits } from "@/components/programas/program-habits";
-import { getProgramChecks } from "@/lib/programs-server";
+import { getProgramChecks, getProgramStates, loadProgram } from "@/lib/programs-server";
 import { habitsToday } from "@/lib/programs";
 import { TodayPanel } from "@/components/hoy/today-panel";
 import { coachOf } from "@/lib/coaches";
@@ -49,9 +49,11 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
   const px = d.program?.meta.experience ?? null;
-  const [ch, checks] = await Promise.all([
+  const [ch, checks, paused] = await Promise.all([
     getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein }),
     px ? getProgramChecks(v, d.today.iso) : Promise.resolve([] as string[]),
+    // Sin programa activo: el que dejó en pausa, para recordárselo (antes Hoy no decía nada y volvía la rutina normal).
+    d.program ? Promise.resolve(null) : pausedProgram(v),
   ]);
   // Programa con experiencia (0027): sus hábitos del día y una línea de comida que cambia cada día.
   const habits = px && d.program ? habitsToday(px, { ...g.log, protein: g.log.protein + eaten.protein }, { checks, proteinTarget: ent.nutrition ? d.t.protein : null, trainedToday: g.trainedToday || d.program.run.today === "hecho", sessionDay: d.program.run.today === "entreno" }) : null;
@@ -91,6 +93,14 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
 
 
+      {paused && (
+        <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cream text-ink"><Pause weight="duotone" className="size-5" /></span>
+          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{paused.title} está en pausa</span><span className="block text-sm text-muted">{paused.at}. Mientras tanto entrenas tu rutina normal; reanúdalo cuando quieras.</span></span>
+          <CaretRight weight="bold" className="size-5 shrink-0 text-faint" />
+        </Link>
+      )}
+
       {/* Sin programa: el entreno de hoy va primero y a todo lo ancho (con imágenes de cada ejercicio). */}
       {!d.program && <WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
         readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} />}
@@ -101,8 +111,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         {/* Con un programa activo, su héroe reemplaza al entreno de hoy; sin programa, aquí va el exprés */}
         {d.program ? <ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <ExpressCard program={false} compact />}
       </div>
-      {d.program && !g.trainedToday && <ExpressCard program compact coach={coach.id === "banana" ? null : coach} />}
-      {px && habits && d.program && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
+      {d.program && !g.trainedToday && <ExpressCard program={d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} />}
+      {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
       {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
 
@@ -148,6 +158,16 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
     </div>
   );
+}
+
+/** Programa en pausa (el más reciente) con el punto en que quedó: "Vas en el día 10 de 30". */
+async function pausedProgram(v: Viewer): Promise<{ slug: string; title: string; at: string } | null> {
+  try {
+    const st = (await getProgramStates(v)).find((s) => s.status === "pausado");
+    const p = st ? await loadProgram(v, st) : null;
+    if (!p) return null;
+    return { slug: p.c.id, title: p.c.title, at: p.run.byDays ? `Quedaste en el día ${Math.min(p.run.days, p.run.effectiveDay + 1)} de ${p.run.days}` : `Quedaste en la semana ${p.run.week} de ${p.run.weeks}` };
+  } catch { return null; }
 }
 
 /** Lo que hizo la última vez en el primer ejercicio con peso de hoy y lo que toca ahora (mismos números que el reproductor). */

@@ -132,7 +132,7 @@ export function GuideVisual({ step, input }: { step: GuideStep; input: GuideInpu
             <div className="relative">
               <p className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />{p.mode ?? "Programa activo"}</p>
               <p className="mt-3 text-xl font-extrabold leading-tight tracking-tight sm:text-3xl">{p.title}</p>
-              <p className="mt-1 text-sm font-bold opacity-85">Semana {p.week} de {p.weeks}</p>
+              <p className="mt-1 text-sm font-bold opacity-85">{p.day && p.days ? `Día ${p.day} de ${p.days}` : `Semana ${p.week} de ${p.weeks}`}</p>
               <div className="mt-3 flex gap-1">{Array.from({ length: p.weeks }, (_, n) => n + 1).map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < p.week ? "bg-ink" : w === p.week ? "bg-ember" : "bg-white/40"}`} />)}</div>
             </div>
             {p.habits.length > 0 && (
