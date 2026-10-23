@@ -35,7 +35,7 @@ export default async function TicketAdmin({ params }: { params: Promise<{ id: st
           {late && <Badge tone="bad">Más de 24 h sin respuesta</Badge>}
           {t.from_tester && <Badge tone="warn"><Flask weight="duotone" className="size-3.5" aria-hidden />Tester</Badge>}
         </>} />
-      {v.demo && <DemoNotice what="este reporte" />}
+      {v.demo && <DemoNotice what="los datos de este reporte" />}
 
       <div className="grid items-start gap-3 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">

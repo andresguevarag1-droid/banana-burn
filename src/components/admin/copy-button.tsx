@@ -18,7 +18,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
     <span className="inline-flex max-w-full items-center gap-1">
       <code className="min-w-0 max-w-32 truncate rounded-md bg-paper px-1.5 py-0.5 text-xs text-ink" title={value}>{value}</code>
       <button type="button" onClick={copy} aria-label={`Copiar ${label}`} title={`Copiar ${label}`}
-        className="grid size-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-paper hover:text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
+        className="tap grid size-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-paper hover:text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
         {done === "ok" ? <Check className="size-4 text-[#17703A]" aria-hidden /> : <Copy className="size-4" aria-hidden />}
       </button>
       <span role="status" aria-live="polite" className="sr-only">{done === "ok" ? `${label} copiado` : done === "error" ? "No se pudo copiar" : ""}</span>

@@ -21,7 +21,7 @@ function Count({ n, inverted }: { n: number; inverted?: boolean }) {
 export function AdminSidebarNav({ items }: { items: NavItem[] }) {
   const path = usePathname();
   return (
-    <nav aria-label="Secciones del panel" className="mt-8">
+    <nav aria-label="Secciones del panel" className="-mx-1 mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-1">
       <ul className="space-y-0.5 text-sm">
         {items.map(({ key, href, label, badge }) => {
           const Icon = ICONS[key];
@@ -31,7 +31,7 @@ export function AdminSidebarNav({ items }: { items: NavItem[] }) {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-9 items-center gap-3 rounded-lg px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${active ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
+                className={`flex h-11 items-center gap-3 rounded-lg px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${active ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
                 {label}
@@ -61,7 +61,7 @@ export function AdminTabsNav({ items }: { items: NavItem[] }) {
           return (
             <li key={key}>
               <Link href={href} aria-current={active ? "page" : undefined}
-                className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${active ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}>
+                className={`flex h-11 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 font-semibold outline-none transition-colors duration-150 focus-visible:ring-4 focus-visible:ring-banana/50 ${active ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}>
                 <Icon className="size-4" aria-hidden />{label}{!!badge && <Count n={badge} inverted={active} />}
               </Link>
             </li>

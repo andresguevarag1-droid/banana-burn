@@ -21,8 +21,8 @@ export function AnnouncementCard({ a }: { a: LiveAnnouncement }) {
       </div>
       {a.cta_label && a.cta_href && (
         a.cta_href.startsWith("/")
-          ? <Link href={a.cta_href} className="btn-primary h-9! px-4! text-sm! shrink-0">{a.cta_label}</Link>
-          : <a href={a.cta_href} target="_blank" rel="noopener noreferrer" className="btn-primary h-9! px-4! text-sm! shrink-0">{a.cta_label}</a>
+          ? <Link href={a.cta_href} className="btn-primary h-11! px-4! text-sm! shrink-0">{a.cta_label}</Link>
+          : <a href={a.cta_href} target="_blank" rel="noopener noreferrer" className="btn-primary h-11! px-4! text-sm! shrink-0">{a.cta_label}</a>
       )}
     </aside>
   );

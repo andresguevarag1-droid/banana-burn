@@ -96,12 +96,12 @@ export function ProgramEditor({ init, sessions: init2, names: names0 }: { init: 
       <section className={`${panel} p-4 sm:p-5`} aria-labelledby="pg-ses">
         <h2 id="pg-ses" className="font-extrabold text-ink">Sesiones</h2>
         <div className="mt-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Fase">
-          {meta.phases.map((p, i) => <button key={i} type="button" role="tab" aria-selected={phase === i + 1} onClick={() => setPhase(i + 1)} className={`h-10 rounded-full px-3.5 text-sm font-bold active:scale-[.97] transition-transform duration-150 ease-out ${phase === i + 1 ? "bg-ink text-white" : "bg-cream text-ink"}`}>Fase {i + 1}: {p.name}</button>)}
+          {meta.phases.map((p, i) => <button key={i} type="button" role="tab" aria-selected={phase === i + 1} onClick={() => setPhase(i + 1)} className={`h-11 rounded-full px-3.5 text-sm font-bold active:scale-[.97] transition-transform duration-150 ease-out ${phase === i + 1 ? "bg-ink text-white" : "bg-cream text-ink"}`}>Fase {i + 1}: {p.name}</button>)}
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5" role="tablist" aria-label="Día">
           {Array.from({ length: meta.daysPerWeek }, (_, k) => k + 1).map((d) => {
             const s = visible.find((x) => x.phase === phase && x.day === d);
-            return <button key={d} type="button" role="tab" aria-selected={day === d} onClick={() => setDay(d)} className={`h-10 rounded-xl border px-3 text-sm font-bold active:scale-[.97] transition-transform duration-150 ease-out ${day === d ? "border-ink bg-banana text-ink" : "border-line bg-white text-ink"}`}>Día {d}{s?.exercises.length ? ` (${s.exercises.length})` : " vacío"}</button>;
+            return <button key={d} type="button" role="tab" aria-selected={day === d} onClick={() => setDay(d)} className={`h-11 rounded-xl border px-3 text-sm font-bold active:scale-[.97] transition-transform duration-150 ease-out ${day === d ? "border-ink bg-banana text-ink" : "border-line bg-white text-ink"}`}>Día {d}{s?.exercises.length ? ` (${s.exercises.length})` : " vacío"}</button>;
           })}
           {phase > 1 && <button type="button" onClick={copyPrev} className={`${btnGhost} ml-auto`}><Copy className="size-4" />Copiar sesiones de la fase {phase - 1}</button>}
         </div>

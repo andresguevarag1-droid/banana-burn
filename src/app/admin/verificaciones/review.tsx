@@ -56,7 +56,7 @@ export function Review({ userId, name }: { userId: string; name: string }) {
       {rejecting ? (
         <div className="space-y-2 rounded-xl bg-[#FDECEC]/60 p-3">
           <label htmlFor={rid} className="block text-xs font-bold text-ink">Motivo del rechazo (la persona lo va a leer)</label>
-          <div className="flex flex-wrap gap-1.5">{REASONS.map((r) => <button key={r} type="button" onClick={() => setReason(r)} className={`h-9 rounded-full border px-3 text-xs font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[.97] ${reason === r ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink/30"}`}>{r}</button>)}</div>
+          <div className="flex flex-wrap gap-1.5">{REASONS.map((r) => <button key={r} type="button" onClick={() => setReason(r)} className={`tap h-9 rounded-full border px-3 text-xs font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[.97] ${reason === r ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink/30"}`}>{r}</button>)}</div>
           <input id={rid} value={reason} onChange={(e) => setReason(e.target.value.slice(0, 300))} maxLength={300} className={inputSm} placeholder="O escribe el motivo" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => decide(false)} disabled={pending || reason.trim().length < 4} className={btnDanger}>{pending ? "Guardando…" : "Rechazar y borrar fotos"}</button>

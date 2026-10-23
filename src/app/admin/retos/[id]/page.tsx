@@ -31,7 +31,7 @@ export default async function EditarReto({ params, searchParams }: { params: Pro
         <Link href={`/app/retos/${c.id}?previa=1`} target="_blank" className={btnGhost}>Ver como usuario</Link>
         {c.status !== "archivado" && <ConfirmAction action={setChallengeStatus} hidden={{ id: c.uuid, status: "archivado" }} trigger="Archivar" title="Archivar este reto" description="Deja de verse en la tienda y en los listados normales. Quien ya está inscrito puede terminarlo. Puedes volver a publicarlo después." danger confirmLabel="Archivar" />}
       </PageHeader>
-      {v.demo && <DemoNotice what="este reto (sin personas ni ventas reales)" />}
+      {v.demo && <DemoNotice what="los datos de este reto (sin personas ni ventas reales)" />}
       {sp.nuevo && <Notice title="Reto creado como borrador">Completa el plan de todos los días y cambia el estado a Publicado para que aparezca en la tienda.</Notice>}
 
       {stats && (
