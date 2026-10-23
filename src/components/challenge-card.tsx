@@ -91,7 +91,7 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
 
   return (
     <article className="overflow-hidden rounded-[1.5rem] border border-line/70 bg-white shadow-soft">
-      <ChallengeCover c={{ cover: v.c.cover as CoverStyle, icon: v.c.icon }} className={compact ? "h-[5.5rem]" : "h-28"}>
+      <ChallengeCover c={{ id: v.c.id, cover: v.c.cover as CoverStyle, icon: v.c.icon }} className={compact ? "h-[5.5rem]" : "h-28"}>
         <div className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 ${compact ? "pl-[4.25rem] pt-3" : "pl-[4.25rem]"}`}>
           <div className="min-w-0 flex-1">
             <Link href={`/app/retos/${v.c.id}`} className={`block truncate font-extrabold leading-tight hover:underline ${ink} ${compact ? "text-base" : "text-lg"}`}>{v.c.title}</Link>

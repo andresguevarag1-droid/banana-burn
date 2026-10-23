@@ -3,6 +3,15 @@
 import { SEED, type ChallengeStatus, type CoverStyle, type DayTask, type Difficulty, type SeedChallenge, type Verify } from "./challenge-seed";
 import { ALL_PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./program-seed";
 import { parseMeta, type ProgramMeta } from "./programs";
+import { RESTYLE } from "./catalog-0028";
+
+/** Catálogo de respaldo con los nombres, colores y estados de 0028 (la base ya los tiene después de la migración). */
+function restyle(c: Challenge): Challenge {
+  const r = RESTYLE[c.id];
+  if (!r) return c;
+  const program = c.program && r.mode && c.program.experience?.mode === r.mode[0] ? { ...c.program, experience: { ...c.program.experience, mode: r.mode[1] } } : c.program;
+  return { ...c, title: r.title ?? c.title, cover: r.cover ?? c.cover, color: r.cover ? COVER_COLOR[r.cover] : c.color, status: r.hide ? "oculto" : c.status, featured: r.hide ? false : c.featured, program };
+}
 export type { ChallengeStatus, CoverStyle, DayTask, Difficulty, TaskType, Verify } from "./challenge-seed";
 
 export type Challenge = {
@@ -87,7 +96,7 @@ export function fromProgramSeed(p: ProgramSeed, source: "app" | "admin" = "app")
 
 /** Los 6 retos con los que nació la app (sus ids se guardan en user_challenges desde 0008). */
 export const BASE_IDS = ["banana-30", "flexiones-30", "plancha-30", "pasos-30", "proteina-21", "agua-21"];
-export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...ALL_PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p))];
+export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...ALL_PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p))].map(restyle);
 export const CHALLENGES: Challenge[] = SEED_CHALLENGES.filter((c) => BASE_IDS.includes(c.id));
 export const CHALLENGE_BY_ID: Record<string, Challenge> = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
 

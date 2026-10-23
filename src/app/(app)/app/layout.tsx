@@ -19,6 +19,7 @@ import { BetaBanner } from "@/components/beta-notice";
 import { betaLive } from "@/lib/plans";
 import { getActiveProgram } from "@/lib/programs-server";
 import { ProgramRibbon } from "@/components/programas/program-ribbon";
+import { COVER_ACCENT } from "@/components/retos/cover";
 import { GiftCelebration } from "@/components/gift-celebration";
 import { deliverPendingGifts, getUnseenGifts } from "@/lib/gifts-server";
 import { AddCardBanner, FailedBanner, ProcessingBanner, ScheduledBanner } from "@/components/card-banner";
@@ -48,7 +49,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!v.demo && ent.charge && (ent.charge.due || ent.charge.remind || ent.charge.phase === "procesando")) after(() => runDueForUser(v.id).then(() => {}));
   const banner = bannerFor({ betaLive: betaLive(), fromSubscription: ent.fromSubscription, cardStep, charge, trial: Boolean(trial) });
   return (
-    <div className="lg:pl-64">
+    <div className="lg:pl-64" style={live ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
+      {/* Programa activo: la app toma su color en una franja arriba (y en la cinta y los hábitos). */}
+      {live && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-[var(--program)]" />}
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
       <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} />

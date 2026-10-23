@@ -264,6 +264,7 @@ describe("adaptación al equipo", () => {
 // ───────────── 0027: experiencias y programas nuevos ─────────────
 import { ALL_PROGRAM_SEED, EXPERIENCES, PROGRAM_SEED_2, PROGRAM_UPGRADES, program0027Sql } from "./program-seed";
 import { habitsToday, parseExperience, tipFor, type ProgramExperience } from "./programs";
+import { RESTYLE } from "./catalog-0028";
 
 const sql27 = readFileSync(new URL("../../supabase/migrations/0027_experiencias.sql", import.meta.url), "utf8");
 const muscleOf = (id: string) => (exInfo(id)?.muscle ?? "").toLowerCase();
@@ -336,7 +337,7 @@ describe("programas de 0027", () => {
   });
   it("la experiencia viaja al catálogo de respaldo", () => {
     const by = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
-    for (const slug of Object.keys(EXPERIENCES)) expect(by[slug]?.program?.experience?.mode, slug).toBe(EXPERIENCES[slug].mode);
+    for (const slug of Object.keys(EXPERIENCES)) expect(by[slug]?.program?.experience?.mode, slug).toBe(RESTYLE[slug]?.mode?.[1] ?? EXPERIENCES[slug].mode);
     expect(by["banana-girl"].cover).toBe("fresa");
   });
 });

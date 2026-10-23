@@ -57,7 +57,7 @@ export function AppNav({ name, staff, nutrition, program = null }: { name: strin
         <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
         {program && (
           <Link href={`/app/retos/${program.slug}/progreso`} className="pressable mt-6 flex items-center gap-2.5 rounded-2xl bg-ink px-3 py-2.5 text-white hover:bg-black">
-            <span aria-hidden className="size-2 shrink-0 rounded-full bg-banana" />
+            <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-[var(--program,var(--color-banana))]" />
             <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">{program.mode ?? "Programa activo"}</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
           </Link>
         )}

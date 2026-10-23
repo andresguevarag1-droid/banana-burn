@@ -1,5 +1,7 @@
-// Arte de cada nivel: el ícono de marca sobre un fondo propio del escalón. Sin emojis.
-import { BrandIcon } from "@/components/icons";
+// Arte de cada nivel: Coach Banana en una etapa de su vida (de bebé a King Kong) con el anillo del escalón. Sin emojis.
+// Bloqueado: la misma ilustración en gris, como adelanto de lo que viene.
+import Image from "next/image";
+import { levelArt } from "@/lib/challenge-art";
 import { LEVELS } from "@/lib/gamify";
 
 /** Fondo, anillo y color del ícono por nivel (1-based): de banana verde a King Kong. */
@@ -20,10 +22,10 @@ export function LevelBadge({ idx, size = "md", locked = false, className = "" }:
   const lv = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx - 1))];
   const t = tierOf(idx);
   const box = { sm: "size-9 rounded-xl", md: "size-12 rounded-2xl", lg: "size-16 rounded-[1.25rem]", xl: "size-24 rounded-[1.75rem]" }[size];
-  const ic = { sm: "size-5", md: "size-7", lg: "size-9", xl: "size-14" }[size];
+  const px = { sm: 72, md: 96, lg: 128, xl: 192 }[size];
   return (
-    <span className={`relative grid shrink-0 place-items-center ring-2 ${box} ${locked ? "bg-cream ring-line text-faint" : `${t.bg} ${t.ring} ${t.ink}`} ${className}`}>
-      <BrandIcon name={lv.icon} weight={locked ? "regular" : "duotone"} className={ic} />
+    <span className={`relative grid shrink-0 place-items-center overflow-hidden ring-2 ${box} ${locked ? "bg-cream ring-line" : `${t.bg} ${t.ring}`} ${className}`}>
+      <Image src={levelArt(idx)} alt={locked ? `${lv.n} (bloqueado)` : lv.n} width={px} height={px} sizes={`${px}px`} className={`size-full object-cover ${locked ? "opacity-45 grayscale" : ""}`} />
     </span>
   );
 }
