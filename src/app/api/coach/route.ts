@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getViewer, createClient } from "@/lib/supabase/server";
 import { getAthlete } from "@/lib/athlete";
+import { getEntitlements } from "@/lib/entitlements";
 import { getProgress } from "@/lib/progress";
 import { coachSystem, demoReply, safetyCheck, sanitizeMessages, stripEmoji } from "@/lib/coach";
 import { clientIp, isSameOrigin, memoryRateLimit } from "@/lib/security";
@@ -72,13 +73,12 @@ export async function POST(req: Request) {
     return new Response(textStream(fake(demoReply(last.content, a0.name?.split(" ")[0] ?? "", v.country))), { headers });
   }
 
-  const a = await getAthlete(v);
-  const p = await getProgress(v);
+  const [a, p, ent] = await Promise.all([getAthlete(v), getProgress(v), getEntitlements(v)]);
   const client = new Anthropic({ apiKey: key });
   const stream = client.messages.stream({
     model: process.env.COACH_MODEL || "claude-sonnet-5-5",
     max_tokens: 700,
-    system: coachSystem(a, p.weights, p.workouts),
+    system: coachSystem(a, p.weights, p.workouts, { nutrition: ent.nutrition }),
     messages,
   });
   async function* text() {

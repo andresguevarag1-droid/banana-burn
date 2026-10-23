@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import { FunnelTracker } from "@/components/analytics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Warning } from "@/components/icons";
+import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning } from "@/components/icons";
 import { ageOn, DAY_NAMES, planWeek, scheduleFor, targets } from "@/lib/engine";
 import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
@@ -77,8 +77,12 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 
 const SELECT = "input h-14 text-lg px-3";
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt }: {
+export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true }: {
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
+  /** El acceso gratis viene del período de prueba del servicio (beta), no solo de los 7 días. */
+  trialBeta?: boolean;
+  /** ¿Tiene nutrición hoy (Entreno + Nutrición, prueba o beta)? En Entreno el resumen no muestra calorías ni proteína. */
+  nutrition?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -165,14 +169,14 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
         <div className="max-w-md w-full animate-rise">
           <span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink"><MonkeyBanana className="size-16" /></span>
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-ink text-balance">¡Tu plan está listo, {full.name.trim().split(" ")[0]}!</h1>
-          <p className="mt-2 text-muted text-pretty">Calculado para ti. Se ajusta solo cada semana con tu peso real.</p>
+          <p className="mt-2 text-muted text-pretty">{nutrition ? "Calculado para ti. Se ajusta solo cada semana con tu peso real." : "Calculado para ti. Tus cargas suben solas cuando dominas el rango."}</p>
           {trialEnd && (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              Tu prueba gratis de {TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el {trialEnd}. Sin tarjeta, así que no hay cobros automáticos; te avisamos en la app antes de que termine.
+              {trialBeta ? `Estás en el período de prueba de Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}.`} Sin tarjeta, así que no hay cobros automáticos; te avisamos en la app antes de que termine.
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
-            {([[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-419"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína al día"], [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${full.days} días`, "por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(full.goalWeight)} kg`, new Date(full.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
+            {([...(nutrition ? [[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-419"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína al día"]] as const : [[<Timer key="m" weight="duotone" className="size-5 text-ember-ink" />, `${full.minutes} min`, "por sesión"], [<PersonSimpleRun key="l" weight="duotone" className="size-5 text-banana-ink" />, full.level.charAt(0).toUpperCase() + full.level.slice(1), "tu nivel"]] as const), [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${full.days} días`, "por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(full.goalWeight)} kg`, new Date(full.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
               <div key={l} className="card p-4 transition-[opacity,translate] duration-300 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:translate-y-2" style={{ transitionDelay: `${150 + i * 60}ms` }}><span className="grid place-items-center size-9 rounded-xl bg-cream">{e}</span><p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{v}</p><p className="text-xs font-semibold text-muted">{l}</p></div>
             ))}
           </div>
@@ -213,7 +217,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
               </label>
               {o.glp1 && (
                 <div className="mt-4 space-y-3 transition-[opacity,translate] duration-200 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:-translate-y-1">
-                  <p className="text-sm text-body text-pretty"><b>Banana Shield</b> ajusta tu plan: más proteína, fuerza como prioridad y modo suave en días de náusea, para que pierdas grasa y no músculo. Está incluido en {COMPLETO.name}; en tu prueba gratis lo tienes {TRIAL_DAYS} días.{intent?.plan === "entreno" ? ` El plan que elegiste, Entreno, no lo incluye después de la prueba.` : ""}</p>
+                  <p className="text-sm text-body text-pretty"><b>Banana Shield</b> ajusta tu plan: más proteína, fuerza como prioridad y modo suave en días de náusea, para que pierdas grasa y no músculo. Está incluido en {COMPLETO.name}{trialEnd ? `; en tu prueba gratis lo tienes hasta el ${trialEnd}` : ""}.{!nutrition ? " Tu plan actual, Entreno, no lo incluye." : intent?.plan === "entreno" ? " El plan que elegiste, Entreno, no lo incluye después de la prueba." : ""}</p>
                   <label className="block"><span className="text-sm font-bold text-ink">Medicamento</span>
                     <select value={o.glp1Med} onChange={(e) => up({ glp1Med: e.target.value as Onboard["glp1Med"] })} className="input h-12 mt-1">{MEDS.map((m) => <option key={m.id} value={m.id}>{m.n} ({m.ex})</option>)}</select></label>
                   <label className="block"><span className="text-sm font-bold text-ink">Día de inyección</span>

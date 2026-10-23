@@ -74,31 +74,32 @@ export function bienvenida(d: { name: string }): Email {
   const n = firstName(d.name);
   const subject = `Bienvenido a Banana Burn, ${n}. Tu plan te espera`;
   const preheader = "Tu entrenador con IA ya está listo. Te toma 2 minutos armar tu plan.";
-  const body = h1(`¡Pura vida, ${esc(n)}!`) +
+  const body = h1(`¡Hola, ${esc(n)}!`) +
     p("Ya tienes tu entrenador personal con IA. Aquí no hay rutinas genéricas: cada sesión trae las cargas calculadas para ti y se ajusta según cómo te va.") +
-    list([`${dot()}<b>Rutina del día</b> lista para el gym o la casa`, `${dot(C.ember)}<b>Racha y niveles</b> para que entrenar sea un juego`, `${dot(C.peel)}<b>Comida tica</b> con proteína y calorías claras`, `${dot(C.ink)}<b>Coach IA</b> que conoce tus datos`]) +
+    list([`${dot()}<b>Rutina del día</b> lista para el gym o la casa`, `${dot(C.ember)}<b>Racha y niveles</b> para que entrenar sea un juego`, `${dot(C.peel)}<b>Comida latina</b> con proteína y calorías claras, incluida en tu prueba gratis`, `${dot(C.ink)}<b>Coach IA</b> que conoce tus datos`]) +
     p("Termina tu perfil en 2 minutos y te armamos el plan.") + button("Armar mi plan", "/bienvenida");
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque creaste una cuenta en Banana Burn." }),
-    text: textLayout([`¡Pura vida, ${n}!`, "", "Ya tienes tu entrenador personal con IA: rutina del día con cargas calculadas, racha y niveles, comida tica y un Coach IA que conoce tus datos.", "", `Arma tu plan en 2 minutos: ${abs("/bienvenida")}`], undefined, "Recibes este correo porque creaste una cuenta en Banana Burn."),
+    text: textLayout([`¡Hola, ${n}!`, "", "Ya tienes tu entrenador personal con IA: rutina del día con cargas calculadas, racha y niveles, un Coach IA que conoce tus datos y, en tu prueba gratis, comida latina con proteína y calorías claras.", "", `Arma tu plan en 2 minutos: ${abs("/bienvenida")}`], undefined, "Recibes este correo porque creaste una cuenta en Banana Burn."),
   };
 }
 
-export function planListo(d: { name: string; trainDays: number; todayRoutine: string; kcal: number; protein: number; startWeight?: number; goalWeight: number; goalDate: string }): Email {
+/** `kcal` y `protein` solo llegan si la persona tiene nutrición (Entreno + Nutrición, prueba o beta); sin ellos se muestran los minutos. */
+export function planListo(d: { name: string; trainDays: number; todayRoutine: string; kcal?: number; protein?: number; minutes?: number; startWeight?: number; goalWeight: number; goalDate: string }): Email {
   const n = firstName(d.name);
   const subject = `${n}, tu plan está listo: ${d.trainDays} días por semana`;
   const preheader = `Hoy arrancas con ${d.todayRoutine}. Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}.`;
   const body = badge("Plan listo", C.banana) + h1("Tu plan está listo") +
     p(`${esc(n)}, armamos tu programa con base en tus datos. Esto es lo que viene:`) +
-    stats([[`${d.trainDays}`, "días/semana"], [d.kcal.toLocaleString("es-419"), "kcal/día"], [`${d.protein} g`, "proteína"]]) +
+    stats(d.kcal != null && d.protein != null ? [[`${d.trainDays}`, "días/semana"], [d.kcal.toLocaleString("es-419"), "kcal/día"], [`${d.protein} g`, "proteína"]] : [[`${d.trainDays}`, "días/semana"], ...(d.minutes ? [[`${d.minutes}`, "min/sesión"] as [string, string]] : []), [`${kg(d.goalWeight)} kg`, "meta"]]) +
     rows([["Hoy te toca", d.todayRoutine], ...(d.startWeight ? [["Peso inicial", `${kg(d.startWeight)} kg`] as [string, string]] : []), ["Meta", `${kg(d.goalWeight)} kg`], ["Fecha meta", longDate(d.goalDate)]]) +
     p("Las cargas se calibran en tu primera sesión y suben solas cuando dominas el rango. Tú solo llega y dale.") +
     button("Ver mi entreno de hoy", "/app/entreno");
   return {
     subject, preheader,
     html: layout({ preheader, body, reason: "Recibes este correo porque completaste tu perfil en Banana Burn." }),
-    text: textLayout([`Tu plan está listo, ${n}.`, "", `• ${d.trainDays} días por semana`, `• ${d.kcal.toLocaleString("es-419")} kcal/día y ${d.protein} g de proteína`, `• Hoy te toca: ${d.todayRoutine}`, `• Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}`, "", `Ver mi entreno de hoy: ${abs("/app/entreno")}`]),
+    text: textLayout([`Tu plan está listo, ${n}.`, "", `• ${d.trainDays} días por semana`, ...(d.kcal != null && d.protein != null ? [`• ${d.kcal.toLocaleString("es-419")} kcal/día y ${d.protein} g de proteína`] : d.minutes ? [`• ${d.minutes} min por sesión`] : []), `• Hoy te toca: ${d.todayRoutine}`, `• Meta: ${kg(d.goalWeight)} kg el ${longDate(d.goalDate)}`, "", `Ver mi entreno de hoy: ${abs("/app/entreno")}`]),
   };
 }
 

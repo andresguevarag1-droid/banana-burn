@@ -4,13 +4,15 @@
 //   - Después: plan "entreno" = entreno, coach, comunidad, retos y progreso; plan "completo" = todo (incluye nutrición y Banana Shield).
 //   - Cortesías vigentes y staff = completo.
 //   - Sin plan y sin prueba vigente: la app muestra el muro de planes (no se borra nada).
-// La base de datos repite la regla de acceso en public.has_app_access() (0013) para el coach y la comunidad.
+// La base de datos repite la regla de acceso en public.has_app_access() (0013/0021) para el coach y la comunidad,
+// y la de nutrición en public.has_nutrition_access() (0022) para comidas, Mis comidas y Mis recetas.
 import "server-only";
 import { cache } from "react";
 import { createClient, STAFF, type Role, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { BETA_ENDS_AT, TRIAL_DAYS, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
+import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -191,4 +193,14 @@ const load = cache(async (userId: string, role: string, viewerPlan: string): Pro
 export async function getEntitlements(viewer: Viewer): Promise<Entitlements> {
   if (viewer.demo) return DEMO_ENT;
   return load(viewer.id, viewer.role, viewer.plan);
+}
+
+/**
+ * Candado de servidor para acciones: null si puede, o el mensaje para la persona.
+ * `nutrition` = `ent.nutrition`; `app` = `ent.app`. En demo siempre puede (DEMO_ENT).
+ */
+export async function accessError(v: Viewer, need: Need): Promise<string | null> {
+  const ent = await getEntitlements(v);
+  if (need === "nutrition") return ent.nutrition ? null : ent.app ? NUTRITION_LOCKED_MSG : APP_LOCKED_MSG;
+  return ent.app ? null : APP_LOCKED_MSG;
 }

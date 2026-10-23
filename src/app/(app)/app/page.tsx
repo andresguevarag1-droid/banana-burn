@@ -4,6 +4,8 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
+import { getEntitlements } from "@/lib/entitlements";
+import { hoyTip } from "@/lib/plan-access";
 import { DAY_NAMES } from "@/lib/engine";
 import { TodayPanel } from "@/components/hoy/today-panel";
 import { WeekCard } from "@/components/hoy/week-card";
@@ -23,19 +25,11 @@ export const metadata = { title: "Hoy" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-function tipFor(dow: number, training: boolean, proteinLeft: number, trained: boolean) {
-  if (trained) return proteinLeft > 30 ? `Ya entrenaste. Ahora cierra la proteína: te faltan unos ${Math.round(proteinLeft)} g (pechuga, atún, yogur griego o huevos).` : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
-  if (!training) return "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo.";
-  if (proteinLeft > 100) return "Come tus carbos de 60 a 90 min antes de entrenar: avena con banana, arroz con huevo o pan integral con yogur griego.";
-  if (dow === 5) return "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el finde hay salida, máximo 2 tragos.";
-  return "Tempo 3-1-1 en cada rep. Bajar lento es donde se construye el músculo.";
-}
-
 export default async function Hoy() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
-  const [g, meals] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v)]);
+  const [g, meals, ent] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v), getEntitlements(v)]);
   const eaten = sumMeals(meals.today);
   const [ch, xs] = await Promise.all([
     getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein }),
@@ -69,9 +63,9 @@ export default async function Hoy() {
       <EnablePush hideWhenSnoozed />
 
 
-      {/* Números de hoy: calorías y macros, lo primero */}
+      {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <TodayPanel initial={g.log} base={eaten} mode={a.mode} target={{ kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat, steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
+        <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: a.mode } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
         {/* Rutina de hoy */}
         <section className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${g.trainedToday ? "bg-banana-soft border border-banana" : training ? "bg-banana" : "card"}`}>
           {training && !g.trainedToday && <BrandIcon name={plan.icon} aria-hidden className="absolute -right-8 -top-8 size-44 text-ink opacity-[.09] rotate-12 select-none pointer-events-none" />}
@@ -116,7 +110,7 @@ export default async function Hoy() {
 
       {/* Semana y retos */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} />
+        <WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} nutrition={ent.nutrition} />
         <section>
           <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Tienda de retos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
           {ch.active.length ? (
@@ -146,7 +140,7 @@ export default async function Hoy() {
       {/* Coach */}
         <Link href="/app/coach" className="card p-4 flex gap-3 items-center self-start">
         <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
-        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{tipFor(d.today.dow, training, t.protein - g.log.protein - eaten.protein, g.trainedToday)}</p></div>
+        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">Coach Banana</p><p className="text-[15px] text-ink leading-snug">{hoyTip({ dow: d.today.dow, training, proteinLeft: t.protein - g.log.protein - eaten.protein, trained: g.trainedToday, nutrition: ent.nutrition })}</p></div>
         <CaretRight weight="bold" className="size-5 text-faint shrink-0" />
       </Link>
       </div>

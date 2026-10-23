@@ -3,6 +3,7 @@ import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
 import { createClient, type Viewer } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/entitlements";
 
 export type Athlete = {
   name: string; dob: string; heightCm: number; startWeight: number; currentWeight: number; goalWeight: number; goalDate: string; startDate: string; mode: Mode; complete: boolean; trainDays: number; sex: Sex; equipment: Equipment; level: Level; minutes: number | null; glp1: Glp1;
@@ -17,10 +18,11 @@ const DEMO: Athlete = { name: "Andrés", dob: "1999-01-27", heightCm: 182, start
 export async function getAthlete(v: Viewer): Promise<Athlete> {
   if (v.demo) return { ...DEMO, tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) };
   const sb = await createClient();
-  const [{ data: p }, { data: g }, { data: w }] = await Promise.all([
+  const [{ data: p }, { data: g }, { data: w }, ent] = await Promise.all([
     sb.from("profiles").select("full_name,dob,height_cm,train_days,sex,onboarded,equipment,level,session_minutes,glp1,glp1_med,glp1_injection_dow,glp1_since").eq("id", v.id).maybeSingle(),
     sb.from("goals").select("*").eq("user_id", v.id).eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     sb.from("weights").select("kg").eq("user_id", v.id).order("day", { ascending: false }).limit(1).maybeSingle(),
+    getEntitlements(v),
   ]);
   const complete = Boolean(p?.onboarded && p?.dob && p?.height_cm && g);
   return {
@@ -30,7 +32,8 @@ export async function getAthlete(v: Viewer): Promise<Athlete> {
     goalWeight: Number(g?.goal_weight ?? 75), goalDate: g?.goal_date ?? "2026-12-31",
     startDate: g?.start_date ?? mondayOf(todayFor(v).iso), mode: (g?.mode as Mode) ?? "acelerada", complete, trainDays: Number(p?.train_days ?? 6), sex: (p?.sex as Sex) ?? "m", equipment: (p?.equipment as Equipment) ?? "gym", level: (p?.level as Level) ?? "intermedio", minutes: p?.session_minutes ?? null,
     tz: v.tz, country: v.country,
-    glp1: { on: Boolean(p?.glp1), med: ((p?.glp1_med as Glp1Med) ?? "otro"), injectionDow: p?.glp1_injection_dow ?? null, since: p?.glp1_since ?? null },
+    // Banana Shield es de Entreno + Nutrición: sin nutrición se apaga en todas las pantallas (el perfil guarda la configuración).
+    glp1: { on: Boolean(p?.glp1) && ent.nutrition, med: ((p?.glp1_med as Glp1Med) ?? "otro"), injectionDow: p?.glp1_injection_dow ?? null, since: p?.glp1_since ?? null },
   };
 }
 

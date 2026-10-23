@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
-import { PLANS, annualSavingPct, perMonthAnnual, type Billing, type PlanId } from "@/lib/plans";
+import { PLANS, PREMIUM_RETOS_NOTE, annualSavingPct, perMonthAnnual, type Billing, type PlanId } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/env";
 import { intentPath } from "@/lib/checkout-intent";
 import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
@@ -97,7 +97,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason }: {
               </p>
               <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] flex-1 ${hot ? "border-white/15" : "border-line"}`}>
                 {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{noBreakGlp1(f)}</li>)}
-                {!p.nutrition && <li className="flex gap-2.5 text-faint"><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span>Plan de nutrición, registro de comidas y Banana Shield</span></li>}
+                {p.excluded.map((f) => <li key={f} className={`flex gap-2.5 ${hot ? "text-white/60" : "text-faint"}`}><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span>{noBreakGlp1(f)}</span></li>)}
               </ul>
               <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} />
             </div>
@@ -106,6 +106,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason }: {
       </div>
       {checkout.error && <p role="alert" className="mt-6 text-center text-sm font-semibold text-bad">{checkout.error}</p>}
       <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido. Precios en dólares (USD); pagas con tarjeta de crédito o débito cuando eliges tu plan.</p>
+      <p className="mt-2 text-center text-sm text-muted text-pretty">{PREMIUM_RETOS_NOTE}</p>
 
       <div className="mt-14 max-w-4xl mx-auto grid gap-6 rounded-[1.75rem] border border-line bg-cream p-6 sm:p-8 lg:grid-cols-[1fr_1.7fr] lg:gap-10">
         <div>

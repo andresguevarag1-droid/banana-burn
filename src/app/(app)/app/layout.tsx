@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="lg:pl-64">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
-      <AppNav name={v.name} staff={STAFF.includes(v.role)} />
+      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} />
       <InstallPrompt />
       <TzSync current={v.tz} />
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}

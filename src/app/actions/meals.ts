@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { creditChallenges } from "@/lib/challenges-server";
 import { createClient, getViewer, type Viewer } from "@/lib/supabase/server";
+import { accessError } from "@/lib/entitlements";
 import { adminClient } from "@/lib/supabase/admin";
 import { todayFor } from "@/lib/today";
 import { byGrams, CATALOG_BY_ID, cleanCustom, mealName, portion, type SavedFood } from "@/lib/foods-catalog";
@@ -42,7 +43,7 @@ async function awardMealXp(v: Viewer, day: string): Promise<{ xp: number; count:
   return { xp, count: Math.min(MEAL_XP_DAILY_MAX, (count ?? 0) + 1) };
 }
 
-export type AddMealResult = { ok: boolean; item?: MealItem; xp?: number; xpCount?: number };
+export type AddMealResult = { ok: boolean; item?: MealItem; xp?: number; xpCount?: number; error?: string };
 
 export async function addMeal(input: {
   slot: Slot; foodId?: string; qty?: number;
@@ -54,6 +55,9 @@ export async function addMeal(input: {
 }): Promise<AddMealResult> {
   const v = await getViewer();
   if (!v || !SLOTS.includes(input.slot)) return { ok: false };
+  // Registro de comidas: solo Entreno + Nutrición (o prueba/beta). La base de datos lo vuelve a exigir (0022).
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
   let row: Omit<MealItem, "id">;
   if (input.foodId) {
     const f = CATALOG_BY_ID[input.foodId];
@@ -88,9 +92,11 @@ export async function addMeal(input: {
   return { ok: true, item: { ...row, id: String(data.id) }, xp: award.xp, xpCount: award.count };
 }
 
-export async function removeMeal(id: string): Promise<{ ok: boolean }> {
+export async function removeMeal(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };
   const sb = await createClient();
   const { error } = await sb.from("meals").delete().eq("id", Number(id)).eq("user_id", v.id);
@@ -99,9 +105,12 @@ export async function removeMeal(id: string): Promise<{ ok: boolean }> {
   return { ok: !error };
 }
 
-export async function copyMeals(items: { slot: Slot; name: string; qty: number; kcal: number; protein: number; carbs: number; fat: number }[]): Promise<{ ok: boolean; items?: MealItem[] }> {
+export async function copyMeals(items: { slot: Slot; name: string; qty: number; kcal: number; protein: number; carbs: number; fat: number }[]): Promise<{ ok: boolean; items?: MealItem[]; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
+  if (!Array.isArray(items)) return { ok: false };
   const clean = items.slice(0, 40).filter((i) => SLOTS.includes(i.slot)).map((i) => ({ slot: i.slot, name: String(i.name).slice(0, 80), qty: Number(i.qty) || 1, kcal: Math.max(0, Math.min(5000, Math.round(i.kcal))), protein: Math.max(0, Math.min(400, r1(i.protein))), carbs: Math.max(0, r1(i.carbs)), fat: Math.max(0, r1(i.fat)) }));
   if (v.demo) return { ok: true, items: clean.map((c, n) => ({ ...c, id: `demo-${Date.now()}-${n}` })) };
   const sb = await createClient();
@@ -116,10 +125,13 @@ export async function copyMeals(items: { slot: Slot; name: string; qty: number; 
 // ───────────── Mis comidas ─────────────
 
 /** Guarda una comida personalizada para reusarla. En demo vive en el navegador (lo maneja el cliente). */
-export async function saveFood(input: { name: string; portion?: string; kcal: number; protein?: number; carbs?: number; fat?: number }): Promise<{ ok: boolean; food?: SavedFood }> {
+export async function saveFood(input: { name: string; portion?: string; kcal: number; protein?: number; carbs?: number; fat?: number }): Promise<{ ok: boolean; food?: SavedFood; error?: string }> {
   const v = await getViewer();
+  if (!v) return { ok: false };
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
   const c = cleanCustom(input);
-  if (!v || !c) return { ok: false };
+  if (!c) return { ok: false };
   if (v.demo) return { ok: true, food: { ...c, id: `demo-${Date.now()}` } };
   const sb = await createClient();
   const { data, error } = await sb.from("saved_foods").insert({ user_id: v.id, ...c }).select("id").single();
@@ -128,9 +140,11 @@ export async function saveFood(input: { name: string; portion?: string; kcal: nu
   return { ok: true, food: { ...c, id: String(data.id) } };
 }
 
-export async function deleteSavedFood(id: string): Promise<{ ok: boolean }> {
+export async function deleteSavedFood(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };
   const n = Number(id);
   if (!Number.isFinite(n)) return { ok: false };
@@ -148,8 +162,11 @@ export async function deleteSavedFood(id: string): Promise<{ ok: boolean }> {
  */
 export async function saveRecipe(input: { id?: string; name: string; servings: number; items: unknown[] }): Promise<{ ok: boolean; recipe?: UserRecipe; error?: string }> {
   const v = await getViewer();
+  if (!v) return { ok: false };
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
   const c = cleanRecipe(input);
-  if (!v || !c) return { ok: false };
+  if (!c) return { ok: false };
   const id = input.id && /^\d+$/.test(input.id) ? Number(input.id) : null;
   if (v.demo) return { ok: true, recipe: { ...c, id: input.id || `demo-${Date.now()}` } };
   const sb = await createClient();
@@ -162,9 +179,11 @@ export async function saveRecipe(input: { id?: string; name: string; servings: n
   return { ok: true, recipe: { ...c, id: String(res.data.id) } };
 }
 
-export async function deleteRecipe(id: string): Promise<{ ok: boolean }> {
+export async function deleteRecipe(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  const denied = await accessError(v, "nutrition");
+  if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };
   const n = Number(id);
   if (!Number.isFinite(n)) return { ok: false };
@@ -178,6 +197,7 @@ export async function deleteRecipe(id: string): Promise<{ ok: boolean }> {
 export async function listRecipes(): Promise<UserRecipe[]> {
   const v = await getViewer();
   if (!v || v.demo) return [];
+  if (await accessError(v, "nutrition")) return [];
   const sb = await createClient();
   const { data } = await sb.from("user_recipes").select("id,name,servings,ingredients,kcal,protein,carbs,fat").eq("user_id", v.id).order("updated_at", { ascending: false }).limit(100);
   return (data ?? []).map(recipeFromRow);

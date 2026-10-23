@@ -3,18 +3,20 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, House, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, ChartLine, CreditCard, DotsThree, House, Lock, ShieldCheck, SignOut, User, Users, Watch, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
 import { Sheet, SheetTitle } from "./sheet";
 
-type Item = { href: string; label: string; icon: PhosphorIcon | typeof Monkey; hint?: string };
+/** `nutri`: sección de Entreno + Nutrición. En Entreno se ve con candado y abre la invitación a mejorar el plan. */
+type Item = { href: string; label: string; icon: PhosphorIcon | typeof Monkey; hint?: string; nutri?: boolean };
+const NUTRI_HINT = "Incluido en Entreno + Nutrición";
 
 const MAIN: Item[] = [
   { href: "/app", label: "Hoy", icon: House },
   { href: "/app/entrenar", label: "Entrenar", icon: Barbell },
-  { href: "/app/nutricion", label: "Comida", icon: BowlFood, hint: "Calorías, recetas y menú" },
+  { href: "/app/nutricion", label: "Comida", icon: BowlFood, hint: "Calorías, recetas y menú", nutri: true },
   { href: "/app/progreso", label: "Progreso", icon: ChartLine, hint: "Peso, medidas y fotos" },
   { href: "/app/comunidad", label: "Comunidad", icon: Users },
 ];
@@ -23,19 +25,21 @@ const EXTRA: Item[] = [
   { href: "/app/retos", label: "Retos", icon: BananaMedal, hint: "Tienda: gratis y Premium" },
   { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
-  { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1" },
+  { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1", nutri: true },
 ];
 /** Fuera del menú principal: solo en "Más" (todavía no conecta relojes). */
 const SOON: Item = { href: "/app/conexiones", label: "Relojes", icon: Watch, hint: "Próximamente" };
 /** Barra inferior en móvil: 4 secciones + Coach al centro + "Más". */
 const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
 
-export function AppNav({ name, staff }: { name: string; staff: boolean }) {
+export function AppNav({ name, staff, nutrition }: { name: string; staff: boolean; nutrition: boolean }) {
   const path = usePathname();
   const [more, setMore] = useState(false);
   useEffect(() => setMore(false), [path]);
   const active = (h: string) => (h === "/app" ? path === "/app" : path.startsWith(h));
   const inMore = ![...MOBILE].some((i) => active(i.href)) && path !== "/app";
+  const locked = (i: Item) => Boolean(i.nutri) && !nutrition;
+  const lockMark = (i: Item) => (locked(i) ? <><Lock weight="bold" aria-hidden className="ml-auto size-4 shrink-0 opacity-70" /><span className="sr-only"> ({NUTRI_HINT})</span></> : null);
   const sideLink = (on: boolean) => `pressable flex items-center gap-3 rounded-2xl px-3 h-11 font-semibold ${on ? "bg-ink text-white" : "text-muted hover:bg-white hover:text-ink"}`;
 
   return (
@@ -50,17 +54,17 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-line bg-cream/80 backdrop-blur px-4 py-6">
         <div className="px-2 flex items-center justify-between"><Logo href="/app" /><NotificationBell /></div>
         <nav aria-label="Menú principal" className="mt-10 space-y-1">
-          {MAIN.map(({ href, label, icon: Icon }) => (
+          {MAIN.map((it) => { const { href, label, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
-              <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}
+              <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}{lockMark(it)}
             </Link>
-          ))}
+          ); })}
           <div className="my-3 border-t border-line" />
-          {EXTRA.map(({ href, label, icon: Icon }) => (
+          {EXTRA.map((it) => { const { href, label, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
-              <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}
+              <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}{lockMark(it)}
             </Link>
-          ))}
+          ); })}
         </nav>
         {staff && <ViewSwitch current="usuario" className="mt-6" />}
         <div className="mt-auto flex items-center gap-3 rounded-2xl bg-white border border-line p-3">
@@ -94,15 +98,15 @@ export function AppNav({ name, staff }: { name: string; staff: boolean }) {
       <Sheet open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-4 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map(({ href, label, icon: Icon, hint }) => (
+          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Suscripción", icon: CreditCard, hint: "Plan y recibos" }, SOON].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : it.hint; return (
             <li key={href}>
               <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-2 rounded-2xl p-4 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
-                <Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />
+                <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}</span>
                 <span className="font-extrabold leading-tight">{label}</span>
                 {hint && <span className={`text-xs ${active(href) ? "text-white/70" : "text-muted"}`}>{hint}</span>}
               </Link>
             </li>
-          ))}
+          ); })}
           {staff && <li className="col-span-2"><p className="mb-2 text-xs font-bold text-muted">Eres parte del equipo</p><ViewSwitch current="usuario" /></li>}
         </ul>
         <form action="/auth/salir" method="post" className="mt-4"><button className="btn-ghost w-full"><SignOut className="size-5" weight="bold" />Cerrar sesión</button></form>

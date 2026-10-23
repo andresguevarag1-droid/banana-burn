@@ -5,6 +5,8 @@ import { kcalAdjustment, weeklyTrend } from "@/lib/engine";
 import { WeightChart } from "@/components/weight-chart";
 import { WeighIn } from "@/components/weigh-in";
 import { getDaily } from "@/lib/daily";
+import { getEntitlements } from "@/lib/entitlements";
+import Link from "next/link";
 import { ProfileForm } from "./forms";
 import { Measures, Photos } from "./body";
 import { ProgressBar } from "@/components/progress-bar";
@@ -30,7 +32,7 @@ export default async function Progreso() {
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
-  const [{ weights, tracked, workouts }, g, measures, photos] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight), getMeasures(v), getPhotos(v)]);
+  const [{ weights, tracked, workouts }, g, measures, photos, ent] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight), getMeasures(v), getPhotos(v), getEntitlements(v)]);
   const lm = measures.at(-1);
   const bf = lm ? navyBodyFat({ sex: a.sex, heightCm: a.heightCm, waist: lm.waist, neck: lm.neck, hip: lm.hip }) : null;
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
@@ -43,6 +45,11 @@ export default async function Progreso() {
   else if (adj < 0) insight = { tone: "bg-banana-soft", icon: Target, ink: "text-banana-ink", t: `Casi: ${nf(-rate, 2)} de ${nf(d.needPerWeek, 2)} kg/sem`, b: `Vas bien, pero un poco por debajo del ritmo. Ajuste suave: −${-adj} kcal al día (media taza de arroz menos en la cena). Proteína intacta.` };
   else if (adj > 0) insight = { tone: "bg-banana-soft", icon: Lightning, ink: "text-banana-ink", t: `Vas muy rápido: ${nf(-rate, 2)} kg/sem`, b: `Te subo ${adj} kcal para no perder músculo ni fuerza. Lo rápido no dura; lo constante sí.` };
   else insight = { tone: "bg-peel/10", icon: CheckCircle, ink: "text-peel", t: `En ritmo: ${nf(-rate, 2)} kg/sem`, b: `Necesitas ${nf(d.needPerWeek, 2)} kg/sem para llegar a ${a.goalWeight} kg el ${new Date(a.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long" })}. No cambies nada.` };
+  // El ajuste de calorías según el peso real es de Entreno + Nutrición. En Entreno se muestra el ritmo, sin cifras de comida.
+  if (!ent.nutrition && rate != null) {
+    const off = adj !== 0;
+    insight = { tone: off ? "bg-banana-soft" : "bg-peel/10", icon: off ? Target : CheckCircle, ink: off ? "text-banana-ink" : "text-peel", t: `Tu ritmo: ${nf(-rate, 2)} de ${nf(d.needPerWeek, 2)} kg/sem`, b: off ? "Sigue con tus entrenos y súmale pasos. El ajuste semanal de calorías según tu peso real está en Entreno + Nutrición." : "Vas en ritmo para tu meta. Sigue igual con tus entrenos y tus pasos." };
+  }
 
   return (
     <div className="space-y-6 animate-enter">
@@ -60,9 +67,10 @@ export default async function Progreso() {
         </section>
         <div className="space-y-4">
           <section className={`rounded-[1.5rem] p-5 ${insight.tone}`}>
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-muted"><Monkey className="size-4 text-ink" />Ajuste semanal del coach</p>
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-muted"><Monkey className="size-4 text-ink" />{ent.nutrition ? "Ajuste semanal del coach" : "Tu ritmo semanal"}</p>
             <p className="mt-2 flex items-start gap-2.5 text-lg font-extrabold text-ink"><span className={`grid place-items-center size-9 shrink-0 rounded-xl bg-white/80 ${insight.ink}`}><insight.icon weight="duotone" className="size-5" /></span><span className="pt-1 leading-snug">{insight.t}</span></p>
             <p className="mt-1 text-sm text-body">{insight.b}</p>
+            {!ent.nutrition && rate != null && adj !== 0 && <Link href="/app/suscripcion" className="tap mt-2 inline-flex min-h-11 items-center text-sm font-bold text-banana-ink hover:text-ink">Ver Entreno + Nutrición</Link>}
           </section>
           <section className="card p-5">
             <h2 className="font-bold text-ink mb-3">Peso de hoy</h2>

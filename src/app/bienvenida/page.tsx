@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient, getViewer } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/supabase/server";
+import { getEntitlements } from "@/lib/entitlements";
 import { INTENT_COOKIE, decodeIntent } from "@/lib/checkout-intent";
 import { isCountry } from "@/lib/countries";
 import { trialEnd } from "@/lib/copy";
@@ -11,7 +12,6 @@ import type { Goal } from "./goal";
 export const metadata = { title: "Bienvenida", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-const PAID = ["entreno", "completo", "pro"];
 
 export default async function Bienvenida() {
   const v = await getViewer();
@@ -25,19 +25,20 @@ export default async function Bienvenida() {
   const glp1 = jar.get("bb_programa")?.value === "glp1";
   const intent = decodeIntent(jar.get(INTENT_COOKIE)?.value);
 
-  // Prueba gratis: 7 días con todo desde que se creó la cuenta, solo si no tiene plan pagado ni es del equipo.
-  let trialEndsAt: string | null = null;
+  // Prueba gratis (7 días desde el registro, o el período de prueba del servicio) y si hoy tiene nutrición: misma regla
+  // que el resto de la app (entitlements.ts). Con plan pagado o del equipo no hay prueba que mostrar.
+  let trialEndsAt: string | null = null, trialBeta = false, nutrition = true;
   if (v.demo) trialEndsAt = trialEnd(new Date().toISOString())?.toISOString() ?? null;
-  else if (!PAID.includes(v.plan) && v.role === "free") {
-    const { data } = await (await createClient()).from("profiles").select("created_at").eq("id", v.id).maybeSingle();
-    const end = trialEnd(data?.created_at as string | undefined);
-    if (end && end.getTime() > Date.now()) trialEndsAt = end.toISOString();
+  else {
+    const ent = await getEntitlements(v);
+    nutrition = ent.nutrition;
+    if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
   }
 
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} />
+      <Wizard name={v.demo ? "Andrés" : v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} />
     </>
   );
 }
