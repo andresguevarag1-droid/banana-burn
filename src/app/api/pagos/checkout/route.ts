@@ -3,6 +3,9 @@ import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError, startCheckout } from "@/lib/billing";
+import { adminClient } from "@/lib/supabase/admin";
+import { dbRateLimit } from "@/lib/security/db-rate-limit";
+import { errInfo } from "@/lib/security/log";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +20,15 @@ export async function POST(req: Request) {
   if (v.demo) return NextResponse.json({ ok: false, demo: true, error: "Modo demo: los pagos no están activos." }, { status: 409 });
   if (!isOnvoConfigured()) return NextResponse.json({ ok: false, error: "Los pagos aún no están activos. Te avisaremos muy pronto." }, { status: 503 });
   // Cada intento puede crear un cliente y una suscripción en ONVO: tope por persona y doble clic unido en uno.
-  if (!memoryRateLimit(`checkout:${v.id}`, 10, 10 * 60_000)) return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
+  // En memoria (por instancia) y en la base (compartido entre instancias, 0023).
+  if (!memoryRateLimit(`checkout:${v.id}`, 10, 10 * 60_000) || !(await dbRateLimit(adminClient(), `checkout:${v.id}`, 3600, 20)))
+    return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
   try {
     const { url } = await singleFlight(`checkout:${v.id}:${pb.plan}:${pb.billing}`, () => startCheckout(v, pb.plan, pb.billing));
     return NextResponse.json({ ok: true, url });
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
-    console.error("[pagos] checkout", e);
+    console.error("[pagos] checkout", errInfo(e));
     return NextResponse.json({ ok: false, error: "No pudimos iniciar el pago. Intenta de nuevo en un momento." }, { status: 502 });
   }
 }
