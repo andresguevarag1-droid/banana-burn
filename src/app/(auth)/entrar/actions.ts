@@ -6,7 +6,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
 import { memoryRateLimit } from "@/lib/security";
 import { dbRateLimitAll, keyPart } from "@/lib/security/db-rate-limit";
 import { attributeReferral } from "@/lib/referrals-server";
-import { loginOutcome, normEmail, signupError } from "./validate";
+import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./validate";
 
 // Acceso sin correo de confirmación: si producción no tiene SMTP, el correo de confirmación nunca llega y la persona
 // queda fuera. Con la llave service_role creamos (o confirmamos) la cuenta en el servidor y el navegador entra con
@@ -59,7 +59,8 @@ export async function signUpConfirmed(email: string, password: string): Promise<
   const invalid = signupError(mail, password);
   if (invalid) return { ok: false, error: invalid };
   const admin = adminClient();
-  if (!admin) return { ok: false, error: "", fallback: true };
+  // Sin service_role, o con confirmación de correo obligatoria (AUTH_EMAIL_CONFIRM=1): registro normal con correo.
+  if (!admin || requireEmailConfirm()) return { ok: false, error: "", fallback: true };
   if (await limited("signup", mail, admin)) return { ok: false, error: TOO_MANY };
   const { data, error } = await admin.auth.admin.createUser({ email: mail, password, email_confirm: true });
   if (!error) {
@@ -80,7 +81,7 @@ export async function signUpConfirmed(email: string, password: string): Promise<
 export async function confirmAndCheck(email: string, password: string): Promise<AuthResult> {
   const mail = normEmail(email);
   const admin = adminClient();
-  if (!admin || !mail || typeof password !== "string" || !password) return { ok: false, error: "", fallback: true };
+  if (!admin || requireEmailConfirm() || !mail || typeof password !== "string" || !password) return { ok: false, error: "", fallback: true };
   if (await limited("confirm", mail, admin)) return { ok: false, error: TOO_MANY };
   const BAD = { ok: false as const, error: "Correo o contraseña incorrectos." };
   const first = await passwordCheck(mail, password);

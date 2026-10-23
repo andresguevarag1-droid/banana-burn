@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginOutcome, normEmail, signupError } from "./validate";
+import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./validate";
 
 describe("signupError", () => {
   it("acepta correo y contraseña válidos", () => expect(signupError(" Ana@Gmail.com ", "banana123")).toBeNull());
@@ -25,5 +25,17 @@ describe("loginOutcome (confirmar solo con la contraseña correcta)", () => {
   it("contraseña equivocada u otro error: no se confirma nada", () => {
     expect(loginOutcome({ code: "invalid_credentials", message: "Invalid login credentials" })).toBe("bad");
     expect(loginOutcome({ message: "Request rate limit reached" })).toBe("bad");
+  });
+});
+
+describe("requireEmailConfirm (AUTH_EMAIL_CONFIRM)", () => {
+  it("apagado por defecto: el registro sigue creando cuentas confirmadas", () => {
+    expect(requireEmailConfirm({})).toBe(false);
+    expect(requireEmailConfirm({ AUTH_EMAIL_CONFIRM: "" })).toBe(false);
+    expect(requireEmailConfirm({ AUTH_EMAIL_CONFIRM: "0" })).toBe(false);
+    expect(requireEmailConfirm({ AUTH_EMAIL_CONFIRM: "no" })).toBe(false);
+  });
+  it("encendido con 1, true o sí (con espacios)", () => {
+    for (const v of ["1", "true", "TRUE", " sí ", "si", "yes"]) expect(requireEmailConfirm({ AUTH_EMAIL_CONFIRM: v })).toBe(true);
   });
 });

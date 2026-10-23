@@ -21,3 +21,13 @@ export function loginOutcome(error: { code?: string; message?: string } | null |
   if (error.code === "email_not_confirmed" || /email not confirmed/i.test(error.message ?? "")) return "unconfirmed";
   return "bad";
 }
+
+/**
+ * ¿Hay que confirmar el correo antes de entrar? Con AUTH_EMAIL_CONFIRM=1 (cuando Supabase ya envía correos con SMTP propio)
+ * el registro deja de crear cuentas ya confirmadas en el servidor: el formulario usa signUp normal y el enlace del correo.
+ * Sin confirmar, cualquiera puede registrar el correo de otra persona con su contraseña y, si esa persona después entra
+ * con Google al mismo correo, Supabase une las cuentas y quien la creó conserva la contraseña (toma de cuenta previa).
+ */
+export function requireEmailConfirm(env: Record<string, string | undefined> = process.env): boolean {
+  return /^(1|true|si|sí|yes)$/i.test((env.AUTH_EMAIL_CONFIRM ?? "").trim());
+}
