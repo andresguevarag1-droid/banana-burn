@@ -23,7 +23,7 @@ export default async function Retos() {
   const v = (await getViewer())!;
   const today = todayFor(v).iso;
   const [{ active, done, ended }, catalog, owned, participants, perks] = await Promise.all([
-    getMyChallenges(v, await todayMetrics(v)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v),
+    todayMetrics(v).then((m) => getMyChallenges(v, m)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v),
   ]);
   const activeIds = new Set(active.map((a) => a.c.id));
   const list = [...catalog.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort - b.sort);

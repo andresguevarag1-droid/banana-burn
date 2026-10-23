@@ -27,14 +27,12 @@ const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDig
 
 export default async function Hoy() {
   const v = (await getViewer())!;
-  const a = await getAthlete(v);
+  // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
+  const [a, meals, ent, xs] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v)]);
   const d = dashboard(a);
-  const [g, meals, ent] = await Promise.all([getDaily(v, a.startWeight, a.currentWeight), getMeals(v), getEntitlements(v)]);
+  const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
-  const [ch, xs] = await Promise.all([
-    getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein }),
-    getXpSummary(v),
-  ]);
+  const ch = await getMyChallenges(v, { workout: g.trainedToday, steps: g.log.steps, water: g.log.water, protein: g.log.protein + eaten.protein, proteinGoal: d.t.protein });
   const { plan, t } = d;
   const training = !!plan.tpl;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });

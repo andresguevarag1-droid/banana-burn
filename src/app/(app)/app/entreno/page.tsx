@@ -16,7 +16,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const v = (await getViewer())!;
   const a = await getAthlete(v);
   const d = dashboard(a);
-  const g = await getDaily(v, a.startWeight, a.currentWeight);
   const n = Number(dia);
   const plan = expres ? expressDay(Number(expres), d.week + d.today.dow) : dia != null && n >= 0 && n <= 6 ? planDay(n, d.week, d.sched, d.opts) : d.plan;
 
@@ -25,7 +24,15 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     const home = d.equipment === "gym" || d.equipment === "mixto" ? HOME[e.id] : undefined; // opción "en casa / sin máquina" también en el gym
     return [e.id, ...pool.filter((x) => x !== e.id), ...(home ? [home] : [])].filter((x, i, a) => a.indexOf(x) === i).slice(0, 5) as ExerciseId[];
   });
-  const hist = await getHistory(v, [...new Set(optionIds.flat())]);
+  const libAlts = plan.exercises.map((e) => libraryAlternatives(e.id, d.equipment));
+  const template = plan.tpl ?? (expres ? `expres${expres}` : "descanso");
+  // Todo lo que no depende entre sí se pide en paralelo (antes eran cuatro viajes seguidos a la base).
+  const [g, hist, libHist, doneTemplates] = await Promise.all([
+    getDaily(v, a.startWeight, a.currentWeight),
+    getHistory(v, [...new Set(optionIds.flat())]),
+    getHistory(v, libAlts.flat().map((x) => `ds:${x.id}`)),
+    plan.exercises.length ? templatesDoneToday(v) : Promise.resolve([] as string[]),
+  ]);
   const build = (id: ExerciseId, cfg: SlotCfg): PlayerExercise => {
     const h = hist[id] ?? [];
     const best = Math.max(0, ...h.flat().map((s) => (s.kg ? e1rm(s.kg, s.reps) : 0)));
@@ -34,8 +41,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     if (modo === "fuerte" && rx.type !== "cal") rx = { ...rx, note: `Día fuerte: busca 1 rep extra en la última serie. ${rx.note}` };
     return { id, name: EX[id].n, muscle: EX[id].m, cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), load: loadKindOf(id, { inc: EX[id].inc }), rx, best, lastSets: h.at(-1) ?? null };
   };
-  const libAlts = plan.exercises.map((e) => libraryAlternatives(e.id, d.equipment));
-  const libHist = await getHistory(v, libAlts.flat().map((x) => `ds:${x.id}`));
   // Variante de la biblioteca: mismo patrón y músculo que el ejercicio del plan, así que hereda su animación y su nombre de músculo.
   const buildLib = (x: NonNullable<ReturnType<typeof getLibEx>>, slot: { id: ExerciseId; muscle: string; cfg: SlotCfg }): PlayerExercise => {
     const id = `ds:${x.id}`, h = libHist[id] ?? [], inc = incFor(x.eq);
@@ -58,8 +63,7 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       if (option > 0) preswap = { slot, option };
     }
   }
-  const template = plan.tpl ?? (expres ? `expres${expres}` : "descanso");
-  const doneToday = options.length > 0 && (await templatesDoneToday(v)).includes(template);
+  const doneToday = options.length > 0 && doneTemplates.includes(template);
   return <Player template={template} title={plan.name} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone }} />;
 }

@@ -31,7 +31,7 @@ export default async function RetoDetalle({ params }: P) {
   const { slug } = await params;
   const v = (await getViewer())!;
   const today = todayFor(v).iso;
-  const [catalog, owned, participants, perks, mine, ent] = await Promise.all([getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getMyChallenges(v, await todayMetrics(v)), getEntitlements(v)]);
+  const [catalog, owned, participants, perks, mine, ent] = await Promise.all([getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), todayMetrics(v).then((m) => getMyChallenges(v, m)), getEntitlements(v)]);
   const c = catalog.get(slug);
   const myActive = mine.active.find((m) => m.c.id === slug);
   if (!c || (c.status !== "publicado" && !myActive)) notFound();

@@ -27,14 +27,12 @@ const fmtDay = (iso?: string, tz?: string) => { if (!iso) return null; try { ret
 export default async function Perfil({ searchParams }: { searchParams: Promise<{ clave?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
-  const a = await getAthlete(v);
+  // En paralelo: el perfil público, el plan, los avisos y las medallas no dependen del atleta.
+  const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
+  const [a, data, ent, prefs, certs] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getCompletedChallenges(v).catch(() => [])]);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   let cp = { username: "andres", bio: "Bajando de 94 a 85 kg con Banana Burn", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };
-  if (!v.demo) {
-    const { data } = await (await createClient()).from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle();
-    cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
-  }
-  const [ent, prefs, certs] = await Promise.all([getEntitlements(v), getNotificationPrefs().catch(() => null), getCompletedChallenges(v).catch(() => [])]);
+  if (!v.demo) cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
   const frame = perksAt(g.level.idx).frame;
   const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
   const planTitle = plan ? plan.name : ent.trial ? "Prueba gratis" : "Sin plan";

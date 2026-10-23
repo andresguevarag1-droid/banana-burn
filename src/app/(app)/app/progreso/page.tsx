@@ -30,9 +30,10 @@ const FUN: { I: PhosphorIcon; w: "duotone" | "fill"; l: string }[] = [
 
 export default async function Progreso() {
   const v = (await getViewer())!;
-  const a = await getAthlete(v);
+  // El atleta y lo que no depende de él van juntos; el registro del día necesita su peso.
+  const [a, { weights, tracked, workouts }, measures, photos, ent] = await Promise.all([getAthlete(v), getProgress(v), getMeasures(v), getPhotos(v), getEntitlements(v)]);
   const d = dashboard(a);
-  const [{ weights, tracked, workouts }, g, measures, photos, ent] = await Promise.all([getProgress(v), getDaily(v, a.startWeight, a.currentWeight), getMeasures(v), getPhotos(v), getEntitlements(v)]);
+  const g = await getDaily(v, a.startWeight, a.currentWeight);
   const lm = measures.at(-1);
   const bf = lm ? navyBodyFat({ sex: a.sex, heightCm: a.heightCm, waist: lm.waist, neck: lm.neck, hip: lm.hip }) : null;
   const rate = weeklyTrend(weights.map((w) => ({ d: w.d, kg: w.v })));
