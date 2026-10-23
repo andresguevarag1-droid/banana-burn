@@ -3,7 +3,7 @@
 // mismos estilos de la app (chips, tarjetas, portada del programa). Nada decorativo se lee dos veces: aria-hidden
 // en lo que repite el texto y alt corto en las capturas.
 import Image from "next/image";
-import { BrandIcon, CheckCircle, CookingPot, Drop, Footprints, Lightning, Lock, Moon, Play, ShieldCheck, Timer, TrendUp } from "@/components/icons";
+import { BrandIcon, CheckCircle, CookingPot, Drop, Egg, Footprints, Leaf, Lightning, Lock, Moon, Play, ShieldCheck, Syringe, Timer, TrendUp } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { ChallengeCover } from "@/components/retos/cover";
 import type { CoverStyle } from "@/lib/challenges";
@@ -158,9 +158,58 @@ export function GuideVisual({ step, input }: { step: GuideStep; input: GuideInpu
             </ul>
           </div>
           <div className="flex items-center gap-3 rounded-[1.25rem] bg-ink p-4 text-white">
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" className="size-6" /></span>
-            <span className="min-w-0"><span className="block font-extrabold">Banana Shield</span><span className="block text-sm text-white/75">Proteína, fibra y agua para tu día de GLP&#8209;1</span></span>
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-banana text-ink"><BrandIcon name="fork" className="size-6" /></span>
+            <span className="min-w-0"><span className="block font-extrabold">Mis recetas</span><span className="block text-sm text-white/75">Guarda la tuya y regístrala en un toque</span></span>
           </div>
+        </div>
+      );
+    case "programas": {
+      // Portadas reales de tres programas (arte de Coach Banana por programa, challenge-art.ts).
+      const main = { id: "gluteos-30", cover: "ember" as CoverStyle, icon: "bolt", title: "Glúteos de acero", mode: "Modo glúteo", habits: ["Activación de glúteo", "Camina 8.000 pasos"] };
+      const more = [{ id: "banana-girl", cover: "fresa" as CoverStyle, icon: "sparkle", title: "Banana Girl" }, { id: "abdomen-marcado", cover: "sky" as CoverStyle, icon: "target", title: "Operación Abdomen" }];
+      return (
+        <div aria-hidden className="grid h-full grid-rows-[1.35fr_1fr] gap-2">
+          <div className="overflow-hidden rounded-[1.5rem] shadow-soft">
+            <ChallengeCover c={main} chip={false} sizes="420px" className="flex h-full flex-col justify-between p-4 sm:p-5">
+              <span className="relative">
+                <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[10px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={main.icon} className="size-3" />{main.mode}</span>
+                <span className="mt-1.5 block max-w-[60%] text-xl font-extrabold leading-tight sm:text-2xl">{main.title}</span>
+                <span className="mt-1 block text-xs font-bold opacity-85">Semana 2 de 6</span>
+              </span>
+              <span className="relative flex flex-wrap gap-1">
+                {main.habits.map((h) => <span key={h} className="chip h-6 bg-white/85 text-[11px] text-ink"><CheckCircle weight="fill" className="size-3.5 text-peel" />{h}</span>)}
+              </span>
+            </ChallengeCover>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {more.map((m) => (
+              <div key={m.id} className="overflow-hidden rounded-[1.25rem] shadow-soft">
+                <ChallengeCover c={m} chip={false} sizes="220px" className="flex h-full items-end p-3">
+                  <span className="relative max-w-[70%] text-sm font-extrabold leading-tight">{m.title}</span>
+                </ChallengeCover>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case "shield":
+      return (
+        <div aria-hidden className="relative flex h-full flex-col justify-center gap-2.5 overflow-hidden rounded-[1.75rem] bg-ink p-4 text-white sm:gap-3 sm:p-6">
+          <div className="flex items-center gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" className="size-7" /></span>
+            <span className="min-w-0"><span className="block text-lg font-extrabold leading-tight">Banana Shield</span><span className="block text-xs font-bold text-banana">Programa para GLP&#8209;1</span></span>
+          </div>
+          {!v.included && <span className="inline-flex h-7 w-fit items-center gap-1.5 rounded-full bg-banana px-2.5 text-[11px] font-extrabold text-ink"><Lock weight="bold" className="size-3.5" />Incluido en Entreno + Nutrición</span>}
+          <ul className="grid gap-1.5">
+            {([[Egg, "Proteína primero", "Meta diaria y piso de calorías"], [Syringe, "Día de inyección", "Entreno más suave ese día y el siguiente"], [Leaf, "Molestias", "Qué comer con náuseas o estreñimiento"]] as const).map(([I, t, d], n) => (
+              <li key={t} className={`${n === 2 || (n === 1 && !v.included) ? "hidden sm:flex" : "flex"} items-center gap-3 rounded-2xl bg-white/[.08] px-3 py-2`}>
+                <I weight="duotone" className="size-5 shrink-0 text-banana" />
+                <span className="min-w-0"><span className="block text-sm font-extrabold">{t}</span><span className="block truncate text-xs text-white/75">{d}</span></span>
+              </li>
+            ))}
+          </ul>
+          <span className="block text-xs font-semibold text-white/70">Meta: que al menos 3 de cada 4 kg perdidos sean grasa y que tu fuerza no baje.</span>
         </div>
       );
     case "coach": {

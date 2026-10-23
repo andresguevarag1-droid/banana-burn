@@ -28,7 +28,7 @@ describe("variante de la guía", () => {
 describe("capítulos por plan", () => {
   it("Entreno: sin recetas, con un solo paso honesto de nutrición y su precio", () => {
     const s = guideSteps(entreno, D);
-    expect(ids(s)).toEqual(["inicio", "hoy", "plan", "reproductor", "progresion", "tecnica", "retos", "nutricion", "coach", "comunidad", "progreso", "final"]);
+    expect(ids(s)).toEqual(["inicio", "hoy", "plan", "reproductor", "progresion", "tecnica", "programas", "retos", "nutricion", "shield", "coach", "comunidad", "progreso", "final"]);
     const n = s.find((x) => x.id === "nutricion")!;
     const full = PLANS.find((p) => p.id === "completo")!;
     expect(n.title).toContain(full.name);
@@ -39,24 +39,42 @@ describe("capítulos por plan", () => {
     // Fuera del paso de mejora, Entreno nunca promete comida, macros ni Banana Shield.
     // La captura de Hoy (con calorías) no se usa en Entreno.
     expect(s.find((x) => x.id === "hoy")!.visual.kind).toBe("hoy");
-    const rest = text(s.filter((x) => x.id !== "nutricion"));
+    // Banana Shield: capítulo propio, honesto (no lo tiene), con precio y enlace a planes, sin dosis.
+    const sh = s.find((x) => x.id === "shield")!;
+    expect(sh.body).toContain("no lo incluye");
+    expect(sh.body).toContain(full.name);
+    expect(sh.note).toContain(money(full.price.mes));
+    expect(sh.note).toMatch(/no da indicaciones de dosis/i);
+    expect(sh.cta?.href).toBe("/app/suscripcion");
+    expect(sh.visual).toEqual({ kind: "shield", included: false });
+    expect(text([sh])).not.toMatch(/Actívalo|tu Banana Shield|\/app\/glp1/);
+    // Programas: la comida del programa se ofrece como parte de Entreno + Nutrición, no como algo que ya tiene.
+    expect(s.find((x) => x.id === "programas")!.bullets.join(" ")).toContain(`Con ${full.name}, tu comida`);
+    const rest = text(s.filter((x) => !["nutricion", "shield", "programas"].includes(x.id)));
     expect(rest).not.toMatch(/Banana Shield|macros|calorías|Menú flash|recetas/i);
   });
 
   it("Entreno + Nutrición: nutrición completa con recetas, Menú flash y Banana Shield", () => {
     const s = guideSteps(completo, D);
-    expect(ids(s)).toEqual(["inicio", "hoy", "plan", "reproductor", "progresion", "tecnica", "retos", "nutricion", "recetas", "coach", "comunidad", "progreso", "final"]);
+    expect(ids(s)).toEqual(["inicio", "hoy", "plan", "reproductor", "progresion", "tecnica", "programas", "retos", "nutricion", "recetas", "shield", "coach", "comunidad", "progreso", "final"]);
     expect(text(s)).toMatch(/Menú flash/);
     expect(text(s)).toMatch(/Banana Shield/);
     expect(s.find((x) => x.id === "nutricion")!.cta?.href).toBe("/app/nutricion");
     expect(s.find((x) => x.id === "hoy")!.visual.kind).toBe("captura");
     expect(s.find((x) => x.id === "final")!.body).toContain("Entreno + Nutrición");
+    const sh = s.find((x) => x.id === "shield")!;
+    expect(sh.cta?.href).toBe("/app/glp1");
+    expect(sh.bullets.join(" ")).toContain("Perfil");
+    expect(sh.note).toMatch(/consulta con tu médico/);
+    expect(sh.visual).toEqual({ kind: "shield", included: true });
   });
 
   it("prueba y beta: todo incluido y, al final, qué pasa después", () => {
     for (const i of [beta, prueba]) {
       const s = guideSteps(i, D);
       expect(ids(s)).toContain("recetas");
+      expect(ids(s)).toContain("shield");
+      expect(s.find((x) => x.id === "shield")!.note).toContain("Incluido en tu prueba");
       const f = s.at(-1)!;
       expect(f.id).toBe("final");
       expect(f.chapter).toBe("Tu prueba");
@@ -94,12 +112,28 @@ describe("capítulos por plan", () => {
   });
 });
 
+describe("capítulos que van en todas las variantes", () => {
+  it("Banana Shield y programas Premium siempre, con programa activo o sin él", () => {
+    for (const i of [entreno, completo, beta, prueba, { ...entreno, program }, { ...completo, program }]) {
+      const s = guideSteps(i, D);
+      expect(ids(s)).toContain("shield");
+      const p = s.find((x) => x.id === "programas")!;
+      expect(p.visual.kind).toBe("programas");
+      expect(p.body).toMatch(/pago único/);
+      expect(p.bullets.join(" ")).toMatch(/Hasta 4 hábitos/);
+      expect(p.bullets.join(" ")).toMatch(/certificado/);
+      expect(s.find((x) => x.id === "retos")!.body).toContain("de 7 a 30 días");
+    }
+  });
+});
+
 describe("reglas de los textos", () => {
   const all = [entreno, completo, beta, prueba, { ...completo, program }, { ...beta, charge: { kind: "beta" as const, phase: "programado" as const, plan: "entreno" as const, amount: 9.99, chargeAt: "2026-11-01T06:00:00.000Z" } }];
   it("sin IA, sin emojis, sin rayas largas, sin cadenas con punto medio y con banana", () => {
     for (const i of all) {
       const t = text(guideSteps(i, D));
       expect(t).not.toMatch(/\bIA\b|inteligencia artificial/i);
+      expect(t).not.toMatch(/\b\d+([.,]\d+)?\s?mg\b/i); // nunca dosis
       expect(t).not.toMatch(/[—–]/);
       expect(t).not.toMatch(/·/);
       expect(t).not.toMatch(/banano/i);
