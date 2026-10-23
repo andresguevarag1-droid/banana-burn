@@ -10,7 +10,7 @@ import { getAthlete } from "@/lib/athlete";
 import { getDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, Compass, Lifebuoy, LevelIcon, Lock, ShieldCheck, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, Compass, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -111,6 +111,12 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
         <H icon={Compass}>Guía de la app</H>
         <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}Coach Banana y tu progreso, según tu plan.</p>
         <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
+      </section>
+
+      <section className="card p-5">
+        <H icon={Sparkle}>Novedades</H>
+        <p className="mt-1 text-sm text-muted">Todo lo que mejoramos en Banana Burn y cómo te ayuda.</p>
+        <Link href="/app/novedades" className="btn-ghost mt-3 h-11 text-sm px-4">Ver las novedades<ArrowRight weight="bold" className="size-4" aria-hidden /></Link>
       </section>
 
       <section className="card p-5">

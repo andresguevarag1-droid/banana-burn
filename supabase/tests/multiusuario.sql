@@ -3,6 +3,7 @@
 -- la 5c los programas (0024), la 7, el acceso a nutrición por plan (0022), la 9, regalos, referidos y escribir datos con plan (0025)
 -- la 10, tarjeta guardada y prueba de 7 días con cobro el día 7 (0026), la 11, testers de la beta y "Reportar algo" (0029),
 -- la 12, la guía de la app (0031), y el cupo de Coach Banana por plan (0032).
+-- la 12, la guía de la app (0031), y la 13, las novedades (0036).
 -- (0017 es de nutrición y no es requisito de 0018.)
 --   psql -d bb -X -q -f supabase/tests/multiusuario.sql 2>&1 | grep -E '^(NOTICE:  )?(PASS|FAIL|RESUMEN)'
 -- Cada verificación imprime PASS/FAIL y al final un RESUMEN; la suite falla si hay algún FAIL.
@@ -1644,6 +1645,35 @@ select public.support_create_ticket('cuenta', 'Quiero borrar', 'Voy a borrar mi 
 reset role;
 delete from auth.users where id = '50900000-0000-4000-8000-0000000000a1';
 select bbtest.ok('borrado: sin casos de la cuenta borrada', not exists (select 1 from public.support_tickets where user_id = '50900000-0000-4000-8000-0000000000a1'));
+
+-- ───────────── 13. Novedades (0036) ─────────────
+-- Cada persona marca solo su última novedad vista; la fecha la pone el servidor; ids validados; nunca baja de fecha.
+update public.profiles set news_seen = null, news_seen_at = null where id in (bbtest.u('A'), bbtest.u('B'));
+set role authenticated; select bbtest.login('A');
+select public.news_mark_seen('2026-10-23-programas');
+select bbtest.ok('novedades: A guarda su última vista con fecha del servidor', (select news_seen = '2026-10-23-programas' and news_seen_at is not null and news_seen_at <= now() + interval '1 minute' from public.profiles where id = auth.uid()));
+select public.news_mark_seen('2026-10-23-retos-y-guia');
+select bbtest.ok('novedades: el mismo día se puede avanzar', (select news_seen = '2026-10-23-retos-y-guia' from public.profiles where id = auth.uid()));
+select public.news_mark_seen('2026-11-15-algo-nuevo');
+select public.news_mark_seen('2026-10-01-vieja');
+select bbtest.ok('novedades: una versión de fecha anterior no baja la vista', (select news_seen = '2026-11-15-algo-nuevo' from public.profiles where id = auth.uid()));
+select bbtest.zero('novedades: A no marca las novedades de B', $q$ update public.profiles set news_seen = '2026-10-23-programas' where id = bbtest.u('B') $q$);
+select bbtest.fails('novedades: id con formato inválido', $q$ select public.news_mark_seen('hola') $q$, '22023');
+select bbtest.fails('novedades: id con caracteres raros', $q$ select public.news_mark_seen('2026-10-23-x'',''y') $q$, '22023');
+select bbtest.fails('novedades: id nulo', $q$ select public.news_mark_seen(null) $q$, '22023');
+select bbtest.fails('novedades: id demasiado largo', $q$ select public.news_mark_seen('2026-10-23-' || repeat('a', 60)) $q$, '22023');
+select bbtest.fails('novedades: id inválido directo en la tabla', $q$ update public.profiles set news_seen = 'Hola Mundo' where id = auth.uid() $q$, '23514');
+update public.profiles set news_seen_at = '2099-01-01' where id = auth.uid();
+select bbtest.ok('novedades: la fecha de vista no se inventa', (select news_seen_at <= now() + interval '1 minute' from public.profiles where id = auth.uid()));
+select bbtest.fails('novedades: A no se sube el rol al marcar novedades', $q$ update public.profiles set news_seen = '2026-10-23-programas', role = 'superadmin' where id = auth.uid() $q$, '42501');
+reset role;
+select bbtest.ok('novedades: B quedó sin tocar', (select news_seen is null and news_seen_at is null from public.profiles where id = bbtest.u('B')));
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('novedades: B no ve la vista de A como suya', (select news_seen is null from public.profiles where id = auth.uid()));
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('novedades: anon no marca novedades', $q$ select public.news_mark_seen('2026-10-23-programas') $q$, '42501');
+reset role;
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));

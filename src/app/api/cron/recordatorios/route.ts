@@ -6,6 +6,7 @@ import { deliverTesterNotices } from "@/lib/testers-server";
 import { deliverSupportNotices } from "@/lib/support-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
 import { purgeIdentityFiles } from "@/lib/identity-server";
+import { nudgeUnseenNews } from "@/lib/novedades-server";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 
@@ -22,6 +23,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * los cobros con tarjeta guardada: aviso 2 días antes, cobro al terminar la prueba y un reintento al día siguiente.
  * También los avisos de testers de la beta (asignación, 3 días antes del final y agradecimiento).
  * También borra las fotos de verificaciones de identidad ya decididas o vencidas (máximo 30 días, 0030).
+ * Y "Hay novedades en Banana Burn" (0036): push y campanita una vez por versión a quien no la vio en 3 días.
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -44,5 +46,7 @@ export async function GET(req: Request) {
   const identidad = await purgeIdentityFiles({ deadline: t0 + 57_000 }).catch((e) => { logError("cron:identidad", "run_failed", { kind: errCode(e) }); return null; });
   // Soporte (0034): correo y push de eventos que no se alcanzaron a avisar al responder (respaldo).
   const soporte = await deliverSupportNotices({ limit: 200 }).catch((e) => { logError("cron:soporte", "run_failed", { kind: errCode(e) }); return null; });
-  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte }, { status: stats.ok ? 200 : 500 });
+  // Novedades (0036): una vez por versión, entre el día 3 y el 14, a quien no la vio. Reclamado en notification_log.
+  const novedades = await nudgeUnseenNews({ limit: 300, deadline: t0 + 58_500 }).catch((e) => { logError("cron:novedades", "run_failed", { kind: errCode(e) }); return null; });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte, novedades }, { status: stats.ok ? 200 : 500 });
 }

@@ -1,5 +1,5 @@
 -- ¿Qué migraciones ya corrí? Pégala completa en Supabase → SQL Editor y toca Run.
--- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0033 se puede repetir sin daño).
+-- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0036 se puede repetir sin daño).
 select m.archivo,
        case when m.aplicada then 'Ya está' else 'FALTA: córrela' end as estado
 from (values
@@ -25,6 +25,7 @@ from (values
   (20,'0031_guia.sql',                exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'guide_tips') and to_regprocedure('public.guide_mark_seen(integer)') is not null and to_regprocedure('public.guide_tip_seen(text)') is not null),
   (21,'0032_coach_cuota.sql',        to_regclass('public.coach_quota_tickets') is not null and to_regprocedure('public.coach_take_quota(text)') is not null and to_regprocedure('public.coach_refund_quota(uuid)') is not null and to_regprocedure('public.coach_quota_status()') is not null and to_regprocedure('public.admin_coach_usage(uuid)') is not null),
   (22,'0033_retos_gratis.sql',       exists (select 1 from pg_constraint where conname = 'challenges_catalog_free_days_check')),
-  (23,'0034_soporte.sql',             to_regclass('public.support_tickets') is not null and to_regclass('public.support_messages') is not null and to_regclass('public.support_events') is not null and to_regprocedure('public.support_create_ticket(text,text,text,jsonb,text)') is not null and exists (select 1 from storage.buckets where id = 'soporte' and not public))
+  (23,'0034_soporte.sql',             to_regclass('public.support_tickets') is not null and to_regclass('public.support_messages') is not null and to_regclass('public.support_events') is not null and to_regprocedure('public.support_create_ticket(text,text,text,jsonb,text)') is not null and exists (select 1 from storage.buckets where id = 'soporte' and not public)),
+  (25,'0036_novedades.sql',          exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'news_seen') and to_regprocedure('public.news_mark_seen(text)') is not null)
 ) as m(orden, archivo, aplicada)
 order by m.orden;
