@@ -16,7 +16,7 @@ export const GIFT_MESSAGE_MAX = 280;
 export const GIFT_BULK_MAX = 200;
 
 export const planLabel = (p: string | null | undefined) => (p === "completo" ? "Entreno + Nutrición" : "Entreno");
-export const monthsLabel = (n: number) => `${n.toLocaleString("es-419")} ${n === 1 ? "mes" : "meses"}`;
+export const monthsLabel = (n: number) => `${n.toLocaleString("es-CO")} ${n === 1 ? "mes" : "meses"}`;
 
 /** "Te regalaron 3 meses de Entreno + Nutrición" o, si es por referidos, "Ganaste 1 mes de Entreno". */
 export function giftTitle(g: { months: number; plan: string; source: GiftSource | string }) {

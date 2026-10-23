@@ -17,7 +17,7 @@ export type ChallengeView = {
 };
 export type EndedView = { ucId: string; id: string; title: string; icon: string; days: number; outcome: "fallido" | "vencido"; completed: number; canRetry: boolean };
 
-const n = (x: number) => x.toLocaleString("es-419");
+const n = (x: number) => x.toLocaleString("es-CO");
 
 /** Días seguidos cumplidos hasta hoy (o hasta ayer si hoy aún no). */
 export function cellStreak(cells: Cell[]) {

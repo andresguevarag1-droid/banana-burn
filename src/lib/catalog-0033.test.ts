@@ -1,3 +1,4 @@
+import { fixThousands } from "./num";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FREE_HIDE, FREE_MAX_DAYS, FREE_REWORK, catalog0033Sql } from "./catalog-0033";
@@ -23,7 +24,7 @@ describe("0033: retos gratis", () => {
   it("cada uno trae un plan completo, uno por día, sin emojis ni raya larga", () => {
     for (const [slug, r] of Object.entries(FREE_REWORK)) {
       expect(r.plan.length, slug).toBe(r.days);
-      expect(by[slug].task(1)).toBe(r.plan[0].t);
+      expect(by[slug].task(1)).toBe(fixThousands(r.plan[0].t));
       expect(/[—\p{Extended_Pictographic}]/u.test(JSON.stringify(r)), slug).toBe(false);
     }
   });

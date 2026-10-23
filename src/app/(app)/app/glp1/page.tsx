@@ -12,7 +12,7 @@ import { ageOn } from "@/lib/engine";
 
 export const metadata = { title: "Banana Shield para GLP-1" };
 
-const nf = (n: number, d = 0) => n.toLocaleString("es-419", { maximumFractionDigits: d });
+const nf = (n: number, d = 0) => n.toLocaleString("es-CO", { maximumFractionDigits: d });
 
 /** Pesajes alrededor de una fecha (±10 días), para emparejar cada medición con su peso aunque sea antigua. */
 async function weightsAround(userId: string, iso: string) {

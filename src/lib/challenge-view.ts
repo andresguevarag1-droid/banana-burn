@@ -4,7 +4,7 @@ import type { ChallengeView, EndedView } from "@/components/challenge-card";
 const hint = (m: Pick<MyChallenge, "c">) => {
   switch (m.c.verify) {
     case "workout": return "Se marca solo al guardar tu entreno";
-    case "steps": return `Se marca solo al registrar ${(m.c.stepsGoal ?? 10000).toLocaleString("es-419")} pasos en Hoy`;
+    case "steps": return `Se marca solo al registrar ${(m.c.stepsGoal ?? 10000).toLocaleString("es-CO")} pasos en Hoy`;
     case "protein": return "Se marca solo al llegar a tu proteína";
     case "water": return "Se marca solo con 8 vasos registrados";
     default: return "";

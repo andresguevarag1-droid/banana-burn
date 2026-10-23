@@ -103,7 +103,7 @@ export function ReportForm({ userId, demo, page, origin, defaultCategory = "app"
         <label htmlFor={`${uid}-b`} className="mb-1.5 block text-sm font-bold text-ink">¿Qué pasó?</label>
         <textarea id={`${uid}-b`} value={body} onChange={(e) => setBody(e.target.value)} maxLength={BODY_MAX} required rows={5} aria-describedby={`${uid}-bh`}
           placeholder="Qué hiciste, qué esperabas y qué pasó. Si se repite, cuéntanos cada cuánto." className={`${field} py-3`} />
-        <p id={`${uid}-bh`} className="mt-1 flex justify-between gap-3 text-xs text-muted"><span>No incluyas contraseñas ni números de tarjeta.</span><span className="tabular-nums" aria-live="polite">{body.length.toLocaleString("es-419")} / {BODY_MAX.toLocaleString("es-419")}</span></p>
+        <p id={`${uid}-bh`} className="mt-1 flex justify-between gap-3 text-xs text-muted"><span>No incluyas contraseñas ni números de tarjeta.</span><span className="tabular-nums" aria-live="polite">{body.length.toLocaleString("es-CO")} / {BODY_MAX.toLocaleString("es-CO")}</span></p>
       </div>
       <div>
         <p className="mb-1.5 text-sm font-bold text-ink">Captura de pantalla <span className="font-semibold text-muted">(opcional)</span></p>

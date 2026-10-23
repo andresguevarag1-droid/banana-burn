@@ -4,7 +4,7 @@ import { ProgressBar } from "@/components/progress-bar";
 import { mealStreak, nutritionBadges, weeklyBalance } from "@/lib/foods-gamify";
 import { MEAL_XP, MEAL_XP_DAILY_MAX } from "@/lib/gamify";
 
-const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
+const n0 = (n: number) => Math.round(n).toLocaleString("es-CO");
 const DOW = ["L", "M", "M", "J", "V", "S", "D"];
 
 /** Registrar es lo que cuenta: XP de comidas de hoy, racha de registro, logro Honesto y balance de la semana. */

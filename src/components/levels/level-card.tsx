@@ -7,8 +7,8 @@ import type { XpSummary } from "@/lib/xp-server";
 import { LevelBadge } from "./level-badge";
 
 const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
-const n = (x: number) => x.toLocaleString("es-419");
-const mult = (m: number) => `x${m.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+const n = (x: number) => x.toLocaleString("es-CO");
+const mult = (m: number) => `x${m.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
 
 /** Acción rápida para sumar XP. Registrar comida solo se sugiere con nutrición (plan Entreno + Nutrición, prueba o beta). */
 export function quickAction(s: XpSummary, opts: { training: boolean; weighed: boolean; nutrition: boolean }) {

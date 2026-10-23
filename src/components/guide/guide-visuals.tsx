@@ -10,7 +10,7 @@ import type { CoverStyle } from "@/lib/challenges";
 import { guideVariant, type GuideInput, type GuideStep } from "@/lib/guide";
 import { PLANS } from "@/lib/plans";
 
-const nf = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 1 });
+const nf = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 });
 
 /** Captura en un teléfono que sale por abajo del recuadro (se ve la parte de arriba de la pantalla). */
 function Shot({ src, alt, badge }: { src: string; alt: string; badge?: React.ReactNode }) {

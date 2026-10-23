@@ -269,7 +269,7 @@ export function releaseDay(date: string): string {
 }
 
 /** "1 novedad" / "5 novedades". */
-export const countLabel = (n: number) => `${n.toLocaleString("es-419")} ${n === 1 ? "novedad" : "novedades"}`;
+export const countLabel = (n: number) => `${n.toLocaleString("es-CO")} ${n === 1 ? "novedad" : "novedades"}`;
 
 // ───────────── Aviso a quien no abre la app ─────────────
 

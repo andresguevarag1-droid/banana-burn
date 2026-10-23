@@ -205,7 +205,7 @@ export type HabitView = { key: string; label: string; kind: HabitKind; done: boo
  * marca a mano. El de entreno, en un día sin sesión, se convierte en el descanso activo (a mano).
  */
 export function habitsToday(x: ProgramExperience, log: { steps: number; water: number; sleep: number; protein: number }, o: { checks: string[]; proteinTarget: number | null; trainedToday: boolean; sessionDay: boolean }): HabitView[] {
-  const fmt = (n: number) => n.toLocaleString("es-419");
+  const fmt = (n: number) => n.toLocaleString("es-CO");
   const checked = new Set(o.checks);
   return x.habits.map((h) => {
     const manual = (label = h.label): HabitView => ({ key: h.key, label, kind: h.kind, done: checked.has(h.key), auto: false, detail: null, pct: checked.has(h.key) ? 1 : 0 });
@@ -449,7 +449,7 @@ export function daysLabel(meta: Pick<ProgramMeta, "daysPerWeek">, sessions: Prog
 
 /** Texto de una prescripción: "3 × 8-12", "3 × 30-45 s". */
 export const setsLabel = (e: Pick<ProgramExercise, "sets" | "lo" | "hi"> & { unit?: string }) => `${e.sets} × ${e.lo === e.hi ? e.lo : `${e.lo}-${e.hi}`}${e.unit === "s" ? " s" : e.unit === "m" ? " m" : ""}`;
-export const restLabel = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-419")} min` : `${s} s`);
+export const restLabel = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-CO")} min` : `${s} s`);
 
 // ───────────── Del programa a la rutina del día ─────────────
 

@@ -23,7 +23,7 @@ import { VoicePicker } from "@/components/voice-picker";
 import { voiceForLevel } from "@/lib/voice";
 
 const STEPS = 7;
-const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
+const nf = (n: number, d = 1) => n.toLocaleString("es-CO", { minimumFractionDigits: d, maximumFractionDigits: d });
 /** Fecha local del teléfono (no UTC: en Costa Rica después de las 6 p. m. el día UTC ya es mañana). */
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -212,7 +212,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
-            {([...(nutrition ? [[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-419"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína al día"]] as const : [[<Timer key="m" weight="duotone" className="size-5 text-ember-ink" />, `${full.minutes} min`, "por sesión"], [<PersonSimpleRun key="l" weight="duotone" className="size-5 text-banana-ink" />, full.level.charAt(0).toUpperCase() + full.level.slice(1), "tu nivel"]] as const), [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${full.days} días`, "por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(full.goalWeight)} kg`, new Date(full.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
+            {([...(nutrition ? [[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-CO"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína al día"]] as const : [[<Timer key="m" weight="duotone" className="size-5 text-ember-ink" />, `${full.minutes} min`, "por sesión"], [<PersonSimpleRun key="l" weight="duotone" className="size-5 text-banana-ink" />, full.level.charAt(0).toUpperCase() + full.level.slice(1), "tu nivel"]] as const), [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${full.days} días`, "por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(full.goalWeight)} kg`, new Date(full.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
               <div key={l} className="card p-4 transition-[opacity,translate] duration-300 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:translate-y-2" style={{ transitionDelay: `${150 + i * 60}ms` }}><span className="grid place-items-center size-9 rounded-xl bg-cream">{e}</span><p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{v}</p><p className="text-xs font-semibold text-muted">{l}</p></div>
             ))}
           </div>

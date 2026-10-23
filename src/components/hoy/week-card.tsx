@@ -7,7 +7,7 @@ import { quickAction } from "@/components/levels/level-card";
 import type { XpSummary } from "@/lib/xp-server";
 
 const DOW1 = ["D", "L", "M", "M", "J", "V", "S"];
-const n = (x: number) => x.toLocaleString("es-419");
+const n = (x: number) => x.toLocaleString("es-CO");
 
 export function WeekCard({ s, week, sched, todayIso, training, weighed, streak, nutrition }: {
   s: XpSummary;

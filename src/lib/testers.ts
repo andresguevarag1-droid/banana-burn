@@ -71,7 +71,7 @@ export function testerState(rows: TesterGrantRow[], now = new Date()): TesterSta
 /** "30 días", "1 día", "Último día". */
 export function daysLeftLabel(n: number): string {
   if (n <= 1) return "Último día";
-  return `${n.toLocaleString("es-419")} días`;
+  return `${n.toLocaleString("es-CO")} días`;
 }
 
 export type TesterNotice = "asignado" | "pronto" | "terminado";
@@ -105,7 +105,7 @@ export function feedbackError(kind: string, body: string): string | null {
   if (!FEEDBACK_KINDS.some(([k]) => k === kind)) return "Elige qué quieres contarnos.";
   const len = body.trim().length;
   if (len < 3) return "Cuéntanos un poco más.";
-  if (len > FEEDBACK_MAX) return `Máximo ${FEEDBACK_MAX.toLocaleString("es-419")} caracteres.`;
+  if (len > FEEDBACK_MAX) return `Máximo ${FEEDBACK_MAX.toLocaleString("es-CO")} caracteres.`;
   return null;
 }
 

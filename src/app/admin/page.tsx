@@ -67,7 +67,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
             <Kpi label="Preguntas hoy" value={fmtNum(coach.dayTotal)} hint={`${fmtNum(coach.usersToday)} personas`} />
             <Kpi label="Preguntas del mes" value={fmtNum(coach.monthTotal)} hint={`${fmtNum(coach.usersMonth)} personas`} />
-            <Kpi label="Costo estimado del mes" value={money(Math.round(coach.monthTotal * COACH_COST_PER_Q * 100) / 100)} hint={`Aproximado, a unos USD ${COACH_COST_PER_Q.toLocaleString("es-419")} por pregunta`} />
+            <Kpi label="Costo estimado del mes" value={money(Math.round(coach.monthTotal * COACH_COST_PER_Q * 100) / 100)} hint={`Aproximado, a unos USD ${COACH_COST_PER_Q.toLocaleString("es-CO")} por pregunta`} />
             <Kpi label="Llegaron al tope hoy" value={fmtNum(coach.atLimitToday)} hint="Usaron todas sus preguntas del día" />
           </div>
         </section>

@@ -18,7 +18,7 @@ type Habits = { steps: number; sleep: number; water: number };
 export type NutritionNumbers = { base: Macros; target: Macros; mode: GoalMode; meal: HoyFood };
 export type GoalMode = "acelerada" | "recomp" | "fuerza";
 
-const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
+const n0 = (n: number) => Math.round(n).toLocaleString("es-CO");
 
 /** Qué significa la meta de calorías, en una línea, según el objetivo. */
 const WHY: Record<GoalMode, string> = {
@@ -87,7 +87,7 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
   const small: { f: DailyField; label: string; icon: React.ReactNode; val: number; goal: number; unit: string; step: number; stepLabel: string; fmt: (n: number) => string }[] = [
     { f: "water", label: "Agua", icon: <Drop weight="duotone" className="size-5" />, val: log.water, goal: habits.water, unit: "vasos", step: 1, stepLabel: "1 vaso", fmt: (n) => n0(n) },
     { f: "steps", label: "Pasos", icon: <Footprints weight="duotone" className="size-5" />, val: log.steps, goal: habits.steps, unit: "", step: 1000, stepLabel: n0(1000), fmt: (n) => n0(n) },
-    { f: "sleep", label: "Sueño", icon: <Moon weight="duotone" className="size-5" />, val: log.sleep, goal: habits.sleep, unit: "h", step: 0.5, stepLabel: "½ h", fmt: (n) => n.toLocaleString("es-419", { maximumFractionDigits: 1 }) },
+    { f: "sleep", label: "Sueño", icon: <Moon weight="duotone" className="size-5" />, val: log.sleep, goal: habits.sleep, unit: "h", step: 0.5, stepLabel: "½ h", fmt: (n) => n.toLocaleString("es-CO", { maximumFractionDigits: 1 }) },
   ];
 
   return (
@@ -221,7 +221,7 @@ function MealToday({ meal }: { meal: HoyFood }) {
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-ink/75">Coach Banana te recomienda. {nx.when}:</p>
             <p className="mt-0.5 text-[17px] font-extrabold leading-tight text-balance">{nx.title}</p>
-            <p className="mt-1 text-xs font-semibold tabular-nums text-ink/80">{n0(nx.kcal)} kcal y {n0(nx.protein)} g de proteína{nx.portions !== 1 ? ` (${nx.portions.toLocaleString("es-419")} porciones)` : ""}</p>
+            <p className="mt-1 text-xs font-semibold tabular-nums text-ink/80">{n0(nx.kcal)} kcal y {n0(nx.protein)} g de proteína{nx.portions !== 1 ? ` (${nx.portions.toLocaleString("es-CO")} porciones)` : ""}</p>
             {nx.others.length > 0 && <p className="mt-1 text-xs text-ink/75">También te sirve: {nx.others.join(" o ")}.</p>}
             <Link href="/app/nutricion/recetas" className="tap pressable mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-extrabold text-banana">Ver la receta<ArrowRight weight="bold" className="size-3.5" /></Link>
           </div>

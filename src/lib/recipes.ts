@@ -93,7 +93,7 @@ export function fmtQty(n: number) {
   const int = Math.floor(n + 1e-9), fr = Math.round((n - int) * 4) / 4;
   if (fr === 1) return String(int + 1);
   const f = FRAC[fr] ?? "";
-  return int ? `${int.toLocaleString("es-419")}${f}` : f || "0";
+  return int ? `${int.toLocaleString("es-CO")}${f}` : f || "0";
 }
 
 /** Texto del ingrediente para `portions` porciones (la receta completa rinde `serves`). */

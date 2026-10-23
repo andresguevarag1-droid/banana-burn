@@ -11,18 +11,18 @@ describe("formato", () => {
     expect(clock(-3)).toBe("0:00");
     expect(restLabel(90)).toBe("90 s");
     expect(restLabel(120)).toBe("2 min");
-    expect(restLabel(150)).toBe("2.5 min");
+    expect(restLabel(150)).toBe("2,5 min");
     expect(restLabel(60)).toBe("1 min");
   });
   it("objetivo de la serie", () => {
     expect(targetText({ kg: "10", reps: "8" }, { bw: false })).toBe("10 kg × 8 reps");
     expect(targetText({ kg: "", reps: "12" }, { bw: true })).toBe("12 reps");
     expect(targetText({ kg: "", reps: "40" }, { bw: true, unit: "s" })).toBe("40 seg");
-    expect(targetText({ kg: "22,5", reps: "6" }, { bw: false })).toBe("22.5 kg × 6 reps");
+    expect(targetText({ kg: "22,5", reps: "6" }, { bw: false })).toBe("22,5 kg × 6 reps");
   });
   it("volumen", () => {
     expect(volumeOf([[row({ done: true }), row()], [row({ kg: "100", reps: "10", done: true })]])).toBe(1160);
-    expect(volumeText(1160)).toBe("1.2 t");
+    expect(volumeText(1160)).toBe("1,2 t");
     expect(volumeText(640)).toBe("640 kg");
   });
 });

@@ -5,6 +5,7 @@ import { ALL_PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./prog
 import { parseMeta, type ProgramMeta } from "./programs";
 import { RESTYLE } from "./catalog-0028";
 import { FREE_HIDE, FREE_REWORK } from "./catalog-0033";
+import { fixThousands } from "./num";
 
 /** Catálogo de respaldo con los nombres, colores y estados de 0028 (la base ya los tiene después de la migración). */
 function restyle(c0: Challenge): Challenge {
@@ -67,7 +68,7 @@ export const STATUS_LABEL: Record<ChallengeStatus, string> = { borrador: "Borrad
 const fallbackTask = (verify: Verify, stepsGoal?: number) => ({
   manual: "Cumple el objetivo de hoy y márcalo",
   workout: "Completa cualquier entreno",
-  steps: `Llega a ${(stepsGoal ?? 10000).toLocaleString("es-419")} pasos (regístralos en Hoy)`,
+  steps: `Llega a ${(stepsGoal ?? 10000).toLocaleString("es-CO")} pasos (regístralos en Hoy)`,
   protein: "Llega a tu meta de proteína del día",
   water: "Toma 8 vasos de agua",
 }[verify]);
@@ -75,7 +76,7 @@ const fallbackTask = (verify: Verify, stepsGoal?: number) => ({
 /** Texto del día `day` (1-based). Sin plan, la tarea genérica de su verificación. */
 export function taskFor(plan: DayTask[] | null | undefined, day: number, verify: Verify, stepsGoal?: number, fixed?: string | null) {
   const t = plan?.[Math.max(0, Math.min(plan.length - 1, day - 1))]?.t;
-  return t || fixed || fallbackTask(verify, stepsGoal);
+  return fixThousands(t || fixed || fallbackTask(verify, stepsGoal));
 }
 
 export function fromSeed(s: SeedChallenge, source: "app" | "admin" = "app"): Challenge {
@@ -219,7 +220,7 @@ export function priceMinor(priceUsd: number, discountPct = 0) {
   return Math.max(Math.round(MIN_PRICE_USD * 100), Math.round((base * (100 - d)) / 100));
 }
 
-export const usd = (minor: number) => `$${(minor / 100).toLocaleString("es-419", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const usd = (minor: number) => `$${(minor / 100).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Días del plan que puede ver alguien: todos si es gratis o ya lo tiene; si no, los primeros PREVIEW_DAYS. */
 export function visibleDays(c: Pick<Challenge, "priceUsd" | "days">, owned: boolean) {

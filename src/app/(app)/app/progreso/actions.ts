@@ -11,7 +11,7 @@ export async function logWeight(_: FormState, fd: FormData): Promise<FormState> 
   if (!v) return { error: "Inicia sesión." };
   const kg = Number(String(fd.get("kg")).replace(",", "."));
   if (!(kg >= 30 && kg <= 300)) return { error: "Peso inválido." };
-  const kgTxt = kg.toLocaleString("es-419", { maximumFractionDigits: 1 });
+  const kgTxt = kg.toLocaleString("es-CO", { maximumFractionDigits: 1 });
   if (v.demo) return { ok: `Anotamos ${kgTxt} kg (demo, no se guarda).` };
   const denied = await accessError(v, "app");
   if (denied) return { error: denied };

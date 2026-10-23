@@ -23,12 +23,12 @@ export function t<T>(v: Voice, o: { basico: T; intermedio: T; tecnico: T }): T {
 /** Registro sugerido según la experiencia (en la bienvenida, hasta que la persona elija otro). */
 export const voiceForLevel = (level: string): Voice => (level === "principiante" ? "basico" : level === "avanzado" ? "tecnico" : "intermedio");
 
-const n = (x: number) => x.toLocaleString("es-419", { maximumFractionDigits: 2 });
+const n = (x: number) => x.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 const plural = (k: number, one: string, many: string) => (k === 1 ? one : many);
 
 /** "2 min", "90 s": descansos en texto corrido. */
 export function restText(sec: number) {
-  if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-419", { maximumFractionDigits: 1 })} min`;
+  if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-CO", { maximumFractionDigits: 1 })} min`;
   return `${sec} s`;
 }
 

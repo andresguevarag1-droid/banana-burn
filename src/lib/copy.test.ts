@@ -51,7 +51,7 @@ describe("recommendPlan", () => {
 
 describe("progressLine", () => {
   it("entrenos y kilos bajados", () => {
-    expect(progressLine({ workouts: 5, firstKg: 94, lastKg: 92.8 })).toBe("Llevas 5 entrenos y −1.2 kg");
+    expect(progressLine({ workouts: 5, firstKg: 94, lastKg: 92.8 })).toBe("Llevas 5 entrenos y −1,2 kg");
     expect(progressLine({ workouts: 1, firstKg: null, lastKg: null })).toBe("Llevas 1 entreno");
   });
   it("no muestra subidas ni ceros", () => {

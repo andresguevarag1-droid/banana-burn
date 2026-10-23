@@ -46,7 +46,7 @@ export function TesterCard({ phase, until, daysLeft, used, tz }: TesterCardProps
       <Flask weight="duotone" aria-hidden className="pointer-events-none absolute -right-6 -top-6 size-36 rotate-12 text-banana opacity-[.08] select-none" />
       <div className="relative flex items-center justify-between gap-3">
         <p className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[.14em] text-banana"><Flask weight="fill" className="size-3.5" aria-hidden />Tester de la beta</p>
-        {!soon && <p className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-sm font-extrabold tabular-nums text-banana">{daysLeft.toLocaleString("es-419")} días</p>}
+        {!soon && <p className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-sm font-extrabold tabular-nums text-banana">{daysLeft.toLocaleString("es-CO")} días</p>}
       </div>
       <h2 id="tester-t" className="relative mt-2 text-xl font-extrabold leading-tight tracking-tight text-balance">
         {soon ? (daysLeft <= 1 ? "Hoy es tu último día de tester" : `Te quedan ${daysLeft} días de tester`) : "Tienes Entreno + Nutrición gratis"}

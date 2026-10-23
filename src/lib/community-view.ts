@@ -2,9 +2,11 @@
 // formato de cifras, contador de caracteres, podio del ranking e insignias públicas. Probada en community-view.test.ts.
 import { badges, levelOf, type Badge } from "@/lib/gamify";
 import type { Flair } from "@/lib/profile-power";
+import { NUM_LOCALE } from "@/lib/num";
 
+/** Fechas relativas en español latino; las cifras van con NUM_LOCALE (coma decimal). */
 const LOCALE = "es-419";
-const nf = (n: number, max = 0) => n.toLocaleString(LOCALE, { maximumFractionDigits: max });
+const nf = (n: number, max = 0) => n.toLocaleString(NUM_LOCALE, { maximumFractionDigits: max });
 
 /** Tiempo relativo en español latinoamericano: "hace 5 minutos", "ayer", "hace 3 días", o la fecha si pasó más de una semana. */
 export function timeAgo(iso: string, now: Date = new Date()): string {

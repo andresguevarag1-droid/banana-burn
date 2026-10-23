@@ -115,8 +115,8 @@ describe("datos del descanso", () => {
   it("arma datos reales y rota", () => {
     const facts = restFacts({ next: { name: "Press banca", best: e1(60, 8), reps: 8, step: 2.5, kg: true }, volToday: 800, volLast: 2400, streak: 4, todayDone: false,
       finish: { left: 3, xp: 60, bonus: 30 } });
-    expect(facts[0]).toContain("62.5 kg × 8");
-    expect(facts.some((f) => f.includes("Llevas 800 kg de los 2.4 t"))).toBe(true);
+    expect(facts[0]).toContain("62,5 kg × 8");
+    expect(facts.some((f) => f.includes("Llevas 800 kg de los 2,4 t"))).toBe(true);
     expect(facts.some((f) => f.includes("racha a 5 días"))).toBe(true);
     expect(facts.some((f) => f.includes("+60 XP, con el bono de +30"))).toBe(true);
     expect(pickFact(facts, facts.length)).toBe(facts[0]);

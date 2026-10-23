@@ -4,8 +4,8 @@ import Link from "next/link";
 import { CaretRight, CookingPot, PencilSimple, Plus } from "@/components/icons";
 import type { UserRecipe } from "@/lib/user-recipes";
 
-const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
-const g0 = (n: number) => Math.round(n).toLocaleString("es-419");
+const n0 = (n: number) => Math.round(n).toLocaleString("es-CO");
+const g0 = (n: number) => Math.round(n).toLocaleString("es-CO");
 
 /** "Mis recetas" en la página de recetas: las propias (en la demo, del navegador) con enlace para registrar, editar o crear. */
 export function MyRecipes({ initial, demo }: { initial: UserRecipe[]; demo: boolean }) {

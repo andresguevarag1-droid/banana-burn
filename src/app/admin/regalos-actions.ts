@@ -69,13 +69,13 @@ export async function giftMonthsBulk(_: ActionState, fd: FormData): Promise<Acti
     const g = giftInput(fd);
     confirmed(fd);
     const what = `${monthsLabel(g.months)} de ${planLabel(g.plan)}`;
-    if (!sb) return ok(`Regalaste ${what} a ${ids.length.toLocaleString("es-419")} ${ids.length === 1 ? "persona" : "personas"}${DEMO_MSG}`);
+    if (!sb) return ok(`Regalaste ${what} a ${ids.length.toLocaleString("es-CO")} ${ids.length === 1 ? "persona" : "personas"}${DEMO_MSG}`);
     const { data, error } = await sb.rpc("admin_gift_months_bulk", { p_targets: ids, p_plan: g.plan, p_months: g.months, p_message: g.message, p_reason: g.reason });
     if (error) return fail(pgMsg(error));
     await deliverPendingGifts({ limit: GIFT_BULK_MAX });
     revalidatePath("/admin/usuarios");
     const n = Number(data ?? 0);
-    return ok(`Listo: ${what} para ${n.toLocaleString("es-419")} ${n === 1 ? "persona" : "personas"}${n < ids.length ? ` (${ids.length - n} no existen)` : ""}. Quedó en auditoría.`);
+    return ok(`Listo: ${what} para ${n.toLocaleString("es-CO")} ${n === 1 ? "persona" : "personas"}${n < ids.length ? ` (${ids.length - n} no existen)` : ""}. Quedó en auditoría.`);
   });
 }
 

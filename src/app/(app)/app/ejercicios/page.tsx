@@ -30,7 +30,7 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-5 animate-enter">
       <header>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{LIB_COUNT.toLocaleString("es-419")} ejercicios</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">{LIB_COUNT.toLocaleString("es-CO")} ejercicios</h1>
         <p className="mt-1 text-muted">Con pasos en español, músculos que trabajan y equipo necesario.</p>
       </header>
       <form className="flex gap-2" role="search">
@@ -54,7 +54,7 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
       {(a.equipment === "casa" || a.equipment === "ninguno") && (
         <Link href={qs({ mio: sp.mio === "1" ? undefined : "1", p: undefined })} className={`chip h-9 px-4 ${sp.mio === "1" ? "bg-banana text-ink" : "bg-cream text-ink"}`}>{sp.mio === "1" && <Check weight="bold" className="size-4" />}Solo lo que puedo hacer {a.equipment === "ninguno" ? "sin equipo" : "en casa"}</Link>
       )}
-      <p className={`text-sm text-muted ${sp.q || sp.zona || sp.mio || sp.equipo ? "" : "sr-only"}`} aria-live="polite">{r.total.toLocaleString("es-419")} {r.total === 1 ? "resultado" : "resultados"}</p>
+      <p className={`text-sm text-muted ${sp.q || sp.zona || sp.mio || sp.equipo ? "" : "sr-only"}`} aria-live="polite">{r.total.toLocaleString("es-CO")} {r.total === 1 ? "resultado" : "resultados"}</p>
       {r.items.length > 0 && <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {r.items.map((e) => (
           <li key={e.id}>

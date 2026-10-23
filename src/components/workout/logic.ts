@@ -7,7 +7,7 @@ export type Effort = "f" | "j" | "l";
 export type Row = { kg: string; reps: string; done: boolean; easy: boolean; eff?: Effort; at?: number; c?: number };
 
 export const num = (s: string | number | null | undefined) => Number(String(s ?? "").replace(",", ".")) || 0;
-export const kgFmt = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 2 });
+export const kgFmt = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 export const e1 = (kg: number, r: number) => kg * (1 + r / 30);
 export const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 export const clock = (s: number) => { const t = Math.max(0, Math.floor(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
@@ -15,7 +15,7 @@ export const unitLbl = (u?: string) => (u === "s" ? "seg" : u === "m" ? "m" : "r
 
 /** "2 min", "90 s", "2,5 min": para hablar de descansos en texto corrido. */
 export function restLabel(sec: number) {
-  if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-419", { maximumFractionDigits: 1 })} min`;
+  if (sec >= 120 || (sec >= 60 && sec % 60 === 0)) return `${(sec / 60).toLocaleString("es-CO", { maximumFractionDigits: 1 })} min`;
   return `${sec} s`;
 }
 

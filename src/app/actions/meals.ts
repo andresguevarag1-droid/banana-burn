@@ -64,7 +64,7 @@ export async function addMeal(input: {
     if (!f) return { ok: false };
     const g = input.grams ? byGrams(f, input.grams) : null;
     if (input.grams && !g) return { ok: false };
-    if (g) row = { slot: input.slot, name: `${mealName(f)}, ${g.grams.toLocaleString("es-419")} g`.slice(0, 120), qty: 1, kcal: g.kcal, protein: g.protein, carbs: g.carbs, fat: g.fat, foodId: f.id };
+    if (g) row = { slot: input.slot, name: `${mealName(f)}, ${g.grams.toLocaleString("es-CO")} g`.slice(0, 120), qty: 1, kcal: g.kcal, protein: g.protein, carbs: g.carbs, fat: g.fat, foodId: f.id };
     else {
       const p = portion(f, input.qty ?? 1);
       row = { slot: input.slot, name: mealName(f), qty: p.qty, kcal: p.kcal, protein: p.protein, carbs: p.carbs, fat: p.fat, foodId: f.id };

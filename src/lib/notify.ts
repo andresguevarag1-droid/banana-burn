@@ -181,7 +181,7 @@ export type CopyCtx = {
 /** Lo último que hizo la persona en el ejercicio principal de hoy: subió de peso o lo repitió. */
 export type LiftFact = { name: string; kg: number; delta: number };
 
-const kgTxt = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 2 });
+const kgTxt = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 const lower = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);
 
 /**
@@ -249,7 +249,7 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
         url: "/app",
       };
     case "semanal": {
-      const f = (n: number) => n.toLocaleString("es-419", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const f = (n: number) => n.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const kg = x.kgDelta == null ? "" : x.kgDelta < 0 ? ` y ${f(x.kgDelta)} kg` : x.kgDelta > 0 ? ` y +${f(x.kgDelta)} kg` : " y peso estable";
       return { title: x.name.trim() ? `${first}, así te fue esta semana` : "Tu semana en Banana Burn", body: `${x.workouts ?? 0} entrenos${kg}. Mira lo que viene esta semana.`, url: "/app/progreso" };
     }

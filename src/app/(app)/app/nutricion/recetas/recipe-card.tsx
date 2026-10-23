@@ -6,7 +6,7 @@ import { SLOTS_MEAL, sumMeals, type MealItem } from "@/lib/meals-shared";
 import { AddRecipe } from "./add";
 
 const SLOT_N: Record<Slot, string> = { desayuno: "Desayuno", almuerzo: "Almuerzo", merienda: "Merienda", cena: "Cena" };
-const n0 = (n: number) => Math.round(n).toLocaleString("es-419");
+const n0 = (n: number) => Math.round(n).toLocaleString("es-CO");
 const portionsLabel = (p: number) => `${fmtQty(p)} ${p === 1 ? "porción" : "porciones"}`;
 const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} y ${xs.at(-1)}` : xs[0] ?? "");
 
