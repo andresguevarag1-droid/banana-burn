@@ -46,7 +46,7 @@ export function PersonRow({ p }: { p: Person }) {
     <li className="flex items-center gap-3">
       <Avatar name={p.name} xp={p.xp} size="md" />
       <span className="flex-1 min-w-0">
-        <span className="flex min-w-0 items-center gap-1">{href ? <Link href={href} className="block font-bold text-ink truncate hover:underline">{p.name}</Link> : <span className="block font-bold text-ink truncate">{p.name}</span>}<NameFlair flair={p.flair} size="sm" className="shrink-0" /></span>
+        <span className="flex min-w-0 items-center gap-1">{href ? <Link href={href} className="-my-2.5 block py-2.5 font-bold text-ink truncate hover:underline">{p.name}</Link> : <span className="block font-bold text-ink truncate">{p.name}</span>}<NameFlair flair={p.flair} size="sm" className="shrink-0" /></span>
         <span className="block text-xs text-faint truncate">{p.activeDays > 0 ? plural(p.activeDays, "día activo", "días activos") + " en 2 semanas" : p.username ? `@${p.username}` : ""}</span>
       </span>
       <FollowButton userId={p.id} name={p.name} />

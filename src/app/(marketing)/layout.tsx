@@ -36,7 +36,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <nav aria-label="Principal" className="mx-auto max-w-6xl h-16 px-4 sm:px-6 flex items-center justify-between gap-3">
           <Logo compact />
           <div className="hidden lg:flex items-center gap-8 text-[15px] font-medium text-muted whitespace-nowrap">
-            {NAV.map(([href, label]) => <Link key={href} href={href} className={LINK}>{label}</Link>)}
+            {NAV.map(([href, label]) => <Link key={href} href={href} className={`${LINK} inline-flex min-h-11 items-center`}>{label}</Link>)}
           </div>
           {/* "Entrar" siempre visible; bajo 400 px el logo queda solo en ícono para que todo quepa desde 320 px. */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
@@ -51,7 +51,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <footer className="mt-24 border-t border-line">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <Logo />
-          <nav aria-label="Pie de página" className="flex flex-wrap gap-x-6 text-sm font-medium text-muted [&>a]:inline-flex [&>a]:min-h-11 [&>a]:items-center">
+          <nav aria-label="Pie de página" className="flex flex-wrap gap-x-6 text-sm font-medium text-muted [&>a]:inline-flex [&>a]:min-h-11 [&>a]:min-w-11 [&>a]:items-center">
             <Link className={LINK} href="/entrar">Entrar</Link>
             <Link className={LINK} href="/precios">Precios</Link>
             <Link className={LINK} href="/glp1">Banana Shield</Link>
