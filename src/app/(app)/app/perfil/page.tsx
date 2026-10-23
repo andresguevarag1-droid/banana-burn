@@ -41,7 +41,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   const frame = perksAt(g.level.idx).frame;
   const plan = PLANS.find((p) => p.id === ent.plan) ?? null;
   const planTitle = plan ? plan.name : ent.trial ? "Prueba gratis" : "Sin plan";
-  const planText = isTester && (ent.access === "comp" || ent.access === "demo") ? `Mes de tester de la beta hasta el ${fmtDay(tester!.until ?? undefined, v.tz)}: Entreno + Nutrición, sin cobros.`
+  const planText = isTester && (ent.access === "comp" || ent.access === "demo") ? `Mes de tester de la beta hasta el ${fmtDay(tester!.until ?? undefined, v.tz)}: Entreno + Nutrición, sin cobros.${ent.charge?.testerHold ? ` Tu cobro programado pasa al ${fmtDay(ent.charge.chargeAt, v.tz)}.` : ""}`
     : ent.access === "demo" ? "Modo demo: acceso completo, sin cobros." : ent.access === "comp" ? `Plan de cortesía${ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt, v.tz)}` : ""}, sin cobros.`
     : ent.access === "staff" ? "Acceso completo por ser parte del equipo."
     : ent.access === "manual" ? "Plan asignado por el equipo de Banana Burn, sin cobros automáticos."

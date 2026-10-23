@@ -196,11 +196,14 @@ const CHARGE_READ = "id,user_id,idem_key,kind,plan,billing,amount_minor,trial_st
 
 /** Cobro programado y tarjeta (RLS: solo lo propio; de la tarjeta solo marca, últimos 4 y vencimiento). Sin 0026: nada. */
 async function loadCardTrial(sb: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<{ trialCharge: TrialChargeRow | null; card: CardRow | null }> {
-  const [t, c] = await Promise.all([
+  const [t, c, h] = await Promise.all([
     sb.from("trial_charges").select(CHARGE_READ).eq("user_id", userId).maybeSingle(),
     sb.from("payment_methods").select("brand,last4,exp_month,exp_year,status").eq("user_id", userId).maybeSingle(),
+    // 0029 (mes de tester): aparte, para que sin la migración lo demás siga igual.
+    sb.from("trial_charges").select("moved_from,tester_hold").eq("user_id", userId).maybeSingle(),
   ]);
-  return { trialCharge: t.error ? null : ((t.data as TrialChargeRow | null) ?? null), card: c.error ? null : ((c.data as CardRow | null) ?? null) };
+  const row = t.error ? null : ((t.data as TrialChargeRow | null) ?? null);
+  return { trialCharge: row && !h.error && h.data ? { ...row, ...(h.data as Pick<TrialChargeRow, "moved_from" | "tester_hold">) } : row, card: c.error ? null : ((c.data as CardRow | null) ?? null) };
 }
 
 /** Cortesías y regalos del usuario (RLS: solo los propios). Sin 0025 (no existe `source`) lee las columnas de antes. */

@@ -42,7 +42,9 @@ export function ScheduledBanner({ charge, tz }: { charge: ChargeView; tz: string
   return (
     <aside aria-label="Cobro programado" className="mb-5 flex items-center gap-2.5 rounded-2xl border border-line bg-white px-3.5 py-1 text-sm">
       <CreditCard weight="duotone" className="size-5 shrink-0 text-peel" aria-hidden />
-      <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink"><b>Tarjeta guardada.</b> El {fmt(charge.chargeAt, tz)} se cobra {plan.name} por {money(charge.amount)}, salvo que canceles antes.</p>
+      <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink">{charge.testerHold
+        ? <><b>Mientras seas tester no se te cobra nada.</b> El {fmt(charge.chargeAt, tz)}, al terminar tu mes de tester, se cobra {plan.name} por {money(charge.amount)}, salvo que canceles antes.</>
+        : <><b>Tarjeta guardada.</b> El {fmt(charge.chargeAt, tz)} se cobra {plan.name} por {money(charge.amount)}, salvo que canceles antes.</>}</p>
       <Link href="/app/suscripcion" data-cta="card-banner-plan" className="tap inline-flex h-11 shrink-0 items-center gap-1 font-bold text-banana-ink hover:text-ink">Ver<ArrowRight weight="bold" className="size-4" /></Link>
     </aside>
   );
@@ -54,7 +56,7 @@ export function FailedBanner({ charge, tz }: { charge: ChargeView; tz: string })
     <aside role="alert" className="mb-5 flex items-center gap-2.5 rounded-2xl border border-bad/30 bg-bad/5 px-3.5 py-1 text-sm">
       <FunnelTracker view="card_banner_view" props={{ kind: "failed" }} />
       <WarningCircle weight="duotone" className="size-5 shrink-0 text-bad" aria-hidden />
-      <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink"><b>No pudimos cobrar tu plan.</b> {charge.retryAt ? `Lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}, o cambia tu tarjeta para seguir hoy.` : "Cambia tu tarjeta para seguir."}</p>
+      <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink"><b>No pudimos cobrar tu plan.</b> {charge.testerHold && charge.retryAt ? `Mientras seas tester no se te cobra: lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}, al terminar tu mes de tester. Puedes cambiar tu tarjeta antes.` : charge.retryAt ? `Lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}, o cambia tu tarjeta para seguir hoy.` : "Cambia tu tarjeta para seguir."}</p>
       <Link href="/app/suscripcion#tarjeta" data-cta="card-banner-cambiar" className="tap inline-flex h-11 shrink-0 items-center gap-1 font-bold text-bad hover:text-ink">Cambiar<ArrowRight weight="bold" className="size-4" /></Link>
     </aside>
   );

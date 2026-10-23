@@ -1292,6 +1292,75 @@ reset role;
 set role anon; select bbtest.login(null);
 select bbtest.fails('reporte: anon no envía reportes', $q$ select public.submit_feedback('otro', 'hola hola', null) $q$, '42501');
 reset role;
+-- 11h. Un tester no paga durante su mes de tester: el primer cobro con tarjeta espera al final y vuelve si se lo quitan.
+-- T3: cuenta de la beta con tarjeta guardada (cobro "beta" al fin de la beta, que ya pasó: tocaba cobrar).
+-- T4: cuenta nueva con prueba de 7 días. T5: cobro rechazado con reintento mañana.
+reset role; select bbtest.login(null);
+insert into auth.users (id, email) values ('7e570000-0000-4000-8000-0000000000a3', 't3@prueba.test'), ('7e570000-0000-4000-8000-0000000000a4', 't4@prueba.test'), ('7e570000-0000-4000-8000-0000000000a5', 't5@prueba.test');
+update public.profiles set created_at = public._beta_ends_at() - interval '30 days', onboarded = true where id in ('7e570000-0000-4000-8000-0000000000a3', '7e570000-0000-4000-8000-0000000000a5');
+update public.profiles set onboarded = true where id = '7e570000-0000-4000-8000-0000000000a4';
+insert into public.payment_methods (user_id, provider_customer_id, provider_payment_method_id) values
+  ('7e570000-0000-4000-8000-0000000000a3', 'cus_t3', 'pm_t3'), ('7e570000-0000-4000-8000-0000000000a5', 'cus_t5', 'pm_t5');
+insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_started_at, trial_ends_at, charge_at, next_attempt_at, status)
+  values ('7e570000-0000-4000-8000-0000000000a3', 'trial:7e570000-0000-4000-8000-0000000000a3', 'beta', 'completo', 'mes', 1499, public._beta_ends_at() - interval '10 days', public._beta_ends_at(), public._beta_ends_at(), public._beta_ends_at(), 'scheduled');
+select bbtest.card_trial('7e570000-0000-4000-8000-0000000000a4');
+insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_started_at, trial_ends_at, charge_at, next_attempt_at, status, attempts)
+  values ('7e570000-0000-4000-8000-0000000000a5', 'trial:7e570000-0000-4000-8000-0000000000a5', 'beta', 'entreno', 'mes', 999, public._beta_ends_at() - interval '10 days', public._beta_ends_at(), public._beta_ends_at(), now() + interval '1 day', 'retry_scheduled', 1);
+select bbtest.ok('cobro tester: a T3 le tocaba cobrar hoy', (select next_attempt_at <= now() from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a3'));
+
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('cobro tester: admin hace tester a T3, T4 y T5', (select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a3', 'prueba cobros') > 0 and public.admin_set_tester('7e570000-0000-4000-8000-0000000000a4', 'prueba cobros') > 0 and public.admin_set_tester('7e570000-0000-4000-8000-0000000000a5', 'prueba cobros') > 0));
+reset role; select bbtest.login(null);
+select bbtest.ok('cobro tester: el cobro de T3 pasa al final de su mes de tester (y el intento también)', (select c.charge_at = t.expires_at and c.next_attempt_at = t.expires_at and c.moved_from = c.trial_ends_at and c.tester_hold and c.reminder_sent_at is null and c.status = 'scheduled'
+  from public.trial_charges c join public.tester_grants t on t.user_id = c.user_id and t.revoked_at is null where c.user_id = '7e570000-0000-4000-8000-0000000000a3'));
+select bbtest.ok('cobro tester: a T3 ya no le toca cobrar hoy', (select next_attempt_at > now() + interval '29 days' from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a3'));
+select bbtest.ok('cobro tester: el aviso de 2 días antes queda para la fecha nueva', (select not (now() >= charge_at - interval '2 days') and reminder_sent_at is null from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a3'));
+select bbtest.ok('cobro tester: aviso en la campanita de que el cobro se movió', (select count(*) = 1 from public.notifications where user_id = '7e570000-0000-4000-8000-0000000000a3' and kind = 'cobro' and title = 'Tu cobro pasa al final de tu mes de tester'));
+select bbtest.ok('cobro tester: la prueba de 7 días de T4 no se alarga, solo el cobro', (select trial_ends_at = trial_started_at + interval '7 days' and charge_at > now() + interval '29 days' and moved_from = trial_ends_at and tester_hold from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a4'));
+select bbtest.ok('cobro tester: el reintento de T5 espera al final del mes de tester', (select next_attempt_at > now() + interval '29 days' and tester_hold and status = 'retry_scheduled' from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a5'));
+select bbtest.ok('cobro tester: el servidor revisa antes de cobrar', (select public.tester_hold_charge('7e570000-0000-4000-8000-0000000000a3')) is not null);
+select bbtest.ok('cobro tester: revisar de nuevo no mueve ni avisa otra vez', (select count(*) = 1 from public.notifications where user_id = '7e570000-0000-4000-8000-0000000000a3' and kind = 'cobro'));
+select bbtest.ok('cobro tester: a una persona que no es tester no le mueve nada', (select public.tester_hold_charge('ab000000-0000-4000-8000-0000000000a2')) is null);
+select bbtest.fails('cobro tester: un cobro movido necesita su fecha original', $q$ update public.trial_charges set moved_from = null where user_id = '7e570000-0000-4000-8000-0000000000a3' $q$, '23514');
+set role authenticated; select bbtest.as_user('7e570000-0000-4000-8000-0000000000a3');
+select bbtest.fails('cobro tester: una persona no llama la revisión del servidor', $q$ select public.tester_hold_charge(auth.uid()) $q$, '42501');
+select bbtest.fails('cobro tester: una persona no usa la función interna', $q$ select public._tester_release_charge(auth.uid()) $q$, '42501');
+select bbtest.ok('cobro tester: T3 ve su cobro aplazado', (select tester_hold and charge_at > now() + interval '29 days' from public.trial_charges where user_id = auth.uid()));
+reset role;
+
+-- Renovar: el cobro se vuelve a mover al nuevo final.
+reset role; select bbtest.login(null);
+update public.tester_grants set starts_at = now() - interval '20 days', expires_at = now() + interval '10 days' where user_id = '7e570000-0000-4000-8000-0000000000a3' and revoked_at is null;
+update public.comp_grants set starts_at = now() - interval '20 days', expires_at = now() + interval '10 days' where user_id = '7e570000-0000-4000-8000-0000000000a3' and source = 'tester' and revoked_at is null;
+update public.trial_charges set charge_at = now() + interval '10 days', next_attempt_at = now() + interval '10 days', reminder_sent_at = now() where user_id = '7e570000-0000-4000-8000-0000000000a3';
+set role authenticated; select bbtest.login('S');
+select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a3', 'renueva');
+reset role; select bbtest.login(null);
+select bbtest.ok('cobro tester: renovar mueve el cobro al nuevo final y rearma el aviso', (select abs(extract(epoch from c.charge_at - t.expires_at)) < 1 and c.next_attempt_at = c.charge_at and c.reminder_sent_at is null and c.moved_from = c.trial_ends_at
+  from public.trial_charges c join public.tester_grants t on t.user_id = c.user_id and t.revoked_at is null and t.expires_at > now() where c.user_id = '7e570000-0000-4000-8000-0000000000a3'));
+
+-- Quitar antes de tiempo: vuelve a max(ahora, fecha original), nunca a menos de 2 días; sin cobrar dos veces.
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('cobro tester: admin quita a T3, T4 y T5', (select public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a3', 'fin de pruebas') + public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a4', 'fin de pruebas') + public.admin_revoke_tester('7e570000-0000-4000-8000-0000000000a5', 'fin de pruebas')) = 3);
+reset role; select bbtest.login(null);
+select bbtest.ok('cobro tester: la fecha original de T3 ya pasó: se cobra en 2 días, con aviso', (select abs(extract(epoch from charge_at - (now() + interval '2 days'))) < 60 and next_attempt_at = charge_at and not tester_hold and reminder_sent_at is null and status = 'scheduled'
+  and now() >= charge_at - interval '2 days' and moved_from is not null from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a3'));
+select bbtest.ok('cobro tester: aviso honesto en la campanita al volver a programar', (select count(*) = 1 from public.notifications where user_id = '7e570000-0000-4000-8000-0000000000a3' and kind = 'cobro' and title = 'Tu cobro vuelve a estar programado'));
+select bbtest.ok('cobro tester: T4 vuelve a su día 7 original', (select charge_at = trial_ends_at and next_attempt_at = charge_at and moved_from is null and not tester_hold from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a4'));
+select bbtest.ok('cobro tester: el reintento de T5 queda para ahora (sin intento extra)', (select next_attempt_at <= now() and not tester_hold and attempts = 1 and status = 'retry_scheduled' from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a5'));
+select bbtest.ok('cobro tester: liberar de nuevo no mueve nada', (select public._tester_release_charge('7e570000-0000-4000-8000-0000000000a4')) = 0);
+select bbtest.ok('cobro tester: T4 sigue en su día 7', (select charge_at = trial_ends_at from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a4'));
+
+-- Al terminar solo: el cobro sigue en el final del mes de tester (ese día se cobra) y la marca de aplazado se limpia.
+set role authenticated; select bbtest.login('S');
+select public.admin_set_tester('7e570000-0000-4000-8000-0000000000a4', 'otra vez');
+reset role; select bbtest.login(null);
+update public.tester_grants set starts_at = now() - interval '30 days', expires_at = now() - interval '1 minute' where user_id = '7e570000-0000-4000-8000-0000000000a4' and revoked_at is null;
+update public.comp_grants set starts_at = now() - interval '30 days', expires_at = now() - interval '1 minute' where user_id = '7e570000-0000-4000-8000-0000000000a4' and source = 'tester' and revoked_at is null;
+update public.trial_charges set charge_at = now() - interval '1 minute', next_attempt_at = now() - interval '1 minute', trial_started_at = now() - interval '31 days', trial_ends_at = now() - interval '24 days' where user_id = '7e570000-0000-4000-8000-0000000000a4';
+select bbtest.ok('cobro tester: terminado el mes, el servidor ya no aplaza', (select public.tester_hold_charge('7e570000-0000-4000-8000-0000000000a4')) is null);
+select bbtest.ok('cobro tester: terminado el mes, el cobro toca y ya no dice aplazado', (select next_attempt_at <= now() and not tester_hold from public.trial_charges where user_id = '7e570000-0000-4000-8000-0000000000a4'));
+
 -- Borrar la cuenta borra su estado de tester y sus reportes.
 delete from auth.users where id = '7e570000-0000-4000-8000-0000000000a2';
 select bbtest.ok('borrado: sin reportes de la cuenta borrada', not exists (select 1 from public.feedback_reports where user_id = '7e570000-0000-4000-8000-0000000000a2'));

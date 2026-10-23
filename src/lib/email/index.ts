@@ -100,7 +100,7 @@ export async function sendChargeReminder(r: Recipient & ChargeMail & { chargeId:
   if (!to) return skip();
   const { userId: _u, to: _t, name: _n, chargeId, ...d } = r;
   void _u; void _t; void _n;
-  return sendEmail(to.to, T.recordatorioCobro({ ...d, name: to.name }), { idempotencyKey: `recordatorio_cobro/${chargeId}`, tags: { kind: "recordatorio_cobro" } });
+  return sendEmail(to.to, T.recordatorioCobro({ ...d, name: to.name }), { idempotencyKey: `recordatorio_cobro/${chargeId}/${String(d.chargeAt).slice(0, 10)}`, tags: { kind: "recordatorio_cobro" } });
 }
 
 /** Canceló el cobro programado antes de que llegara. */
@@ -127,10 +127,10 @@ export async function sendGiftEmail(r: Recipient & Omit<Parameters<typeof T.rega
 }
 
 /** Te hicieron tester (o se renovó). Idempotente por asignación (`grantId`). Transaccional. */
-export async function sendTesterEmail(r: Recipient & { grantId: number; expiresAt: string; renewal?: boolean }): Promise<SendResult> {
+export async function sendTesterEmail(r: Recipient & { grantId: number; expiresAt: string; renewal?: boolean; charge?: { amount: number; chargeAt: string } | null }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  return sendEmail(to.to, T.testerAsignado({ name: to.name, expiresAt: r.expiresAt, renewal: r.renewal }), { idempotencyKey: `tester/${r.grantId}`, tags: { kind: "tester" } });
+  return sendEmail(to.to, T.testerAsignado({ name: to.name, expiresAt: r.expiresAt, renewal: r.renewal, charge: r.charge }), { idempotencyKey: `tester/${r.grantId}`, tags: { kind: "tester" } });
 }
 
 /** Terminó el mes de tester: agradecimiento y qué pasa ahora. Idempotente por asignación. */

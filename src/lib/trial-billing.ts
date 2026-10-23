@@ -22,7 +22,7 @@ import {
   getPaymentMethod, getSubscription, isOnvoConfigured, listCustomerSubscriptions, matchesAttempt, priceIdFor, profilePlanFor,
 } from "@/lib/onvo";
 import {
-  STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, amountMinorFor, attemptKeyFor, canCancel, canChangePlan, chargeView,
+  STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, amountMinorFor, attemptKeyFor, canCancel, canChangePlan, chargeMoved, chargeView,
   idemKeyFor, isDue, onCardSaved, reminderDue, reminderLine, scheduleFor, type CardRow, type ChargeView, type TrialChargeRow,
 } from "@/lib/trial";
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
@@ -48,7 +48,9 @@ const nowIso = () => new Date().toISOString();
 
 async function loadRow(db: SupabaseClient, userId: string): Promise<TrialChargeRow | null> {
   const { data } = await db.from("trial_charges").select(CHARGE_COLS).eq("user_id", userId).maybeSingle();
-  return (data as TrialChargeRow | null) ?? null;
+  const row = (data as TrialChargeRow | null) ?? null;
+  const hold = row ? await holdInfo(db, row.id) : null;
+  return row && hold ? { ...row, ...hold } : row;
 }
 async function loadCard(db: SupabaseClient, userId: string): Promise<CardFull | null> {
   const { data } = await db.from("payment_methods").select(CARD_COLS).eq("user_id", userId).maybeSingle();
@@ -77,16 +79,36 @@ async function pushTo(db: SupabaseClient, userId: string, payload: { title: stri
 
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
 
+/**
+ * Testers de la beta (0029): mientras la persona sea tester no se le cobra. Esta revisión va justo antes de avisar o cobrar:
+ * si es tester, la base aplaza el cobro (programado o reintento) al final de su mes de tester y devuelve esa fecha.
+ * Sin 0029 aplicada (o si falla) devuelve null y todo sigue como antes.
+ */
+export async function testerHold(db: SupabaseClient, userId: string): Promise<string | null> {
+  const { data, error } = await db.rpc("tester_hold_charge", { p_user: userId });
+  return !error && typeof data === "string" && Number.isFinite(Date.parse(data)) ? data : null;
+}
+
+/** Columnas de 0029 (fecha original y aplazado por tester), aparte: sin la migración, el resto sigue funcionando. */
+export async function holdInfo(db: SupabaseClient, chargeId: number): Promise<Pick<TrialChargeRow, "moved_from" | "tester_hold"> | null> {
+  const { data, error } = await db.from("trial_charges").select("moved_from,tester_hold").eq("id", chargeId).maybeSingle();
+  return error || !data ? null : (data as Pick<TrialChargeRow, "moved_from" | "tester_hold">);
+}
+
 /** Día 5 (o 2 días antes del fin de la beta): correo, push y campanita. Se reclama con reminder_sent_at: una sola vez. */
 export async function sendReminderIfDue(db: SupabaseClient, row: TrialChargeRow, now = new Date()): Promise<boolean> {
   if (!reminderDue(row, now)) return false;
+  // Tester: si el cobro caía antes del final de su mes de tester, la base lo aplazó (y el aviso sale 2 días antes de la fecha nueva).
+  const until = await testerHold(db, row.user_id);
+  if (until && Date.parse(row.charge_at) < Date.parse(until)) return false;
   const { data: claimed } = await db.from("trial_charges").update({ reminder_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled").is("reminder_sent_at", null).select("id");
   if (!claimed?.length) return false;
   const amount = row.amount_minor / 100;
-  const line = reminderLine(amount, row.kind, fmtDay(row.charge_at));
+  const moved = chargeMoved(await holdInfo(db, row.id));
+  const line = reminderLine(amount, row.kind, fmtDay(row.charge_at), moved);
   const card = cardLabel(await loadCard(db, row.user_id));
   await notifyInApp(row.user_id, { kind: "cobro_pronto", title: "En 2 días se cobra tu plan", body: line, url: "/app/suscripcion" }).catch(() => false);
-  await sendChargeReminder({ userId: row.user_id, chargeId: row.id, plan: planName(row.plan), amount, chargeAt: row.charge_at, kind: row.kind, card }).catch(() => null);
+  await sendChargeReminder({ userId: row.user_id, chargeId: row.id, plan: planName(row.plan), amount, chargeAt: row.charge_at, kind: row.kind, card, moved }).catch(() => null);
   await pushTo(db, row.user_id, { title: "En 2 días se cobra tu plan", body: line, url: "/app/suscripcion", tag: `cobro-${row.id}` });
   log("aviso de cobro enviado", { userId: row.user_id, chargeId: row.id });
   return true;
@@ -175,6 +197,8 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
       return { card, charge: chargeView(row, now), outcome: "sin_cambio" };
     }
     row = ins.data as TrialChargeRow;
+    // Tester (0029): el cobro pasa al final de su mes de tester antes de avisar la fecha.
+    if (row.kind !== "inmediato" && (await testerHold(db, v.id))) row = (await loadRow(db, v.id)) ?? row;
     log("cobro programado", { userId: v.id, chargeId: row.id, kind: row.kind, chargeAt: row.charge_at, plan: row.plan, billing: row.billing });
     if (row.kind === "inmediato") {
       const r = await attemptCharge(db, row, now);
@@ -196,6 +220,7 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
 
   if (plan.do === "resume") {
     await db.from("trial_charges").update({ ...planFields, status: "scheduled", next_attempt_at: row.charge_at, canceled_at: null, updated_at: now.toISOString() }).eq("id", row.id).eq("status", "canceled");
+    await testerHold(db, v.id);
     log("cobro reanudado", { userId: v.id, chargeId: row.id });
     return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "reanudado" };
   }
@@ -288,7 +313,7 @@ export async function removeCard(v: Viewer): Promise<void> {
 
 // ───────────────────────── Paso 3: el cobro ─────────────────────────
 
-export type AttemptResult = "omitido" | "enviado" | "rechazado" | "por_confirmar" | "reemplazado" | "sin_tarjeta" | "sin_config";
+export type AttemptResult = "omitido" | "aplazado" | "enviado" | "rechazado" | "por_confirmar" | "reemplazado" | "sin_tarjeta" | "sin_config";
 
 /**
  * Un intento de cobro. Idempotente: el UPDATE condicional (estado + intentos + fecha cumplida) deja pasar a un solo proceso.
@@ -298,12 +323,23 @@ export type AttemptResult = "omitido" | "enviado" | "rechazado" | "por_confirmar
 export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now = new Date()): Promise<AttemptResult> {
   if (!isDue(row, now)) return "omitido";
   if (!isOnvoConfigured()) { alert("cobro pendiente pero ONVO no está configurado", { chargeId: row.id }); return "sin_config"; }
+  // Nunca se cobra a un tester durante su mes de tester: la base aplaza el cobro al final y aquí no se intenta.
+  if (await testerHold(db, row.user_id)) { log("cobro aplazado por mes de tester", { userId: row.user_id, chargeId: row.id }); return "aplazado"; }
+  const prev = { status: row.status, attempts: row.attempts, last_attempt_at: row.last_attempt_at };
   const at = now.toISOString();
   const { data: won } = await db.from("trial_charges")
     .update({ status: "charging", attempts: row.attempts + 1, last_attempt_at: at, last_error: null, updated_at: at })
     .eq("id", row.id).eq("status", row.status).eq("attempts", row.attempts).lte("next_attempt_at", at).select(CHARGE_COLS);
   const r = (won as TrialChargeRow[] | null)?.[0];
   if (!r) return "omitido";
+  // Lo hicieron tester justo entre la revisión y el reclamo: se devuelve el intento (sin contar) y se aplaza.
+  const { data: liveTester } = await db.from("tester_grants").select("id").eq("user_id", r.user_id).is("revoked_at", null).lte("starts_at", at).gt("expires_at", at).limit(1);
+  if (liveTester?.length) {
+    await db.from("trial_charges").update({ ...prev, updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
+    await testerHold(db, r.user_id);
+    log("cobro aplazado por mes de tester", { userId: r.user_id, chargeId: r.id });
+    return "aplazado";
+  }
 
   // Ya paga por otro lado (eligió pagar antes desde Mi plan): este cobro sobra.
   if (await hasLivePaidSubscription(db, r.user_id)) {

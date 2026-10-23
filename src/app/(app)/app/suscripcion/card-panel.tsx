@@ -79,7 +79,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
     trial: { title: "Empieza tu prueba gratis de 7 días", sub: "Elige tu plan y guarda tu tarjeta. Tienes todo incluido durante la prueba, sin importar el plan.", btn: "Empezar mis 7 días gratis", note: <><b>{TRIAL_CARD_LINE}</b> Tu día 7 es el {trialEnd}: ese día se cobran {price}. Te avisamos 2 días antes.</> },
     beta: { title: `Agrega tu tarjeta antes del ${betaFirstPaid}`, sub: "Desde esa fecha la app se paga. Si guardas tu tarjeta ahora sigues sin cortes.", btn: "Guardar tarjeta", note: <><b>Hoy no te cobramos.</b> El {betaFirstPaid} se cobran {price} del plan que elegiste, salvo que canceles antes. Te avisamos 2 días antes.</> },
     pay: failed
-      ? { title: "Cambia tu tarjeta", sub: charge?.retryAt ? `No pudimos cobrar tu plan. Lo intentaremos una vez más el ${day(charge.retryAt)}, o cambia tu tarjeta para seguir hoy.` : "No pudimos cobrar tu plan con tu tarjeta. Cambia la tarjeta para seguir.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> }
+      ? { title: "Cambia tu tarjeta", sub: charge?.retryAt && charge.testerHold ? `No pudimos cobrar tu plan. Mientras seas tester no se te cobra: lo intentaremos una vez más el ${day(charge.retryAt)}, al terminar tu mes de tester.` : charge?.retryAt ? `No pudimos cobrar tu plan. Lo intentaremos una vez más el ${day(charge.retryAt)}, o cambia tu tarjeta para seguir hoy.` : "No pudimos cobrar tu plan con tu tarjeta. Cambia la tarjeta para seguir.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> }
       : { title: "Guarda tu tarjeta y elige tu plan", sub: "La versión de prueba terminó. Tu progreso sigue guardado y retomas donde ibas.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> },
   }[step];
 
@@ -162,8 +162,8 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
   return (
     <section id="tarjeta" aria-labelledby="cobro-titulo" className="scroll-mt-24 rounded-[1.5rem] border-2 border-ink bg-white p-5 sm:p-6 space-y-4">
       <div>
-        <p className="text-sm font-semibold text-muted">{beta ? "Versión de prueba" : "Prueba gratis"}</p>
-        <h2 id="cobro-titulo" ref={head} tabIndex={-1} className="mt-0.5 text-xl font-extrabold text-ink outline-none text-balance">{beta ? `Todo gratis hasta el ${day(new Date(Date.parse(charge.chargeAt) - 1).toISOString())}` : `Todo incluido hasta el ${day(charge.trialEndsAt)}`}</h2>
+        <p className="text-sm font-semibold text-muted">{charge.testerHold ? "Mes de tester" : charge.moved ? "Cobro programado" : beta ? "Versión de prueba" : "Prueba gratis"}</p>
+        <h2 id="cobro-titulo" ref={head} tabIndex={-1} className="mt-0.5 text-xl font-extrabold text-ink outline-none text-balance">{charge.testerHold ? `Sin cobros hasta el ${day(charge.chargeAt)}` : charge.moved ? `Se cobra el ${day(charge.chargeAt)}` : beta ? `Todo gratis hasta el ${day(new Date(Date.parse(charge.chargeAt) - 1).toISOString())}` : `Todo incluido hasta el ${day(charge.trialEndsAt)}`}</h2>
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div className="col-span-2 rounded-2xl bg-banana-soft p-3"><dt className="flex items-center gap-1.5 text-xs font-semibold text-banana-ink"><CalendarCheck weight="duotone" className="size-4" />Se cobra el</dt><dd className="mt-0.5 text-lg font-extrabold text-ink">{day(charge.chargeAt)}{charge.daysToCharge > 0 ? <span className="text-sm font-semibold text-muted">, en {charge.daysToCharge} {charge.daysToCharge === 1 ? "día" : "días"}</span> : null}</dd></div>
@@ -171,7 +171,9 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
         <div className="rounded-2xl bg-paper p-3"><dt className="text-xs font-semibold text-muted">Monto</dt><dd className="font-bold tabular-nums text-ink">{money(charge.amount)} USD</dd></div>
         <div className="col-span-2 rounded-2xl bg-paper p-3"><dt className="text-xs font-semibold text-muted">Tarjeta</dt><dd className="font-bold text-ink">{cardText(card)}{card?.expMonth && card.expYear ? <span className="font-semibold text-muted">, vence {String(card.expMonth).padStart(2, "0")}/{String(card.expYear).slice(-2)}</span> : null}</dd></div>
       </dl>
-      <p className="text-sm text-body text-pretty">{beta ? <><b>Hoy no te cobramos.</b> El {day(charge.chargeAt)} se cobra tu plan, salvo que canceles antes.</> : <b>{TRIAL_CARD_LINE}</b>} Te avisamos 2 días antes.</p>
+      <p className="text-sm text-body text-pretty">{charge.testerHold ? <><b>Mientras seas tester no se te cobra nada.</b> Tu cobro pasó al {day(charge.chargeAt)}, cuando termina tu mes de tester, salvo que canceles antes.</>
+        : charge.moved ? <><b>Tu cobro quedó para el {day(charge.chargeAt)}.</b> Puedes cancelar sin costo antes de esa fecha.</>
+        : beta ? <><b>Hoy no te cobramos.</b> El {day(charge.chargeAt)} se cobra tu plan, salvo que canceles antes.</> : <b>{TRIAL_CARD_LINE}</b>} Te avisamos 2 días antes.</p>
       {demo && <p className="text-xs font-semibold text-banana-ink">Modo demo: datos de ejemplo, no hay ninguna tarjeta real.</p>}
 
       {view === "idle" && (

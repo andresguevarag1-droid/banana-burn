@@ -279,3 +279,51 @@ describe("webhook antes de registrar la suscripción", () => {
     expect(r.status).toBe("error");
   });
 });
+
+describe("testers de la beta: nunca se cobra durante el mes de tester (0029)", () => {
+  /** Como la base: tester_hold_charge aplaza el cobro al final del mes de tester y devuelve esa fecha. */
+  function asTester(f: ReturnType<typeof setup>, until: Date | null) {
+    const db = f.db as unknown as { rpc: (fn: string, args: { p_user: string }) => Promise<{ data: unknown; error: null }> };
+    db.rpc = async (fn, args) => {
+      if (fn !== "tester_hold_charge" || !until || args.p_user !== NEW_USER) return { data: null, error: null };
+      const r = f.tables.trial_charges[0] as Record<string, unknown>;
+      if (r && r.status === "scheduled" && Date.parse(String(r.charge_at)) < until.getTime()) Object.assign(r, { moved_from: r.moved_from ?? r.charge_at, charge_at: until.toISOString(), next_attempt_at: until.toISOString(), reminder_sent_at: null, tester_hold: true });
+      return { data: until.toISOString(), error: null };
+    };
+  }
+  it("el día 7 de un tester no se cobra: se aplaza al final de su mes de tester", async () => {
+    const f = setup({ tester_grants: [] }); const r = scheduled(f);
+    const until = plus(T0, 25);
+    asTester(f, until);
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("aplazado");
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", attempts: 0, charge_at: until.toISOString(), next_attempt_at: until.toISOString(), tester_hold: true });
+    await tb.sweepTrialCharges(plus(T0, 7.5));
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+  });
+  it("el aviso de 2 días antes no sale para la fecha vieja; sale antes de la nueva y lo dice", async () => {
+    const f = setup({ tester_grants: [] }); scheduled(f);
+    const until = plus(T0, 25);
+    asTester(f, until);
+    await tb.sweepTrialCharges(plus(T0, 5.2));
+    expect(mail.sendChargeReminder).not.toHaveBeenCalled();
+    await tb.sweepTrialCharges(plus(T0, 23.5));
+    expect(mail.sendChargeReminder).toHaveBeenCalledOnce();
+    expect(mail.sendChargeReminder).toHaveBeenCalledWith(expect.objectContaining({ moved: "tester", chargeAt: until.toISOString() }));
+    expect(mail.notifyInApp).toHaveBeenCalledWith(NEW_USER, expect.objectContaining({ body: expect.stringContaining("Tu mes de tester termina en 2 días") }));
+  });
+  it("si lo hacen tester justo después de la revisión, se devuelve el intento sin contarlo y no se cobra", async () => {
+    const f = setup({ tester_grants: [{ id: 1, user_id: NEW_USER, revoked_at: null, starts_at: plus(T0, 6).toISOString(), expires_at: plus(T0, 36).toISOString() }] });
+    const r = scheduled(f);
+    asTester(f, null); // la primera revisión no lo ve (carrera)
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("aplazado");
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", attempts: 0 });
+  });
+  it("sin tester (o sin la migración) cobra como siempre", async () => {
+    const f = setup({ tester_grants: [] }); const r = scheduled(f);
+    asTester(f, null);
+    onvo.createChargedSubscription.mockResolvedValue({ id: "sub_7" });
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("enviado");
+  });
+});

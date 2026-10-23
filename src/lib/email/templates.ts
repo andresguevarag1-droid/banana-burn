@@ -285,7 +285,9 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
 }
 
 /** Datos del primer cobro programado (prueba de 7 días o fin de la beta). */
-export type ChargeMailData = { name: string; plan: string; amount: number; currency?: string; chargeAt: string; kind: "prueba" | "beta" | "inmediato"; card?: string | null };
+export type ChargeMailData = { name: string; plan: string; amount: number; currency?: string; chargeAt: string; kind: "prueba" | "beta" | "inmediato"; card?: string | null;
+  /** El cobro se movió: "tester" (al final del mes de tester) o "ajustado" (ya no está en su fecha original). */
+  moved?: "tester" | "ajustado" | null };
 
 /** Al guardar la tarjeta: confirma que hoy no se cobra, cuánto y cuándo se cobra, y cómo cancelar. Transaccional. */
 export function pruebaIniciada(d: ChargeMailData): Email {
@@ -315,8 +317,9 @@ export function recordatorioCobro(d: ChargeMailData): Email {
   const n = firstName(d.name);
   const total = money(d.amount, d.currency);
   const when = longDate(d.chargeAt);
-  const beta = d.kind === "beta";
-  const line = beta ? `En 2 días se cobra tu plan de ${total}, el ${when}. Puedes cancelar sin costo antes de esa fecha.` : `En 2 días se cobra tu plan de ${total}. Puedes cancelar sin costo hasta el día 7.`;
+  const beta = d.kind === "beta" || !!d.moved;
+  const line = d.moved === "tester" ? `Tu mes de tester termina en 2 días. El ${when} se cobra tu plan de ${total}. Puedes cancelar sin costo antes de esa fecha.`
+    : beta ? `En 2 días se cobra tu plan de ${total}, el ${when}. Puedes cancelar sin costo antes de esa fecha.` : `En 2 días se cobra tu plan de ${total}. Puedes cancelar sin costo hasta el día 7.`;
   const subject = `En 2 días se cobra tu plan de ${total}`;
   const r: [string, string][] = [["Plan", d.plan], ["Se cobra el", when], ["Monto", total]];
   if (d.card) r.push(["Tarjeta", d.card]);
@@ -399,7 +402,7 @@ export function regalo(d: { name: string; months: number; plan: string; source: 
  * Te hicieron tester de la beta: un mes de Entreno + Nutrición como cortesía. Transaccional: no lleva enlace de baja.
  * `renewal`: ya era tester y se renovó por otros 30 días desde hoy.
  */
-export function testerAsignado(d: { name: string; expiresAt: string; days?: number; renewal?: boolean }): Email {
+export function testerAsignado(d: { name: string; expiresAt: string; days?: number; renewal?: boolean; charge?: { amount: number; chargeAt: string } | null }): Email {
   const n = firstName(d.name);
   const days = d.days ?? 30;
   const until = longDate(d.expiresAt);
@@ -418,6 +421,7 @@ export function testerAsignado(d: { name: string; expiresAt: string; days?: numb
       `${dot()}<b>Insignia de tester</b> en tu perfil y en la comunidad.`,
     ]) +
     rows(r) +
+    (d.charge ? p(`<b>Tu cobro programado pasa al final de tu mes de tester.</b> Mientras seas tester no se te cobra nada. El ${esc(longDate(d.charge.chargeAt))} se cobra tu plan de ${esc(money(d.charge.amount))}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.`) : "") +
     eyebrow("Cómo nos ayudas") +
     p("Usa la app como lo harías normalmente. Si algo falla, se ve raro o se te ocurre una idea, toca <b>Reportar algo</b> en Hoy y escríbenos en una frase. Cada reporte nos llega directo y lo revisamos.") +
     button("Abrir la app", "/app") +
@@ -427,7 +431,7 @@ export function testerAsignado(d: { name: string; expiresAt: string; days?: numb
   return {
     subject, preheader,
     html: layout({ preheader, hero, body, reason, coach }),
-    text: textLayout([subject, "", intro, "", "Lo que tienes este mes:", "- Entrenos con pesos que se ajustan solos, coach y todos los programas.", "- Nutrición completa: calorías, macros, comidas, recetas y Banana Shield.", "- Insignia de tester en tu perfil y en la comunidad.", "", ...r.map(([k, v]) => `${k}: ${v}`), "",
+    text: textLayout([subject, "", intro, ...(d.charge ? ["", `Tu cobro programado pasa al final de tu mes de tester: el ${longDate(d.charge.chargeAt)} se cobra tu plan de ${money(d.charge.amount)}, salvo que canceles antes. Mientras seas tester no se te cobra nada.`] : []), "", "Lo que tienes este mes:", "- Entrenos con pesos que se ajustan solos, coach y todos los programas.", "- Nutrición completa: calorías, macros, comidas, recetas y Banana Shield.", "- Insignia de tester en tu perfil y en la comunidad.", "", ...r.map(([k, v]) => `${k}: ${v}`), "",
       "Cómo nos ayudas: si algo falla o se te ocurre una idea, toca Reportar algo en Hoy y escríbenos en una frase.", "", `Abrir la app: ${abs("/app")}`], undefined, reason, coach),
   };
 }
