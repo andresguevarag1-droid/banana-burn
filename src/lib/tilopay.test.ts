@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   __setTilopayFetch, amountText, apiToken, chargeSavedCard, checkoutOrderNumber, consultOrder, createTokenizeUrl, isTilopayConfigured,
-  readCharge, readConsult, readReturn, renewalOrderNumber, signState, splitName, trialOrderNumber, verifyState,
+  readCharge, readConsult, readReturn, renewalOrderNumber, signState, splitName, tilopayMode, tilopayOfferedTo, trialOrderNumber, verifyState,
 } from "./tilopay";
 import { RENEWAL_MAX_ATTEMPTS, renewalNext } from "./tilopay-renewal";
 
@@ -14,6 +14,28 @@ describe("configuración de Tilopay", () => {
     expect(isTilopayConfigured({ ...ENV, TILOPAY_ENABLED: "0" } as unknown as NodeJS.ProcessEnv)).toBe(false);
     expect(isTilopayConfigured({ ...ENV, TILOPAY_KEY: "" } as unknown as NodeJS.ProcessEnv)).toBe(false);
     expect(isTilopayConfigured({} as unknown as NodeJS.ProcessEnv)).toBe(false);
+  });
+});
+
+describe("modo staff (TILOPAY_ENABLED=staff)", () => {
+  const env = (enabled: string) => ({ ...ENV, TILOPAY_ENABLED: enabled }) as unknown as NodeJS.ProcessEnv;
+  it("lee el modo", () => {
+    expect(tilopayMode(env("1"))).toBe("all");
+    expect(tilopayMode(env("staff"))).toBe("staff");
+    expect(tilopayMode(env("STAFF"))).toBe("staff");
+    expect(tilopayMode(env("0"))).toBe("off");
+    expect(tilopayMode({ TILOPAY_ENABLED: "staff" } as unknown as NodeJS.ProcessEnv)).toBe("off");
+  });
+  it("en modo staff solo se ofrece al equipo; el motor sí corre", () => {
+    expect(isTilopayConfigured(env("staff"))).toBe(true);
+    for (const r of ["coach", "support", "admin", "superadmin"] as const) expect(tilopayOfferedTo(r, env("staff"))).toBe(true);
+    expect(tilopayOfferedTo("free", env("staff"))).toBe(false);
+    expect(tilopayOfferedTo("pro", env("staff"))).toBe(false);
+    expect(tilopayOfferedTo(null, env("staff"))).toBe(false);
+  });
+  it("con 1 se ofrece a todos; apagado, a nadie", () => {
+    expect(tilopayOfferedTo("free", env("1"))).toBe(true);
+    expect(tilopayOfferedTo("superadmin", env("0"))).toBe(false);
   });
 });
 

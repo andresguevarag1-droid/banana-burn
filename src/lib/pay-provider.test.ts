@@ -21,6 +21,9 @@ describe("procesador según el país", () => {
     expect(providerFor({ country: "CO", override: "onvo", tilopayReady: true })).toBe("onvo");
     expect(providerFor({ country: "CO", override: "stripe", tilopayReady: true })).toBe("tilopay");
   });
+  it("staff en Costa Rica puede forzar Tilopay para probarlo", () => {
+    expect(providerFor({ country: "CR", profileCountry: "CR", override: "tilopay", tilopayReady: true })).toBe("tilopay");
+  });
   it("normaliza el país", () => {
     expect(normCountry(" cr ")).toBe("CR");
     expect(normCountry("T1")).toBeNull();

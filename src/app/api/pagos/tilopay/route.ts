@@ -4,7 +4,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
-import { isTilopayConfigured } from "@/lib/tilopay";
+import { tilopayOfferedTo } from "@/lib/tilopay";
 import { providerFor } from "@/lib/pay-provider";
 import { startTilopayCard } from "@/lib/tilopay-billing";
 import { adminClient } from "@/lib/supabase/admin";
@@ -21,7 +21,8 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "Inicia sesión para continuar." }, { status: 401 });
-  const available = !v.demo && isTilopayConfigured();
+  // TILOPAY_ENABLED=staff: solo el equipo lo ve (y puede forzarlo aunque esté en Costa Rica, con el control del formulario).
+  const available = !v.demo && tilopayOfferedTo(v.role);
   const suggested = providerFor({ country: req.headers.get("x-vercel-ip-country"), profileCountry: v.country, tilopayReady: available });
   return NextResponse.json({ ok: true, available, suggested }, { headers: { "Cache-Control": "no-store" } });
 }
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "Inicia sesión para continuar." }, { status: 401 });
   if (v.demo) return NextResponse.json({ ok: false, demo: true, error: "Modo demo: no se guardan tarjetas reales." }, { status: 409 });
-  if (!isTilopayConfigured()) return NextResponse.json({ ok: false, error: "Los pagos con tarjetas de otros países aún no están activos." }, { status: 503 });
+  if (!tilopayOfferedTo(v.role)) return NextResponse.json({ ok: false, error: "Los pagos con tarjetas de otros países aún no están activos." }, { status: 503 });
   const body = (await req.json().catch(() => ({}))) as { purpose?: unknown; plan?: unknown; billing?: unknown };
   if (body.purpose !== "tarjeta") return NextResponse.json({ ok: false, error: "Acción inválida." }, { status: 400 });
   const pb = parsePlanBilling(body.plan, body.billing);

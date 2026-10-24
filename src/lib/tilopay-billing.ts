@@ -18,7 +18,7 @@ import { BillingError, SUB_COLS, activateVerified, recordAppEvent, syncProfilePl
 import { cardSaveContext, emailOf, saveVerifiedCard, type SaveCardResult } from "@/lib/trial-billing";
 import { estimatePeriodEnd, expectedAmountMinor, profilePlanFor } from "@/lib/onvo";
 import {
-  chargeSavedCard, checkoutOrderNumber, consultOrder, createPaymentUrl, createTokenizeUrl, isTilopayConfigured, readReturn,
+  chargeSavedCard, checkoutOrderNumber, consultOrder, createPaymentUrl, createTokenizeUrl, isTilopayConfigured, readReturn, tilopayOfferedTo,
   renewalOrderNumber, signState, tilopayCustomerId, tilopaySubId, type ChargeOutcome, type ReturnState,
 } from "@/lib/tilopay";
 import { sendPaymentFailed, sendSubscriptionCanceled } from "@/lib/email";
@@ -38,6 +38,11 @@ function admin(): SupabaseClient {
   return a;
 }
 
+/** Iniciar: solo a quien se le ofrece (modo staff = solo el equipo). La vuelta solo exige el motor encendido. */
+function offered(v: Viewer) {
+  if (!tilopayOfferedTo(v.role)) throw new BillingError("Los pagos con tarjetas de otros países aún no están activos.", 503);
+}
+
 function ready() {
   if (!isTilopayConfigured()) throw new BillingError("Los pagos con tarjetas de otros países aún no están activos.", 503);
 }
@@ -50,6 +55,7 @@ const returnUrl = (origin: string, state: string) => `${origin}/api/pagos/tilopa
 
 export async function startTilopayCard(v: Viewer, plan: PlanId, billing: Billing, origin: string): Promise<{ url: string }> {
   ready();
+  offered(v);
   const db = admin();
   // Mismas reglas que con ONVO: si ya paga o hay un cobro en curso, no se abre la página.
   await cardSaveContext(db, v);
@@ -63,6 +69,7 @@ export async function startTilopayCard(v: Viewer, plan: PlanId, billing: Billing
 
 export async function startTilopayCheckout(v: Viewer, plan: PlanId, billing: Billing, origin: string, country: string | null): Promise<{ url: string }> {
   ready();
+  offered(v);
   const db = admin();
   const { data: rows } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", v.id).order("created_at", { ascending: false }).limit(20);
   const subs = (rows as SubscriptionRow[] | null) ?? [];

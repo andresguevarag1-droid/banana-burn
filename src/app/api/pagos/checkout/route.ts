@@ -6,7 +6,7 @@ import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError, startCheckout } from "@/lib/billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { dbRateLimit } from "@/lib/security/db-rate-limit";
-import { isTilopayConfigured } from "@/lib/tilopay";
+import { tilopayOfferedTo } from "@/lib/tilopay";
 import { providerFor } from "@/lib/pay-provider";
 import { startTilopayCheckout } from "@/lib/tilopay-billing";
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const pb = parsePlanBilling(body.plan, body.billing);
   if (!pb) return NextResponse.json({ ok: false, error: "Plan o periodo inválido." }, { status: 400 });
   if (v.demo) return NextResponse.json({ ok: false, demo: true, error: "Modo demo: los pagos no están activos." }, { status: 409 });
-  const tilopayReady = isTilopayConfigured();
+  const tilopayReady = tilopayOfferedTo(v.role);
   let saved: unknown = null;
   if (tilopayReady && body.provider === undefined) {
     const { data } = (await adminClient()?.from("payment_methods").select("provider,status").eq("user_id", v.id).maybeSingle()) ?? { data: null };
