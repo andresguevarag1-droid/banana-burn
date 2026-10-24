@@ -98,7 +98,7 @@ function WorkoutCard({ d }: { d: FeedPost["data"] }) {
         <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><BrandIcon name={d.icon ?? "barbell"} className="size-6" /></span>
         <div className="min-w-0">
           <p className="text-xs font-semibold text-white/60">Entreno completado</p>
-          <p className="text-lg font-extrabold leading-tight truncate">{d.title ?? "Entreno"}</p>
+          <p className="text-lg font-extrabold leading-tight line-clamp-2">{d.title ?? "Entreno"}</p>
         </div>
         <Banana aria-hidden weight="fill" className="pointer-events-none absolute -right-3 -top-2 size-20 text-banana/10 rotate-12" />
       </div>

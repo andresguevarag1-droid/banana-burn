@@ -1,6 +1,6 @@
 "use client";
 // Sesiones de una semana del programa, en pestañas (Entrenar y la vista previa de la semana 1 en la tienda).
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Clock, Info, Lock, Repeat } from "@/components/icons";
 import { DEFAULT_VOICE, muscleText, setsReps, t, tempoLabel, type Voice } from "@/lib/voice";
@@ -17,11 +17,20 @@ export type WeekSessionView = {
 export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE, dayLabel }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice; dayLabel?: Record<number, number> }) {
   const word = (day: number) => `Día ${dayLabel?.[day] ?? day}`;
   const [sel, setSel] = useState(current ?? sessions[0]?.day ?? 1);
+  // Si la fila de pestañas se desliza (5 o más sesiones), la de hoy empieza a la vista (solo se mueve la fila, no la página).
+  const tabs = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = tabs.current, on = el?.querySelector<HTMLElement>("[aria-selected=true]");
+    if (el && on && el.scrollWidth > el.clientWidth) el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const s = sessions.find((x) => x.day === sel) ?? sessions[0];
   if (!s) return null;
   return (
     <div className="space-y-3">
-      <div role="tablist" aria-label={label} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${sessions.length}, minmax(0, 1fr))` }}>
+      {/* Con 5 o más sesiones (Pilates) las pestañas tienen un ancho mínimo y la fila se desliza: en 390 px quedaban de
+          60 px y "bailarina" se partía a la mitad. pt/pr dejan ver el check de "hecha" que sobresale de la esquina. */}
+      <div ref={tabs} role="tablist" aria-label={label} className="relative -mx-1 grid gap-1.5 overflow-x-auto overscroll-x-contain px-1 pt-2 pr-2 pb-1 -mt-2" style={{ gridTemplateColumns: `repeat(${sessions.length}, minmax(${sessions.length > 4 ? "6.5rem" : "0"}, 1fr))` }}>
         {sessions.map((x) => {
           const on = x.day === sel;
           return (
