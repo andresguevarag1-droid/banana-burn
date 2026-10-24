@@ -133,3 +133,23 @@ describe("plan del perfil según la suscripción", () => {
     expect(estimatePeriodEnd(new Date("2026-03-10T00:00:00Z"), "mes").toISOString()).toBe("2026-04-10T00:00:00.000Z");
   });
 });
+
+describe("0043: primer mes con 50 % (PaymentIntent sin la persona presente)", () => {
+  it("solo succeeded aprueba; 3DS y rechazos son rechazo; processing espera; sin confirmar no cobró", async () => {
+    const { intentOutcome } = await import("./onvo");
+    expect(intentOutcome("succeeded")).toBe("approved");
+    expect(intentOutcome("requires_action")).toBe("declined");
+    expect(intentOutcome("requires_payment_method")).toBe("declined");
+    expect(intentOutcome("canceled")).toBe("declined");
+    expect(intentOutcome("processing")).toBe("processing");
+    expect(intentOutcome("requires_confirmation")).toBe("not_confirmed");
+    expect(intentOutcome(undefined)).toBe("not_confirmed");
+  });
+  it("el monto con descuento solo vale como esperado si el servidor lo pasa", async () => {
+    const { checkPaidAmount } = await import("./billing");
+    const row = { plan: "completo" as const, billing: "mes" as const };
+    expect(checkPaidAmount(row, 749, "USD").ok).toBe(false);
+    expect(checkPaidAmount(row, 749, "USD", 749).ok).toBe(true);
+    expect(checkPaidAmount(row, 500, "USD", 749).ok).toBe(false);
+  });
+});

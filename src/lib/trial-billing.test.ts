@@ -9,6 +9,7 @@ vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => state.db }));
 const onvo = vi.hoisted(() => ({
   createChargedSubscription: vi.fn(), getPaymentMethod: vi.fn(), detachPaymentMethod: vi.fn(), cancelSubscription: vi.fn(),
   listCustomerSubscriptions: vi.fn(), getSubscription: vi.fn(), createCustomer: vi.fn(),
+  createPaymentIntent: vi.fn(), confirmPaymentIntent: vi.fn(), getPaymentIntent: vi.fn(),
 }));
 vi.mock("@/lib/onvo", async (orig) => {
   const real = await orig<typeof import("./onvo")>();
@@ -63,15 +64,35 @@ beforeEach(() => {
 });
 
 describe("guardar la tarjeta", () => {
-  it("cuenta nueva: guarda marca y últimos 4 que dice ONVO y programa el cobro al día 7, sin cobrar hoy", async () => {
+  it("cuenta nueva: guarda marca y últimos 4 que dice ONVO y programa el cobro al final de SU prueba (alta + 7 días), sin cobrar hoy", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm());
     const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "anual" }, T0);
     expect(r.outcome).toBe("programado");
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(f.tables.payment_methods[0]).toMatchObject({ brand: "visa", last4: "4242", status: "active", provider_payment_method_id: "pm_1" });
-    expect(charge(f)).toMatchObject({ kind: "prueba", status: "scheduled", plan: "completo", billing: "anual", amount_minor: 8999, charge_at: plus(T0, 7).toISOString() });
+    // Alta el 9 de noviembre a las 12:00: la prueba (y el cobro) terminan el 16 a la misma hora, aunque guarde la tarjeta el 10.
+    expect(charge(f)).toMatchObject({ kind: "prueba", status: "scheduled", plan: "completo", billing: "anual", amount_minor: 8999, promo: "primer_mes_50", trial_started_at: "2026-11-09T12:00:00.000Z", charge_at: "2026-11-16T12:00:00.000Z" });
+    expect(r.charge).toMatchObject({ promo: false, amount: 89.99 });
     expect(mail.sendTrialStarted).toHaveBeenCalledOnce();
+  });
+  it("0043: plan mensual con la tarjeta lista antes del primer cobro: 50 % del primer mes; cambiar a anual lo quita, volver a mensual lo devuelve", async () => {
+    const f = setup();
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, T0);
+    expect(charge(f)).toMatchObject({ amount_minor: 749, promo: "primer_mes_50" });
+    expect(r.charge).toMatchObject({ promo: true, amount: 7.49, fullAmount: 14.99 });
+    expect((mail.sendTrialStarted.mock.calls as unknown[][])[0][0]).toMatchObject({ amount: 7.49, promo: true });
+    await tb.changeTrialPlan(viewer(NEW_USER), "completo", "anual", T0);
+    expect(charge(f)).toMatchObject({ amount_minor: 8999 });
+    await tb.changeTrialPlan(viewer(NEW_USER), "entreno", "mes", T0);
+    expect(charge(f)).toMatchObject({ amount_minor: 499 });
+  });
+  it("0043: quien ya pagó un plan antes no gana el 50 %", async () => {
+    const f = setup({ subscriptions: [{ id: 3, user_id: NEW_USER, status: "canceled", plan: "entreno", current_period_start: "2026-09-01T00:00:00Z", current_period_end: "2026-10-01T00:00:00Z", cancel_at_period_end: false }] });
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, T0);
+    expect(charge(f)).toMatchObject({ amount_minor: 999, promo: null });
   });
   it("rechaza una tarjeta de otro cliente de ONVO o que no está activa", async () => {
     setup();
@@ -89,7 +110,7 @@ describe("guardar la tarjeta", () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
     await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-10-25T12:00:00Z"));
-    expect(charge(f)).toMatchObject({ kind: "beta", charge_at: BETA, trial_ends_at: BETA });
+    expect(charge(f)).toMatchObject({ kind: "beta", charge_at: BETA, trial_ends_at: BETA, promo: "primer_mes_50", amount_minor: 499 });
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
   });
   it("cuenta de la beta después del 1 de noviembre: se cobra en ese momento", async () => {
@@ -100,7 +121,7 @@ describe("guardar la tarjeta", () => {
     expect(r.outcome).toBe("enviado");
     expect(onvo.createChargedSubscription).toHaveBeenCalledOnce();
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ customerId: "cus_old", paymentMethodId: "pm_1", plan: "entreno", billing: "mes", trialKey: idemKeyFor(OLD_USER), attempt: 1 });
-    expect(charge(f)).toMatchObject({ kind: "inmediato", status: "pending", provider_subscription_id: "sub_1", attempts: 1 });
+    expect(charge(f)).toMatchObject({ kind: "inmediato", status: "pending", provider_subscription_id: "sub_1", attempts: 1, promo: null, amount_minor: 999 });
     expect(f.tables.subscriptions[0]).toMatchObject({ status: "incomplete", provider_subscription_id: "sub_1", plan: "entreno", billing: "mes" });
     expect(f.tables.profiles.find((p) => p.id === OLD_USER)!.plan).toBe("free");
   });
@@ -325,5 +346,59 @@ describe("testers de la beta: nunca se cobra durante el mes de tester (0029)", (
     asTester(f, null);
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_7" });
     expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("enviado");
+  });
+});
+
+describe("0043: primer mes con 50 % en ONVO (cobro único y luego la suscripción normal)", () => {
+  it("cobra el monto con descuento con un PaymentIntent confirmado por el servidor y activa un mes", async () => {
+    const f = setup();
+    const r = scheduled(f, { promo: "primer_mes_50", amount_minor: 749 } as Partial<TrialChargeRow>);
+    onvo.createPaymentIntent.mockResolvedValue({ id: "pi_1", status: "requires_confirmation" });
+    onvo.confirmPaymentIntent.mockResolvedValue({ id: "pi_1", status: "succeeded" });
+    onvo.getPaymentIntent.mockResolvedValue({ id: "pi_1", status: "succeeded", amount: 749, currency: "USD" });
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("enviado");
+    expect(onvo.createPaymentIntent.mock.calls[0][0]).toMatchObject({ amountMinor: 749, customerId: "cus_new" });
+    expect(onvo.confirmPaymentIntent).toHaveBeenCalledWith("pi_1", "pm_1");
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(f.tables.subscriptions[0]).toMatchObject({ provider_subscription_id: "onvo-pi:pi_1", status: "active", plan: "completo", billing: "mes" });
+    expect(charge(f)).toMatchObject({ status: "succeeded" });
+    expect(f.tables.profiles.find((p) => p.id === NEW_USER)!.plan).toBe("completo");
+  });
+  it("si ONVO cobró menos de lo que dice el servidor, no se activa", async () => {
+    const f = setup();
+    const r = scheduled(f, { promo: "primer_mes_50", amount_minor: 749 } as Partial<TrialChargeRow>);
+    onvo.createPaymentIntent.mockResolvedValue({ id: "pi_2" });
+    onvo.confirmPaymentIntent.mockResolvedValue({ id: "pi_2", status: "succeeded" });
+    onvo.getPaymentIntent.mockResolvedValue({ id: "pi_2", status: "succeeded", amount: 100, currency: "USD" });
+    await tb.attemptCharge(f.db, r, plus(T0, 7));
+    expect(f.tables.profiles.find((p) => p.id === NEW_USER)!.plan).toBe("free");
+  });
+  it("un monto guardado que no coincide con el servidor nunca se cobra", async () => {
+    const f = setup();
+    const r = scheduled(f, { promo: "primer_mes_50", amount_minor: 1 } as Partial<TrialChargeRow>);
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("sin_config");
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+  });
+  it("3DS o rechazo: rechazo normal con reintento al día siguiente", async () => {
+    const f = setup();
+    const r = scheduled(f, { promo: "primer_mes_50", amount_minor: 749 } as Partial<TrialChargeRow>);
+    onvo.createPaymentIntent.mockResolvedValue({ id: "pi_3" });
+    onvo.confirmPaymentIntent.mockResolvedValue({ id: "pi_3", status: "requires_action" });
+    onvo.getPaymentIntent.mockResolvedValue({ id: "pi_3", status: "requires_action", amount: 749, currency: "USD" });
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("rechazado");
+    expect(charge(f)).toMatchObject({ status: "retry_scheduled" });
+    expect(onvo.cancelSubscription).not.toHaveBeenCalled();
+  });
+  it("sin respuesta al confirmar: por confirmar y se consulta el PaymentIntent (nunca se cobra dos veces)", async () => {
+    const f = setup();
+    const r = scheduled(f, { promo: "primer_mes_50", amount_minor: 749 } as Partial<TrialChargeRow>);
+    onvo.createPaymentIntent.mockResolvedValue({ id: "pi_4" });
+    onvo.confirmPaymentIntent.mockRejectedValue(new OnvoError("timeout", 504));
+    expect(await tb.attemptCharge(f.db, r, plus(T0, 7))).toBe("por_confirmar");
+    expect(charge(f)).toMatchObject({ status: "unknown", provider_subscription_id: "onvo-pi:pi_4" });
+    onvo.getPaymentIntent.mockResolvedValue({ id: "pi_4", status: "succeeded", amount: 749, currency: "USD" });
+    await tb.runDueForUser(NEW_USER, plus(T0, 7.1));
+    expect(onvo.createPaymentIntent).toHaveBeenCalledOnce();
+    expect(f.tables.subscriptions[0]).toMatchObject({ status: "active" });
   });
 });

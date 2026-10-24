@@ -6,6 +6,7 @@ import { deliverTesterNotices } from "@/lib/testers-server";
 import { deliverSupportNotices } from "@/lib/support-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
 import { sweepTilopayRenewals } from "@/lib/tilopay-billing";
+import { sweepOnvoIntro } from "@/lib/onvo-intro";
 import { purgeIdentityFiles } from "@/lib/identity-server";
 import { nudgeUnseenNews } from "@/lib/novedades-server";
 import { purgeHousekeeping } from "@/lib/housekeeping";
@@ -52,6 +53,8 @@ export async function GET(req: Request) {
   // Tilopay (0042): renovaciones que cobramos nosotros (vence el periodo, se cobra la tarjeta guardada; rechazo = 3 intentos
   // diarios y luego se cancela) y compras directas por confirmar. null si Tilopay no está encendido.
   const renovaciones = await sweepTilopayRenewals(new Date(), { deadline: t0 + 47_000 }).catch((e) => { logError("cron:renovaciones", "run_failed", { kind: errCode(e) }); return null; });
+  // Primer mes con 50 % en ONVO (0043): al terminar ese mes se crea la suscripción normal a precio completo.
+  const primerMes = await sweepOnvoIntro(new Date(), { deadline: t0 + 50_000 }).catch((e) => { logError("cron:primer-mes", "run_failed", { kind: errCode(e) }); return null; });
   const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
   const regalos = await deliverPendingGifts({ limit: 200 }).catch((e) => { logError("cron:regalos", "run_failed", { kind: errCode(e) }); return null; });
   // Testers (0029): correo y push de asignaciones sin avisar, aviso de 3 días antes del final y agradecimiento al terminar.
@@ -65,5 +68,5 @@ export async function GET(req: Request) {
   const novedades = await nudgeUnseenNews({ limit: 300, deadline: t0 + 58_500 }).catch((e) => { logError("cron:novedades", "run_failed", { kind: errCode(e) }); return null; });
   // Última corrida, para /admin/salud: solo conteos.
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
-  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, testers, identidad, soporte, novedades, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
 }

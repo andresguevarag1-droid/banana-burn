@@ -1,5 +1,5 @@
 -- ¿Qué migraciones ya corrí? Pégala completa en Supabase → SQL Editor y toca Run.
--- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0042 se puede repetir sin daño).
+-- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0043 se puede repetir sin daño).
 select m.archivo,
        case when m.aplicada then 'Ya está' else 'FALTA: córrela' end as estado
 from (values
@@ -33,6 +33,7 @@ from (values
   (28,'0039_textos_neutros.sql',     not exists (select 1 from public.challenges_catalog where program::text like '%cuando estás listo%' or program::text like '%cuando estás fresco%') and not exists (select 1 from public.challenge_plans where days::text like '%si estás cansado%')),
   (29,'0040_escala.sql',             to_regclass('public.ai_usage_daily') is not null and to_regprocedure('public.ai_budget_take(text,integer,bigint)') is not null and to_regprocedure('public.purge_housekeeping(integer)') is not null and to_regprocedure('public.auth_user_id_by_email(text)') is not null and to_regclass('public.comments_post_created') is not null),
   (30,'0041_monitoreo.sql',          to_regclass('public.app_errors') is not null and to_regclass('public.ops_heartbeats') is not null and to_regprocedure('public.app_error_report(text,text,text,text,text,text,text,text)') is not null and to_regprocedure('public.admin_error_summary(integer)') is not null and to_regprocedure('public.app_errors_purge(integer)') is not null and to_regprocedure('public.health_ping()') is not null),
-  (31,'0042_tilopay.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'subscriptions' and column_name = 'next_renewal_attempt_at') and exists (select 1 from pg_constraint where conname = 'payment_methods_provider_ok')))
+  (31,'0042_tilopay.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'subscriptions' and column_name = 'next_renewal_attempt_at') and exists (select 1 from pg_constraint where conname = 'payment_methods_provider_ok')),
+  (32,'0043_prueba_sin_tarjeta.sql',  exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'trial_charges' and column_name = 'promo') and exists (select 1 from pg_constraint where conname = 'trial_charges_promo_ok'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

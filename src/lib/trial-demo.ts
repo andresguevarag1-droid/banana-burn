@@ -1,7 +1,7 @@
 // Modo demo (sin Supabase): estados de ejemplo de la tarjeta y del primer cobro, para ver cada pantalla sin llamar a ONVO.
 // /app/suscripcion?demo=beta|prueba|nueva|fallo|procesando|cancelado. Sin parámetro: "beta" durante la beta y "prueba" después.
 import { BETA_ENDS_AT, betaLive } from "./plans";
-import { DAY_MS, amountMinorFor, cardStepFor, chargeView, type CardStep, type ChargeView, type TrialChargeRow } from "./trial";
+import { DAY_MS, amountMinorFor, cardStepFor, firstChargeMinor, chargeView, type CardStep, type ChargeView, type TrialChargeRow } from "./trial";
 
 export const DEMO_CARD_VARIANTS = ["beta", "prueba", "nueva", "fallo", "procesando", "cancelado"] as const;
 export type DemoCardVariant = (typeof DEMO_CARD_VARIANTS)[number];
@@ -39,8 +39,11 @@ export function demoCardState(v: string | null | undefined, now = new Date()): D
       const end = Date.parse(BETA_ENDS_AT);
       return { variant, charge: null, card: null, cardStep: "beta", locked: false, trial: end > t ? { endsAt: BETA_ENDS_AT, daysLeft: daysLeft(end), beta: true } : null };
     }
-    case "nueva":
-      return { variant, charge: null, card: null, cardStep: "trial", locked: true, trial: null };
+    case "nueva": {
+      // 0043: cuenta nueva en su prueba sin tarjeta: todo abierto y la oferta de dejar la tarjeta lista.
+      const end = t + 5 * DAY_MS;
+      return { variant, charge: null, card: null, cardStep: "trial", locked: false, trial: { endsAt: iso(end), daysLeft: daysLeft(end) } };
+    }
     case "fallo": {
       const r = row({ trial_started_at: iso(t - 7.4 * DAY_MS), trial_ends_at: iso(t - 0.4 * DAY_MS), charge_at: iso(t - 0.4 * DAY_MS), status: "retry_scheduled", attempts: 1, next_attempt_at: iso(t + 0.6 * DAY_MS), last_error: "rechazado" }, t);
       return { variant, charge: chargeView(r, now), card, cardStep: cardStepFor({ paidAccess: false, createdAt: r.created_at, row: r, now, betaEndsAt: "2000-01-01T00:00:00Z" }), locked: true, trial: null };
@@ -54,7 +57,7 @@ export function demoCardState(v: string | null | undefined, now = new Date()): D
       return { variant, charge: chargeView(r, now), card: { ...card, active: false }, cardStep: "none", locked: false, trial: { endsAt: r.trial_ends_at, daysLeft: daysLeft(Date.parse(r.trial_ends_at)) } };
     }
     default: {
-      const r = row({}, t);
+      const r = row({ promo: "primer_mes_50", amount_minor: firstChargeMinor("completo", "mes", "primer_mes_50") }, t);
       return { variant: "prueba", charge: chargeView(r, now), card, cardStep: "none", locked: false, trial: { endsAt: r.trial_ends_at, daysLeft: daysLeft(Date.parse(r.trial_ends_at)) } };
     }
   }

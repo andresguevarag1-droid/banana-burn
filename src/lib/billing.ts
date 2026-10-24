@@ -18,6 +18,14 @@ import {
 
 export const SUB_COLS = "id,user_id,provider,provider_customer_id,provider_subscription_id,status,price_id,plan,billing,cancel_at_period_end,canceled_at,current_period_start,current_period_end,created_at";
 
+/**
+ * Primer mes con 50 % en ONVO (0043): ONVO no tiene cupones para suscripciones, así que ese mes es un cobro único
+ * (PaymentIntent) y su fila en `subscriptions` lleva este prefijo + el ID del PaymentIntent. No existe como suscripción en
+ * ONVO: nunca se cancela allá; al terminar el mes, onvo-intro.ts crea la suscripción normal a precio completo.
+ */
+export const INTRO_PREFIX = "onvo-pi:";
+export const isIntroSub = (id: string | null | undefined) => !!id && id.startsWith(INTRO_PREFIX);
+
 export class BillingError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
@@ -102,8 +110,9 @@ export async function cancelAtPeriodEnd(v: Viewer, reason?: string): Promise<{ e
   if (!subs.length) throw new BillingError("No tienes una suscripción activa para cancelar.", 404);
   let endsAt: string | null = null;
   for (const r of subs) {
-    // Tilopay: la renovación la cobramos nosotros, así que cancelar es solo no cobrar el próximo periodo.
-    if (r.provider_subscription_id && r.provider !== "tilopay") {
+    // Tilopay y el primer mes con 50 % de ONVO: la renovación la hacemos nosotros, así que cancelar es solo no cobrar el
+    // próximo periodo.
+    if (r.provider_subscription_id && r.provider !== "tilopay" && !isIntroSub(r.provider_subscription_id)) {
       try {
         await cancelSubscription(r.provider_subscription_id);
       } catch (e) {
@@ -158,7 +167,7 @@ export async function syncProfilePlan(db: SupabaseClient, userId: string) {
 async function cancelOthers(db: SupabaseClient, keep: SubscriptionRow) {
   const { data } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", keep.user_id).neq("id", keep.id).in("status", ["active", "trialing", "past_due", "incomplete"]);
   for (const r of (data as SubscriptionRow[] | null) ?? []) {
-    if (r.provider_subscription_id && r.provider !== "tilopay") await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: errInfo(e) }));
+    if (r.provider_subscription_id && r.provider !== "tilopay" && !isIntroSub(r.provider_subscription_id)) await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: errInfo(e) }));
     await db.from("subscriptions").update({ status: r.status === "incomplete" ? "expired" : "canceled", cancel_at_period_end: false, canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", r.id);
     log("plan anterior reemplazado", { userId: keep.user_id, replaced: r.provider_subscription_id, by: keep.provider_subscription_id });
   }
@@ -201,10 +210,11 @@ async function referralAnnualPaid(db: SupabaseClient, userId: string) {
  * - Monto mayor (p. ej. impuestos): se activa con nota.
  * - ONVO no informó monto: se activa (el evento ya viene autenticado y la suscripción la creamos con el priceId del servidor).
  */
-export function checkPaidAmount(row: { plan: PlanId | null; billing: Billing | null }, amountMinor: number | null, currency: string | null): { ok: boolean; note?: string } {
+export function checkPaidAmount(row: { plan: PlanId | null; billing: Billing | null }, amountMinor: number | null, currency: string | null, expectedMinor?: number | null): { ok: boolean; note?: string } {
   if (currency && currency.toUpperCase() !== "USD") return { ok: false, note: `moneda ${currency} (se esperaba USD)` };
   if (!row.plan || !row.billing || amountMinor === null) return { ok: true };
-  const expected = expectedAmountMinor(row.plan, row.billing);
+  // `expectedMinor`: solo el primer cobro con el 50 % del primer mes (0043), calculado por el servidor desde trial_charges.
+  const expected = expectedMinor ?? expectedAmountMinor(row.plan, row.billing);
   if (amountMinor < expected) return { ok: false, note: `monto ${amountMinor} < ${expected} centavos USD de plans.ts` };
   if (amountMinor > expected) return { ok: true, note: `monto ${amountMinor} > ${expected} centavos USD de plans.ts (revisa el precio en ONVO)` };
   return { ok: true };
@@ -217,8 +227,8 @@ const planName = (p: PlanId | null) => PLANS.find((x) => x.id === p)?.name ?? "B
  * tarjeta guardada o consulta de la orden). Valida el monto contra plans.ts, deja el evento en payment_events (idempotente
  * por `reference`), cancela los otros planes, cierra el cobro de la prueba, recalcula el plan y manda el recibo.
  */
-export async function activateVerified(db: SupabaseClient, row: SubscriptionRow, a: { periodStart: string; periodEnd: string; amountMinor: number | null; currency: string | null; reference: string; provider: "tilopay" }): Promise<{ ok: boolean; plan?: string; note?: string }> {
-  const check = checkPaidAmount(row, a.amountMinor, a.currency);
+export async function activateVerified(db: SupabaseClient, row: SubscriptionRow, a: { periodStart: string; periodEnd: string; amountMinor: number | null; currency: string | null; reference: string; provider: "tilopay" | "onvo"; expectedMinor?: number | null }): Promise<{ ok: boolean; plan?: string; note?: string }> {
+  const check = checkPaidAmount(row, a.amountMinor, a.currency, a.expectedMinor);
   const key = `${a.provider}.charge.approved:${a.reference}`;
   const ins = await db.from("payment_events").insert({
     provider: a.provider, event_key: key, type: "charge.approved", user_id: row.user_id, provider_subscription_id: row.provider_subscription_id,
@@ -237,16 +247,16 @@ export async function activateVerified(db: SupabaseClient, row: SubscriptionRow,
   }
   // Renovación: el periodo nuevo empieza donde terminó el anterior (activate nunca retrocede el fin).
   const plan = await activate(db, row, { periodStart: a.periodStart, periodEnd: a.periodEnd, customerId: null });
-  await notifyPaid(row, a.amountMinor, a.currency, a.periodEnd, a.reference);
+  await notifyPaid(row, a.amountMinor, a.currency, a.periodEnd, a.reference, a.expectedMinor != null && row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : null);
   await done("processed", check.note ? `${check.note}, plan=${plan}` : `plan=${plan}`);
   log("cobro verificado activado", { provider: a.provider, userId: row.user_id, subscriptionId: row.provider_subscription_id, plan });
   return { ok: true, plan };
 }
 
 /** Recibo por correo (idempotente por referencia). Nunca bloquea el webhook. */
-async function notifyPaid(row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string) {
+async function notifyPaid(row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string, promoFull: number | null = null) {
   const amount = amountMinor != null ? amountMinor / 100 : row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0;
-  await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd }).catch(() => {});
+  await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd, promoFull }).catch(() => {});
 }
 
 /**
@@ -342,7 +352,8 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       return finish("ignored", "payment intent sin suscripción pendiente");
     }
     for (const row of candidates) {
-      if (!row.provider_subscription_id) continue;
+      // El primer mes con 50 % (cobro único) no es una suscripción de ONVO: lo activa el servidor al confirmar el cobro.
+      if (!row.provider_subscription_id || isIntroSub(row.provider_subscription_id)) continue;
       // Fuente de verdad: preguntamos a ONVO por la suscripción (servidor a servidor con la llave secreta).
       const st = await fetchSubscriptionState(row.provider_subscription_id);
       if (st.active) {

@@ -28,7 +28,7 @@ const faq = () => [
   ["¿Qué medicamentos aplica?", `${GLP1} recetados como semaglutida (Ozempic, Wegovy), tirzepatida (Mounjaro, Zepbound) o liraglutida (Saxenda). No trabajamos con péptidos sin aprobación ni compuestos de mercado gris.`],
   ["¿Por qué importa el músculo?", "Al bajar de peso rápido una parte puede ser músculo. Perder músculo baja tu metabolismo y tu fuerza y facilita el rebote. La fuerza y la proteína son las herramientas con más evidencia para protegerlo."],
   ["¿Y si dejo el medicamento?", "Los hábitos que construyes (fuerza, proteína, pesarte cada semana) son tu seguro. La app ajusta tus calorías con tu peso real para una transición gradual, siempre con tu médico."],
-  ["¿Cuánto cuesta?", `${offer().card ? `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido: guardas tu tarjeta, hoy no te cobramos y el día ${TRIAL_DAYS} se cobra tu plan, salvo que canceles antes.` : `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido.`} Después, Banana Shield viene en ${COMPLETO.name}: ${money(COMPLETO.price.mes)} al mes o ${money(COMPLETO.price.anual)} al año.`],
+  ["¿Cuánto cuesta?", `${offer().card ? `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido y sin tarjeta.` : `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido.`} Después, Banana Shield viene en ${COMPLETO.name}: ${money(COMPLETO.price.mes)} al mes o ${money(COMPLETO.price.anual)} al año.`],
 ] as const;
 
 export default function Glp1Landing() {
@@ -120,7 +120,7 @@ export default function Glp1Landing() {
         <p>Las capturas de la app muestran datos de ejemplo.</p>
         <p>Banana Burn no vende ni receta medicamentos y no reemplaza la atención médica. Ozempic®, Wegovy®, Mounjaro®, Zepbound® y Saxenda® son marcas de sus respectivos dueños; Banana Burn no está afiliado a ellos.</p>
       </aside>
-      <StickyCta note={o.card ? `Banana Shield gratis ${TRIAL_DAYS} días. Hoy no te cobramos.` : `Banana Shield gratis ${TRIAL_DAYS} días con todo incluido.`}><Link href={SIGNUP} data-cta="glp1-sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={o.card ? `Banana Shield gratis ${TRIAL_DAYS} días, sin tarjeta.` : `Banana Shield gratis ${TRIAL_DAYS} días con todo incluido.`}><Link href={SIGNUP} data-cta="glp1-sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }

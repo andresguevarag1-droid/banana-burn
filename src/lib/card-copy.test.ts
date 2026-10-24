@@ -8,7 +8,6 @@ import { demoCardState } from "./trial-demo";
 
 const BEFORE = new Date("2026-10-23T12:00:00Z");
 const AFTER = new Date("2026-11-01T06:00:00Z");
-const LINE = "7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, salvo que canceles antes.";
 const RULES = /[\u{1F300}-\u{1FAFF}☀-➿]|—|\bIA\b|·/u;
 
 describe("textos de la oferta según la fecha", () => {
@@ -19,12 +18,14 @@ describe("textos de la oferta según la fecha", () => {
     expect(o.signupChecks).toEqual(["7 días gratis", "Todo incluido"]);
     expect(JSON.stringify(o)).not.toMatch(/sin tarjeta/i);
   });
-  it("desde el 1 de noviembre: la tarjeta, sin decir nunca 'sin tarjeta'", () => {
+  it("0043, desde el 1 de noviembre: 7 días sin tarjeta y la oferta opcional del 50 % del primer mes", () => {
     const o = offer(AFTER);
     expect(o.card).toBe(true);
-    expect(o.note).toBe(LINE);
-    const all = JSON.stringify({ ...o, from: o.from("$5.00"), pricingIntro: o.pricingIntro(50), faqTrial: o.faqTrial("Entreno + Nutrición") });
-    expect(all).not.toMatch(/sin tarjeta|no pedimos tarjeta|sin cobros automáticos/i);
+    expect(o.note).toBe("7 días gratis con todo incluido, sin tarjeta.");
+    expect(o.signupChecks).toEqual(["7 días gratis", "Sin tarjeta"]);
+    const all = JSON.stringify({ ...o, from: o.from("$9.99"), pricingIntro: o.pricingIntro(50), faqTrial: o.faqTrial("Entreno + Nutrición") });
+    expect(all).toMatch(/50 %/);
+    expect(all).not.toMatch(/se pide tarjeta|guardas tu tarjeta, hoy no te cobramos y el día 7/i);
     expect(o.faqCancel).toMatch(/8 días hábiles/);
   });
   it("sin emojis, rayas largas, cadenas con punto medio ni 'IA' en ninguno de los dos", () => {
@@ -97,7 +98,9 @@ describe("correos del cobro", () => {
   const d = { name: "Ana López", plan: "Entreno + Nutrición", amount: 14.99, chargeAt: "2026-11-17T15:00:00Z", kind: "prueba" as const, card: "Visa terminada en 4242" };
   it("prueba iniciada: hoy no se cobra, cuándo y cuánto", () => {
     const e = pruebaIniciada(d);
-    expect(e.text).toContain(LINE);
+    expect(e.text).toMatch(/Hoy no te cobramos/);
+    expect(pruebaIniciada({ ...d, amount: 7.49, promo: true }).subject).toMatch(/primer mes con 50 %/);
+    expect(recordatorioCobro({ ...d, amount: 7.49, promo: true }).preheader).toMatch(/primer mes con 50 % de descuento/);
     expect(e.text).toMatch(/17 de noviembre de 2026/);
     expect(e.html).toContain("/app/suscripcion");
   });
@@ -122,7 +125,7 @@ describe("modo demo", () => {
     expect(demoCardState(null, AFTER).variant).toBe("prueba");
     expect(demoCardState("fallo", AFTER)).toMatchObject({ locked: true, cardStep: "pay" });
     expect(demoCardState("fallo", AFTER).charge?.phase).toBe("reintento");
-    expect(demoCardState("nueva", AFTER)).toMatchObject({ cardStep: "trial", locked: true });
+    expect(demoCardState("nueva", AFTER)).toMatchObject({ cardStep: "trial", locked: false });
     expect(demoCardState("raro", AFTER).variant).toBe("prueba");
   });
 });

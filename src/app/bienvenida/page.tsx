@@ -29,29 +29,32 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
 
   // Prueba gratis (7 días desde el registro, o el período de prueba del servicio) y si hoy tiene nutrición: misma regla
   // que el resto de la app (entitlements.ts). Con plan pagado o del equipo no hay prueba que mostrar.
-  // Desde el fin de la beta, una cuenta nueva sin prueba todavía elige plan y guarda su tarjeta al final (cardStep "trial").
-  let trialEndsAt: string | null = null, trialBeta = false, nutrition = true, cardRequired = false;
+  // 0043: si todavía no dejó su tarjeta (beta o prueba corriendo), al final se ofrece dejarla lista con 50 % el primer mes.
+  let trialEndsAt: string | null = null, trialBeta = false, nutrition = true, cardOffer = false, chargeAt: string | null = null;
   if (v.demo) {
-    // Demo igual que una cuenta real de la beta: acceso gratis hasta el fin de la beta (las mismas fechas que el aviso de la tarjeta).
-    cardRequired = !betaLive();
-    trialEndsAt = cardRequired ? null : BETA_ENDS_AT;
-    trialBeta = !cardRequired;
+    // Demo igual que una cuenta real: la beta hasta su fin, o una cuenta nueva con sus 7 días.
+    const beta = betaLive();
+    trialEndsAt = beta ? BETA_ENDS_AT : new Date(Date.now() + 7 * 864e5).toISOString();
+    trialBeta = beta;
+    cardOffer = true;
+    chargeAt = trialEndsAt;
   } else {
     const ent = await getEntitlements(v);
     nutrition = ent.nutrition || ent.cardStep === "trial";
-    cardRequired = ent.cardStep === "trial";
+    cardOffer = ent.cardStep === "trial" || ent.cardStep === "beta";
     if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
+    chargeAt = cardOffer ? (ent.cardStep === "beta" ? BETA_ENDS_AT : trialEndsAt) : null;
   }
   // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
   const vista = (await searchParams).vista;
-  const startOnCard = v.demo && cardRequired && vista === "tarjeta";
+  const startOnCard = v.demo && cardOffer && vista === "tarjeta";
   // Solo demo: ?vista=lenguaje abre el paso de experiencia y "Cómo te hablo" para revisarlo.
   const startOnVoice = v.demo && vista === "lenguaje";
 
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardRequired={cardRequired} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
+      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={cardOffer} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
     </>
   );
 }

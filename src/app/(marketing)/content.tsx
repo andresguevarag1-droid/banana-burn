@@ -1,4 +1,5 @@
 // Contenido compartido de las páginas públicas (inicio, precios, GLP-1): oferta, preguntas y comparación.
+import { PROMO_PCT, promoPrice } from "@/lib/trial";
 import { TECHNIQUE_COUNT } from "@/lib/exercise-frames";
 import Link from "next/link";
 import { ArrowRight, Check, Minus, X } from "@/components/icons";
@@ -34,7 +35,8 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   ["¿Cuánto peso voy a bajar?", "Depende de ti y de tu punto de partida, así que no prometemos un número. Un ritmo sano es de 0.5 a 1 % de tu peso por semana, y Banana Burn mide tu tendencia real para mantenerte en ese rango sin perder músculo."],
   ["¿Cómo cancelo? ¿Hay reembolso?", o.faqCancel],
   ["¿Qué diferencia hay entre los planes?", `Entreno incluye tu rutina, el peso de cada serie, Coach Banana para tus dudas de entreno (hasta ${COACH_LIMITS.entreno.day} preguntas al día), tu progreso, agua, pasos y sueño, la comunidad, los retos gratis y los niveles. Entreno + Nutrición suma tus calorías y macros, el registro de comidas, las recetas, el ajuste semanal según tu peso, Banana Shield y Coach Banana también para tu comida (hasta ${COACH_LIMITS.completo.day} preguntas al día). Los retos Premium no vienen en ningún plan: se compran aparte con un pago único.`],
-  ["¿Cómo pago?", "Con tarjeta de crédito o débito, procesado por ONVO Pay. Los precios están en dólares (USD) y tu banco hace la conversión si tu tarjeta es en otra moneda."],
+  ["¿Cómo pago?", "Con tarjeta de crédito o débito, procesado por ONVO Pay (tarjetas de Costa Rica) o Tilopay (tarjetas de otros países). Los precios están en dólares (USD) y tu banco hace la conversión si tu tarjeta es en otra moneda."],
+  ["¿Hay descuento en el primer mes?", `Sí. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta ${PROMO_PCT} % menos: ${money(promoPrice("entreno"))} en Entreno y ${money(promoPrice("completo"))} en ${COMPLETO.name}. Ese día no se cobra nada, te avisamos 2 días antes y cancelas cuando quieras desde Mi plan. Es una vez por cuenta, si nunca pagaste un plan; el anual no tiene este descuento.`],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras. Los tratamos según nuestra Política de privacidad y la ley de protección de datos de Costa Rica, donde está la empresa."],
   ["¿Es en español de verdad?", "Sí. Banana Burn está en español latino desde el primer día y pensada para Latinoamérica: los ejercicios, el coach y las comidas. No es una app traducida."],
   ["¿Tengo que descargarla de una tienda?", "No. Es una app web: la abres en el navegador y la instalas en tu pantalla de inicio, en iPhone o Android."],
@@ -42,7 +44,7 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
 };
 
 /** Preguntas de /precios: las de dinero primero. */
-export const pricingFaq = (now = new Date()) => { const f = faq(now); return [0, 7, 8, 1, 5, 10].map((i) => f[i]); };
+export const pricingFaq = (now = new Date()) => { const f = faq(now); return [0, 10, 7, 8, 1, 5, 11].map((i) => f[i]); };
 
 type Mark = true | false | string;
 const PAY_ROW = "Cómo se paga";
