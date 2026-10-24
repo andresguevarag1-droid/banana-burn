@@ -31,7 +31,6 @@ vi.mock("@/lib/push", () => ({ sendPush: vi.fn(async () => 1) }));
 const mon = vi.hoisted(() => ({ recordServerError: vi.fn() }));
 vi.mock("@/lib/monitor/server", () => mon);
 
-const { OnvoError } = await import("./onvo");
 const tb = await import("./trial-billing");
 const tp = await import("./tilopay-billing");
 const intro = await import("./onvo-intro");
