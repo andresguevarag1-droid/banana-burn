@@ -16,6 +16,8 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { resilientFetch, type FetchLike } from "./resilient-fetch";
 import type { Billing, PlanId } from "./plans";
+import { isStaff } from "./admin-perms";
+import type { Role } from "./supabase/server";
 
 if (typeof window !== "undefined") {
   throw new Error("src/lib/tilopay.ts es solo para el servidor");
@@ -26,9 +28,28 @@ const DEFAULT_REMOVE_CARD_PATH = "/api/v1/removeCard";
 
 // ───────────────────────── Configuración ─────────────────────────
 
-/** ¿Tilopay está listo y encendido? Sin las cuatro variables, la app sigue toda con ONVO como hoy. */
+/**
+ * Modo de Tilopay según TILOPAY_ENABLED (y las tres credenciales):
+ *   "all"   TILOPAY_ENABLED=1: se ofrece a todos.
+ *   "staff" TILOPAY_ENABLED=staff: solo cuentas del equipo (para probar en producción sin tocar a nadie más).
+ *   "off"   cualquier otro valor o falta una credencial: todo sigue con ONVO como hoy.
+ */
+export type TilopayMode = "off" | "staff" | "all";
+export function tilopayMode(env: NodeJS.ProcessEnv = process.env): TilopayMode {
+  if (!(env.TILOPAY_API_USER?.trim() && env.TILOPAY_API_PASSWORD?.trim() && env.TILOPAY_KEY?.trim())) return "off";
+  const v = env.TILOPAY_ENABLED?.trim().toLowerCase();
+  return v === "1" ? "all" : v === "staff" ? "staff" : "off";
+}
+
+/** ¿El motor de Tilopay corre? (cobros, renovaciones y vuelta de quien ya lo usa). En modo staff también. */
 export function isTilopayConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.TILOPAY_API_USER?.trim() && env.TILOPAY_API_PASSWORD?.trim() && env.TILOPAY_KEY?.trim() && env.TILOPAY_ENABLED?.trim() === "1");
+  return tilopayMode(env) !== "off";
+}
+
+/** ¿Se le ofrece Tilopay a esta persona? Con TILOPAY_ENABLED=staff, solo al equipo (coach, soporte, admin, superadmin). */
+export function tilopayOfferedTo(role: Role | null | undefined, env: NodeJS.ProcessEnv = process.env): boolean {
+  const m = tilopayMode(env);
+  return m === "all" || (m === "staff" && isStaff(role));
 }
 
 export class TilopayError extends Error {
