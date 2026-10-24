@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   // Cada intento puede crear un cliente y una suscripción en ONVO: tope por persona y doble clic unido en uno.
   // En memoria (por instancia) y en la base (compartido entre instancias, 0023).
   if (!memoryRateLimit(`checkout:${v.id}`, 10, 10 * 60_000) || !(await dbRateLimit(adminClient(), `checkout:${v.id}`, 3600, 20)))
-    return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
+    return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429, headers: { "Retry-After": "600" } });
   try {
     const { url } = await singleFlight(`checkout:${v.id}:${pb.plan}:${pb.billing}`, () => startCheckout(v, pb.plan, pb.billing));
     return NextResponse.json({ ok: true, url });

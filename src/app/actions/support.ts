@@ -15,6 +15,7 @@ import { deviceLabel, MESSAGE_MAX, ticketError, ticketNumber } from "@/lib/suppo
 import { deliverSupportNotices } from "@/lib/support-server";
 import { errCode, logError } from "@/lib/log";
 import { isUuid } from "@/lib/security";
+import { limitError } from "@/lib/security/limits";
 
 export type SupportResult = { ok: boolean; error?: string; id?: number; number?: string; demo?: boolean };
 
@@ -85,6 +86,7 @@ export async function replyTicket(ticketId: number, body: string): Promise<Suppo
 export async function ticketAction(ticketId: number, action: "confirmar" | "reabrir"): Promise<SupportResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("registro", v.id); if (lim) return { ok: false, error: lim }; }
   if (!Number.isInteger(ticketId) || ticketId < 1 || (action !== "confirmar" && action !== "reabrir")) return { ok: false, error: "Acción inválida." };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();

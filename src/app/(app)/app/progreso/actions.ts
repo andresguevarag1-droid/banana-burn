@@ -3,12 +3,14 @@ import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { accessError } from "@/lib/entitlements";
 import { todayFor } from "@/lib/today";
+import { limitError } from "@/lib/security/limits";
 
 export type FormState = { ok?: string; error?: string };
 
 export async function logWeight(_: FormState, fd: FormData): Promise<FormState> {
   const v = await getViewer();
   if (!v) return { error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("progreso", v.id); if (lim) return { error: lim }; }
   const kg = Number(String(fd.get("kg")).replace(",", "."));
   if (!(kg >= 30 && kg <= 300)) return { error: "Peso inválido." };
   const kgTxt = kg.toLocaleString("es-419", { maximumFractionDigits: 1 });
@@ -28,6 +30,7 @@ export async function logWeight(_: FormState, fd: FormData): Promise<FormState> 
 export async function saveProfile(_: FormState, fd: FormData): Promise<FormState> {
   const v = await getViewer();
   if (!v) return { error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("progreso", v.id); if (lim) return { error: lim }; }
   if (v.demo) return { ok: "Demo: perfil no guardado." };
   const g = (k: string) => String(fd.get(k) ?? "").trim();
   const start = Number(g("start_weight").replace(",", ".")), goal = Number(g("goal_weight").replace(",", "."));

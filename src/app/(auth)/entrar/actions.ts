@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { createClient as createSupabase } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
-import { memoryRateLimit } from "@/lib/security";
+import { clientIpFrom, memoryRateLimit } from "@/lib/security";
 import { dbRateLimitAll, keyPart } from "@/lib/security/db-rate-limit";
 import { attributeReferral } from "@/lib/referrals-server";
 import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./validate";
@@ -15,7 +15,7 @@ import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./val
 export type AuthResult = { ok: true } | { ok: false; error: string; fallback?: boolean };
 
 async function limited(kind: string, email: string, admin: ReturnType<typeof adminClient>) {
-  const ip = ((await headers()).get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  const ip = clientIpFrom(await headers());
   // Primer freno por instancia: 10 intentos por IP y 5 por correo cada 10 minutos.
   if (!memoryRateLimit(`${kind}:ip:${ip}`, 10, 600_000) || !memoryRateLimit(`${kind}:mail:${email}`, 5, 600_000)) return true;
   // Freno compartido entre instancias (0023): el registro crea cuentas confirmadas sin pasar por los límites de Supabase Auth.
@@ -31,6 +31,14 @@ async function limited(kind: string, email: string, admin: ReturnType<typeof adm
 const TOO_MANY = "Demasiados intentos. Espera unos minutos e intenta de nuevo.";
 
 async function findUserByEmail(admin: NonNullable<ReturnType<typeof adminClient>>, email: string) {
+  // Con 0040: una búsqueda con índice en vez de recorrer la lista de Auth de a 1000 (con miles de cuentas era lento).
+  const { data: id, error } = await admin.rpc("auth_user_id_by_email", { p_email: email });
+  if (!error) {
+    if (typeof id !== "string") return null;
+    const { data } = await admin.auth.admin.getUserById(id);
+    return data.user ?? null;
+  }
+  // Sin 0040 (la función no existe): el recorrido de antes.
   for (let page = 1; page <= 20; page++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) return null;

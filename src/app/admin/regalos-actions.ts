@@ -9,6 +9,7 @@ import { ValidationError } from "@/lib/admin-validate";
 import { GIFT_BULK_MAX, GIFT_MAX_MONTHS, GIFT_MESSAGE_MAX, monthsLabel, planLabel } from "@/lib/gifts";
 import { deliverPendingGifts } from "@/lib/gifts-server";
 import { isEmailConfigured } from "@/lib/email/send";
+import { limitError } from "@/lib/security/limits";
 
 function pgMsg(e: { code?: string; message?: string } | null): string {
   if (!e) return "Error de base de datos.";
@@ -60,7 +61,9 @@ const UUIDS = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 /** El mismo regalo a varias personas: casillas de la lista (`ids`) o ids pegados en el campo de texto. */
 export async function giftMonthsBulk(_: ActionState, fd: FormData): Promise<ActionState> {
-  return run("users.gift", fd, async ({ sb }) => {
+  return run("users.gift", fd, async ({ v, sb }) => {
+    const lim = v.demo ? null : await limitError("admin:masivo", v.id);
+    if (lim) return fail(lim);
     const picked = fd.getAll("ids").map(String);
     const pasted = val.text(fd, "pasted", { max: 40_000 }).match(UUIDS) ?? [];
     const ids = [...new Set([...picked, ...pasted].map((x) => x.toLowerCase()).filter(val.isUuid))];

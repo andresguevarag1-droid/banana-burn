@@ -1,6 +1,6 @@
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { getDaily } from "@/lib/daily";
+import { getDaily, prefetchDaily } from "@/lib/daily";
 import { WeekTabs } from "./week-tabs";
 import Link from "next/link";
 import { ExpressCard } from "@/components/express-chips";
@@ -22,11 +22,11 @@ export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
   const v = (await getViewer())!;
-  const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
+  prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
+  const [a, voice, doneTpls] = await Promise.all([getAthlete(v), getVoice(v), templatesDoneToday(v)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const block = (d.week % 6) + 1;
-  const doneTpls = await templatesDoneToday(v);
   const todayTpl = d.weekPlan.find((p) => p.dow === d.today.dow)?.tpl ?? null;
   // Hoy cuenta como hecho si ya entrenaste hoy (la plantilla del día u otra sesión); los días anteriores, por actividad registrada.
   const doneToday = doneTpls.length > 0 || g.trainedToday;

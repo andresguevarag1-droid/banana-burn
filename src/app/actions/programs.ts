@@ -10,6 +10,7 @@ import { getProgramStates } from "@/lib/programs-server";
 import { isProgram } from "@/lib/challenges";
 import { startPlan } from "@/lib/programs";
 import { APP_LOCKED_MSG } from "@/lib/plan-access";
+import { limitError } from "@/lib/security/limits";
 
 export type ProgramResult = { ok: boolean; demo?: boolean; error?: string; conflict?: { slug: string; title: string }; result?: string };
 
@@ -34,6 +35,7 @@ const refresh = (slug: string) => { revalidatePath("/app", "layout"); revalidate
 export async function startProgram(slug: string, pauseCurrent = false): Promise<ProgramResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("programas", v.id); if (lim) return { ok: false, error: lim }; }
   if (typeof slug !== "string" || !SLUG.test(slug)) return { ok: false, error: "Este programa ya no está disponible." };
   const [catalog, owned, states, ent] = await Promise.all([getCatalog(v.demo), getOwned(v), getProgramStates(v), getEntitlements(v)]);
   const c = catalog.get(slug);
@@ -52,6 +54,7 @@ export async function startProgram(slug: string, pauseCurrent = false): Promise<
 export async function pauseProgram(slug: string): Promise<ProgramResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("programas", v.id); if (lim) return { ok: false, error: lim }; }
   if (typeof slug !== "string" || !SLUG.test(slug)) return { ok: false, error: "Este programa ya no está disponible." };
   if (v.demo) return { ok: true, demo: true };
   const { error } = await (await createClient()).rpc("program_pause", { p_slug: slug, p_day: todayFor(v).iso });
@@ -63,6 +66,7 @@ export async function pauseProgram(slug: string): Promise<ProgramResult> {
 export async function leaveProgram(slug: string): Promise<ProgramResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("programas", v.id); if (lim) return { ok: false, error: lim }; }
   if (typeof slug !== "string" || !SLUG.test(slug)) return { ok: false, error: "Este programa ya no está disponible." };
   if (v.demo) return { ok: true, demo: true };
   const { error } = await (await createClient()).rpc("program_leave", { p_slug: slug });
@@ -74,6 +78,7 @@ export async function leaveProgram(slug: string): Promise<ProgramResult> {
 export async function finishProgram(slug: string): Promise<ProgramResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("programas", v.id); if (lim) return { ok: false, error: lim }; }
   if (typeof slug !== "string" || !SLUG.test(slug)) return { ok: false, error: "Este programa ya no está disponible." };
   if (v.demo) return { ok: true, demo: true };
   const { error } = await (await createClient()).rpc("program_finish", { p_slug: slug, p_day: todayFor(v).iso });

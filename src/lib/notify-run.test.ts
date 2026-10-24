@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { allPages } from "./notify-run";
+import { forEachLimit } from "./concurrency";
 
 describe("allPages", () => {
   it("lee todas las páginas cuando hay más de 1000 filas", async () => {
@@ -17,5 +18,25 @@ describe("allPages", () => {
     const page = vi.fn(async () => ({ data: [], error: null }));
     expect((await allPages(page)).data).toEqual([]);
     expect(page).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("forEachLimit (personas en paralelo en el cron)", () => {
+  it("procesa todo sin pasar del límite a la vez", async () => {
+    let live = 0, peak = 0;
+    const seen: number[] = [];
+    await forEachLimit(Array.from({ length: 30 }, (_, i) => i), 8, async (i) => {
+      live++; peak = Math.max(peak, live);
+      await new Promise((r) => setTimeout(r, 2));
+      seen.push(i); live--;
+    });
+    expect(seen.sort((a, b) => a - b)).toEqual(Array.from({ length: 30 }, (_, i) => i));
+    expect(peak).toBe(8);
+  });
+  it("lista vacía o límite raro no se cuelga", async () => {
+    await expect(forEachLimit([], 8, async () => {})).resolves.toBeUndefined();
+    const fn = vi.fn(async () => {});
+    await forEachLimit([1, 2], 0, fn);
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 });

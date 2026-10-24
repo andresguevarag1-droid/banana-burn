@@ -1806,6 +1806,93 @@ select bbtest.ok('0041: admin ve el resumen agrupado', (select hits from public.
 select bbtest.fails('0041: el resumen valida la ventana', $q$ select * from public.admin_error_summary(0) $q$, '22023');
 reset role;
 
+
+-- ───────────── 18. Escala para el lanzamiento (0040) ─────────────
+-- 17a. Tope diario global del Coach IA: solo service_role, atómico, corta por preguntas y por tokens.
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('0040: un usuario no reserva preguntas globales', $q$ select public.ai_budget_take('chat', 100, 0) $q$, '42501');
+select bbtest.fails('0040: un usuario no suma tokens', $q$ select public.ai_budget_add('chat', 0, 1, 1, 0, 0) $q$, '42501');
+select bbtest.zero('0040: un usuario no lee el uso global', $q$ select * from public.ai_usage_daily $q$);
+select bbtest.fails('0040: un usuario no escribe el uso global', $q$ insert into public.ai_usage_daily (day, kind) values (current_date, 'chat') $q$, '42501');
+select bbtest.fails('0040: un usuario no corre la limpieza', $q$ select public.purge_housekeeping(10) $q$, '42501');
+select bbtest.fails('0040: un usuario no busca cuentas por correo', $q$ select public.auth_user_id_by_email('ana@prueba.test') $q$, '42501');
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0040: anon no reserva preguntas globales', $q$ select public.ai_budget_take('chat', 100, 0) $q$, '42501');
+select bbtest.fails('0040: anon no busca cuentas por correo', $q$ select public.auth_user_id_by_email('ana@prueba.test') $q$, '42501');
+reset role;
+-- Un JWT de usuario no puede usarlas aunque el rol de base fuera service_role.
+set role service_role; select bbtest.login('A');
+select bbtest.fails('0040: con sesión de usuario no reserva', $q$ select public.ai_budget_take('chat', 100, 0) $q$, '42501');
+select bbtest.fails('0040: con sesión de usuario no busca correos', $q$ select public.auth_user_id_by_email('ana@prueba.test') $q$, '42501');
+reset role;
+delete from public.ai_usage_daily;
+set role service_role; select bbtest.login(null);
+select bbtest.ok('0040: reserva dentro del tope', public.ai_budget_take('feedback', 2, 0) and public.ai_budget_take('feedback', 2, 0));
+select bbtest.ok('0040: corta al llegar al tope de preguntas', not public.ai_budget_take('feedback', 2, 0));
+select bbtest.ok('0040: el chat tiene su propio contador', public.ai_budget_take('chat', 2, 1000));
+select bbtest.ok('0040: tope 0 = apagado', not public.ai_budget_take('chat', 0, 0));
+select public.ai_budget_add('chat', 0, 600, 300, 50, 50);
+select bbtest.ok('0040: corta al llegar al tope de tokens', not public.ai_budget_take('chat', 100, 1000));
+select bbtest.ok('0040: sin tope de tokens sigue contando preguntas', public.ai_budget_take('chat', 100, 0));
+select public.ai_budget_add('feedback', -1, 0, 0, 0, 0);
+select bbtest.ok('0040: devolver una pregunta abre un lugar', public.ai_budget_take('feedback', 2, 0));
+select public.ai_budget_add('feedback', -50, -5, 0, 0, 0);
+select bbtest.fails('0040: tipo inválido', $q$ select public.ai_budget_take('otro', 5, 0) $q$, '22023');
+reset role;
+select bbtest.ok('0040: los conteos nunca bajan de cero ni restan tokens', (select requests = 0 and input_tokens = 0 from public.ai_usage_daily where kind = 'feedback' and day = public.cr_today()));
+select bbtest.ok('0040: el uso del chat quedó con sus tokens', (select requests = 2 and input_tokens = 600 and output_tokens = 300 and cache_read_tokens = 50 and cache_write_tokens = 50 from public.ai_usage_daily where kind = 'chat' and day = public.cr_today()));
+delete from public.ai_usage_daily;
+
+-- 17b. Limpieza: borra solo lo viejo y por lotes.
+insert into public.rate_limits (key, window_start, n) values ('vieja:1', now() - interval '9 days', 1), ('vieja:2', now() - interval '10 days', 1), ('nueva:1', now() - interval '1 hour', 1);
+insert into public.notification_log (user_id, kind, local_day) values (bbtest.u('A'), 'purga_vieja', current_date - 200), (bbtest.u('A'), 'purga_nueva', current_date - 3);
+insert into public.notifications (user_id, kind, title, read_at, created_at) values
+  (bbtest.u('A'), 'purga', 'leida vieja', now() - interval '200 days', now() - interval '200 days'),
+  (bbtest.u('A'), 'purga', 'sin leer reciente', null, now() - interval '200 days'),
+  (bbtest.u('A'), 'purga', 'sin leer muy vieja', null, now() - interval '400 days');
+insert into public.coach_usage (user_id, day, kind, n) values (bbtest.u('A'), current_date - 500, 'chat', 3) on conflict do nothing;
+set role service_role; select bbtest.login(null);
+select bbtest.ok('0040: la limpieza respeta el lote', (public.purge_housekeeping(1) ->> 'rate_limits')::int = 1);
+select bbtest.ok('0040: la limpieza devuelve sus conteos', public.purge_housekeeping(5000) ? 'notifications');
+reset role;
+select bbtest.ok('0040: ventanas viejas de rate_limits borradas, la actual intacta', not exists (select 1 from public.rate_limits where key like 'vieja:%') and exists (select 1 from public.rate_limits where key = 'nueva:1'));
+select bbtest.ok('0040: registro de avisos viejo borrado, el reciente intacto', not exists (select 1 from public.notification_log where kind = 'purga_vieja') and exists (select 1 from public.notification_log where kind = 'purga_nueva'));
+select bbtest.ok('0040: avisos leídos viejos y los de más de un año borrados; sin leer de 200 días se queda', (select array_agg(title order by title) = array['sin leer reciente'] from public.notifications where kind = 'purga'));
+select bbtest.ok('0040: uso del coach de hace más de 400 días borrado', not exists (select 1 from public.coach_usage where user_id = bbtest.u('A') and day = current_date - 500));
+delete from public.rate_limits where key = 'nueva:1';
+delete from public.notification_log where kind = 'purga_nueva';
+delete from public.notifications where kind = 'purga';
+
+-- 17c. Cuenta por correo.
+insert into auth.users (id, email) values ('40404040-0000-4000-8000-000000000040', 'escala@prueba.test') on conflict (id) do nothing;
+set role service_role; select bbtest.login(null);
+select bbtest.ok('0040: encuentra la cuenta por correo (con espacios y mayúsculas)', public.auth_user_id_by_email('  Escala@Prueba.test ') = '40404040-0000-4000-8000-000000000040');
+select bbtest.ok('0040: correo inexistente = null', public.auth_user_id_by_email('nadie@prueba.test') is null);
+reset role;
+
+-- 17d. Conteos del feed: mismos números que contar las filas con la RLS de quien mira.
+insert into public.posts (user_id, kind, body, visibility) values (bbtest.u('B'), 'text', 'conteo 0040', 'publico');
+insert into public.kudos (post_id, user_id) select id, bbtest.u('A') from public.posts where body = 'conteo 0040';
+insert into public.kudos (post_id, user_id) select id, bbtest.u('D') from public.posts where body = 'conteo 0040';
+insert into public.comments (post_id, user_id, body) select id, bbtest.u('D'), 'visible' from public.posts where body = 'conteo 0040';
+insert into public.comments (post_id, user_id, body, hidden) select id, bbtest.u('D'), 'oculto', true from public.posts where body = 'conteo 0040';
+select bbtest.ok('0040: feed_counts corre con la RLS de quien mira (security invoker)', (select not prosecdef from pg_proc where proname = 'feed_counts'));
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0040: feed_counts cuenta bananas, comentarios visibles y la mía', (select kudos = 2 and comments = 1 and i_kudo from public.feed_counts((select array_agg(id) from public.posts where body = 'conteo 0040'))));
+select bbtest.login('D');
+select bbtest.ok('0040: feed_counts coincide con contar las filas', (select f.kudos = (select count(*) from public.kudos k where k.post_id = f.post_id) and f.comments = (select count(*) from public.comments c where c.post_id = f.post_id) from public.feed_counts((select array_agg(id) from public.posts where body = 'conteo 0040')) f));
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0040: anon no usa feed_counts', $q$ select * from public.feed_counts(array[1::bigint]) $q$, '42501');
+reset role;
+delete from public.posts where body = 'conteo 0040';
+
+-- 17e. Índices nuevos.
+select bbtest.ok('0040: índices de lecturas frecuentes', to_regclass('public.comments_post_created') is not null and to_regclass('public.follows_followee') is not null
+  and to_regclass('public.posts_workout') is not null and to_regclass('public.user_challenges_active_id') is not null
+  and to_regclass('public.notifications_created') is not null and to_regclass('public.notification_log_local_day') is not null and to_regclass('public.coach_quota_tickets_created') is not null);
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

@@ -12,6 +12,7 @@ import { getLibEx } from "@/lib/library";
 import { normalizeWorkout, serverPrs, workoutTiming, type Finished } from "./validate";
 import { errCode, logError } from "@/lib/log";
 import { parseProgramTemplate, weeksOf } from "@/lib/programs";
+import { limitError } from "@/lib/security/limits";
 
 const nameOf = (id: string) => (id.startsWith("ds:") ? getLibEx(id.slice(3))?.n : EX[id as ExerciseId]?.n) ?? id;
 
@@ -36,6 +37,7 @@ export async function saveWorkout(input: Finished): Promise<SaveResult> {
 async function save(input: Finished): Promise<SaveResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar; tu entreno sigue guardado en este teléfono." };
+  { const lim = v.demo ? null : await limitError("entreno:guardar", v.id); if (lim) return { ok: false, error: lim }; }
   const w = normalizeWorkout(input);
   if (!w) return { ok: false, error: "Datos del entreno inválidos." };
   if (v.demo) return { ok: true, demo: true };

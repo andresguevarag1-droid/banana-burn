@@ -7,6 +7,7 @@ import { isBadgeId } from "@/lib/profile-power";
 import { validateSubmission } from "@/lib/identity";
 import { COUNTRIES } from "@/lib/countries";
 import { errCode, logError, logWarn } from "@/lib/log";
+import { limitError } from "@/lib/security/limits";
 
 type Res = { ok: boolean; error?: string; demo?: boolean };
 const BUCKET = "identidad";
@@ -15,6 +16,7 @@ const BUCKET = "identidad";
 export async function setFeaturedBadge(id: string | null): Promise<Res> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   if (id !== null && !isBadgeId(id)) return { ok: false, error: "Esa insignia no existe." };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
@@ -74,6 +76,7 @@ export async function submitVerification(raw: { docType?: unknown; country?: unk
 export async function withdrawVerification(): Promise<Res> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { data, error } = await sb.rpc("identity_withdraw");

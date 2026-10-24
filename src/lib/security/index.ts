@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 
 export { safeNext } from "./redirect";
+import { clientIpFrom } from "./ip";
 
 /** Comparación en tiempo constante (también oculta la longitud: compara hashes SHA-256). */
 export function safeEqual(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -75,8 +76,10 @@ export function singleFlight<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return p;
 }
 
+export { clientIpFrom } from "./ip";
+/** IP del cliente. En Vercel, x-real-ip y x-forwarded-for los pone la plataforma (no se pueden falsificar desde afuera). */
 export function clientIp(req: Request): string {
-  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "local";
+  return clientIpFrom(req.headers);
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

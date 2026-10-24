@@ -10,6 +10,7 @@ import { cleanRecipe, recipeFromRow, type UserRecipe } from "@/lib/user-recipes"
 import { localDayStartUtc } from "@/lib/foods-gamify";
 import { MEAL_XP_DAILY_MAX, mealXpFor } from "@/lib/gamify";
 import type { MealItem, Slot } from "@/lib/meals-shared";
+import { limitError } from "@/lib/security/limits";
 
 const SLOTS: Slot[] = ["desayuno", "almuerzo", "merienda", "cena"];
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -55,6 +56,7 @@ export async function addMeal(input: {
 }): Promise<AddMealResult> {
   const v = await getViewer();
   if (!v || !SLOTS.includes(input.slot)) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   // Registro de comidas: solo Entreno + Nutrición (o prueba/beta). La base de datos lo vuelve a exigir (0022).
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
@@ -95,6 +97,7 @@ export async function addMeal(input: {
 export async function removeMeal(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };
@@ -109,6 +112,7 @@ export async function removeMeal(id: string): Promise<{ ok: boolean; error?: str
 export async function copyMeals(items: { slot: Slot; name: string; qty: number; kcal: number; protein: number; carbs: number; fat: number }[]): Promise<{ ok: boolean; items?: MealItem[]; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   if (!Array.isArray(items)) return { ok: false };
@@ -134,6 +138,7 @@ export async function copyMeals(items: { slot: Slot; name: string; qty: number; 
 export async function saveFood(input: { name: string; portion?: string; kcal: number; protein?: number; carbs?: number; fat?: number }): Promise<{ ok: boolean; food?: SavedFood; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   const c = cleanCustom(input);
@@ -149,6 +154,7 @@ export async function saveFood(input: { name: string; portion?: string; kcal: nu
 export async function deleteSavedFood(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };
@@ -169,6 +175,7 @@ export async function deleteSavedFood(id: string): Promise<{ ok: boolean; error?
 export async function saveRecipe(input: { id?: string; name: string; servings: number; items: unknown[] }): Promise<{ ok: boolean; recipe?: UserRecipe; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   const c = cleanRecipe(input);
@@ -188,6 +195,7 @@ export async function saveRecipe(input: { id?: string; name: string; servings: n
 export async function deleteRecipe(id: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("comidas", v.id); if (lim) return { ok: false, error: lim }; }
   const denied = await accessError(v, "nutrition");
   if (denied) return { ok: false, error: denied };
   if (v.demo) return { ok: true };

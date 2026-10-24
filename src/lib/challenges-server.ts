@@ -2,13 +2,15 @@ import "server-only";
 import { errCode, logError, logWarn } from "@/lib/log";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient, type Viewer } from "@/lib/supabase/server";
+import { createClient, getViewer, STAFF, type Viewer } from "@/lib/supabase/server";
+import { STORE_COLS, STORE_COLS_24, publishedCatalogRows } from "@/lib/shared-cache";
 import { demoState } from "@/lib/demo-persona";
 import { adminClient } from "@/lib/supabase/admin";
 import { todayFor, todayIn } from "@/lib/today";
 import { MILESTONE_DAYS, MILESTONE_XP, levelOf, perksAt } from "@/lib/gamify";
 import { addDaysIso, challengeState, fromCatalogRow, mergeCatalog, parsePlan, SEED_CHALLENGES, type CatalogRow, type Challenge, type DayTask, type Outcome } from "@/lib/challenges";
 import { getSex } from "@/lib/athlete";
+import { forEachLimit } from "@/lib/concurrency";
 
 export type Metrics = { workout: boolean; steps: number; water: number; protein: number; proteinGoal: number };
 export type MyChallenge = { ucId: string; c: Challenge; startedOn: string; state: ReturnType<typeof challengeState>; autoOk: boolean;
@@ -34,10 +36,8 @@ export function metAuto(c: Challenge, m: Metrics) {
 
 // ───────────── Catálogo ─────────────
 
-/** Columnas de la tienda (0018). */
-export const STORE_COLS = "slug,title,description,days,rules,status,price_usd,difficulty,minutes,cover,icon,verify,grace,xp,steps_goal,badge,reward_title,start_mode,start_date,featured,coming_soon,safety_note,sort";
-/** Con los programas (0024): tipo y meta. */
-export const STORE_COLS_24 = `${STORE_COLS},kind,program`;
+/** Columnas de la tienda (0018) y con los programas (0024): tipo y meta. Viven en shared-cache.ts. */
+export { STORE_COLS, STORE_COLS_24 } from "@/lib/shared-cache";
 type DefRow = CatalogRow & { plan?: unknown };
 
 /**
@@ -47,8 +47,12 @@ type DefRow = CatalogRow & { plan?: unknown };
 export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Challenge>> => {
   if (demo) return new Map(SEED_CHALLENGES.map((c) => [c.id, c]));
   const sb = await createClient();
+  // Lo publicado es igual para todos: sale del caché compartido (shared-cache.ts, se invalida al editar en el panel).
+  // El staff ve también borradores (RLS), así que lee directo. Si el caché falla, la lectura de siempre.
+  const v = await getViewer();
+  const shared = v && !STAFF.includes(v.role) ? await publishedCatalogRows().catch(() => null) : null;
   const [first, mine, progs] = await Promise.all([
-    sb.from("challenges_catalog").select(STORE_COLS_24).order("sort").order("created_at"),
+    shared ? Promise.resolve({ data: shared, error: null }) : sb.from("challenges_catalog").select(STORE_COLS_24).order("sort").order("created_at"),
     sb.rpc("my_challenge_defs"),
     sb.rpc("my_program_defs"),
   ]);
@@ -305,12 +309,13 @@ export async function sweepChallenges(now = new Date(), opts: { deadline?: numbe
     const tzOf = new Map<string, string>();
     for (const p of (profs ?? []) as { id: string; timezone: string | null }[]) if (p.timezone) tzOf.set(p.id, p.timezone);
     for (const p of (prefs ?? []) as { user_id: string; timezone: string | null }[]) if (p.timezone) tzOf.set(p.user_id, p.timezone);
-    for (const r of rows) {
-      if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; break; }
+    // Varios retos a la vez (3 o 4 consultas cada uno): de uno en uno, miles de retos activos no cabían en el tiempo del cron.
+    await forEachLimit(rows, 8, async (r) => {
+      if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; return; }
       // Un reto con datos raros no detiene al resto. Acreditar (upsert) y cerrar son idempotentes: correr dos veces es seguro.
       try {
         const c = catalog.get(r.challenge_id);
-        if (!c) continue; // reto borrado del catálogo: se deja como está
+        if (!c) return; // reto borrado del catálogo: se deja como está
         const today = todayIn(tzOf.get(r.user_id), now).iso;
         const yesterday = addDaysIso(today, -1);
         if (c.verify !== "manual" && c.verify !== "protein" && r.started_on <= yesterday && (await metOn(db, r.user_id, c, yesterday))) {
@@ -319,10 +324,10 @@ export async function sweepChallenges(now = new Date(), opts: { deadline?: numbe
         }
         const { data: ck, error: ckErr } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
         // Sin la lista de días cumplidos no se decide nada: cerrar con datos vacíos marcaría el reto como fallido.
-        if (ckErr) { stats.errors++; continue; }
+        if (ckErr) { stats.errors++; return; }
         if ((await finalize(db, r.user_id, r, c, (ck ?? []).map((x) => x.day as string), today)) !== "activo") stats.closed++;
       } catch (e) { stats.errors++; logError("cron:retos", "row_failed", { kind: errCode(e) }); }
-    }
+    });
     if (stats.partial || data.length < 200) break;
   }
   return stats;

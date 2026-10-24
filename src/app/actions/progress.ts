@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { accessError } from "@/lib/entitlements";
 import { todayFor } from "@/lib/today";
+import { limitError } from "@/lib/security/limits";
 
 const PHOTO_PATH = /^[0-9a-f-]{36}\/[A-Za-z0-9_-][A-Za-z0-9._-]{0,119}$/;
 const FIELDS = ["waist", "neck", "chest", "arm", "thigh", "hip"] as const;
@@ -10,6 +11,7 @@ const FIELDS = ["waist", "neck", "chest", "arm", "thigh", "hip"] as const;
 export async function saveMeasures(input: Partial<Record<(typeof FIELDS)[number], number | null>>) {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("progreso", v.id); if (lim) return { ok: false, error: lim }; }
   const row: Record<string, number | null> = {};
   for (const f of FIELDS) {
     const x = input[f];
@@ -34,6 +36,7 @@ export async function saveMeasures(input: Partial<Record<(typeof FIELDS)[number]
 export async function addPhoto(path: string, pose: string) {
   const v = await getViewer();
   if (!v || v.demo) return { ok: false };
+  { const lim = v.demo ? null : await limitError("progreso", v.id); if (lim) return { ok: false }; }
   // Ruta dentro de la carpeta del usuario, sin subcarpetas ni "..": igual que el CHECK de 0012.
   if (typeof path !== "string" || !PHOTO_PATH.test(path) || path.includes("..") || !path.startsWith(`${v.id}/`) || !["frente", "lado", "espalda"].includes(pose)) return { ok: false };
   if (await accessError(v, "app")) return { ok: false };
@@ -49,6 +52,7 @@ export async function addPhoto(path: string, pose: string) {
 export async function deletePhoto(id: string) {
   const v = await getViewer();
   if (!v || v.demo) return { ok: false };
+  { const lim = v.demo ? null : await limitError("progreso", v.id); if (lim) return { ok: false }; }
   const sb = await createClient();
   if (!/^[0-9]{1,18}$/.test(String(id))) return { ok: false };
   const { data } = await sb.from("progress_photos").select("path").eq("id", Number(id)).eq("user_id", v.id).maybeSingle();

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { errCode, logError } from "@/lib/log";
 import { getViewer } from "@/lib/supabase/server";
-import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
+import { isSameOrigin, singleFlight } from "@/lib/security";
 import { BillingError, cancelAtPeriodEnd } from "@/lib/billing";
+import { hitLimit, tooMany } from "@/lib/security/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,8 @@ export async function POST(req: Request) {
   if (!v) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { reason?: unknown };
   if (v.demo) return NextResponse.json({ ok: true, demo: true, endsAt: null });
-  if (!memoryRateLimit(`cancelar:${v.id}`, 5, 10 * 60_000)) return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
+  const lim = await hitLimit("pagos:cancelar", v.id);
+  if (!lim.ok) return tooMany(lim);
   try {
     const { endsAt } = await singleFlight(`cancelar:${v.id}`, () => cancelAtPeriodEnd(v, typeof body.reason === "string" ? body.reason : undefined));
     return NextResponse.json({ ok: true, endsAt });

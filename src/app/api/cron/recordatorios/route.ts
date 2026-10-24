@@ -7,6 +7,7 @@ import { deliverSupportNotices } from "@/lib/support-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
 import { purgeIdentityFiles } from "@/lib/identity-server";
 import { nudgeUnseenNews } from "@/lib/novedades-server";
+import { purgeHousekeeping } from "@/lib/housekeeping";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 import { beat, runMonitorMaintenance } from "@/lib/monitor/server";
@@ -26,6 +27,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * También borra las fotos de verificaciones de identidad ya decididas o vencidas (máximo 30 días, 0030).
  * Y "Hay novedades en Banana Burn" (0036): push y campanita una vez por versión a quien no la vio en 3 días.
  * También el monitoreo (0041): purga de errores viejos, aviso si se dispararon y registro de esta corrida.
+ * Y la limpieza de tablas que crecen sin fin (0040).
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -35,6 +37,9 @@ export async function GET(req: Request) {
   // Monitoreo (0041), primero porque es corto (2 consultas): borra errores de más de 30 días y avisa al dueño si se
   // dispararon en 24 h. Si falla, sigue lo demás.
   const monitoreo = await runMonitorMaintenance().catch((e) => { logError("cron:monitoreo", "run_failed", { kind: errCode(e) }); return null; });
+  // Limpieza (0040): ventanas viejas de límites, tickets del coach y registros de avisos. Por lotes; primero porque es
+  // rápida y así corre todos los días aunque lo de abajo use todo el tiempo.
+  const limpieza = await purgeHousekeeping();
   const stats = await runReminders(new Date(), undefined, { deadline: t0 + 25_000 }).catch((e) => {
     logError("cron:recordatorios", "run_failed", { kind: errCode(e) });
     return { ok: false, mode: "daily" as const, scanned: 0, candidates: 0, sent: {}, push: 0, email: 0, errors: 1 };
@@ -55,5 +60,5 @@ export async function GET(req: Request) {
   const novedades = await nudgeUnseenNews({ limit: 300, deadline: t0 + 58_500 }).catch((e) => { logError("cron:novedades", "run_failed", { kind: errCode(e) }); return null; });
   // Última corrida, para /admin/salud: solo conteos.
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
-  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte, novedades, monitoreo }, { status: stats.ok ? 200 : 500 });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte, novedades, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
 }

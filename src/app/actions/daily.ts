@@ -5,6 +5,7 @@ import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
 import { APP_LOCKED_MSG, DAILY_NEED, NUTRITION_LOCKED_MSG, canSetDaily } from "@/lib/plan-access";
 import { todayFor } from "@/lib/today";
+import { limitError } from "@/lib/security/limits";
 
 const COL = { water: "water_glasses", steps: "steps", sleep: "sleep_h", protein: "protein_g", kcal: "kcal", energy: "energy", nausea: "nausea", fiber: "fiber_g" } as const;
 const MAX = { water: 20, steps: 80000, sleep: 16, protein: 500, kcal: 8000, energy: 3, nausea: 3, fiber: 150 };
@@ -17,6 +18,7 @@ export type DailyField = keyof typeof COL;
 export async function setDaily(field: DailyField, value: number): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("registro", v.id); if (lim) return { ok: false, error: lim }; }
   if (!Object.hasOwn(COL, field) || !Number.isFinite(value)) return { ok: false };
   const ent = await getEntitlements(v);
   if (!canSetDaily(field, ent)) return { ok: false, error: DAILY_NEED[field] === "nutrition" && ent.app ? NUTRITION_LOCKED_MSG : APP_LOCKED_MSG };

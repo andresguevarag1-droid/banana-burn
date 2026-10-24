@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
-import { getDaily, greetingAt } from "@/lib/daily";
+import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
@@ -41,6 +41,7 @@ const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDig
 
 export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string }> }) {
   const v = (await getViewer())!;
+  prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
   const demoTester = v.demo ? (await searchParams).tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.

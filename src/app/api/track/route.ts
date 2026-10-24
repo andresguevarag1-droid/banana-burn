@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return new Response(null, { status: 403 });
   // Ruta pública que escribe en el log: tope por IP para que nadie lo llene (costo y ruido en los registros).
-  if (!memoryRateLimit(`track:${clientIp(req)}`, 120, 60_000)) return new Response(null, { status: 429 });
+  if (!memoryRateLimit(`track:${clientIp(req)}`, 120, 60_000)) return new Response(null, { status: 429, headers: { "Retry-After": "60" } });
   const text = await req.text().catch(() => "");
   if (!text || text.length > 2048) return new Response(null, { status: 400 });
   let raw: unknown;

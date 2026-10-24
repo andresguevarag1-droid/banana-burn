@@ -4,7 +4,7 @@ import { getProgress, LIFTS_WEEKS } from "@/lib/progress";
 import { kcalAdjustment, weeklyTrend } from "@/lib/engine";
 import { WeightChart } from "@/components/weight-chart";
 import { WeighIn } from "@/components/weigh-in";
-import { getDaily } from "@/lib/daily";
+import { getDaily, prefetchDaily } from "@/lib/daily";
 import { getEntitlements } from "@/lib/entitlements";
 import Link from "next/link";
 import { ProfileForm } from "./forms";
@@ -30,6 +30,7 @@ const FUN: { I: PhosphorIcon; w: "duotone" | "fill"; l: string }[] = [
 
 export default async function Progreso() {
   const v = (await getViewer())!;
+  prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // El atleta y lo que no depende de él van juntos; el registro del día necesita su peso.
   const [a, { weights, tracked, workouts }, measures, photos, ent] = await Promise.all([getAthlete(v), getProgress(v), getMeasures(v), getPhotos(v), getEntitlements(v)]);
   const d = dashboard(a);

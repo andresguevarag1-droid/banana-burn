@@ -8,7 +8,7 @@ import { AccountSettings } from "./account";
 import { getEntitlements } from "@/lib/entitlements";
 import { getAthlete } from "@/lib/athlete";
 import { coachOf } from "@/lib/coaches";
-import { getDaily } from "@/lib/daily";
+import { getDaily, prefetchDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
 import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
@@ -38,11 +38,11 @@ const fmtDay = (iso?: string, tz?: string) => { if (!iso) return null; try { ret
 
 export default async function Perfil({ searchParams }: { searchParams: Promise<{ clave?: string; tester?: string }> }) {
   const v = (await getViewer())!;
+  prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   const sp = await searchParams;
   // En paralelo: el perfil público, el plan, los avisos y las medallas no dependen del atleta.
   const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
-  const [a, data, ent, prefs, power, verif, tester] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null)]);
-  const voice = await getVoice(v);
+  const [a, data, ent, prefs, power, verif, tester, voice] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null), getVoice(v)]);
   const isTester = tester?.phase === "activo" || tester?.phase === "pronto";
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   let cp = { username: "andres", bio: "Bajando de 94 a 85 kg con Banana Burn", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };

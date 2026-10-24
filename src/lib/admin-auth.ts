@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getViewer, type Role, type Viewer } from "@/lib/supabase/server";
 import { can, canSee, isStaff, STAFF_ROLES, type Capability, type Section } from "@/lib/admin-perms";
+import { limitError } from "@/lib/security/limits";
 
 export const DEMO_ROLE_COOKIE = "bb_admin_demo_role";
 
@@ -32,5 +33,14 @@ export async function authorize(cap: Capability): Promise<{ ok: true; v: Viewer 
   const v = await getAdminViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
   if (!can(v.role, cap)) return { ok: false, error: "Tu rol no tiene permiso para esta acción." };
+  // Freno por persona del staff (compartido entre instancias): una cuenta comprometida no hace daño masivo en minutos.
+  // Lo masivo y los borrados tienen su propio tope, más bajo.
+  if (!v.demo) {
+    const lim = (await limitError("admin", v.id)) ?? (HEAVY[cap] ? await limitError(HEAVY[cap], v.id) : null);
+    if (lim) return { ok: false, error: lim };
+  }
   return { ok: true, v };
 }
+
+/** Capacidades con tope propio (además del general del panel). */
+const HEAVY: Partial<Record<Capability, "admin:masivo" | "admin:borrar-cuenta">> = { "users.delete": "admin:borrar-cuenta" };
