@@ -8,6 +8,8 @@ import { MetaPixel } from "@/components/meta-pixel";
 export const metadata: Metadata = {
   // Base de los enlaces absolutos (Open Graph, canonical) en TODAS las páginas, no solo las de marketing.
   metadataBase: new URL(SITE_URL),
+  // Verificación del dominio en Meta Business (anuncios). Va en el <head> de todas las páginas, incluida la de inicio.
+  verification: { other: { "facebook-domain-verification": "hehrpmjmq0u8lm0ya9thx01egvv1d6" } },
   title: { default: "Banana Burn: tu entrenador personal en el celular", template: "%s | Banana Burn" },
   description: "Baja grasa y gana fuerza con un plan de gym que cambia cada día, se adapta a tu progreso y habla tu idioma. Hecho en Costa Rica para toda Latinoamérica.",
   applicationName: "Banana Burn",
