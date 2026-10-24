@@ -36,7 +36,8 @@ export type Capability =
   | "content.foods"
   | "content.announcements"
   | "community.moderate"
-  | "audit.view";
+  | "audit.view"
+  | "ops.health";          // salud técnica: versión, base, errores de la app, cron y webhooks fallidos (0041)
 
 const ALL_STAFF = STAFF_ROLES;
 const COACH_ADMIN: Role[] = ["coach", "admin", "superadmin"];
@@ -69,13 +70,14 @@ export const MATRIX: Record<Capability, Role[]> = {
   "content.announcements": PRIVILEGED,
   "community.moderate": ALL_STAFF,
   "audit.view": PRIVILEGED,
+  "ops.health": PRIVILEGED, // igual que public.is_admin() en app_errors y ops_heartbeats (0041)
 };
 
 export function can(role: Role | null | undefined, cap: Capability): boolean {
   return !!role && MATRIX[cap].includes(role);
 }
 
-export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria";
+export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud";
 
 /** Una sección es visible si el rol tiene al menos una de sus capacidades. */
 export const SECTION_CAPS: Record<Section, Capability[]> = {
@@ -88,6 +90,7 @@ export const SECTION_CAPS: Record<Section, Capability[]> = {
   verificaciones: ["users.verify"],
   soporte: ["support.tickets"],
   auditoria: ["audit.view"],
+  salud: ["ops.health"],
 };
 
 export function canSee(role: Role | null | undefined, section: Section): boolean {

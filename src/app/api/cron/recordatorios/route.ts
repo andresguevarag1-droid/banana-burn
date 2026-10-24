@@ -9,6 +9,7 @@ import { purgeIdentityFiles } from "@/lib/identity-server";
 import { nudgeUnseenNews } from "@/lib/novedades-server";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
+import { beat, runMonitorMaintenance } from "@/lib/monitor/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,12 +25,16 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * También los avisos de testers de la beta (asignación, 3 días antes del final y agradecimiento).
  * También borra las fotos de verificaciones de identidad ya decididas o vencidas (máximo 30 días, 0030).
  * Y "Hay novedades en Banana Burn" (0036): push y campanita una vez por versión a quien no la vio en 3 días.
+ * También el monitoreo (0041): purga de errores viejos, aviso si se dispararon y registro de esta corrida.
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
   if (!authorized(req)) return NextResponse.json({ ok: false, error: "No autorizado" }, { status: 401 });
   // Presupuesto de tiempo por debajo de maxDuration: cada parte se detiene a tiempo y responde con lo que alcanzó.
   const t0 = Date.now();
+  // Monitoreo (0041), primero porque es corto (2 consultas): borra errores de más de 30 días y avisa al dueño si se
+  // dispararon en 24 h. Si falla, sigue lo demás.
+  const monitoreo = await runMonitorMaintenance().catch((e) => { logError("cron:monitoreo", "run_failed", { kind: errCode(e) }); return null; });
   const stats = await runReminders(new Date(), undefined, { deadline: t0 + 25_000 }).catch((e) => {
     logError("cron:recordatorios", "run_failed", { kind: errCode(e) });
     return { ok: false, mode: "daily" as const, scanned: 0, candidates: 0, sent: {}, push: 0, email: 0, errors: 1 };
@@ -48,5 +53,7 @@ export async function GET(req: Request) {
   const soporte = await deliverSupportNotices({ limit: 200 }).catch((e) => { logError("cron:soporte", "run_failed", { kind: errCode(e) }); return null; });
   // Novedades (0036): una vez por versión, entre el día 3 y el 14, a quien no la vio. Reclamado en notification_log.
   const novedades = await nudgeUnseenNews({ limit: 300, deadline: t0 + 58_500 }).catch((e) => { logError("cron:novedades", "run_failed", { kind: errCode(e) }); return null; });
-  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte, novedades }, { status: stats.ok ? 200 : 500 });
+  // Última corrida, para /admin/salud: solo conteos.
+  await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
+  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte, novedades, monitoreo }, { status: stats.ok ? 200 : 500 });
 }

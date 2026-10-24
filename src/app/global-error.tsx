@@ -1,12 +1,16 @@
 "use client";
 // Último recurso: falló el layout raíz, así que no hay estilos ni componentes de la app. Todo va en línea, con los colores de marca.
 import { useEffect } from "react";
+import { reportBoundaryError } from "@/lib/monitor/client";
 
 const STALE = /ChunkLoadError|Loading chunk|dynamically imported module|Failed to find Server Action/i;
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const stale = STALE.test(`${error.name} ${error.message}`);
-  useEffect(() => { console.error(`[ui:global] ${stale ? "stale" : "generic"}`, { digest: error.digest ?? null, name: error.name }); }, [error, stale]);
+  useEffect(() => {
+    console.error(`[ui:global] ${stale ? "stale" : "generic"}`, { digest: error.digest ?? null, name: error.name });
+    reportBoundaryError(error);
+  }, [error, stale]);
   const btn: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: 52, borderRadius: 999, fontSize: 16, fontWeight: 800, textDecoration: "none", border: 0, cursor: "pointer", fontFamily: "inherit" };
   return (
     <html lang="es-419">
