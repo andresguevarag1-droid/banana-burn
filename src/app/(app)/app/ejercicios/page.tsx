@@ -34,14 +34,14 @@ export default async function Biblioteca({ searchParams }: { searchParams: Promi
         <p className="mt-1 text-muted">Con pasos en español, músculos que trabajan y equipo necesario.</p>
       </header>
       <form className="flex gap-2" role="search">
-        <label className="flex-1 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40">
+        <label className="flex-1 min-w-0 flex items-center gap-2 h-12 rounded-2xl bg-white border border-line px-3 focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40">
           <MagnifyingGlass weight="bold" className="size-5 text-faint" aria-hidden /><span className="sr-only">Buscar ejercicio</span>
           <input name="q" defaultValue={sp.q} placeholder="Sentadilla, glúteos, banda…" className="flex-1 min-w-0 bg-transparent text-[16px] text-ink outline-none" />
         </label>
         {sp.zona && <input type="hidden" name="zona" value={sp.zona} />}
         {sp.equipo && <input type="hidden" name="equipo" value={sp.equipo} />}
         {sp.mio === "1" && <input type="hidden" name="mio" value="1" />}
-        <button className="btn-primary h-12 px-5">Buscar</button>
+        <button className="btn-primary h-12 shrink-0 px-5">Buscar</button>
       </form>
       <nav aria-label="Filtrar por zona" className="-mx-4 px-4 flex gap-1.5 overflow-x-auto pb-1 relative">
         <Link href={qs({ zona: undefined, p: undefined })} aria-current={!sp.zona ? "true" : undefined} className={`chip h-9 px-4 shrink-0 ${!sp.zona ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>Todo</Link>

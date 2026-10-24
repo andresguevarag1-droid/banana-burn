@@ -49,7 +49,7 @@ export default async function Entrenar() {
             <ChallengeCover c={{ id: p.slug, cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
               <div className={`relative ${coverInk(p.cover)}`}>
                 <p className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />Programa activo</p>
-                <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">{p.title}</h1>
+                <h1 className="mt-3 max-w-[72%] text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">{p.title}</h1>
                 <p className="mt-1 text-sm font-bold opacity-85">{weekLabel(p)}{p.run.phase.phase.deload && <span className="whitespace-nowrap">, descarga <TreePalm weight="duotone" className="inline size-4 align-[-0.15em]" aria-hidden /></span>}</p>
                 <div className="mt-3 flex gap-1" role="progressbar" aria-valuemin={1} aria-valuemax={p.run.weeks} aria-valuenow={p.run.week} aria-label={p.run.byDays ? weekLabel(p) : `Semana ${p.run.week} de ${p.run.weeks}`}>
                   {Array.from({ length: p.run.weeks }, (_, i) => i + 1).map((w) => <span key={w} className={`h-2 flex-1 rounded-full ${w < p.run.week ? (p.cover === "noche" ? "bg-banana" : "bg-ink") : w === p.run.week ? "bg-ember" : "bg-white/30"}`} />)}

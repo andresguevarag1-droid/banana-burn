@@ -26,7 +26,7 @@ export default async function MisReportes() {
       {v.demo && <p className="rounded-2xl bg-banana-soft p-3 text-sm font-semibold text-banana-ink">Modo demo: reportes de ejemplo, no se guarda nada.</p>}
       {unavailable && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink">Los reportes todavía no están activos. Escríbenos a <a className="font-bold underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>.</p>}
       {tickets.length ? (
-        <ul className="grid gap-3" aria-label={`Tus reportes: ${tickets.length}, ${open.length} abiertos`}>
+        <ul className="grid gap-3 [&>*]:min-w-0" aria-label={`Tus reportes: ${tickets.length}, ${open.length} abiertos`}>
           {tickets.map((t) => {
             const fresh = !!t.last_staff_at && t.last_staff_at > t.last_user_at && isOpen(t.status);
             return (
@@ -35,7 +35,7 @@ export default async function MisReportes() {
                   <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-banana-soft text-banana-ink"><ChatCircleText weight="duotone" className="size-6" aria-hidden /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold tabular-nums text-muted">{ticketNumber(t.id)}</span><StatusChip status={t.status} />{fresh && <span className="chip h-7 bg-ink text-banana">Respuesta nueva</span>}</span>
-                    <span className="mt-1 block truncate font-extrabold text-ink">{t.title}</span>
+                    <span className="mt-1 block line-clamp-2 font-extrabold leading-snug text-ink">{t.title}</span>
                     <span className="block text-xs text-muted">{CATEGORY_LABEL[t.category as SupportCategory] ?? t.category}, actualizado el {fmt(t.updated_at, v.tz)}</span>
                   </span>
                   <CaretRight weight="bold" className="size-5 shrink-0 text-faint" aria-hidden />

@@ -39,7 +39,7 @@ export function StoreCard({ c, owned, participants, discountPct, active, classNa
           <li className="chip h-7 bg-cream">{DIFFICULTY_LABEL[c.difficulty]}</li>
           <li className="chip h-7 bg-cream"><Clock weight="duotone" className="size-3.5" />{c.minutes} min al día</li>
         </ul>
-        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink/80"><BananaMedal className="size-4 shrink-0 text-banana-ink" /><span className="min-w-0 truncate">+{c.xp.toLocaleString("es-419")} XP y medalla {c.badge}</span></p>
+        <p className="mt-3 flex items-start gap-1.5 text-xs font-semibold text-ink/80"><BananaMedal className="size-4 shrink-0 text-banana-ink" /><span className="min-w-0 pt-px">+{c.xp.toLocaleString("es-419")} XP y medalla {c.badge}</span></p>
         {c.startMode === "fecha" && c.startDate && <p className="mt-1 text-xs font-semibold text-sky">Empieza el {fmtStart(c.startDate)}</p>}
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
           {participants !== undefined && participants >= MIN_PARTICIPANTS_SHOWN ? (

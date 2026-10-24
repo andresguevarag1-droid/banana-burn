@@ -42,7 +42,7 @@ export function InsigniasPicker({ items, featured: f0 }: { items: Insignia[]; fe
               <span className="min-w-0 flex-1">
                 <span className="block text-[11px] font-bold uppercase tracking-[.08em] text-banana-ink">Racha<span className="normal-case tracking-normal text-muted">, solo tú la ves</span></span>
                 <span className="block truncate text-sm font-bold leading-tight text-ink">{i.label}</span>
-                {i.detail && <span className="block truncate text-[11px] leading-tight text-muted">{i.detail}</span>}
+                {i.detail && <span className="block text-[11px] leading-tight text-muted">{i.detail}</span>}
               </span>
             </li>
           );
@@ -56,7 +56,7 @@ export function InsigniasPicker({ items, featured: f0 }: { items: Insignia[]; fe
                     {on ? <><PushPin weight="fill" aria-hidden className="size-3" />Destacada</> : KIND_LABEL[i.kind]}
                   </span>
                   <span className="block truncate text-sm font-bold leading-tight text-ink">{i.label}</span>
-                  {i.detail && <span className="block truncate text-[11px] leading-tight text-muted">{i.detail}</span>}
+                  {i.detail && <span className="block text-[11px] leading-tight text-muted">{i.detail}</span>}
                 </span>
                 <span className="sr-only">{on ? "Destacada. Toca para quitarla." : "Toca para destacarla."}</span>
               </button>

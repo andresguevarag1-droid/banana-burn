@@ -1,6 +1,6 @@
 "use client";
 // Sesiones de una semana del programa, en pestañas (Entrenar y la vista previa de la semana 1 en la tienda).
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Clock, Info, Lock, Repeat } from "@/components/icons";
 import { DEFAULT_VOICE, muscleText, setsReps, t, tempoLabel, type Voice } from "@/lib/voice";
@@ -17,18 +17,28 @@ export type WeekSessionView = {
 export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE, dayLabel }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice; dayLabel?: Record<number, number> }) {
   const word = (day: number) => `Día ${dayLabel?.[day] ?? day}`;
   const [sel, setSel] = useState(current ?? sessions[0]?.day ?? 1);
+  // Si la fila de pestañas se desliza (5 o más sesiones), la de hoy empieza a la vista (solo se mueve la fila, no la página).
+  const tabs = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = tabs.current, on = el?.querySelector<HTMLElement>("[aria-selected=true]");
+    if (el && on && el.scrollWidth > el.clientWidth) el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const s = sessions.find((x) => x.day === sel) ?? sessions[0];
   if (!s) return null;
   return (
     <div className="space-y-3">
-      <div role="tablist" aria-label={label} className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${sessions.length}, minmax(0, 1fr))` }}>
+      {/* Con 5 o más sesiones (Pilates) las pestañas tienen un ancho mínimo y la fila se desliza: en 390 px quedaban de
+          60 px y "bailarina" se partía a la mitad. pt/pr dejan ver el check de "hecha" que sobresale de la esquina. */}
+      <div ref={tabs} role="tablist" aria-label={label} className="relative -mx-1 grid gap-1.5 overflow-x-auto overscroll-x-contain px-1 pt-2 pr-2 pb-1 -mt-2" style={{ gridTemplateColumns: `repeat(${sessions.length}, minmax(${sessions.length > 4 ? "6.5rem" : "0"}, 1fr))` }}>
         {sessions.map((x) => {
           const on = x.day === sel;
           return (
             <button key={x.day} type="button" role="tab" aria-selected={on} onClick={() => setSel(x.day)}
               className={`pressable relative min-h-14 rounded-2xl px-1 py-2 text-center ${on ? "bg-ink text-white shadow-lift" : x.optional ? "border border-dashed border-line bg-white/60 text-ink" : "border border-line bg-white text-ink"}`}>
               <span className={`block text-[11px] font-bold uppercase tracking-[.08em] ${on ? "text-banana" : "text-muted"}`}>{x.optional ? "Extra" : word(x.day)}</span>
-              <span className="mt-0.5 block truncate text-xs font-extrabold">{x.title.replace(/^Extra: /, "")}</span>
+              {/* Dos líneas en vez de truncar: en 360 px las cuatro decían "Cuerpo c…" y no se distinguían. */}
+              <span className="mt-0.5 line-clamp-2 break-words text-xs font-extrabold leading-tight">{x.title.replace(/^Extra: /, "")}</span>
               {x.done && <span className="absolute -top-1.5 -right-1.5 grid size-[18px] place-items-center rounded-full bg-peel text-white ring-2 ring-paper" role="img" aria-label="Hecha"><Check weight="bold" className="size-2.5" /></span>}
             </button>
           );
@@ -46,7 +56,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
             <li key={`${e.id}-${i}`} className="rounded-2xl bg-cream px-3.5 py-3">
               <div className="flex items-center gap-3">
                 <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-sm font-bold text-white">{i + 1}</span>
-                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${e.rest}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${String(e.rest).replace(/ (s|min)\b/g, "\u00a0$1")}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
                 {/* Series y repeticiones en el registro de la persona: "3 series de 10 a 12" en básico, "3×10-12" en técnico. */}
                 <p className={`shrink-0 font-extrabold tabular-nums text-ink text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{e.cfg ? setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide) : e.sets}</p>
               </div>

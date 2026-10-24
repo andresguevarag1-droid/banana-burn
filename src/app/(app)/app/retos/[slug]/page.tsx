@@ -101,7 +101,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
         <div className="space-y-6">
           <header className="overflow-hidden rounded-[1.75rem] shadow-soft">
             <ChallengeCover c={c} className="h-44 sm:h-52">
-              <div className="absolute inset-x-0 bottom-0 p-5">
+              <div className="absolute bottom-0 left-0 max-w-[72%] p-5">
                 <p className={`text-xs font-extrabold uppercase tracking-[.14em] opacity-85 ${ink}`}>{paid ? "Premium" : "Gratis"}{c.featured ? ", destacado" : ""}</p>
                 <h1 className={`mt-1 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-balance ${ink}`}>{c.title}</h1>
               </div>

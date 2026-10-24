@@ -57,8 +57,9 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
             <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />{x?.mode ?? "Programa activo"}</span>
             {r.phase.phase.deload && <span className="inline-flex h-7 items-center gap-1 rounded-full bg-white/85 px-2.5 text-[11px] font-extrabold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
           </div>
-          <h2 id="prog-hoy" className="mt-3 text-[26px] sm:text-[30px] font-extrabold leading-tight tracking-tight text-balance">{p.title}</h2>
-          <p className="mt-1 text-sm font-bold opacity-85">{weekLabel(p)}. Fase {r.phase.index}: {r.phase.phase.name}</p>
+          {/* Título y semana sin pasar del velo (72 %): no se montan sobre la coach de la portada. */}
+          <h2 id="prog-hoy" className="mt-3 max-w-[72%] text-[26px] sm:text-[30px] font-extrabold leading-tight tracking-tight text-balance">{p.title}</h2>
+          <p className="mt-1 max-w-[72%] text-sm font-bold opacity-85">{weekLabel(p)}. Fase {r.phase.index}: {r.phase.phase.name}</p>
           <div className="mt-3">
             <ProgressBar value={r.pct} min={0.03} className="h-2.5" track="bg-white/25" fill={p.cover === "noche" ? "bg-banana" : "bg-ink"} label={`Programa: ${r.sessionsDone} de ${r.sessionsTotal} sesiones`} />
             <p className="mt-1.5 flex flex-wrap justify-between gap-x-3 text-xs font-bold tabular-nums opacity-85"><span>{n(r.sessionsDone)} de {n(r.sessionsTotal)} sesiones</span><span>{Math.round(r.pct * 100)} % del programa</span></p>

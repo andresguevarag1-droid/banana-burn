@@ -97,8 +97,8 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
           className="sheet-panel relative flex h-[100dvh] w-full flex-col bg-paper outline-none sm:h-[min(760px,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem] sm:shadow-lift">
           {/* Encabezado: capítulo, avance y Saltar */}
           <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-2 sm:px-6 sm:pt-5">
-            {/* div y no p: el text-wrap global de los párrafos le gana a truncate */}
-            <div className="min-w-0 truncate text-[12px] font-bold uppercase tracking-[.14em] text-banana-ink">
+            {/* Sin truncar: en 360 px "Cómo funciona la app" no cabía junto al contador y Saltar; parte en dos líneas. */}
+            <div className="min-w-0 text-[12px] font-bold uppercase leading-tight tracking-[.1em] text-banana-ink sm:tracking-[.14em]">
               <span className="sr-only">Guía de la app. </span>{step.chapter}
             </div>
             <div className="flex shrink-0 items-center gap-1">
@@ -112,8 +112,10 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
 
           {/* Contenido del paso */}
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 sm:px-6">
-            <div key={step.id} className="guide-step grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] sm:items-center sm:gap-8" style={{ "--guide-dx": `${dir * 12}px` } as React.CSSProperties}>
-              <div className="h-[clamp(180px,31dvh,280px)] sm:h-[min(440px,calc(100dvh-16rem))]">
+            <div key={step.id} className="guide-step grid gap-5 sm:min-h-[calc(100%-1.5rem)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] sm:content-center sm:items-center sm:gap-8" style={{ "--guide-dx": `${dir * 12}px` } as React.CSSProperties}>
+              {/* Alto mínimo (no fijo): un visual más alto que la caja en pantallas bajas (la doble progresión en 360x640)
+                  crece en vez de quedar cortado arriba y abajo. Grid: los hijos h-full toman el alto de la fila. */}
+              <div className="grid min-h-[clamp(180px,31dvh,280px)] sm:min-h-[min(440px,calc(100dvh-16rem))]">
                 <GuideVisual step={step} input={input} />
               </div>
               <div className="min-w-0 sm:py-4">

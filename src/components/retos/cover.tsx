@@ -32,7 +32,9 @@ export function ChallengeCover({ c, className = "h-28", children, chip = true, a
     <div className={`relative isolate overflow-hidden ${st.bg} ${st.ink} ${className}`}>
       {src ? (
         <>
-          <Image src={src} alt="" aria-hidden fill sizes={sizes} className="-z-20 object-cover object-right select-none" />
+          {/* Anclada a la derecha (ahí está Coach Banana) y cerca de arriba: en portadas más anchas que 16:9 (tarjetas
+              de h-28, cintas) el recorte centrado le cortaba la cabeza; así el recorte cae casi todo en los pies. */}
+          <Image src={src} alt="" aria-hidden fill sizes={sizes} className="-z-20 object-cover object-[100%_20%] select-none" />
           <div aria-hidden className="absolute inset-0 -z-10" style={{ backgroundImage: `linear-gradient(90deg, ${st.scrim}f2 0%, ${st.scrim}cc 38%, ${st.scrim}00 72%)` }} />
         </>
       ) : (

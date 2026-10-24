@@ -55,9 +55,13 @@
 html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
 body { background: var(--color-paper); color: var(--color-body); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--color-banana); color: var(--color-ink); }
-/* Títulos sin palabras huérfanas; párrafos con cortes más parejos */
-:where(h1, h2, h3) { text-wrap: balance; }
-:where(p, li, dd, blockquote) { text-wrap: pretty; }
+/* Títulos sin palabras huérfanas; párrafos con cortes más parejos. En la capa base: fuera de una capa, el atajo
+   text-wrap (que también fija text-wrap-mode) le ganaba a truncate y whitespace-nowrap, que viven en la capa de
+   utilidades, y los textos que debían quedar en una línea partían (por ejemplo "97.5 / cm"). */
+@layer base {
+  :where(h1, h2, h3) { text-wrap: balance; }
+  :where(p, li, dd, blockquote) { text-wrap: pretty; }
+}
 
 /* Zona táctil mínima de 44×44 px sin agrandar el diseño: un ::before invisible centrado. */
 @utility tap {

@@ -30,7 +30,7 @@ function useLoggedIn(known?: boolean) {
 export const CTA_LABEL = `Empezar ${TRIAL_DAYS} días gratis`;
 
 function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanId; billing: Billing; name: string; hot: boolean; loggedIn: boolean; checkout: ReturnType<typeof useCheckout> }) {
-  const cls = `mt-8 h-14 w-full text-base ${hot ? "btn-banana shadow-none" : "btn-primary"}`;
+  const cls = `mt-5 h-14 w-full text-base ${hot ? "btn-banana shadow-none" : "btn-primary"}`;
   const intent = { plan, billing };
   const cta = `pricing-${plan}-${billing}`;
   // Demo: sin cuentas ni cobros, mostramos la pantalla de suscripción con el aviso de demo.
@@ -79,7 +79,10 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
         </div>
       </div>
 
-      <div data-sticky-hide className="grid gap-5 md:grid-cols-2 max-w-4xl mx-auto items-stretch">
+      {/* El botón va justo después del precio (alineado en las dos tarjetas por el min-h del texto del pago) y la tarjeta
+          mide su contenido: antes la lista crecía para alinear los botones al pie y la tarjeta con menos líneas
+          quedaba con un hueco grande sobre el botón. */}
+      <div data-sticky-hide className="grid gap-5 md:grid-cols-2 max-w-4xl mx-auto items-start">
         {PLANS.map((p) => {
           const hot = p.id === recommended;
           const annual = b === "anual";
@@ -96,11 +99,11 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
               <p className={`mt-2 min-h-10 text-sm font-semibold tabular-nums text-pretty ${annual ? (hot ? "text-banana" : "text-peel") : hot ? "text-white/75" : "text-muted"}`}>
                 {annual ? `Un solo pago al año. Ahorras ${money(saved)} frente a ${money(p.price.mes)} al mes.` : "Sin permanencia. Cancela cuando quieras."}
               </p>
-              <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] flex-1 ${hot ? "border-white/15" : "border-line"}`}>
+              <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} />
+              <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] ${hot ? "border-white/15" : "border-line"}`}>
                 {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{noBreakGlp1(f)}</li>)}
                 {p.excluded.map((f) => <li key={f} className={`flex gap-2.5 ${hot ? "text-white/60" : "text-faint"}`}><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span>{noBreakGlp1(f)}</span></li>)}
               </ul>
-              <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} />
             </div>
           );
         })}
@@ -109,14 +112,15 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
       <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido. Precios en dólares (USD); pagas con tarjeta de crédito o débito cuando eliges tu plan.</p>
       <p className="mt-2 text-center text-sm text-muted text-pretty">{PREMIUM_RETOS_NOTE}</p>
 
-      <div className="mt-14 max-w-4xl mx-auto grid gap-6 rounded-[1.75rem] border border-line bg-cream p-6 sm:p-8 lg:grid-cols-[1fr_1.7fr] lg:gap-10">
-        <div>
+      {/* Título arriba y las cuatro garantías en dos columnas: en escritorio la columna del título quedaba casi vacía. */}
+      <div className="mt-14 max-w-4xl mx-auto rounded-[1.75rem] border border-line bg-cream p-6 sm:p-8">
+        <div className="max-w-2xl">
           <h3 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Sin riesgo y sin letra pequeña</h3>
           <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">términos</Link>, escritos para leerse en cinco minutos.</p>
         </div>
-        <ul className="divide-y divide-line">
+        <ul className="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-2">
           {guarantees(trialGuarantee ?? offer().guarantee).map(([I, t, d]) => (
-            <li key={t} className="flex gap-4 py-4 first:pt-0 last:pb-0">
+            <li key={t} className="flex gap-4 border-t border-line pt-5">
               <I weight="duotone" aria-hidden className="mt-0.5 size-6 shrink-0 text-banana-ink" />
               <div>
                 <p className="font-extrabold text-ink">{t}</p>

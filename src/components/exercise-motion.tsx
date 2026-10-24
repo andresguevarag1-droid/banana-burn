@@ -48,8 +48,10 @@ export function ExerciseMotion({ anim, label = true, className = "", mus, cues }
 function ExerciseMascot({ label, className, missing }: { label: boolean; className: string; missing: boolean }) {
   return (
     <div role="img" aria-label={missing ? "Coach Banana: sigue los pasos de este ejercicio" : "Coach Banana"} className={`motion ${className}`}>
-      <div className="relative flex-1 min-h-0 flex justify-center">
-        <div className="relative h-full aspect-square max-w-full overflow-hidden rounded-2xl bg-banana">
+      {/* Cuadrado del lado menor del recuadro (consultas de contenedor): con h-full + aspect-square + max-w-full, en un
+          recuadro más alto que ancho la caja dejaba de ser cuadrada y el recorte de la hoja se corría. */}
+      <div className="relative flex-1 min-h-0 flex items-center justify-center [container-type:size]">
+        <div className="relative size-[min(100cqw,100cqh)] overflow-hidden rounded-2xl bg-banana">
           <Image src="/brand/mascota.webp" alt="" fill sizes={label ? "360px" : "112px"} className="object-contain" />
           {missing && label ? (
             <span className="absolute inset-x-[6%] bottom-[4%] mx-auto w-fit max-w-[88%] text-center rounded-xl bg-ink px-2.5 py-1 text-[11px] font-bold leading-tight text-white">Sigue los pasos: Coach Banana te guía con texto</span>
@@ -150,9 +152,11 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
   if (still) {
     return (
       <div role="img" aria-label="Posición inicial y final del ejercicio" className={`motion ${className}`}>
-        <div className="relative flex-1 min-h-0 grid grid-cols-2 gap-1">
-          <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={cells[0]} grid={grid} sizes={sizes} onFail={onFail} /></div>
-          {label ? <div className="relative overflow-hidden rounded-xl"><Frame src={src} n={cells[last]} grid={grid} sizes={sizes} onFail={onFail} /></div> : null}
+        <div className={`relative flex-1 min-h-0 grid gap-1 ${label ? "grid-cols-2" : "grid-cols-1"}`}>
+          {/* Cada fotograma en un cuadrado centrado (lado = el menor del recuadro): en una celda más alta que ancha, el
+              recorte de la hoja cuadrada se corría y cortaba cabeza o pies, o asomaba el fotograma vecino. */}
+          <div className="relative overflow-hidden rounded-xl [container-type:size]"><Frame src={src} n={cells[0]} grid={grid} sizes={sizes} onFail={onFail} className="m-auto size-[min(100cqw,100cqh)]" /></div>
+          {label ? <div className="relative overflow-hidden rounded-xl [container-type:size]"><Frame src={src} n={cells[last]} grid={grid} sizes={sizes} onFail={onFail} className="m-auto size-[min(100cqw,100cqh)]" /></div> : null}
         </div>
       </div>
     );
@@ -177,8 +181,10 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
           </div>
         </div>
       ) : null}
-      <div className="relative flex-1 min-h-0 flex justify-center">
-        <div className="relative h-full aspect-square max-w-full overflow-hidden rounded-2xl bg-banana">
+      {/* Cuadrado del lado menor del recuadro (consultas de contenedor): con h-full + aspect-square + max-w-full, en un
+          recuadro más alto que ancho la caja dejaba de ser cuadrada y el recorte de la hoja se corría. */}
+      <div className="relative flex-1 min-h-0 flex items-center justify-center [container-type:size]">
+        <div className="relative size-[min(100cqw,100cqh)] overflow-hidden rounded-2xl bg-banana">
           {cells.map((cell, n) => (
             <Frame key={cell} src={src} n={cell} grid={grid} sizes={sizes} onFail={onFail} refCb={(l) => { layers.current[n] = l; }} className={n === 0 ? "" : "opacity-0"} />
           ))}

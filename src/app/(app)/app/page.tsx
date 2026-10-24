@@ -107,10 +107,12 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} />}
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
-      <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
+      {/* items-start: cada tarjeta mide lo que su contenido (sin estirarse al alto de la vecina con un hueco vacío); el
+          exprés, más corto, acompaña fijo (sticky) mientras bajas por tus números en escritorio. */}
+      <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
         {/* Con un programa activo, su héroe reemplaza al entreno de hoy; sin programa, aquí va el exprés */}
-        {d.program ? <ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <ExpressCard program={false} compact />}
+        {d.program ? <ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={false} compact /></div>}
       </div>
       {d.program && !g.trainedToday && <ExpressCard program={d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} />}
       {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}

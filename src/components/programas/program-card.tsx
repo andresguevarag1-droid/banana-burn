@@ -14,7 +14,8 @@ export function ProgramCard({ c, owned, discountPct, status, days, big = false }
   return (
     <Link href={`/app/retos/${c.id}`} className={`card group flex min-w-0 flex-col overflow-hidden p-0! outline-none ${big ? "md:col-span-2 md:flex-row" : ""}`}>
       <ChallengeCover c={c} chip={false} className={big ? "h-44 md:h-auto md:w-[46%] md:shrink-0" : "h-36"}>
-        <div className={`absolute inset-x-0 bottom-0 p-4 ${ink}`}>
+        {/* El título no pasa del velo (72 %): no se monta sobre Coach Banana en la ilustración. */}
+        <div className={`absolute bottom-0 left-0 max-w-[72%] p-4 ${ink}`}>
           <p className="text-[11px] font-extrabold uppercase tracking-[.14em] opacity-85">Programa de {durationLabel(c.program)}</p>
           <h3 className={`mt-0.5 font-extrabold leading-tight tracking-tight text-balance ${big ? "text-[26px]" : "text-xl"}`}>{c.title}</h3>
         </div>

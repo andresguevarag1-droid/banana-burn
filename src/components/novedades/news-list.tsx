@@ -22,7 +22,9 @@ function Art({ item }: { item: NewsItem }) {
   if (src && !failed) {
     return (
       <span className="relative block size-16 shrink-0 overflow-hidden rounded-2xl bg-banana-soft ring-1 ring-ink/10 sm:size-20">
-        <Image src={src} alt="" width={80} height={80} sizes="80px" className="size-full object-cover" onError={() => setFailed(true)} />
+        {/* Las portadas de retos son 16:9 con Coach Banana a la derecha: el recorte cuadrado se ancla a ese lado (centrado
+            quedaba solo el fondo y medio mono). */}
+        <Image src={src} alt="" width={80} height={80} sizes="80px" className={`size-full object-cover ${item.image && "reto" in item.image ? "object-right" : ""}`} onError={() => setFailed(true)} />
         <span className="absolute bottom-1 right-1 grid size-6 place-items-center rounded-lg bg-white/95 text-banana-ink shadow-soft"><BrandIcon name={item.icon} className="size-4" aria-hidden /></span>
       </span>
     );
