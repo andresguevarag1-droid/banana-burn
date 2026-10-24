@@ -1767,6 +1767,45 @@ delete from public.challenge_purchases where provider_payment_intent_id = 'pi_te
 select bbtest.ok('0039: sin frases que asumen a un hombre en programas y planes de retos', not exists (select 1 from public.challenges_catalog where program::text ~ '(si estás cansado|cuando estás listo|cuando estás fresco|Llega descansado)') and not exists (select 1 from public.challenge_plans where days::text ~ '(si estás cansado|cuando estás listo)') and not exists (select 1 from public.program_sessions where focus like '%Llega descansado%'));
 select bbtest.ok('0039: las versiones neutras quedaron en su lugar', exists (select 1 from public.challenges_catalog where slug = 'reconstruccion-8-semanas' and program::text like '%cuando ya puedes más%') and exists (select 1 from public.program_sessions where focus like '%Llega con energía al cierre.%'));
 
+-- ───────────── 17. Monitoreo (0041): errores sin datos personales, solo admin lee ─────────────
+set role anon; select bbtest.login(null);
+select bbtest.fails('0041: anon no reporta errores directo', $q$ select public.app_error_report('client', 'TypeError', '/app', 'x', null, null, null, 'k') $q$, '42501');
+select bbtest.fails('0041: anon no inserta en app_errors', $q$ insert into public.app_errors (fingerprint, source, kind, route) values ('x', 'client', 'E', '/') $q$, '42501');
+select bbtest.ok('0041: anon sí puede hacer el ping de salud', public.health_ping());
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('0041: un usuario no reporta errores directo', $q$ select public.app_error_report('client', 'TypeError', '/app', 'x', null, null, null, 'k') $q$, '42501');
+select bbtest.fails('0041: un usuario no inserta en app_errors', $q$ insert into public.app_errors (fingerprint, source, kind, route) values ('x', 'client', 'E', '/') $q$, '42501');
+select bbtest.fails('0041: un usuario no escribe ops_heartbeats', $q$ insert into public.ops_heartbeats (name, ok) values ('cron', true) $q$, '42501');
+select bbtest.fails('0041: un usuario no ve el resumen', $q$ select * from public.admin_error_summary(24) $q$, '42501');
+select bbtest.fails('0041: un usuario no purga', $q$ select public.app_errors_purge(30) $q$, '42501');
+reset role;
+set role service_role; select bbtest.login(null);
+select bbtest.ok('0041: el servidor guarda un error', public.app_error_report('client', 'TypeError', '/app/hoy', 'Falló para ana@correo.com con id 3f2b1c4d-1111-4222-8333-444455556666 y tel 8888-1234', 'abc123', 'deadbee', 'chrome', 'cliente-1'));
+select bbtest.ok('0041: el mismo error otra vez', public.app_error_report('client', 'TypeError', '/app/hoy', 'Falló para ana@correo.com con id 3f2b1c4d-1111-4222-8333-444455556666 y tel 8888-1234', null, 'deadbee', 'chrome', 'cliente-1'));
+select bbtest.ok('0041: el mismo error suma hits en vez de otra fila', (select count(*) = 1 and sum(hits) = 2 from public.app_errors where route = '/app/hoy'));
+select bbtest.ok('0041: la base limpia correo, id y números', (select message from public.app_errors where route = '/app/hoy') !~ '(ana@correo|3f2b1c4d|8888|1234)'
+  and (select message from public.app_errors where route = '/app/hoy') like '%[correo]%');
+select bbtest.ok('0041: fuente inválida se descarta', not public.app_error_report('hacker', 'E', '/', 'x', null, null, null, 'cliente-1'));
+select bbtest.ok('0041: tope por cliente (30 cada 10 min)', (select count(*) filter (where not public.app_error_report('client', 'E', '/tope', 'x' || g, null, null, null, 'cliente-tope')) from generate_series(1, 35) g) = 5);
+insert into public.app_errors (fingerprint, source, kind, route, last_at, first_at) values ('viejo', 'server', 'E', '/viejo', now() - interval '40 days', now() - interval '40 days');
+select bbtest.ok('0041: la purga borra una fila vieja', public.app_errors_purge(30) = 1);
+select bbtest.ok('0041: la purga borra lo de más de 30 días y deja lo reciente', not exists (select 1 from public.app_errors where fingerprint = 'viejo') and exists (select 1 from public.app_errors where route = '/app/hoy'));
+insert into public.ops_heartbeats (name, ok, ms) values ('cron:recordatorios', true, 1200) on conflict (name) do update set ok = excluded.ok, ms = excluded.ms, last_at = now();
+reset role;
+set role service_role; select bbtest.login('A');
+select bbtest.fails('0041: con sesión de usuario no reporta', $q$ select public.app_error_report('client', 'E', '/', 'x', null, null, null, 'k') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0041: un usuario no lee errores ni tareas', bbtest.num($q$ select 1 from public.app_errors $q$) = 0 and bbtest.num($q$ select 1 from public.ops_heartbeats $q$) = 0);
+select bbtest.login('P');
+select bbtest.ok('0041: soporte no lee errores (solo admin)', bbtest.num($q$ select 1 from public.app_errors $q$) = 0);
+select bbtest.login('S');
+select bbtest.ok('0041: admin lee errores y tareas', bbtest.num($q$ select 1 from public.app_errors where route = '/app/hoy' $q$) = 1 and bbtest.num($q$ select 1 from public.ops_heartbeats where name = 'cron:recordatorios' $q$) = 1);
+select bbtest.ok('0041: admin ve el resumen agrupado', (select hits from public.admin_error_summary(24) where route = '/app/hoy') = 2);
+select bbtest.fails('0041: el resumen valida la ventana', $q$ select * from public.admin_error_summary(0) $q$, '22023');
+reset role;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

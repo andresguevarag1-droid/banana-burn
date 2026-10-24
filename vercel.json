@@ -1,16 +1,41 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/recordatorios", "schedule": "0 13 * * *" }
+    {
+      "path": "/api/cron/recordatorios",
+      "schedule": "0 13 * * *"
+    }
   ],
   "headers": [
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/((?!api/|_next/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "banana-burn.vercel.app"
+        }
+      ],
+      "destination": "https://www.bananaburn.app/$1",
+      "permanent": true
     }
   ]
 }

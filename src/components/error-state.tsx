@@ -4,10 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowCounterClockwise, MonkeyBanana } from "@/components/icons";
 import { ERROR_COPY, errorKind, type ErrorKind } from "@/lib/error-kind";
+import { reportBoundaryError } from "@/lib/monitor/client";
 
-/** Registro sin datos personales: solo el área, el tipo de falla y el código (digest) que Next asocia al log del servidor. */
+/**
+ * Registro sin datos personales: solo el área, el tipo de falla y el código (digest) que Next asocia al log del servidor.
+ * Además se reporta (limpio y con tope) a /api/errores para verlo en /admin/salud. Sin conexión no se reporta.
+ */
 export function logClientError(area: string, error: Error & { digest?: string }, kind: ErrorKind) {
   console.error(`[ui:${area}] ${kind}`, { digest: error.digest ?? null, name: error.name });
+  if (kind !== "offline") reportBoundaryError(error);
 }
 
 /**

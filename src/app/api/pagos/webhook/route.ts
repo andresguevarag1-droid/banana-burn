@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { WEBHOOK_HEADER, parseEvent, verifyWebhook } from "@/lib/onvo";
 import { processWebhook } from "@/lib/billing";
-import { errInfo } from "@/lib/security/log";
+import { errCode, logError, logWarn } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,25 +14,25 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const secret = process.env.ONVO_WEBHOOK_SECRET;
   if (!secret) {
-    console.error("[pagos] webhook recibido pero ONVO_WEBHOOK_SECRET no está configurada");
+    logError("pagos:webhook", "secret_missing");
     return NextResponse.json({ ok: false }, { status: 503 });
   }
   if (!verifyWebhook(req.headers.get(WEBHOOK_HEADER), secret)) {
-    console.warn("[pagos] webhook rechazado: secreto inválido");
+    logWarn("pagos:webhook", "bad_secret");
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   const raw = await req.text();
   const evt = parseEvent(raw);
   if (!evt) {
-    console.warn("[pagos] webhook con cuerpo inválido");
+    logWarn("pagos:webhook", "bad_payload");
     return NextResponse.json({ ok: false, error: "payload inválido" }, { status: 400 });
   }
   try {
     const r = await processWebhook(evt, raw);
-    if (r.status === "error") return NextResponse.json({ ok: false }, { status: 500 });
+    if (r.status === "error") { logError("pagos:webhook", "process_error", { type: evt.type.slice(0, 60) }); return NextResponse.json({ ok: false }, { status: 500 }); }
     return NextResponse.json({ ok: true, result: r.status });
   } catch (e) {
-    console.error("[pagos] webhook", evt.type, errInfo(e));
+    logError("pagos:webhook", "exception", { type: evt.type.slice(0, 60), kind: errCode(e) });
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
