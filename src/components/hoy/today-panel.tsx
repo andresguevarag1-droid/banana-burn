@@ -194,7 +194,8 @@ function MealToday({ meal, coach }: { meal: HoyFood; coach: NutritionNumbers["co
         <h3 className="text-base font-extrabold">¿Qué has comido hoy?</h3>
         <Link href="/app/nutricion" className="tap text-xs font-bold text-banana underline-offset-4 hover:underline">Registrar comida</Link>
       </div>
-      <ul className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* En escritorio esta columna mide ~420 px: con 4 columnas los platos ("Arroz con frijoles y huevos revueltos") se cortaban. */}
+      <ul className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
         {meal.slots.map((s) => {
           const has = s.items.length > 0;
           return (

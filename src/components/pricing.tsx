@@ -110,7 +110,9 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
         })}
       </div>
       {checkout.error && <p role="alert" className="mt-6 text-center text-sm font-semibold text-bad">{checkout.error}</p>}
-      <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido, sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD).</p>
+      {/* La prueba gratis solo se le cuenta a quien aún no tiene cuenta: en el muro (prueba terminada) y en Mi plan no aplica. */}
+      {!loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido, sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD).</p>}
+      {loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Precios en dólares (USD).</p>}
       <p className="mt-2 text-center text-sm text-muted text-pretty">{PREMIUM_RETOS_NOTE}</p>
 
       {/* Título arriba y las cuatro garantías en dos columnas: en escritorio la columna del título quedaba casi vacía. */}
@@ -120,7 +122,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
           <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">términos</Link>, escritos para leerse en cinco minutos.</p>
         </div>
         <ul className="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-2">
-          {guarantees(trialGuarantee ?? offer().guarantee).map(([I, t, d]) => (
+          {guarantees(trialGuarantee ?? offer().guarantee).slice(loggedIn ? 1 : 0).map(([I, t, d]) => (
             <li key={t} className="flex gap-4 border-t border-line pt-5">
               <I weight="duotone" aria-hidden className="mt-0.5 size-6 shrink-0 text-banana-ink" />
               <div>

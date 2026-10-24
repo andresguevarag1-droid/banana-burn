@@ -272,6 +272,8 @@ export type ChargeView = {
   fullAmount: number;
   /** El primer cobro lleva el 50 % del primer mes. */
   promo: boolean;
+  /** La persona ganó el 50 % del primer mes (aplica si el plan que se cobra es mensual). Para mostrar precios al cambiar de plan. */
+  promoEarned: boolean;
   chargeAt: string;
   trialEndsAt: string;
   retryAt: string | null;
@@ -303,7 +305,7 @@ export function chargeView(row: TrialChargeRow | null | undefined, now = new Dat
   const at = ms(row.charge_at);
   return {
     kind: row.kind, phase, plan: row.plan, billing: row.billing, amount: row.amount_minor / 100,
-    fullAmount: amountMinorFor(row.plan, row.billing) / 100, promo: promoApplies(row.promo, row.billing),
+    fullAmount: amountMinorFor(row.plan, row.billing) / 100, promo: promoApplies(row.promo, row.billing), promoEarned: row.promo === PROMO_ID,
     chargeAt: row.charge_at, trialEndsAt: row.trial_ends_at,
     retryAt: row.status === "retry_scheduled" ? row.next_attempt_at : null,
     daysToCharge: Math.max(0, Math.ceil((at - now.getTime()) / DAY_MS)),
