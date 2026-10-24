@@ -9,7 +9,7 @@ import { parseDraft, type DraftContent } from "@/lib/season-draft";
 import { AVOID_SWAPS, INJURY_SWAPS, aggregateFeedback, intakeSummary, parseIntake, retention, toReplace, type ExerciseStat, type FeedbackRow, type SeasonIntake, type SportId } from "@/lib/seasons";
 
 export type SeasonStats = {
-  owners: number; started: number; exercises: ExerciseStat[]; replace: string[];
+  owners: number; started: number; runs: { count: number; km: number }; exercises: ExerciseStat[]; replace: string[];
   retention: { week: number; users: number; pct: number }[]; intakes: SeasonIntake[]; summary: ReturnType<typeof intakeSummary>;
 };
 
@@ -18,21 +18,21 @@ function demoRaw(slug: string) {
   const ids = (SEASON_SEED_BY_SLUG[slug]?.sessions ?? []).flatMap((s) => s.exercises.map((e) => e.id)).slice(0, 10);
   const feedback: FeedbackRow[] = ids.flatMap((id, k) => Array.from({ length: 8 }, (_, n) => ({ exercise_id: id, week: 1 + (n % 3), liked: k === 3 ? n < 2 : n % 4 !== 0, difficulty: k === 1 && n < 3 ? ("dificil" as const) : null, skipped: k === 5 && n < 3, completed: !(k === 5 && n < 3) })));
   const weeks = Array.from({ length: 20 }, (_, n) => Array.from({ length: 8 - (n % 5) }, (_, w) => w + 1));
-  return { owners: 24, started: 20, feedback, weeks, intakes: [] as unknown[] };
+  return { owners: 24, started: 20, feedback, weeks, intakes: [] as unknown[], runs: { count: slug.includes("running") ? 86 : 0, km: slug.includes("running") ? 612.4 : 0 } };
 }
 
 export async function seasonStats(v: Viewer, slug: string, sport: SportId): Promise<SeasonStats | { error: string }> {
-  let raw: { owners: number; started: number; feedback: FeedbackRow[]; weeks: number[][]; intakes: unknown[] };
+  let raw: { owners: number; started: number; feedback: FeedbackRow[]; weeks: number[][]; intakes: unknown[]; runs: { count: number; km: number } };
   if (v.demo) raw = demoRaw(slug);
   else {
     const { data, error } = await (await createClient()).rpc("admin_season_stats", { p_slug: slug });
     if (error) return { error: error.code === "42883" || error.code === "PGRST202" ? "Falta aplicar la migración 0046_temporadas.sql." : "No pudimos leer las estadísticas." };
     const d = (data ?? {}) as Partial<typeof raw>;
-    raw = { owners: Number(d.owners) || 0, started: Number(d.started) || 0, feedback: Array.isArray(d.feedback) ? d.feedback : [], weeks: Array.isArray(d.weeks) ? d.weeks.filter(Array.isArray) : [], intakes: Array.isArray(d.intakes) ? d.intakes : [] };
+    raw = { owners: Number(d.owners) || 0, started: Number(d.started) || 0, feedback: Array.isArray(d.feedback) ? d.feedback : [], weeks: Array.isArray(d.weeks) ? d.weeks.filter(Array.isArray) : [], intakes: Array.isArray(d.intakes) ? d.intakes : [], runs: { count: Number(d.runs?.count) || 0, km: Number(d.runs?.km) || 0 } };
   }
   const exercises = aggregateFeedback(raw.feedback);
   const intakes = raw.intakes.map((x) => parseIntake(x, sport)).filter((x): x is SeasonIntake => !!x);
-  return { owners: raw.owners, started: raw.started, exercises, replace: toReplace(exercises), retention: retention(raw.weeks), intakes, summary: intakeSummary(intakes, sport) };
+  return { owners: raw.owners, started: raw.started, runs: raw.runs, exercises, replace: toReplace(exercises), retention: retention(raw.weeks), intakes, summary: intakeSummary(intakes, sport) };
 }
 
 /** Alternativas para cambiar un ejercicio: las del motor y los cambios por molestia que ya revisamos. */

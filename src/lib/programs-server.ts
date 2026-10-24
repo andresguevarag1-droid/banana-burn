@@ -158,12 +158,14 @@ export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedPr
     // Temporada: el programa a la medida de su cuestionario y con la coach con la ropa del deporte.
     const { personalize, getIntake } = await import("@/lib/seasons-server");
     const { getSex } = await import("@/lib/athlete");
-    const [ps, sex, intake] = await Promise.all([personalize(v, def), getSex(v), getIntake(v, st.slug)]);
+    const { listRuns } = await import("@/lib/runs-server");
+    const { runsForCoach } = await import("@/lib/runs");
+    const [ps, sex, intake, runs] = await Promise.all([personalize(v, def), getSex(v), getIntake(v, st.slug), listRuns(v, 14).catch(() => [])]);
     if (ps) {
       const exp = c.program.experience ? { ...c.program.experience, coach: seasonCoachId(sm.sport, sex) } : undefined;
       const meta: ProgramMeta = { ...ps.def.meta, ...(exp ? { experience: exp } : {}) };
       const pdef = { ...ps.def, meta };
-      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper, note: intake ? intakeForCoach(sm.sport, intake.answers, todayFor(v).iso) : null } };
+      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper, note: [intake ? intakeForCoach(sm.sport, intake.answers, todayFor(v).iso) : null, runsForCoach(runs)].filter(Boolean).join(" ") || null } };
     }
   }
   return { c, def, state: st, done, run: resolveProgram(def, st, done, todayFor(v).iso) };

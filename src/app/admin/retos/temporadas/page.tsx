@@ -45,11 +45,12 @@ export default async function AdminTemporadas({ searchParams }: { searchParams: 
 
       {"error" in stats ? <Notice tone="warn" title="Sin estadísticas">{stats.error}</Notice> : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <Kpi label="Personas con la temporada" value={fmtNum(stats.owners)} />
             <Kpi label="La empezaron" value={fmtNum(stats.started)} />
             <Kpi label="Cuestionarios" value={fmtNum(stats.intakes.length)} />
             <Kpi label="Siguen en la semana 8" value={fmtPct(stats.retention[7]?.pct ?? 0)} hint="De quienes entrenaron al menos una vez" />
+            <Kpi label="Carreras con GPS" value={fmtNum(stats.runs.count)} hint={`${stats.runs.km.toLocaleString("es-419")} km en la temporada`} />
           </div>
 
           <section className={`${panel} p-4 space-y-3`} aria-labelledby="ret">

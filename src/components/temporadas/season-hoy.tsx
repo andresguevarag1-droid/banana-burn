@@ -1,13 +1,15 @@
 // Tarjeta de temporada en Hoy: cuenta regresiva en la preventa, "Empezar mi temporada" si ya empezó y no la activó,
 // y con la temporada activa, su semana, su evento y la opinión rápida de la última sesión.
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, Flag } from "@/components/icons";
+import { ArrowRight, CalendarCheck, Flag, PersonSimpleRun } from "@/components/icons";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { getProgramStates } from "@/lib/programs-server";
 import { exInfo } from "@/lib/programs-server";
 import { parseProgramTemplate } from "@/lib/programs";
 import { getIntake, getSeasonsView } from "@/lib/seasons-server";
-import { SPORTS, daysBetweenIso, daysToStart, longDate, parseSeasonSlug, seasonStatus, seasonWeek } from "@/lib/seasons";
+import { DOW_LONG, SPORTS, daysBetweenIso, daysToStart, longDate, parseSeasonSlug, planWeek, seasonStatus, seasonWeek } from "@/lib/seasons";
+import { listRuns } from "@/lib/runs-server";
+import { fmtKm, longRunShift } from "@/lib/runs";
 import { SeasonActivate } from "./season-activate";
 import { SeasonFeedback } from "./season-feedback";
 
@@ -58,6 +60,8 @@ export async function SeasonHoy({ v }: { v: Viewer }) {
     );
   }
   const fb = await pendingFeedback(v, s.slug, view.today);
+  // Running: una carrera larga fuera de plan corre un día la siguiente sesión pesada de piernas.
+  const shift = m.sport === "running" && intake ? longRunShift(planWeek("running", intake.answers).days, await listRuns(v, 3), view.today, intake.answers.running?.longRunDay ?? null) : null;
   const ev = intake?.answers.eventDate && intake.answers.eventDate >= view.today ? intake.answers : null;
   return (
     <div style={style} className="space-y-3">
@@ -66,6 +70,13 @@ export async function SeasonHoy({ v }: { v: Viewer }) {
         <span className="min-w-0 flex-1 text-sm font-semibold text-ink">Semana {Math.max(1, Math.min(8, seasonWeek(s, view.today)))} de 8{ev ? `. Faltan ${daysBetweenIso(view.today, ev.eventDate!)} días para tu ${ev.eventType ?? "evento"}` : ""}</span>
         {ev ? <Flag weight="duotone" className="size-5 shrink-0 text-[var(--sport)]" /> : <ArrowRight className="size-4 shrink-0 text-muted" />}
       </Link>
+      {shift && (
+        <section className="card flex gap-3 p-4">
+          <PersonSimpleRun weight="duotone" className="size-6 shrink-0 text-[var(--sport)]" />
+          <p className="text-sm text-body"><b className="block text-ink">Corriste {fmtKm(shift.run.distanceM)} km fuera de tu plan</b>Pasa tu sesión de {shift.moved} al {DOW_LONG[shift.to]} y haz hoy recuperación o descanso: tus piernas necesitan 48 horas antes de cargar pesado.</p>
+        </section>
+      )}
+      {m.sport === "running" && <Link href="/app/correr" className="card flex items-center gap-3 p-4 text-sm font-semibold text-ink"><PersonSimpleRun weight="duotone" className="size-5 text-[var(--sport)]" /><span className="flex-1">Registra tu carrera con GPS</span><ArrowRight className="size-4 text-muted" /></Link>}
       {fb && <SeasonFeedback slug={s.slug} week={fb.week} day={fb.day} title={`Semana ${fb.week}, sesión ${fb.day}`} exercises={fb.exercises} />}
     </div>
   );

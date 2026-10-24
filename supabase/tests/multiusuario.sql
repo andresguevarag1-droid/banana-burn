@@ -2018,7 +2018,30 @@ select bbtest.zero('0046: A no edita el cuestionario de F', $q$ update public.se
 select bbtest.ok('0046: A no ve canjes ajenos', bbtest.num($q$ select 1 from public.season_redemptions $q$) = 0);
 reset role;
 set role authenticated; select bbtest.login('S');
-select bbtest.ok('0046: el panel lee el resumen sin identificar a nadie', (select (v->>'owners')::int = 1 and jsonb_array_length(v->'feedback') = 1 and jsonb_array_length(v->'intakes') = 1 and not (v::text ~ '0f0f0f0f') from (select public.admin_season_stats('temporada-running-1') v) x));
+select bbtest.ok('0046: el panel lee el resumen sin identificar a nadie', (select (v->>'owners')::int = 1 and (v->'runs'->>'count')::int >= 0 and jsonb_array_length(v->'feedback') = 1 and jsonb_array_length(v->'intakes') = 1 and not (v::text ~ '0f0f0f0f') from (select public.admin_season_stats('temporada-running-1') v) x));
+reset role;
+
+-- ───────────── 21. Carreras con GPS (0047) ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0047: guarda su carrera', bbtest.affected($q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s, pace_s_km, splits, track) values ('11111111-2222-4333-8444-555555555555', current_date, now() - interval '40 minutes', now() - interval '10 minutes', 5000, 1500, 300, '[{"km":1,"seconds":300}]', '[]') $q$) = 1);
+select bbtest.fails('0047: el mismo id de carrera no se duplica', $q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s) values ('11111111-2222-4333-8444-555555555555', current_date, now() - interval '40 minutes', now() - interval '10 minutes', 5000, 1500) $q$, '23505');
+select bbtest.fails('0047: no guarda una carrera a 40 km/h', $q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s) values (gen_random_uuid(), current_date, now() - interval '30 minutes', now(), 20000, 1800) $q$, '23514');
+select bbtest.fails('0047: no guarda una carrera de más de 24 horas', $q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s) values (gen_random_uuid(), current_date, now() - interval '30 hours', now(), 20000, 9000) $q$, '23514');
+select bbtest.fails('0047: no guarda carreras de otra persona', $q$ insert into public.runs (user_id, client_id, day, started_at, ended_at, distance_m, moving_s) values (bbtest.u('B'), gen_random_uuid(), current_date, now() - interval '30 minutes', now(), 5000, 1500) $q$, '42501');
+select bbtest.zero('0047: no edita sus carreras', $q$ update public.runs set distance_m = 9000 $q$);
+reset role;
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('0047: B no ve las carreras de A', bbtest.num($q$ select 1 from public.runs $q$) = 0);
+select bbtest.zero('0047: B no borra las carreras de A', $q$ delete from public.runs $q$);
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('0047: ni el staff ve recorridos ajenos', bbtest.num($q$ select 1 from public.runs $q$) = 0);
+reset role;
+set role authenticated; select bbtest.login('E');
+select bbtest.fails('0047: sin plan ni prueba no guarda carreras', $q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s) values (gen_random_uuid(), current_date, now() - interval '30 minutes', now(), 5000, 1500) $q$, '42501') where not (select public.has_app_access());
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0047: borra su carrera', bbtest.affected($q$ delete from public.runs where client_id = '11111111-2222-4333-8444-555555555555' $q$) = 1);
 reset role;
 
 -- ───────────── Resumen ─────────────

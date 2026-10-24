@@ -1,3 +1,7 @@
+import { todayFor } from "@/lib/today";
+import { listRuns } from "@/lib/runs-server";
+import { weeklyKm } from "@/lib/runs";
+import { WeeklyKm } from "@/components/correr/weekly-km";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getProgress, LIFTS_WEEKS } from "@/lib/progress";
@@ -32,7 +36,7 @@ export default async function Progreso() {
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // El atleta y lo que no depende de él van juntos; el registro del día necesita su peso.
-  const [a, { weights, tracked, workouts }, measures, photos, ent] = await Promise.all([getAthlete(v), getProgress(v), getMeasures(v), getPhotos(v), getEntitlements(v)]);
+  const [a, { weights, tracked, workouts }, measures, photos, ent, runs] = await Promise.all([getAthlete(v), getProgress(v), getMeasures(v), getPhotos(v), getEntitlements(v), listRuns(v, 60)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const lm = measures.at(-1);
@@ -170,6 +174,8 @@ export default async function Progreso() {
         <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><CaretDown weight="bold" className="size-5 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
         <div className="px-5 pb-5"><ProfileForm a={{ name: a.name, dob: a.dob, heightCm: a.heightCm, startWeight: a.startWeight, goalWeight: a.goalWeight, goalDate: a.goalDate, mode: a.mode, sex: a.sex }} /></div>
       </details>
+      {/* Carreras con GPS (0047): km por semana, solo si ya registró alguna. */}
+      {runs.length > 0 && <Link href="/app/correr" className="block transition-transform duration-150 active:scale-[.99]"><WeeklyKm weeks={weeklyKm(runs, todayFor(v).iso)} title="Km corridos por semana" /></Link>}
     </div>
   );
 }
