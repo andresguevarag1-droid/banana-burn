@@ -1,9 +1,9 @@
 // Modo demo (sin Supabase): estados de ejemplo de la tarjeta y del primer cobro, para ver cada pantalla sin llamar a ONVO.
-// /app/suscripcion?demo=beta|prueba|nueva|fallo|procesando|cancelado. Sin parámetro: "beta" durante la beta y "prueba" después.
+// /app/suscripcion?demo=beta|prueba|nueva|fallo|procesando|cancelado|vencida. Sin parámetro: "beta" durante la beta y "prueba" después.
 import { BETA_ENDS_AT, betaLive } from "./plans";
 import { DAY_MS, amountMinorFor, cardStepFor, firstChargeMinor, chargeView, type CardStep, type ChargeView, type TrialChargeRow } from "./trial";
 
-export const DEMO_CARD_VARIANTS = ["beta", "prueba", "nueva", "fallo", "procesando", "cancelado"] as const;
+export const DEMO_CARD_VARIANTS = ["beta", "prueba", "nueva", "fallo", "procesando", "cancelado", "vencida"] as const;
 export type DemoCardVariant = (typeof DEMO_CARD_VARIANTS)[number];
 
 export type DemoCardState = {
@@ -44,6 +44,9 @@ export function demoCardState(v: string | null | undefined, now = new Date()): D
       const end = t + 5 * DAY_MS;
       return { variant, charge: null, card: null, cardStep: "trial", locked: false, trial: { endsAt: iso(end), daysLeft: daysLeft(end) } };
     }
+    case "vencida":
+      // Prueba sin tarjeta que ya terminó (0043): el muro de planes.
+      return { variant, charge: null, card: null, cardStep: "pay", locked: true, trial: null };
     case "fallo": {
       const r = row({ trial_started_at: iso(t - 7.4 * DAY_MS), trial_ends_at: iso(t - 0.4 * DAY_MS), charge_at: iso(t - 0.4 * DAY_MS), status: "retry_scheduled", attempts: 1, next_attempt_at: iso(t + 0.6 * DAY_MS), last_error: "rechazado" }, t);
       return { variant, charge: chargeView(r, now), card, cardStep: cardStepFor({ paidAccess: false, createdAt: r.created_at, row: r, now, betaEndsAt: "2000-01-01T00:00:00Z" }), locked: true, trial: null };

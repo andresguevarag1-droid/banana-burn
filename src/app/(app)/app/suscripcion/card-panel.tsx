@@ -89,7 +89,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
     beta: { title: PROMO_TITLE, sub: `Hasta el fin de la versión de prueba todo es gratis. Desde el ${betaFirstPaid} la app se paga: si dejas tu tarjeta lista ahora, tu primer mes cuesta la mitad y sigues sin cortes.`, btn: "Dejar mi tarjeta lista", note: offerNote },
     pay: failed
       ? { title: "Cambia tu tarjeta", sub: charge?.retryAt && charge.testerHold ? `No pudimos cobrar tu plan. Mientras seas tester no se te cobra: lo intentaremos una vez más el ${day(charge.retryAt)}, al terminar tu mes de tester.` : charge?.retryAt ? `No pudimos cobrar tu plan. Lo intentaremos una vez más el ${day(charge.retryAt)}, o cambia tu tarjeta para seguir hoy.` : "No pudimos cobrar tu plan con tu tarjeta. Cambia la tarjeta para seguir.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> }
-      : { title: "Guarda tu tarjeta y elige tu plan", sub: "La versión de prueba terminó. Tu progreso sigue guardado y retomas donde ibas.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> },
+      : { title: "Guarda tu tarjeta y elige tu plan", sub: "Tu acceso gratis terminó. Tu progreso sigue guardado y retomas donde ibas.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> },
   }[step];
 
   return (
@@ -197,7 +197,8 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
       {view === "plan" && (
         <div className="space-y-3 rounded-2xl border border-line p-4">
           <p className="font-extrabold text-ink">¿Qué plan se cobra el {day(charge.chargeAt)}?</p>
-          <PlanPicker value={choice} onChange={setChoice} disabled={busy} />
+          {/* Con el 50 % ganado, los mensuales muestran el precio del primer mes (el servidor lo vuelve a calcular). */}
+          <PlanPicker value={choice} onChange={setChoice} disabled={busy} promo={charge.promoEarned} />
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
             <button type="button" onClick={() => setView("idle")} className="btn-ghost h-12 sm:flex-1">Volver</button>

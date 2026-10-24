@@ -37,8 +37,8 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
             <button key={x.day} type="button" role="tab" aria-selected={on} onClick={() => setSel(x.day)}
               className={`pressable relative min-h-14 rounded-2xl px-1 py-2 text-center ${on ? "bg-ink text-white shadow-lift" : x.optional ? "border border-dashed border-line bg-white/60 text-ink" : "border border-line bg-white text-ink"}`}>
               <span className={`block text-[11px] font-bold uppercase tracking-[.08em] ${on ? "text-banana" : "text-muted"}`}>{x.optional ? "Extra" : word(x.day)}</span>
-              {/* Dos líneas en vez de truncar: en 360 px las cuatro decían "Cuerpo c…" y no se distinguían. */}
-              <span className="mt-0.5 line-clamp-2 break-words text-xs font-extrabold leading-tight">{x.title.replace(/^Extra: /, "")}</span>
+              {/* Hasta tres líneas en vez de truncar: en 360 px "Cuerpo completo A" y "brazos, hombros y core" no caben en dos. */}
+              <span className="mt-0.5 line-clamp-3 break-words text-xs font-extrabold leading-tight">{x.title.replace(/^Extra: /, "")}</span>
               {x.done && <span className="absolute -top-1.5 -right-1.5 grid size-[18px] place-items-center rounded-full bg-peel text-white ring-2 ring-paper" role="img" aria-label="Hecha"><Check weight="bold" className="size-2.5" /></span>}
             </button>
           );

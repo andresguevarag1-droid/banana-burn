@@ -179,7 +179,9 @@ describe("50 % del primer mes (0043)", () => {
   });
   it("la vista del cobro dice el monto con descuento y el precio normal", () => {
     expect(chargeView(row({ promo: "primer_mes_50", amount_minor: 749 }), plus(START, 3))).toMatchObject({ amount: 7.49, fullAmount: 14.99, promo: true });
-    expect(chargeView(row({ promo: "primer_mes_50", billing: "anual", amount_minor: 8999 }), plus(START, 3))).toMatchObject({ promo: false, fullAmount: 89.99 });
+    expect(chargeView(row({ promo: "primer_mes_50", billing: "anual", amount_minor: 8999 }), plus(START, 3))).toMatchObject({ promo: false, promoEarned: true, fullAmount: 89.99 });
+    // Al cambiar de plan, el selector muestra el precio con descuento si la persona ganó la promoción (aunque hoy esté en anual).
+    expect(chargeView(row({ promo: null }), plus(START, 3))).toMatchObject({ promo: false, promoEarned: false });
   });
 });
 
