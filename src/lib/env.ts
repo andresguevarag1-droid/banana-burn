@@ -19,8 +19,22 @@ export const SUPABASE_URL = (() => { const u = cleanUrl(process.env.NEXT_PUBLIC_
 export const SUPABASE_ANON_KEY = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 /** Sin llaves de Supabase la app corre en modo demo (datos de ejemplo, sin login). */
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-/** URL pública: variable explícita, o el dominio de producción que Vercel expone, o local. */
-export const SITE_URL = cleanUrl(process.env.NEXT_PUBLIC_SITE_URL) || cleanUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) || "http://localhost:3000";
+/** Dominio canónico de producción. bananaburn.app (sin www) redirige con 308 a este. */
+export const CANONICAL_ORIGIN = "https://www.bananaburn.app";
+
+/**
+ * URL pública para enlaces absolutos (canonical, sitemap, correos, push). Variable explícita (NEXT_PUBLIC_SITE_URL); si
+ * apunta al dominio sin www se corrige al canónico (evita un salto de redirección en cada enlace y canonical a una
+ * redirección). Sin variable, en Vercel (producción o preview) se usa el canónico: VERCEL_PROJECT_PRODUCTION_URL elige
+ * el dominio más corto (bananaburn.app, que redirige) y no sirve como canonical. Local: localhost.
+ */
+export function siteUrlFrom(env: Record<string, string | undefined>): string {
+  const explicit = cleanUrl(env.NEXT_PUBLIC_SITE_URL);
+  if (explicit) return explicit === "https://bananaburn.app" || explicit === "http://bananaburn.app" ? CANONICAL_ORIGIN : explicit;
+  if (env.VERCEL_ENV === "production" || env.VERCEL_ENV === "preview") return CANONICAL_ORIGIN;
+  return "http://localhost:3000";
+}
+export const SITE_URL = siteUrlFrom(process.env);
 
 /**
  * ¿Se permite el modo demo? Solo si Supabase NO está configurado y no estamos en el deploy de producción

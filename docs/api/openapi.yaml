@@ -1,0 +1,416 @@
+openapi: 3.1.0
+info:
+  title: Banana Burn API
+  version: "2026-10-23"
+  summary: Endpoints HTTP de Banana Burn que se llaman desde fuera de las pantallas (monitores, ONVO, Vercel Cron, la PWA).
+  description: |
+    Todas las respuestas llevan `Cache-Control: no-store`. Los métodos no listados responden **405**.
+    Errores en JSON con la forma `{ "ok": false, "error": "<mensaje en español para la persona>" }` salvo donde se indica
+    (el coach responde texto plano en streaming; `/api/track` y `/api/errores` responden sin cuerpo).
+
+    Autenticación:
+    - **Sesión** (`cookieSession`): cookie de Supabase Auth de la app (mismo sitio). Los endpoints que cambian datos
+      además exigen mismo origen (`Origin`/`Sec-Fetch-Site`): no se pueden llamar desde otro sitio.
+    - **Bearer CRON_SECRET** (`cronBearer`): solo Vercel Cron y monitores de confianza.
+    - **Secreto de webhook** (`onvoWebhook`): cabecera `x-webhook-secret` que configura ONVO.
+
+    No hay una API pública de datos con llaves: ver docs/api/README.md (cómo conectar integraciones).
+servers:
+  - url: https://www.bananaburn.app
+    description: Producción
+  - url: http://localhost:3000
+    description: Local
+
+tags:
+  - name: operación
+  - name: pagos
+  - name: cuenta
+  - name: app
+
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: sb-<proyecto>-auth-token
+      description: Sesión de Supabase Auth puesta por la app al entrar. Mismo origen obligatorio en POST/DELETE.
+    cronBearer:
+      type: http
+      scheme: bearer
+      description: "`Authorization: Bearer $CRON_SECRET`."
+    onvoWebhook:
+      type: apiKey
+      in: header
+      name: x-webhook-secret
+      description: Secreto del webhook de ONVO (ONVO_WEBHOOK_SECRET), comparado en tiempo constante.
+  schemas:
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: { const: false }
+        error: { type: string, description: Mensaje para mostrar a la persona (español). }
+    Ok:
+      type: object
+      required: [ok]
+      properties:
+        ok: { const: true }
+        demo: { type: boolean, description: true en modo demo (sin Supabase); no se guardó nada. }
+    Version:
+      type: object
+      required: [v, commit, builtAt, env]
+      properties:
+        v: { type: string, description: Id del deploy (vacío en local). La PWA lo compara para ofrecer actualizar. }
+        commit: { type: [string, "null"], description: SHA corto (7) del commit desplegado. }
+        builtAt: { type: [string, "null"], format: date-time, description: Hora del build. }
+        env: { type: string, enum: [production, preview, development, local] }
+    HealthPublic:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean, description: La base responde (o modo demo). }
+    HealthDetail:
+      allOf:
+        - $ref: "#/components/schemas/HealthPublic"
+        - type: object
+          properties:
+            demo: { type: boolean }
+            supabaseUp: { type: boolean }
+            supabaseMs: { type: [integer, "null"] }
+            supabaseVia: { type: [string, "null"], enum: [db, auth, null], description: "db = ida y vuelta a Postgres (health_ping); auth = respaldo." }
+            integrations:
+              type: object
+              description: Solo booleanos (configurada o no); nunca valores.
+              additionalProperties: { type: boolean }
+            missing: { type: array, items: { type: string } }
+            version: { type: [string, "null"] }
+            builtAt: { type: [string, "null"], format: date-time }
+            at: { type: string, format: date-time }
+    ErrorReport:
+      type: object
+      required: [source]
+      description: |
+        Reporte de error del navegador. El servidor vuelve a limpiar todo (correos, números de 3+ cifras, ids, tokens,
+        query strings) y descarta campos desconocidos. Máximo 4 KB.
+      properties:
+        source: { type: string, enum: [client, boundary] }
+        kind: { type: string, maxLength: 40, pattern: "^[A-Za-z][A-Za-z0-9_.:-]*$", examples: [TypeError] }
+        message: { type: string, maxLength: 300 }
+        route: { type: string, description: "Ruta; se guarda sin query y con ids como :id." }
+        digest: { type: [string, "null"], maxLength: 64, pattern: "^[A-Za-z0-9_-]+$" }
+        release: { type: [string, "null"], maxLength: 40 }
+    FunnelEvent:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, enum: [page_view, cta_click, trial_banner_view, plan_wall_view, checkout_view, purchase_success, onboarding_done, card_banner_view, card_saved] }
+        props:
+          type: object
+          maxProperties: 12
+          description: Claves `^[a-z][a-z0-9_]{0,31}$`; valores texto (≤120, sin correos ni números largos), número o booleano.
+          additionalProperties: { type: [string, number, boolean] }
+    CoachLimit:
+      type: object
+      properties:
+        error: { const: cuota }
+        reason: { type: string, enum: [day, month] }
+        tier: { type: string }
+        left: { const: 0 }
+        dayLimit: { type: [integer, "null"] }
+        monthLimit: { type: [integer, "null"] }
+        resetsAt: { type: [string, "null"], format: date-time }
+  responses:
+    Unauthorized:
+      description: Sin sesión.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Forbidden:
+      description: Otro origen (CSRF) o sin permiso.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    BadRequest:
+      description: Cuerpo inválido.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    TooMany:
+      description: Límite de frecuencia. Puede traer `Retry-After`.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    MethodNotAllowed:
+      description: Método no soportado (lo responde Next).
+
+paths:
+  /api/salud:
+    get:
+      tags: [operación]
+      summary: Salud de la app (para monitores de disponibilidad)
+      description: |
+        Público: solo `{ ok }`, 200 si la base responde y 503 si no (tiempo límite 3 s). Con `Bearer CRON_SECRET` o
+        sesión de staff: detalle de integraciones (booleanos), latencia de la base y versión.
+      security: [{}, { cronBearer: [] }, { cookieSession: [] }]
+      responses:
+        "200":
+          description: Todo responde.
+          content: { application/json: { schema: { oneOf: [{ $ref: "#/components/schemas/HealthPublic" }, { $ref: "#/components/schemas/HealthDetail" }] } } }
+        "503":
+          description: La base no responde.
+          content: { application/json: { schema: { $ref: "#/components/schemas/HealthPublic" } } }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+
+  /api/version:
+    get:
+      tags: [operación]
+      summary: Versión desplegada (commit y hora del build)
+      security: [{}]
+      responses:
+        "200":
+          description: Versión actual.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Version" } } }
+
+  /api/errores:
+    post:
+      tags: [operación]
+      summary: Reporte de error del navegador (lo manda la app con sendBeacon)
+      description: |
+        Sin sesión, mismo origen obligatorio. Límite: 20 por IP cada 10 min (memoria), 30 por cliente cada 10 min y
+        600 por minuto en total (base, rate_hit). Se guarda en `app_errors` (0041) sin usuario ni IP.
+      security: [{}]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/ErrorReport" } }
+          text/plain: { schema: { type: string, description: JSON del reporte. } }
+      responses:
+        "204": { description: "Recibido (o descartado por ser ruido)." }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413":
+          description: Más de 4 KB.
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "429": { $ref: "#/components/responses/TooMany" }
+
+  /api/pagos/webhook:
+    post:
+      tags: [pagos]
+      summary: Webhook de ONVO Pay
+      description: |
+        Único camino que otorga planes pagados. Idempotente por evento (`payment_events.event_key`): un reintento de
+        ONVO de un evento ya procesado responde 200 con `result: duplicate`. Responde 2xx solo si se procesó; cualquier
+        otro código queda como entrega fallida y ONVO reintenta. Configurar en ONVO con la URL
+        `https://www.bananaburn.app/api/pagos/webhook` (con www: no seguir redirecciones).
+      security: [{ onvoWebhook: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, data]
+              properties:
+                type: { type: string, examples: [subscription.renewal.succeeded, payment-intent.succeeded] }
+                data: { type: object }
+      responses:
+        "200":
+          description: Procesado, ignorado o duplicado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { const: true }
+                  result: { type: string, enum: [processed, ignored, duplicate] }
+        "400": { description: "Cuerpo inválido." }
+        "401": { description: "Secreto inválido." }
+        "500": { description: "Error al procesar (ONVO reintenta)." }
+        "503": { description: "ONVO_WEBHOOK_SECRET sin configurar." }
+
+  /api/cron/recordatorios:
+    get:
+      tags: [operación]
+      summary: Tareas diarias (Vercel Cron, 13:00 UTC = 7:00 Costa Rica)
+      description: |
+        Recordatorios, cobros de tarjeta guardada, retos, regalos, testers, purga de fotos de identidad, soporte,
+        novedades y monitoreo (purga de errores > 30 días, aviso por correo si se disparan, registro de la corrida).
+        Idempotente: correrlo dos veces no duplica envíos ni cobros. Presupuesto ~58 s (maxDuration 60).
+      security: [{ cronBearer: [] }]
+      responses:
+        "200":
+          description: Resumen con conteos (sin datos personales).
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { description: "La parte de recordatorios falló (el resto igual corrió)." }
+
+  /api/cuenta/exportar:
+    get:
+      tags: [cuenta]
+      summary: Descargar mis datos (Ley 8968, derecho de acceso)
+      description: Descarga JSON con todos los datos de la cuenta y enlaces de 1 hora a las fotos. 6 por hora. Se abre como enlace, por eso los errores son texto plano.
+      security: [{ cookieSession: [] }]
+      responses:
+        "200":
+          description: "Archivo JSON (`Content-Disposition: attachment`)."
+          content: { application/json: { schema: { type: object } } }
+        "401": { description: "Sin sesión (texto plano)." }
+        "429": { description: "Límite de descargas (texto plano, `Retry-After`)." }
+
+  /api/cuenta/borrar:
+    post:
+      tags: [cuenta]
+      summary: Borrar mi cuenta (Ley 8968, derecho de supresión)
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [confirm], properties: { confirm: { const: BORRAR } } }
+      responses:
+        "200": { description: "Borrada (y sesión cerrada).", content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { description: "Borrado no configurado (falta service_role).", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /api/push/subscribe:
+    post:
+      tags: [app]
+      summary: Guardar la suscripción Web Push de este dispositivo
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint: { type: string, format: uri, maxLength: 1024, description: "Solo servicios de push reales (FCM, Mozilla, Apple, Windows)." }
+                keys:
+                  type: object
+                  required: [p256dh, auth]
+                  properties:
+                    p256dh: { type: string, maxLength: 255 }
+                    auth: { type: string, maxLength: 255 }
+      responses:
+        "200": { description: "Guardada.", content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { description: "No se pudo guardar.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [app]
+      summary: Quitar la suscripción de este dispositivo
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [endpoint], properties: { endpoint: { type: string, maxLength: 1024 } } }
+      responses:
+        "200": { description: "Quitada.", content: { application/json: { schema: { $ref: "#/components/schemas/Ok" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/coach:
+    post:
+      tags: [app]
+      summary: Chat con Coach Banana (respuesta en streaming)
+      description: |
+        Requiere plan o prueba vigente. Cupo por plan en la base (coach_take_quota, 0032); si la respuesta falla, la
+        pregunta se devuelve. Cabeceras de respuesta: `X-Coach-Left`, `X-Coach-Day-Used`, `X-Coach-Month-Used`,
+        `X-Coach-State` (`limit`, `locked`, `setup`). Las urgencias de salud siempre responden y no gastan cupo.
+      security: [{ cookieSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messages]
+              properties:
+                messages:
+                  type: array
+                  description: Historial; el último debe ser del usuario. Máx. 64 KB en total.
+                  items:
+                    type: object
+                    required: [role, content]
+                    properties:
+                      role: { type: string, enum: [user, assistant] }
+                      content: { type: string }
+      responses:
+        "200": { description: "Texto plano en streaming.", content: { text/plain: { schema: { type: string } } } }
+        "400": { description: "Mensaje vacío (texto plano)." }
+        "401": { description: "Sin sesión (texto plano)." }
+        "402": { description: "Sin plan ni prueba vigente (texto plano, `X-Coach-State: locked`)." }
+        "403": { description: "Otro origen (texto plano)." }
+        "413": { description: "Mensaje demasiado largo." }
+        "429":
+          description: Llegó al cupo (no es un error de la app).
+          content: { application/json: { schema: { $ref: "#/components/schemas/CoachLimit" } } }
+        "503": { description: "Coach no disponible o sin configurar (texto plano)." }
+
+  /api/coach/feedback:
+    post:
+      tags: [app]
+      summary: Feedback corto al terminar un entreno
+      description: "Siempre responde 200 con un texto; si la IA no está o se pasó el cupo, usa reglas locales (`source: reglas`)."
+      security: [{ cookieSession: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 60 }
+                done: { type: number }
+                total: { type: number }
+                prs: { type: array, items: { type: string }, maxItems: 5 }
+                volume: { type: number }
+                mins: { type: number }
+                fun: { type: number }
+                easy: { type: number }
+                streak: { type: number }
+      responses:
+        "200":
+          description: Feedback.
+          content: { application/json: { schema: { type: object, properties: { text: { type: string }, source: { type: string, enum: [ia, reglas] } } } } }
+        "401": { description: "Sin sesión (`{ text: \"\" }`)." }
+        "403": { description: "Otro origen (`{ text: \"\" }`)." }
+
+  /api/track:
+    post:
+      tags: [app]
+      summary: Evento del embudo (sin terceros ni datos personales)
+      description: Solo deja una línea JSON en el log del servidor. 120 por IP por minuto. Máx. 2 KB.
+      security: [{}]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/FunnelEvent" } }
+          text/plain: { schema: { type: string } }
+      responses:
+        "204": { description: "Registrado." }
+        "400": { description: "Inválido (sin cuerpo)." }
+        "403": { description: "Otro origen (sin cuerpo)." }
+        "429": { description: "Límite (sin cuerpo)." }
+
+  /api/email/baja:
+    get:
+      tags: [cuenta]
+      summary: Darse de baja de correos con un clic (enlace firmado del correo)
+      security: [{}]
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string }, description: Token HMAC (EMAIL_UNSUB_SECRET). }
+      responses:
+        "200": { description: "Página HTML de confirmación.", content: { text/html: { schema: { type: string } } } }
+        "400": { description: "Enlace no válido (HTML)." }
+        "503": { description: "No se pudo guardar (HTML)." }
+    post:
+      tags: [cuenta]
+      summary: Baja con un clic (RFC 8058) o volver a suscribirse
+      security: [{}]
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema: { type: object, properties: { accion: { type: string, enum: [volver] } } }
+      responses:
+        "200": { description: "HTML de confirmación." }
+        "400": { description: "Enlace no válido." }
