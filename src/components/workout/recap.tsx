@@ -27,7 +27,8 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+export function Recap({ sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+  sex?: string | null;
   voice?: Voice;
   /** Coach del programa (Coach Platanita) que firma el feedback; sin ella, Coach Banana. */
   coach?: { name: string; avatar: string } | null;
@@ -39,7 +40,7 @@ export function Recap({ title, icon, xpBefore, xp, rushed, streak, seconds, done
   // La tarjeta y el título no mienten: "completado" solo si hiciste todo.
   const full = total > 0 && done >= total;
   const status = full ? "Entreno completado" : "Sesión parcial";
-  const before = levelOf(xpBefore), after = levelOf(xpBefore + xp);
+  const before = levelOf(xpBefore, sex), after = levelOf(xpBefore + xp, sex);
   const leveled = after.idx > before.idx;
   const shownXp = useCountUp(xp);
   const reduce = useReducedMotion();

@@ -8,6 +8,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { todayFor, todayIn } from "@/lib/today";
 import { MILESTONE_DAYS, MILESTONE_XP, levelOf, perksAt } from "@/lib/gamify";
 import { addDaysIso, challengeState, fromCatalogRow, mergeCatalog, parsePlan, SEED_CHALLENGES, type CatalogRow, type Challenge, type DayTask, type Outcome } from "@/lib/challenges";
+import { getSex } from "@/lib/athlete";
 
 export type Metrics = { workout: boolean; steps: number; water: number; protein: number; proteinGoal: number };
 export type MyChallenge = { ucId: string; c: Challenge; startedOn: string; state: ReturnType<typeof challengeState>; autoOk: boolean;
@@ -103,7 +104,7 @@ export async function getPlan(v: Viewer, c: Challenge, owned: boolean): Promise<
 export async function levelPerks(v: Viewer) {
   const { getXpTotal } = await import("@/lib/xp-server");
   const xp = await getXpTotal(v);
-  const lv = levelOf(xp);
+  const lv = levelOf(xp, await getSex(v));
   return { xp, level: lv, ...perksAt(lv.idx) };
 }
 

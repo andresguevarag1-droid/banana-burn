@@ -35,7 +35,8 @@ import { hookLine } from "@/lib/engine";
 import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, t, type Voice } from "@/lib/voice";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
-export type Gam = { xp: number; streak: number; todayDone: boolean };
+/** `sex`: nombres de nivel para ella ("Mona fuerte"). */
+export type Gam = { xp: number; streak: number; todayDone: boolean; sex?: string | null };
 type Mode = "normal" | "suave" | "fuerte";
 type Rest = { end: number; total: number } | null;
 type Sheet = null | "tech" | "swap" | "exit" | "sound";
@@ -198,7 +199,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const planTotal = Math.max(plan ?? 0, totalSets);
   const xpNow = noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed });
   const xpState = (done: number, seconds: number) => ({ doneSets: done, totalSets: planTotal, doable: totalSets, prs: prs.length, seconds });
-  const goal: LevelGoal | null = noXp ? null : levelGoal(gam.xp, xpState(doneSets, elapsed));
+  const goal: LevelGoal | null = noXp ? null : levelGoal(gam.xp, xpState(doneSets, elapsed), gam.sex);
   const streakNext = gam.todayDone ? gam.streak : gam.streak + 1;
   const bananas = { got: rows.filter((r) => r.length && r.every((s) => s.done)).length, total: rows.length };
   const setWord = interval ? "intervalos" : "series";
@@ -307,7 +308,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     const xp = noXp ? 0 : setXpGain({ doneBefore: doneSets, totalSets: planTotal, prsBefore: prs.length, prsAfter: prs.length + (isPr ? 1 : 0), seconds });
     // ¿Esta serie sube de nivel? Mismo cálculo que el servidor, antes y después de la serie.
     const xpBefore = noXp ? 0 : workoutXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds }).xp;
-    const lvUp = xp ? levelCrossed(gam.xp + xpBefore, gam.xp + xpBefore + xp) : null;
+    const lvUp = xp ? levelCrossed(gam.xp + xpBefore, gam.xp + xpBefore + xp, gam.sex) : null;
     const ms = nextMilestone(doneSets + 1, totalSets, seen);
     if (ms.seen.length !== seen.length) setSeen(ms.seen);
     const rushed = isRushed(doneSets + 1, seconds);
@@ -347,7 +348,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     setToast(lvUp ? { t: `Logro: subiste a ${lvUp.n}`, kind: "level", idx: lvUp.idx } : null);
     // Motivación del descanso: meta de nivel, lo que vale terminar y un dato real que rota
     const after = { doneSets: doneSets + 1, totalSets: planTotal, doable: totalSets, prs: prs.length + (isPr && !rushed ? 1 : 0), seconds };
-    const g = noXp ? null : levelGoal(gam.xp, after);
+    const g = noXp ? null : levelGoal(gam.xp, after, gam.sex);
     const fin = noXp ? null : finishValue(after);
     const nextRow = nextRows[target.ex][target.si];
     const facts = restFacts({
@@ -557,7 +558,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   }
 
   if (phase === "saved") {
-    return <Recap title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
+    return <Recap sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
       done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} />;
   }
 

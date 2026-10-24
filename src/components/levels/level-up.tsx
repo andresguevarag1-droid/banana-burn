@@ -3,7 +3,7 @@ import { Portal } from "@/components/portal";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Confetti } from "@/components/confetti";
-import { LEVELS, LEVEL_PERKS } from "@/lib/gamify";
+import { LEVEL_PERKS, levelAt } from "@/lib/gamify";
 import { LevelBadge } from "./level-badge";
 
 /**
@@ -11,7 +11,7 @@ import { LevelBadge } from "./level-badge";
  * con el XP real); si es mayor que el último que esta persona vio en este navegador, se celebra una vez.
  * Entra en 280 ms (ease-out, desde .96, nunca desde 0), sale en 200 ms y respeta movimiento reducido.
  */
-export function LevelWatcher({ uid, idx }: { uid: string; idx: number }) {
+export function LevelWatcher({ uid, idx, sex = null }: { uid: string; idx: number; sex?: string | null }) {
   const [show, setShow] = useState<number | null>(null);
   useEffect(() => {
     const key = `bb.nivel.${uid}`;
@@ -20,13 +20,13 @@ export function LevelWatcher({ uid, idx }: { uid: string; idx: number }) {
     if (seen !== null && Number.isFinite(seen) && idx > seen) setShow(idx);
   }, [uid, idx]);
   if (!show) return null;
-  return <LevelUpDialog idx={show} onClose={() => setShow(null)} />;
+  return <LevelUpDialog idx={show} sex={sex} onClose={() => setShow(null)} />;
 }
 
-export function LevelUpDialog({ idx, onClose }: { idx: number; onClose: () => void }) {
+export function LevelUpDialog({ idx, onClose, sex = null }: { idx: number; onClose: () => void; sex?: string | null }) {
   const [closing, setClosing] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
-  const lv = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx - 1))];
+  const lv = levelAt(idx, sex);
   const perk = LEVEL_PERKS[idx - 1];
   const close = () => { setClosing(true); setTimeout(onClose, 200); };
   useEffect(() => {
@@ -44,7 +44,7 @@ export function LevelUpDialog({ idx, onClose }: { idx: number; onClose: () => vo
       <div className={`bb-celebrate relative w-full max-w-sm rounded-[2rem] bg-ink p-6 text-center text-white shadow-lift ring-2 ring-banana/60 ${closing ? "bb-out" : ""}`}>
         <span className="relative mx-auto grid w-fit place-items-center">
           <span aria-hidden className="bb-ring absolute inset-0 rounded-[1.75rem] ring-4 ring-banana" />
-          <LevelBadge idx={idx} size="xl" />
+          <LevelBadge idx={idx} size="xl" sex={sex} />
         </span>
         <p className="mt-4 text-sm font-bold text-banana">Subiste al nivel {idx}</p>
         <h2 id="lvup-t" className="text-3xl font-extrabold tracking-tight">{lv.n}</h2>

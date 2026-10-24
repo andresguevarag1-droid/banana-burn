@@ -20,8 +20,21 @@ export const nfmt = (n: number, max = 1, min = 0) => n.toLocaleString(NUM_LOCALE
  * Solo toca miles de exactamente tres dígitos tras el punto y decimales de uno o dos dígitos tras la coma, así
  * "10,000", "93.1" o "8 vasos, 3 comidas" quedan igual.
  */
+/**
+ * Frases de la siembra que asumían a un hombre ("si estás cansado"): en la app se leen neutras. 0039 las corrige en la
+ * base; esto cubre el catálogo de respaldo, el modo demo y lo que aún no se migró. FUENTE de 0039 (lo verifica num.test.ts).
+ */
+export const NEUTRAL_WORDING: [string, string][] = [
+  ["si estás cansado, usa el modo suave", "si te falta energía, usa el modo suave"],
+  ["Llega descansado al cierre.", "Llega con energía al cierre."],
+  ["que suben cuando estás listo", "que suben cuando ya puedes más"],
+  ["el programa sube el peso cuando estás listo.", "el programa sube el peso cuando ya puedes más."],
+  ["al empezar la sesión, cuando estás fresco.", "al empezar la sesión, cuando tienes más energía."],
+];
+const neutral = (s: string) => (/cansado|descansado|listo|fresco/.test(s) ? NEUTRAL_WORDING.reduce((t, [a, b]) => t.replaceAll(a, b), s) : s);
+
 export const es419Text = (s: string) =>
-  s
+  neutral(s)
     .replace(/(?<![\d.,])(\d{1,3})((?:\.\d{3})+)(?![\d.,]*\d)/g, (_, a: string, rest: string) => a + rest.replaceAll(".", ","))
     .replace(/(?<![\d.,])(\d+),(\d{1,2})(?![\d,])/g, "$1.$2");
 

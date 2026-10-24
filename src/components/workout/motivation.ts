@@ -34,9 +34,9 @@ export type LevelGoal = {
 };
 
 /** Meta de nivel durante el entreno: cuánto falta y cuántas series lo consiguen, con las reglas reales de XP. */
-export function levelGoal(base: number, o: XpState): LevelGoal {
+export function levelGoal(base: number, o: XpState, sex?: string | null): LevelGoal {
   const now = xpOf(o);
-  const level = levelOf(base + now);
+  const level = levelOf(base + now, sex);
   const left = leftOf(o);
   const finishXp = left ? Math.max(0, projectedXp(o, left) - now) : 0;
   if (!level.next) return { level, sets: null, needsBonus: false, finishXp };

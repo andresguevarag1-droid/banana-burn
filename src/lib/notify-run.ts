@@ -17,7 +17,7 @@ const PAGE = 200;
 const CHUNK = 100;
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-type Profile = { id: string; full_name: string | null; train_days: number | null; equipment: string | null; timezone: string | null; /** "Cómo te hablo" (0035); sin la columna, intermedio. */ lenguaje?: string | null };
+type Profile = { id: string; full_name: string | null; sex?: string | null; train_days: number | null; equipment: string | null; timezone: string | null; /** "Cómo te hablo" (0035); sin la columna, intermedio. */ lenguaje?: string | null };
 export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"; scanned: number; candidates: number; sent: Record<string, number>; push: number; email: number; errors: number; /** Se cortó por tiempo: la próxima corrida sigue (los envíos ya hechos no se repiten). */ partial?: boolean };
 
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
@@ -79,7 +79,7 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   return stats;
 }
 
-const PROFILE_COLS = "id,full_name,train_days,equipment,timezone";
+const PROFILE_COLS = "id,full_name,sex,train_days,equipment,timezone";
 /** Una página de perfiles con su registro de lenguaje. Si 0035 no corrió (columna inexistente), se lee sin él. */
 async function profilePage(admin: SupabaseClient, from: number) {
   const q = (cols: string) => admin.from("profiles").select(cols).eq("onboarded", true).order("id").range(from, from + PAGE - 1);
@@ -190,7 +190,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const todayLogs = (logBy.get(u.id) ?? []).filter((l) => l.local_day === c.iso);
     const sched = scheduleFor(Number(u.train_days ?? 6));
     const eq = (u.equipment as Equipment) ?? "gym";
-    const plan = planDay(c.dow, 0, sched, eq);
+    const plan = planDay(c.dow, 0, sched, { equipment: eq, sex: u.sex });
     const streak = streakOf(active, c.iso).days;
     const userSubs = subBy.get(u.id) ?? [];
 

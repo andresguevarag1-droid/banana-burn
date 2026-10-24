@@ -3,6 +3,7 @@ import { DEMO_PRS, demoActiveDays, demoWeighIns, demoWorkouts, demoXp } from "@/
 import { todayFor } from "@/lib/today";
 import { badges, levelOf, streakOf } from "@/lib/gamify";
 import { getXpTotal } from "@/lib/xp-total";
+import { getSex } from "@/lib/athlete";
 
 export type DailyLog = { water: number; steps: number; sleep: number; protein: number; kcal: number; energy?: number; nausea?: number; fiber?: number };
 export const EMPTY: DailyLog = { water: 0, steps: 0, sleep: 0, protein: 0, kcal: 0 };
@@ -33,7 +34,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     const streak = streakOf(days, today);
     return {
       log: { water: 5, steps: 4820, sleep: 7.5, protein: 0, kcal: 0 } as DailyLog,
-      xp, level: levelOf(xp), streak, workoutsTotal: nW, trainedToday: false, weighedToday: false,
+      xp, level: levelOf(xp, await getSex(v)), streak, workoutsTotal: nW, trainedToday: false, weighedToday: false,
       week: weekDays(today).map((d) => ({ d, active: days.has(d), trained: trainedD.has(d) })),
       badges: badges({ workouts: nW, streak: streak.days, prs: DEMO_PRS, weighIns: demoWeighIns(today), lostKg: startWeight - currentWeight }),
     };
@@ -58,7 +59,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
   const streak = streakOf(active, today);
   return {
     log: { water: log?.water_glasses ?? 0, steps: log?.steps ?? 0, sleep: Number(log?.sleep_h ?? 0), protein: log?.protein_g ?? 0, kcal: log?.kcal ?? 0, energy: log?.energy ?? 0, nausea: log?.nausea ?? 0, fiber: log?.fiber_g ?? 0 },
-    xp, level: levelOf(xp), streak, workoutsTotal: workoutsTotal ?? 0,
+    xp, level: levelOf(xp, await getSex(v)), streak, workoutsTotal: workoutsTotal ?? 0,
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),
     week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),

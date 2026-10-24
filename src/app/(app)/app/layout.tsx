@@ -35,6 +35,7 @@ import { NewsLauncher } from "@/components/novedades/news-dialog";
 import { getNewsState } from "@/lib/novedades-server";
 import { NEWS_STAFF_ROLES, newsView } from "@/lib/novedades";
 import { coachOf } from "@/lib/coaches";
+import { getSex } from "@/lib/athlete";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TzSync current={v.tz} />
       <ConnectionStatus />
       <UpdatePrompt version={deployId()} />
-      {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} />}
+      {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} sex={await getSex(v).catch(() => null)} />}
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
       <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
       <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>

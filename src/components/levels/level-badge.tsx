@@ -2,7 +2,7 @@
 // Bloqueado: la misma ilustración en gris, como adelanto de lo que viene.
 import { SafeImage } from "@/components/safe-image";
 import { levelArt } from "@/lib/challenge-art";
-import { LEVELS } from "@/lib/gamify";
+import { levelAt } from "@/lib/gamify";
 
 /** Fondo, anillo y color del ícono por nivel (1-based): de banana verde a King Kong. */
 export const TIER = [
@@ -18,8 +18,8 @@ export const TIER = [
 
 export const tierOf = (idx: number) => TIER[Math.max(0, Math.min(TIER.length - 1, idx - 1))];
 
-export function LevelBadge({ idx, size = "md", locked = false, className = "" }: { idx: number; size?: "sm" | "md" | "lg" | "xl"; locked?: boolean; className?: string }) {
-  const lv = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx - 1))];
+export function LevelBadge({ idx, size = "md", locked = false, className = "", sex = null }: { idx: number; size?: "sm" | "md" | "lg" | "xl"; locked?: boolean; className?: string; sex?: string | null }) {
+  const lv = levelAt(idx, sex);
   const t = tierOf(idx);
   const box = { sm: "size-9 rounded-xl", md: "size-12 rounded-2xl", lg: "size-16 rounded-[1.25rem]", xl: "size-24 rounded-[1.75rem]" }[size];
   const px = { sm: 72, md: 96, lg: 128, xl: 192 }[size];

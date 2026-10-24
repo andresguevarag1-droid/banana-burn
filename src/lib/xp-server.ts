@@ -14,6 +14,7 @@ import { addDaysIso } from "@/lib/challenges";
 
 // XP total paginado (más de 1000 eventos): vive en xp-total.ts para que daily.ts lo use sin importar este archivo.
 import { getXpTotal } from "@/lib/xp-total";
+import { getSex } from "@/lib/athlete";
 export { getXpTotal };
 
 /** Días con actividad (entreno, registro diario o pesaje) de los últimos 90 días: la misma regla que la racha de Hoy. */
@@ -65,9 +66,10 @@ export const getXpSummary = cache(async (v: Viewer) => {
   const count = (k: string) => todayEvents.filter((e) => e.kind === k).length;
   const weekXp = xpByDay(events, week, v.tz).reduce((a, d) => a + d.xp, 0);
   const streak = streakOf(active, today);
-  const level = levelOf(total);
+  const sex = await getSex(v);
+  const level = levelOf(total, sex);
   return {
-    total, level, next: nextUnlock(total), perks: perksAt(level.idx),
+    total, level, next: nextUnlock(total, sex), perks: perksAt(level.idx),
     history, today: todayRow,
     week: { xp: weekXp, goal: weeklyGoalFor(level.idx), days: week },
     streak, multiplier: streakMultiplier(streak.days), nextTier: nextStreakTier(streak.days),

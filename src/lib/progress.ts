@@ -4,6 +4,7 @@ import { TPL } from "@/lib/engine/data";
 import { getLibEx } from "@/lib/library";
 import { todayFor } from "@/lib/today";
 import { demoWeights, demoWorkouts } from "@/lib/demo-story";
+import { getSex } from "@/lib/athlete";
 
 export type Point = { d: string; v: number };
 export type Lift = { id: string; name: string; pts: Point[] };
@@ -25,8 +26,8 @@ export function exerciseName(id: string) {
 }
 
 /** Nombre legible de la sesión guardada en workouts.template (pushA, expres20, descanso...). */
-export function workoutName(tpl: string) {
-  if (tpl in TPL) return TPL[tpl as keyof typeof TPL].n;
+export function workoutName(tpl: string, sex?: string | null) {
+  if (tpl in TPL) { const t = TPL[tpl as keyof typeof TPL]; return sex === "f" && t.nf ? t.nf : t.n; }
   const m = /^expres(\d+)$/.exec(tpl);
   if (m) return `Exprés ${m[1]} min`;
   if (tpl === "descanso") return "Descanso activo";
@@ -80,17 +81,18 @@ export async function getProgress(v: Viewer) {
   const sb = await createClient();
   const today = todayFor(v).iso;
   const since = addDays(today, -120), sinceLifts = addDays(today, -7 * LIFTS_WEEKS);
-  const [{ data: w }, { data: sets }, { data: wk }] = await Promise.all([
+  const [{ data: w }, { data: sets }, { data: wk }, sex] = await Promise.all([
     sb.from("weights").select("day,kg").eq("user_id", v.id).gte("day", since).order("day"),
     sb.from("workout_sets").select("exercise,kg,reps,workouts!inner(day)").eq("user_id", v.id).gt("kg", 0).gte("workouts.day", sinceLifts).limit(3000),
     sb.from("workouts").select("id,day,template,fun,started_at,finished_at,workout_sets(kg,reps)").eq("user_id", v.id).order("day", { ascending: false }).limit(10),
+    getSex(v),
   ]);
   const weights = (w ?? []).map((r) => ({ d: r.day as string, v: Number(r.kg) }));
   const rows = (sets ?? []) as unknown as { exercise: string; kg: number | null; reps: number | null; workouts: { day: string } }[];
   const lifts = pickLifts(rows.map((r) => ({ exercise: r.exercise, kg: r.kg, reps: r.reps, day: r.workouts.day })));
   const workouts: WorkoutRow[] = (wk ?? []).map((r) => {
     const s = (r.workout_sets ?? []) as { kg: number | null; reps: number }[];
-    return { d: r.day as string, tpl: workoutName(String(r.template ?? "")), sets: s.length, vol: Math.round(s.reduce((a, x) => a + (Number(x.kg) || 0) * (x.reps || 0), 0)), mins: minutesBetween(r.started_at, r.finished_at), fun: r.fun as number };
+    return { d: r.day as string, tpl: workoutName(String(r.template ?? ""), sex), sets: s.length, vol: Math.round(s.reduce((a, x) => a + (Number(x.kg) || 0) * (x.reps || 0), 0)), mins: minutesBetween(r.started_at, r.finished_at), fun: r.fun as number };
   });
   return { weights, lifts: byId(lifts), tracked: lifts, workouts };
 }

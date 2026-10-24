@@ -127,7 +127,8 @@ export type PlannedDay = {
 export const isTrainingDay = (p: Pick<PlannedDay, "tpl" | "key">) => !!p.tpl || !!p.key;
 
 /** Rutina de un día: las variantes rotan cada semana, así nada se repite. */
-export type PlanOpts = { equipment?: Equipment; level?: Level; minutes?: number };
+/** `sex`: "f" usa los nombres para ella de las rutinas (Template.nf). */
+export type PlanOpts = { equipment?: Equipment; level?: Level; minutes?: number; sex?: string | null };
 
 /** Minutos estimados de una sesión: ~40 s por serie + descansos + 5 min de calentamiento. */
 export function estimateMinutes(ex: { cfg: SlotCfg }[]) {
@@ -171,7 +172,8 @@ export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts
   const seen = new Set<string>();
   const exercises = personalize(raw.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))), o.level, o.minutes);
   const mins = estimateMinutes(exercises) + (t.cardio ? 10 : 0);
-  return { dow, tpl: tplId, name: t.n, hook: t.hook, tag: t.tag, icon: t.icon, exercises, cardio: t.cardio, mins };
+  const her = o.sex === "f";
+  return { dow, tpl: tplId, name: her && t.nf ? t.nf : t.n, hook: her && t.hookF ? t.hookF : t.hook, tag: t.tag, icon: t.icon, exercises, cardio: t.cardio, mins };
 }
 
 /** Entreno exprés de 10/20/30 min sin equipo: series por tiempo, descansos cortos, cuerpo completo. */

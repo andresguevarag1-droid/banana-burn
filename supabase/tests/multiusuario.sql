@@ -1763,6 +1763,10 @@ select bbtest.ok('0038: A no lee pagos de B', bbtest.num($q$ select 1 from publi
 reset role;
 delete from public.challenge_purchases where provider_payment_intent_id = 'pi_test_0038';
 
+-- ───────────── 16. Textos neutros (0039) ─────────────
+select bbtest.ok('0039: sin frases que asumen a un hombre en programas y planes de retos', not exists (select 1 from public.challenges_catalog where program::text ~ '(si estás cansado|cuando estás listo|cuando estás fresco|Llega descansado)') and not exists (select 1 from public.challenge_plans where days::text ~ '(si estás cansado|cuando estás listo)') and not exists (select 1 from public.program_sessions where focus like '%Llega descansado%'));
+select bbtest.ok('0039: las versiones neutras quedaron en su lugar', exists (select 1 from public.challenges_catalog where slug = 'reconstruccion-8-semanas' and program::text like '%cuando ya puedes más%') and exists (select 1 from public.program_sessions where focus like '%Llega con energía al cierre.%'));
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

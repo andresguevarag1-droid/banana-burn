@@ -36,7 +36,7 @@ export function ExpressCard({ program = false, compact = false, coach = null }: 
       <div className="relative pr-24 sm:pr-32">
         <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-banana">{coach?.name ?? "Coach Banana"} exprés</p>
         <h2 id="expres-t" className={`mt-1 flex items-start gap-2 font-extrabold tracking-tight text-balance ${compact ? "text-xl" : "text-2xl sm:text-[28px]"}`}>
-          <Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Día ocupado? Entrena donde estés
+          <Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Te estás quedando sin tiempo? Termina con estos exprés
         </h2>
         <p className="mt-1 max-w-[52ch] text-sm text-white/75">Sin equipo, con tu peso, en un espacio de 2 × 2 m. Cuenta para tu racha{program ? ", aunque no reemplaza la sesión del programa" : ""}.</p>
       </div>

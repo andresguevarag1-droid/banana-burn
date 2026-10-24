@@ -87,7 +87,7 @@ export function dashboard(a: Athlete) {
   const g = a.glp1.on ? glp1Targets({ kg: a.currentWeight, goalKg: a.goalWeight, heightCm: a.heightCm, age, sex: a.sex }) : null;
   const t = g ? { ...base, kcal: g.kcal, protein: g.protein, fat: g.fat, carbs: g.carbs, steps: 8000 } : base;
   const sched = scheduleFor(a.trainDays);
-  const opts = { equipment: a.equipment, level: a.level, minutes: a.minutes ?? undefined };
+  const opts = { equipment: a.equipment, level: a.level, minutes: a.minutes ?? undefined, sex: a.sex };
   const pr = a.program ?? null;
   const toGo = a.mode === "fuerza" ? Math.max(0, a.goalWeight - a.currentWeight) : Math.max(0, a.currentWeight - a.goalWeight);
   const { daysLeft, needPerWeek, goalPassed } = goalPace(a.goalDate, today.date, toGo);
