@@ -9,6 +9,7 @@ import { todayFor, todayIn } from "@/lib/today";
 import { MILESTONE_DAYS, MILESTONE_XP, levelOf, perksAt } from "@/lib/gamify";
 import { addDaysIso, challengeState, fromCatalogRow, mergeCatalog, parsePlan, SEED_CHALLENGES, type CatalogRow, type Challenge, type DayTask, type Outcome } from "@/lib/challenges";
 import { getSex } from "@/lib/athlete";
+import { forEachLimit } from "@/lib/concurrency";
 
 export type Metrics = { workout: boolean; steps: number; water: number; protein: number; proteinGoal: number };
 export type MyChallenge = { ucId: string; c: Challenge; startedOn: string; state: ReturnType<typeof challengeState>; autoOk: boolean;
@@ -305,12 +306,13 @@ export async function sweepChallenges(now = new Date(), opts: { deadline?: numbe
     const tzOf = new Map<string, string>();
     for (const p of (profs ?? []) as { id: string; timezone: string | null }[]) if (p.timezone) tzOf.set(p.id, p.timezone);
     for (const p of (prefs ?? []) as { user_id: string; timezone: string | null }[]) if (p.timezone) tzOf.set(p.user_id, p.timezone);
-    for (const r of rows) {
-      if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; break; }
+    // Varios retos a la vez (3 o 4 consultas cada uno): de uno en uno, miles de retos activos no cabían en el tiempo del cron.
+    await forEachLimit(rows, 8, async (r) => {
+      if (opts.deadline != null && Date.now() > opts.deadline) { stats.partial = true; return; }
       // Un reto con datos raros no detiene al resto. Acreditar (upsert) y cerrar son idempotentes: correr dos veces es seguro.
       try {
         const c = catalog.get(r.challenge_id);
-        if (!c) continue; // reto borrado del catálogo: se deja como está
+        if (!c) return; // reto borrado del catálogo: se deja como está
         const today = todayIn(tzOf.get(r.user_id), now).iso;
         const yesterday = addDaysIso(today, -1);
         if (c.verify !== "manual" && c.verify !== "protein" && r.started_on <= yesterday && (await metOn(db, r.user_id, c, yesterday))) {
@@ -319,10 +321,10 @@ export async function sweepChallenges(now = new Date(), opts: { deadline?: numbe
         }
         const { data: ck, error: ckErr } = await db.from("challenge_checkins").select("day").eq("user_challenge_id", r.id);
         // Sin la lista de días cumplidos no se decide nada: cerrar con datos vacíos marcaría el reto como fallido.
-        if (ckErr) { stats.errors++; continue; }
+        if (ckErr) { stats.errors++; return; }
         if ((await finalize(db, r.user_id, r, c, (ck ?? []).map((x) => x.day as string), today)) !== "activo") stats.closed++;
       } catch (e) { stats.errors++; logError("cron:retos", "row_failed", { kind: errCode(e) }); }
-    }
+    });
     if (stats.partial || data.length < 200) break;
   }
   return stats;

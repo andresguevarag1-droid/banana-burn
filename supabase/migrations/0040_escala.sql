@@ -10,6 +10,7 @@
 --      (el inicio de sesión de cuentas sin confirmar lo hacía de a 1000 por página). Solo service_role.
 --   4. Índices para lecturas frecuentes que no tenían uno: comentarios por publicación, seguidores por persona,
 --      publicaciones por entreno, retos activos (cron), y fechas para la limpieza.
+--   5. feed_counts(): conteos de bananas y comentarios del feed en la base (con la RLS de quien mira).
 
 -- ───────────── 1. Tope diario global del Coach IA ─────────────
 create table if not exists public.ai_usage_daily (
@@ -136,6 +137,24 @@ create index if not exists follows_followee on public.follows (followee, followe
 create index if not exists posts_workout on public.posts (workout_id) where workout_id is not null;
 -- Cron de retos: recorre los retos activos por id.
 create index if not exists user_challenges_active_id on public.user_challenges (id) where status = 'activo';
+
+-- ───────────── 5. Conteos del feed en la base ─────────────
+/**
+ * Bananas, comentarios visibles y si yo di banana, por publicación (máx. 100 ids). SECURITY INVOKER: aplica la misma RLS
+ * que leer las filas, pero devuelve 3 números por publicación en vez de todas las filas (con miles de personas, una
+ * publicación popular pasaba del tope de 1000 filas por respuesta y los conteos salían cortos).
+ */
+create or replace function public.feed_counts(p_ids bigint[])
+returns table (post_id bigint, kudos bigint, comments bigint, i_kudo boolean)
+language sql stable security invoker set search_path = public as $$
+  select x.id,
+    (select count(*) from public.kudos k where k.post_id = x.id),
+    (select count(*) from public.comments c where c.post_id = x.id and not c.hidden),
+    exists (select 1 from public.kudos k where k.post_id = x.id and k.user_id = auth.uid())
+  from unnest(p_ids[1:100]) as x(id);
+$$;
+revoke execute on function public.feed_counts(bigint[]) from public, anon;
+grant execute on function public.feed_counts(bigint[]) to authenticated, service_role;
 
 -- Estadísticas al día para que el planificador use los índices nuevos.
 analyze public.comments; analyze public.follows; analyze public.posts; analyze public.user_challenges;

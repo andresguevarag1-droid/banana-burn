@@ -11,6 +11,7 @@ import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHo
 import { sendPush, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import * as T from "@/lib/email/templates";
+import { forEachLimit } from "@/lib/concurrency";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
 const PAGE = 200;
@@ -155,12 +156,18 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const goalBy = new Map<string, GoalRow>();
   for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
 
-  for (const u of users) {
+  // Varias personas a la vez (cada una espera push, correo y la base): con miles de cuentas, de una en una no alcanzaba
+  // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
+  await forEachLimit(users, USER_CONCURRENCY, async (u) => {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
     try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, goalBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
-  }
+  });
 }
+
+/** Personas procesadas a la vez en cada lote (push y correo en paralelo, sin saturar la base ni Resend). */
+const USER_CONCURRENCY = 8;
+
 
 type Grouped = {
   wkBy: Map<string, { user_id: string; day: string }[]>; dlBy: Map<string, { user_id: string; day: string }[]>; wsBy: Map<string, { user_id: string; day: string; kg: number }[]>;

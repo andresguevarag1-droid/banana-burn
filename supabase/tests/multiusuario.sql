@@ -1831,7 +1831,24 @@ select bbtest.ok('0040: encuentra la cuenta por correo (con espacios y mayúscul
 select bbtest.ok('0040: correo inexistente = null', public.auth_user_id_by_email('nadie@prueba.test') is null);
 reset role;
 
--- 17d. Índices nuevos.
+-- 17d. Conteos del feed: mismos números que contar las filas con la RLS de quien mira.
+insert into public.posts (user_id, kind, body, visibility) values (bbtest.u('B'), 'text', 'conteo 0040', 'publico');
+insert into public.kudos (post_id, user_id) select id, bbtest.u('A') from public.posts where body = 'conteo 0040';
+insert into public.kudos (post_id, user_id) select id, bbtest.u('D') from public.posts where body = 'conteo 0040';
+insert into public.comments (post_id, user_id, body) select id, bbtest.u('D'), 'visible' from public.posts where body = 'conteo 0040';
+insert into public.comments (post_id, user_id, body, hidden) select id, bbtest.u('D'), 'oculto', true from public.posts where body = 'conteo 0040';
+select bbtest.ok('0040: feed_counts corre con la RLS de quien mira (security invoker)', (select not prosecdef from pg_proc where proname = 'feed_counts'));
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0040: feed_counts cuenta bananas, comentarios visibles y la mía', (select kudos = 2 and comments = 1 and i_kudo from public.feed_counts((select array_agg(id) from public.posts where body = 'conteo 0040'))));
+select bbtest.login('D');
+select bbtest.ok('0040: feed_counts coincide con contar las filas', (select f.kudos = (select count(*) from public.kudos k where k.post_id = f.post_id) and f.comments = (select count(*) from public.comments c where c.post_id = f.post_id) from public.feed_counts((select array_agg(id) from public.posts where body = 'conteo 0040')) f));
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0040: anon no usa feed_counts', $q$ select * from public.feed_counts(array[1::bigint]) $q$, '42501');
+reset role;
+delete from public.posts where body = 'conteo 0040';
+
+-- 17e. Índices nuevos.
 select bbtest.ok('0040: índices de lecturas frecuentes', to_regclass('public.comments_post_created') is not null and to_regclass('public.follows_followee') is not null
   and to_regclass('public.posts_workout') is not null and to_regclass('public.user_challenges_active_id') is not null
   and to_regclass('public.notifications_created') is not null and to_regclass('public.notification_log_local_day') is not null and to_regclass('public.coach_quota_tickets_created') is not null);

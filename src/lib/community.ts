@@ -83,17 +83,47 @@ async function badgesOf(sb: Sb, ids: string[]): Promise<{ xp: Map<string, number
   return { xp: await levelsOf(sb, ids), flair: new Map() };
 }
 
+/** Filas de comentarios para las vistas previas del feed (40 publicaciones × 3 visibles, con holgura). */
+const COMMENT_ROWS = 300;
+
+type Counts = Map<number, { kudos: number; comments: number; iKudo: boolean }>;
+/**
+ * Bananas y comentarios por publicación. Con 0040, feed_counts (3 números por publicación); sin la función, el cálculo
+ * de antes con las filas de bananas (con tope) y el conteo exacto de comentarios por publicación.
+ */
+async function feedCounts(sb: Sb, v: Viewer, postIds: (number | string)[]): Promise<Counts> {
+  const out: Counts = new Map();
+  const ids = postIds.map(Number).filter(Number.isFinite).slice(0, 100);
+  if (!ids.length) return out;
+  const { data, error } = await sb.rpc("feed_counts", { p_ids: ids });
+  if (!error) {
+    for (const r of (data ?? []) as { post_id: number | string; kudos: number | string; comments: number | string; i_kudo: boolean }[]) out.set(Number(r.post_id), { kudos: Number(r.kudos) || 0, comments: Number(r.comments) || 0, iKudo: !!r.i_kudo });
+    return out;
+  }
+  const [{ data: kd }, { data: cm }] = await Promise.all([
+    sb.from("kudos").select("post_id,user_id").in("post_id", ids).limit(1000),
+    sb.from("comments").select("post_id").in("post_id", ids).eq("hidden", false).limit(1000),
+  ]);
+  for (const id of ids) out.set(id, { kudos: 0, comments: 0, iKudo: false });
+  for (const k of (kd ?? []) as { post_id: number; user_id: string }[]) { const c = out.get(Number(k.post_id)); if (c) { c.kudos++; if (k.user_id === v.id) c.iKudo = true; } }
+  for (const k of (cm ?? []) as { post_id: number }[]) { const c = out.get(Number(k.post_id)); if (c) c.comments++; }
+  return out;
+}
+
 /** Arma las tarjetas: autores (con nivel), bananas y los últimos comentarios visibles (RLS decide qué se ve). */
 async function hydrate(sb: Sb, v: Viewer, list: PostRow[]): Promise<FeedPost[]> {
   if (!list.length) return [];
   const postIds = list.map((p) => p.id);
   const userIds = [...new Set(list.map((p) => p.user_id))];
-  const [{ data: profs }, { data: kd }, { data: cm }, lv] = await Promise.all([
+  // Conteos en la base (0040: feed_counts, con la RLS de quien mira). Las filas de comentarios solo para la vista previa:
+  // los más recientes, con tope (antes se traían todas y una publicación popular pasaba del máximo de filas por respuesta).
+  const [{ data: profs }, counts, { data: cmDesc }, lv] = await Promise.all([
     sb.from("public_profiles").select("id,username,full_name").in("id", userIds),
-    sb.from("kudos").select("post_id,user_id").in("post_id", postIds),
-    sb.from("comments").select("id,post_id,user_id,body,created_at").in("post_id", postIds).eq("hidden", false).order("created_at"),
+    feedCounts(sb, v, postIds),
+    sb.from("comments").select("id,post_id,user_id,body,created_at").in("post_id", postIds).eq("hidden", false).order("created_at", { ascending: false }).limit(COMMENT_ROWS),
     badgesOf(sb, userIds),
   ]);
+  const cm = [...(cmDesc ?? [])].reverse();
   const cmUsers = [...new Set((cm ?? []).map((c) => c.user_id as string))].filter((u) => !userIds.includes(u));
   const [{ data: cmProfs }, cmLv, testers] = await Promise.all([
     cmUsers.length ? sb.from("public_profiles").select("id,username,full_name").in("id", cmUsers) : Promise.resolve({ data: [] }),
@@ -105,12 +135,12 @@ async function hydrate(sb: Sb, v: Viewer, list: PostRow[]): Promise<FeedPost[]> 
   const pmap = new Map([...((profs ?? []) as ProfRow[]), ...((cmProfs ?? []) as ProfRow[])].map((p) => [p.id, { id: p.id, username: p.username, name: p.full_name || p.username || "Atleta", xp: xpOf(p.id), tester: testers.has(p.id), flair: flairOf(p.id) }]));
   const author = (id: string): Author => pmap.get(id) ?? { id, username: null, name: "Atleta", xp: null };
   return list.map((p) => {
-    const ks = (kd ?? []).filter((k) => k.post_id === p.id);
-    const cs = (cm ?? []).filter((c) => c.post_id === p.id);
+    const cs = cm.filter((c) => c.post_id === p.id);
+    const n = counts.get(Number(p.id));
     return {
       id: String(p.id), author: author(p.user_id), kind: p.kind, body: p.body, data: (p.data ?? {}) as PostData, at: p.created_at,
-      kudos: ks.length, iKudo: ks.some((k) => k.user_id === v.id), mine: p.user_id === v.id,
-      commentCount: cs.length,
+      kudos: n?.kudos ?? 0, iKudo: n?.iKudo ?? false, mine: p.user_id === v.id,
+      commentCount: Math.max(n?.comments ?? 0, cs.length),
       comments: cs.slice(-COMMENTS_PREVIEW).map((c) => ({ id: String(c.id), author: author(c.user_id as string), body: c.body as string, at: c.created_at as string, mine: c.user_id === v.id })),
     };
   });
