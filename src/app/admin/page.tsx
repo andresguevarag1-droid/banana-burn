@@ -5,6 +5,7 @@ import { COACH_COST_PER_Q, getCoachTotals } from "@/lib/admin-coach";
 import { delta, pct, RETENTION_WINDOWS, type Cell } from "@/lib/admin-kpis";
 import { can, canSee, SECTION_CAPS, type Section } from "@/lib/admin-perms";
 import { openSupportCount } from "@/lib/support-server";
+import { getInstallStats } from "@/lib/install-stats";
 import { BarChart, LineChart } from "@/components/admin/charts";
 import { DemoNotice, Empty, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDate, fmtNum, fmtPct, link, money, panel, tr } from "@/components/admin/ui";
 
@@ -23,10 +24,12 @@ function RetCell({ c }: { c: Cell }) {
   );
 }
 
+const d0demo = (v: { demo?: boolean }) => Boolean(v.demo);
+
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ sin_acceso?: string }> }) {
   const v = await requireSection("resumen");
   const { sin_acceso } = await searchParams;
-  const [d, coach, support] = await Promise.all([getDashboard(v), getCoachTotals(v).catch(() => null), canSee(v.role, "soporte") ? openSupportCount(v).catch(() => null) : Promise.resolve(null)]);
+  const [d, coach, support, inst] = await Promise.all([getDashboard(v), getCoachTotals(v).catch(() => null), canSee(v.role, "soporte") ? openSupportCount(v).catch(() => null) : Promise.resolve(null), d0demo(v) ? Promise.resolve(null) : getInstallStats()]);
   const dNew = delta(d.new_7, d.new_prev_7);
   const workouts = d.series.map((s) => ({ day: s.day, n: s.workouts }));
   const signups = d.series.map((s) => ({ day: s.day, n: s.signups }));
@@ -60,6 +63,18 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <Kpi label="Entrenos hoy" value={fmtNum(d.workouts_today)} hint={`${fmtNum(d.workouts_7)} en 7 d, ${avgWorkouts} por día en 30 d`} />
         </div>
       </section>
+
+      {inst && (
+        <section aria-labelledby="kpi-linkapp" className="space-y-2.5">
+          <SectionHeading id="kpi-linkapp" title="LinkApp y avisos" />
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Kpi label="Instalada" value={fmtNum(inst.installed)} hint={`${fmtPct(pct(inst.installed, inst.users))} de los usuarios`} />
+            <Kpi label="Instalada 7 d" value={fmtNum(inst.installed7)} hint="primera vez abierta instalada" />
+            <Kpi label="Avisos activos" value={fmtNum(inst.push)} hint={`${fmtPct(pct(inst.push, inst.users))} de los usuarios`} />
+            <Kpi label="Sin instalar" value={fmtNum(Math.max(0, inst.users - inst.installed))} hint="les sale la tarjeta en Hoy" tone="muted" />
+          </div>
+        </section>
+      )}
 
       {coach && (
         <section aria-labelledby="kpi-coach" className="space-y-2.5">

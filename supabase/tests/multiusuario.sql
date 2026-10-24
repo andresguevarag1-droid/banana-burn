@@ -1969,6 +1969,18 @@ set role authenticated; select bbtest.login('A');
 select bbtest.fails('0045: A no escribe huellas', $q$ insert into public.card_fingerprints (key, fingerprint, user_id, provider) values (repeat('a', 64) || ':' || auth.uid()::text, repeat('a', 64), auth.uid(), 'onvo') $q$, '42501');
 reset role;
 
+-- ───────────── 0046 LinkApp instalada ─────────────
+set role authenticated; select bbtest.login('A');
+select public.app_mark_installed();
+select bbtest.ok('0046: A marca su app como instalada', (select app_installed_at is not null and app_last_standalone_at is not null from public.profiles where id = auth.uid()));
+update public.profiles set app_installed_at = '2020-01-01' where id = auth.uid();
+select bbtest.ok('0046: A no puede inventar la fecha de instalación', (select app_installed_at > '2025-01-01' from public.profiles where id = auth.uid()));
+reset role;
+select bbtest.ok('0046: marcar A no toca a B', (select app_installed_at is null from public.profiles where id = bbtest.u('B')));
+set role anon;
+select bbtest.fails('0046: sin sesión no se marca', $q$ select public.app_mark_installed() $q$, '42501');
+reset role;
+
 -- ───────────── 21. Primeros pasos (0047) ─────────────
 set role authenticated; select bbtest.login('A');
 select public.learn_mark('pp-semana');

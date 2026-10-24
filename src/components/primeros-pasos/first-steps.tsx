@@ -9,10 +9,11 @@ import { CoachPic } from "@/components/coach-pic";
 import { Confetti } from "@/components/confetti";
 import { Sheet, SheetTitle } from "@/components/sheet";
 import { EnablePush } from "@/components/notifications/enable-push";
+import { InstallHelper } from "@/components/install/install-helper";
 import { PP_CELEBRATED, PP_HIDDEN, STEP_KEY, checklistState, nextStep, type FirstStep, type StepSignals } from "@/lib/primeros-pasos";
 import { useLearnKeys } from "./learn-store";
 
-/** Evento para abrir el ayudante de instalación de la LinkApp. Si nadie lo atiende (preventDefault), se abre la guía simple. */
+/** Evento para abrir el ayudante de instalación de la LinkApp desde otra pieza. Si nadie lo atiende (preventDefault), se abre aquí. */
 export const INSTALL_EVENT = "bb:instalar";
 
 type Device = { pushSupported: boolean; mobile: boolean; standalone: boolean; pushOn: boolean };
@@ -130,23 +131,14 @@ function Ring({ pct, label }: { pct: number; label: string }) {
   );
 }
 
-/** Guía simple para instalar la LinkApp (la reemplaza el ayudante de instalación cuando escucha `bb:instalar`). */
+/** Instalar la LinkApp: el mismo ayudante de instalación que Hoy y Perfil (components/install). */
 function InstallSteps({ onDone }: { onDone: () => void }) {
-  const [ios, setIos] = useState(false);
-  useEffect(() => { try { setIos(/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1)); } catch { /* */ } }, []);
-  const steps = ios
-    ? ["Abre bananaburn.app en Safari.", "Toca el botón Compartir (el cuadrito con una flecha hacia arriba).", "Toca \"Agregar a inicio\".", "Toca \"Agregar\". Listo: busca el ícono de Banana Burn en tu pantalla."]
-    : ["Abre bananaburn.app en Chrome.", "Toca el menú (los tres puntos de arriba).", "Toca \"Instalar app\" o \"Agregar a la pantalla principal\".", "Confirma. Listo: busca el ícono de Banana Burn en tu pantalla."];
   return (
     <div>
       <SheetTitle className="text-xl font-extrabold text-ink">Instala tu LinkApp</SheetTitle>
-      <p className="mt-1 text-sm text-muted">Así abres Banana Burn con un toque desde tu pantalla de inicio, como cualquier app. No ocupa casi espacio.</p>
-      <ol className="mt-4 space-y-2">
-        {steps.map((s, i) => (
-          <li key={s} className="flex gap-3 rounded-2xl bg-cream px-3.5 py-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-ink text-xs font-extrabold text-banana tabular-nums">{i + 1}</span><span className="text-[15px] text-ink">{s}</span></li>
-        ))}
-      </ol>
-      <button type="button" onClick={onDone} className="btn-primary mt-5 h-12 w-full">Ya la instalé</button>
+      <p className="mt-1 mb-4 text-sm text-muted">Así abres Banana Burn con un toque desde tu pantalla de inicio, como cualquier app.</p>
+      <InstallHelper where="primeros-pasos" />
+      <button type="button" onClick={onDone} className="btn-ghost mt-5 h-12 w-full">Ya la instalé</button>
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { coachOf } from "@/lib/coaches";
 import { getDaily, prefetchDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, DeviceMobile, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -116,6 +116,12 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
         <H icon={Compass}>Guía de Banana Burn</H>
         <p className="mt-1 text-sm text-muted">Cómo entrenar, retos, {ent.nutrition ? "nutrición, " : ""}tu coach y tu progreso, según tu plan.</p>
         <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
+      </section>
+
+      <section className="card p-5">
+        <H icon={DeviceMobile}>Instalar app</H>
+        <p className="mt-1 text-sm text-muted">Banana Burn es una LinkApp: se instala en tu pantalla de inicio, sin tiendas de apps. Así entras con un toque y recibes tus recordatorios.</p>
+        <Link href="/app/instalar" className="btn-ghost mt-3 h-11 text-sm px-4">Cómo instalarla<ArrowRight weight="bold" className="size-4" aria-hidden /></Link>
       </section>
 
       <section className="card p-5">
