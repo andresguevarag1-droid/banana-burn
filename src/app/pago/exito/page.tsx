@@ -20,15 +20,17 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
   // ¿Hay un pago que esperar? Solo si el enlace trae una suscripción de esta cuenta.
   let pending = false;
   let planName: string | null = null;
+  let billing: string | null = null;
   let renews: string | null = null;
   if (!v.demo) {
     const ent = await getEntitlements(v);
     let target = ent.plan;
     if (s) {
-      const { data: row } = await (await createClient()).from("subscriptions").select("status, plan").eq("provider_subscription_id", s).eq("user_id", v.id).maybeSingle();
+      const { data: row } = await (await createClient()).from("subscriptions").select("status, plan, billing").eq("provider_subscription_id", s).eq("user_id", v.id).maybeSingle();
       confirmed = row?.status === "active";
       pending = row?.status === "incomplete"; // el webhook de ONVO aún no la activa
       target = (row?.plan as typeof target) ?? target;
+      billing = (row?.billing as string | undefined) ?? null;
     } else confirmed = ent.fromSubscription && ent.plan !== "free";
     planName = PLANS.find((p) => p.id === target)?.name ?? null;
     renews = fmt(ent.renewsAt);
@@ -70,7 +72,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
   const nutrition = PLANS.find((p) => p.name === planName)?.nutrition;
   return (
     <Card icon={<MonkeyBanana className="size-10" />} tone="ok" title={`${planName ?? "Tu plan"} ya está activo`} body="Todo lo que llevas sigue ahí. El siguiente paso es tu entreno de hoy.">
-      <FunnelTracker view="purchase_success" props={{ plan: planName ?? "" }} />
+      <FunnelTracker view="purchase_success" props={{ plan: planName ?? "", ...(billing ? { billing } : {}) }} />
       <Link href="/app/entreno" data-cta="exito-entreno" className="btn-banana w-full h-14 text-base">Ir a mi entreno de hoy<ArrowRight weight="bold" className="size-5" /></Link>
       <ol className="text-left space-y-3 text-[15px] border-t border-line pt-5">
         <Step n={1}>Haz tu rutina de hoy: cada serie trae su peso.</Step>
