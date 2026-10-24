@@ -9,7 +9,7 @@ import { Chat } from "./chat";
 import { coachOf } from "@/lib/coaches";
 import { todayLine } from "@/lib/coach";
 
-export const metadata = { title: "Coach IA" };
+export const metadata = { title: "Coach Banana" };
 
 export default async function Coach({ searchParams }: { searchParams: Promise<{ cuota?: string; nivel?: string }> }) {
   const v = (await getViewer())!;

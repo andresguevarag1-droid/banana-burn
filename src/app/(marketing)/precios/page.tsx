@@ -9,12 +9,12 @@ import type { Metadata } from "next";
 
 const TITLE = `Precios: tu entrenador personal en el celular desde ${FROM} al mes`;
 /** Según la fecha (offer.ts): sin tarjeta hasta el fin de la beta; con tarjeta y cobro el día 7 después. */
-const description = () => `${offer().card ? `Prueba Banana Burn ${TRIAL_DAYS} días gratis: hoy no te cobramos y cancelas sin costo antes del día ${TRIAL_DAYS}.` : `Prueba Banana Burn ${TRIAL_DAYS} días gratis, sin tarjeta.`} Después, Entreno desde ${FROM} al mes con el plan anual, o súmale nutrición con comida latina de verdad. Cancela cuando quieras.`;
+const description = () => `${offer().card ? `Prueba Banana Burn ${TRIAL_DAYS} días gratis: hoy no te cobramos y cancelas sin costo antes del día ${TRIAL_DAYS}.` : `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido.`} Después, Entreno desde ${FROM} al mes, o súmale nutrición con comida latina de verdad. Cancela cuando quieras.`;
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
 
 export function generateMetadata(): Metadata {
   const d = description();
-  return { title: TITLE, description: d, ...social({ title: "Precios de Banana Burn", description: d, path: "/precios", og: { t: "Precios claros, 7 días gratis", s: offer().card ? "Entreno o Entreno + Nutrición, en dólares. Hoy no te cobramos." : "Entreno o Entreno + Nutrición, en dólares y sin tarjeta para probar.", v: "record" } }) };
+  return { title: TITLE, description: d, ...social({ title: "Precios de Banana Burn", description: d, path: "/precios", og: { t: "Precios claros, 7 días gratis", s: offer().card ? "Entreno o Entreno + Nutrición, en dólares. Hoy no te cobramos." : "Entreno o Entreno + Nutrición, en dólares, con todo incluido para probar.", v: "record" } }) };
 }
 
 export default function Precios() {

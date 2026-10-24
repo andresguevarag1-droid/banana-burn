@@ -412,7 +412,7 @@ export function testerAsignado(d: { name: string; expiresAt: string; days?: numb
     ? `Gracias por seguir probando la beta con nosotros. Tu mes de tester empieza de nuevo hoy: ${days} días más con todo incluido.`
     : "Te elegimos para probar Banana Burn durante la beta. Como agradecimiento, tienes la app completa por un mes, sin cobros.";
   const hero: Hero = { eyebrow: "Tester de la beta", chip: `${days} días gratis`, title: d.renewal ? "Seguimos contigo, tester" : "Eres tester de Banana Burn", lead: esc(intro) };
-  const r: [string, string][] = [["Plan", "Entreno + Nutrición"], ["Tiempo", `${days} días`], ["Hasta", until], ["Costo", "Gratis, sin tarjeta"]];
+  const r: [string, string][] = [["Plan", "Entreno + Nutrición"], ["Tiempo", `${days} días`], ["Hasta", until], ["Costo", "Gratis"]];
   const body =
     eyebrow("Lo que tienes este mes") +
     list([

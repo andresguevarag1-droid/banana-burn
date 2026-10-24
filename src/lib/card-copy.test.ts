@@ -12,11 +12,12 @@ const LINE = "7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, sa
 const RULES = /[\u{1F300}-\u{1FAFF}☀-➿]|—|\bIA\b|·/u;
 
 describe("textos de la oferta según la fecha", () => {
-  it("antes del 1 de noviembre: la copia de la beta, igual que siempre", () => {
+  it("antes del 1 de noviembre: la copia de la beta, sin hablar de tarjeta", () => {
     const o = offer(BEFORE);
     expect(o.card).toBe(false);
-    expect(o.note).toBe("7 días gratis con todo incluido. Sin tarjeta.");
-    expect(o.signupChecks).toEqual(["Sin tarjeta", "Sin cobros automáticos"]);
+    expect(o.note).toBe("7 días gratis con todo incluido.");
+    expect(o.signupChecks).toEqual(["7 días gratis", "Todo incluido"]);
+    expect(JSON.stringify(o)).not.toMatch(/sin tarjeta/i);
   });
   it("desde el 1 de noviembre: la tarjeta, sin decir nunca 'sin tarjeta'", () => {
     const o = offer(AFTER);
