@@ -489,7 +489,7 @@ insert into public.challenge_purchases (user_id, challenge_slug, status, amount_
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0a0a0a0a-0000-4000-8000-00000000000a', 'gluteos-30', 'compra');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' $q$) = 16);
+select bbtest.ok('tienda: el usuario ve los retos publicados', bbtest.num($q$ select 1 from public.challenges_catalog where status = 'publicado' and slug not like 'temporada-%' $q$) = 16);
 select bbtest.ok('tienda: no ve ocultos, borradores ni archivados', bbtest.num($q$ select 1 from public.challenges_catalog where slug in ('movilidad-14','sin-azucar-7','pasos-14') $q$) = 0);
 select bbtest.fails('tienda: el usuario no crea retos', $q$ insert into public.challenges_catalog (slug, title, days) values ('trampa-2', 'Trampa', 7) $q$, '42501');
 select bbtest.zero('tienda: el usuario no cambia precios', $q$ update public.challenges_catalog set price_usd = 0 where slug = 'abdomen-21' $q$);
@@ -550,7 +550,7 @@ update public.challenges_catalog set status = 'publicado' where slug = 'reto-pag
 
 -- Staff: admin (S) edita y regala; soporte (P) regala pero no edita el catálogo
 set role authenticated; select bbtest.login('S');
-select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog $q$) = 20);
+select bbtest.ok('panel: admin ve también ocultos y borradores', bbtest.num($q$ select 1 from public.challenges_catalog where slug not like 'temporada-%' $q$) = 20);
 select bbtest.ok('panel: admin cambia el estado', bbtest.affected($q$ update public.challenges_catalog set status = 'publicado' where slug = 'movilidad-14' $q$) = 1);
 select bbtest.ok('panel: active queda sincronizado con publicado', (select active from public.challenges_catalog where slug = 'movilidad-14') and not (select active from public.challenges_catalog where slug = 'sin-azucar-7'));
 select bbtest.ok('panel: admin edita el plan', bbtest.affected($q$ update public.challenge_plans set days = days where slug = 'movilidad-14' $q$) = 1);
@@ -575,15 +575,15 @@ select bbtest.ok('cuenta borrada: la venta queda registrada sin dueño y el acce
 -- F (prueba vigente) compra programas; A intenta tocar lo de F; S (admin) edita; E (prueba vencida) no empieza.
 reset role;
 select bbtest.login(null);
-select bbtest.ok('programas: la siembra trae 9 programas con sesiones', (select count(*) = 9 from public.challenges_catalog where kind = 'programa')
-  and (select count(distinct slug) = 9 from public.program_sessions));
+select bbtest.ok('programas: la siembra trae 9 programas con sesiones', (select count(*) = 9 from public.challenges_catalog where kind = 'programa' and slug not like 'temporada-%')
+  and (select count(distinct slug) = 9 from public.program_sessions where slug not like 'temporada-%'));
 select bbtest.ok('programas: los retos de hábitos siguen siendo retos', (select kind = 'reto' from public.challenges_catalog where slug = 'banana-30') and (select kind = 'reto' from public.challenges_catalog where slug = 'sprint-verano-28'));
 select bbtest.ok('programas: el insignia cuesta $9.99 y dura 8 semanas', (select price_usd = 9.99 and public._program_weeks(program) = 8 from public.challenges_catalog where slug = 'reconstruccion-8-semanas'));
 select bbtest.ok('programas: los convertidos conservan su precio', (select bool_and(price_usd = case slug when 'abdomen-21' then 4.99 when 'gluteos-30' then 6.99 when 'dominadas-desde-cero' then 7.99 else 9.99 end) from public.challenges_catalog where slug in ('abdomen-21','gluteos-30','dominadas-desde-cero','pierde-3kg-6-semanas')));
 select bbtest.fails('programas: un programa necesita su meta', $q$ update public.challenges_catalog set program = null where slug = 'abdomen-21' $q$, '23514');
 
 set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
-select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' $q$) = 8);
+select bbtest.ok('programas: F ve los programas publicados con su meta', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program ? 'phases' and slug not like 'temporada-%' $q$) = 8);
 select bbtest.ok('sesiones: sin comprar ve la semana 1 (fase 1)', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase = 1 $q$) = 4);
 select bbtest.ok('sesiones: sin comprar no ve las demás fases', bbtest.num($q$ select 1 from public.program_sessions where slug = 'reconstruccion-8-semanas' and phase > 1 $q$) = 0);
 select bbtest.zero('sesiones: F no edita sesiones', $q$ update public.program_sessions set title = 'x' where slug = 'reconstruccion-8-semanas' $q$);
@@ -619,7 +619,7 @@ select bbtest.ok('dejar: deja el programa en pausa', bbtest.affected($q$ select 
 select bbtest.ok('dejar: queda abandonado', (select status = 'abandonado' from public.user_programs where user_id = auth.uid() and slug = 'gluteos-30'));
 select bbtest.ok('dejar: lo vuelve a empezar desde cero', public.program_start('gluteos-30', current_date, true) = 'reiniciado');
 -- 0027: experiencias. Cada programa trae su modo; los nuevos se compran aparte; los hábitos manuales viven en daily_logs.
-select bbtest.ok('0027: los 8 programas publicados traen su experiencia (abdomen-21 quedó oculto en 0028; Pilates llega en 0037)', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null $q$) = 8);
+select bbtest.ok('0027: los 8 programas publicados traen su experiencia (abdomen-21 quedó oculto en 0028; Pilates llega en 0037)', bbtest.num($q$ select 1 from public.challenges_catalog where kind = 'programa' and program->'experience'->>'mode' is not null and slug not like 'temporada-%' $q$) = 8);
 select bbtest.ok('0028: 21 días de abdomen no se ve en la tienda', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'abdomen-21' $q$) = 0);
 select bbtest.ok('0028: Brazos de Gorila con su modo nuevo', bbtest.num($q$ select 1 from public.challenges_catalog where slug = 'brazos-definidos' and title = 'Brazos de Gorila' and cover = 'peel' and program->'experience'->>'mode' = 'Modo gorila' $q$) = 1);
 select bbtest.ok('0027: Glúteos de acero rehecho con 4 sesiones por semana', bbtest.num($q$ select 1 from public.program_sessions where slug = 'gluteos-30' and phase = 2 $q$) = 4);
@@ -1927,6 +1927,60 @@ set role authenticated; select bbtest.login('A');
 select bbtest.fails('0042: A no se crea una suscripción de Tilopay', $q$ insert into public.subscriptions (user_id, provider, provider_subscription_id, status, plan, billing) values (auth.uid(), 'tilopay', 'tlp:bbc-falsa', 'active', 'completo', 'anual') $q$, '42501');
 select bbtest.fails('0042: A no toca los intentos de renovación', $q$ update public.subscriptions set renewal_attempts = 0, next_renewal_attempt_at = null where user_id = auth.uid() $q$, '42501');
 select bbtest.fails('0042: A no guarda una tarjeta de Tilopay por la API', $q$ insert into public.payment_methods (user_id, provider, provider_customer_id, provider_payment_method_id) values (auth.uid(), 'tilopay', 'tlp:x', 'tok_falso') $q$, '42501');
+reset role;
+
+-- ───────────── 20. Temporadas deportivas (0046) ─────────────
+reset role;
+select bbtest.ok('0046: tres temporadas sembradas con su programa y 8 semanas', (select count(*) = 3 from public.seasons s join public.challenges_catalog c on c.slug = s.slug where c.kind = 'programa' and public._program_weeks(c.program) = 8));
+select bbtest.ok('0046: precios por deporte', (select bool_and(price_minor = case sport when 'running' then 1499 when 'raquetas' then 1699 else 1899 end) from public.seasons));
+select bbtest.fails('0046: una temporada dura 8 semanas exactas', $q$ insert into public.seasons (slug, sport, number, starts_on, ends_on, enroll_until, price_minor) values ('temporada-running-1', 'running', 9, '2027-01-04', '2027-01-31', '2027-01-17', 1499) $q$, '23514');
+select bbtest.fails('0046: el canje anual no acepta fuentes inventadas', $q$ insert into public.challenge_entitlements (user_id, challenge_slug, source) values (bbtest.u('A'), 'temporada-running-1', 'regalo') $q$, '23514');
+set role anon; select bbtest.login(null);
+select bbtest.ok('0046: cualquiera ve las fechas y precios', bbtest.num($q$ select 1 from public.seasons $q$) = 3);
+select bbtest.fails('0046: anon no ve cuestionarios', $q$ select 1 from public.season_intake $q$, '42501');
+reset role;
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.fails('0046: F no crea temporadas', $q$ insert into public.seasons (slug, sport, number, starts_on, ends_on, enroll_until, price_minor) values ('temporada-cross-2', 'cross', 2, '2027-01-04', '2027-02-28', '2027-01-17', 1) $q$, '42501');
+select bbtest.fails('0046: F no se canjea una temporada', $q$ insert into public.season_redemptions (user_id, slug, sub_id, period_start) values (auth.uid(), 'temporada-running-1', 'x', current_date) $q$, '42501');
+select bbtest.fails('0046: F no se otorga la temporada', $q$ insert into public.challenge_entitlements (user_id, challenge_slug, source) values (auth.uid(), 'temporada-running-1', 'anual') $q$, '42501');
+select bbtest.fails('0046: sin la temporada no guarda cuestionario', $q$ insert into public.season_intake (user_id, slug, answers) values (auth.uid(), 'temporada-running-1', '{"trainDays":[1]}') $q$, '42501');
+select bbtest.fails('0046: sin la temporada no opina', $q$ insert into public.season_feedback (user_id, slug, week, day, exercise_id, liked) values (auth.uid(), 'temporada-running-1', 1, 1, 'rdl', true) $q$, '42501');
+select bbtest.fails('0046: sin comprar no empieza la temporada', $q$ select public.program_start('temporada-running-1', current_date, true) $q$, '42501');
+select bbtest.fails('0046: F no lee el resumen del panel', $q$ select public.admin_season_stats('temporada-running-1') $q$, '42501');
+reset role;
+-- El servidor confirma el canje del plan anual de F (monto 0) y una compra de Raquetas.
+insert into public.challenge_entitlements (user_id, challenge_slug, source) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'temporada-running-1', 'anual'), ('0f0f0f0f-0000-4000-8000-00000000000f', 'temporada-raquetas-1', 'compra');
+insert into public.season_redemptions (user_id, slug, sub_id, period_start) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'temporada-running-1', 'sub-f', '2026-11-01');
+select bbtest.fails('0046: un solo canje por periodo anual', $q$ insert into public.season_redemptions (user_id, slug, sub_id, period_start) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'temporada-raquetas-1', 'sub-f', '2026-11-01') $q$, '23505');
+select bbtest.fails('0046: la misma temporada no se canjea dos veces', $q$ insert into public.season_redemptions (user_id, slug, sub_id, period_start) values ('0f0f0f0f-0000-4000-8000-00000000000f', 'temporada-running-1', 'sub-f', '2027-11-01') $q$, '23505');
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.ok('0046: con la temporada guarda su cuestionario', bbtest.affected($q$ insert into public.season_intake (user_id, slug, answers) values (auth.uid(), 'temporada-running-1', '{"trainDays":[0,2,4],"sessions":3}') $q$) = 1);
+select bbtest.ok('0046: edita su cuestionario', bbtest.affected($q$ update public.season_intake set answers = '{"trainDays":[0,2]}', from_week = 3 where user_id = auth.uid() and slug = 'temporada-running-1' $q$) = 1);
+select bbtest.fails('0046: no guarda el cuestionario de otra persona', $q$ insert into public.season_intake (user_id, slug, answers) values (bbtest.u('A'), 'temporada-running-1', '{}') $q$, '42501');
+select bbtest.fails('0046: no guarda un cuestionario gigante', $q$ insert into public.season_intake (user_id, slug, answers) values (auth.uid(), 'temporada-raquetas-1', jsonb_build_object('x', repeat('a', 9000))) $q$, '23514');
+select bbtest.ok('0046: opina sobre un ejercicio', bbtest.affected($q$ insert into public.season_feedback (user_id, slug, week, day, exercise_id, liked, difficulty) values (auth.uid(), 'temporada-running-1', 1, 1, 'rdl', true, 'dificil') $q$) = 1);
+select bbtest.fails('0046: una opinión por ejercicio y sesión', $q$ insert into public.season_feedback (user_id, slug, week, day, exercise_id, liked) values (auth.uid(), 'temporada-running-1', 1, 1, 'rdl', false) $q$, '23505');
+select bbtest.fails('0046: id de ejercicio inválido', $q$ insert into public.season_feedback (user_id, slug, week, day, exercise_id) values (auth.uid(), 'temporada-running-1', 1, 2, 'DROP TABLE') $q$, '23514');
+select bbtest.zero('0046: no borra opiniones', $q$ delete from public.season_feedback where user_id = auth.uid() $q$);
+select bbtest.ok('0046: empieza la temporada', public.program_start('temporada-running-1', current_date, true) = 'empezado');
+select bbtest.ok('0046: con la fecha oficial y sin pausas', (select started_on = '2026-11-09' and paused_days = 0 from public.user_programs where user_id = auth.uid() and slug = 'temporada-running-1'));
+select bbtest.ok('0046: solo una activa: empieza la otra', public.program_start('temporada-raquetas-1', current_date, true) = 'empezado');
+select bbtest.ok('0046: y la primera queda en pausa', (select status = 'pausado' from public.user_programs where user_id = auth.uid() and slug = 'temporada-running-1'));
+select bbtest.ok('0046: vuelve a la primera', public.program_start('temporada-running-1', current_date, true) = 'reanudado');
+select bbtest.ok('0046: al volver, la semana sigue el calendario (sin días en pausa)', (select started_on = '2026-11-09' and paused_days = 0 and status = 'activo' from public.user_programs where user_id = auth.uid() and slug = 'temporada-running-1'));
+reset role;
+update public.user_programs set status = 'completado', completed_at = now() where user_id = '0f0f0f0f-0000-4000-8000-00000000000f' and slug = 'temporada-raquetas-1';
+set role authenticated; select bbtest.as_user('0f0f0f0f-0000-4000-8000-00000000000f');
+select bbtest.fails('0046: una temporada terminada no se repite', $q$ select public.program_start('temporada-raquetas-1', current_date, true) $q$, 'P0001');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0046: A no ve el cuestionario de F', bbtest.num($q$ select 1 from public.season_intake $q$) = 0);
+select bbtest.ok('0046: A no ve las opiniones de F', bbtest.num($q$ select 1 from public.season_feedback $q$) = 0);
+select bbtest.zero('0046: A no edita el cuestionario de F', $q$ update public.season_intake set from_week = 1 $q$);
+select bbtest.ok('0046: A no ve canjes ajenos', bbtest.num($q$ select 1 from public.season_redemptions $q$) = 0);
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('0046: el panel lee el resumen sin identificar a nadie', (select (v->>'owners')::int = 1 and jsonb_array_length(v->'feedback') = 1 and jsonb_array_length(v->'intakes') = 1 and not (v::text ~ '0f0f0f0f') from (select public.admin_season_stats('temporada-running-1') v) x));
 reset role;
 
 -- ───────────── Resumen ─────────────
