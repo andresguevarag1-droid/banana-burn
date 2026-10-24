@@ -1,3 +1,7 @@
+import { redirect } from "next/navigation";
+// Conectar relojes y otros dispositivos todavía no se ofrece: la sección queda cerrada (decisión del dueño, oct 2026).
+// Para reabrirla, quita este redirect y vuelve a poner el acceso en app-nav.tsx.
+const ABIERTA = false;
 import Link from "next/link";
 import { Footprints, Heart, Heartbeat, Info, Moon, PersonSimpleRun, Watch, type PhosphorIcon } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
@@ -9,6 +13,7 @@ export const metadata = { title: "Conecta tu reloj" };
 const ICON: Record<DeviceId, PhosphorIcon> = { apple: Heart, android: Heartbeat, garmin: Watch, fitbit: Footprints, strava: PersonSimpleRun, whoop_oura: Moon };
 
 export default async function Conexiones() {
+  if (!ABIERTA) redirect("/app");
   const v = (await getViewer())!;
   let mine = new Set<string>();
   if (!v.demo) {
