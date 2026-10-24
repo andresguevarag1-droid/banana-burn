@@ -18,12 +18,17 @@ import { LIB_COUNT } from "@/lib/library";
 import { FirstTip } from "@/components/guide/first-tip";
 import { getVoice } from "@/lib/voice-server";
 import { t } from "@/lib/voice";
+import { techniqueHref } from "@/components/hoy/exercise-tiles";
+import { getLearnState } from "@/lib/primeros-pasos-server";
+import { MarkLearn } from "@/components/primeros-pasos/mark-learn";
+import { HowToButton, PageTour } from "@/components/primeros-pasos/page-tour";
+import { STEP_KEY } from "@/lib/primeros-pasos";
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
-  const [a, voice, doneTpls] = await Promise.all([getAthlete(v), getVoice(v), templatesDoneToday(v)]);
+  const [a, voice, doneTpls, learnState] = await Promise.all([getAthlete(v), getVoice(v), templatesDoneToday(v), getLearnState(v)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const block = (d.week % 6) + 1;
@@ -37,8 +42,21 @@ export default async function Entrenar() {
   const pc = p ? coachOf(p.meta.experience) : null;
   const coach = pc && pc.id !== "banana" ? pc : null;
   const daysOfWeek = p?.run.byDays ? weekDaysLabel(p.meta, p.run.week) : null;
+  // Tocar un ejercicio abre su técnica (antes la lista no se podía tocar).
+  const tech: Record<string, string> = {};
+  for (const day of d.weekPlan) for (const e of day.exercises) tech[e.id] ??= techniqueHref(e);
+  const views = p ? sessionViews(p, p.icon, p.run.weekSessions.map((w) => w.session), p.run.week, d.equipment, (day) => p.run.weekSessions.some((w) => w.day === day && w.done), (day) => (day === p.run.next?.day ? "/app/entreno" : `/app/entreno?sesion=${day}`)) : [];
+  for (const w of views) for (const e of w.exercises) tech[e.id] ??= techniqueHref(e);
+  const tourSteps = [
+    { target: "ent-dias", title: "Toca un día para ver sus ejercicios", body: p ? "Cada pestaña es una sesión de tu programa. La que te toca ya está elegida." : "Cada día de la semana tiene su entreno. Los días sin entreno son de descanso." },
+    { target: "ent-ejercicio", title: "Toca un ejercicio para ver cómo se hace", body: "Verás el movimiento, el músculo que trabaja y los pasos para hacerlo bien." },
+    { target: "ent-empezar", title: "Este botón empieza tu entrenamiento", body: "La app te lleva paso a paso. Tú haces el ejercicio y anotas lo que hiciste." },
+  ];
   return (
     <div className="space-y-5 animate-enter">
+      <MarkLearn k={STEP_KEY.semana} />
+      <PageTour tour="entrenar" steps={tourSteps} serverKeys={learnState.keys} finalLabel="A entrenar" />
+      <div className="-mb-3 flex justify-end"><HowToButton tour="entrenar" /></div>
       <FirstTip id="entrenar" coach={coach} title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: la progresión sube sola con tu historial." : t(voice, { basico: "Toca el día de hoy para empezar. Si se te pasa uno, hazlo mañana: Coach Banana mantiene el orden y te dice qué peso usar.", intermedio: "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos.", tecnico: "Sigue el orden de la semana. Si saltas un día, retómalo al siguiente: la progresión de cargas se recalcula con tu historial." })}</FirstTip>
       {/* Exprés arriba: la salida para los días ocupados (antes quedaba al final y casi nadie la veía). */}
       <ExpressCard program={!!p} coach={coach} />
@@ -64,7 +82,7 @@ export default async function Entrenar() {
             </div>
           </header>
           <ProgramWeek current={p.run.next?.day ?? null} label={daysOfWeek ? `Sesiones de los ${daysOfWeek}` : `Sesiones de la semana ${p.run.week}`} dayLabel={p.run.byDays ? Object.fromEntries(p.run.weekSessions.map((w) => [w.day, programDayOf({ meta: p.meta, sessions: p.run.weekSessions.map((x) => x.session) }, p.run.week, w.day)])) : undefined}
-            voice={voice} sessions={sessionViews(p, p.icon, p.run.weekSessions.map((w) => w.session), p.run.week, d.equipment, (day) => p.run.weekSessions.some((w) => w.day === day && w.done), (day) => (day === p.run.next?.day ? "/app/entreno" : `/app/entreno?sesion=${day}`))} />
+            voice={voice} tech={tech} sessions={views} />
         </>
       ) : (
         <>
@@ -76,7 +94,7 @@ export default async function Entrenar() {
             </div>
             <p className="mt-2 max-w-[65ch] text-sm text-muted">{a.trainDays} días por semana, nivel {a.level}{a.minutes ? `, ${a.minutes} min por sesión` : ""}. Haz el día que te toca. Si se te pasa uno, hazlo mañana y sigue con el orden: Coach Banana ajusta los pesos solo.</p>
           </header>
-          <WeekTabs voice={voice} days={d.weekPlan} todayDow={d.today.dow} done={done} todayDone={!!todayTpl && doneTpls.includes(todayTpl)} />
+          <WeekTabs voice={voice} tech={tech} days={d.weekPlan} todayDow={d.today.dow} done={done} todayDone={!!todayTpl && doneTpls.includes(todayTpl)} />
         </>
       )}
       <Link href="/app/ejercicios" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft text-banana-ink" aria-hidden><Books weight="duotone" className="size-6" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Biblioteca de {LIB_COUNT.toLocaleString("es-419")} ejercicios</span><span className="block text-sm text-muted">Busca por músculo o equipo, con pasos en español.</span></span><CaretRight weight="bold" className="size-5 shrink-0 text-faint" /></Link>

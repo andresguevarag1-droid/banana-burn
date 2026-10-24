@@ -34,6 +34,12 @@ import { getXpSummary } from "@/lib/xp-server";
 import { toView } from "@/lib/challenge-view";
 import { TesterCard } from "@/components/testers/tester-card";
 import { getMyTester } from "@/lib/testers-server";
+import { COACHES } from "@/lib/coaches";
+import { getLearnState } from "@/lib/primeros-pasos-server";
+import { FirstSteps } from "@/components/primeros-pasos/first-steps";
+import { HowToButton, PageTour } from "@/components/primeros-pasos/page-tour";
+import { WeekRecap } from "@/components/primeros-pasos/week-recap";
+import { weekRecapFor } from "@/lib/week-recap-server";
 
 export const metadata = { title: "Hoy" };
 
@@ -45,7 +51,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
   const demoTester = v.demo ? (await searchParams).tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
-  const [a, meals, ent, xs, tester, voice] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v)]);
+  const [a, meals, ent, xs, tester, voice, learnState] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v)]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
@@ -70,6 +76,16 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const kgLost = a.startWeight - a.currentWeight;
   // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
   const lastTime = training && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
+  // Primeros pasos: lo acompaña Coach Platanita si el perfil es de mujer o el programa es suyo; si no, Coach Banana.
+  const guideCoach = coach.id !== "banana" ? coach : a.sex === "f" ? COACHES.platanita : null;
+  const recap = await weekRecapFor(v, d.today, a.trainDays, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[]).catch(() => null);
+  const tourSteps = [
+    { target: "hoy-pasos", title: "Empieza por aquí", body: "Esta lista te enseña a usar la app, un paso a la vez. Toca el primero." },
+    { target: "hoy-entreno", title: "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
+    { target: "hoy-numeros", title: ent.nutrition ? "Aquí van tus calorías y proteína" : "Aquí registras tu día", body: ent.nutrition ? "Ves cuánto comiste y cuánto te falta. También registras agua, pasos y sueño con un toque." : "Agua, pasos y sueño, con un toque. Así sabes si vas bien." },
+    { target: "hoy-semana", title: "Aquí ves tu semana", body: "Los días que entrenas se marcan. Tu racha sube cada día que entrenas o registras algo." },
+    { target: "hoy-coach", title: `${guideCoach?.name ?? "Coach Banana"}, tu entrenador 24/7`, body: "Pregúntale lo que quieras de tu entreno. Te responde con tu plan en mente." },
+  ];
 
   return (
     <div className="space-y-5 animate-enter">
@@ -78,6 +94,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         <div className="min-w-0">
           <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
           <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{greetingAt(v.tz)}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
+          <HowToButton tour="hoy" className="-ml-1" />
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <NotificationBell className="lg:hidden" />
@@ -89,6 +106,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         </div>
       </header>
 
+      <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />
+      <FirstSteps server={{ keys: learnState.keys, workouts: learnState.workouts, weights: learnState.weights, coachMessages: learnState.coachMessages, push: learnState.push }} coach={{ name: guideCoach?.name ?? "Coach Banana", avatar: guideCoach?.avatar ?? null }} />
+      {recap && <WeekRecap r={recap} />}
       <AnnouncementBanner />
       <EnablePush hideWhenSnoozed />
       {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
@@ -103,16 +123,16 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       )}
 
       {/* Sin programa: el entreno de hoy va primero y a todo lo ancho (con imágenes de cada ejercicio). */}
-      {!d.program && <WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
-        readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} />}
+      {!d.program && <div data-tour="hoy-entreno"><WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+        readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>}
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
       {/* items-start: cada tarjeta mide lo que su contenido (sin estirarse al alto de la vecina con un hueco vacío); el
           exprés, más corto, acompaña fijo (sticky) mientras bajas por tus números en escritorio. */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} />
+        <div data-tour="hoy-numeros"><TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} /></div>
         {/* Con un programa activo, su héroe reemplaza al entreno de hoy; sin programa, aquí va el exprés */}
-        {d.program ? <ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /> : !g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={false} compact /></div>}
+        {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div> : !g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={false} compact /></div>}
       </div>
       {d.program && !g.trainedToday && <ExpressCard program={d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} />}
       {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
@@ -121,7 +141,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       {/* Semana y retos */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} nutrition={ent.nutrition} />
+        <div data-tour="hoy-semana"><WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} nutrition={ent.nutrition} /></div>
         <section>
           <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Tienda de retos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
           {ch.active.length ? (
@@ -135,7 +155,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Peso y meta */}
-        <section className="card p-5 flex flex-col" aria-label="Peso y meta">
+        <section id="peso" className="card p-5 flex flex-col scroll-mt-6" aria-label="Peso y meta">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 rounded-lg bg-banana-soft text-banana-ink"><Scales weight="duotone" className="size-5" /></span>{g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?"}</p>
             <Link href="/app/progreso" className="tap inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink">Ver curva <ArrowRight weight="bold" className="size-3.5" /></Link>
@@ -149,7 +169,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
           </div>
         </section>
       {/* Coach */}
-        <Link href="/app/coach" className="card p-4 flex gap-3 items-center self-start">
+        <Link href="/app/coach" data-tour="hoy-coach" className="card p-4 flex gap-3 items-center self-start">
         {coach.id === "banana" ? <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
           : <CoachPic src={coach.avatar} size={48} className="size-12 shrink-0 rounded-2xl object-cover" />}
         <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">{coach.name}</p><p className="text-[15px] text-ink leading-snug">{d.program && training && !g.trainedToday ? "Pregúntame antes de empezar: cómo se hace un ejercicio, qué hacer si algo te molesta o qué comer después." : hoyTip({ dow: d.today.dow, training, proteinLeft: t.protein - g.log.protein - eaten.protein, trained: g.trainedToday, nutrition: ent.nutrition })}</p></div>

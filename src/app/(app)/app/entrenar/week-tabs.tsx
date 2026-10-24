@@ -6,14 +6,15 @@ import { DAY_NAMES, hookLine, type PlannedDay } from "@/lib/engine";
 import { DEFAULT_VOICE, muscleText, restText, sessionLine, setsReps, setsLegend, t, type Voice } from "@/lib/voice";
 
 
-export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFAULT_VOICE }: { days: PlannedDay[]; todayDow: number; done: number[]; todayDone?: boolean; voice?: Voice }) {
+/** `tech`: página de técnica de cada ejercicio (la arma el servidor). Tocar el ejercicio la abre. */
+export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFAULT_VOICE, tech = {} }: { days: PlannedDay[]; todayDow: number; done: number[]; todayDone?: boolean; voice?: Voice; tech?: Record<string, string> }) {
   const [sel, setSel] = useState(todayDow);
   const p = days.find((d) => d.dow === sel)!;
   const isToday = sel === todayDow;
   const doneHere = isToday && todayDone;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-7 gap-1.5">
+      <div data-tour="ent-dias" className="grid grid-cols-7 gap-1.5">
         {days.map((d) => {
           const active = d.dow === sel, today = d.dow === todayDow, ok = done.includes(d.dow);
           return (
@@ -37,11 +38,11 @@ export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFA
         {p.exercises.length > 0 ? (
           <>
             <p className="mt-1 text-sm font-semibold text-ink/75 tabular-nums">{sessionLine(voice, { exercises: p.exercises.length, mins: p.mins ?? 55, cardio: !!p.cardio })}</p>
-            <ol className="mt-4 space-y-2 stagger">
+            <ol id="ejercicios" className="mt-4 space-y-2 stagger scroll-mt-6">
               {p.exercises.map((e, i) => (
-                <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white/80 px-3.5 py-3">
+                <li key={e.id} data-tour={i === 0 ? "ent-ejercicio" : undefined} className="relative flex items-center gap-3 rounded-2xl bg-white/80 px-3.5 py-3">
                   <span className="grid place-items-center size-8 shrink-0 rounded-xl bg-ink text-white text-sm font-bold">{i + 1}</span>
-                  <div className="flex-1 min-w-0"><p className="font-bold text-ink leading-tight">{e.name}</p><p className="text-xs text-muted">{muscleText(voice, e.muscle)}, {t(voice, { basico: "descansa", intermedio: "descanso de", tecnico: "descanso" })} {restText(e.cfg.rest)}</p></div>
+                  <div className="flex-1 min-w-0"><p className="font-bold text-ink leading-tight">{tech[e.id] ? <Link href={tech[e.id]} className="after:absolute after:inset-0 after:rounded-2xl hover:underline underline-offset-2">{e.name}<span className="sr-only">: ver cómo se hace</span></Link> : e.name}</p><p className="text-xs text-muted">{muscleText(voice, e.muscle)}, {t(voice, { basico: "descansa", intermedio: "descanso de", tecnico: "descanso" })} {restText(e.cfg.rest)}</p></div>
                   <p className={`shrink-0 font-extrabold text-ink tabular-nums text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide)}</p>
                 </li>
               ))}
@@ -54,7 +55,7 @@ export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFA
                 <Link href="/app/entreno?repetir=1" className="btn-ghost mt-3 w-full sm:w-auto h-13 px-6"><Repeat weight="bold" className="size-5" />Repetir (no suma XP)</Link>
               </div>
             ) : (
-              <Link href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
+              <Link data-tour="ent-empezar" href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
             )}
           </>
         ) : (

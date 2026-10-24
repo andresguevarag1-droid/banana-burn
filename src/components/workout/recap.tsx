@@ -27,9 +27,11 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+export function Recap({ next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
   sex?: string | null;
   voice?: Voice;
+  /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
+  next?: { name: string; line: string }[];
   /** Coach del programa (Coach Platanita) que firma el feedback; sin ella, Coach Banana. */
   coach?: { name: string; avatar: string } | null;
   title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
@@ -120,6 +122,13 @@ export function Recap({ sex = null, title, icon, xpBefore, xp, rushed, streak, s
               </div>
               {volume > 0 && <p className="mt-2 text-sm text-muted">{t(voice, { basico: "Sumando todas tus repeticiones, levantaste", intermedio: "Moviste", tecnico: "Volumen total (kg × reps):" })} <span className="font-bold text-ink tabular-nums">{volumeText(volume)}</span>{t(voice, { basico: " en total.", intermedio: " en total.", tecnico: "." })}</p>}
             </div>
+            {next.length > 0 && (
+              <div className="border-t border-line p-4">
+                <p className="text-sm font-bold text-ink">Lo que cambia la próxima vez</p>
+                <p className="mt-0.5 text-xs text-muted">Con lo que anotaste hoy, tu plan ya se ajustó:</p>
+                <ul className="mt-2 space-y-1.5">{next.map((n) => <li key={n.name} className="text-sm"><span className="font-bold text-ink">{n.name}:</span> <span className="text-body">{n.line}</span></li>)}</ul>
+              </div>
+            )}
             <div className={`border-t border-line p-4 ${leveled ? "bg-banana-soft/70" : ""}`}>
               {leveled && <p className="mb-2 text-xs font-extrabold text-banana-ink">Nivel nuevo desbloqueado</p>}
               <div className="flex items-center gap-2.5">

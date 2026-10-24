@@ -148,7 +148,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
         )}
       </section>
 
-      <section className="card p-5"><NotificationSettings initial={prefs} /></section>
+      <section id="avisos" className="card p-5 scroll-mt-6"><NotificationSettings initial={prefs} /></section>
 
       <section id="ayuda" className="card p-5 scroll-mt-6" aria-labelledby="ayuda-t">
         <h2 id="ayuda-t" className="flex items-center gap-2 font-extrabold text-ink"><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><Lifebuoy weight="duotone" className="size-5" /></span>Ayuda y soporte</h2>
@@ -156,6 +156,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
         <div className="mt-3 flex flex-wrap gap-2">
           <Link href="/app/soporte/nuevo?origen=perfil&desde=/app/perfil" className="btn-primary h-11 px-4 text-sm">Reportar un problema</Link>
           <Link href="/app/soporte" className="btn-ghost h-11 px-4 text-sm">Mis reportes</Link>
+          <Link href="/app/aprende" className="btn-ghost h-11 px-4 text-sm">Aprende a entrenar</Link>
         </div>
       </section>
 
