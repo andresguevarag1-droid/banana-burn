@@ -12,6 +12,7 @@ import { getCatalog, getOwned } from "@/lib/challenges-server";
 import { isProgram, type Challenge, type CoverStyle } from "@/lib/challenges";
 import { PROGRAM_SEED_BY_SLUG } from "@/lib/program-seed";
 import { demoState, isDemoGirlProgram, type DemoState } from "@/lib/demo-persona";
+import { es419Deep } from "./num";
 import {
   addDays, calendarSlot, parseProgramTemplate, parseSession, plannedFromSession, resolveProgram, restDay, restLabel, setsLabel,
   type DoneSession, type ExInfo, type ProgramDef, type ProgramMeta, type ProgramRun, type ProgramSession, type ProgramState, type ProgramStatus,
@@ -104,11 +105,11 @@ export const getProgramSessions = cache(async (v: Viewer, slug: string): Promise
     const seed = PROGRAM_SEED_BY_SLUG[slug];
     if (!seed) return [];
     const full = (await getOwned(v)).has(slug) || seed.priceUsd === 0;
-    return seed.sessions.filter((s) => full || s.phase === 1);
+    return es419Deep(seed.sessions.filter((s) => full || s.phase === 1));
   }
   const { data, error } = await (await createClient()).from("program_sessions").select("phase,day,title,focus,optional,exercises").eq("slug", slug).order("phase").order("day");
   if (error) return [];
-  return (data ?? []).map(parseSession).filter((s): s is ProgramSession => !!s);
+  return es419Deep((data ?? []).map(parseSession).filter((s): s is ProgramSession => !!s));
 });
 
 /** Sesiones hechas desde `since` (entrenos guardados con la plantilla del programa). */

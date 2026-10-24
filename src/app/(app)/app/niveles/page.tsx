@@ -2,10 +2,11 @@ import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
 import { getXpSummary } from "@/lib/xp-server";
 import { getEntitlements } from "@/lib/entitlements";
-import { CHECKIN_XP, CHALLENGE_DAY_XP, FULL_BONUS, LEVELS, LEVEL_PERKS, MEAL_XP, MEAL_XP_DAILY_MAX, MILESTONE_XP, PR_XP, SET_XP, STREAK_BONUS_MAX, STREAK_TIERS, WEIGH_XP } from "@/lib/gamify";
+import { levelName, CHECKIN_XP, CHALLENGE_DAY_XP, FULL_BONUS, LEVELS, LEVEL_PERKS, MEAL_XP, MEAL_XP_DAILY_MAX, MILESTONE_XP, PR_XP, SET_XP, STREAK_BONUS_MAX, STREAK_TIERS, WEIGH_XP } from "@/lib/gamify";
 import { LevelBadge } from "@/components/levels/level-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { BananaFlame, BananaMedal, Barbell, BowlFood, Check, CheckCircle, CalendarCheck, Lock, Scales, Target } from "@/components/icons";
+import { getSex } from "@/lib/athlete";
 
 export const metadata = { title: "Niveles" };
 
@@ -15,7 +16,7 @@ const DOW = ["D", "L", "M", "M", "J", "V", "S"];
 
 export default async function Niveles() {
   const v = (await getViewer())!;
-  const [s, ent] = await Promise.all([getXpSummary(v), getEntitlements(v)]);
+  const [s, ent, sex] = await Promise.all([getXpSummary(v), getEntitlements(v), getSex(v)]);
   const maxDay = Math.max(1, ...s.history.map((d) => d.xp));
   const sum7 = s.history.reduce((a, d) => a + d.xp, 0);
   const bonus7 = s.history.reduce((a, d) => a + d.bonus, 0);
@@ -131,9 +132,9 @@ export default async function Niveles() {
             const idx = i + 1, cur = idx === s.level.idx, got = idx < s.level.idx;
             return (
               <li key={lv.n} className={`flex items-center gap-3 rounded-2xl border p-3 ${cur ? "border-ember bg-ember/5 ring-2 ring-ember/20" : got ? "border-line bg-white" : "border-line bg-white/60"}`} aria-current={cur ? "step" : undefined}>
-                <LevelBadge idx={idx} locked={!got && !cur} />
+                <LevelBadge idx={idx} locked={!got && !cur} sex={sex} />
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold text-ink">{lv.n}<span className="text-xs font-semibold text-muted tabular-nums">{n(lv.xp)} XP</span>{cur && <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-extrabold text-banana">Estás aquí</span>}</p>
+                  <p className="flex flex-wrap items-center gap-x-2 text-sm font-extrabold text-ink">{levelName(lv, sex)}<span className="text-xs font-semibold text-muted tabular-nums">{n(lv.xp)} XP</span>{cur && <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-extrabold text-banana">Estás aquí</span>}</p>
                   <p className="text-xs text-muted">{LEVEL_PERKS[i].text}</p>
                 </div>
                 <span className="shrink-0" role="img" aria-label={got || cur ? "Desbloqueado" : "Bloqueado"}>{got || cur ? <Check weight="bold" className="size-5 text-peel" /> : <Lock weight="duotone" className="size-5 text-faint" />}</span>

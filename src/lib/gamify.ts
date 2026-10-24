@@ -4,19 +4,26 @@ export const LEVELS = [
   { xp: 0, n: "Banana verde", icon: "banana" },
   { xp: 300, n: "Banana pintona", icon: "banana" },
   { xp: 800, n: "Banana madura", icon: "peeled" },
-  { xp: 1600, n: "Plátano macho", icon: "bunch" },
-  { xp: 3000, n: "Mono fuerte", icon: "monkey" },
+  { xp: 1600, n: "Plátano macho", nf: "Banana dorada", icon: "bunch" },
+  { xp: 3000, n: "Mono fuerte", nf: "Mona fuerte", icon: "monkey" },
   { xp: 5000, n: "Gorila", icon: "gorilla" },
-  { xp: 8000, n: "Rey de la selva", icon: "monkeyCrown" },
+  { xp: 8000, n: "Rey de la selva", nf: "Reina de la selva", icon: "monkeyCrown" },
   { xp: 12000, n: "King Kong", icon: "monkeyCrown" },
 ];
 
-export function levelOf(xp: number) {
+type LevelDef = { xp: number; n: string; nf?: string; icon: string };
+/** Nombre del nivel para quien lo mira: "Banana dorada", "Mona fuerte" y "Reina de la selva" para ella. */
+export const levelName = (lv: Pick<LevelDef, "n" | "nf">, sex?: string | null) => (sex === "f" && lv.nf ? lv.nf : lv.n);
+/** Nivel (1-based) por número: nombre ya en el género de quien lo mira. */
+export const levelAt = (idx: number, sex?: string | null) => { const lv: LevelDef = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx - 1))]; return { ...lv, n: levelName(lv, sex) }; };
+
+/** `sex`: "f" usa los nombres para ella (el número, los XP y las ventajas son los mismos). */
+export function levelOf(xp: number, sex?: string | null) {
   let i = 0;
   while (i + 1 < LEVELS.length && xp >= LEVELS[i + 1].xp) i++;
-  const cur = LEVELS[i], next = LEVELS[i + 1];
+  const cur: LevelDef = LEVELS[i], next: LevelDef | undefined = LEVELS[i + 1];
   const into = xp - cur.xp, span = next ? next.xp - cur.xp : 1;
-  return { idx: i + 1, ...cur, next: next ?? null, progress: next ? into / span : 1, toNext: next ? next.xp - xp : 0 };
+  return { idx: i + 1, ...cur, n: levelName(cur, sex), next: next ? { ...next, n: levelName(next, sex) } : null, progress: next ? into / span : 1, toNext: next ? next.xp - xp : 0 };
 }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -70,8 +77,8 @@ export function workoutXp(o: { doneSets: number; totalSets: number; prs: number;
 }
 
 /** Nivel nuevo si pasar de `xpBefore` a `xpAfter` cruza un umbral; si no, null. */
-export function levelCrossed(xpBefore: number, xpAfter: number) {
-  const a = levelOf(xpBefore), b = levelOf(xpAfter);
+export function levelCrossed(xpBefore: number, xpAfter: number, sex?: string | null) {
+  const a = levelOf(xpBefore), b = levelOf(xpAfter, sex);
   return b.idx > a.idx ? b : null;
 }
 
@@ -131,8 +138,8 @@ export function perksAt(idx: number) {
 }
 
 /** Lo que trae el próximo nivel, para mostrarlo ("Te faltan 80 XP para Banana madura"). */
-export function nextUnlock(xp: number) {
-  const lv = levelOf(xp);
+export function nextUnlock(xp: number, sex?: string | null) {
+  const lv = levelOf(xp, sex);
   if (!lv.next) return null;
   return { name: lv.next.n, idx: lv.idx + 1, xpLeft: lv.toNext, perk: LEVEL_PERKS[lv.idx] };
 }

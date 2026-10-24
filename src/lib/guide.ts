@@ -197,7 +197,7 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
     body: "Cada ejercicio trae una animación del movimiento con el músculo que trabaja y las claves de técnica. Baja lento: unos 3 segundos.",
     bullets: [
       `Más de ${(1300).toLocaleString("es-419")} ejercicios en la biblioteca, con pasos en español.`,
-      "¿Día ocupado? Entrenos exprés de 10, 20 o 30 minutos sin equipo, en un espacio de 2 × 2 m.",
+      "¿Te estás quedando sin tiempo? Entrenos exprés de 10, 20 o 30 minutos sin equipo, en un espacio de 2 × 2 m.",
     ],
     cta: { href: "/app/entreno?expres=10", label: "Probar un exprés de 10 min" }, visual: { kind: "tecnica" },
   });

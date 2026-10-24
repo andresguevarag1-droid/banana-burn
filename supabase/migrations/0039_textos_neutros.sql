@@ -1,0 +1,36 @@
+-- 0039: textos neutros. Algunas frases de la siembra de retos y programas (0018, 0024, 0027) asumían a un hombre
+-- ("si estás cansado", "cuando estás listo", "llega descansado", "cuando estás fresco"). Ahora se leen igual de bien para
+-- ellas y para ellos. Solo reemplaza esas frases exactas, también dentro de lo que el panel ya editó; lo demás queda igual.
+-- No toca permisos ni datos de personas. Idempotente: se puede correr más de una vez.
+
+-- Datos de 0039 (generados desde NEUTRAL_WORDING en src/lib/num.ts). Solo cambia esas frases exactas.
+update public.challenges_catalog set description = replace(description, 'si estás cansado, usa el modo suave', 'si te falta energía, usa el modo suave') where description like '%si estás cansado, usa el modo suave%';
+update public.challenges_catalog set safety_note = replace(safety_note, 'si estás cansado, usa el modo suave', 'si te falta energía, usa el modo suave') where safety_note like '%si estás cansado, usa el modo suave%';
+update public.challenges_catalog set program = replace(program::text, 'si estás cansado, usa el modo suave', 'si te falta energía, usa el modo suave')::jsonb where program is not null and program::text like '%si estás cansado, usa el modo suave%';
+update public.challenge_plans set days = replace(days::text, 'si estás cansado, usa el modo suave', 'si te falta energía, usa el modo suave')::jsonb, updated_at = now() where days::text like '%si estás cansado, usa el modo suave%';
+update public.program_sessions set focus = replace(focus, 'si estás cansado, usa el modo suave', 'si te falta energía, usa el modo suave') where focus like '%si estás cansado, usa el modo suave%';
+update public.program_sessions set exercises = replace(exercises::text, 'si estás cansado, usa el modo suave', 'si te falta energía, usa el modo suave')::jsonb where exercises::text like '%si estás cansado, usa el modo suave%';
+update public.challenges_catalog set description = replace(description, 'Llega descansado al cierre.', 'Llega con energía al cierre.') where description like '%Llega descansado al cierre.%';
+update public.challenges_catalog set safety_note = replace(safety_note, 'Llega descansado al cierre.', 'Llega con energía al cierre.') where safety_note like '%Llega descansado al cierre.%';
+update public.challenges_catalog set program = replace(program::text, 'Llega descansado al cierre.', 'Llega con energía al cierre.')::jsonb where program is not null and program::text like '%Llega descansado al cierre.%';
+update public.challenge_plans set days = replace(days::text, 'Llega descansado al cierre.', 'Llega con energía al cierre.')::jsonb, updated_at = now() where days::text like '%Llega descansado al cierre.%';
+update public.program_sessions set focus = replace(focus, 'Llega descansado al cierre.', 'Llega con energía al cierre.') where focus like '%Llega descansado al cierre.%';
+update public.program_sessions set exercises = replace(exercises::text, 'Llega descansado al cierre.', 'Llega con energía al cierre.')::jsonb where exercises::text like '%Llega descansado al cierre.%';
+update public.challenges_catalog set description = replace(description, 'que suben cuando estás listo', 'que suben cuando ya puedes más') where description like '%que suben cuando estás listo%';
+update public.challenges_catalog set safety_note = replace(safety_note, 'que suben cuando estás listo', 'que suben cuando ya puedes más') where safety_note like '%que suben cuando estás listo%';
+update public.challenges_catalog set program = replace(program::text, 'que suben cuando estás listo', 'que suben cuando ya puedes más')::jsonb where program is not null and program::text like '%que suben cuando estás listo%';
+update public.challenge_plans set days = replace(days::text, 'que suben cuando estás listo', 'que suben cuando ya puedes más')::jsonb, updated_at = now() where days::text like '%que suben cuando estás listo%';
+update public.program_sessions set focus = replace(focus, 'que suben cuando estás listo', 'que suben cuando ya puedes más') where focus like '%que suben cuando estás listo%';
+update public.program_sessions set exercises = replace(exercises::text, 'que suben cuando estás listo', 'que suben cuando ya puedes más')::jsonb where exercises::text like '%que suben cuando estás listo%';
+update public.challenges_catalog set description = replace(description, 'el programa sube el peso cuando estás listo.', 'el programa sube el peso cuando ya puedes más.') where description like '%el programa sube el peso cuando estás listo.%';
+update public.challenges_catalog set safety_note = replace(safety_note, 'el programa sube el peso cuando estás listo.', 'el programa sube el peso cuando ya puedes más.') where safety_note like '%el programa sube el peso cuando estás listo.%';
+update public.challenges_catalog set program = replace(program::text, 'el programa sube el peso cuando estás listo.', 'el programa sube el peso cuando ya puedes más.')::jsonb where program is not null and program::text like '%el programa sube el peso cuando estás listo.%';
+update public.challenge_plans set days = replace(days::text, 'el programa sube el peso cuando estás listo.', 'el programa sube el peso cuando ya puedes más.')::jsonb, updated_at = now() where days::text like '%el programa sube el peso cuando estás listo.%';
+update public.program_sessions set focus = replace(focus, 'el programa sube el peso cuando estás listo.', 'el programa sube el peso cuando ya puedes más.') where focus like '%el programa sube el peso cuando estás listo.%';
+update public.program_sessions set exercises = replace(exercises::text, 'el programa sube el peso cuando estás listo.', 'el programa sube el peso cuando ya puedes más.')::jsonb where exercises::text like '%el programa sube el peso cuando estás listo.%';
+update public.challenges_catalog set description = replace(description, 'al empezar la sesión, cuando estás fresco.', 'al empezar la sesión, cuando tienes más energía.') where description like '%al empezar la sesión, cuando estás fresco.%';
+update public.challenges_catalog set safety_note = replace(safety_note, 'al empezar la sesión, cuando estás fresco.', 'al empezar la sesión, cuando tienes más energía.') where safety_note like '%al empezar la sesión, cuando estás fresco.%';
+update public.challenges_catalog set program = replace(program::text, 'al empezar la sesión, cuando estás fresco.', 'al empezar la sesión, cuando tienes más energía.')::jsonb where program is not null and program::text like '%al empezar la sesión, cuando estás fresco.%';
+update public.challenge_plans set days = replace(days::text, 'al empezar la sesión, cuando estás fresco.', 'al empezar la sesión, cuando tienes más energía.')::jsonb, updated_at = now() where days::text like '%al empezar la sesión, cuando estás fresco.%';
+update public.program_sessions set focus = replace(focus, 'al empezar la sesión, cuando estás fresco.', 'al empezar la sesión, cuando tienes más energía.') where focus like '%al empezar la sesión, cuando estás fresco.%';
+update public.program_sessions set exercises = replace(exercises::text, 'al empezar la sesión, cuando estás fresco.', 'al empezar la sesión, cuando tienes más energía.')::jsonb where exercises::text like '%al empezar la sesión, cuando estás fresco.%';
