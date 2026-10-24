@@ -25,7 +25,8 @@ import { WeekCard } from "@/components/hoy/week-card";
 import { WeighIn } from "@/components/weigh-in";
 import { ExpressCard } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
-import { EnablePush } from "@/components/notifications/enable-push";
+import { InstallCard } from "@/components/install/install-card";
+import { PushWhenReady } from "@/components/install/push-when-ready";
 import { AnnouncementBanner } from "@/components/admin/announcement-banner";
 import { Glp1Card } from "@/components/glp1-card";
 import { ChallengeCard } from "@/components/challenge-card";
@@ -90,7 +91,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       </header>
 
       <AnnouncementBanner />
-      <EnablePush hideWhenSnoozed />
+      <InstallCard />
+      <PushWhenReady trained={g.trainedToday || g.streak.days > 0 || !!lastTime} />
       {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
 
 
