@@ -7,7 +7,7 @@ import { EditDraft, GenerateDraft } from "./forms";
 
 export const metadata = { title: "Temporadas" };
 
-const pct = (x: number | null) => (x == null ? "Sin votos" : fmtPct(x));
+const pct = (x: number | null) => (x == null ? "Sin votos" : fmtPct(Math.round(x * 100)));
 
 function Bars({ title, rows, label }: { title: string; rows: { k: string; n: number; pct: number }[]; label?: (k: string) => string }) {
   if (!rows.length) return null;
@@ -49,7 +49,7 @@ export default async function AdminTemporadas({ searchParams }: { searchParams: 
             <Kpi label="Personas con la temporada" value={fmtNum(stats.owners)} />
             <Kpi label="La empezaron" value={fmtNum(stats.started)} />
             <Kpi label="Cuestionarios" value={fmtNum(stats.intakes.length)} />
-            <Kpi label="Siguen en la semana 8" value={fmtPct(stats.retention[7]?.pct ?? 0)} hint="De quienes entrenaron al menos una vez" />
+            <Kpi label="Siguen en la semana 8" value={fmtPct(Math.round((stats.retention[7]?.pct ?? 0) * 100))} hint="De quienes entrenaron al menos una vez" />
             <Kpi label="Carreras con GPS" value={fmtNum(stats.runs.count)} hint={`${stats.runs.km.toLocaleString("es-419")} km en la temporada`} />
           </div>
 
@@ -77,7 +77,7 @@ export default async function AdminTemporadas({ searchParams }: { searchParams: 
                       <Td><span className="font-semibold text-ink">{exName(e.id)}</span><span className="block text-xs text-muted">{e.id}</span></Td>
                       <Td className="text-right tabular-nums">{fmtNum(e.votes)}</Td>
                       <Td className="text-right tabular-nums">{pct(e.likeRate)}</Td>
-                      <Td className="text-right tabular-nums">{fmtPct(e.skipRate)}</Td>
+                      <Td className="text-right tabular-nums">{fmtPct(Math.round(e.skipRate * 100))}</Td>
                       <Td className="text-right tabular-nums">{fmtNum(e.hard)}</Td>
                       <Td className="text-right tabular-nums">{fmtNum(e.easy)}</Td>
                       <Td>{stats.replace.includes(e.id) ? <Badge tone="bad">Cambiar</Badge> : e.votes >= 5 && (e.likeRate ?? 0) >= 0.8 ? <Badge tone="good">Se queda</Badge> : <Badge>Sin cambio</Badge>}</Td>

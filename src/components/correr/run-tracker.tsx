@@ -86,8 +86,9 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
     tickFrom.current = Date.now();
     const id = window.setInterval(() => {
       const now = Date.now();
-      setActiveMs((x) => x + (now - (tickFrom.current ?? now)));
+      const delta = now - (tickFrom.current ?? now);
       tickFrom.current = now;
+      setActiveMs((x) => x + delta);
     }, 1000);
     return () => { window.clearInterval(id); tickFrom.current = null; };
   }, [phase, autoPaused]);

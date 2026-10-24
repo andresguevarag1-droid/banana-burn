@@ -1,3 +1,4 @@
+"use client";
 // Mapa de una carrera sin librerías: teselas de OpenStreetMap y el recorrido en SVG encima.
 // Cada tramo se dibuja aparte (las pausas y señales perdidas no se unen con una recta).
 import type { Track } from "@/lib/runs";
@@ -26,7 +27,7 @@ export function RunMap({ track, here, className = "", label = "Mapa del recorrid
     <figure className={`relative overflow-hidden rounded-2xl bg-paper aspect-[8/5] ${className}`} aria-label={label} role="img">
       {tiles.map(({ x, y }) => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={`${x}-${y}`} alt="" loading="lazy" decoding="async" draggable={false} src={`https://tile.openstreetmap.org/${z}/${((x % n) + n) % n}/${y}.png`}
+        <img key={`${x}-${y}`} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} decoding="async" draggable={false} src={`https://tile.openstreetmap.org/${z}/${((x % n) + n) % n}/${y}.png`}
           className="absolute max-w-none select-none" style={{ left: `${((x * TILE - ox) / W) * 100}%`, top: `${((y * TILE - oy) / H) * 100}%`, width: `${(TILE / W) * 100}%`, height: `${(TILE / H) * 100}%` }} />
       ))}
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 size-full" aria-hidden>

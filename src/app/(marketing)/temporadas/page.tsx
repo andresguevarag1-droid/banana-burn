@@ -50,7 +50,7 @@ export default function TemporadasLanding() {
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 pb-12 animate-rise">
         <p className="chip h-8 w-fit bg-ink text-banana">Temporada 1</p>
-        <h1 className="mt-4 max-w-3xl text-[2.4rem] leading-[1.05] sm:text-6xl font-extrabold tracking-[-0.035em] text-ink text-balance">Entrena para <Marker>tu deporte</Marker>, no solo para el gym</h1>
+        <h1 className="mt-4 max-w-3xl text-[2.4rem] leading-[1.05] sm:text-6xl font-extrabold tracking-[-0.035em] text-ink text-balance">Entrena para <Marker>tu deporte</Marker><br /> no solo para el gym</h1>
         <p className="mt-5 max-w-2xl text-lg sm:text-xl text-muted leading-relaxed text-pretty">8 semanas con fechas oficiales para running, raquetas o cross training. Te armamos la fuerza alrededor de tus días de deporte para que rindas más y te lesiones menos.</p>
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
           <Link href={SIGNUP} data-cta="temporadas-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
@@ -102,8 +102,7 @@ export default function TemporadasLanding() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 sm:px-6 py-16">
-        <h2 className="text-3xl font-extrabold tracking-tight text-ink">Preguntas frecuentes</h2>
-        <div className="mt-6"><Faq items={FAQ} id="faq-temporadas" /></div>
+        <Faq items={FAQ} id="faq-temporadas" />
         <div className="mt-8"><FaqCta href={SIGNUP} cta={TRIAL_CTA} /></div>
       </section>
     </>
