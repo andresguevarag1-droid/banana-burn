@@ -99,3 +99,19 @@ describe("Coach Platanita", () => {
     expect([...ids].filter((id) => !coachArt(pl, id) && !(VETTED_ANIM[id] && sheetFor(VETTED_ANIM[id]!)))).toEqual([]);
   });
 });
+
+describe("temporadas: ningún ejercicio sin animación de técnica", () => {
+  test("cada ejercicio de las sesiones y de los cambios por molestia muestra su hoja revisada", () => {
+    const ids = new Set<string>();
+    for (const p of SEASON_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
+    for (const m of [...Object.values(INJURY_SWAPS), ...Object.values(AVOID_SWAPS)]) for (const [k, v] of Object.entries(m)) { ids.add(k); if (v) ids.add(v); }
+    const sinHoja = [...ids].filter((id) => !(VETTED_ANIM[id] && sheetFor(VETTED_ANIM[id]!)) || resolved(id) !== VETTED_ANIM[id]);
+    expect(sinHoja).toEqual([]);
+  });
+  test("sin ejercicios repetidos dentro de una sesión", () => {
+    for (const p of SEASON_SEED) for (const s of p.sessions) {
+      const xs = s.exercises.map((e) => e.id);
+      expect(xs.length, `${p.slug} f${s.phase} d${s.day}`).toBe(new Set(xs).size);
+    }
+  });
+});

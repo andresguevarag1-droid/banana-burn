@@ -37,12 +37,12 @@ describe("temporada a la medida", () => {
   it("con molestia de rodilla no hay saltos ni zancadas", () => {
     const p = personalSeason(seed(run.slug), run, runner({ injuries: ["rodilla"] }));
     const ids = p.def.sessions.flatMap((s) => s.exercises.map((e) => e.id));
-    for (const bad of ["jumpsquat", "ds:3361", "bulgarian", "ds:0431"]) expect(ids).not.toContain(bad);
+    for (const bad of ["jumpsquat", "lunge", "bulgarian", "ds:0431"]) expect(ids).not.toContain(bad);
     for (const id of ids) expect(knownExercise(id), id).toBe(true);
   });
   it("raquetas: las molestias típicas también cambian ejercicios", () => {
     const sw = swapsFor("raquetas", { ...DEFAULT_INTAKE, raquetas: { which: "padel", playDays: [2], competitiveDays: [], hand: "derecha", category: "", matchMin: 90, pains: ["codo"] } });
-    expect(sw["ds:0994"]).toBeNull();
+    expect(sw.suitcase).toBeNull();
   });
   it("cross: lo que no quiere hacer no aparece", () => {
     const cross = SEASON_BY_SLUG["temporada-cross-1"];

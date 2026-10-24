@@ -362,23 +362,23 @@ export const EX_PER_MINUTES: Record<30 | 45 | 60, number> = { 30: 4, 45: 5, 60: 
  * programa; el valor, el reemplazo (o null para quitarlo).
  */
 export const INJURY_SWAPS: Record<Area, Record<string, string | null>> = {
-  rodilla: { jumpsquat: "glutebridge", "ds:3361": "ds:0628", "ds:2612": "ds:1373", bulgarian: "ds:3561", "ds:1410": "ds:0628", lunge: "glutebridge", "ds:0381": "glutebridge", "ds:0431": "ds:3561", "ds:0696": "ds:0586", burpee: "mountain" },
-  tobillo: { jumpsquat: "glutebridge", "ds:3361": "ds:0628", "ds:2612": "ds:0628", burpee: "mountain", "ds:0417": "ds:1379" },
-  pie: { jumpsquat: "glutebridge", "ds:3361": "ds:0628", "ds:2612": "ds:0628", burpee: "mountain" },
-  espalda_baja: { deadlift: "glutebridge", rdl: "glutebridge", dbrdl: "glutebridge", "ds:0549": "glutebridge", "ds:0535": "ds:3561", squat: "goblet", "ds:1354": "ds:0979", row: "dbrow" },
-  hombro: { ohp: "ds:0235", dbpress: "ds:0235", "ds:1700": "ds:0235", "ds:0550": "goblet", pullup: "lat", "ds:0970": "lat", pikepush: "ds:0235", dips: "pushup", "ds:1353": "ds:0979", "ds:1354": "ds:0979", burpee: "mountain" },
-  codo: { "ds:1016": null, "ds:0994": null, pullup: "lat", "ds:0970": "lat", dips: "pushup" },
-  muneca: { pushup: "ds:0979", "ds:1016": null, "ds:0994": null, frontsquat: "goblet", "ds:0535": "ds:0549", burpee: "mountain", mountain: "ds:0276", planktap: "ds:0276" },
-  cadera: { "ds:3361": "ds:0628", "ds:1410": "ds:0628", bulgarian: "glutebridge" },
-  cuello: { carry: "ds:0979" },
+  rodilla: { jumpsquat: "glutebridge", lunge: "glutebridge", bulgarian: "ds:3561", "ds:0381": "glutebridge", "ds:0431": "ds:3561", jacks: "ds:0628", burpee: "mountain" },
+  tobillo: { jumpsquat: "glutebridge", lunge: "glutebridge", jacks: "ds:0628", burpee: "mountain", "ds:0431": "ds:3561" },
+  pie: { jumpsquat: "glutebridge", jacks: "ds:0628", burpee: "mountain" },
+  espalda_baja: { deadlift: "glutebridge", rdl: "glutebridge", dbrdl: "glutebridge", squat: "goblet", frontsquat: "goblet", row: "dbrow" },
+  hombro: { ohp: "floorpress", dbpress: "floorpress", pullup: "lat", "ds:0970": "lat", pikepush: "pushup", dips: "pushup", burpee: "mountain" },
+  codo: { carry: null, suitcase: null, pullup: "lat", "ds:0970": "lat", dips: "pushup" },
+  muneca: { pushup: "ds:0276", frontsquat: "goblet", burpee: "glutebridge", mountain: "ds:0276", planktap: "ds:0705", bearcrawl: "ds:3561" },
+  cadera: { lunge: "glutebridge", bulgarian: "glutebridge" },
+  cuello: { carry: "ds:0276" },
   espalda_alta: { row: "dbrow" },
 };
 /** En Cross Training, lo que la persona no puede o no quiere hacer. */
 export const AVOID_SWAPS: Record<(typeof AVOID_OPTIONS)[number], Record<string, string | null>> = {
-  saltos: { jumpsquat: "goblet", "ds:3361": "ds:0628", "ds:2612": "ds:2142", burpee: "mountain" },
-  olimpicos: { "ds:0535": "ds:0549", "ds:1700": "dbpress" },
+  saltos: { jumpsquat: "goblet", jacks: "mountain", burpee: "mountain" },
+  olimpicos: { frontsquat: "goblet" },
   colgarse: { pullup: "invrow", "ds:0970": "invrow", kneeraise: "legraisef", "ds:0688": "ytw" },
-  sobre_cabeza: { ohp: "ds:0235", dbpress: "ds:0235", "ds:1700": "ds:0235", "ds:0550": "goblet", pikepush: "pushup", "ds:1353": "ds:1354" },
+  sobre_cabeza: { ohp: "floorpress", dbpress: "floorpress", pikepush: "pushup" },
   correr: {},
   burpees: { burpee: "mountain" },
 };

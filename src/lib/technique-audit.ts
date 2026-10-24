@@ -82,27 +82,4 @@ export const VETTED_ANIM: Readonly<Record<string, string | null>> = {
   "ds:3561": "bridgemarch", // glute bridge march (también Platanita)
   "ds:3645": null, // single leg bridge (Platanita)
   "ds:3667": null, // side lying hip adduction (Platanita)
-  // Temporadas deportivas (0046): sesiones y cambios por molestia; ninguna tiene hoja revisada todavía.
-  "ds:0235": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0243": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0417": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0535": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0549": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0550": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0696": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0864": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:0994": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1016": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1353": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1354": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1373": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1377": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1379": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1410": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1511": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1700": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:1775": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:2142": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:2612": null, // temporadas (0046): sin hoja propia, se muestra sin animación
-  "ds:3361": null, // temporadas (0046): sin hoja propia, se muestra sin animación
 };
