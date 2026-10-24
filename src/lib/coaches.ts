@@ -56,7 +56,22 @@ const PLATANITA_EXERCISE: Record<string, string> = Object.fromEntries(
   ] as [string, string][]).map(([k, v]) => [k, art(v)]),
 );
 
-export const COACHES: Record<CoachId, Coach> = {
+// Ropa de temporada (Higgsfield, con la mascota oficial y la ilustración de Platanita como referencia). Revisadas a mano:
+// mismo personaje, cinco dedos, sin logos ni texto. Los ejercicios siguen con las ilustraciones de siempre.
+const OUTFIT: Record<"banana" | "platanita", Record<"running" | "raquetas" | "cross", string>> = {
+  banana: {
+    running: "hf_20261024_165124_cd9498db-f538-48fc-af74-ced4cfb8877f",
+    raquetas: "hf_20261024_165230_40ff47dc-d852-44a8-a92e-949174e0e3f1",
+    cross: "hf_20261024_165231_81406a62-fbcb-4958-aa5a-7b106e557f40",
+  },
+  platanita: {
+    running: "hf_20261024_165123_18813667-d76b-4dd9-a041-5bf8f6688d11",
+    raquetas: "hf_20261024_165123_48dde489-a1ee-4cb1-b4d2-b0bdf042fa4e",
+    cross: "hf_20261024_165124_8807ea61-5157-4b37-8c62-9b217b5d1fe6",
+  },
+};
+
+const BASE: Record<"banana" | "platanita", Coach> = {
   banana: { id: "banana", name: "Coach Banana", avatar: "/brand/mascota-sola.webp", hello: "/brand/mascota-sola.webp", she: false, exercise: {} },
   platanita: {
     id: "platanita", name: "Coach Platanita", she: true,
@@ -65,6 +80,17 @@ export const COACHES: Record<CoachId, Coach> = {
     exercise: PLATANITA_EXERCISE,
   },
 };
+const withOutfit = (who: "banana" | "platanita", sport: "running" | "raquetas" | "cross"): Coach => ({
+  ...BASE[who], id: `${who}-${sport}`, avatar: art(OUTFIT[who][sport]), hello: art(OUTFIT[who][sport]),
+});
+export const COACHES = {
+  ...BASE,
+  "banana-running": withOutfit("banana", "running"), "banana-raquetas": withOutfit("banana", "raquetas"), "banana-cross": withOutfit("banana", "cross"),
+  "platanita-running": withOutfit("platanita", "running"), "platanita-raquetas": withOutfit("platanita", "raquetas"), "platanita-cross": withOutfit("platanita", "cross"),
+} satisfies Record<CoachId, Coach>;
+
+/** Coach de una temporada: Platanita para quien eligió "mujer" en su perfil; si no, Coach Banana. Con la ropa del deporte. */
+export const seasonCoachId = (sport: "running" | "raquetas" | "cross", sex: string | null | undefined): CoachId => `${sex === "f" ? "platanita" : "banana"}-${sport}`;
 
 /** Coach de un programa (o Coach Banana sin programa / sin elección). */
 export const coachOf = (x: Pick<ProgramExperience, "coach"> | null | undefined): Coach => COACHES[x?.coach ?? "banana"] ?? COACHES.banana;

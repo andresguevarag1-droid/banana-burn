@@ -11,6 +11,9 @@ import { animFor, es, getLibEx, MUSCLE } from "@/lib/library";
 import { getCatalog, getOwned } from "@/lib/challenges-server";
 import { isProgram, type Challenge, type CoverStyle } from "@/lib/challenges";
 import { PROGRAM_SEED_BY_SLUG } from "@/lib/program-seed";
+import { SEASON_SEED_BY_SLUG } from "@/lib/season-content";
+import { isSeasonSlug, parseSeasonSlug, type SportId, type WeekPlan } from "@/lib/seasons";
+import { seasonCoachId } from "@/lib/coaches";
 import { demoState, isDemoGirlProgram, type DemoState } from "@/lib/demo-persona";
 import { es419Deep } from "./num";
 import {
@@ -86,6 +89,8 @@ export const getProgramStates = cache(async (v: Viewer): Promise<ProgramState[]>
     const today = todayFor(v).iso;
     // Demo: ?programa=no muestra la rutina normal del motor (sin programa activo) para revisar Hoy y Entrenar.
     const ds = await demoState();
+    // Demo de temporada (?temporada=running|raquetas|cross): empezó hace 9 días (semana 2), sin esperar la fecha oficial.
+    if (ds.season) return [{ slug: `temporada-${ds.season}-1`, status: "activo", startedOn: addDays(today, -9), pausedOn: null, pausedDays: 0, completedAt: null }];
     if (isDemoGirlProgram(ds.program)) return [girlDemoState(ds, today)];
     if ((await cookies()).get("bb_demo_programa")?.value === "no") return [{ slug: "abdomen-marcado", status: "completado", startedOn: addDays(today, -55), pausedOn: null, pausedDays: 0, completedAt: `${addDays(today, -12)}T19:00:00.000Z` }];
     // Antes del programa insignia, Andrés completó Abdomen marcado (6 semanas): su certificado sale en Retos y en su perfil.
@@ -102,9 +107,9 @@ export const getProgramStates = cache(async (v: Viewer): Promise<ProgramState[]>
 /** Sesiones que quien mira puede leer (RLS: la fase 1 para todos; todo con la compra, si lo empezó o si es staff). */
 export const getProgramSessions = cache(async (v: Viewer, slug: string): Promise<ProgramSession[]> => {
   if (v.demo) {
-    const seed = PROGRAM_SEED_BY_SLUG[slug];
+    const seed = PROGRAM_SEED_BY_SLUG[slug] ?? SEASON_SEED_BY_SLUG[slug];
     if (!seed) return [];
-    const full = (await getOwned(v)).has(slug) || seed.priceUsd === 0;
+    const full = (await getOwned(v)).has(slug) || seed.priceUsd === 0 || (isSeasonSlug(slug) && (await demoState()).season !== null);
     return es419Deep(seed.sessions.filter((s) => full || s.phase === 1));
   }
   const { data, error } = await (await createClient()).from("program_sessions").select("phase,day,title,focus,optional,exercises").eq("slug", slug).order("phase").order("day");
@@ -117,6 +122,8 @@ export async function getProgramDone(v: Viewer, slug: string, since: string): Pr
   if (v.demo) {
     const today = todayFor(v).iso;
     if (slug === DEMO_PROGRAM) return demoDone(today);
+    // Demo de temporada: la semana 1 completa (lunes, miércoles y viernes de su calendario).
+    if (isSeasonSlug(slug)) return [1, 2, 3].map((day, k) => ({ week: 1, day, on: addDays(today, -9 + k * 2) }));
     const st = (await getProgramStates(v)).find((s) => s.slug === slug);
     return st && isDemoGirlProgram(slug) ? girlDemoDone(st, today) : [];
   }
@@ -130,7 +137,13 @@ export async function getProgramDone(v: Viewer, slug: string, since: string): Pr
 }
 
 export type ProgramChallenge = Challenge & { kind: "programa"; program: ProgramMeta };
-export type LoadedProgram = { c: ProgramChallenge; def: ProgramDef; state: ProgramState; done: DoneSession[]; run: ProgramRun };
+export type LoadedProgram = {
+  c: ProgramChallenge; def: ProgramDef; state: ProgramState; done: DoneSession[]; run: ProgramRun;
+  /** Temporada: el equipo que eligió en su cuestionario manda sobre el de su perfil. */
+  eq?: Equipment;
+  /** Temporada: su semana armada alrededor del deporte (avisos incluidos). */
+  season?: { sport: SportId; plan: WeekPlan; taper: number[] };
+};
 
 /** Carga un programa de la persona con su estado y qué toca hoy. Null si ya no existe o no tiene sesiones visibles. */
 export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedProgram | null> {
@@ -140,6 +153,19 @@ export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedPr
   if (!sessions.length) return null;
   const done = await getProgramDone(v, st.slug, st.startedOn);
   const def: ProgramDef = { slug: c.id, title: c.title, meta: c.program, sessions };
+  const sm = parseSeasonSlug(st.slug);
+  if (sm) {
+    // Temporada: el programa a la medida de su cuestionario y con la coach con la ropa del deporte.
+    const { personalize } = await import("@/lib/seasons-server");
+    const { getSex } = await import("@/lib/athlete");
+    const [ps, sex] = await Promise.all([personalize(v, def), getSex(v)]);
+    if (ps) {
+      const exp = c.program.experience ? { ...c.program.experience, coach: seasonCoachId(sm.sport, sex) } : undefined;
+      const meta: ProgramMeta = { ...ps.def.meta, ...(exp ? { experience: exp } : {}) };
+      const pdef = { ...ps.def, meta };
+      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper } };
+    }
+  }
   return { c, def, state: st, done, run: resolveProgram(def, st, done, todayFor(v).iso) };
 }
 
@@ -154,7 +180,10 @@ export async function getProgramChecks(v: Viewer, day: string): Promise<string[]
 /** El programa activo (uno como máximo). */
 export const getActiveProgram = cache(async (v: Viewer): Promise<LoadedProgram | null> => {
   const st = (await getProgramStates(v)).find((s) => s.status === "activo");
-  return st ? loadProgram(v, st) : null;
+  if (!st) return null;
+  // Una temporada en preventa todavía no toma la app: hasta su fecha oficial sigue la rutina normal.
+  if (!v.demo && isSeasonSlug(st.slug) && todayFor(v).iso < st.startedOn) return null;
+  return loadProgram(v, st);
 });
 
 // ───────────── Rutina del día para el resto de la app ─────────────
@@ -165,8 +194,9 @@ export type AthleteProgram = {
   plan: PlannedDay; weekPlan: PlannedDay[]; sched: Record<number, boolean>; yesterday: PlannedDay; tomorrow: PlannedDay;
 };
 
-export function programContext(p: LoadedProgram, eq: Equipment, today: { iso: string; dow: number }): AthleteProgram {
+export function programContext(p: LoadedProgram, eq0: Equipment, today: { iso: string; dow: number }): AthleteProgram {
   const { c, def, state, run } = p;
+  const eq = p.eq ?? eq0;
   const dowOf = (iso: string) => new Date(iso + "T12:00:00").getDay();
   const at = (iso: string): PlannedDay => {
     const slot = calendarSlot(def, state, today.iso, iso);

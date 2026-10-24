@@ -186,7 +186,7 @@ export type RacketAnswers = {
   category: string; matchMin: number; pains: ("codo" | "hombro" | "muneca" | "rodilla" | "tobillo")[];
 };
 export type CrossAnswers = {
-  boxDays: number[]; oly: "nada" | "basica" | "solida"; gymnastics: "nada" | "basica" | "solida"; benchWod: string | null; squat1rm: number | null; avoid: string[];
+  boxDays: number[]; oly: "nada" | "basica" | "solida"; gymnastics: "nada" | "basica" | "solida"; benchWod: string | null; squat1rm: number | null; avoid: AvoidId[];
 };
 export type SeasonIntake = {
   level: Level; years: number; trainDays: number[]; time: TimeOfDay; sessions: 2 | 3 | 4; minutes: 30 | 45 | 60;
@@ -201,6 +201,7 @@ const num = (x: unknown, a: number, b: number, d: number) => (typeof x === "numb
 const str = (x: unknown, max: number) => (typeof x === "string" ? x.trim().replace(/\s+/g, " ").slice(0, max) : "");
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 export const AVOID_OPTIONS = ["saltos", "olimpicos", "colgarse", "sobre_cabeza", "correr", "burpees"] as const;
+export type AvoidId = (typeof AVOID_OPTIONS)[number];
 export const AVOID_LABEL: Record<(typeof AVOID_OPTIONS)[number], string> = {
   saltos: "Saltos", olimpicos: "Levantamientos olímpicos", colgarse: "Colgarme de la barra", sobre_cabeza: "Peso sobre la cabeza", correr: "Correr", burpees: "Burpees",
 };
