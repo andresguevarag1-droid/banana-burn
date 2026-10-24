@@ -1,5 +1,5 @@
 "use server";
-// Acciones de la persona sobre sus temporadas: cuestionario, opiniones de cada sesión y activar. La base (RLS de 0046 y
+// Acciones de la persona sobre sus temporadas: cuestionario, opiniones de cada sesión y activar. La base (RLS de 0047 y
 // program_start) valida todo otra vez: solo filas propias y solo con la temporada comprada o canjeada.
 import { revalidatePath } from "next/cache";
 import { createClient, getViewer } from "@/lib/supabase/server";

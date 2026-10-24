@@ -1,5 +1,5 @@
 // Borrador de la próxima temporada (panel): parte de las sesiones de la temporada actual y cambia lo que no gustó
-// o se saltó mucho (toReplace) por una alternativa conocida. Pura: el panel la llama con los datos anónimos de 0046.
+// o se saltó mucho (toReplace) por una alternativa conocida. Pura: el panel la llama con los datos anónimos de 0047.
 // Nada se publica solo: el borrador se revisa, se edita y se crea en la tienda como borrador del editor de retos.
 import type { ProgramSession } from "@/lib/programs";
 import { addDaysIso, makeSeason, toReplace, type ExerciseStat, type SeasonInfo } from "@/lib/seasons";

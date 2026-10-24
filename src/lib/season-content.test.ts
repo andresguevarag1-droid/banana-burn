@@ -43,9 +43,9 @@ describe("contenido de la Temporada 1", () => {
 
 import { readFileSync } from "node:fs";
 import { seasonSeedSql } from "./season-content";
-describe("0046", () => {
+describe("0047", () => {
   it("la siembra de la migración coincide con el código", () => {
-    const sql = readFileSync(new URL("../../supabase/migrations/0046_temporadas.sql", import.meta.url), "utf8");
+    const sql = readFileSync(new URL("../../supabase/migrations/0047_temporadas.sql", import.meta.url), "utf8");
     expect(sql).toContain(seasonSeedSql());
   });
 });

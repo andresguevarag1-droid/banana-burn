@@ -24,7 +24,7 @@ function visibleIds() {
   Object.values(ALTS).flat().forEach((a) => ids.add(a));
   Object.keys(EX).forEach((k) => ids.add(k));
   for (const p of ALL_PROGRAM_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
-  // Temporadas (0046): sus sesiones y los cambios por molestia o por lo que la persona prefiere evitar.
+  // Temporadas (0047): sus sesiones y los cambios por molestia o por lo que la persona prefiere evitar.
   for (const p of SEASON_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
   for (const m of [...Object.values(INJURY_SWAPS), ...Object.values(AVOID_SWAPS)]) for (const [k, v] of Object.entries(m)) { ids.add(k); if (v) ids.add(v); }
   return [...ids].sort();

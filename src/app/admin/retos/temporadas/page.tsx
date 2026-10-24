@@ -32,7 +32,7 @@ export default async function AdminTemporadas({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const seasons = await getSeasons(v.demo);
   const s = seasons.find((x) => x.slug === sp.t) ?? seasons[0];
-  if (!s) return <Empty title="Sin temporadas">Aplica la migración 0046_temporadas.sql.</Empty>;
+  if (!s) return <Empty title="Sin temporadas">Aplica la migración 0047_temporadas.sql.</Empty>;
   const m = parseSeasonSlug(s.slug)!;
   const [stats, drafts] = await Promise.all([seasonStats(v, s.slug, m.sport), listDrafts(v, m.sport)]);
 

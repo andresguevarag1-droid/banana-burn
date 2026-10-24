@@ -60,7 +60,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <a className={LINK} href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>
           </nav>
         </div>
-        <p className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 text-xs text-muted text-pretty">© {new Date().getFullYear()} Atlas Resources SRL. Banana Burn, hecho en Costa Rica para toda Latinoamérica. No sustituye consejo médico.</p>
+        <p className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 text-xs text-muted text-pretty">© {new Date().getFullYear()} Atlas Resources SRL. Banana Burn, hecho en Costa Rica para toda Latinoamérica. No sustituye consejo médico. LinkApp es una marca registrada en Costa Rica, usada con permiso.</p>
       </footer>
     </>
   );

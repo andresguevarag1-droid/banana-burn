@@ -39,7 +39,7 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   ["¿Hay descuento en el primer mes?", `Sí. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta ${PROMO_PCT} % menos: ${money(promoPrice("entreno"))} en Entreno y ${money(promoPrice("completo"))} en ${COMPLETO.name}. Ese día no se cobra nada, te avisamos 2 días antes y cancelas cuando quieras desde Mi plan. Es una vez por cuenta, si nunca pagaste un plan; el anual no tiene este descuento.`],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras. Los tratamos según nuestra Política de privacidad y la ley de protección de datos de Costa Rica, donde está la empresa."],
   ["¿Es en español de verdad?", "Sí. Banana Burn está en español latino desde el primer día y pensada para Latinoamérica: los ejercicios, el coach y las comidas. No es una app traducida."],
-  ["¿Tengo que descargarla de una tienda?", "No. Es una app web: la abres en el navegador y la instalas en tu pantalla de inicio, en iPhone o Android."],
+  ["¿Tengo que descargarla de una tienda?", "No. Banana Burn es una LinkApp: la abres en el navegador y la instalas en tu pantalla de inicio en 10 segundos, en iPhone o Android. En iPhone: Safari, Compartir, Agregar a inicio. En Android: Instalar app. Instalada te llegan los recordatorios de tu entreno."],
   ["¿Qué son las temporadas deportivas?", "Programas de 8 semanas con fechas oficiales para running, raquetas (tenis y pádel) o cross training, armados alrededor de tus días de deporte. Se suman a tu plan con un pago único por temporada, y el plan anual incluye 1 gratis por cada año pagado."],
   ];
 };

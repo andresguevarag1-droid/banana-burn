@@ -1,4 +1,4 @@
-// Carreras con GPS (0047): lectura desde el servidor. Privadas: siempre con el cliente de la persona (RLS).
+// Carreras con GPS (0048): lectura desde el servidor. Privadas: siempre con el cliente de la persona (RLS).
 import "server-only";
 import { cache } from "react";
 import { createClient, type Viewer } from "@/lib/supabase/server";

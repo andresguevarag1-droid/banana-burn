@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Barbell, BowlFood, Check, CreditCard, Lock, Scales, Scroll, ShieldCheck, Syringe, X,
+  ArrowCounterClockwise, ArrowRight, Barbell, BowlFood, Check, CreditCard, DeviceMobile, Lock, Scales, Scroll, ShieldCheck, Syringe, X,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
@@ -10,6 +10,7 @@ import { PLANS, annualSavingPct } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
+import { InstallSection } from "./install-section";
 import { AppTour } from "./app-tour";
 import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
@@ -116,7 +117,7 @@ export default function Landing() {
             </p>
             <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link href={SIGNUP} data-cta="hero" className="pressable inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
-              <a href="#por-dentro" data-cta="hero-tour" className="tap hidden sm:inline-flex items-center font-bold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Ver la app por dentro</a>
+              <a href="#instalar" data-cta="hero-instalar" className="tap inline-flex items-center gap-2 font-bold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink"><DeviceMobile weight="bold" aria-hidden className="size-5" />Instálala en tu celular</a>
             </div>
             <p className="mt-4 text-sm font-semibold text-ink">{o.note} {o.from(FROM)}</p>
             <p className="mt-1 text-sm text-ink/75">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
@@ -297,6 +298,8 @@ export default function Landing() {
         </div>
         <Pricing trialGuarantee={o.guarantee} />
       </section>
+
+      <InstallSection />
 
       <Faq id="faq" items={faqItems} aside={<FaqCta cta="faq" />} />
 

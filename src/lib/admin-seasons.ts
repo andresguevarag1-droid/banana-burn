@@ -1,4 +1,4 @@
-// Panel de temporadas (0046): resumen anónimo por temporada y borradores de la próxima. Solo servidor.
+// Panel de temporadas (0047): resumen anónimo por temporada y borradores de la próxima. Solo servidor.
 import "server-only";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { ALTS } from "@/lib/engine/data";
@@ -26,7 +26,7 @@ export async function seasonStats(v: Viewer, slug: string, sport: SportId): Prom
   if (v.demo) raw = demoRaw(slug);
   else {
     const { data, error } = await (await createClient()).rpc("admin_season_stats", { p_slug: slug });
-    if (error) return { error: error.code === "42883" || error.code === "PGRST202" ? "Falta aplicar la migración 0046_temporadas.sql." : "No pudimos leer las estadísticas." };
+    if (error) return { error: error.code === "42883" || error.code === "PGRST202" ? "Falta aplicar la migración 0047_temporadas.sql." : "No pudimos leer las estadísticas." };
     const d = (data ?? {}) as Partial<typeof raw>;
     raw = { owners: Number(d.owners) || 0, started: Number(d.started) || 0, feedback: Array.isArray(d.feedback) ? d.feedback : [], weeks: Array.isArray(d.weeks) ? d.weeks.filter(Array.isArray) : [], intakes: Array.isArray(d.intakes) ? d.intakes : [], runs: { count: Number(d.runs?.count) || 0, km: Number(d.runs?.km) || 0 } };
   }

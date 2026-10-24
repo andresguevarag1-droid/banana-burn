@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { after } from "next/server";
 import { AppNav } from "@/components/app-nav";
 import { DemoBanner } from "@/components/brand";
-import { InstallPrompt } from "@/components/install-prompt";
+import { InstallBeacon } from "@/components/install/install-beacon";
 import { TzSync } from "@/components/tz-sync";
 import { ConnectionStatus } from "@/components/offline/connection-status";
 import { UpdatePrompt } from "@/components/offline/update-prompt";
@@ -82,7 +82,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
       <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} coachName={liveCoach && liveCoach.id !== "banana" ? liveCoach.name : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
-      <InstallPrompt />
+      <InstallBeacon />
       <TzSync current={v.tz} />
       <ConnectionStatus />
       <UpdatePrompt version={deployId()} />
