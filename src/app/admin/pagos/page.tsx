@@ -106,7 +106,7 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
               <tr key={String(x.id ?? i)} className={`${trHover} align-top`}>
                 <Td className="max-w-64">{x.user_id ? <Link href={`/admin/usuarios/${x.user_id}`} className="block truncate font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{x.name ?? "Usuario"}</Link> : <Nil />}{x.email && <p className="truncate text-xs text-muted">{x.email}</p>}</Td>
                 <Td><PlanText label={x.planLabel} /></Td><Td><SubStatus status={x.status} /></Td>
-                <Td className="text-muted whitespace-nowrap">{x.current_period_start ? fmtDate(x.current_period_start) : <Nil />}<span className="block text-xs">Cliente desde {fmtDate(x.created_at)}</span></Td>
+                <Td className="min-w-32 text-muted">{x.current_period_start ? fmtDate(x.current_period_start) : <Nil />}<span className="block text-xs">Cliente desde {fmtDate(x.created_at)}</span></Td>
                 <Td className="min-w-32 text-muted">
                   {x.status === "trialing" ? `Prueba hasta ${fmtDate(x.current_period_end)}`
                     : x.status === "canceled" || x.status === "cancelled" ? <>Cancelada {fmtDate(x.canceled_at ?? x.updated_at)}<span className="block text-xs">Acceso hasta {fmtDate(x.current_period_end)}</span></>

@@ -30,13 +30,14 @@ export function MoveButtons({ id, first, last }: { id: string; first: boolean; l
   );
 }
 
+// Bajo 1536 px solo el ícono (el nombre queda en aria-label y title): así la tabla cabe sin desplazarse en escritorio.
 export function QuickActions({ id, status }: { id: string; status: string }) {
   return (
     <span className="inline-flex flex-nowrap justify-end gap-1">
-      <Mini action={duplicateChallenge} fields={{ id }} label="Duplicar como borrador"><Copy className="size-4" />Duplicar</Mini>
+      <Mini action={duplicateChallenge} fields={{ id }} label="Duplicar como borrador"><Copy className="size-4" /><span className="max-2xl:sr-only">Duplicar</span></Mini>
       {status === "publicado"
-        ? <Mini action={setChallengeStatus} fields={{ id, status: "oculto" }} label="Ocultar de la tienda"><EyeSlash className="size-4" />Ocultar</Mini>
-        : status === "oculto" ? <Mini action={setChallengeStatus} fields={{ id, status: "publicado" }} label="Volver a mostrar en la tienda"><Eye className="size-4" />Mostrar</Mini> : null}
+        ? <Mini action={setChallengeStatus} fields={{ id, status: "oculto" }} label="Ocultar de la tienda"><EyeSlash className="size-4" /><span className="max-2xl:sr-only">Ocultar</span></Mini>
+        : status === "oculto" ? <Mini action={setChallengeStatus} fields={{ id, status: "publicado" }} label="Volver a mostrar en la tienda"><Eye className="size-4" /><span className="max-2xl:sr-only">Mostrar</span></Mini> : null}
     </span>
   );
 }

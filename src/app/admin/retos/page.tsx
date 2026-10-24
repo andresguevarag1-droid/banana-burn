@@ -35,7 +35,7 @@ export default async function AdminRetos({ searchParams }: { searchParams: Promi
         <p className="text-sm text-muted">{fmtNum(totals.active)} personas con retos en curso{sales ? <>, {fmtNum(totals.buys)} compras y {usd(totals.rev)} USD en ventas confirmadas</> : null}.</p>
       )}
       {rows.length ? (
-        <Table caption="Retos de la tienda" captionHidden minWidth={sales ? 1120 : 940}>
+        <Table caption="Retos de la tienda" captionHidden minWidth={sales ? 960 : 860}>
           <thead><tr><Th className="w-24">Orden</Th><Th>Reto</Th><Th>Estado</Th><Th>Precio</Th><Th className="text-right">En curso</Th><Th className="text-right">Completados</Th>{sales && <><Th className="text-right">Compras</Th><Th className="text-right">Ingresos</Th></>}<Th className="text-right">Acciones</Th></tr></thead>
           <tbody>
             {rows.map(({ c, stats }, i) => (
@@ -44,7 +44,7 @@ export default async function AdminRetos({ searchParams }: { searchParams: Promi
                 <Td>
                   <Link href={`/admin/retos/${c.uuid}`} className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-banana/50">
                     <span className="w-14 shrink-0 overflow-hidden rounded-xl"><ChallengeCover c={c} className="h-10 w-14" chip={false} /></span>
-                    <span className="min-w-44"><span className="block font-semibold text-ink hover:underline">{c.title}</span><span className="block text-xs text-muted">{c.id}, {c.kind === "programa" && c.program ? `programa de ${durationLabel(c.program)}` : `${c.days} días`}{c.featured ? ", destacado" : ""}</span></span>
+                    <span className="min-w-32"><span className="block font-semibold text-ink hover:underline">{c.title}</span><span className="block text-xs text-muted">{c.id}, {c.kind === "programa" && c.program ? `programa de ${durationLabel(c.program)}` : `${c.days} días`}{c.featured ? ", destacado" : ""}</span></span>
                   </Link>
                 </Td>
                 <Td><Badge tone={TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge></Td>

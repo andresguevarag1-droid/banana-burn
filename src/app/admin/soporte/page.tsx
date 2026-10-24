@@ -75,7 +75,7 @@ export default async function Soporte({ searchParams }: { searchParams: Promise<
           <thead className="border-b border-line"><tr><Th>Reporte</Th><Th>Persona</Th><Th>Categoría</Th><Th>Estado</Th><Th>Prioridad</Th><Th>Asignado</Th><Th className="text-right">Espera</Th></tr></thead>
           <tbody>{rows.map((t) => (
             <tr key={t.id} className={trHover}>
-              <Td className="max-w-80">
+              <Td className="max-w-60">
                 <Link href={`/admin/soporte/${t.id}`} className="block truncate font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{t.title}</Link>
                 <p className="flex items-center gap-1.5 text-xs text-muted tabular-nums">{ticketNumber(t.id)}{t.attachment_path && <Paperclip className="size-3.5" aria-label="Con captura" />}</p>
               </Td>

@@ -126,8 +126,8 @@ export function Table({ caption, captionHidden, children, minWidth = 720, classN
   );
 }
 /** Encabezado de columna: sentence case (sin mayúsculas espaciadas), fondo sutil para separar del cuerpo. */
-export const Th = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <th scope="col" className={`bg-[#FCFAF3] px-3 py-2.5 first:pl-4 last:pr-4 first:sticky first:left-0 first:z-[1] ${/\btext-(center|right)\b/.test(className) ? "" : "text-left "}text-xs font-semibold text-muted whitespace-nowrap ${className}`}>{children}</th>;
-export const Td = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <td className={`px-3 py-2.5 first:pl-4 last:pr-4 first:sticky first:left-0 first:z-[1] first:bg-white align-middle ${className}`}>{children}</td>;
+export const Th = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <th scope="col" className={`bg-[#FCFAF3] px-2.5 py-2.5 first:pl-4 last:pr-4 first:sticky first:left-0 first:z-[1] ${/\btext-(center|right)\b/.test(className) ? "" : "text-left "}text-xs font-semibold text-muted whitespace-nowrap ${className}`}>{children}</th>;
+export const Td = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <td className={`px-2.5 py-2.5 first:pl-4 last:pr-4 first:sticky first:left-0 first:z-[1] first:bg-white align-middle ${className}`}>{children}</td>;
 /** La primera columna queda fija al desplazar la tabla de lado (en móvil siempre se sabe de quién es la fila). */
 /** Clases de fila de tabla (borde inferior + hover sutil, que Tailwind ya limita a punteros finos). */
 export const tr = "border-b border-line last:border-0";

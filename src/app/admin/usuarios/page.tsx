@@ -110,20 +110,20 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
             const st = statusOf(u, today) as keyof typeof STATUS_TONE;
             return (
               <tr key={u.id} className={trHover}>
-                <Td className="max-w-72">
+                <Td className="max-w-48">
                   <Link href={`/admin/usuarios/${u.id}`} className="block truncate font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{u.full_name || "Sin nombre"}</Link>
                   {u.email && <p className="truncate text-xs text-muted">{u.email}</p>}
                 </Td>
                 <Td><span className="flex flex-wrap items-center gap-1"><RoleBadge role={u.role} />{u.tester_until && <TesterChip until={u.tester_until} />}</span></Td>
                 <Td>
-                  <span className="text-ink whitespace-nowrap">{PLAN_LABEL[u.plan] ?? u.plan}</span>
+                  <span className="block min-w-20 text-ink">{PLAN_LABEL[u.plan] ?? u.plan}</span>
                   {u.plan !== "free" && u.billing && !u.comp_until && <p className="text-xs text-muted">{BILLING_LABEL[u.billing] ?? u.billing}</p>}
                   {u.comp_until && <p className="text-xs text-[#6E4E00] font-semibold whitespace-nowrap">Cortesía hasta {fmtDate(u.comp_until)}</p>}
                 </Td>
                 <Td><SubStatus status={u.sub_status} /></Td>
                 <Td><Badge tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge></Td>
                 <Td className="text-muted whitespace-nowrap">{limited ? <Nil /> : ago(u.last_active, today)}</Td>
-                {showRefs && <Td className="text-right tabular-nums">{refCounts.get(u.id) ? <span title="Invitados, activos y recompensas"><b className="text-ink">{fmtNum(refCounts.get(u.id)!.total)}</b><span className="block whitespace-nowrap text-xs text-muted"> ({fmtNum(refCounts.get(u.id)!.qualified)} activos, {fmtNum(refCounts.get(u.id)!.rewards)} premios)</span></span> : <Nil />}</Td>}
+                {showRefs && <Td className="text-right tabular-nums">{refCounts.get(u.id) ? <span title="Invitados, activos y recompensas"><b className="text-ink">{fmtNum(refCounts.get(u.id)!.total)}</b><span className="block min-w-24 text-xs text-muted"> ({fmtNum(refCounts.get(u.id)!.qualified)} activos, {fmtNum(refCounts.get(u.id)!.rewards)} premios)</span></span> : <Nil />}</Td>}
                 <Td className="text-right text-muted whitespace-nowrap">{fmtDate(u.created_at)}</Td>
               </tr>
             );
