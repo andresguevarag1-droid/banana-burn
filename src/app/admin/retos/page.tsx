@@ -25,6 +25,7 @@ export default async function AdminRetos({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-5">
       <PageHeader title="Retos" desc="La tienda de retos: crea, edita, ordena, oculta y vende retos. Lo publicado aparece en la app al instante." >
+        <Link href="/admin/retos/temporadas" className={btnGhost}>Temporadas</Link>
         <Link href="/admin/retos/nuevo?tipo=programa" className={btnGhost}><Plus weight="bold" className="size-4" />Nuevo programa</Link>
         <Link href="/admin/retos/nuevo" className={btnPrimary}><Plus weight="bold" className="size-4" />Nuevo reto</Link>
       </PageHeader>

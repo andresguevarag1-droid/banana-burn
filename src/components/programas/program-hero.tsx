@@ -2,7 +2,7 @@
 // Portada del programa, "Semana 2 de 8, día 2", la sesión de hoy, el avance y el próximo hito. Servidor.
 import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
-import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Monkey, Pause, TreePalm, TrendUp } from "@/components/icons";
+import { ArrowRight, BrandIcon, CalendarCheck, CheckCircle, Flag, Medal, Monkey, Pause, TreePalm, TrendUp } from "@/components/icons";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import { ProgressBar } from "@/components/progress-bar";
 import { Readiness } from "@/components/readiness";
@@ -10,6 +10,7 @@ import { DAY_NAMES } from "@/lib/engine";
 import type { AthleteProgram } from "@/lib/programs-server";
 import { daysToWeekEnd, tipFor, weekDaysLabel } from "@/lib/programs";
 import { coachOf } from "@/lib/coaches";
+import { SPORTS } from "@/lib/seasons";
 import { ExerciseTiles } from "@/components/hoy/exercise-tiles";
 import { DEFAULT_VOICE, commonTempo, sessionLine, setsLegend, t, type Voice } from "@/lib/voice";
 
@@ -55,6 +56,7 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
         <div className={`relative ${ink}`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />{x?.mode ?? "Programa activo"}</span>
+            {p.season && <span style={{ backgroundColor: SPORTS[p.season.sport].accent }} className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white"><Medal weight="fill" className="size-3.5" />Temporada de {SPORTS[p.season.sport].name.toLowerCase()}</span>}
             {r.phase.phase.deload && <span className="inline-flex h-7 items-center gap-1 rounded-full bg-white/85 px-2.5 text-[11px] font-extrabold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
           </div>
           {/* Título y semana sin pasar del velo (72 %): no se montan sobre la coach de la portada. */}
