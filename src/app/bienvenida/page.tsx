@@ -7,7 +7,7 @@ import { isCountry } from "@/lib/countries";
 import { Wizard } from "./wizard";
 import { TzSync } from "@/components/tz-sync";
 import type { Goal } from "./goal";
-import { BETA_ENDS_AT, betaLive } from "@/lib/plans";
+import { BETA_GRACE_UNTIL, betaLive } from "@/lib/plans";
 import { isOnvoConfigured } from "@/lib/onvo";
 import { betaDates } from "@/components/beta-notice";
 
@@ -34,7 +34,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   if (v.demo) {
     // Demo igual que una cuenta real: la beta hasta su fin, o una cuenta nueva con sus 7 días.
     const beta = betaLive();
-    trialEndsAt = beta ? BETA_ENDS_AT : new Date(Date.now() + 7 * 864e5).toISOString();
+    trialEndsAt = beta ? BETA_GRACE_UNTIL : new Date(Date.now() + 7 * 864e5).toISOString();
     trialBeta = beta;
     cardOffer = true;
     chargeAt = trialEndsAt;
@@ -43,7 +43,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
     nutrition = ent.nutrition || ent.cardStep === "trial";
     cardOffer = ent.cardStep === "trial" || ent.cardStep === "beta";
     if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
-    chargeAt = cardOffer ? (ent.cardStep === "beta" ? BETA_ENDS_AT : trialEndsAt) : null;
+    chargeAt = cardOffer ? (ent.cardStep === "beta" ? BETA_GRACE_UNTIL : trialEndsAt) : null;
   }
   // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
   const vista = (await searchParams).vista;

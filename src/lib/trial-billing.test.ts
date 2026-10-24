@@ -27,6 +27,7 @@ const { OnvoError } = await import("./onvo");
 const tb = await import("./trial-billing");
 
 const BETA = "2026-11-01T06:00:00.000Z";
+const GRACE = "2026-11-08T06:00:00.000Z";
 const NEW_USER = "11111111-1111-4111-8111-111111111111";
 const OLD_USER = "22222222-2222-4222-8222-222222222222";
 const T0 = new Date("2026-11-10T15:00:00.000Z");
@@ -106,18 +107,35 @@ describe("guardar la tarjeta", () => {
     await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1'; drop", plan: "entreno", billing: "mes" }, T0)).rejects.toThrow(/inválida/);
     expect(onvo.getPaymentMethod).not.toHaveBeenCalled();
   });
-  it("cuenta de la beta antes del 1 de noviembre: se cobra al terminar la beta, sin días extra", async () => {
+  it("0045: cuenta de la beta antes del 1 de noviembre: se cobra el 8 de noviembre (00:00 Costa Rica), con el 50 %", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
     await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-10-25T12:00:00Z"));
-    expect(charge(f)).toMatchObject({ kind: "beta", charge_at: BETA, trial_ends_at: BETA, promo: "primer_mes_50", amount_minor: 499 });
+    expect(charge(f)).toMatchObject({ kind: "beta", charge_at: GRACE, trial_ends_at: GRACE, next_attempt_at: GRACE, promo: "primer_mes_50", amount_minor: 499 });
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
   });
-  it("cuenta de la beta después del 1 de noviembre: se cobra en ese momento", async () => {
+  it("0045: cuenta de la beta que guarda la tarjeta entre el 1 y el 7 de noviembre: también se cobra el 8, nunca antes", async () => {
+    const f = setup();
+    onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
+    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-11-03T12:00:00Z"));
+    expect(r.outcome).toBe("programado");
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ kind: "beta", charge_at: GRACE, promo: "primer_mes_50", amount_minor: 499 });
+  });
+  it("0045: una fila de la beta que ya tocaba antes del 8 (p. ej. movida por el mes de tester) no se cobra: pasa al 8", async () => {
+    const f = setup();
+    f.tables.payment_methods.push({ user_id: OLD_USER, provider_customer_id: "cus_old", provider_payment_method_id: "pm_9", status: "active" });
+    f.tables.trial_charges.push({ id: 5, user_id: OLD_USER, idem_key: idemKeyFor(OLD_USER), kind: "beta", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", trial_started_at: "2026-10-25T12:00:00.000Z", trial_ends_at: "2026-11-03T00:00:00.000Z", charge_at: "2026-11-03T00:00:00.000Z", next_attempt_at: "2026-11-03T00:00:00.000Z", status: "scheduled", attempts: 0, last_attempt_at: null, provider_subscription_id: null, last_error: null, updated_at: "2026-10-25T12:00:00.000Z" });
+    const row = f.tables.trial_charges[0] as unknown as TrialChargeRow;
+    expect(await tb.attemptCharge(f.db, row, new Date("2026-11-04T00:00:00Z"))).toBe("aplazado");
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+    expect(f.tables.trial_charges[0]).toMatchObject({ status: "scheduled", next_attempt_at: GRACE, attempts: 0 });
+  });
+  it("cuenta de la beta desde el 8 de noviembre: se cobra en ese momento", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_1", status: "active" });
-    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-11-03T12:00:00Z"));
+    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-11-09T12:00:00Z"));
     expect(r.outcome).toBe("enviado");
     expect(onvo.createChargedSubscription).toHaveBeenCalledOnce();
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ customerId: "cus_old", paymentMethodId: "pm_1", plan: "entreno", billing: "mes", trialKey: idemKeyFor(OLD_USER), attempt: 1 });

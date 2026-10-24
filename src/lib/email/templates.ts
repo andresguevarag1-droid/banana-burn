@@ -305,7 +305,7 @@ export function pruebaIniciada(d: ChargeMailData): Email {
   const preheader = `Hoy no te cobramos. El ${when} se cobra ${what}, salvo que canceles antes.`;
   const r: [string, string][] = [["Plan", d.plan], ["Hoy", money(0, d.currency)], ["Se cobra el", when], ["Monto", d.promo ? `${total}, primer mes con 50 % de descuento` : total]];
   if (d.card) r.push(["Tarjeta", d.card]);
-  const hero: Hero = { eyebrow: "Tarjeta lista", ...(d.promo ? { chip: "50 % el primer mes" } : {}), title: `${esc(n)}, tu tarjeta quedó lista`, lead: `Hoy no te cobramos. ${beta ? "Sigues con todo incluido hasta que termine la versión de prueba." : "Sigues con todo incluido hasta que termine tu prueba gratis."} El <b>${esc(when)}</b> se cobra ${esc(what)}, salvo que canceles antes.` };
+  const hero: Hero = { eyebrow: "Tarjeta lista", ...(d.promo ? { chip: "50 % el primer mes" } : {}), title: `${esc(n)}, tu tarjeta quedó lista`, lead: `Hoy no te cobramos. ${beta ? "Sigues con todo incluido hasta el día del cobro." : "Sigues con todo incluido hasta que termine tu prueba gratis."} El <b>${esc(when)}</b> se cobra ${esc(what)}, salvo que canceles antes.` };
   const body = rows(r) + p("Te avisaremos 2 días antes del cobro. Para cancelar sin costo entra a Mi plan antes de esa fecha: no se cobra nada y conservas el acceso hasta el final de la prueba.") +
     button("Ver mi plan", "/app/suscripcion");
   const reason = "Recibes este correo porque guardaste una tarjeta en Banana Burn.";

@@ -59,6 +59,23 @@ export const TRIAL_DAYS = 7;
  */
 export const BETA_ENDS_AT = process.env.NEXT_PUBLIC_BETA_ENDS_AT || "2026-11-01T06:00:00.000Z";
 export const betaLive = (now = new Date()) => now.getTime() < Date.parse(BETA_ENDS_AT);
+/**
+ * ¿Se movió la fecha de la beta con NEXT_PUBLIC_BETA_ENDS_AT? Es solo para pruebas locales: la base tiene la fecha fija en
+ * public._beta_ends_at() (0025) y public._beta_grace_until() (0045), así que en producción la app y la base dirían cosas
+ * distintas. instrumentation.ts avisa en los registros si está puesta en producción.
+ */
+export const BETA_DATE_OVERRIDDEN = Boolean(process.env.NEXT_PUBLIC_BETA_ENDS_AT);
+
+/**
+ * Lanzamiento (decisión del dueño, 24 oct 2026): las cuentas creadas durante la beta (antes de BETA_ENDS_AT) siguen gratis
+ * 7 días más después del lanzamiento: hasta el final del 7 de noviembre en Costa Rica (2026-11-08T06:00Z). Ninguna cuenta
+ * de la beta se cobra antes de esta fecha; quien dejó su tarjeta lista se cobra este día (con el 50 % del primer mes si
+ * aplica). Las cuentas nuevas desde el lanzamiento tienen sus propios 7 días desde el registro, como siempre.
+ * La base repite la fecha en public._beta_grace_until() (0045) = _beta_ends_at() + 7 días.
+ */
+export const BETA_GRACE_DAYS = 7;
+export const betaGraceFor = (betaEndsAt: string) => new Date(Date.parse(betaEndsAt) + BETA_GRACE_DAYS * 864e5).toISOString();
+export const BETA_GRACE_UNTIL = betaGraceFor(BETA_ENDS_AT);
 
 /** ¿El plan incluye nutrición y Banana Shield? Solo `completo` (y el histórico `pro`). La prueba gratis se resuelve en entitlements.ts. */
 export function hasNutrition(plan: string | null | undefined) {

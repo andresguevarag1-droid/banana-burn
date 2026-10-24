@@ -7,6 +7,8 @@ import {
 import { PLANS } from "./plans";
 
 const BETA = "2026-11-01T06:00:00.000Z";
+/** 0045: las cuentas de la beta siguen gratis hasta el final del 7 de noviembre en Costa Rica. */
+const GRACE = "2026-11-08T06:00:00.000Z";
 const at = (s: string) => new Date(s);
 const plus = (d: Date, days: number) => new Date(d.getTime() + days * DAY_MS);
 const START = at("2026-11-10T15:00:00.000Z");
@@ -28,18 +30,32 @@ describe("antes y después del 1 de noviembre", () => {
   });
   it("tipo de primer cobro según cuándo se creó la cuenta y cuándo guarda la tarjeta", () => {
     expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at("2026-10-25T00:00:00Z"), betaEndsAt: BETA })).toBe("beta");
-    expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at("2026-11-03T00:00:00Z"), betaEndsAt: BETA })).toBe("inmediato");
+    // 0045: cuenta de la beta que guarda la tarjeta después del lanzamiento pero antes del 8: se cobra el 8 (nunca antes).
+    expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at("2026-11-03T00:00:00Z"), betaEndsAt: BETA })).toBe("beta");
+    expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at("2026-11-08T05:59:59Z"), betaEndsAt: BETA })).toBe("beta");
+    // Desde el 8 de noviembre: se cobra en ese momento.
+    expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at(GRACE), betaEndsAt: BETA })).toBe("inmediato");
     expect(kindFor({ createdAt: "2026-11-02T00:00:00Z", now: at("2026-11-03T00:00:00Z"), betaEndsAt: BETA })).toBe("prueba");
     // 0043: la prueba ya terminó (alta + 7 días) sin tarjeta: guardarla ahora cobra ya, sin días extra.
     expect(kindFor({ createdAt: "2026-11-02T00:00:00Z", now: at("2026-11-09T00:00:01Z"), betaEndsAt: BETA })).toBe("inmediato");
     expect(signedUpInBeta(null, BETA)).toBe(true);
   });
-  it("cuenta de la beta: sin días extra, se cobra al terminar la beta (o ya, si guarda la tarjeta después)", () => {
+  it("0045: cuenta de la beta: se cobra el 8 de noviembre a las 00:00 de Costa Rica (7 días después del lanzamiento), nunca antes", () => {
     const b = scheduleFor("beta", at("2026-10-25T00:00:00Z"), BETA);
-    expect(b.chargeAt).toBe(BETA);
-    expect(b.trialEndsAt).toBe(BETA);
-    const i = scheduleFor("inmediato", at("2026-11-03T00:00:00Z"), BETA);
-    expect(i.chargeAt).toBe("2026-11-03T00:00:00.000Z");
+    expect(b.chargeAt).toBe(GRACE);
+    expect(b.trialEndsAt).toBe(GRACE);
+    // Guardada después del lanzamiento (antes del 8): mismo día de cobro.
+    expect(scheduleFor("beta", at("2026-11-03T00:00:00Z"), BETA).chargeAt).toBe(GRACE);
+    const i = scheduleFor("inmediato", at("2026-11-09T00:00:00Z"), BETA);
+    expect(i.chargeAt).toBe("2026-11-09T00:00:00.000Z");
+  });
+  it("0045: el aviso de 2 días antes del cobro de la beta sale desde el 6 de noviembre", () => {
+    const b = scheduleFor("beta", at("2026-10-25T00:00:00Z"), BETA);
+    const r = row({ kind: "beta", trial_started_at: b.trialStartedAt, trial_ends_at: b.trialEndsAt, charge_at: b.chargeAt, next_attempt_at: b.chargeAt });
+    expect(reminderDue(r, at("2026-11-06T05:59:59Z"))).toBe(false);
+    expect(reminderDue(r, at("2026-11-06T06:00:00Z"))).toBe(true);
+    expect(isDue(r, at("2026-11-08T05:59:59Z"))).toBe(false);
+    expect(isDue(r, at(GRACE))).toBe(true);
   });
 });
 
@@ -151,9 +167,16 @@ describe("prueba vigente (misma regla que _trial_live en 0043)", () => {
     expect(trialLive(START.toISOString(), plus(START, 7), BETA)).toBe(false);
     expect(trialEndFor(START.toISOString(), BETA)).toBe(plus(START, 7).toISOString());
   });
-  it("una cuenta de la beta no recibe prueba", () => {
+  it("0045: una cuenta de la beta sigue gratis hasta el 8 de noviembre a las 06:00 UTC, no después", () => {
+    expect(trialEndFor("2026-10-15T00:00:00Z", BETA)).toBe(GRACE);
+    expect(trialLive("2026-10-15T00:00:00Z", at("2026-11-08T05:59:59Z"), BETA)).toBe(true);
+    expect(trialLive("2026-10-15T00:00:00Z", at(GRACE), BETA)).toBe(false);
     expect(trialLive("2026-10-15T00:00:00Z", plus(START, 1), BETA)).toBe(false);
-    expect(trialEndFor("2026-10-15T00:00:00Z", BETA)).toBeNull();
+  });
+  it("0045: la prueba de una cuenta nueva no cambia (7 días desde el registro)", () => {
+    expect(trialEndFor("2026-11-05T10:00:00Z", BETA)).toBe("2026-11-12T10:00:00.000Z");
+    expect(trialLive("2026-11-05T10:00:00Z", at("2026-11-12T09:59:59Z"), BETA)).toBe(true);
+    expect(trialLive("2026-11-05T10:00:00Z", at("2026-11-12T10:00:00Z"), BETA)).toBe(false);
   });
   it("sin fecha de alta no hay prueba", () => expect(trialLive(null, plus(START, 1), BETA)).toBe(false));
 });
@@ -190,7 +213,9 @@ describe("qué pide la pantalla de la tarjeta", () => {
   it("después de la beta: cuenta nueva en su prueba ve la oferta; al terminar, paga; cuenta de la beta paga", () => {
     expect(cardStepFor({ ...base, createdAt: "2026-11-05T00:00:00Z", row: null, now: at("2026-11-05T01:00:00Z") })).toBe("trial");
     expect(cardStepFor({ ...base, createdAt: "2026-11-05T00:00:00Z", row: null, now: at("2026-11-12T00:00:01Z") })).toBe("pay");
-    expect(cardStepFor({ ...base, createdAt: "2026-10-01T00:00:00Z", row: null, now: at("2026-11-05T01:00:00Z") })).toBe("pay");
+    // 0045: cuenta de la beta: hasta el 8 de noviembre ve la oferta; desde ahí, paga.
+    expect(cardStepFor({ ...base, createdAt: "2026-10-01T00:00:00Z", row: null, now: at("2026-11-05T01:00:00Z") })).toBe("trial");
+    expect(cardStepFor({ ...base, createdAt: "2026-10-01T00:00:00Z", row: null, now: at(GRACE) })).toBe("pay");
   });
   it("rechazado: cambiar tarjeta; cancelado y ya terminó: pagar; programado: nada", () => {
     expect(cardStepFor({ ...base, createdAt: START.toISOString(), row: row({ status: "retry_scheduled" }), now: plus(START, 7.1) })).toBe("pay");

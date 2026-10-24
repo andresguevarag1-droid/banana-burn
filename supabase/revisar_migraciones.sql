@@ -1,5 +1,5 @@
 -- ¿Qué migraciones ya corrí? Pégala completa en Supabase → SQL Editor y toca Run.
--- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0044 se puede repetir sin daño).
+-- Solo lee, no cambia nada. Corre en orden las que digan FALTA (cualquiera de 0012 a 0045 se puede repetir sin daño).
 select m.archivo,
        case when m.aplicada then 'Ya está' else 'FALTA: córrela' end as estado
 from (values
@@ -35,6 +35,7 @@ from (values
   (30,'0041_monitoreo.sql',          to_regclass('public.app_errors') is not null and to_regclass('public.ops_heartbeats') is not null and to_regprocedure('public.app_error_report(text,text,text,text,text,text,text,text)') is not null and to_regprocedure('public.admin_error_summary(integer)') is not null and to_regprocedure('public.app_errors_purge(integer)') is not null and to_regprocedure('public.health_ping()') is not null),
   (31,'0042_tilopay.sql',            exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'subscriptions' and column_name = 'next_renewal_attempt_at') and exists (select 1 from pg_constraint where conname = 'payment_methods_provider_ok')),
   (32,'0043_prueba_sin_tarjeta.sql',  exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'trial_charges' and column_name = 'promo') and exists (select 1 from pg_constraint where conname = 'trial_charges_promo_ok')),
-  (33,'0044_asesor.sql',              exists (select 1 from pg_proc where proname = 'touch_updated_at' and proconfig::text like '%search_path%') and not exists (select 1 from pg_policies where schemaname = 'public' and (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ~ '(?<!SELECT )auth[.]uid[(][)]'))
+  (33,'0044_asesor.sql',              exists (select 1 from pg_proc where proname = 'touch_updated_at' and proconfig::text like '%search_path%') and not exists (select 1 from pg_policies where schemaname = 'public' and (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ~ '(?<!SELECT )auth[.]uid[(][)]')),
+  (34,'0045_lanzamiento_cobros.sql',  to_regprocedure('public._beta_grace_until()') is not null and to_regclass('public.card_fingerprints') is not null and pg_get_functiondef('public._trial_live(uuid)'::regprocedure) like '%_beta_grace_until%')
 ) as m(orden, archivo, aplicada)
 order by m.orden;

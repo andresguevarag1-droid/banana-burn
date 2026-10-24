@@ -4,7 +4,7 @@
 //   - Un regalo respeta su plan: Entreno o Entreno + Nutrición. Las cortesías de siempre (source 'cortesia') valen como completo.
 //   - Se apila: empieza cuando termina el acceso igual o mejor que ya tiene la persona (prueba o beta vigente,
 //     cortesías y regalos vigentes o programados, suscripción pagada vigente). Nunca reemplaza ni recorta nada.
-import type { PlanId } from "@/lib/plans";
+import { betaGraceFor, type PlanId } from "@/lib/plans";
 
 export type GiftSource = "cortesia" | "regalo" | "referido";
 
@@ -58,7 +58,9 @@ export function coveredUntil(i: { now: Date; plan: PlanId; createdAt?: string | 
   if (Number.isFinite(created)) {
     const own = created + TRIAL_MS;
     const beta = i.betaEndsAt ? Date.parse(i.betaEndsAt) : NaN;
-    ends.push(Number.isFinite(beta) && beta > now ? Math.max(own, beta) : own);
+    // Cuentas de la beta (0045): gratis hasta 7 días después del lanzamiento.
+    const grace = Number.isFinite(beta) && created < beta ? Date.parse(betaGraceFor(i.betaEndsAt!)) : NaN;
+    ends.push(Number.isFinite(grace) && grace > now ? Math.max(own, grace) : own);
   }
   for (const c of i.comps ?? []) {
     const end = Date.parse(c.expires_at);

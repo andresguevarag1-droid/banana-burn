@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { ArrowRight, Flask } from "@/components/icons";
-import { BETA_ENDS_AT, betaLive } from "@/lib/plans";
+import { BETA_GRACE_UNTIL, betaLive } from "@/lib/plans";
 
 const TZ = "America/Costa_Rica";
 const day = (ms: number) => new Date(ms).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: TZ });
 
-/** "31 de octubre" (último día gratis) y "1 de noviembre" (primer día con cobro), según BETA_ENDS_AT. */
+/**
+ * Cuentas de la beta: "7 de noviembre" (último día gratis) y "8 de noviembre" (primer día con cobro), según
+ * BETA_GRACE_UNTIL (7 días después del lanzamiento del 1 de noviembre, 0045).
+ */
 export function betaDates() {
-  const end = Date.parse(BETA_ENDS_AT);
+  const end = Date.parse(BETA_GRACE_UNTIL);
   return { lastFree: day(end - 1), firstPaid: day(end) };
 }
 
