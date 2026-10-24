@@ -56,8 +56,19 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
 
+// Versión del build (commit corto) y hora del build: /api/version, /admin/salud y los reportes de errores.
+// No son secretos. BB_BUILD_TIME solo se lee en el servidor (así no cambia el hash de los archivos del navegador).
+const BUILD_ENV = {
+  BB_RELEASE: (process.env.VERCEL_GIT_COMMIT_SHA || process.env.BB_BUILD_ID || "").slice(0, 7),
+  BB_BUILD_TIME: new Date().toISOString(),
+};
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Producción: JavaScript minificado y SIN mapas de fuente públicos (es el valor por defecto; explícito para que nadie
+  // lo active sin querer). scripts/check-client-bundle.mjs lo verifica en CI.
+  productionBrowserSourceMaps: false,
+  env: BUILD_ENV,
   // La imagen para compartir (/og) lee fuentes y marca del disco en el servidor.
   outputFileTracingIncludes: { "/og": ["./src/app/og/*.woff", "./public/icons/logo.svg", "./public/brand/mascota.jpg"] },
   images: {
