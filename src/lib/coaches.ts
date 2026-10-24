@@ -42,6 +42,17 @@ const PLATANITA_EXERCISE: Record<string, string> = Object.fromEntries(
     ["ds:3006", "hf_20261023_212545_a24c506b-4ede-43d9-a4e1-37181a1a8c10"],
     ["ds:1014", "hf_20261023_212544_9bc79d49-91a4-481b-9a75-7083714ef93f"],
     ["ds:1358", "hf_20261023_212544_c5637b30-db0c-459f-9086-d64d9c7c4142"],
+    // 24/10: las dos que faltaban de pilates (plancha invertida con pierna y plancha con toque de hombro) y las de
+    // Banana Girl que no tenían ilustración. Con camiseta y pantalón deportivo: el filtro de Higgsfield rechazaba el top.
+    ["ds:3663", "hf_20261024_075611_b64d826c-1ead-4735-b8fe-e16e6ef48992"],
+    ["planktap", "hf_20261024_075611_b2884d79-3bc5-417d-a2b1-785800e8db30"],
+    ["ds:0333", "hf_20261024_075124_8ddc3281-f6fa-4c93-9833-6fa29087d6d0"],
+    ["ds:0381", "hf_20261024_075707_9aac824d-2d20-4086-874b-419d17716c5e"],
+    ["ds:0431", "hf_20261024_075706_1dc565b4-1058-4654-a5a8-477dd54277b5"],
+    ["ds:0228", "hf_20261024_075707_019377d4-a028-4362-928c-11e4630ba1cd"],
+    ["ds:0628", "hf_20261024_075707_e1b7e486-e30a-4826-bd64-bcdfa5824f4a"],
+    ["ds:0597", "hf_20261024_075829_c3cb0957-3b8c-4356-ae3f-7b654ee1276a"],
+    ["ds:0979", "hf_20261024_080306_a0bdd403-9f4e-4bf7-8507-50d6c43f36c7"],
   ] as [string, string][]).map(([k, v]) => [k, art(v)]),
 );
 

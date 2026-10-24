@@ -34,7 +34,7 @@ export const knownExercise = (id: string) => exInfo(id) !== null;
 /** Animación de técnica del mono para un ejercicio (null si no hay una que se parezca). */
 export function exAnim(id: string): string | null {
   if (id.startsWith("ds:")) { const x = getLibEx(id.slice(3)); return x ? animFor(x) : null; }
-  return TECH[id]?.anim ?? null;
+  return TECH[id]?.anim || null;
 }
 
 // ───────────── Estado ─────────────

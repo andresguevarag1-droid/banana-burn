@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { sheetFor } from "@/lib/exercise-frames";
+import { SHEET_MOTION, sheetFor } from "@/lib/exercise-frames";
 
 type Kind = "ecc" | "con" | "hold" | "air";
 /** Fase: fotograma destino (A = 0, B = 3, o un número de 0 a 3), duración en s, texto y tipo. */
@@ -38,16 +38,22 @@ export function ExerciseMotion({ anim, label = true, className = "", mus, cues }
   const sheet = sheetFor(anim);
   const [broken, setBroken] = useState(false);
   if (sheet && !broken) return <ExerciseSheet anim={anim} sheet={sheet} label={label} className={className} mus={mus} cues={cues} onFail={() => setBroken(true)} />;
-  return <ExerciseMascot label={label} className={className} />;
+  return <ExerciseMascot label={label} className={className} missing={!sheet} />;
 }
 
-/** Respaldo si la hoja de fotogramas no carga: el mono de la marca, quieto (nunca el dibujo vectorial viejo). */
-function ExerciseMascot({ label, className }: { label: boolean; className: string }) {
+/**
+ * Respaldo quieto: el mono de la marca (nunca el dibujo vectorial viejo ni la animación de otro movimiento).
+ * `missing`: el ejercicio no tiene animación propia; en grande se dice, para que se lea como decisión y no como error.
+ */
+function ExerciseMascot({ label, className, missing }: { label: boolean; className: string; missing: boolean }) {
   return (
-    <div role="img" aria-label="Coach Banana" className={`motion ${className}`}>
+    <div role="img" aria-label={missing ? "Coach Banana: sigue los pasos de este ejercicio" : "Coach Banana"} className={`motion ${className}`}>
       <div className="relative flex-1 min-h-0 flex justify-center">
         <div className="relative h-full aspect-square max-w-full overflow-hidden rounded-2xl bg-banana">
           <Image src="/brand/mascota.webp" alt="" fill sizes={label ? "360px" : "112px"} className="object-contain" />
+          {missing && label ? (
+            <span className="absolute inset-x-[6%] bottom-[4%] mx-auto w-fit max-w-[88%] text-center rounded-xl bg-ink px-2.5 py-1 text-[11px] font-bold leading-tight text-white">Sigue los pasos: Coach Banana te guía con texto</span>
+          ) : null}
         </div>
       </div>
     </div>
@@ -74,12 +80,12 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
   const root = useRef<HTMLDivElement>(null);
   const layers = useRef<(HTMLDivElement | null)[]>([]);
   const fills = useRef<(HTMLElement | null)[]>([]);
-  const custom = SHEET_PHASES[anim];
+  const custom = SHEET_PHASES[anim] ?? SHEET_MOTION[anim];
   const loop = !!custom?.loop;
   const [phases, setPhases] = useState<Phase[] | null>(custom?.ph ?? null);
   const [live, setLive] = useState<Live>({ i: -1, left: 0, cycle: 0 });
   const [still, setStill] = useState(false);
-  const conDir = CON_DIR[anim] ?? "none";
+  const conDir: Dir = CON_DIR[anim] ?? SHEET_MOTION[anim]?.dir ?? "none";
   const grid = sheet.grid, src = sheet.url;
   const cells = sheet.cells ?? Array.from({ length: grid * grid }, (_, n) => n);
   const last = cells.length - 1;
@@ -87,7 +93,8 @@ function ExerciseSheet({ anim, sheet, label, className, mus, cues, onFail }: {
 
   useEffect(() => {
     setStill(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    if (SHEET_PHASES[anim]) { setPhases(SHEET_PHASES[anim].ph); return; }
+    const own = SHEET_PHASES[anim] ?? SHEET_MOTION[anim];
+    if (own) { setPhases(own.ph); return; }
     let alive = true;
     import("@/lib/motion").then(({ ANIM }) => {
       const ph = ANIM[anim]?.ph as Phase[] | undefined;
