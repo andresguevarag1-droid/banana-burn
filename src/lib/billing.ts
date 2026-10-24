@@ -11,6 +11,9 @@ import type { SubscriptionRow } from "@/lib/entitlements";
 import { PLANS, type Billing, type PlanId } from "@/lib/plans";
 import { sendPaymentFailed, sendPaymentReceipt, sendSubscriptionCanceled } from "@/lib/email";
 import { errInfo } from "@/lib/security/log";
+import { chargeBusy } from "@/lib/trial";
+import { markCardsPaid } from "@/lib/card-fingerprint";
+import { recordServerError } from "@/lib/monitor/server";
 import {
   OnvoError, actionForEvent, cancelSubscription, createCustomer, createSubscription, estimatePeriodEnd, eventKey,
   expectedAmountMinor, fetchSubscriptionState, priceIdFor, profilePlanFor, type OnvoEvent,
@@ -73,8 +76,9 @@ export async function startCheckout(v: Viewer, plan: PlanId, billing: Billing): 
 
   // Cobro con la tarjeta guardada (0026) en curso: no abrimos otro pago en paralelo. Sus suscripciones no se reutilizan aquí
   // (las cobra el servidor con la tarjeta guardada, no el SDK).
-  const { data: tc } = await db.from("trial_charges").select("status,provider_subscription_id").eq("user_id", v.id).maybeSingle();
-  if (tc && ["charging", "pending", "unknown"].includes(tc.status as string)) throw new BillingError("Estamos procesando el cobro de tu plan con tu tarjeta guardada. Revisa en unos minutos.", 409);
+  const { data: tc } = await db.from("trial_charges").select("status,provider_subscription_id,last_error").eq("user_id", v.id).maybeSingle();
+  // Un cobro marcado para revisión (más de un día sin confirmar, trial.ts) ya no bloquea: la persona puede pagar aquí.
+  if (chargeBusy(tc as { status: "unknown"; last_error: string | null } | null)) throw new BillingError("Estamos procesando el cobro de tu plan con tu tarjeta guardada. Revisa en unos minutos.", 409);
   const trialSub = (tc?.provider_subscription_id as string | null | undefined) ?? null;
 
   // Reutiliza una pendiente reciente del mismo plan (doble clic, volver atrás).
@@ -166,7 +170,15 @@ export async function syncProfilePlan(db: SupabaseClient, userId: string) {
 /** Al activarse un plan nuevo, cancela los demás del usuario (cambio de plan). */
 async function cancelOthers(db: SupabaseClient, keep: SubscriptionRow) {
   const { data } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", keep.user_id).neq("id", keep.id).in("status", ["active", "trialing", "past_due", "incomplete"]);
+  const now = Date.now();
   for (const r of (data as SubscriptionRow[] | null) ?? []) {
+    // Un plan PAGADO hace poco se reemplaza (dos cobros casi juntos: compra directa y cobro de la tarjeta, o dos pestañas):
+    // el equipo revisa si corresponde un reembolso. Queda en los registros y en app_errors (/admin/salud).
+    const paidRecently = r.status !== "incomplete" && !!r.current_period_start && now - Date.parse(r.current_period_start) < 3 * 864e5 && !!r.current_period_end && Date.parse(r.current_period_end) > now + 864e5;
+    if (paidRecently) {
+      console.error(JSON.stringify({ scope: "pagos", msg: "ALERTA plan pagado hace menos de 3 días reemplazado por otro: revisar reembolso", userId: keep.user_id, replaced: r.provider_subscription_id, by: keep.provider_subscription_id }));
+      recordServerError("pagos/reembolso", "refund_review");
+    }
     if (r.provider_subscription_id && r.provider !== "tilopay" && !isIntroSub(r.provider_subscription_id)) await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: errInfo(e) }));
     await db.from("subscriptions").update({ status: r.status === "incomplete" ? "expired" : "canceled", cancel_at_period_end: false, canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", r.id);
     log("plan anterior reemplazado", { userId: keep.user_id, replaced: r.provider_subscription_id, by: keep.provider_subscription_id });
@@ -190,6 +202,8 @@ async function activate(db: SupabaseClient, row: SubscriptionRow, a: { periodSta
   const { trialOnActivated } = await import("@/lib/trial-billing");
   await trialOnActivated(db, row);
   const plan = await syncProfilePlan(db, row.user_id);
+  // 0045: sus tarjetas quedan como "ya pagó" (la promoción del primer mes no vuelve con la misma tarjeta en otra cuenta).
+  await markCardsPaid(db, row.user_id);
   if (row.billing === "anual") await referralAnnualPaid(db, row.user_id);
   return plan;
 }

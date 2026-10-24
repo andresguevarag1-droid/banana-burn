@@ -17,5 +17,7 @@ export const EXPORT_BY_USER = [
  * Los referidos y recompensas propios van en "referidos" (my_referrals y referral_rewards).
  * coach_quota_tickets (0032) va descrita: son comprobantes internos de cada pregunta al coach (fecha, sin contenido) que
  * nadie lee por la API; el conteo de preguntas ya va completo en coach_usage.
+ * card_fingerprints (0045) va descrita: una huella (sha256) de la tarjeta para que la promoción del primer mes sea una por
+ * tarjeta; no es el número ni se puede revertir, y nadie la lee por la API.
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods", "coach_quota_tickets"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints"] as const;

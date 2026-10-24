@@ -818,10 +818,10 @@ delete from auth.users where id in ('8a8a8a8a-0000-4000-8000-00000000008a', '7e7
 select bbtest.ok('borrado: el registro contable del pago queda sin dueño', (select user_id is null from public.payment_events where event_key = 'evt_borrar'));
 
 -- ───────────── 9. Regalos, referidos y acceso con plan (0025) ─────────────
--- Para probar las reglas normales HOY, esta sección da por terminada la beta (solo en esta BD de pruebas) y la
--- restaura al final. _beta_ends_at() es el único lugar donde vive la fecha.
+-- Para probar las reglas normales HOY, esta sección da por terminada la beta y los 7 días más de las cuentas de la beta
+-- (0045: el lanzamiento fue hace 8 días; solo en esta BD de pruebas) y la restaura al final. _beta_ends_at() es el único lugar donde vive la fecha.
 reset role; select bbtest.login(null);
-create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() - interval '1 day' $$;
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() - interval '8 days' $$;
 -- Personas: R invita (Gmail), Q1-Q7 referidas nuevas, X misma bandeja que R (alias), V paga Completo, H sin plan.
 insert into auth.users (id, email) values
   ('9a000000-0000-4000-8000-0000000000a0', 'rita.gomez@gmail.com'),
@@ -1478,7 +1478,7 @@ select public.admin_set_tester(bbtest.cq('04'), 'prueba la app');
 reset role; select bbtest.login(null);
 
 -- 12a. Beta apagada: cada plan con su tope.
-create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() - interval '1 day' $$;
+create or replace function public._beta_ends_at() returns timestamptz language sql stable set search_path = public as $$ select now() - interval '8 days' $$;
 select bbtest.ok('cuota: niveles sin beta (sin plan, entreno, completo, tester, staff, regalo entreno)',
   public._coach_tier(bbtest.cq('01')) = 'none' and public._coach_tier(bbtest.cq('02')) = 'entreno' and public._coach_tier(bbtest.cq('03')) = 'completo'
   and public._coach_tier(bbtest.cq('04')) = 'prueba' and public._coach_tier(bbtest.u('S')) = 'staff' and public._coach_tier(bbtest.u('P')) = 'staff'
@@ -1929,6 +1929,44 @@ select bbtest.fails('0042: A no toca los intentos de renovación', $q$ update pu
 select bbtest.fails('0042: A no guarda una tarjeta de Tilopay por la API', $q$ insert into public.payment_methods (user_id, provider, provider_customer_id, provider_payment_method_id) values (auth.uid(), 'tilopay', 'tlp:x', 'tok_falso') $q$, '42501');
 reset role;
 
+-- ───────────── 20. Lanzamiento (0045): 7 días más para las cuentas de la beta y huella de tarjeta ─────────────
+select bbtest.ok('0045: las cuentas de la beta siguen gratis hasta 7 días después del lanzamiento', public._beta_grace_until() = public._beta_ends_at() + interval '7 days');
+select bbtest.ok('0045: _trial_live incluye a las cuentas de la beta hasta _beta_grace_until()', pg_get_functiondef('public._trial_live(uuid)'::regprocedure) like '%_beta_grace_until%');
+-- Cuenta de la beta (creada antes del lanzamiento): con acceso mientras no pase _beta_grace_until(); sin acceso después.
+insert into auth.users (id, email) values ('acacacac-0000-4000-8000-0000000000ad', 'beta45@prueba.test');
+update public.profiles set created_at = public._beta_ends_at() - interval '20 days' where id = 'acacacac-0000-4000-8000-0000000000ad';
+select bbtest.ok('0045: cuenta de la beta tiene la app antes de _beta_grace_until()', public._has_app_access('acacacac-0000-4000-8000-0000000000ad')) where now() < public._beta_grace_until();
+select bbtest.ok('0045: cuenta de la beta tiene nutrición antes de _beta_grace_until()', public._has_nutrition_access('acacacac-0000-4000-8000-0000000000ad')) where now() < public._beta_grace_until();
+select bbtest.ok('0045: cuenta de la beta sin plan no tiene la app desde _beta_grace_until()', not public._has_app_access('acacacac-0000-4000-8000-0000000000ad')) where now() >= public._beta_grace_until();
+select bbtest.ok('0045: un regalo para una cuenta de la beta empieza al terminar sus 7 días después del lanzamiento', abs(extract(epoch from public._access_covered_until('acacacac-0000-4000-8000-0000000000ad', 'completo') - public._beta_grace_until())) < 1) where now() < public._beta_grace_until();
+-- Cuenta nueva desde el lanzamiento: sus 7 días desde el registro, sin cambios.
+update public.profiles set created_at = greatest(now(), public._beta_ends_at()) - interval '1 day' where id = 'acacacac-0000-4000-8000-0000000000ad';
+select bbtest.ok('0045: cuenta nueva (después del lanzamiento) sigue con sus 7 días', public._has_app_access('acacacac-0000-4000-8000-0000000000ad')) where now() >= public._beta_ends_at() + interval '1 day';
+delete from auth.users where id = 'acacacac-0000-4000-8000-0000000000ad';
+-- Cobros de la beta: el servidor programa el cobro para _beta_grace_until(); la migración mueve los que caían antes.
+-- Mismo UPDATE de 0045 sobre dos filas de prueba: una normal y una movida por el mes de tester (moved_from).
+insert into auth.users (id, email) values ('acacacac-0000-4000-8000-0000000000ae', 'beta45b@prueba.test'), ('acacacac-0000-4000-8000-0000000000af', 'beta45c@prueba.test');
+insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_started_at, trial_ends_at, charge_at, next_attempt_at, status, reminder_sent_at)
+  values ('acacacac-0000-4000-8000-0000000000ae', 'trial:acacacac-0000-4000-8000-0000000000ae', 'beta', 'entreno', 'mes', 999, public._beta_ends_at() - interval '5 days', public._beta_ends_at(), public._beta_ends_at(), public._beta_ends_at(), 'scheduled', public._beta_ends_at() - interval '2 days');
+insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_started_at, trial_ends_at, charge_at, next_attempt_at, status, moved_from)
+  values ('acacacac-0000-4000-8000-0000000000af', 'trial:acacacac-0000-4000-8000-0000000000af', 'beta', 'entreno', 'mes', 999, public._beta_ends_at() - interval '5 days', public._beta_ends_at(), public._beta_ends_at() + interval '3 days', public._beta_ends_at() + interval '3 days', 'scheduled', public._beta_ends_at());
+update public.trial_charges
+   set trial_ends_at = greatest(trial_ends_at, public._beta_grace_until()),
+       charge_at = greatest(charge_at, public._beta_grace_until()),
+       next_attempt_at = case when next_attempt_at is null then null else greatest(next_attempt_at, public._beta_grace_until()) end,
+       reminder_sent_at = case when charge_at < public._beta_grace_until() then null else reminder_sent_at end,
+       updated_at = now()
+ where user_id in ('acacacac-0000-4000-8000-0000000000ae', 'acacacac-0000-4000-8000-0000000000af') and kind = 'beta'
+   and status in ('scheduled', 'retry_scheduled') and (charge_at < public._beta_grace_until() or trial_ends_at < public._beta_grace_until());
+select bbtest.ok('0045: el cobro de la beta pasa al 8 de noviembre y el aviso vuelve a salir', exists (select 1 from public.trial_charges where user_id = 'acacacac-0000-4000-8000-0000000000ae' and charge_at = public._beta_grace_until() and trial_ends_at = public._beta_grace_until() and next_attempt_at = public._beta_grace_until() and reminder_sent_at is null));
+select bbtest.ok('0045: una fila movida por el mes de tester también queda en el 8 (o después), sin romper el check de fechas', exists (select 1 from public.trial_charges where user_id = 'acacacac-0000-4000-8000-0000000000af' and charge_at >= public._beta_grace_until() and trial_ends_at = public._beta_grace_until()));
+delete from auth.users where id in ('acacacac-0000-4000-8000-0000000000ae', 'acacacac-0000-4000-8000-0000000000af');
+-- Huellas de tarjeta: solo service_role.
+select bbtest.ok('0045: card_fingerprints tiene RLS', (select relrowsecurity from pg_class where oid = 'public.card_fingerprints'::regclass));
+select bbtest.ok('0045: nadie lee las huellas por la API', not has_table_privilege('authenticated', 'public.card_fingerprints', 'select') and not has_table_privilege('anon', 'public.card_fingerprints', 'select'));
+select bbtest.fails('0045: una huella que no es sha256 no entra', $q$ insert into public.card_fingerprints (key, fingerprint, user_id, provider) values ('xxxxxxxxxx:1', 'abc', null, 'onvo') $q$, '23514');
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('0045: A no escribe huellas', $q$ insert into public.card_fingerprints (key, fingerprint, user_id, provider) values (repeat('a', 64) || ':' || auth.uid()::text, repeat('a', 64), auth.uid(), 'onvo') $q$, '42501');
 -- ───────────── 20. Temporadas deportivas (0046) ─────────────
 reset role;
 select bbtest.ok('0046: tres temporadas sembradas con su programa y 8 semanas', (select count(*) = 3 from public.seasons s join public.challenges_catalog c on c.slug = s.slug where c.kind = 'programa' and public._program_weeks(c.program) = 8));

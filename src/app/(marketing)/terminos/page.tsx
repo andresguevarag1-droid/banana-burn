@@ -1,7 +1,7 @@
 import { LegalPage, type LegalSection } from "../legal";
 import { social } from "../seo";
 import { TRIAL_DAYS } from "@/lib/copy";
-import { BETA_ENDS_AT, PLANS, betaLive } from "@/lib/plans";
+import { BETA_ENDS_AT, BETA_GRACE_UNTIL, PLANS, betaLive } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { PROMO_PCT, PROMO_TERMS, promoPrice } from "@/lib/trial";
 
@@ -12,11 +12,13 @@ const day = (ms: number) => new Date(ms).toLocaleDateString("es-419", { day: "nu
 
 /**
  * Prueba gratis, tarjeta opcional y 50 % del primer mes (0043). Hasta el fin de la beta se muestran las reglas de la beta
- * y las de las cuentas nuevas desde el 1 de noviembre; desde esa fecha solo las nuevas. Se calcula en cada render.
+ * y las de las cuentas nuevas desde el 1 de noviembre; desde esa fecha, las nuevas y el cierre de la beta. Las cuentas de la
+ * beta siguen gratis 7 días después del lanzamiento (BETA_GRACE_UNTIL, 0045). Se calcula en cada render.
  */
 function trialSection(now = new Date()): LegalSection {
-  const end = Date.parse(BETA_ENDS_AT);
-  const lastFree = day(end - 1), firstPaid = day(end);
+  const launch = Date.parse(BETA_ENDS_AT), grace = Date.parse(BETA_GRACE_UNTIL);
+  const lastBeta = day(launch - 1), launchDay = day(launch);
+  const lastFree = day(grace - 1), firstPaid = day(grace);
   const promo = [
     `Dejar tu tarjeta lista es opcional. Si la guardas antes de tu primer cobro y nunca pagaste un plan, tu primer mes del plan mensual cuesta ${PROMO_PCT} % menos (por ejemplo, ${money(promoPrice("entreno"))} en vez de ${money(ENTRENO.price.mes)}). ${PROMO_TERMS}`,
     "El día que guardas la tarjeta no se te cobra nada. Te avisamos 2 días antes del cobro por correo, y también en la app y por notificación si las tienes activadas. En Mi plan siempre ves la fecha y el monto del cobro.",
@@ -29,12 +31,12 @@ function trialSection(now = new Date()): LegalSection {
     `Al crear tu cuenta tienes ${TRIAL_DAYS} días de prueba gratis desde el registro, con todas las funciones, incluida la nutrición y Banana Shield, sin tarjeta. Al terminar, si no elegiste un plan, verás la pantalla de planes; tus datos quedan guardados.`,
     [`Si dejas tu tarjeta lista durante la prueba, el primer cobro es el día en que termina tu prueba (${TRIAL_DAYS} días después del registro), salvo que canceles antes. Guardar la tarjeta no alarga la prueba.`, ...promo, "La prueba gratis es una por persona y solo para cuentas nuevas."],
   ] as LegalSection["p"];
-  if (!betaLive(now)) return { id: "prueba", t: "Prueba gratis, tarjeta y primer cobro", p: [...rules, `Las cuentas creadas durante la versión de prueba (hasta el ${lastFree}) ya tuvieron su acceso gratis y no reciben días adicionales: para seguir usando la app eligen un plan y pagan.`] };
+  if (!betaLive(now)) return { id: "prueba", t: "Prueba gratis, tarjeta y primer cobro", p: [...rules, `Las cuentas creadas durante la versión de prueba (hasta el ${lastBeta}) tienen acceso completo y gratis hasta el ${lastFree}, sin tarjeta. Si dejan su tarjeta lista antes, el primer cobro es el ${firstPaid}, con el ${PROMO_PCT} % de descuento en el primer mes si es mensual, salvo que cancelen antes. Si no la dejan, desde el ${firstPaid} ven la pantalla de planes hasta que elijan uno y paguen. No reciben días gratis adicionales después del ${lastFree}.`] };
   return { id: "prueba", t: "Versión de prueba, prueba gratis y primer cobro", p: [
-    `Hasta el ${lastFree} Banana Burn está en versión de prueba: todas las cuentas tienen acceso completo y gratis, sin tarjeta.`,
-    `Desde el ${firstPaid} se cobran los planes. Si ya tienes cuenta, puedes dejar tu tarjeta lista antes de esa fecha: no se cobra nada al guardarla y el ${firstPaid} se cobra el plan que elegiste (con el ${PROMO_PCT} % de descuento en tu primer mes si es mensual), salvo que canceles antes. Si no la guardas, desde el ${firstPaid} verás la pantalla de planes hasta que elijas uno y pagues. Las cuentas creadas durante la versión de prueba no reciben días gratis adicionales.`,
+    `Hasta el ${lastBeta} Banana Burn está en versión de prueba: todas las cuentas tienen acceso completo y gratis, sin tarjeta. Banana Burn se lanza el ${launchDay}, y las cuentas creadas durante la versión de prueba siguen con acceso completo y gratis hasta el ${lastFree}.`,
+    `Desde el ${firstPaid} se cobran los planes a esas cuentas. Si ya tienes cuenta, puedes dejar tu tarjeta lista antes de esa fecha: no se cobra nada al guardarla y el ${firstPaid} se cobra el plan que elegiste (con el ${PROMO_PCT} % de descuento en tu primer mes si es mensual), salvo que canceles antes. Si no la guardas, desde el ${firstPaid} verás la pantalla de planes hasta que elijas uno y pagues. Las cuentas creadas durante la versión de prueba no reciben días gratis adicionales después del ${lastFree}.`,
     [...promo],
-    `Para las cuentas nuevas desde el ${firstPaid} aplica lo siguiente:`,
+    `Para las cuentas nuevas desde el ${launchDay} aplica lo siguiente:`,
     ...rules,
   ] };
 }
@@ -85,5 +87,5 @@ const SECTIONS: LegalSection[] = [
 
 export default function Page() {
   const S = SECTIONS.map((x) => (x.id === "prueba" ? trialSection() : x));
-  return <LegalPage title="Términos y condiciones" updated="23 de octubre de 2026" intro="Estas condiciones explican cómo funciona Banana Burn, qué puedes esperar de nosotros y qué esperamos de ti. Están escritas para leerse en cinco minutos." sections={S} />;
+  return <LegalPage title="Términos y condiciones" updated="24 de octubre de 2026" intro="Estas condiciones explican cómo funciona Banana Burn, qué puedes esperar de nosotros y qué esperamos de ti. Están escritas para leerse en cinco minutos." sections={S} />;
 }

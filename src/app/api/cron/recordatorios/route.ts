@@ -49,12 +49,15 @@ export async function GET(req: Request) {
   });
   // Tarjeta guardada (0026): aviso del día 5, cobro del día 7, reintento del día 8 y reconciliación. Idempotente: lo que no
   // alcance hoy lo toma la visita de la persona a la app o la próxima corrida. Cada llamada a ONVO tiene su tiempo límite (15 s).
-  const cobros = await sweepTrialCharges(new Date(), { deadline: t0 + 42_000 }).catch((e) => { logError("cron:cobros", "run_failed", { kind: errCode(e) }); return null; });
+  // Cobros nuevos solo hasta el segundo 35: un cobro puede tardar 20 s y la función se corta a los 60 (maxDuration). Lo que
+  // no alcance lo toma la próxima corrida o la visita de la persona. Las consultas (sin cobro) pueden seguir hasta el límite.
+  const chargeBy = t0 + 35_000;
+  const cobros = await sweepTrialCharges(new Date(), { deadline: t0 + 42_000, chargeBy }).catch((e) => { logError("cron:cobros", "run_failed", { kind: errCode(e) }); return null; });
   // Tilopay (0042): renovaciones que cobramos nosotros (vence el periodo, se cobra la tarjeta guardada; rechazo = 3 intentos
   // diarios y luego se cancela) y compras directas por confirmar. null si Tilopay no está encendido.
-  const renovaciones = await sweepTilopayRenewals(new Date(), { deadline: t0 + 47_000 }).catch((e) => { logError("cron:renovaciones", "run_failed", { kind: errCode(e) }); return null; });
+  const renovaciones = await sweepTilopayRenewals(new Date(), { deadline: t0 + 47_000, chargeBy }).catch((e) => { logError("cron:renovaciones", "run_failed", { kind: errCode(e) }); return null; });
   // Primer mes con 50 % en ONVO (0043): al terminar ese mes se crea la suscripción normal a precio completo.
-  const primerMes = await sweepOnvoIntro(new Date(), { deadline: t0 + 50_000 }).catch((e) => { logError("cron:primer-mes", "run_failed", { kind: errCode(e) }); return null; });
+  const primerMes = await sweepOnvoIntro(new Date(), { deadline: t0 + 50_000, chargeBy }).catch((e) => { logError("cron:primer-mes", "run_failed", { kind: errCode(e) }); return null; });
   const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
   const regalos = await deliverPendingGifts({ limit: 200 }).catch((e) => { logError("cron:regalos", "run_failed", { kind: errCode(e) }); return null; });
   // Testers (0029): correo y push de asignaciones sin avisar, aviso de 3 días antes del final y agradecimiento al terminar.

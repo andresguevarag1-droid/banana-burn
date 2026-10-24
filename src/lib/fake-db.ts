@@ -13,6 +13,7 @@ const get = (r: Row, col: string): unknown => {
   for (const p of parts.slice(1)) v = v && typeof v === "object" ? (v as Row)[p] : undefined;
   return v;
 };
+const likeRe = (pat: string) => new RegExp(`^${pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".")}$`);
 const cmp = (a: unknown, b: unknown) => (typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b)));
 
 export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, string[]> = {}) {
@@ -66,6 +67,14 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
       gt: (c: string, v: unknown) => { filters.push((r) => get(r, c) != null && cmp(get(r, c), v) > 0); return q; },
       gte: (c: string, v: unknown) => { filters.push((r) => get(r, c) != null && cmp(get(r, c), v) >= 0); return q; },
       is: (c: string, v: null) => { filters.push((r) => (get(r, c) ?? null) === v); return q; },
+      like: (c: string, pat: string) => { const re = likeRe(pat); filters.push((r) => typeof get(r, c) === "string" && re.test(get(r, c) as string)); return q; },
+      not: (c: string, o: string, v: unknown) => {
+        if (o === "is" && v === null) filters.push((r) => get(r, c) != null);
+        else if (o === "like") { const re = likeRe(String(v)); filters.push((r) => !(typeof get(r, c) === "string" && re.test(get(r, c) as string))); }
+        else if (o === "eq") filters.push((r) => get(r, c) !== v);
+        else throw new Error(`fake-db: not.${o} sin soporte`);
+        return q;
+      },
       or: (expr: string) => {
         const parts = expr.split(",").map((p) => p.split("."));
         filters.push((r) => parts.some(([c, o, ...rest]) => {
@@ -73,6 +82,7 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
           const x = get(r, c);
           if (o === "is" && val === "null") return x == null;
           if (o === "lt") return x != null && Number(x) < Number(val);
+          if (o === "lte") return x != null && cmp(x, val) <= 0;
           if (o === "eq") return String(x) === val;
           return false;
         }));
@@ -88,6 +98,11 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
   }
 
   const rpcCalls: { fn: string; args: unknown }[] = [];
-  const db = { from: (name: string) => builder(name), rpc: async (fn: string, args: unknown) => { rpcCalls.push({ fn, args }); return { data: true, error: null }; } };
+  const db = {
+    from: (name: string) => builder(name),
+    rpc: async (fn: string, args: unknown) => { rpcCalls.push({ fn, args }); return { data: true, error: null }; },
+    // Correo por persona (tabla de prueba "users": { id, email }), como auth.admin.getUserById.
+    auth: { admin: { getUserById: async (id: string) => { const u = t("users").find((x) => x.id === id); return { data: { user: u ? { id, email: u.email } : null }, error: null }; } } },
+  };
   return { db: db as unknown as SupabaseClient, tables, rpcCalls };
 }
