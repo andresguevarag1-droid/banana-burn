@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/today";
 import { localDayStartUtc } from "@/lib/foods-gamify";
@@ -24,7 +25,8 @@ const DEMO_YESTERDAY: MealItem[] = [
 // Demo: kcal de los días anteriores (de ayer hacia atrás), con un día de pizza incluido: así se ve el balance semanal.
 const DEMO_PAST_KCAL = [1300, 2650, 1850, 1900, 1750, 2050];
 
-export async function getMeals(v: Viewer) {
+/** Una lectura por request (React cache). */
+export const getMeals = cache(async function getMeals(v: Viewer) {
   const today = todayFor(v).iso;
   if (v.demo) return { today: DEMO_TODAY, yesterday: DEMO_YESTERDAY, demo: true };
   const sb = await createClient();
@@ -32,7 +34,7 @@ export async function getMeals(v: Viewer) {
   const map = (r: Record<string, unknown>): MealItem => ({ id: String(r.id), slot: (r.slot as Slot) ?? "almuerzo", name: r.name as string, qty: Number(r.qty ?? 1), kcal: Number(r.kcal ?? 0), protein: Number(r.protein ?? 0), carbs: Number(r.carbs ?? 0), fat: Number(r.fat ?? 0) });
   const rows = data ?? [];
   return { today: rows.filter((r) => r.day === today).map(map), yesterday: rows.filter((r) => r.day !== today).map(map), demo: false };
-}
+});
 
 export type NutritionExtras = {
   /** kcal por día de esta semana (lunes a ayer): comidas + lo anotado rápido en Hoy. */

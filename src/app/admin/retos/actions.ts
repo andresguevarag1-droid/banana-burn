@@ -2,7 +2,8 @@
 import { FREE_MAX_DAYS } from "@/lib/catalog-0033";
 // Acciones del panel para la tienda de retos. Cada una: autoriza en el servidor (content.challenges o challenges.grant),
 // valida a mano, muta con el cliente del usuario (RLS de 0018 vuelve a validar) y escribe en auditoría.
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { TAGS } from "@/lib/shared-cache";
 import { redirect } from "next/navigation";
 import * as val from "@/lib/admin-validate";
 import { ValidationError } from "@/lib/admin-validate";
@@ -20,6 +21,8 @@ const VERIFY = ["manual", "workout", "steps", "protein", "water"] as const;
 const DIFF = ["facil", "media", "dificil"] as const;
 
 const refresh = (slug?: string) => {
+  // Catálogo publicado en caché compartido (shared-cache.ts): la tienda lo ve al instante tras guardar.
+  revalidateTag(TAGS.catalog);
   revalidatePath("/admin/retos", "layout");
   revalidatePath("/app/retos", "layout");
   if (slug) revalidatePath(`/app/retos/${slug}`);

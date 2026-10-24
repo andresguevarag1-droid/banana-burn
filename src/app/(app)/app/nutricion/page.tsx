@@ -36,8 +36,8 @@ export default async function Nutricion() {
       </div>
     );
   }
-  const d = dashboard(await getAthlete(v));
-  const [meals, daily, extras] = await Promise.all([getMeals(v), getDaily(v, 0, 0), getNutritionExtras(v)]);
+  // Todo en paralelo con el atleta: comidas, registro del día y extras no dependen de él.
+  const [d, meals, daily, extras] = await Promise.all([getAthlete(v).then(dashboard), getMeals(v), getDaily(v, 0, 0), getNutritionExtras(v)]);
   const { t } = d;
   const px = d.program?.meta.experience ?? null;
   return (

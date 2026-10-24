@@ -1,7 +1,7 @@
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
-import { getDaily } from "@/lib/daily";
+import { getDaily, prefetchDaily } from "@/lib/daily";
 import { ALTS, BARBELL, EX, HOME, SLOTS, e1rm, expressDay, forEquipment, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
@@ -21,6 +21,7 @@ const isEngine = (id: string): id is ExerciseId => Object.hasOwn(EX, id);
 export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string }> }) {
   const { dia, modo, expres, repetir, cambiar, por, sesion } = await searchParams;
   const v = (await getViewer())!;
+  prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
   const d = dashboard(a);
   const n = Number(dia);

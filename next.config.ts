@@ -71,6 +71,9 @@ const nextConfig: NextConfig = {
       { source: "/(.*)", headers: securityHeaders },
       // Datos personales: nunca en cachés compartidas.
       { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      // Archivos de public/ (íconos, marca, landing, imágenes de correos): sin hash en el nombre, así que el navegador
+      // los guarda una semana y la CDN un mes (Vercel vacía su caché en cada despliegue). /_next/static ya es immutable.
+      { source: "/:dir(icons|brand|landing|email)/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=86400" }] },
     ];
   },
 };

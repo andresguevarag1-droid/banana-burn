@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { DEMO_PRS, demoActiveDays, demoWeighIns, demoWorkouts, demoXp } from "@/lib/demo-story";
 import { todayFor } from "@/lib/today";
@@ -39,6 +40,30 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
       badges: badges({ workouts: nW, streak: streak.days, prs: DEMO_PRS, weighIns: demoWeighIns(today), lostKg: startWeight - currentWeight }),
     };
   }
+  const { log, wk, dl, ws, weighIns, xp, prs, workoutsTotal, testerGrants, sex } = await dailyRows(v);
+  const active = new Set<string>([...(wk ?? []), ...(dl ?? []), ...(ws ?? [])].map((r) => r.day as string));
+  const streak = streakOf(active, today);
+  return {
+    log: { water: log?.water_glasses ?? 0, steps: log?.steps ?? 0, sleep: Number(log?.sleep_h ?? 0), protein: log?.protein_g ?? 0, kcal: log?.kcal ?? 0, energy: log?.energy ?? 0, nausea: log?.nausea ?? 0, fiber: log?.fiber_g ?? 0 },
+    xp, level: levelOf(xp, sex), streak, workoutsTotal: workoutsTotal ?? 0,
+    trainedToday: (wk ?? []).some((w) => w.day === today),
+    weighedToday: (ws ?? []).some((w) => w.day === today),
+    week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),
+    badges: badges({ workouts: workoutsTotal ?? 0, streak: streak.days, prs: prs ?? 0, weighIns: weighIns ?? 0, lostKg: startWeight - currentWeight, tester: (testerGrants ?? 0) > 0 }),
+  };
+}
+
+/**
+ * Empieza a leer el registro del día sin esperar al atleta (las consultas no dependen del peso): la página la llama
+ * apenas tiene al usuario y getDaily después reutiliza la misma lectura (React cache). Sin esto era una cascada.
+ */
+export function prefetchDaily(v: Viewer) {
+  if (!v.demo) void dailyRows(v).catch(() => {});
+}
+
+/** Consultas del registro del día (una vez por request). */
+const dailyRows = cache(async (v: Viewer) => {
+  const today = todayFor(v).iso;
   const sb = await createClient();
   const since = addDays(today, -90);
   // Medalla "Tester beta" (0029): si alguna vez fue tester. Sin la migración, sin medalla. Va en paralelo con lo demás.
@@ -54,15 +79,6 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     sb.from("xp_events").select("*", { count: "exact", head: true }).eq("user_id", v.id).eq("kind", "pr"),
     sb.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", v.id),
   ]);
-  const { count: testerGrants } = await testerQ;
-  const active = new Set<string>([...(wk ?? []), ...(dl ?? []), ...(ws ?? [])].map((r) => r.day as string));
-  const streak = streakOf(active, today);
-  return {
-    log: { water: log?.water_glasses ?? 0, steps: log?.steps ?? 0, sleep: Number(log?.sleep_h ?? 0), protein: log?.protein_g ?? 0, kcal: log?.kcal ?? 0, energy: log?.energy ?? 0, nausea: log?.nausea ?? 0, fiber: log?.fiber_g ?? 0 },
-    xp, level: levelOf(xp, await getSex(v)), streak, workoutsTotal: workoutsTotal ?? 0,
-    trainedToday: (wk ?? []).some((w) => w.day === today),
-    weighedToday: (ws ?? []).some((w) => w.day === today),
-    week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),
-    badges: badges({ workouts: workoutsTotal ?? 0, streak: streak.days, prs: prs ?? 0, weighIns: weighIns ?? 0, lostKg: startWeight - currentWeight, tester: (testerGrants ?? 0) > 0 }),
-  };
-}
+  const [{ count: testerGrants }, sex] = await Promise.all([testerQ, getSex(v)]);
+  return { log, wk, dl, ws, weighIns, xp, prs, workoutsTotal, testerGrants, sex };
+});

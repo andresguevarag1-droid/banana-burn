@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { e1rm, EX } from "@/lib/engine";
 import { TPL } from "@/lib/engine/data";
@@ -76,7 +77,8 @@ function demo(v: Viewer) {
   return { weights, lifts: byId(lifts), tracked: lifts, workouts };
 }
 
-export async function getProgress(v: Viewer) {
+/** Una lectura por request (React cache). */
+export const getProgress = cache(async function getProgress(v: Viewer) {
   if (v.demo) return demo(v);
   const sb = await createClient();
   const today = todayFor(v).iso;
@@ -95,4 +97,4 @@ export async function getProgress(v: Viewer) {
     return { d: r.day as string, tpl: workoutName(String(r.template ?? ""), sex), sets: s.length, vol: Math.round(s.reduce((a, x) => a + (Number(x.kg) || 0) * (x.reps || 0), 0)), mins: minutesBetween(r.started_at, r.finished_at), fun: r.fun as number };
   });
   return { weights, lifts: byId(lifts), tracked: lifts, workouts };
-}
+});

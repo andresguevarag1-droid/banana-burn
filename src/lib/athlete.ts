@@ -34,7 +34,8 @@ export const getSex = cache(async (v: Viewer): Promise<Sex> => {
   return data?.sex === "f" ? "f" : "m";
 });
 
-export async function getAthlete(v: Viewer): Promise<Athlete> {
+/** Una lectura por request (React cache): página, layout y componentes comparten el resultado. */
+export const getAthlete = cache(async function getAthlete(v: Viewer): Promise<Athlete> {
   if (v.demo) {
     // Demo de chica (?programa=pilates-casa-30 o ?persona=chica): Valeria, mujer; en Pilates entrena en casa.
     const ds = await demoState();
@@ -60,7 +61,7 @@ export async function getAthlete(v: Viewer): Promise<Athlete> {
     // Banana Shield es de Entreno + Nutrición: sin nutrición se apaga en todas las pantallas (el perfil guarda la configuración).
     glp1: { on: Boolean(p?.glp1) && ent.nutrition, med: ((p?.glp1_med as Glp1Med) ?? "otro"), injectionDow: p?.glp1_injection_dow ?? null, since: p?.glp1_since ?? null },
   });
-}
+});
 
 /**
  * Programa activo (0024): toma el control del entreno del día y, si hay nutrición, puede ajustar calorías y proteína.

@@ -2,7 +2,8 @@ import "server-only";
 import { errCode, logError, logWarn } from "@/lib/log";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient, type Viewer } from "@/lib/supabase/server";
+import { createClient, getViewer, STAFF, type Viewer } from "@/lib/supabase/server";
+import { STORE_COLS, STORE_COLS_24, publishedCatalogRows } from "@/lib/shared-cache";
 import { demoState } from "@/lib/demo-persona";
 import { adminClient } from "@/lib/supabase/admin";
 import { todayFor, todayIn } from "@/lib/today";
@@ -35,10 +36,8 @@ export function metAuto(c: Challenge, m: Metrics) {
 
 // ───────────── Catálogo ─────────────
 
-/** Columnas de la tienda (0018). */
-export const STORE_COLS = "slug,title,description,days,rules,status,price_usd,difficulty,minutes,cover,icon,verify,grace,xp,steps_goal,badge,reward_title,start_mode,start_date,featured,coming_soon,safety_note,sort";
-/** Con los programas (0024): tipo y meta. */
-export const STORE_COLS_24 = `${STORE_COLS},kind,program`;
+/** Columnas de la tienda (0018) y con los programas (0024): tipo y meta. Viven en shared-cache.ts. */
+export { STORE_COLS, STORE_COLS_24 } from "@/lib/shared-cache";
 type DefRow = CatalogRow & { plan?: unknown };
 
 /**
@@ -48,8 +47,12 @@ type DefRow = CatalogRow & { plan?: unknown };
 export const getCatalog = cache(async (demo: boolean): Promise<Map<string, Challenge>> => {
   if (demo) return new Map(SEED_CHALLENGES.map((c) => [c.id, c]));
   const sb = await createClient();
+  // Lo publicado es igual para todos: sale del caché compartido (shared-cache.ts, se invalida al editar en el panel).
+  // El staff ve también borradores (RLS), así que lee directo. Si el caché falla, la lectura de siempre.
+  const v = await getViewer();
+  const shared = v && !STAFF.includes(v.role) ? await publishedCatalogRows().catch(() => null) : null;
   const [first, mine, progs] = await Promise.all([
-    sb.from("challenges_catalog").select(STORE_COLS_24).order("sort").order("created_at"),
+    shared ? Promise.resolve({ data: shared, error: null }) : sb.from("challenges_catalog").select(STORE_COLS_24).order("sort").order("created_at"),
     sb.rpc("my_challenge_defs"),
     sb.rpc("my_program_defs"),
   ]);

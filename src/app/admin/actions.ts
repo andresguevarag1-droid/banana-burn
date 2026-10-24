@@ -1,7 +1,8 @@
 "use server";
 // Mutaciones del panel. Cada acción: (1) valida la sesión y el rol en el servidor, (2) valida la entrada a mano,
 // (3) muta con el cliente del usuario (RLS / RPC SECURITY DEFINER vuelven a validar), (4) escribe public.audit_log.
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { TAGS } from "@/lib/shared-cache";
 import { errCode, logError } from "@/lib/log";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -250,6 +251,7 @@ export async function saveAnnouncement(_: ActionState, fd: FormData): Promise<Ac
     if (res.error) return fail(pgMessage(res.error)!);
     await audit(sb, v, idRaw ? "announcement.update" : "announcement.create", `announcement:${res.data.id}`, { title: row.title, audience: row.audience, active: row.active });
     revalidatePath("/admin/contenido");
+    revalidateTag(TAGS.announcements);
     return ok(idRaw ? "Anuncio actualizado." : "Anuncio creado.");
   });
 }
@@ -264,6 +266,7 @@ export async function deleteAnnouncement(_: ActionState, fd: FormData): Promise<
     if (error) return fail(pgMessage(error)!);
     await audit(sb, v, "announcement.delete", `announcement:${id}`, { title: data?.title });
     revalidatePath("/admin/contenido");
+    revalidateTag(TAGS.announcements);
     return ok("Anuncio eliminado.");
   });
 }
