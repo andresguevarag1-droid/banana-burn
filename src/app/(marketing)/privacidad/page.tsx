@@ -23,11 +23,12 @@ const S: LegalSection[] = [
   ] },
   { id: "uso", t: "Para qué usamos tus datos", p: [
     ["Calcular tus calorías, proteína y rutina, y ajustarlas cada semana según tu progreso.", "Darte respuestas del Coach Banana con el contexto de tu plan.", "Enviarte recordatorios y resúmenes que tú elijas, y correos sobre tu cuenta y tus pagos.", "Mostrar tu actividad en la comunidad solo según la privacidad que configures.", "Prevenir abuso, fraude y accesos no autorizados.", "Mejorar la app con métricas agregadas que no te identifican."],
-    "No vendemos tus datos ni los usamos para publicidad de terceros.",
+    "Medir y mejorar nuestros anuncios en Instagram y Facebook (ver Meta más abajo).",
+    "No vendemos tus datos. Nunca compartimos con anunciantes tus datos de salud, tu peso, tus comidas ni tus fotos.",
   ] },
   { id: "terceros", t: "Con quién los compartimos", p: [
     "Trabajamos con proveedores que procesan datos por cuenta nuestra y bajo contrato:",
-    ["Supabase: base de datos, autenticación y almacenamiento de fotos.", "Vercel: alojamiento de la aplicación.", "Anthropic: genera las respuestas del Coach Banana. Le enviamos tu mensaje y un resumen de tu plan, sin tu correo.", "Resend: envío de correos.", "ONVO Pay: procesamiento de pagos en Costa Rica."],
+    ["Supabase: base de datos, autenticación y almacenamiento de fotos.", "Vercel: alojamiento de la aplicación.", "Anthropic: genera las respuestas del Coach Banana. Le enviamos tu mensaje y un resumen de tu plan, sin tu correo.", "Resend: envío de correos.", "ONVO Pay: procesamiento de pagos en Costa Rica.", "Meta Platforms (Instagram y Facebook): con el Meta Pixel y su API de Conversiones medimos qué anuncios llevan a una visita, un registro o una suscripción. Meta recibe la página visitada, el tipo de evento (por ejemplo, registro o suscripción y su precio), tu dirección IP, tu navegador y sus propias cookies. No recibe tu correo, tu nombre ni ningún dato de salud."],
     "Algunos de estos proveedores almacenan datos fuera de tu país y de Costa Rica (principalmente en Estados Unidos). Al aceptar esta política autorizas esa transferencia, que hacemos con medidas de seguridad equivalentes a las exigidas por la ley costarricense.",
   ] },
   { id: "derechos", t: "Tus derechos", p: [
@@ -45,7 +46,8 @@ const S: LegalSection[] = [
     "Banana Burn es solo para personas mayores de 18 años. Si detectamos una cuenta de una persona menor de edad, la eliminamos.",
   ] },
   { id: "cookies", t: "Cookies y almacenamiento local", p: [
-    "Usamos solo cookies y almacenamiento local necesarios para mantener tu sesión, recordar preferencias de la app y proteger la cuenta. No usamos cookies de publicidad.",
+    "Usamos cookies y almacenamiento local necesarios para mantener tu sesión, recordar preferencias de la app y proteger la cuenta.",
+    "Además, el Meta Pixel guarda cookies de Meta (_fbp y _fbc) para medir los anuncios. Puedes bloquearlas desde la configuración de tu navegador o con un bloqueador de anuncios, y administrar tus preferencias de anuncios en tu cuenta de Meta; la app funciona igual.",
   ] },
   { id: "cambios", t: "Cambios a esta política", p: [
     "Si hacemos cambios importantes te avisaremos en la app o por correo antes de que entren en vigor.",
@@ -53,5 +55,5 @@ const S: LegalSection[] = [
 ];
 
 export default function Page() {
-  return <LegalPage title="Política de privacidad" updated="23 de octubre de 2026" intro="Tus datos de salud son tuyos. Esta política explica qué datos usamos, para qué, con quién los compartimos y cómo ejercer tus derechos. Como la empresa está en Costa Rica, se rige por la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales y su reglamento, sin perjuicio de los derechos que te dé la ley de tu país." sections={S} />;
+  return <LegalPage title="Política de privacidad" updated="24 de octubre de 2026" intro="Tus datos de salud son tuyos. Esta política explica qué datos usamos, para qué, con quién los compartimos y cómo ejercer tus derechos. Como la empresa está en Costa Rica, se rige por la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales y su reglamento, sin perjuicio de los derechos que te dé la ley de tu país." sections={S} />;
 }

@@ -2,15 +2,22 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import type { FunnelEvent, FunnelProps } from "@/app/api/track/event";
+import { newEventId, toMetaEvent } from "@/lib/meta-pixel";
+import { fbq } from "@/components/meta-pixel";
 
 /**
- * Analítica ligera del embudo, sin terceros: un beacon a /api/track (que hoy solo registra en el log del servidor).
+ * Analítica ligera del embudo: un beacon a /api/track (log del servidor y, si hay token, API de Conversiones de Meta)
+ * y el mismo evento al Meta Pixel cuando corresponde (ver src/lib/meta-pixel.ts).
  * Nunca rompe la página: si el navegador no tiene sendBeacon o falla, no pasa nada.
  */
 export function track(name: FunnelEvent, props: FunnelProps = {}) {
+  // Meta Pixel: mismo event_id que el beacon, para que Meta deduplique con la API de Conversiones del servidor.
+  const meta = toMetaEvent(name, props);
+  const eid = meta ? newEventId() : "";
+  if (meta) fbq(meta.custom ? "trackCustom" : "track", meta.name, meta.params, { eventID: eid });
   try {
     if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return;
-    const body = JSON.stringify({ name, props: { path: location.pathname, ...props } });
+    const body = JSON.stringify({ name, props: { path: location.pathname, ...props, ...(eid ? { event_id: eid } : {}) } });
     navigator.sendBeacon("/api/track", new Blob([body], { type: "application/json" }));
   } catch { /* sin analítica */ }
 }

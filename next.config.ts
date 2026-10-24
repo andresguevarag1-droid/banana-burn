@@ -10,7 +10,7 @@ if (envProblems.length) throw new Error(`Variables de entorno inseguras:\n- ${en
 // CSP pragmática: Next (App Router) inyecta scripts inline para hidratar, y las páginas de marketing son estáticas,
 // así que no usamos nonces (obligarían a renderizar todo dinámico). Mitigación: no hay sinks de HTML crudo en la app
 // (sin dangerouslySetInnerHTML), React escapa todo el contenido de usuarios, y todo lo demás queda restringido a
-// nuestro origen + Supabase + ONVO. Si se agrega un dominio (CDN de media, analítica), agrégalo aquí.
+// nuestro origen + Supabase + ONVO + Meta Pixel. Si se agrega un dominio (CDN de media, analítica), agrégalo aquí.
 
 // cleanUrl tolera valores pegados sin https:// o con espacios (un valor raro no debe romper el build ni la CSP).
 const origin = (u?: string) => {
@@ -23,17 +23,20 @@ const media = origin(process.env.EXERCISE_MEDIA_BASE_URL);
 const isDev = process.env.NODE_ENV !== "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
 const ONVO = "https://*.onvopay.com";
+// Meta Pixel (anuncios de Instagram y Facebook): script, beacon /tr y la imagen de respaldo.
+const META_JS = "https://connect.facebook.net";
+const META_TR = "https://www.facebook.com";
 
 const src = (...xs: (string | null | false | undefined)[]) => xs.filter(Boolean).join(" ");
 
 const CSP = [
   `default-src 'self'`,
-  `script-src ${src("'self'", "'unsafe-inline'", isDev && "'unsafe-eval'", "https://sdk.onvopay.com", ONVO, isPreview && "https://vercel.live")}`,
+  `script-src ${src("'self'", "'unsafe-inline'", isDev && "'unsafe-eval'", "https://sdk.onvopay.com", ONVO, META_JS, isPreview && "https://vercel.live")}`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src ${src("'self'", "data:", "blob:", supabase, media, ONVO, isPreview && "https://vercel.live https://vercel.com")}`,
+  `img-src ${src("'self'", "data:", "blob:", supabase, media, ONVO, META_TR, isPreview && "https://vercel.live https://vercel.com")}`,
   `media-src ${src("'self'", "blob:", media)}`,
   `font-src ${src("'self'", "data:", isPreview && "https://vercel.live")}`,
-  `connect-src ${src("'self'", supabase, supabaseWs, ONVO, isDev && "ws:", isPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
+  `connect-src ${src("'self'", supabase, supabaseWs, ONVO, META_TR, META_JS, isDev && "ws:", isPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
   `frame-src ${src(ONVO, isPreview && "https://vercel.live")}`,
   `worker-src 'self' blob:`,
   `manifest-src 'self'`,
