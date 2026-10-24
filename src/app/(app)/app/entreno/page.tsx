@@ -79,18 +79,18 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     const rx = mode(withProgramNote(voiced(prescribe(id, cfg, h, { deload: d.deload }), cfg, EX[id].inc), s));
     return { id, name: EX[id].n, muscle: EX[id].m, cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), load: loadKindOf(id, { inc: EX[id].inc }), rx, best, lastSets: h.at(-1) ?? null };
   };
-  // Ejercicio de la biblioteca: hereda la animación del ejercicio del plan si es una variante, o la del patrón.
-  const buildLib = (x: LibEx, s: (typeof slots)[number], fallbackAnim: string | null): PlayerExercise => {
+  // Ejercicio de la biblioteca: solo su propia animación (nunca la del ejercicio del plan: una variante es otro movimiento).
+  const buildLib = (x: LibEx, s: (typeof slots)[number]): PlayerExercise => {
     const id = `ds:${x.id}`, h = hist[id] ?? [], inc = incFor(x.eq);
     const best = Math.max(0, ...h.flat().map((r) => (r.kg ? e1rm(r.kg, r.reps) : 0)));
     return { id, name: x.n, muscle: s.muscle || cap(esLib(MUSCLE, x.t)), cfg: s.cfg, bw: inc === 0, barbell: x.eq === "barbell" || x.eq === "olympic barbell", load: loadKindOf(id, { inc, eq: x.eq }),
       rx: mode(withProgramNote(voiced(prescribe(id, s.cfg, h, { deload: d.deload, inc }), s.cfg, inc), s)), best, lastSets: h.at(-1) ?? null,
-      tech: { anim: fallbackAnim ?? animFor(x) ?? "", mus: cap([x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(", ")), how: x.s, cues: [], err: [], mono: "" } };
+      tech: { anim: animFor(x) ?? "", mus: cap([x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(", ")), how: x.s, cues: [], err: [], mono: "" } };
   };
   const options = slots.map((s, i) => {
     const main = libMain[i];
-    if (main) return [buildLib(main, s, null), ...libAlts[i].map((x) => buildLib(x, s, animFor(main)))];
-    return [...optionIds[i].map((id) => build(id, s.cfg, s)), ...libAlts[i].map((x) => buildLib(x, s, TECH[s.id]?.anim ?? null))];
+    if (main) return [buildLib(main, s), ...libAlts[i].map((x) => buildLib(x, s))];
+    return [...optionIds[i].map((id) => build(id, s.cfg, s)), ...libAlts[i].map((x) => buildLib(x, s))];
   });
   // "Cambiar por este" desde la biblioteca: ubica el ejercicio del plan y agrega la variante si no estaba entre las opciones.
   let preswap: { slot: number; option: number } | null = null;
@@ -100,7 +100,7 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       let option = options[slot].findIndex((o) => o.id === por);
       if (option < 0 && por.startsWith("ds:")) {
         const x = getLibEx(por.slice(3));
-        if (x) { options[slot].push(buildLib(x, slots[slot], TECH[slots[slot].id]?.anim ?? null)); option = options[slot].length - 1; }
+        if (x) { options[slot].push(buildLib(x, slots[slot])); option = options[slot].length - 1; }
       }
       if (option > 0) preswap = { slot, option };
     }

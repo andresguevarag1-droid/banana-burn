@@ -46,7 +46,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Coach Banana abraza la barra con los hombros y se mantiene <b>derechito como palmera</b>. Más pierna, menos espalda baja."
  },
  "goblet": {
-  "anim": "frontsquat",
+  "anim": "goblet",
   "mus": "Cuádriceps, glúteos, core",
   "how": [
    "Mancuerna pegada al pecho, codos dentro.",
@@ -268,7 +268,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Agarre amigable para el hombro, mismo <b>dorsal gigante</b>."
  },
  "lat": {
-  "anim": "pullup",
+  "anim": "lat",
   "mus": "Dorsales, bíceps",
   "how": [
    "Muslos fijos.",
@@ -338,7 +338,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Coach Banana no hace el gusano: <b>solo se mueven los antebrazos</b>."
  },
  "hammer": {
-  "anim": "curl",
+  "anim": "curl_bw",
   "mus": "Braquial, antebrazo, bíceps",
   "how": [
    "Palmas mirándose.",
@@ -386,7 +386,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Hombros anchos hacen ver la <b>cintura más pequeña</b>. Truco del gordiflaco."
  },
  "lateralc": {
-  "anim": "lateral",
+  "anim": "lateralc",
   "mus": "Deltoide lateral",
   "how": [
    "Polea baja, cruzada por delante.",
@@ -401,7 +401,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "La polea nunca descansa: <b>tensión todo el rango</b>."
  },
  "laterall": {
-  "anim": "lateral",
+  "anim": "laterall",
   "mus": "Deltoide lateral",
   "how": [
    "Apóyate en un poste, inclínate 15°.",
@@ -434,7 +434,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "El seguro de hombros de Coach Banana. <b>Postura recta, hombros sanos.</b>"
  },
  "reardelt": {
-  "anim": "facepull",
+  "anim": "reardelt",
   "mus": "Deltoide posterior",
   "how": [
    "Torso inclinado.",
@@ -469,7 +469,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Coach Banana no necesita banco para hacer <b>pecho</b>: el piso siempre está ahí."
  },
  "pushupd": {
-  "anim": "pushup",
+  "anim": "pushupd",
   "mus": "Tríceps, pectoral",
   "how": [
    "Manos juntas formando un diamante bajo el pecho.",
@@ -485,7 +485,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Mismo piso, más <b>tríceps</b>."
  },
  "pushupe": {
-  "anim": "pushup",
+  "anim": "pushupe",
   "mus": "Pectoral superior, hombros",
   "how": [
    "Pies en un banco, manos en el piso.",
@@ -519,7 +519,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Coach Banana no aguanta por aguantar: <b>tensión máxima</b> o no cuenta."
  },
  "planktap": {
-  "anim": "plank",
+  "anim": "planktap",
   "mus": "Core antirotación, hombros",
   "how": [
    "Plancha alta sobre las manos.",
@@ -568,7 +568,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Coach Banana no se columpia como en la selva: <b>sube con el abdomen</b>."
  },
  "legraise": {
-  "anim": "kneeraise",
+  "anim": "legraise",
   "mus": "Abdomen, flexores de cadera",
   "how": [
    "Piernas casi rectas.",
@@ -584,7 +584,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Versión difícil: <b>piernas largas</b>."
  },
  "twistraise": {
-  "anim": "kneeraise",
+  "anim": "twistraise",
   "mus": "Oblicuos, abdomen",
   "how": [
    "Sube las rodillas hacia un lado, luego al otro.",
@@ -617,7 +617,7 @@ export const TECH: Record<string, Technique> = {
   "mono": "Coach Banana carga los racimos de bananas a casa: <b>pesado y derecho</b>."
  },
  "suitcase": {
-  "anim": "carry",
+  "anim": "suitcase",
   "mus": "Oblicuos, agarre, core",
   "how": [
    "Una sola mancuerna.",
@@ -664,27 +664,27 @@ export const TECH: Record<string, Technique> = {
 
 // Variantes para entrenar en casa
 Object.assign(TECH, {
-  floorpress: { anim: "bench", mus: "Pecho, tríceps, hombro anterior", how: ["Acuéstate en el piso con rodillas dobladas y una mancuerna en cada mano.", "Codos a 45° del torso, tocan el piso suave en cada rep.", "Pausa 1 s abajo y empuja fuerte hacia arriba."], cues: ["Codos a 45°", "Escápulas pegadas al piso"], err: ["Rebotar los codos en el piso"], mono: "Coach Banana empuja el coco al techo <b>sin rebotar</b>." },
-  dbrdl: { anim: "rdl", mus: "Femorales, glúteos, espalda baja", how: ["De pie, mancuernas frente a los muslos.", "Lleva la cadera atrás con rodillas apenas dobladas.", "Baja hasta sentir el estiramiento atrás del muslo y sube apretando glúteo."], cues: ["Cadera atrás", "Espalda neutra"], err: ["Redondear la espalda"], mono: "Coach Banana cierra la puerta del carro <b>con la cola</b>." },
-  invrow: { anim: "row", mus: "Espalda, bíceps", how: ["Acuéstate bajo una mesa firme o barra baja y agárrala.", "Cuerpo en tabla, talones en el piso.", "Tira del pecho hacia la mesa y baja lento 3 s."], cues: ["Cuerpo en tabla", "Codos al bolsillo"], err: ["Dejar caer la cadera"], mono: "Coach Banana se sube al árbol <b>con la espalda</b>, no con los brazos." },
-  bandpull: { anim: "pullup", mus: "Dorsales, bíceps", how: ["Ancla la banda arriba de una puerta.", "De rodillas, tira codos hacia las costillas.", "Vuelve lento sin soltar la tensión."], cues: ["Pecho alto", "Codos abajo y atrás"], err: ["Encoger los hombros"], mono: "Coach Banana jala la liana <b>con los codos</b>." },
-  legraisef: { anim: "plank", mus: "Abdomen inferior", how: ["Boca arriba, manos bajo la cadera.", "Sube las piernas rectas hasta 90°.", "Baja lento sin que la espalda baja se despegue."], cues: ["Espalda baja pegada al piso"], err: ["Arquear la espalda"], mono: "Coach Banana baja las piernas <b>como en cámara lenta</b>." },
-  bicycle: { anim: "plank", mus: "Oblicuos, abdomen", how: ["Boca arriba, manos detrás de la cabeza.", "Lleva codo hacia la rodilla contraria alternando.", "Ritmo controlado, sin jalar el cuello."], cues: ["Gira el torso, no el cuello"], err: ["Ir demasiado rápido"], mono: "Coach Banana pedalea <b>lento y con giro</b>." },
+  floorpress: { anim: "floorpress", mus: "Pecho, tríceps, hombro anterior", how: ["Acuéstate en el piso con rodillas dobladas y una mancuerna en cada mano.", "Codos a 45° del torso, tocan el piso suave en cada rep.", "Pausa 1 s abajo y empuja fuerte hacia arriba."], cues: ["Codos a 45°", "Escápulas pegadas al piso"], err: ["Rebotar los codos en el piso"], mono: "Coach Banana empuja el coco al techo <b>sin rebotar</b>." },
+  dbrdl: { anim: "dbrdl", mus: "Femorales, glúteos, espalda baja", how: ["De pie, mancuernas frente a los muslos.", "Lleva la cadera atrás con rodillas apenas dobladas.", "Baja hasta sentir el estiramiento atrás del muslo y sube apretando glúteo."], cues: ["Cadera atrás", "Espalda neutra"], err: ["Redondear la espalda"], mono: "Coach Banana cierra la puerta del carro <b>con la cola</b>." },
+  invrow: { anim: "invrow", mus: "Espalda, bíceps", how: ["Acuéstate bajo una mesa firme o barra baja y agárrala.", "Cuerpo en tabla, talones en el piso.", "Tira del pecho hacia la mesa y baja lento 3 s."], cues: ["Cuerpo en tabla", "Codos al bolsillo"], err: ["Dejar caer la cadera"], mono: "Coach Banana se sube al árbol <b>con la espalda</b>, no con los brazos." },
+  bandpull: { anim: "bandpull", mus: "Dorsales, bíceps", how: ["Ancla la banda arriba de una puerta.", "De rodillas, tira codos hacia las costillas.", "Vuelve lento sin soltar la tensión."], cues: ["Pecho alto", "Codos abajo y atrás"], err: ["Encoger los hombros"], mono: "Coach Banana jala la liana <b>con los codos</b>." },
+  legraisef: { anim: "legraisef", mus: "Abdomen inferior", how: ["Boca arriba, manos bajo la cadera.", "Sube las piernas rectas hasta 90°.", "Baja lento sin que la espalda baja se despegue."], cues: ["Espalda baja pegada al piso"], err: ["Arquear la espalda"], mono: "Coach Banana baja las piernas <b>como en cámara lenta</b>." },
+  bicycle: { anim: "bicycle", mus: "Oblicuos, abdomen", how: ["Boca arriba, manos detrás de la cabeza.", "Lleva codo hacia la rodilla contraria alternando.", "Ritmo controlado, sin jalar el cuello."], cues: ["Gira el torso, no el cuello"], err: ["Ir demasiado rápido"], mono: "Coach Banana pedalea <b>lento y con giro</b>." },
 });
 
 // Sin equipo y exprés
 Object.assign(TECH, {
   bwsquat: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pies al ancho de hombros, brazos al frente.", "Baja 3 s como si te sentaras en una silla baja.", "Sube empujando el piso con todo el pie."], cues: ["Rodillas siguen las puntas", "Pecho arriba"], err: ["Talones se despegan"], mono: "Coach Banana se sienta en una silla <b>invisible</b>." },
-  bulgarian: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Pie de atrás apoyado en una silla o sofá.", "Baja recto hasta que la rodilla de atrás casi toque el piso.", "Sube con la pierna de adelante. Cambia de lado."], cues: ["Torso alto", "Peso en el pie de adelante"], err: ["Rodilla de adelante hacia adentro"], mono: "Coach Banana sube la escalera <b>una pierna a la vez</b>." },
-  pikepush: { anim: "pushup", mus: "Hombros, tríceps", how: ["Manos al piso y cadera arriba en forma de V invertida.", "Baja la cabeza hacia el piso entre las manos.", "Empuja de vuelta arriba."], cues: ["Cadera alta", "Codos hacia atrás"], err: ["Cadera baja (se vuelve flexión normal)"], mono: "Coach Banana hace de <b>techo de casita</b>." },
-  slrdl: { anim: "rdl_bw", mus: "Femorales, glúteos, equilibrio", how: ["De pie en una pierna, rodilla apenas doblada.", "Lleva la cadera atrás y la otra pierna estirada hacia atrás.", "Vuelve apretando glúteo. Cambia de lado."], cues: ["Cadera cuadrada al piso"], err: ["Girar la cadera"], mono: "Coach Banana es <b>un avión</b> que despega lento." },
-  glutebridge: { anim: "plank", mus: "Glúteos, femorales", how: ["Boca arriba, rodillas dobladas, pies al ancho de cadera.", "Sube la cadera apretando glúteos 2 s arriba.", "Baja lento sin tocar del todo el piso."], cues: ["Aprieta glúteo arriba", "Costillas abajo"], err: ["Arquear la espalda baja"], mono: "Coach Banana hace <b>puente</b> para que pasen los carros." },
-  towelcurl: { anim: "curl_bw", mus: "Bíceps", how: ["Pisa el centro de una toalla y agarra las puntas.", "Tira hacia arriba con todas tus fuerzas sin mover el pie.", "Aguanta el tiempo indicado y respira."], cues: ["Codos pegados al cuerpo"], err: ["Contener la respiración"], mono: "Coach Banana jala la cuerda del <b>tesoro escondido</b>." },
-  ytw: { anim: "lateral", mus: "Hombro posterior, espalda alta", how: ["Boca abajo en el piso, frente en una toalla.", "Sube los brazos en Y, luego T, luego W.", "Pausa 1 s arriba en cada letra."], cues: ["Pulgares al techo", "Escápulas juntas"], err: ["Levantar el pecho del piso"], mono: "Coach Banana escribe <b>YTW</b> en el aire." },
-  bearcrawl: { anim: "plank", mus: "Core, hombros", how: ["En cuatro apoyos con rodillas a 2 cm del piso.", "Avanza mano y pie contrario a la vez.", "Espalda plana como una mesa."], cues: ["Rodillas bajitas", "Espalda plana"], err: ["Cadera muy alta"], mono: "Coach Banana gatea <b>sin hacer ruido</b>." },
+  bulgarian: { anim: "bulgarian", mus: "Cuádriceps, glúteos", how: ["Pie de atrás apoyado en una silla o sofá.", "Baja recto hasta que la rodilla de atrás casi toque el piso.", "Sube con la pierna de adelante. Cambia de lado."], cues: ["Torso alto", "Peso en el pie de adelante"], err: ["Rodilla de adelante hacia adentro"], mono: "Coach Banana sube la escalera <b>una pierna a la vez</b>." },
+  pikepush: { anim: "pikepush", mus: "Hombros, tríceps", how: ["Manos al piso y cadera arriba en forma de V invertida.", "Baja la cabeza hacia el piso entre las manos.", "Empuja de vuelta arriba."], cues: ["Cadera alta", "Codos hacia atrás"], err: ["Cadera baja (se vuelve flexión normal)"], mono: "Coach Banana hace de <b>techo de casita</b>." },
+  slrdl: { anim: "slrdl", mus: "Femorales, glúteos, equilibrio", how: ["De pie en una pierna, rodilla apenas doblada.", "Lleva la cadera atrás y la otra pierna estirada hacia atrás.", "Vuelve apretando glúteo. Cambia de lado."], cues: ["Cadera cuadrada al piso"], err: ["Girar la cadera"], mono: "Coach Banana es <b>un avión</b> que despega lento." },
+  glutebridge: { anim: "glutebridge", mus: "Glúteos, femorales", how: ["Boca arriba, rodillas dobladas, pies al ancho de cadera.", "Sube la cadera apretando glúteos 2 s arriba.", "Baja lento sin tocar del todo el piso."], cues: ["Aprieta glúteo arriba", "Costillas abajo"], err: ["Arquear la espalda baja"], mono: "Coach Banana hace <b>puente</b> para que pasen los carros." },
+  towelcurl: { anim: "towelcurl", mus: "Bíceps", how: ["Pisa el centro de una toalla y agarra las puntas.", "Tira hacia arriba con todas tus fuerzas sin mover el pie.", "Aguanta el tiempo indicado y respira."], cues: ["Codos pegados al cuerpo"], err: ["Contener la respiración"], mono: "Coach Banana jala la cuerda del <b>tesoro escondido</b>." },
+  ytw: { anim: "ytw", mus: "Hombro posterior, espalda alta", how: ["Boca abajo en el piso, frente en una toalla.", "Sube los brazos en Y, luego T, luego W.", "Pausa 1 s arriba en cada letra."], cues: ["Pulgares al techo", "Escápulas juntas"], err: ["Levantar el pecho del piso"], mono: "Coach Banana escribe <b>YTW</b> en el aire." },
+  bearcrawl: { anim: "bearcrawl", mus: "Core, hombros", how: ["En cuatro apoyos con rodillas a 2 cm del piso.", "Avanza mano y pie contrario a la vez.", "Espalda plana como una mesa."], cues: ["Rodillas bajitas", "Espalda plana"], err: ["Cadera muy alta"], mono: "Coach Banana gatea <b>sin hacer ruido</b>." },
   jumpsquat: { anim: "jump_bw", mus: "Piernas, potencia", how: ["Baja a media sentadilla.", "Salta explosivo estirando todo el cuerpo.", "Aterriza suave y encadena."], cues: ["Aterriza suave"], err: ["Aterrizar con rodillas rectas"], mono: "Coach Banana salta a <b>la rama de arriba</b>." },
   burpee: { anim: "burpee", mus: "Cuerpo completo", how: ["Manos al piso, salta los pies atrás a plancha.", "Pecho al piso, empuja arriba.", "Pies a las manos y salta con brazos arriba."], cues: ["Ritmo constante"], err: ["Espalda caída en la plancha"], mono: "Coach Banana <b>cae y se levanta</b>, una y otra vez." },
   mountain: { anim: "mountain", mus: "Core, cardio", how: ["Posición de plancha alta.", "Lleva una rodilla al pecho y cambia rápido.", "Cadera baja todo el tiempo."], cues: ["Hombros sobre las manos"], err: ["Cadera rebotando"], mono: "Coach Banana <b>escala la montaña</b> sin moverse de lugar." },
-  lunge: { anim: "squat_bw", mus: "Cuádriceps, glúteos", how: ["Da un paso largo al frente.", "Baja hasta que ambas rodillas formen 90°.", "Empuja de vuelta y alterna."], cues: ["Torso alto"], err: ["Rodilla pasa mucho la punta"], mono: "Coach Banana da <b>pasos de gigante</b>." },
-  jacks: { anim: "lateral", mus: "Cardio", how: ["Salta abriendo piernas y brazos arriba.", "Vuelve a cerrar.", "Ritmo cómodo y constante."], cues: ["Respira por la nariz"], err: ["Aterrizar con talones"], mono: "Coach Banana hace <b>estrellitas</b>." },
+  lunge: { anim: "lunge", mus: "Cuádriceps, glúteos", how: ["Da un paso largo al frente.", "Baja hasta que ambas rodillas formen 90°.", "Empuja de vuelta y alterna."], cues: ["Torso alto"], err: ["Rodilla pasa mucho la punta"], mono: "Coach Banana da <b>pasos de gigante</b>." },
+  jacks: { anim: "jacks", mus: "Cardio", how: ["Salta abriendo piernas y brazos arriba.", "Vuelve a cerrar.", "Ritmo cómodo y constante."], cues: ["Respira por la nariz"], err: ["Aterrizar con talones"], mono: "Coach Banana hace <b>estrellitas</b>." },
 });

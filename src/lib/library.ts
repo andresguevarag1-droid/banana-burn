@@ -149,28 +149,39 @@ const STRENGTH = new Set(["squat", "lunge", "hinge", "vpull", "hpull", "vpush", 
 export const isStrength = (e: LibEx) => STRENGTH.has(patternOf(e.en)) && !/jump|plyo|burpee|sprint|skip|hop|stretch|hold/i.test(e.en);
 
 /**
- * Animación del mono que representa bien el patrón del ejercicio (null si ninguna se parece lo suficiente).
- * Sirve de referencia visual cuando el ejercicio no tiene video propio.
+ * Animación del mono para un registro de la biblioteca: SOLO si la hoja muestra exactamente ese movimiento (mismo
+ * ejercicio, mismo implemento y misma posición). Lista cerrada y revisada a mano, por id del dataset: antes se elegía
+ * por patrón del nombre y un "remo invertido" mostraba un remo con barra o un press con mancuernas un press militar.
+ * Lo que no está aquí no muestra animación (la interfaz usa el respaldo quieto con los pasos escritos).
  */
-export function animFor(e: LibEx): string | null {
-  const t = e.en.toLowerCase(), eq = e.eq, bw = eq === "body weight";
-  if (/burpee/.test(t)) return "burpee";
-  if (/mountain climber/.test(t)) return "mountain";
-  if (/jump squat|squat jump/.test(t)) return "jump_bw";
-  if (/farmer|suitcase carry|\bcarry\b/.test(t)) return "carry";
-  if (/\bplank\b/.test(t) && !/jack|walk|reach|rotation|side/.test(t)) return "plank";
-  if (/hanging (knee|leg) raise|captains chair|vertical leg raise/.test(t)) return "kneeraise";
-  switch (patternOf(e.en)) {
-    case "squat": if (/leg press|hack|wall sit|step|box|pistol|sissy/.test(t)) return null; return bw ? "squat_bw" : /front|goblet|dumbbell|kettlebell/.test(t) ? "frontsquat" : "squat";
-    case "hinge": return /romanian|stiff|good morning|single leg deadlift/.test(t) ? (bw ? "rdl_bw" : "rdl") : /deadlift/.test(t) && !/sumo|deficit|trap bar/.test(t) ? "deadlift" : null;
-    case "vpull": return /pull-?up|chin-?up|pulldown|pull down/.test(t) && !/muscle up|behind/.test(t) ? "pullup" : null;
-    case "hpull": return /face pull|rear delt/.test(t) ? "facepull" : /\brow\b|rows\b|inverted/.test(t) && !/upright|high row|kneeling/.test(t) ? (eq === "dumbbell" ? "dbrow" : "row") : null;
-    case "vpush": return /pike|handstand|behind|jerk|arnold/.test(t) ? null : eq === "dumbbell" ? "dbpress" : eq === "barbell" || eq === "smith machine" ? "ohp" : null;
-    case "hpush": return /push-?up/.test(t) ? (/(wall|knee|bosu|stability|clap|archer|one arm)/.test(t) ? null : "pushup") : /\bdips?\b/.test(t) ? (/bench/.test(t) ? null : "dips") : /incline/.test(t) && /bench press|press/.test(t) ? "incline" : /bench press/.test(t) && !/decline|reverse|jm/.test(t) ? (eq === "dumbbell" ? "dbpress" : "bench") : null;
-    case "curl": return /leg curl|wrist|reverse|spider|preacher|concentration/.test(t) ? null : bw ? "curl_bw" : "curl";
-    case "raise": return /lateral raise/.test(t) && !/rear|lying|incline|front/.test(t) ? "lateral" : null;
-    default: return null;
-  }
+export const LIB_ANIM: Readonly<Record<string, string>> = {
+  // Sentadillas
+  "0043": "squat", "1461": "squat", "1462": "squat", "1436": "squat", "1435": "squat",
+  "0042": "frontsquat", "0029": "frontsquat", "1760": "goblet",
+  "0514": "jump_bw", "0513": "jump_bw", "3470": "lunge",
+  "0739": "legpress", "1463": "legpress", "1464": "legpress",
+  // Empujes
+  "0025": "bench", "0030": "bench", "0314": "incline", "1457": "ohp", "0426": "dbpress",
+  "0251": "dips", "0662": "pushup", "0283": "pushupd", "0279": "pushupe",
+  // Bisagra y glúteo
+  "0032": "deadlift", "0085": "rdl", "1459": "dbrdl", "3013": "glutebridge", "1409": "hipthrust", "0586": "legcurl",
+  // Tirones
+  "0652": "pullup", "1326": "pullup", "0651": "pullup", "2330": "lat", "0198": "lat",
+  "0027": "row", "0292": "dbrow", "0499": "invrow", "0497": "invrow", "0861": "cablerow",
+  "0378": "reardelt", "0383": "reardelt", "0380": "reardelt", "2292": "reardelt",
+  // Brazos y hombros
+  "0031": "curl", "0313": "curl_bw", "0312": "curl_bw", "0334": "lateral", "0178": "lateralc", "0192": "lateralc",
+  // Core, acarreos y cardio
+  "0472": "legraise", "0475": "legraise", "3699": "planktap", "2133": "carry", "3360": "bearcrawl",
+  "1160": "burpee", "0630": "mountain",
+  // Programas
+  "0628": "monsterwalk", "0276": "deadbug", "0705": "sideplank", "0710": "sideabd", "0201": "pushdown",
+  "0381": "dbrearlunge", "0431": "stepup", "0597": "abductor", "0333": "kickback", "0430": "ohext", "0372": "preacher",
+  "0194": "cableohext", "0318": "inclinecurl", "0687": "russiantwist", "0872": "revcrunch",
+  "0175": "cablecrunch", "0274": "crunch", "1757": "dbslrdl", "0459": "flutter", "0688": "scappull", "0970": "bandpullup", "1774": "sideplankabd", "0228": "cablehipext", "3561": "bridgemarch",
+};
+export function animFor(e: Pick<LibEx, "id">): string | null {
+  return LIB_ANIM[e.id] ?? null;
 }
 
 /** Variantes de la biblioteca para un ejercicio del motor: mismo patrón de movimiento y músculo, equipo disponible. */

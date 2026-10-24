@@ -6,6 +6,7 @@ import { dashboard, getAthlete } from "@/lib/athlete";
 import { BODY, DS_ID, EQUIP, MUSCLE, animFor, es, getLibEx, isStrength, mediaUrl, patternOf, similar } from "@/lib/library";
 import { TECH } from "@/lib/engine/technique";
 import { ExerciseMotion } from "@/components/exercise-motion";
+import { sheetFor } from "@/lib/exercise-frames";
 import { RichTip } from "@/components/rich-tip";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Barbell, Check, Monkey } from "@/components/icons";
 import { getVoice } from "@/lib/voice-server";
@@ -24,8 +25,10 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
   const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
   const ours = Object.entries(DS_ID).find(([, d]) => d === id)?.[0];
   const tech = ours ? TECH[ours] : null;
+  // Animación del motor solo si es la de este movimiento (con hoja revisada); si no, la del registro o ninguna.
+  const techAnim = tech?.anim && sheetFor(tech.anim) ? tech.anim : null;
   const gif = mediaUrl(e);
-  const anim = gif || tech ? null : animFor(e);
+  const anim = gif || techAnim ? null : animFor(e);
   const alts = similar(e, a.equipment);
 
   // ¿Este ejercicio está hoy en tu rutina, o puede reemplazar uno de hoy (mismo patrón de movimiento)?
@@ -67,8 +70,8 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
           <img src={gif} alt={`Demostración: ${e.n}`} width={180} height={180} className="mx-auto rounded-2xl bg-white" />
           <p className="mt-2 text-center text-[11px] text-ink/70">© Gym visual (gymvisual.com)</p>
         </div>
-      ) : tech ? (
-        <div className="rounded-[1.75rem] bg-banana p-4"><div className="rounded-2xl bg-white/75 px-4 pt-6 pb-2"><ExerciseMotion anim={tech.anim} mus={tech.mus} cues={tech.cues} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div></div>
+      ) : tech && techAnim ? (
+        <div className="rounded-[1.75rem] bg-banana p-4"><div className="rounded-2xl bg-white/75 px-4 pt-6 pb-2"><ExerciseMotion anim={techAnim} mus={tech.mus} cues={tech.cues} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div></div>
       ) : anim ? (
         <div className="rounded-[1.75rem] bg-banana p-4">
           <div className="rounded-2xl bg-white/75 px-4 pt-6 pb-2"><ExerciseMotion anim={anim} mus={es(MUSCLE, e.t)} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div>
