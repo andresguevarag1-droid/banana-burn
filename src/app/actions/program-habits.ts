@@ -7,10 +7,12 @@ import { getActiveProgram } from "@/lib/programs-server";
 import { APP_LOCKED_MSG } from "@/lib/plan-access";
 import { HABIT_KEY } from "@/lib/programs";
 import { todayFor } from "@/lib/today";
+import { limitError } from "@/lib/security/limits";
 
 export async function toggleProgramHabit(key: string, on: boolean): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false };
+  { const lim = v.demo ? null : await limitError("registro", v.id); if (lim) return { ok: false, error: lim }; }
   if (typeof key !== "string" || !HABIT_KEY.test(key)) return { ok: false };
   const ent = await getEntitlements(v);
   if (!ent.app) return { ok: false, error: APP_LOCKED_MSG };

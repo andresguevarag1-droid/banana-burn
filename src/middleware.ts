@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env";
 import { safeNext } from "@/lib/security/redirect";
 import { PRIVATE_NO_STORE, WALL_PATH, gateAction, needsAccessCheck } from "@/lib/access-gate";
+import { burstLimiter, clientIpFrom } from "@/lib/security/ip";
 
 /** Estado de ejemplo de la tarjeta en modo demo (solo sin Supabase). */
 const DEMO_CARD_COOKIE = "bb_demo_tarjeta";
@@ -17,6 +18,22 @@ const DEMO_PARAMS: [string, string, RegExp][] = [
   ["persona", "bb_demo_persona", /^(chica|chico|auto)$/],
 ];
 
+/**
+ * Freno grueso de ráfagas por IP (memoria de cada instancia del middleware, sin consultar la base): solo corta lo que
+ * ningún humano hace (por defecto más de 900 peticiones por minuto desde una IP). Holgado a propósito: en datos móviles
+ * de Latinoamérica muchas personas comparten IP (CGNAT). MW_BURST_MAX=0 lo apaga. Los límites finos por persona viven
+ * en cada ruta y acción (src/lib/security/limits.ts) y en la base. Webhook de pagos y cron nunca pasan por aquí.
+ */
+const BURST_MAX = (() => { const n = Number(process.env.MW_BURST_MAX ?? 900); return Number.isFinite(n) && n >= 0 ? n : 900; })();
+const burst = burstLimiter(BURST_MAX, 60_000);
+const EXEMPT = /^\/api\/(pagos\/webhook|cron\/)/;
+
+function tooFast(retryAfter: number) {
+  return new NextResponse(JSON.stringify({ ok: false, error: "Demasiadas solicitudes seguidas. Espera un momento e intenta de nuevo." }), {
+    status: 429, headers: { "Content-Type": "application/json; charset=utf-8", "Retry-After": String(retryAfter), "Cache-Control": PRIVATE_NO_STORE },
+  });
+}
+
 /** Lo privado nunca queda en cachés compartidas (CDN, proxies) ni en el disco del navegador. */
 function noStore(res: NextResponse) {
   res.headers.set("Cache-Control", PRIVATE_NO_STORE);
@@ -24,6 +41,13 @@ function noStore(res: NextResponse) {
 }
 
 export async function middleware(req: NextRequest) {
+  const p0 = req.nextUrl.pathname;
+  if (BURST_MAX > 0 && !EXEMPT.test(p0)) {
+    const r = burst(clientIpFrom(req.headers));
+    if (!r.ok) return tooFast(r.retryAfter);
+  }
+  // /api y /og: solo el freno de arriba (cada ruta valida su sesión y su cache; next.config pone no-store en /api).
+  if (p0.startsWith("/api/") || p0 === "/og") return NextResponse.next();
   if (!isSupabaseConfigured) {
     // Modo demo: ?demo=<estado> en Mi plan elige el estado de ejemplo de la tarjeta y del cobro (trial-demo.ts) para toda la app.
     // ?lenguaje=basico|intermedio|tecnico elige el registro de ejemplo ("Cómo te hablo") desde esta misma página.
@@ -55,7 +79,11 @@ export async function middleware(req: NextRequest) {
       },
     },
   });
-  const { data: { user } } = await sb.auth.getUser();
+  // getClaims: con llaves de firma asimétricas (Supabase → JWT Keys) verifica el token aquí, sin una llamada a Auth en
+  // cada navegación; con la llave antigua (HS256) hace lo mismo que getUser. Refresca la sesión vencida igual que antes.
+  // Las páginas siguen validando con getUser (getViewer) y la RLS valida el token en cada consulta.
+  const { data: claims } = await sb.auth.getClaims();
+  const user = claims?.claims?.sub ? claims.claims : null;
   const path = req.nextUrl.pathname;
   const isPrivate = path.startsWith("/app") || path.startsWith("/admin") || path.startsWith("/bienvenida");
   if (isPrivate && !user) {
@@ -90,4 +118,4 @@ export async function middleware(req: NextRequest) {
   return noStore(res);
 }
 
-export const config = { matcher: ["/app/:path*", "/admin/:path*", "/bienvenida", "/entrar", "/registro", "/pago/:path*"] };
+export const config = { matcher: ["/app/:path*", "/admin/:path*", "/bienvenida", "/entrar", "/registro", "/pago/:path*", "/api/:path*", "/og"] };

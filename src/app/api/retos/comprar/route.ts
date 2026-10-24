@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (v.demo) return NextResponse.json({ ok: false, demo: true, error: "Modo demo: aquí no se cobra. En la app real pagas con tarjeta en USD." }, { status: 409 });
   // Cada intento crea un cobro en ONVO: límite en memoria (por instancia) y en la base (compartido, 0023).
   if (!memoryRateLimit(`reto-compra:${v.id}`, 10, 10 * 60_000) || !(await dbRateLimit(adminClient(), `reto-compra:${v.id}`, 3600, 20)))
-    return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
+    return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429, headers: { "Retry-After": "600" } });
   try {
     const { url } = await singleFlight(`reto-compra:${v.id}:${slug}`, () => startChallengeCheckout(v, slug));
     return NextResponse.json({ ok: true, url });

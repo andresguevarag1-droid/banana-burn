@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const okDb = action === "guardar"
     ? await dbRateLimitAll(db, [{ key: `tarjeta:guardar:${v.id}`, windowSec: 3600, max: 10 }, { key: `tarjeta:guardar:dia:${v.id}`, windowSec: 86400, max: 25 }])
     : await dbRateLimit(db, `tarjeta:${action}:${v.id}`, 3600, 20);
-  if (!okMem || !okDb) return NextResponse.json({ ok: false, error: "Demasiados intentos con tarjetas. Espera un rato e intenta de nuevo." }, { status: 429 });
+  if (!okMem || !okDb) return NextResponse.json({ ok: false, error: "Demasiados intentos con tarjetas. Espera un rato e intenta de nuevo." }, { status: 429, headers: { "Retry-After": "600" } });
 
   try {
     if (action === "preparar") {

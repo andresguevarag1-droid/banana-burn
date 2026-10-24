@@ -5,12 +5,15 @@ import { canSee, isStaff } from "@/lib/admin-perms";
 import { exportSubscriptions } from "@/lib/admin";
 import { subsCsv, subFiltersFrom } from "@/lib/admin-csv";
 import { crToday } from "@/lib/today";
+import { hitLimit, tooManyText } from "@/lib/security/limits";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const v = await getAdminViewer();
   if (!v || !isStaff(v.role) || !canSee(v.role, "pagos")) return new NextResponse("Sin permiso", { status: 403 });
+  // Exportación completa (sin paginar): cuenta como acción masiva del panel.
+  if (!v.demo) { const lim = await hitLimit("admin:masivo", v.id); if (!lim.ok) return tooManyText(lim); }
   const f = subFiltersFrom(Object.fromEntries(req.nextUrl.searchParams));
   const rows = await exportSubscriptions(v, f);
   return new NextResponse(subsCsv(rows), {

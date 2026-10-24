@@ -1,6 +1,7 @@
 import { adminClient } from "@/lib/supabase/admin";
 import { RESUB_MAX_AGE_MS, UNSUB_MAX_AGE_MS, unsubSecret, verifyUnsubToken, type UnsubScope } from "@/lib/email/token";
 import { esc } from "@/lib/email/templates";
+import { clientIp, memoryRateLimit } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,13 +39,18 @@ function page(title: string, body: string, status = 200) {
 <div style="margin-top:22px;padding:14px 16px;background:#FFFBF0;border:1px solid #EDE3C6;border-radius:18px;display:flex;gap:12px;align-items:center;"><img src="/email/coach.png" width="44" height="44" alt="Coach Banana" style="width:44px;height:44px;border-radius:22px;"><span style="font-size:14px;line-height:1.5;">Tu plan sigue igual. Aquí te espero cuando quieras entrenar.<br><b style="color:#8A6200;font-size:12px;letter-spacing:.14em;text-transform:uppercase;">Coach Banana</b></span></div></div></div>
 <p style="text-align:center;font-size:13px;color:#8C8169;margin-top:18px;"><a href="/app/perfil#notificaciones" style="color:#6A604B;">Ajustar todos mis avisos</a></p>
 </main></body></html>`;
-  return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+  return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", ...(status === 429 ? { "Retry-After": "60" } : {}) } });
 }
+
+/** Ruta pública: freno por IP (por instancia) antes de verificar la firma y escribir en la base. */
+const tooFast = (req: Request) => !memoryRateLimit(`baja:${clientIp(req)}`, 30, 60_000);
+const slowDown = () => page("Espera un momento", `<p style="line-height:1.6;">Recibimos muchos intentos seguidos. Espera un minuto y vuelve a abrir el enlace.</p>`, 429);
 
 const invalid = () => page("Enlace no válido", `<p style="line-height:1.6;">Este enlace de baja no es válido o está incompleto. Puedes ajustar tus correos desde tu perfil en Banana Burn.</p>`, 400);
 
 /** Baja con un clic desde el enlace del correo: ?token=… firmado con EMAIL_UNSUB_SECRET. */
 export async function GET(req: Request) {
+  if (tooFast(req)) return slowDown();
   const token = new URL(req.url).searchParams.get("token");
   const t = verifyUnsubToken(token, unsubSecret(), { maxAgeMs: UNSUB_MAX_AGE_MS });
   if (!t) return invalid();
@@ -57,6 +63,7 @@ ${t.issuedAt !== null && Date.now() - t.issuedAt <= RESUB_MAX_AGE_MS ? `<form me
 
 /** RFC 8058 (List-Unsubscribe-Post: One-Click) y botón "volver a suscribirme". */
 export async function POST(req: Request) {
+  if (tooFast(req)) return slowDown();
   const token = new URL(req.url).searchParams.get("token");
   const form = await req.formData().catch(() => null);
   const resubscribe = form?.get("accion") === "volver";

@@ -8,6 +8,7 @@ import { isPostTag, type PostTag } from "@/lib/community-view";
 import { todayFor } from "@/lib/today";
 import { isUuid } from "@/lib/security";
 import { validateUsername } from "@/lib/username";
+import { limitError } from "@/lib/security/limits";
 
 const clean = (s: unknown, n: number) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 /** Texto de una publicación: conserva saltos de línea (máx. 2 seguidos), sin espacios repetidos. */
@@ -29,6 +30,9 @@ async function canWrite(): Promise<{ ok: true; v: NonNullable<Awaited<ReturnType
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
   if (v.demo) return { ok: true, v };
+  // Publicar y comentar tienen tope por tabla en la base (0012); este freno corta antes, sin las lecturas de abajo.
+  const lim = await limitError("comunidad:escribir", v.id);
+  if (lim) return { ok: false, error: lim };
   const [ent, me] = await Promise.all([getEntitlements(v), getCommunityMe(v)]);
   if (!ent.app) return { ok: false, error: "Tu plan no incluye la comunidad ahora mismo. Revisa tu suscripción." };
   if (me.suspended) return { ok: false, error: "Tu cuenta no puede publicar ni comentar por ahora. Si crees que es un error, escríbenos a hola@bananaburn.app." };
@@ -92,6 +96,7 @@ export async function toggleKudo(postId: string, on: boolean): Promise<Res> {
   if (v?.demo) return { ok: true };
   const pid = postIdOf(postId);
   if (!v || pid === null) return { ok: false, error: "No pudimos guardar tu banana." };
+  { const lim = v.demo ? null : await limitError("comunidad:like", v.id); if (lim) return { ok: false, error: lim }; }
   if (!(await getEntitlements(v)).app) return { ok: false, error: APP_LOCKED_MSG };
   const sb = await createClient();
   const r = on ? await sb.from("kudos").upsert({ post_id: pid, user_id: v.id }, { onConflict: "post_id,user_id", ignoreDuplicates: true }) : await sb.from("kudos").delete().eq("post_id", pid).eq("user_id", v.id);
@@ -117,6 +122,7 @@ export async function getComments(postId: string): Promise<{ ok: boolean; commen
   const v = await getViewer();
   if (!v || typeof postId !== "string" || postId.length > 30) return { ok: false, comments: [] };
   if (!v.demo && postIdOf(postId) === null) return { ok: false, comments: [] };
+  { const lim = v.demo ? null : await limitError("comunidad:leer", v.id); if (lim) return { ok: false, comments: [] }; }
   // Leer la comunidad es parte del plan: sin plan ni prueba no se devuelven comentarios de nadie.
   if (!(await getEntitlements(v)).app) return { ok: false, comments: [] };
   return { ok: true, comments: await loadComments(v, postId) };
@@ -126,6 +132,7 @@ export async function deleteComment(commentId: string): Promise<Res> {
   const v = await getViewer();
   const id = postIdOf(commentId);
   if (!v) return { ok: false, error: "Tu sesión expiró." };
+  { const lim = v.demo ? null : await limitError("comunidad:escribir", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true };
   if (id === null) return { ok: false, error: "No pudimos borrar el comentario." };
   const sb = await createClient();
@@ -139,6 +146,7 @@ export async function deletePost(postId: string): Promise<Res> {
   const v = await getViewer();
   const pid = postIdOf(postId);
   if (!v) return { ok: false, error: "Tu sesión expiró." };
+  { const lim = v.demo ? null : await limitError("comunidad:escribir", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true };
   if (pid === null) return { ok: false, error: "No pudimos borrar la publicación." };
   const sb = await createClient();
@@ -151,6 +159,7 @@ export async function deletePost(postId: string): Promise<Res> {
 export async function setFollow(userId: string, on: boolean): Promise<Res> {
   const v = await getViewer();
   if (!v || userId === v.id) return { ok: false, error: "No pudimos actualizar a quién sigues." };
+  { const lim = v.demo ? null : await limitError("comunidad:seguir", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true };
   if (!isUuid(userId)) return { ok: false, error: "No pudimos actualizar a quién sigues." };
   if (!(await getEntitlements(v)).app) return { ok: false, error: APP_LOCKED_MSG };
@@ -172,6 +181,7 @@ export async function report(targetType: "post" | "comment" | "user", targetId: 
   void _excerpt;
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró." };
+  { const lim = v.demo ? null : await limitError("comunidad:escribir", v.id); if (lim) return { ok: false, error: lim }; }
   if (!["post", "comment", "user"].includes(targetType)) return { ok: false };
   if (v.demo) return { ok: true };
   const sb = await createClient();
@@ -198,6 +208,7 @@ export async function report(targetType: "post" | "comment" | "user", targetId: 
 export async function saveCommunityProfile(input: { username: string; bio: string; visibility: "publico" | "seguidores" | "privado"; share: boolean }) {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("comunidad:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   const u = validateUsername(input?.username);
   if (!u.ok) return { ok: false, error: u.error };
   const username = u.username;

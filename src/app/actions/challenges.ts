@@ -7,6 +7,7 @@ import { APP_LOCKED_MSG } from "@/lib/plan-access";
 import { MAX_ACTIVE, openState } from "@/lib/challenges";
 import { NUTRITION_LOCKED_MSG, challengeNeedsNutrition } from "@/lib/plan-access";
 import { closeDecidedChallenges, creditChallenges, getCatalog, getOwned } from "@/lib/challenges-server";
+import { limitError } from "@/lib/security/limits";
 
 export type JoinResult = { ok: boolean; demo?: boolean; error?: string };
 
@@ -26,6 +27,7 @@ function joinError(e: { code?: string; message?: string } | null): string {
 export async function joinChallenge(id: string): Promise<JoinResult> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("retos", v.id); if (lim) return { ok: false, error: lim }; }
   if (typeof id !== "string" || id.length > 60) return { ok: false, error: "Ese reto ya no está disponible." };
   const catalog = await getCatalog(v.demo);
   const c = catalog.get(id);
@@ -54,6 +56,7 @@ export async function joinChallenge(id: string): Promise<JoinResult> {
 export async function checkInChallenge(ucId: string): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("retos", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true, demo: true };
   if (!(await getEntitlements(v)).app) return { ok: false, error: APP_LOCKED_MSG };
   const n = Number(ucId);
@@ -75,6 +78,7 @@ export async function checkInChallenge(ucId: string): Promise<{ ok: boolean; dem
 export async function leaveChallenge(ucId: string): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("retos", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true };
   const n = Number(ucId);
   if (!Number.isSafeInteger(n) || n <= 0) return { ok: false };

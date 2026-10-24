@@ -5,6 +5,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { DEFAULT_PREFS, cronModeFrom, isHHMM, isValidTimeZone, type Prefs } from "@/lib/notify";
 import { isEmailConfigured } from "@/lib/email/send";
 import { isPushConfigured, sendPush, type PushSub } from "@/lib/push";
+import { limitError } from "@/lib/security/limits";
 
 export type InAppNotification = { id: number; kind: string; title: string; body: string | null; url: string | null; read_at: string | null; created_at: string };
 
@@ -31,6 +32,7 @@ export async function getNotificationPrefs(): Promise<NotificationPrefsData> {
 export async function saveNotificationPrefs(input: Partial<Prefs>): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("registro", v.id); if (lim) return { ok: false, error: lim }; }
   const row: Record<string, unknown> = {};
   for (const k of ["email_reminders", "push_reminders", "weekly_summary", "marketing"] as const) if (typeof input[k] === "boolean") row[k] = input[k];
   if (input.reminder_time !== undefined) { if (!isHHMM(input.reminder_time)) return { ok: false, error: "Hora inválida." }; row.reminder_time = input.reminder_time; }

@@ -7,10 +7,12 @@ import { todayFor } from "@/lib/today";
 import { cookies } from "next/headers";
 import { isVoice } from "@/lib/voice";
 import { DEMO_VOICE_COOKIE } from "@/lib/voice-server";
+import { limitError } from "@/lib/security/limits";
 
 export async function updateTraining(input: { days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; mode: "acelerada" | "recomp" | "fuerza"; level: "principiante" | "intermedio" | "avanzado"; minutes: number | null }) {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   if (![3, 4, 5, 6].includes(input.days) || !["gym", "casa", "mixto", "ninguno"].includes(input.equipment) || !["acelerada", "recomp", "fuerza"].includes(input.mode) || !["principiante", "intermedio", "avanzado"].includes(input.level) || (input.minutes != null && ![15, 20, 30, 45, 60].includes(input.minutes))) return { ok: false, error: "Datos inválidos." };
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
@@ -25,6 +27,7 @@ export async function updateTraining(input: { days: number; equipment: "gym" | "
 export async function updateVoice(voice: unknown): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   if (!isVoice(voice)) return { ok: false, error: "Elige una de las tres opciones." };
   if (v.demo) {
     (await cookies()).set(DEMO_VOICE_COOKIE, voice, { path: "/", sameSite: "lax", maxAge: 3600 });
@@ -40,6 +43,7 @@ export async function updateVoice(voice: unknown): Promise<{ ok: boolean; demo?:
 export async function updateGlp1(input: { on: boolean; med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; dow: number | null }) {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Inicia sesión." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   if (!["semaglutida", "tirzepatida", "liraglutida", "otro"].includes(input.med) || (input.dow != null && !(input.dow >= 0 && input.dow <= 6))) return { ok: false, error: "Datos inválidos." };
   if (v.demo) return { ok: true, demo: true };
   if (input.on && !(await getEntitlements(v)).nutrition) return { ok: false, error: "Banana Shield está incluido en Entreno + Nutrición." };
@@ -61,6 +65,7 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
 export async function updateName(name: string): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
   const full = String(name ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
   if (full.length < 2) return { ok: false, error: "Escribe tu nombre (mínimo 2 letras)." };
   if (v.demo) return { ok: true, demo: true };
@@ -75,6 +80,7 @@ export async function updateName(name: string): Promise<{ ok: boolean; demo?: bo
 export async function requestEmailChange(email: string): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:correo", v.id); if (lim) return { ok: false, error: lim }; }
   const next = String(email ?? "").trim().toLowerCase();
   if (!EMAIL.test(next) || next.length > 254) return { ok: false, error: "Ese correo no parece válido." };
   if (next === v.email.toLowerCase()) return { ok: false, error: "Ese ya es tu correo." };
@@ -89,6 +95,7 @@ export async function requestEmailChange(email: string): Promise<{ ok: boolean; 
 export async function sendPasswordLink(): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:enlace-clave", v.id); if (lim) return { ok: false, error: lim }; }
   if (v.demo) return { ok: true, demo: true };
   const sb = await createClient();
   const { error } = await sb.auth.resetPasswordForEmail(v.email, { redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent("/app/perfil?clave=nueva#cuenta")}` });
@@ -100,6 +107,7 @@ export async function sendPasswordLink(): Promise<{ ok: boolean; demo?: boolean;
 export async function setNewPassword(password: string): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
   const v = await getViewer();
   if (!v) return { ok: false, error: "Tu sesión expiró. Pide un enlace nuevo." };
+  { const lim = v.demo ? null : await limitError("cuenta:clave", v.id); if (lim) return { ok: false, error: lim }; }
   const pw = String(password ?? "");
   if (pw.length < 8 || pw.length > 72 || !/[a-zA-Z]/.test(pw) || !/\d/.test(pw)) return { ok: false, error: "Usa al menos 8 caracteres, con letras y números." };
   if (v.demo) return { ok: true, demo: true };

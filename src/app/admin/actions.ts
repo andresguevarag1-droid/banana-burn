@@ -9,6 +9,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { deleteAccountData } from "@/lib/admin-account";
 import { createClient, type Role, type Viewer } from "@/lib/supabase/server";
 import { authorize, DEMO_ROLE_COOKIE, getAdminViewer } from "@/lib/admin-auth";
+import { limitError } from "@/lib/security/limits";
 import { checkRoleChange, ROLES, STAFF_ROLES, type Capability } from "@/lib/admin-perms";
 import * as val from "@/lib/admin-validate";
 import { ValidationError } from "@/lib/admin-validate";
@@ -208,6 +209,8 @@ export async function deleteFood(_: ActionState, fd: FormData): Promise<ActionSt
 export async function seedFoods(_: ActionState, fd: FormData): Promise<ActionState> {
   return run("content.foods", fd, async ({ v, sb }) => {
     if (!sb) return ok(`Se cargarían ${FOODS.length} alimentos${DEMO_MSG}`);
+    const lim = await limitError("admin:masivo", v.id);
+    if (lim) return fail(lim);
     const { count } = await sb.from("foods").select("*", { count: "exact", head: true });
     if ((count ?? 0) > 0) return fail("La tabla ya tiene alimentos; la carga inicial solo se permite con la tabla vacía.");
     const rows = FOODS.map((f) => ({ name: f.n, portion: f.p, kcal: f.k, protein: f.pr, carbs: f.c, fat: f.f, country: "CR", verified: true, slug: f.id, grp: f.g }));

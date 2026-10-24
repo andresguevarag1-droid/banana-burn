@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { errCode, logError } from "@/lib/log";
 import { getViewer } from "@/lib/supabase/server";
-import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
+import { isSameOrigin, singleFlight } from "@/lib/security";
 import { parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
 import { cancelTrial, changeTrialPlan, resumeTrial } from "@/lib/trial-billing";
+import { hitLimit, tooMany } from "@/lib/security/limits";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { action?: unknown; keepCard?: unknown; plan?: unknown; billing?: unknown };
   if (body.action !== "cancelar" && body.action !== "plan" && body.action !== "reanudar") return NextResponse.json({ ok: false, error: "Acción inválida." }, { status: 400 });
   if (v.demo) return NextResponse.json({ ok: true, demo: true });
-  if (!memoryRateLimit(`prueba:${v.id}`, 10, 10 * 60_000)) return NextResponse.json({ ok: false, error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." }, { status: 429 });
+  const lim = await hitLimit("pagos:prueba", v.id);
+  if (!lim.ok) return tooMany(lim);
   try {
     if (body.action === "cancelar") {
       const keep = body.keepCard === true;
