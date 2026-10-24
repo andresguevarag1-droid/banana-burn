@@ -60,6 +60,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const charge = cs ? cs.charge : ent.charge ?? null;
   const cardStep = cs ? cs.cardStep : ent.cardStep ?? "none";
   const trial = cs ? cs.trial : ent.trial;
+  // En demo, los estados de ejemplo con el muro (?demo=fallo|vencida) también lo muestran.
+  const locked = ent.locked || Boolean(cs?.locked);
   if (!v.demo && ent.charge && (ent.charge.due || ent.charge.remind || ent.charge.phase === "procesando")) after(() => runDueForUser(v.id).then(() => {}));
   // Guía de la app: cambia con el plan, la prueba y el programa activo (lib/guide.ts).
   const px = live?.c.program.experience ?? null;
@@ -87,8 +89,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} sex={await getSex(v).catch(() => null)} />}
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
       <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
-      <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
-      <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={ent.locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
+      <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
+      <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
       <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.today === "terminado" ? "tu certificado te espera" : live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: liveCoach && liveCoach.id !== "banana" ? liveCoach.avatar : null }} />}
         {banner === "beta-add" ? <AddCardBanner />
@@ -98,7 +100,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           : banner === "beta" ? <BetaBanner />
           : banner === "trial" && trial ? <TrialBanner daysLeft={trial.daysLeft} charge={charge && (charge.phase === "programado" || charge.phase === "cancelado") ? { amount: charge.amount, canceled: charge.phase === "cancelado" } : null} />
           : null}
-        <PlanGate locked={ent.locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null} cardStep={cardStep} chargePhase={charge?.phase ?? null}>{children}</PlanGate>
+        <PlanGate locked={locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null} cardStep={cardStep} chargePhase={charge?.phase ?? null}>{children}</PlanGate>
       </main>
       </GuideProvider>
     </div>
