@@ -12,7 +12,7 @@ export default function PagoLayout({ children }: { children: React.ReactNode }) 
         <nav className="mx-auto max-w-xl h-16 px-4 flex items-center justify-between gap-3" aria-label="Pago">
           <Logo href="/app" />
           {/* En pantallas angostas se parte en dos líneas parejas («Pago seguro» / «con ONVO Pay»), nunca con «Pay» suelto. */}
-          <span className="inline-flex items-center gap-1.5 text-right text-xs font-semibold leading-tight text-muted"><ShieldCheck weight="duotone" className="size-4 shrink-0 text-peel" /><span>Pago seguro <span className="whitespace-nowrap">con ONVO Pay</span></span></span>
+          <span className="min-w-0 text-right text-xs font-semibold leading-tight text-muted"><ShieldCheck weight="duotone" className="mr-1.5 inline size-4 align-[-4px] text-peel" />Pago seguro <span className="whitespace-nowrap">con ONVO Pay</span></span>
         </nav>
       </header>
       <main className="flex-1 mx-auto w-full max-w-xl px-4 py-8 sm:py-12">{children}</main>
