@@ -185,6 +185,15 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     if (cardRequired && !saved) { go(STEPS); return; }
     finish();
   }
+  /** Tarjeta de otro país (Tilopay): se guarda el plan antes de ir a la página segura; al volver, Mi plan muestra la prueba. */
+  async function saveBeforeTilopay(): Promise<boolean> {
+    if (!full) return false;
+    setErr(null);
+    const r = await safeAction(completeOnboarding(full));
+    if (!r.ok) { setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo."); return false; }
+    return true;
+  }
+
   function finish(card?: CardSaved) {
     if (!full) return;
     setErr(null);
@@ -385,7 +394,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-bold text-ink text-pretty">{TRIAL_CARD_LINE}</p>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel={`Empezar mis ${TRIAL_DAYS} días gratis`} onSaved={(r) => finish(r)}
+              <CardForm choice={choice} demo={demo} submitLabel={`Empezar mis ${TRIAL_DAYS} días gratis`} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
                 note={<>Hoy no te cobramos. Tu día {TRIAL_DAYS} es el {new Date(Date.now() + 7 * DAY_MS).toLocaleDateString("es-419", { day: "numeric", month: "long" })}: ese día se cobran {money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.</>} />
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Escríbenos a hola@bananaburn.app y te ayudamos.</p>

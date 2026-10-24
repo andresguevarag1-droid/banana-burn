@@ -30,9 +30,21 @@ const STATUS: Record<Entitlements["status"], { label: string; cls: string }> = {
   expired: { label: "Vencida", cls: "bg-line text-muted" },
 };
 
+/** Vuelta desde Tilopay (/api/pagos/tilopay/vuelta): qué pasó, en una línea. */
+const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
+  tarjeta_ok: { ok: true, text: "Listo, tu tarjeta quedó guardada." },
+  pago_ok: { ok: true, text: "Listo, tu pago se aprobó y tu plan está activo." },
+  confirmando: { ok: true, text: "Estamos confirmando tu pago con Tilopay. Revisa en unos minutos." },
+  rechazada: { ok: false, text: "Tu banco no aprobó la tarjeta. Prueba con otra o pide a tu banco activar las compras internacionales." },
+  sin_tarjeta: { ok: false, text: "No recibimos tu tarjeta desde Tilopay. Intenta de nuevo." },
+  vencido: { ok: false, text: "El enlace de pago venció. Vuelve a intentarlo." },
+  ocupado: { ok: false, text: "Estamos procesando tu cobro. Revisa en unos minutos." },
+  error: { ok: false, text: "No pudimos terminar con Tilopay. Intenta de nuevo en un momento." },
+};
+
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };
 
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
   const [real, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
@@ -43,6 +55,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   const charge = ent.charge ?? null;
   const cardStep = ent.cardStep ?? "none";
   const payments = isOnvoConfigured() && !v.demo;
+  const tlp = sp.tilopay && Object.hasOwn(TILOPAY_NOTICE, sp.tilopay) ? TILOPAY_NOTICE[sp.tilopay] : null;
   const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent(jar.get(INTENT_COOKIE)?.value);
 
   // Historial: pagos confirmados por webhook (datos reales de ONVO guardados en payment_events).
@@ -53,7 +66,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       .select("id, provider_payment_intent_id, received_at, amount_minor, currency, period_start, period_end")
       .eq("user_id", v.id)
       .eq("status", "processed")
-      .in("type", ["subscription.renewal.succeeded", "payment-intent.succeeded"])
+      .in("type", ["subscription.renewal.succeeded", "payment-intent.succeeded", "charge.approved"])
       .order("received_at", { ascending: false })
       .limit(24);
     // El primer cobro puede llegar como payment-intent.succeeded y como renewal.succeeded: uno por intento de pago.
@@ -91,6 +104,9 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       {ent.trial?.beta && !charge && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Estás en la versión de prueba: todo incluido gratis hasta el {betaDates().lastFree}.</b> Todavía no guardaste una tarjeta, así que no hay ningún cobro programado. Desde el {betaDates().firstPaid} la app se paga.</p>}
       {ent.locked && cardStep !== "trial" && charge?.phase !== "procesando" && charge?.phase !== "reintento" && charge?.phase !== "fallido" && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>{cardStep === "pay" && !charge ? "La versión de prueba terminó" : "Tu prueba gratis terminó"}{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
+      {tlp && (
+        <p role="status" className={`rounded-2xl p-3 text-sm font-semibold text-pretty ${tlp.ok ? "bg-peel/10 text-ink" : "bg-bad/10 text-bad"}`}>{tlp.text}</p>
+      )}
       {(cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
         <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid}
           initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />

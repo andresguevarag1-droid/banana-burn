@@ -5,6 +5,7 @@ import { deliverPendingGifts } from "@/lib/gifts-server";
 import { deliverTesterNotices } from "@/lib/testers-server";
 import { deliverSupportNotices } from "@/lib/support-server";
 import { sweepTrialCharges } from "@/lib/trial-billing";
+import { sweepTilopayRenewals } from "@/lib/tilopay-billing";
 import { purgeIdentityFiles } from "@/lib/identity-server";
 import { nudgeUnseenNews } from "@/lib/novedades-server";
 import { purgeHousekeeping } from "@/lib/housekeeping";
@@ -28,6 +29,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * Y "Hay novedades en Banana Burn" (0036): push y campanita una vez por versión a quien no la vio en 3 días.
  * También el monitoreo (0041): purga de errores viejos, aviso si se dispararon y registro de esta corrida.
  * Y la limpieza de tablas que crecen sin fin (0040).
+ * Y las renovaciones con Tilopay (0042), que cobramos nosotros con la tarjeta guardada.
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -47,6 +49,9 @@ export async function GET(req: Request) {
   // Tarjeta guardada (0026): aviso del día 5, cobro del día 7, reintento del día 8 y reconciliación. Idempotente: lo que no
   // alcance hoy lo toma la visita de la persona a la app o la próxima corrida. Cada llamada a ONVO tiene su tiempo límite (15 s).
   const cobros = await sweepTrialCharges(new Date(), { deadline: t0 + 42_000 }).catch((e) => { logError("cron:cobros", "run_failed", { kind: errCode(e) }); return null; });
+  // Tilopay (0042): renovaciones que cobramos nosotros (vence el periodo, se cobra la tarjeta guardada; rechazo = 3 intentos
+  // diarios y luego se cancela) y compras directas por confirmar. null si Tilopay no está encendido.
+  const renovaciones = await sweepTilopayRenewals(new Date(), { deadline: t0 + 47_000 }).catch((e) => { logError("cron:renovaciones", "run_failed", { kind: errCode(e) }); return null; });
   const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
   const regalos = await deliverPendingGifts({ limit: 200 }).catch((e) => { logError("cron:regalos", "run_failed", { kind: errCode(e) }); return null; });
   // Testers (0029): correo y push de asignaciones sin avisar, aviso de 3 días antes del final y agradecimiento al terminar.
@@ -60,5 +65,5 @@ export async function GET(req: Request) {
   const novedades = await nudgeUnseenNews({ limit: 300, deadline: t0 + 58_500 }).catch((e) => { logError("cron:novedades", "run_failed", { kind: errCode(e) }); return null; });
   // Última corrida, para /admin/salud: solo conteos.
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
-  return NextResponse.json({ ...stats, retos, regalos, cobros, testers, identidad, soporte, novedades, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, testers, identidad, soporte, novedades, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
 }

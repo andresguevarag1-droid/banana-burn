@@ -74,6 +74,8 @@ export type SubscriptionRow = {
   current_period_start: string | null;
   current_period_end: string | null;
   created_at: string;
+  /** 'onvo' o 'tilopay' (0042). Puede no venir en selects viejos. */
+  provider?: string | null;
 };
 
 /** `source`: 'cortesia' (panel, vale como completo), 'regalo' o 'referido' (respetan su plan). Sin 0025 no viene: cortesía. */

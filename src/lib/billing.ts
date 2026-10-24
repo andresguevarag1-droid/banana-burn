@@ -1,6 +1,9 @@
 import "server-only";
-// Orquestación de pagos (servidor): ONVO + Supabase con service_role.
-// Regla de oro: SOLO processWebhook() sube a un usuario a plan pagado.
+// Orquestación de pagos (servidor): ONVO y Tilopay + Supabase con service_role.
+// Regla de oro: solo un resultado del procesador verificado servidor a servidor sube a un usuario a plan pagado:
+//   - ONVO: el webhook autenticado (processWebhook), o la consulta de la suscripción con la llave secreta.
+//   - Tilopay: la respuesta del cobro con la tarjeta guardada o la consulta de la orden (tilopay-billing.ts →
+//     activateVerified). Los webhooks de Tilopay no vienen firmados: nunca dan acceso.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import type { Viewer } from "@/lib/supabase/server";
@@ -13,7 +16,7 @@ import {
   expectedAmountMinor, fetchSubscriptionState, priceIdFor, profilePlanFor, type OnvoEvent,
 } from "@/lib/onvo";
 
-const SUB_COLS = "id,user_id,provider_customer_id,provider_subscription_id,status,price_id,plan,billing,cancel_at_period_end,canceled_at,current_period_start,current_period_end,created_at";
+export const SUB_COLS = "id,user_id,provider,provider_customer_id,provider_subscription_id,status,price_id,plan,billing,cancel_at_period_end,canceled_at,current_period_start,current_period_end,created_at";
 
 export class BillingError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -99,7 +102,8 @@ export async function cancelAtPeriodEnd(v: Viewer, reason?: string): Promise<{ e
   if (!subs.length) throw new BillingError("No tienes una suscripción activa para cancelar.", 404);
   let endsAt: string | null = null;
   for (const r of subs) {
-    if (r.provider_subscription_id) {
+    // Tilopay: la renovación la cobramos nosotros, así que cancelar es solo no cobrar el próximo periodo.
+    if (r.provider_subscription_id && r.provider !== "tilopay") {
       try {
         await cancelSubscription(r.provider_subscription_id);
       } catch (e) {
@@ -118,7 +122,7 @@ export async function cancelAtPeriodEnd(v: Viewer, reason?: string): Promise<{ e
   return { endsAt };
 }
 
-async function recordAppEvent(db: SupabaseClient, key: string, type: string, userId: string, subId: string | null, payload: Record<string, unknown>) {
+export async function recordAppEvent(db: SupabaseClient, key: string, type: string, userId: string, subId: string | null, payload: Record<string, unknown>) {
   const { error } = await db.from("payment_events").insert({ event_key: key, type, user_id: userId, provider_subscription_id: subId, status: "processed", payload, processed_at: new Date().toISOString() });
   if (error && !/duplicate|unique/i.test(error.message)) log("no se pudo registrar evento de app", { key, error: error.message });
 }
@@ -137,7 +141,7 @@ async function setProfilePlan(db: SupabaseClient, userId: string, plan: "entreno
  * Los regalos y recompensas por referidos (0025) no cuentan: la app y la base los leen directo de comp_grants, y si
  * subieran el plan del perfil nadie lo bajaría al vencer.
  */
-async function syncProfilePlan(db: SupabaseClient, userId: string) {
+export async function syncProfilePlan(db: SupabaseClient, userId: string) {
   const now = new Date().toISOString();
   const [{ data }, { data: comps }] = await Promise.all([
     db.from("subscriptions").select(SUB_COLS).eq("user_id", userId),
@@ -154,7 +158,7 @@ async function syncProfilePlan(db: SupabaseClient, userId: string) {
 async function cancelOthers(db: SupabaseClient, keep: SubscriptionRow) {
   const { data } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", keep.user_id).neq("id", keep.id).in("status", ["active", "trialing", "past_due", "incomplete"]);
   for (const r of (data as SubscriptionRow[] | null) ?? []) {
-    if (r.provider_subscription_id) await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: errInfo(e) }));
+    if (r.provider_subscription_id && r.provider !== "tilopay") await cancelSubscription(r.provider_subscription_id).catch((e) => log("no se pudo cancelar plan anterior en ONVO", { id: r.provider_subscription_id, error: errInfo(e) }));
     await db.from("subscriptions").update({ status: r.status === "incomplete" ? "expired" : "canceled", cancel_at_period_end: false, canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", r.id);
     log("plan anterior reemplazado", { userId: keep.user_id, replaced: r.provider_subscription_id, by: keep.provider_subscription_id });
   }
@@ -207,6 +211,37 @@ export function checkPaidAmount(row: { plan: PlanId | null; billing: Billing | n
 }
 
 const planName = (p: PlanId | null) => PLANS.find((x) => x.id === p)?.name ?? "Banana Burn";
+
+/**
+ * Activa (o renueva) una suscripción con un cobro YA verificado servidor a servidor (Tilopay: respuesta del cobro con la
+ * tarjeta guardada o consulta de la orden). Valida el monto contra plans.ts, deja el evento en payment_events (idempotente
+ * por `reference`), cancela los otros planes, cierra el cobro de la prueba, recalcula el plan y manda el recibo.
+ */
+export async function activateVerified(db: SupabaseClient, row: SubscriptionRow, a: { periodStart: string; periodEnd: string; amountMinor: number | null; currency: string | null; reference: string; provider: "tilopay" }): Promise<{ ok: boolean; plan?: string; note?: string }> {
+  const check = checkPaidAmount(row, a.amountMinor, a.currency);
+  const key = `${a.provider}.charge.approved:${a.reference}`;
+  const ins = await db.from("payment_events").insert({
+    provider: a.provider, event_key: key, type: "charge.approved", user_id: row.user_id, provider_subscription_id: row.provider_subscription_id,
+    amount_minor: a.amountMinor, currency: a.currency, period_start: a.periodStart, period_end: a.periodEnd, status: "received", payload: { reference: a.reference },
+  }).select("id").single();
+  if (ins.error) {
+    const { data: prev } = await db.from("payment_events").select("id,status").eq("event_key", key).maybeSingle();
+    if (prev?.status === "processed") return { ok: true, note: "duplicado" };
+    if (!prev) throw new Error(`payment_events: ${ins.error.message}`);
+  }
+  const done = async (status: "processed" | "ignored", note: string | null) => { await db.from("payment_events").update({ status, note, processed_at: new Date().toISOString() }).eq("event_key", key); };
+  if (!check.ok) {
+    console.error(JSON.stringify({ scope: "pagos", msg: "ALERTA monto inválido: no se activa", provider: a.provider, userId: row.user_id, subscriptionId: row.provider_subscription_id, note: check.note }));
+    await done("ignored", `NO ACTIVADA: ${check.note}`);
+    return { ok: false, note: check.note };
+  }
+  // Renovación: el periodo nuevo empieza donde terminó el anterior (activate nunca retrocede el fin).
+  const plan = await activate(db, row, { periodStart: a.periodStart, periodEnd: a.periodEnd, customerId: null });
+  await notifyPaid(row, a.amountMinor, a.currency, a.periodEnd, a.reference);
+  await done("processed", check.note ? `${check.note}, plan=${plan}` : `plan=${plan}`);
+  log("cobro verificado activado", { provider: a.provider, userId: row.user_id, subscriptionId: row.provider_subscription_id, plan });
+  return { ok: true, plan };
+}
 
 /** Recibo por correo (idempotente por referencia). Nunca bloquea el webhook. */
 async function notifyPaid(row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string) {

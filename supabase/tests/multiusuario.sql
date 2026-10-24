@@ -1893,6 +1893,22 @@ select bbtest.ok('0040: índices de lecturas frecuentes', to_regclass('public.co
   and to_regclass('public.posts_workout') is not null and to_regclass('public.user_challenges_active_id') is not null
   and to_regclass('public.notifications_created') is not null and to_regclass('public.notification_log_local_day') is not null and to_regclass('public.coach_quota_tickets_created') is not null);
 
+-- ───────────── 19. Tilopay (0042): tarjetas de otros países y renovaciones que cobramos nosotros ─────────────
+select bbtest.ok('0042: payment_methods acepta onvo y tilopay', pg_get_constraintdef((select oid from pg_constraint where conname = 'payment_methods_provider_ok')) like '%tilopay%');
+select bbtest.ok('0042: ya no queda el check viejo de solo onvo', not exists (select 1 from pg_constraint con join pg_class r on r.oid = con.conrelid where r.relname = 'payment_methods' and pg_get_constraintdef(con.oid) ~ 'provider = ''onvo'''));
+select bbtest.fails('0042: proveedor desconocido no entra', $q$ insert into public.payment_methods (user_id, provider, provider_customer_id, provider_payment_method_id) values (bbtest.u('A'), 'otro', 'tlp:x', 'tok_x') $q$, '23514');
+select bbtest.fails('0042: token de más de 400 caracteres no entra', $q$ insert into public.payment_methods (user_id, provider, provider_customer_id, provider_payment_method_id) values (bbtest.u('A'), 'tilopay', 'tlp:x', repeat('a', 401)) $q$, '23514');
+insert into public.payment_methods (user_id, provider, provider_customer_id, provider_payment_method_id, brand, last4) values ('ab000000-0000-4000-8000-0000000000a1', 'tilopay', 'tlp:ab000000-0000-4000-8000-0000000000a1', repeat('t', 300), 'visa', '4242') on conflict (user_id) do update set provider = excluded.provider, provider_payment_method_id = excluded.provider_payment_method_id;
+select bbtest.ok('0042: el servidor guarda una tarjeta de Tilopay con token largo', exists (select 1 from public.payment_methods where user_id = 'ab000000-0000-4000-8000-0000000000a1' and provider = 'tilopay' and char_length(provider_payment_method_id) = 300));
+delete from public.payment_methods where user_id = 'ab000000-0000-4000-8000-0000000000a1' and provider = 'tilopay';
+select bbtest.fails('0042: suscripción con proveedor desconocido no entra', $q$ insert into public.subscriptions (user_id, provider, status) values (bbtest.u('A'), 'otro', 'incomplete') $q$, '23514');
+select bbtest.fails('0042: intentos de renovación fuera de rango', $q$ insert into public.subscriptions (user_id, provider, status, renewal_attempts) values (bbtest.u('A'), 'tilopay', 'incomplete', 11) $q$, '23514');
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('0042: A no se crea una suscripción de Tilopay', $q$ insert into public.subscriptions (user_id, provider, provider_subscription_id, status, plan, billing) values (auth.uid(), 'tilopay', 'tlp:bbc-falsa', 'active', 'completo', 'anual') $q$, '42501');
+select bbtest.fails('0042: A no toca los intentos de renovación', $q$ update public.subscriptions set renewal_attempts = 0, next_renewal_attempt_at = null where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('0042: A no guarda una tarjeta de Tilopay por la API', $q$ insert into public.payment_methods (user_id, provider, provider_customer_id, provider_payment_method_id) values (auth.uid(), 'tilopay', 'tlp:x', 'tok_falso') $q$, '42501');
+reset role;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$
