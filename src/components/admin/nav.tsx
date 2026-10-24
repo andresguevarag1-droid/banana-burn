@@ -53,7 +53,7 @@ export function AdminTabsNav({ items }: { items: NavItem[] }) {
     ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
   }, [path]);
   return (
-    <nav ref={ref} aria-label="Secciones del panel" className="-mx-4 overflow-x-auto px-4 md:hidden">
+    <nav ref={ref} aria-label="Secciones del panel" className="-mx-4 scroll-px-4 overflow-x-auto px-4 md:hidden">
       <ul className="flex w-max gap-1 pb-2 text-sm">
         {items.map(({ key, href, label, badge }) => {
           const Icon = ICONS[key];

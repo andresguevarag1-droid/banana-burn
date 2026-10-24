@@ -128,7 +128,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <>
                 <dl className="grid grid-cols-3 divide-x divide-line rounded-xl bg-paper/60">
                   {([["Entrenos totales", d.activity.workouts_total], ["Entrenos 30 d", d.activity.workouts_30], ["Días activos 30 d", d.activity.active_days_30]] as const).map(([l, n]) => (
-                    <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
+                    <div key={l} className="flex flex-col-reverse justify-end gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
                   ))}
                 </dl>
                 <div><h3 className="text-sm font-bold text-ink mb-2">Entrenos de los últimos 28 días</h3><ActivityStrip days={d.activity.recent} today={today} label="Días con entreno en los últimos 28 días" /></div>
@@ -141,9 +141,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <>
                 <dl className="grid grid-cols-3 divide-x divide-line rounded-xl bg-paper/60">
                   {([["Preguntas hoy", coach.dayUsed, coach.dayLimit], ["Preguntas del mes", coach.monthUsed, coach.monthLimit]] as const).map(([l, used, lim]) => (
-                    <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}{lim === null ? ", sin tope" : ` de ${fmtNum(lim)}`}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(used)}</dd></div>
+                    <div key={l} className="flex flex-col-reverse justify-end gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}{lim === null ? ", sin tope" : ` de ${fmtNum(lim)}`}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(used)}</dd></div>
                   ))}
-                  <div className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">Cupo</dt><dd className="text-base font-extrabold leading-tight text-ink">{COACH_TIER_LABEL[coach.tier]}</dd></div>
+                  <div className="flex flex-col-reverse justify-end gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">Cupo</dt><dd className="text-base font-extrabold leading-tight text-ink">{COACH_TIER_LABEL[coach.tier]}</dd></div>
                 </dl>
                 <p className="max-w-prose text-xs text-muted text-pretty">Solo conteos (hora de Costa Rica). El contenido de las conversaciones no se muestra en el panel.</p>
               </>
@@ -251,7 +251,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               {refs.unavailable ? <p className="text-sm text-muted">Falta aplicar la migración 0025_regalos_referidos.sql.</p> : (<>
                 <dl className="grid grid-cols-3 divide-x divide-line rounded-xl bg-paper/60">
                   {([["Invitados", refs.referrals.length], ["Activos", refs.referrals.filter((r) => r.status === "calificado").length], ["Meses ganados", refs.rewards.filter((w) => !w.revoked_at).reduce((n, w) => n + w.months, 0)]] as const).map(([l, n]) => (
-                    <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
+                    <div key={l} className="flex flex-col-reverse justify-end gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
                   ))}
                 </dl>
                 <dl>

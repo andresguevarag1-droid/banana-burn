@@ -51,7 +51,8 @@ export default function Glp1Landing() {
         </div>
         <div className="relative isolate grid place-items-center py-10 sm:py-12 lg:py-0 lg:h-[min(calc(100dvh-8rem),680px)]">
           <div aria-hidden className="absolute inset-0 sm:inset-x-8 lg:inset-x-0 lg:inset-y-6 -z-10 rounded-[2rem] bg-ink" />
-          <ShieldCheck aria-hidden weight="fill" className="absolute right-6 bottom-6 -z-10 size-40 text-banana opacity-[.12]" />
+          {/* Marca de agua solo donde cabe entera junto al teléfono: detrás de él se veía como una mancha cortada. */}
+          <ShieldCheck aria-hidden weight="fill" className="absolute right-4 bottom-10 -z-10 hidden size-24 text-banana opacity-[.12] xl:block" />
           <Phone src="/landing/hoy2.png" alt="Pantalla Hoy de Banana Burn" className="relative w-[240px] sm:w-[260px] lg:w-[clamp(220px,calc((100dvh-12rem)*0.44),280px)]" priority />
         </div>
       </section>

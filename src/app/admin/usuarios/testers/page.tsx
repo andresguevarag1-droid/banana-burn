@@ -25,7 +25,7 @@ export default async function TestersPage() {
 
       <dl className={`${panel} grid grid-cols-3 divide-x divide-line`}>
         {([["Testers vigentes", testers.length], ["Terminan en 3 días", testers.filter((t) => testerDaysLeft(t.expires_at) <= 3).length], ["Reportes abiertos", open.length]] as const).map(([l, n]) => (
-          <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
+          <div key={l} className="flex flex-col-reverse justify-end gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className="text-2xl font-extrabold leading-none text-ink tabular-nums">{fmtNum(n)}</dd></div>
         ))}
       </dl>
 

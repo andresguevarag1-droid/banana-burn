@@ -38,7 +38,7 @@ export default async function Soporte({ searchParams }: { searchParams: Promise<
 
       <dl className={`${panel} grid grid-cols-3 divide-x divide-line`}>
         {([["Abiertos", open], ["Sin respuesta en 24 h", late], ["Esperan a la persona", counts.necesita_info]] as const).map(([l, n]) => (
-          <div key={l} className="flex flex-col-reverse gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className={`text-2xl font-extrabold leading-none tabular-nums ${l.startsWith("Sin") && n > 0 ? "text-[#B4232A]" : "text-ink"}`}>{fmtNum(n)}</dd></div>
+          <div key={l} className="flex flex-col-reverse justify-end gap-1 px-3 py-3 sm:px-4"><dt className="text-xs text-muted">{l}</dt><dd className={`text-2xl font-extrabold leading-none tabular-nums ${l.startsWith("Sin") && n > 0 ? "text-[#B4232A]" : "text-ink"}`}>{fmtNum(n)}</dd></div>
         ))}
       </dl>
 
@@ -75,11 +75,11 @@ export default async function Soporte({ searchParams }: { searchParams: Promise<
           <thead className="border-b border-line"><tr><Th>Reporte</Th><Th>Persona</Th><Th>Categoría</Th><Th>Estado</Th><Th>Prioridad</Th><Th>Asignado</Th><Th className="text-right">Espera</Th></tr></thead>
           <tbody>{rows.map((t) => (
             <tr key={t.id} className={trHover}>
-              <Td className="max-w-80">
+              <Td className="max-w-60">
                 <Link href={`/admin/soporte/${t.id}`} className="block truncate font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{t.title}</Link>
                 <p className="flex items-center gap-1.5 text-xs text-muted tabular-nums">{ticketNumber(t.id)}{t.attachment_path && <Paperclip className="size-3.5" aria-label="Con captura" />}</p>
               </Td>
-              <Td><span className="flex items-center gap-1.5 whitespace-nowrap">{t.name}{t.from_tester && <Badge tone="warn"><Flask weight="duotone" className="size-3.5" aria-hidden />Tester</Badge>}</span></Td>
+              <Td><span className="flex flex-wrap items-center gap-1.5">{t.name}{t.from_tester && <Badge tone="warn"><Flask weight="duotone" className="size-3.5" aria-hidden />Tester</Badge>}</span></Td>
               <Td className="whitespace-nowrap text-muted">{CATEGORY_LABEL[t.category as SupportCategory] ?? t.category}</Td>
               <Td><span className="flex flex-wrap items-center gap-1"><Badge tone={STATUS_TONE[t.status]}>{STATUS_LABEL[t.status]}</Badge>{t.late && <Badge tone="bad">+24 h</Badge>}</span></Td>
               <Td><Badge tone={PRIORITY_TONE[t.priority as SupportPriority] ?? "muted"}>{PRIORITY_LABEL[t.priority as SupportPriority] ?? t.priority}</Badge></Td>

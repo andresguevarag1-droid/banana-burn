@@ -62,11 +62,14 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
       <fieldset className={`${panel} flex flex-wrap items-center gap-3 p-4 sm:p-5`}>
         <legend className="sr-only">Tipo</legend>
         <p className="mr-auto min-w-0 text-sm text-muted"><b className="text-ink">Tipo.</b> Un reto es un hábito diario con check-in. Un programa reemplaza la rutina de la persona mientras dura.</p>
+        {/* Las dos opciones van juntas: si no caben junto al texto, bajan las dos a la línea siguiente. */}
+        <div className="flex flex-wrap gap-2">
         {(["reto", "programa"] as const).map((k) => (
           <label key={k} className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-transform duration-150 ease-out active:scale-[.97] ${kind === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-ink"}`}>
             <input type="radio" name="kind-ui" value={k} checked={kind === k} onChange={() => setKind(k)} className="sr-only" />{k === "reto" ? "Reto de hábitos" : "Programa de entreno"}
           </label>
         ))}
+        </div>
       </fieldset>
       <input type="hidden" name="plan" value={JSON.stringify(rows.filter((r) => r.t.trim()).length === days ? rows : rows.slice(0, rows.findIndex((r) => !r.t.trim()) < 0 ? days : rows.findIndex((r) => !r.t.trim())))} />
 
@@ -127,10 +130,10 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
             <legend className="px-1 text-xs font-bold text-ink">Progresión</legend>
             <label className="block text-xs text-muted" htmlFor={`tp-${k}`}>Texto ({"{n}"} = número del día)</label>
             <input id={`tp-${k}`} value={tpl} onChange={(e) => setTpl(e.target.value)} className={`${inputSm} mt-1`} />
-            <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <input aria-label="Desde" type="number" value={from} onChange={(e) => setFrom(Number(e.target.value))} className={inputSm} />
               <input aria-label="Hasta" type="number" value={to} onChange={(e) => setTo(Number(e.target.value))} className={inputSm} />
-              <select aria-label="Tipo" value={tplType} onChange={(e) => setTplType(e.target.value as TaskType)} className={sel}>{TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
+              <select aria-label="Tipo" value={tplType} onChange={(e) => setTplType(e.target.value as TaskType)} className={`${sel} col-span-2`}>{TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
             </div>
             <button type="button" onClick={progression} className={`${btnGhost} mt-2 w-full`}><ArrowsLeftRight className="size-4" />Llenar {days} días</button>
           </fieldset>
@@ -153,7 +156,7 @@ export function ChallengeEditor({ init, canSell }: { init: EditorValue; canSell:
         <ol className="mt-4 divide-y divide-line rounded-xl border border-line">
           {rows.map((r, i) => (
             <li key={i} className="grid grid-cols-[2.5rem_1fr] items-start gap-2 p-2 sm:grid-cols-[2.5rem_9rem_6rem_1fr]">
-              <span className="grid h-10 place-items-center rounded-lg bg-cream text-sm font-extrabold tabular-nums text-ink" aria-hidden>{i + 1}</span>
+              <span className="grid h-11 place-items-center rounded-lg bg-cream text-sm font-extrabold tabular-nums text-ink" aria-hidden>{i + 1}</span>
               <select aria-label={`Tipo del día ${i + 1}`} value={r.type} onChange={(e) => set(i, { type: e.target.value as TaskType })} className={sel}>{TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
               <input aria-label={`Meta del día ${i + 1}`} type="number" min={0} value={r.target ?? ""} onChange={(e) => set(i, { target: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="Meta" className={`${inputSm} col-start-2 sm:col-start-auto`} />
               <input aria-label={`Tarea del día ${i + 1}`} value={r.t} maxLength={200} onChange={(e) => set(i, { t: e.target.value })} placeholder="Qué hace la persona este día" className={`${inputSm} col-start-2 sm:col-start-auto`} />

@@ -251,7 +251,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             </div>
             <div className={`rounded-3xl border-2 p-4 ${o.glp1 ? "border-ink bg-white" : "border-dashed border-line"}`}>
               <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={o.glp1} onChange={(e) => up({ glp1: e.target.checked })} className="size-5 accent-ink" />
+                <input type="checkbox" checked={o.glp1} onChange={(e) => up({ glp1: e.target.checked })} className="size-5 shrink-0 accent-ink" />
                 <span><span className="flex items-center gap-1.5 font-extrabold text-ink"><Syringe weight="duotone" className="size-5 text-banana-ink" />Estoy en tratamiento con GLP&#8209;1</span><span className="block text-sm text-muted">Ozempic, Wegovy, Mounjaro, Zepbound o Saxenda, recetado por tu médico</span></span>
               </label>
               {o.glp1 && (
