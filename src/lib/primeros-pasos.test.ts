@@ -51,7 +51,7 @@ describe("primeros pasos", () => {
     expect(shouldAutoTour({ keys: [TOUR_KEYS.hoy], tour: "hoy", blocked: false })).toBe(false);
     expect(shouldAutoTour({ keys: [TOUR_KEYS.hoy], tour: "entrenar", blocked: false })).toBe(true);
   });
-  it("las claves no se repiten, respetan el formato y el tope de 64 (igual que 0046)", () => {
+  it("las claves no se repiten, respetan el formato y el tope de 64 (igual que 0047)", () => {
     expect(addKey(["a"], "a")).toEqual(["a"]);
     expect(addKey([], "Mal Formada")).toEqual([]);
     expect(addKey(Array.from({ length: 64 }, (_, i) => `k${i}`), "otra")).toHaveLength(64);

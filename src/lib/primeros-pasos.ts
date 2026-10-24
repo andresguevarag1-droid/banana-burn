@@ -1,5 +1,5 @@
 // Primeros pasos: lo que una persona nueva hace en su primera semana para entender la app haciendo, no leyendo.
-// Puro (sin datos ni React) para poder probar qué ve cada quien. El estado vive en profiles.learn_keys (0046) y, en demo o
+// Puro (sin datos ni React) para poder probar qué ve cada quien. El estado vive en profiles.learn_keys (0047) y, en demo o
 // sin la migración, en este dispositivo (localStorage). Algunas señales salen de datos reales (entrenos, pesajes, chat).
 //
 // Reglas de los textos (libro de marca): español neutro de tú, frases cortas, una idea por frase, sin emojis, sin rayas

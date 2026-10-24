@@ -1969,21 +1969,21 @@ set role authenticated; select bbtest.login('A');
 select bbtest.fails('0045: A no escribe huellas', $q$ insert into public.card_fingerprints (key, fingerprint, user_id, provider) values (repeat('a', 64) || ':' || auth.uid()::text, repeat('a', 64), auth.uid(), 'onvo') $q$, '42501');
 reset role;
 
--- ───────────── 21. Primeros pasos (0046) ─────────────
+-- ───────────── 21. Primeros pasos (0047) ─────────────
 set role authenticated; select bbtest.login('A');
 select public.learn_mark('pp-semana');
 select public.learn_mark('pp-semana');
-select bbtest.ok('0046: A marca su paso una sola vez', (select learn_keys = array['pp-semana'] from public.profiles where id = bbtest.u('A')));
-select bbtest.fails('0046: una clave mal formada no entra', $q$ select public.learn_mark('Pp Semana!') $q$, '22023');
+select bbtest.ok('0047: A marca su paso una sola vez', (select learn_keys = array['pp-semana'] from public.profiles where id = bbtest.u('A')));
+select bbtest.fails('0047: una clave mal formada no entra', $q$ select public.learn_mark('Pp Semana!') $q$, '22023');
 select bbtest.login(null);
-select bbtest.fails('0046: sin sesión no se marca nada', $q$ select public.learn_mark('pp-semana') $q$, '42501');
+select bbtest.fails('0047: sin sesión no se marca nada', $q$ select public.learn_mark('pp-semana') $q$, '42501');
 reset role;
-select bbtest.ok('0046: A no marca pasos de B', (select learn_keys = '{}' from public.profiles where id = bbtest.u('B')));
-select bbtest.ok('0046: anon no ejecuta learn_mark', not has_function_privilege('anon', 'public.learn_mark(text)', 'execute'));
+select bbtest.ok('0047: A no marca pasos de B', (select learn_keys = '{}' from public.profiles where id = bbtest.u('B')));
+select bbtest.ok('0047: anon no ejecuta learn_mark', not has_function_privilege('anon', 'public.learn_mark(text)', 'execute'));
 update public.profiles set learn_keys = (select array_agg('k' || g) from generate_series(1, 64) g) where id = bbtest.u('A');
 set role authenticated; select bbtest.login('A');
 select public.learn_mark('extra');
-select bbtest.ok('0046: tope de 64 claves', (select cardinality(learn_keys) = 64 from public.profiles where id = bbtest.u('A')));
+select bbtest.ok('0047: tope de 64 claves', (select cardinality(learn_keys) = 64 from public.profiles where id = bbtest.u('A')));
 reset role;
 update public.profiles set learn_keys = '{}' where id = bbtest.u('A');
 

@@ -1,4 +1,4 @@
--- 0046: primeros pasos y "Aprende a entrenar". Recuerda en el servidor qué pasos de la primera semana ya hizo la persona,
+-- 0047: primeros pasos y "Aprende a entrenar". Recuerda en el servidor qué pasos de la primera semana ya hizo la persona,
 -- qué lecciones leyó y qué recorridos guiados ya vio (Hoy, Entrenar), para no repetírselos en otro dispositivo.
 -- Solo claves cortas en minúsculas, máximo 64 por persona. Cada persona marca solo lo suyo (auth.uid()). No toca rol,
 -- plan ni acceso. Idempotente: se puede correr más de una vez.

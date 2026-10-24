@@ -1,4 +1,4 @@
-// Estado de los primeros pasos y del curso (0046) más las señales reales que marcan pasos solos. Solo servidor.
+// Estado de los primeros pasos y del curso (0047) más las señales reales que marcan pasos solos. Solo servidor.
 import "server-only";
 import { cache } from "react";
 import { createClient, type Viewer } from "@/lib/supabase/server";
