@@ -113,13 +113,13 @@ export function afterTrialLines(i: Pick<GuideInput, "trial" | "charge" | "cardSt
     const body = `Estás en la versión de prueba: tienes todo incluido y gratis hasta el ${d.lastFree}. Desde el ${d.firstPaid} se cobran los planes.`;
     if (c && c.kind === "beta" && c.phase === "programado") return { body, bullets: [`Ya guardaste tu tarjeta: el ${d.day(c.chargeAt)} se cobra ${planName(c.plan)} por ${money(c.amount)}, salvo que canceles antes en Mi plan.`, `Te avisamos ${REMINDER_DAYS_BEFORE} días antes del cobro.`, choose, keep] };
     if (c && c.phase === "cancelado") return { body, bullets: ["Cancelaste tu plan: no se te cobrará.", `Desde el ${d.firstPaid} verás la pantalla de planes hasta que elijas uno.`, keep] };
-    return { body, bullets: [`Si guardas tu tarjeta antes del ${d.firstPaid}, hoy no se cobra nada y ese día se cobra el plan que elijas, salvo que canceles antes.`, `Si no la agregas, desde el ${d.firstPaid} verás la pantalla de planes hasta que pagues. No hay días gratis extra.`, prices, keep] };
+    return { body, bullets: [`Si dejas tu tarjeta lista antes del ${d.firstPaid}, hoy no se cobra nada y ese día se cobra tu primer mes con 50 % de descuento (plan mensual), salvo que canceles antes.`, `Si no la agregas, desde el ${d.firstPaid} verás la pantalla de planes hasta que pagues. No hay días gratis extra.`, prices, keep] };
   }
   const end = i.trial ? d.day(i.trial.endsAt) : null;
   const body = end ? `Tu prueba gratis de ${TRIAL_DAYS} días tiene todo incluido y termina el ${end}.` : `Tu prueba gratis de ${TRIAL_DAYS} días tiene todo incluido.`;
   if (c && c.phase === "cancelado") return { body, bullets: ["Cancelaste tu plan: no se te cobrará.", "Al terminar la prueba verás la pantalla de planes hasta que elijas uno.", keep] };
   if (c && c.phase === "programado") return { body, bullets: [`El ${d.day(c.chargeAt)} se cobra ${planName(c.plan)} por ${money(c.amount)}, salvo que canceles antes en Mi plan, sin costo.`, `Te avisamos ${REMINDER_DAYS_BEFORE} días antes del cobro.`, choose, keep] };
-  return { body, bullets: [`El día ${TRIAL_DAYS} se cobra el plan que elegiste, salvo que canceles antes en Mi plan.`, prices, keep] };
+  return { body, bullets: ["Tu prueba no pide tarjeta. Si la dejas lista en Mi plan antes de que termine, tu primer mes cuesta 50 % menos (plan mensual).", "Si no la dejas, al terminar verás la pantalla de planes hasta que elijas uno.", prices, keep] };
 }
 
 /**

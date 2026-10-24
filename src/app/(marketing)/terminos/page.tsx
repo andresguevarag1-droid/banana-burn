@@ -1,33 +1,39 @@
 import { LegalPage, type LegalSection } from "../legal";
 import { social } from "../seo";
 import { TRIAL_DAYS } from "@/lib/copy";
-import { BETA_ENDS_AT, betaLive } from "@/lib/plans";
+import { BETA_ENDS_AT, PLANS, betaLive } from "@/lib/plans";
+import { money } from "@/lib/copy";
+import { PROMO_PCT, PROMO_TERMS, promoPrice } from "@/lib/trial";
+
+const ENTRENO = PLANS.find((p) => p.id === "entreno")!;
 
 const TZ = "America/Costa_Rica";
 const day = (ms: number) => new Date(ms).toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric", timeZone: TZ });
 
 /**
- * Prueba gratis. Hasta el fin de la beta se muestran las dos reglas (la de hoy y la que empieza el 1 de noviembre), para
- * avisar el cambio antes de que entre en vigor; desde esa fecha solo la nueva. Se calcula en cada render (revalidate = 3600).
+ * Prueba gratis, tarjeta opcional y 50 % del primer mes (0043). Hasta el fin de la beta se muestran las reglas de la beta
+ * y las de las cuentas nuevas desde el 1 de noviembre; desde esa fecha solo las nuevas. Se calcula en cada render.
  */
 function trialSection(now = new Date()): LegalSection {
   const end = Date.parse(BETA_ENDS_AT);
   const lastFree = day(end - 1), firstPaid = day(end);
+  const promo = [
+    `Dejar tu tarjeta lista es opcional. Si la guardas antes de tu primer cobro y nunca pagaste un plan, tu primer mes del plan mensual cuesta ${PROMO_PCT} % menos (por ejemplo, ${money(promoPrice("entreno"))} en vez de ${money(ENTRENO.price.mes)}). ${PROMO_TERMS}`,
+    "El día que guardas la tarjeta no se te cobra nada. Te avisamos 2 días antes del cobro por correo, y también en la app y por notificación si las tienes activadas. En Mi plan siempre ves la fecha y el monto del cobro.",
+    "Puedes cancelar sin costo desde Mi plan en cualquier momento antes del cobro: no se cobra nada y sigues con acceso hasta el final de tu prueba. Al cancelar eliges si quitamos tu tarjeta guardada o si la conservamos.",
+    "Si el cobro no pasa, el acceso queda en pausa (no se borra nada), te avisamos y lo intentamos una sola vez más al día siguiente. Puedes cambiar tu tarjeta en Mi plan cuando quieras; el cobro se hace en ese momento.",
+    "Desde el segundo mes se cobra el precio normal del plan y la suscripción se renueva cada mes o cada año hasta que la canceles.",
+    "El número de tu tarjeta lo escribes en la página de nuestro procesador de pagos (ONVO Pay para tarjetas de Costa Rica, Tilopay para tarjetas de otros países) y nunca pasa por nuestros servidores. Solo guardamos la marca, los últimos 4 dígitos y el vencimiento para mostrártelos.",
+  ];
   const rules = [
-    `Al crear tu cuenta eliges un plan y guardas una tarjeta de crédito o débito. Ese día no se te cobra nada: tienes ${TRIAL_DAYS} días de prueba gratis con todas las funciones, incluida la nutrición y Banana Shield, sin importar el plan que elegiste.`,
-    [
-      `El día ${TRIAL_DAYS}, al cumplirse los ${TRIAL_DAYS} días desde que guardaste la tarjeta, se cobra el plan que elegiste, salvo que canceles antes. El cobro lo procesa ONVO Pay en dólares (USD) y desde ahí la suscripción se renueva cada mes o cada año hasta que la canceles.`,
-      "Te avisamos 2 días antes del cobro por correo, y también en la app y por notificación si las tienes activadas. En Mi plan siempre ves la fecha y el monto del cobro.",
-      `Puedes cancelar sin costo desde Mi plan en cualquier momento antes del cobro: no se cobra nada y sigues con acceso hasta el final de los ${TRIAL_DAYS} días. Al cancelar eliges si quitamos tu tarjeta guardada o si la conservamos.`,
-      "Si el cobro no pasa, el acceso queda en pausa (no se borra nada), te avisamos y lo intentamos una sola vez más al día siguiente. Puedes cambiar tu tarjeta en Mi plan cuando quieras; el cobro se hace en ese momento.",
-      "La prueba gratis es una por persona y solo para cuentas nuevas.",
-      "El número de tu tarjeta va directo de tu navegador a ONVO Pay y nunca pasa por nuestros servidores. Solo guardamos la marca, los últimos 4 dígitos y el vencimiento para mostrártelos.",
-    ],
+    `Al crear tu cuenta tienes ${TRIAL_DAYS} días de prueba gratis desde el registro, con todas las funciones, incluida la nutrición y Banana Shield, sin tarjeta. Al terminar, si no elegiste un plan, verás la pantalla de planes; tus datos quedan guardados.`,
+    [`Si dejas tu tarjeta lista durante la prueba, el primer cobro es el día en que termina tu prueba (${TRIAL_DAYS} días después del registro), salvo que canceles antes. Guardar la tarjeta no alarga la prueba.`, ...promo, "La prueba gratis es una por persona y solo para cuentas nuevas."],
   ] as LegalSection["p"];
-  if (!betaLive(now)) return { id: "prueba", t: "Prueba gratis y primer cobro", p: [...rules, `Las cuentas creadas durante la versión de prueba (hasta el ${lastFree}) ya tuvieron su acceso gratis y no reciben días adicionales: para seguir usando la app eligen un plan y pagan.`] };
+  if (!betaLive(now)) return { id: "prueba", t: "Prueba gratis, tarjeta y primer cobro", p: [...rules, `Las cuentas creadas durante la versión de prueba (hasta el ${lastFree}) ya tuvieron su acceso gratis y no reciben días adicionales: para seguir usando la app eligen un plan y pagan.`] };
   return { id: "prueba", t: "Versión de prueba, prueba gratis y primer cobro", p: [
-    `Hasta el ${lastFree} Banana Burn está en versión de prueba: todas las cuentas tienen acceso completo y gratis, y no pedimos tarjeta.`,
-    `Desde el ${firstPaid} se cobran los planes. Si ya tienes cuenta, puedes guardar tu tarjeta antes de esa fecha: no se cobra nada al guardarla y el ${firstPaid} se cobra el plan que elegiste, salvo que canceles antes. Si no la guardas, desde el ${firstPaid} verás la pantalla de planes hasta que guardes una tarjeta y pagues. Las cuentas creadas durante la versión de prueba no reciben días gratis adicionales.`,
+    `Hasta el ${lastFree} Banana Burn está en versión de prueba: todas las cuentas tienen acceso completo y gratis, sin tarjeta.`,
+    `Desde el ${firstPaid} se cobran los planes. Si ya tienes cuenta, puedes dejar tu tarjeta lista antes de esa fecha: no se cobra nada al guardarla y el ${firstPaid} se cobra el plan que elegiste (con el ${PROMO_PCT} % de descuento en tu primer mes si es mensual), salvo que canceles antes. Si no la guardas, desde el ${firstPaid} verás la pantalla de planes hasta que elijas uno y pagues. Las cuentas creadas durante la versión de prueba no reciben días gratis adicionales.`,
+    [...promo],
     `Para las cuentas nuevas desde el ${firstPaid} aplica lo siguiente:`,
     ...rules,
   ] };
@@ -54,12 +60,12 @@ const SECTIONS: LegalSection[] = [
   ] },
   { id: "prueba", t: "Prueba gratis", p: [] },
   { id: "planes", t: "Planes, pagos y renovación", p: [
-    "Los planes y precios vigentes se muestran en la página de precios, en dólares estadounidenses (USD). Los pagos los procesa ONVO Pay. Si tu tarjeta es en otra moneda, tu banco hace la conversión y puede cobrar comisiones propias.",
+    "Los planes y precios vigentes se muestran en la página de precios, en dólares estadounidenses (USD). Los pagos los procesa ONVO Pay (tarjetas de Costa Rica) o Tilopay (tarjetas de otros países). Si tu tarjeta es en otra moneda, tu banco hace la conversión y puede cobrar comisiones propias.",
     ["Las suscripciones se renuevan automáticamente al final de cada periodo (mensual o anual) hasta que las canceles.", "Puedes cancelar cuando quieras desde Mi plan. Conservas el acceso hasta el final del periodo ya pagado y no se te vuelve a cobrar.", "Si un cobro de renovación falla, lo reintentaremos y te avisaremos. Si no se resuelve, el acceso se pausa hasta que actualices tu pago o elijas un plan; tus datos quedan guardados.", "Si cambiamos un precio, te avisaremos con al menos 30 días de anticipación y aplicará desde tu siguiente renovación."],
   ] },
   { id: "reembolsos", t: "Reembolsos y derecho de retracto", p: [
     "Si contrataste a distancia puedes ejercer tu derecho de retracto dentro de los 8 días hábiles siguientes a la compra, conforme a la Ley N.º 7472 de Promoción de la Competencia y Defensa Efectiva del Consumidor, escribiendo a hola@bananaburn.app. Fuera de ese plazo no hacemos reembolsos proporcionales de periodos ya iniciados, salvo cuando la ley lo exija o por un error de cobro de nuestra parte.",
-    `Cuando el primer cobro se hace al terminar la prueba gratis, los 8 días hábiles se cuentan desde ese cobro (el día ${TRIAL_DAYS}), no desde que guardaste la tarjeta.`,
+    "Cuando el primer cobro se hace al terminar la prueba gratis, los 8 días hábiles se cuentan desde ese cobro, no desde que guardaste la tarjeta.",
   ] },
   { id: "comunidad", t: "Reglas de la comunidad", p: [
     "La comunidad existe para motivarnos. No se permite:",

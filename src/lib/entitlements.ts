@@ -19,7 +19,7 @@ import { BETA_ENDS_AT, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
 import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
 import { bestLiveComp, compChainEnd, compPlan } from "@/lib/gifts";
-import { cardStepFor, chargeView, signedUpInBeta, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
+import { cardStepFor, chargeView, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -161,13 +161,14 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const betaEndsAt = i.betaEndsAt ?? BETA_ENDS_AT;
   const betaEnd = Date.parse(betaEndsAt);
   const tc = i.trialCharge ?? null;
-  // Durante la beta nadie se bloquea. Después, la prueba de 7 días es la de la tarjeta guardada (cuentas nuevas).
+  // Durante la beta nadie se bloquea. Después, cada cuenta nueva tiene 7 días desde el alta, con o sin tarjeta (0043).
   const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime();
-  const cardTrial = !beta && trialLive(tc, i.card, i.createdAt, now, betaEndsAt);
-  const trialEnd = beta ? new Date(betaEnd) : cardTrial ? new Date(tc!.trial_ends_at) : null;
+  const ownEnd = trialEndFor(i.createdAt, betaEndsAt);
+  const ownTrial = !beta && trialLive(i.createdAt, now, betaEndsAt);
+  const trialEnd = beta ? new Date(betaEnd) : ownTrial && ownEnd ? new Date(ownEnd) : null;
   const live = !!trialEnd && trialEnd.getTime() > now.getTime();
-  // Para el muro: cuándo terminó el acceso gratis (la prueba con tarjeta, o la beta para las cuentas de la beta).
-  const endedAt = trialEnd ?? (tc?.kind === "prueba" ? new Date(tc.trial_ends_at) : signedUpInBeta(i.createdAt, betaEndsAt) && Number.isFinite(betaEnd) ? new Date(betaEnd) : null);
+  // Para el muro: cuándo terminó el acceso gratis (su prueba de 7 días, o la beta para las cuentas de la beta).
+  const endedAt = trialEnd ?? (ownEnd ? new Date(ownEnd) : signedUpInBeta(i.createdAt, betaEndsAt) && Number.isFinite(betaEnd) ? new Date(betaEnd) : null);
   const charge = chargeView(tc, now);
   const card = i.card ? { brand: i.card.brand, last4: i.card.last4, expMonth: i.card.exp_month, expYear: i.card.exp_year, active: i.card.status === "active" } : null;
   const cardStep = cardStepFor({ paidAccess: plan !== "free", createdAt: i.createdAt, row: tc, now, betaEndsAt });
@@ -194,7 +195,7 @@ export async function getSubscriptions(userId: string): Promise<SubscriptionRow[
 }
 
 const COMP_COLS = "plan,previous_plan,starts_at,expires_at,revoked_at,created_at";
-const CHARGE_READ = "id,user_id,idem_key,kind,plan,billing,amount_minor,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
+const CHARGE_READ = "id,user_id,idem_key,kind,plan,billing,amount_minor,promo,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
 
 /** Cobro programado y tarjeta (RLS: solo lo propio; de la tarjeta solo marca, últimos 4 y vencimiento). Sin 0026: nada. */
 async function loadCardTrial(sb: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<{ trialCharge: TrialChargeRow | null; card: CardRow | null }> {

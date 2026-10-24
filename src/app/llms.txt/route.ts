@@ -31,7 +31,7 @@ Banana Burn es una app web (PWA) que se instala desde el navegador en iPhone, An
 ## Precios (USD)
 ${plans}
 - ${PREMIUM_RETOS_NOTE}
-- ${o.llms} Pago con tarjeta de crédito o débito procesado por ONVO Pay. Se cancela cuando quieras.
+- ${o.llms} Pago con tarjeta de crédito o débito procesado por ONVO Pay (Costa Rica) o Tilopay (otros países). Se cancela cuando quieras.
 
 ## Enlaces
 - Inicio: ${SITE_URL}/

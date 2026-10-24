@@ -37,9 +37,9 @@ export function trialNudge(daysLeft: number, trialDays = TRIAL_DAYS, charge?: { 
     if (left <= 3) return { day, tone: "warn", title: `En ${left} días se cobra tu plan de ${price}`, body: `Puedes cancelar sin costo hasta el día ${trialDays}.`, cta: "Ver mi plan" };
     return { day, tone: "calm", title: `Te quedan ${left} días de prueba`, body: `Con todo incluido. El día ${trialDays} se cobra tu plan, salvo que canceles antes.`, cta: "Ver mi plan" };
   }
-  if (left === 1) return { day, tone: "last", title: "Hoy termina tu prueba gratis", body: "Elige tu plan hoy y mañana sigues sin cortes. Tu progreso queda guardado.", cta: "Elegir plan" };
+  if (left === 1) return { day, tone: "last", title: "Hoy termina tu prueba gratis", body: "Deja tu tarjeta lista hoy y tu primer mes cuesta 50 % menos. Tu progreso queda guardado.", cta: "Elegir plan" };
   if (day === 1) return { day, tone: "start", title: `Tu prueba gratis de ${trialDays} días empezó`, body: "Tienes todo incluido. Haz tu primer entreno hoy.", cta: "Ver planes" };
-  if (left <= 3) return { day, tone: "warn", title: `Te quedan ${left} días de prueba`, body: "Elige tu plan antes de que termine y no pierdes tu racha.", cta: "Elegir plan" };
+  if (left <= 3) return { day, tone: "warn", title: `Te quedan ${left} días de prueba`, body: "Deja tu tarjeta lista antes de que termine: tu primer mes cuesta 50 % menos y no pierdes tu racha.", cta: "Elegir plan" };
   return { day, tone: "calm", title: `Te quedan ${left} días de prueba`, body: "Con todo incluido.", cta: "Elegir plan" };
 }
 

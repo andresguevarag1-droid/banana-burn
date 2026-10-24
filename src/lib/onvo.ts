@@ -303,6 +303,26 @@ export function createPaymentIntent(input: { amountMinor: number; customerId: st
   });
 }
 
+/**
+ * POST /v1/payment-intents/{id}/confirm con la tarjeta guardada (llave secreta, servidor). Lo usa el primer mes con 50 %
+ * (0043). Estados documentados: requires_payment_method (también si la confirmación falla), requires_action (3DS: la
+ * persona tendría que estar presente), processing, succeeded, canceled, requires_capture.
+ * Doc: https://docs.onvopay.com/en/api/confirmar-una-intencion-de-pago (body: paymentMethodId).
+ */
+export function confirmPaymentIntent(id: string, paymentMethodId: string) {
+  return onvo<OnvoPaymentIntent>("POST", `/v1/payment-intents/${encodeURIComponent(id)}/confirm`, { paymentMethodId });
+}
+
+/** Qué significa el estado de un PaymentIntent para un cobro sin la persona presente. Pura y testeada. */
+export function intentOutcome(status: unknown): "approved" | "declined" | "processing" | "not_confirmed" {
+  const st = typeof status === "string" ? status.toLowerCase() : "";
+  if (st === "succeeded") return "approved";
+  if (st === "processing" || st === "requires_capture") return "processing";
+  if (st === "requires_confirmation" || st === "") return "not_confirmed";
+  // requires_payment_method (falló), requires_action (3DS sin la persona), canceled.
+  return "declined";
+}
+
 /** GET /v1/payment-intents/{id}: fuente de verdad cuando el webhook no trae el monto. */
 export function getPaymentIntent(id: string) {
   return onvo<OnvoPaymentIntent>("GET", `/v1/payment-intents/${encodeURIComponent(id)}`);

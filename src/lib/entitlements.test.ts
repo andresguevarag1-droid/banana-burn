@@ -33,9 +33,15 @@ describe("acceso: prueba gratis de 7 días con tarjeta (desde el fin de la beta)
     const e = entitlementsFrom({ ...base, createdAt: daysAgo(6.9), trialCharge: trialCharge(6.9), card: CARD });
     expect(e.trial?.daysLeft).toBe(1);
   });
-  it("cuenta nueva sin tarjeta: no hay prueba, el muro ofrece empezarla", () => {
+  it("0043: cuenta nueva sin tarjeta: 7 días con todo desde el alta y la oferta de dejar la tarjeta lista", () => {
     const e = entitlementsFrom({ ...base, createdAt: daysAgo(0.1) });
-    expect(e).toMatchObject({ access: "none", locked: true, trial: null, cardStep: "trial" });
+    expect(e).toMatchObject({ access: "trial", app: true, nutrition: true, locked: false, cardStep: "trial" });
+    expect(e.trial?.daysLeft).toBe(7);
+  });
+  it("0043: cuenta nueva sin tarjeta al día 7: muro", () => {
+    const e = entitlementsFrom({ ...base, createdAt: daysAgo(7.01) });
+    expect(e).toMatchObject({ access: "none", locked: true, trial: null, cardStep: "pay" });
+    expect(e.trialEndsAt).toBeTruthy();
   });
   it("día 7 sin cobro confirmado todavía: muro (el plan lo da el webhook)", () => {
     const e = entitlementsFrom({ ...base, createdAt: daysAgo(7), trialCharge: trialCharge(7, { status: "pending", attempts: 1 }), card: CARD });
@@ -207,7 +213,7 @@ describe("fin de la beta: el muro aplica en el servidor", () => {
     const now = new Date("2026-11-03T12:00:00Z");
     const tc = trialCharge(0, { trial_started_at: "2026-11-02T12:00:00.000Z", trial_ends_at: "2026-11-09T12:00:00.000Z", charge_at: "2026-11-09T12:00:00.000Z", next_attempt_at: "2026-11-09T12:00:00.000Z" });
     expect(entitlementsFrom({ ...beta, now, createdAt: "2026-11-02T11:00:00Z", trialCharge: tc, card: CARD })).toMatchObject({ locked: false, access: "trial" });
-    expect(entitlementsFrom({ ...beta, now, createdAt: "2026-11-02T11:00:00Z" })).toMatchObject({ locked: true, cardStep: "trial" });
+    expect(entitlementsFrom({ ...beta, now, createdAt: "2026-11-02T11:00:00Z" })).toMatchObject({ locked: false, access: "trial", cardStep: "trial" });
   });
   it("con un regalo o un plan pagado no se bloquea", () => {
     const now = new Date("2026-11-05T12:00:00Z");

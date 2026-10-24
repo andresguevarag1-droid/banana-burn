@@ -1,4 +1,5 @@
 "use client";
+import { PROMO_PCT } from "@/lib/trial";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
@@ -55,7 +56,7 @@ const guarantees = (trial: readonly [string, string]) => [
   [Gift, trial[0], trial[1]],
   [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi plan, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
   [Scroll, "8 días hábiles de retracto", "Si compraste y cambias de opinión, escríbenos dentro de los 8 días hábiles siguientes a la compra (Ley 7472)."],
-  [Lock, "Pago seguro con ONVO Pay", "Los datos de tu tarjeta van directo a ONVO Pay, nuestro procesador de pagos, y nunca pasan por nuestros servidores."],
+  [Lock, "Pago seguro", "Los datos de tu tarjeta van directo a nuestro procesador de pagos (ONVO Pay o Tilopay) y nunca pasan por nuestros servidores."],
 ] as const;
 
 /**
@@ -109,7 +110,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
         })}
       </div>
       {checkout.error && <p role="alert" className="mt-6 text-center text-sm font-semibold text-bad">{checkout.error}</p>}
-      <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido. Precios en dólares (USD); pagas con tarjeta de crédito o débito cuando eliges tu plan.</p>
+      <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido, sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD).</p>
       <p className="mt-2 text-center text-sm text-muted text-pretty">{PREMIUM_RETOS_NOTE}</p>
 
       {/* Título arriba y las cuatro garantías en dos columnas: en escritorio la columna del título quedaba casi vacía. */}

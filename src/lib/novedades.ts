@@ -55,6 +55,15 @@ export type Release = {
 // ───────────── Historial (la más nueva primero) ─────────────
 export const NOVEDADES: Release[] = [
   {
+    id: "2026-10-24-tarjeta-lista",
+    date: "2026-10-24",
+    title: "Tu primer mes a mitad de precio",
+    intro: "La prueba gratis ya no pide tarjeta, y dejarla lista tiene premio.",
+    items: [
+      { title: "Deja tu tarjeta lista y paga 50 % menos tu primer mes", benefit: "Si guardas tu tarjeta antes de tu primer cobro, tu primer mes del plan mensual cuesta la mitad. Hoy no se cobra nada, te avisamos 2 días antes y cancelas cuando quieras desde Mi plan.", icon: "shield", href: "/app/suscripcion#tarjeta", cta: "Ver la oferta" },
+    ],
+  },
+  {
     id: "2026-10-23-pilates-platanita",
     date: "2026-10-23",
     title: "Pilates en casa con Coach Platanita",
@@ -107,8 +116,8 @@ export const NOVEDADES: Release[] = [
         icon: "flag", href: "/app/perfil", cta: "Abrir la guía", opens: "guia",
       },
       {
-        title: "7 días gratis con tarjeta desde el 1 de noviembre",
-        benefit: "Las cuentas nuevas guardan su tarjeta para empezar 7 días gratis: ese día no se cobra nada, el día 7 se cobra el plan y te avisamos 2 días antes. Si estás en la beta, tu acceso gratis llega hasta el 31 de octubre; si guardas tu tarjeta antes, el primer cobro es al terminar la beta. Puedes cancelar desde Mi plan.",
+        title: "Tarjeta guardada y cobro con aviso",
+        benefit: "Puedes guardar tu tarjeta en Mi plan: ese día no se cobra nada, te avisamos 2 días antes del cobro y cancelas cuando quieras. Si estás en la beta, tu acceso gratis llega hasta el 31 de octubre.",
         icon: "shield", href: "/app/suscripcion", cta: "Ver mi plan",
       },
       {

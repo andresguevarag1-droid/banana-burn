@@ -21,16 +21,16 @@ export function AddCardBanner() {
       <details className="group">
         <summary className="tap flex min-h-11 list-none items-center gap-2.5 px-3.5 py-2 [&::-webkit-details-marker]:hidden">
           <CreditCard weight="duotone" className="size-5 shrink-0 text-banana-ink" aria-hidden />
-          <span className="min-w-0 flex-1 text-pretty text-ink"><b>Agrega tu tarjeta antes del {firstPaid}.</b> Tu acceso gratis termina el {lastFree}.</span>
+          <span className="min-w-0 flex-1 text-pretty text-ink"><b>Deja tu tarjeta lista y paga 50 % menos tu primer mes.</b> Tu acceso gratis termina el {lastFree}.</span>
           <span className="shrink-0 text-xs font-bold text-banana-ink underline underline-offset-4 group-open:hidden">Más info</span>
         </summary>
         <div className="px-3.5 pb-3 pl-11 text-body text-pretty space-y-1.5">
-          <p>Desde el {firstPaid} la app se paga. Si guardas tu tarjeta ahora, hoy no se cobra nada y el {firstPaid} se cobra el plan que elijas, salvo que canceles antes. Te avisamos 2 días antes.</p>
+          <p>Desde el {firstPaid} la app se paga. Si dejas tu tarjeta lista antes, hoy no se cobra nada y el {firstPaid} se cobra tu primer mes con 50 % de descuento (plan mensual), salvo que canceles antes. Te avisamos 2 días antes.</p>
           <p>Si no la agregas, desde el {firstPaid} verás la pantalla de planes hasta que guardes una tarjeta y pagues. No hay días gratis extra después de esa fecha. Tu progreso queda guardado.</p>
         </div>
       </details>
       <div className="px-3.5 pb-2 pl-11">
-        <Link href="/app/suscripcion#tarjeta" data-cta="card-banner-agregar" className="tap inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Agregar tarjeta<ArrowRight weight="bold" className="size-4" /></Link>
+        <Link href="/app/suscripcion#tarjeta" data-cta="card-banner-agregar" className="tap inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Dejar mi tarjeta lista<ArrowRight weight="bold" className="size-4" /></Link>
       </div>
     </aside>
   );
@@ -44,7 +44,7 @@ export function ScheduledBanner({ charge, tz }: { charge: ChargeView; tz: string
       <CreditCard weight="duotone" className="size-5 shrink-0 text-peel" aria-hidden />
       <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink">{charge.testerHold
         ? <><b>Mientras seas tester no se te cobra nada.</b> El {fmt(charge.chargeAt, tz)}, al terminar tu mes de tester, se cobra {plan.name} por {money(charge.amount)}, salvo que canceles antes.</>
-        : <><b>Tarjeta guardada.</b> El {fmt(charge.chargeAt, tz)} se cobra {plan.name} por {money(charge.amount)}, salvo que canceles antes.</>}</p>
+        : <><b>Tarjeta lista.</b> El {fmt(charge.chargeAt, tz)} se cobra {plan.name} por {money(charge.amount)}{charge.promo ? ", tu primer mes con 50 % de descuento" : ""}, salvo que canceles antes.</>}</p>
       <Link href="/app/suscripcion" data-cta="card-banner-plan" className="tap inline-flex h-11 shrink-0 items-center gap-1 font-bold text-banana-ink hover:text-ink">Ver<ArrowRight weight="bold" className="size-4" /></Link>
     </aside>
   );

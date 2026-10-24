@@ -17,7 +17,7 @@ import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
 import { safeAction } from "@/lib/action-client";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
-import { DAY_MS, TRIAL_CARD_LINE } from "@/lib/trial";
+import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
 import { VoicePicker } from "@/components/voice-picker";
 import { voiceForLevel } from "@/lib/voice";
@@ -85,12 +85,17 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 
 const SELECT = "input h-14 text-lg px-3";
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardRequired = false, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
+export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
   /** Solo demo: abrir en el paso de experiencia y lenguaje (?vista=lenguaje). */
   startOnVoice?: boolean;
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
-  /** Desde el fin de la beta la prueba pide tarjeta: paso extra para elegir plan y guardarla (no se cobra ese día). */
-  cardRequired?: boolean;
+  /**
+   * 0043: paso opcional al final para dejar la tarjeta lista y pagar 50 % menos el primer mes (beta o prueba de 7 días,
+   * sin tarjeta guardada y sin plan pagado). "Seguir sin tarjeta" lo salta.
+   */
+  cardOffer?: boolean;
+  /** Cuándo sería el primer cobro si deja la tarjeta lista: fin de la beta o fin de su prueba (alta + 7 días). */
+  chargeAt?: string | null;
   /** ¿Están activos los pagos con ONVO? Sin ellos no se puede guardar la tarjeta. */
   payments?: boolean;
   /** Solo demo: abrir directo en el paso de la tarjeta (?vista=tarjeta) para revisarlo. */
@@ -105,8 +110,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   nutrition?: boolean;
 }) {
   const router = useRouter();
-  const TOTAL = cardRequired ? STEPS + 1 : STEPS;
-  const [step, setStep] = useState(startOnCard && cardRequired ? STEPS : startOnVoice ? 3 : 0);
+  const TOTAL = cardOffer ? STEPS + 1 : STEPS;
+  const [step, setStep] = useState(startOnCard && cardOffer ? STEPS : startOnVoice ? 3 : 0);
   /** El registro sigue al nivel hasta que la persona elige uno a mano. */
   const [voiceTouched, setVoiceTouched] = useState(false);
   const [choice, setChoice] = useState<PlanChoice>(intent ?? { plan: "completo", billing: "mes" });
@@ -170,6 +175,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   // En la beta el fin llega a medianoche del día siguiente: se muestra el último día con acceso (igual que el aviso de la tarjeta).
   const trialEnd = trialBeta && betaLastFree ? betaLastFree : trialEndsAt ? new Date(trialEndsAt).toLocaleDateString("es-419", { day: "numeric", month: "long" }) : null;
   const intentPlan = intent ? PLANS.find((p) => p.id === intent.plan) : null;
+  const chargeDay = offerChargeAt ? new Date(offerChargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" }) : null;
 
   const canNext = [
     true,
@@ -179,10 +185,10 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     Boolean(full) && o.consent && (!parqYes || medOk),
   ][step];
 
-  // Desde el fin de la beta: "Crear mi plan" lleva primero a elegir plan y guardar la tarjeta. El perfil se guarda después,
-  // ya con la prueba activa (así el primer peso se registra con acceso).
+  // "Crear mi plan" lleva primero a la oferta de la tarjeta (opcional). El perfil se guarda al dejarla lista o al seguir sin
+  // tarjeta.
   function next() {
-    if (cardRequired && !saved) { go(STEPS); return; }
+    if (cardOffer && !saved) { go(STEPS); return; }
     finish();
   }
   /** Tarjeta de otro país (Tilopay): se guarda el plan antes de ir a la página segura; al volver, Mi plan muestra la prueba. */
@@ -206,7 +212,9 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   }
 
   if (step === TOTAL && full && t) {
-    const chargeAt = saved?.charge?.chargeAt ?? (saved ? new Date(Date.now() + 7 * DAY_MS).toISOString() : null);
+    const chargeAt = saved?.charge?.chargeAt ?? (saved ? offerChargeAt ?? new Date(Date.now() + 7 * DAY_MS).toISOString() : null);
+    const savedPromo = saved?.charge ? saved.charge.promo : choice.billing === "mes";
+    const savedAmount = saved?.charge?.amount ?? (savedPromo ? promoPrice(choice.plan) : PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]);
     return (
       <main className="min-h-dvh bg-paper grid place-items-center px-6 py-10 text-center">
         <Confetti />
@@ -216,11 +224,11 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           <p className="mt-2 text-muted text-pretty">{nutrition ? "Calculado para ti. Se ajusta solo cada semana con tu peso real." : "Calculado para ti. Tus cargas suben solas cuando dominas el rango."}</p>
           {saved && chargeAt ? (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              Tu prueba gratis de {TRIAL_DAYS} días ya empezó. {TRIAL_CARD_LINE} Tu día {TRIAL_DAYS} es el {new Date(chargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long" })}: ese día se cobran {money2(saved.charge?.amount ?? PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])}. Te avisamos 2 días antes.
+              Tu tarjeta quedó lista. Hoy no te cobramos. El {new Date(chargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long" })} se cobran {money2(savedAmount)}{savedPromo ? ", tu primer mes con 50 % de descuento" : ""}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.
             </p>
           ) : trialEnd && (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              {trialBeta ? `Estás en la versión de prueba de Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}.`}
+              {trialBeta ? `Estás en la versión de prueba de Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}, sin tarjeta.`}
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
@@ -386,19 +394,27 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
           </>)}
 
-          {step === STEPS && cardRequired && (<>
+          {step === STEPS && cardOffer && (<>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Activa tus {TRIAL_DAYS} días gratis</h1>
-              <p className="mt-2 text-muted text-pretty">Elige tu plan y guarda tu tarjeta. En la prueba tienes todo incluido, sin importar el plan.</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{PROMO_TITLE}</h1>
+              <p className="mt-2 text-muted text-pretty">{trialBeta && betaLastFree ? `Tienes todo incluido gratis hasta el ${betaLastFree}, con o sin tarjeta.` : `Tus ${TRIAL_DAYS} días gratis ya empezaron, con o sin tarjeta.`} Si la dejas lista hoy, tu primer mes cuesta la mitad.</p>
             </div>
-            <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-bold text-ink text-pretty">{TRIAL_CARD_LINE}</p>
-            <PlanPicker value={choice} onChange={setChoice} disabled={pending} />
+            <ul className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink space-y-1.5">
+              {[
+                "Hoy no te cobramos",
+                chargeDay ? `El ${chargeDay} se cobra tu primer mes con 50 % de descuento` : "Al terminar tu prueba se cobra tu primer mes con 50 % de descuento",
+                "Te avisamos 2 días antes",
+                "Cancela cuando quieras desde Mi plan",
+              ].map((l) => <li key={l} className="flex items-start gap-2"><Check weight="bold" aria-hidden className="mt-0.5 size-4 shrink-0" /><span className="text-pretty">{l}</span></li>)}
+            </ul>
+            <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel={`Empezar mis ${TRIAL_DAYS} días gratis`} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
-                note={<>Hoy no te cobramos. Tu día {TRIAL_DAYS} es el {new Date(Date.now() + 7 * DAY_MS).toLocaleDateString("es-419", { day: "numeric", month: "long" })}: ese día se cobran {money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.</>} />
+              <CardForm choice={choice} demo={demo} submitLabel="Dejar mi tarjeta lista" onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
+                note={chargeDay ? (promoApplies("primer_mes_50", choice.billing) ? <>{promoChargeLine(chargeDay)} Monto: {money2(promoPrice(choice.plan))}; desde el segundo mes, {money2(PLANS.find((p) => p.id === choice.plan)!.price.mes)} al mes.</> : <>Hoy no te cobramos. El {chargeDay} se cobran {money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])} del plan anual, salvo que canceles antes desde Mi plan.</>) : null} />
             ) : (
-              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Escríbenos a hola@bananaburn.app y te ayudamos.</p>
+              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.</p>
             )}
+            <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>
             {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />Creando tu plan…</p>}
             {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
           </>)}
@@ -411,7 +427,9 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           {step < STEPS - 1 ? (
             <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>
           ) : step === STEPS - 1 ? (
-            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardRequired ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
+            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardOffer ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
+          ) : step === STEPS && cardOffer ? (
+            <button data-cta="bienvenida-sin-tarjeta" disabled={pending} onClick={() => finish()} className="btn-ghost w-full h-12 text-base">Seguir sin tarjeta</button>
           ) : null}
         </div>
       </footer>

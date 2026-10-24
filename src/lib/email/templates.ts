@@ -238,7 +238,9 @@ export function planListo(d: { name: string; trainDays: number; todayRoutine: st
   };
 }
 
-export type PaymentData = { name: string; plan: string; amount: number; currency?: string; date?: string; reference?: string; method?: string; nextCharge?: string | null };
+export type PaymentData = { name: string; plan: string; amount: number; currency?: string; date?: string; reference?: string; method?: string; nextCharge?: string | null;
+  /** 0043: primer mes con 50 %. Precio normal (USD) que se cobra desde el siguiente mes. */
+  promoFull?: number | null };
 
 export function reciboPago(d: PaymentData): Email {
   const n = firstName(d.name);
@@ -249,7 +251,8 @@ export function reciboPago(d: PaymentData): Email {
   const r: [string, string][] = [["Plan", d.plan], ["Total", total], ["Fecha", longDate(d.date ?? new Date().toISOString())]];
   if (d.method) r.push(["Método", d.method]);
   if (d.reference) r.push(["Referencia", d.reference]);
-  if (d.nextCharge) r.push(["Próximo cobro", longDate(d.nextCharge)]);
+  if (d.promoFull) r.push(["Descuento", "Primer mes con 50 % de descuento"]);
+  if (d.nextCharge) r.push(["Próximo cobro", d.promoFull ? `${longDate(d.nextCharge)}, ${money(d.promoFull, d.currency)} (precio normal)` : longDate(d.nextCharge)]);
   const hero: Hero = { eyebrow: "Recibo", chip: "Pago confirmado", title: "Pago recibido, gracias", lead: `${esc(n)}, tu suscripción a <b>${esc(d.plan)}</b> está activa.` };
   const body = rows(r) +
     small("Guarda este correo como comprobante. ¿Necesitas factura? Responde a este correo con tus datos de facturación y te la enviamos.") + button("Ir a mi entreno", "/app/entreno", "banana");
@@ -286,6 +289,8 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
 
 /** Datos del primer cobro programado (prueba de 7 días o fin de la beta). */
 export type ChargeMailData = { name: string; plan: string; amount: number; currency?: string; chargeAt: string; kind: "prueba" | "beta" | "inmediato"; card?: string | null;
+  /** 0043: el primer cobro lleva el 50 % del primer mes (plan mensual). */
+  promo?: boolean;
   /** El cobro se movió: "tester" (al final del mes de tester) o "ajustado" (ya no está en su fecha original). */
   moved?: "tester" | "ajustado" | null };
 
@@ -295,20 +300,19 @@ export function pruebaIniciada(d: ChargeMailData): Email {
   const total = money(d.amount, d.currency);
   const when = longDate(d.chargeAt);
   const beta = d.kind === "beta";
-  const subject = beta ? `Tarjeta guardada: tu plan se cobra el ${when}` : "Tu prueba gratis de 7 días empezó";
-  const preheader = beta ? `Hoy no te cobramos. El ${when} se cobra ${total}, salvo que canceles antes.` : `Hoy no te cobramos. El día 7 (${when}) se cobra ${total}, salvo que canceles antes.`;
-  const r: [string, string][] = [["Plan", d.plan], ["Hoy", money(0, d.currency)], ["Se cobra el", when], ["Monto", total]];
+  const what = d.promo ? `tu primer mes con 50 % de descuento (${total})` : `tu plan (${total})`;
+  const subject = d.promo ? `Tarjeta lista: tu primer mes con 50 % se cobra el ${when}` : `Tarjeta lista: tu plan se cobra el ${when}`;
+  const preheader = `Hoy no te cobramos. El ${when} se cobra ${what}, salvo que canceles antes.`;
+  const r: [string, string][] = [["Plan", d.plan], ["Hoy", money(0, d.currency)], ["Se cobra el", when], ["Monto", d.promo ? `${total}, primer mes con 50 % de descuento` : total]];
   if (d.card) r.push(["Tarjeta", d.card]);
-  const hero: Hero = beta
-    ? { eyebrow: "Tarjeta guardada", title: "Listo, tu tarjeta quedó guardada", lead: `Hoy no te cobramos. Sigues con todo incluido hasta que termine la versión de prueba. El <b>${esc(when)}</b> se cobra tu plan, salvo que canceles antes.` }
-    : { eyebrow: "Prueba gratis", chip: "7 días gratis", title: `${esc(n)}, tu prueba gratis empezó`, lead: "<b>7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, salvo que canceles antes.</b> Tienes todo incluido mientras tanto." };
+  const hero: Hero = { eyebrow: "Tarjeta lista", ...(d.promo ? { chip: "50 % el primer mes" } : {}), title: `${esc(n)}, tu tarjeta quedó lista`, lead: `Hoy no te cobramos. ${beta ? "Sigues con todo incluido hasta que termine la versión de prueba." : "Sigues con todo incluido hasta que termine tu prueba gratis."} El <b>${esc(when)}</b> se cobra ${esc(what)}, salvo que canceles antes.` };
   const body = rows(r) + p("Te avisaremos 2 días antes del cobro. Para cancelar sin costo entra a Mi plan antes de esa fecha: no se cobra nada y conservas el acceso hasta el final de la prueba.") +
     button("Ver mi plan", "/app/suscripcion");
   const reason = "Recibes este correo porque guardaste una tarjeta en Banana Burn.";
   return {
     subject, preheader,
     html: layout({ preheader, hero, body, reason }),
-    text: textLayout([subject, "", beta ? `Hoy no te cobramos. El ${when} se cobra ${total} de ${d.plan}, salvo que canceles antes.` : `7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, salvo que canceles antes.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", "Te avisaremos 2 días antes. Cancela sin costo desde Mi plan antes de esa fecha.", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
+    text: textLayout([subject, "", `Hoy no te cobramos. El ${when} se cobra ${what}, salvo que canceles antes.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", "Te avisaremos 2 días antes. Cancela sin costo desde Mi plan antes de esa fecha.", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
   };
 }
 
@@ -318,7 +322,8 @@ export function recordatorioCobro(d: ChargeMailData): Email {
   const total = money(d.amount, d.currency);
   const when = longDate(d.chargeAt);
   const beta = d.kind === "beta" || !!d.moved;
-  const line = d.moved === "tester" ? `Tu mes de tester termina en 2 días. El ${when} se cobra tu plan de ${total}. Puedes cancelar sin costo antes de esa fecha.`
+  const line = d.promo ? `En 2 días se cobra tu primer mes con 50 % de descuento: ${total}, el ${when}. Puedes cancelar sin costo antes de esa fecha.`
+    : d.moved === "tester" ? `Tu mes de tester termina en 2 días. El ${when} se cobra tu plan de ${total}. Puedes cancelar sin costo antes de esa fecha.`
     : beta ? `En 2 días se cobra tu plan de ${total}, el ${when}. Puedes cancelar sin costo antes de esa fecha.` : `En 2 días se cobra tu plan de ${total}. Puedes cancelar sin costo hasta el día 7.`;
   const subject = `En 2 días se cobra tu plan de ${total}`;
   const r: [string, string][] = [["Plan", d.plan], ["Se cobra el", when], ["Monto", total]];

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, Barbell, CircleNotch, CreditCard, Lock, Scales, WarningCircle } from "@/components/icons";
-import { TRIAL_CARD_LINE, type CardStep, type ChargePhase } from "@/lib/trial";
+import type { CardStep, ChargePhase } from "@/lib/trial";
 import { MonkeyBanana } from "@/components/icons/brand";
 import { Pricing } from "@/components/pricing";
 import { FunnelTracker } from "@/components/analytics";
@@ -50,8 +50,8 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
   }, [show, usage, cardStep]);
 
   if (!show) return <>{children}</>;
-  // Tarjeta guardada (0026): cuenta nueva sin prueba, cobro rechazado, cobro en curso o cuenta de la beta después del 1 de noviembre.
-  if (cardStep === "trial") return <CardWall icon="card" title="Empieza tu prueba gratis de 7 días" body={`Elige tu plan y guarda tu tarjeta. ${TRIAL_CARD_LINE}`} cta="Elegir plan y empezar" />;
+  // Tarjeta guardada (0026): cobro rechazado, cobro en curso o cuenta de la beta después del 1 de noviembre. Desde 0043 la
+  // prueba no pide tarjeta, así que "trial" nunca llega bloqueado.
   if (chargePhase === "procesando") return <Processing />;
   const failed = chargePhase === "reintento" || chargePhase === "fallido";
   const line = usage ? progressLine(usage) : null;
@@ -89,20 +89,6 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
         <Link href="/app/suscripcion" data-cta="wall-mi-plan" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ver mi plan y pagos</Link>
         <Link href="/app/perfil" data-cta="wall-perfil" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ir a mi perfil</Link>
       </div>
-    </div>
-  );
-}
-
-/** Muro de la prueba con tarjeta: un solo paso claro hacia Mi plan, donde se elige el plan y se guarda la tarjeta. */
-function CardWall({ title, body, cta }: { icon: "card"; title: string; body: string; cta: string }) {
-  return (
-    <div className="animate-enter mx-auto max-w-md space-y-5 py-6 text-center">
-      <FunnelTracker view="plan_wall_view" props={{ kind: "prueba_con_tarjeta" }} />
-      <span className="mx-auto grid place-items-center size-20 rounded-[1.75rem] bg-banana-soft text-banana-ink" aria-hidden><MonkeyBanana className="size-12" /></span>
-      <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{title}</h1>
-      <p className="text-muted text-pretty">{body}</p>
-      <Link href="/app/suscripcion#tarjeta" data-cta="wall-empezar-prueba" className="btn-banana h-14 w-full text-base">{cta}<ArrowRight weight="bold" className="size-5" /></Link>
-      <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-muted"><Lock weight="bold" className="size-3.5" />Te avisamos 2 días antes del cobro.</p>
     </div>
   );
 }

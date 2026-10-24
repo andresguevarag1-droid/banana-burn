@@ -201,10 +201,13 @@ select bbtest.seed(n) from unnest(array['A','B','D']) n;
 -- A y B siguen a E (ajena a los pares que se prueban); D sigue a B (para la prueba de comunidad).
 insert into public.follows (follower, followee) values (bbtest.u('A'), bbtest.u('E')), (bbtest.u('B'), bbtest.u('E')), (bbtest.u('D'), bbtest.u('B'));
 
--- 0026, según la fecha: una cuenta nueva sin tarjeta tiene la app durante la beta; después del 1 de noviembre la prueba pide tarjeta.
+-- Según la fecha: una cuenta nueva sin tarjeta tiene la app durante la beta; después del 1 de noviembre tiene sus 7 días
+-- desde el registro, también sin tarjeta (0043), y al pasar los 7 días ya no.
 insert into auth.users (id, email) values ('acacacac-0000-4000-8000-0000000000ac', 'sintarjeta@prueba.test');
 select bbtest.ok('beta: cuenta nueva sin tarjeta tiene la app hasta noviembre', public._has_app_access('acacacac-0000-4000-8000-0000000000ac')) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
-select bbtest.ok('fin de la beta: cuenta nueva sin tarjeta no tiene la app', not public._has_app_access('acacacac-0000-4000-8000-0000000000ac')) where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.ok('0043, fin de la beta: cuenta nueva sin tarjeta tiene sus 7 días', public._has_app_access('acacacac-0000-4000-8000-0000000000ac')) where now() >= timestamptz '2026-11-01 06:00:00+00';
+update public.profiles set created_at = now() - interval '7 days 1 minute' where id = 'acacacac-0000-4000-8000-0000000000ac';
+select bbtest.ok('0043, fin de la beta: cuenta sin tarjeta después de sus 7 días no tiene la app', not public._has_app_access('acacacac-0000-4000-8000-0000000000ac')) where now() >= timestamptz '2026-11-01 06:00:00+00' and now() - interval '7 days 1 minute' >= timestamptz '2026-11-01 06:00:00+00';
 select bbtest.ok('fin de la beta: cuenta nueva con tarjeta y cobro programado tiene la app', public._has_app_access(bbtest.u('A'))) where now() >= timestamptz '2026-11-01 06:00:00+00';
 delete from auth.users where id = 'acacacac-0000-4000-8000-0000000000ac';
 
@@ -1085,15 +1088,27 @@ update public.payment_methods set status = 'disconnected', disconnected_at = now
 select bbtest.card_trial('ab000000-0000-4000-8000-0000000000a5', 'scheduled', now() - interval '7 days 1 minute');
 select bbtest.card_trial('ab000000-0000-4000-8000-0000000000a6', 'failed', now() - interval '8 days');
 select bbtest.card_trial('ab000000-0000-4000-8000-0000000000a7', 'retry_scheduled', now() - interval '7 days 2 hours');
+-- 0043: la prueba se cuenta desde el registro. N5, N6 y N7 se registraron cuando empezó su prueba.
+update public.profiles set created_at = now() - interval '7 days 1 minute' where id = 'ab000000-0000-4000-8000-0000000000a5';
+update public.profiles set created_at = now() - interval '8 days' where id = 'ab000000-0000-4000-8000-0000000000a6';
+update public.profiles set created_at = now() - interval '7 days 2 hours' where id = 'ab000000-0000-4000-8000-0000000000a7';
+-- N8: cuenta nueva sin tarjeta que ya pasó sus 7 días.
+insert into auth.users (id, email) values ('ab000000-0000-4000-8000-0000000000a8', 'n8@prueba.test');
+update public.profiles set created_at = now() - interval '7 days 1 minute' where id = 'ab000000-0000-4000-8000-0000000000a8';
 -- O1: una fila "prueba" con tarjeta por un error del servidor: la base no le da días a una cuenta de la beta.
 select bbtest.card_trial('ab000000-0000-4000-8000-0000000000b1');
 
--- 10a. Acceso: la prueba de 7 días pide tarjeta y solo es para cuentas nuevas.
+-- 10a. Acceso (0043): la prueba de 7 días NO pide tarjeta, cuenta desde el registro y solo es para cuentas nuevas.
 set role authenticated; select bbtest.as_user('ab000000-0000-4000-8000-0000000000a1');
-select bbtest.ok('tarjeta: N1 (nueva, sin tarjeta) no tiene la app', not (select public.has_app_access()));
-select bbtest.ok('tarjeta: N1 no tiene nutrición', not (select public.has_nutrition_access()));
-select bbtest.fails('tarjeta: N1 no registra su peso', $q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date, 80) $q$, '42501');
+select bbtest.ok('0043: N1 (nueva, sin tarjeta) tiene la app en su prueba', (select public.has_app_access()));
+select bbtest.ok('0043: N1 tiene nutrición en su prueba', (select public.has_nutrition_access()));
+select bbtest.ok('0043: N1 registra su peso sin tarjeta', bbtest.affected($q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date, 80) $q$) = 1);
 reset role;
+set role authenticated; select bbtest.as_user('ab000000-0000-4000-8000-0000000000a8');
+select bbtest.ok('0043: N8 (sin tarjeta, pasó sus 7 días) no tiene la app', not (select public.has_app_access()));
+select bbtest.fails('0043: N8 no registra su peso', $q$ insert into public.weights (user_id, day, kg) values (auth.uid(), current_date, 80) $q$, '42501');
+reset role;
+select bbtest.ok('0043: un regalo para N1 empieza al terminar su prueba sin tarjeta', (select abs(extract(epoch from public._access_covered_until('ab000000-0000-4000-8000-0000000000a1', 'completo') - (p.created_at + interval '7 days'))) < 1 from public.profiles p where p.id = 'ab000000-0000-4000-8000-0000000000a1'));
 set role authenticated; select bbtest.as_user('ab000000-0000-4000-8000-0000000000a2');
 select bbtest.ok('tarjeta: N2 (tarjeta y cobro programado) tiene la app', (select public.has_app_access()));
 select bbtest.ok('tarjeta: N2 tiene nutrición en la prueba aunque eligió Entreno', (select public.has_nutrition_access()));
@@ -1101,7 +1116,7 @@ select bbtest.ok('tarjeta: N2 registra su peso', bbtest.affected($q$ insert into
 select bbtest.ok('tarjeta: N2 registra una comida', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Gallo pinto', 350) $q$) = 1);
 reset role;
 set role authenticated; select bbtest.as_user('ab000000-0000-4000-8000-0000000000a3');
-select bbtest.ok('tarjeta: N3 (cobro programado sin tarjeta) no tiene la app', not (select public.has_app_access()));
+select bbtest.ok('0043: N3 (cobro programado sin tarjeta) igual tiene sus 7 días desde el registro', (select public.has_app_access()));
 reset role;
 set role authenticated; select bbtest.as_user('ab000000-0000-4000-8000-0000000000a4');
 select bbtest.ok('tarjeta: N4 canceló antes del día 7 y sigue con acceso hasta el fin de la prueba', (select public.has_app_access()));
@@ -1140,6 +1155,7 @@ select bbtest.fails('tarjeta: N2 no borra su tarjeta por la API', $q$ delete fro
 select bbtest.ok('cobro: N2 lee su cobro programado', (select status = 'scheduled' and plan = 'entreno' and amount_minor = 999 from public.trial_charges where user_id = auth.uid()));
 select bbtest.ok('cobro: N2 no ve cobros ajenos', bbtest.num($q$ select 1 from public.trial_charges where user_id <> auth.uid() $q$) = 0);
 select bbtest.fails('cobro: N2 no alarga su prueba', $q$ update public.trial_charges set trial_ends_at = trial_ends_at + interval '30 days', charge_at = charge_at + interval '30 days' where user_id = auth.uid() $q$, '42501');
+select bbtest.fails('0043: N2 no se pone la promoción del primer mes', $q$ update public.trial_charges set promo = 'primer_mes_50', amount_minor = 1 where user_id = auth.uid() $q$, '42501');
 select bbtest.fails('cobro: N2 no marca su cobro como pagado', $q$ update public.trial_charges set status = 'succeeded' where user_id = auth.uid() $q$, '42501');
 select bbtest.fails('cobro: N2 no borra su cobro programado', $q$ delete from public.trial_charges where user_id = auth.uid() $q$, '42501');
 reset role;
@@ -1158,6 +1174,10 @@ select bbtest.fails('cobro: la misma clave de idempotencia dos veces', $q$ inser
 select bbtest.fails('cobro: una prueba de 8 días', $q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_ends_at, charge_at, next_attempt_at) values ('ab000000-0000-4000-8000-0000000000a1', 'trial:ab000000-0000-4000-8000-0000000000a1', 'prueba', 'entreno', 'mes', 999, now() + interval '8 days', now() + interval '8 days', now() + interval '8 days') $q$, '23514');
 select bbtest.fails('cobro: cobrar antes del fin de la prueba', $q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_ends_at, charge_at, next_attempt_at) values ('ab000000-0000-4000-8000-0000000000a1', 'trial:ab000000-0000-4000-8000-0000000000a1', 'prueba', 'entreno', 'mes', 999, now() + interval '7 days', now() + interval '6 days', now() + interval '6 days') $q$, '23514');
 select bbtest.fails('cobro: programado sin fecha de intento', $q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_ends_at, charge_at) values ('ab000000-0000-4000-8000-0000000000a1', 'trial:ab000000-0000-4000-8000-0000000000a1', 'beta', 'entreno', 'mes', 999, now() + interval '1 day', now() + interval '1 day') $q$, '23514');
+select bbtest.fails('0043: la promoción no aplica a un cobro inmediato', $q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_ends_at, charge_at, next_attempt_at, promo) values ('ab000000-0000-4000-8000-0000000000a1', 'trial:ab000000-0000-4000-8000-0000000000a1', 'inmediato', 'entreno', 'mes', 499, now(), now(), now(), 'primer_mes_50') $q$, '23514');
+select bbtest.fails('0043: una promoción inventada no entra', $q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_started_at, trial_ends_at, charge_at, next_attempt_at, promo) values ('ab000000-0000-4000-8000-0000000000a1', 'trial:ab000000-0000-4000-8000-0000000000a1', 'prueba', 'entreno', 'mes', 100, now(), now() + interval '7 days', now() + interval '7 days', now() + interval '7 days', 'gratis_100') $q$, '23514');
+select bbtest.ok('0043: el servidor guarda una promoción válida', bbtest.affected($q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, trial_started_at, trial_ends_at, charge_at, next_attempt_at, promo) values ('ab000000-0000-4000-8000-0000000000a8', 'trial:ab000000-0000-4000-8000-0000000000a8', 'beta', 'completo', 'mes', 749, now(), now() + interval '1 day', now() + interval '1 day', now() + interval '1 day', 'primer_mes_50') $q$) = 1);
+delete from public.trial_charges where user_id = 'ab000000-0000-4000-8000-0000000000a8';
 select bbtest.fails('cobro: monto en otra moneda', $q$ insert into public.trial_charges (user_id, idem_key, kind, plan, billing, amount_minor, currency, trial_ends_at, charge_at, next_attempt_at) values ('ab000000-0000-4000-8000-0000000000a1', 'trial:ab000000-0000-4000-8000-0000000000a1', 'inmediato', 'entreno', 'mes', 999, 'CRC', now(), now(), now()) $q$, '23514');
 select bbtest.fails('tarjeta: últimos 4 con letras', $q$ insert into public.payment_methods (user_id, provider_customer_id, provider_payment_method_id, last4) values ('ab000000-0000-4000-8000-0000000000a1', 'cus_n1', 'pm_n1', '42a2') $q$, '23514');
 select bbtest.fails('tarjeta: la misma tarjeta de ONVO en dos cuentas', $q$ insert into public.payment_methods (user_id, provider_customer_id, provider_payment_method_id) values ('ab000000-0000-4000-8000-0000000000a1', 'cus_n1', 'pm_ab000000-0000-4000-8000-0000000000a2') $q$, '23505');

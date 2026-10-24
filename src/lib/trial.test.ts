@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DAY_MS, MAX_ATTEMPTS, TRIAL_CARD_LINE, afterDecline, amountMinorFor, attemptKeyFor, bannerFor, canCancel, canChangePlan, cardRequired,
+  DAY_MS, MAX_ATTEMPTS, PROMO_LINE, PROMO_TERMS, PROMO_TITLE, TRIAL_LINE, afterDecline, discountedMinor, firstChargeMinor, promoApplies, promoChargeLine, promoFor, promoPrice, trialEndFor, amountMinorFor, attemptKeyFor, bannerFor, canCancel, canChangePlan, cardRequired,
   cardStepFor, chargeView, idemKeyFor, isDue, kindFor, onCardSaved, reminderDue, reminderLine, scheduleFor, signedUpInBeta, trialLive,
   type TrialChargeRow,
 } from "./trial";
@@ -30,6 +30,8 @@ describe("antes y después del 1 de noviembre", () => {
     expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at("2026-10-25T00:00:00Z"), betaEndsAt: BETA })).toBe("beta");
     expect(kindFor({ createdAt: "2026-10-20T00:00:00Z", now: at("2026-11-03T00:00:00Z"), betaEndsAt: BETA })).toBe("inmediato");
     expect(kindFor({ createdAt: "2026-11-02T00:00:00Z", now: at("2026-11-03T00:00:00Z"), betaEndsAt: BETA })).toBe("prueba");
+    // 0043: la prueba ya terminó (alta + 7 días) sin tarjeta: guardarla ahora cobra ya, sin días extra.
+    expect(kindFor({ createdAt: "2026-11-02T00:00:00Z", now: at("2026-11-09T00:00:01Z"), betaEndsAt: BETA })).toBe("inmediato");
     expect(signedUpInBeta(null, BETA)).toBe(true);
   });
   it("cuenta de la beta: sin días extra, se cobra al terminar la beta (o ya, si guarda la tarjeta después)", () => {
@@ -42,10 +44,17 @@ describe("antes y después del 1 de noviembre", () => {
 });
 
 describe("qué día se cobra", () => {
-  it("la prueba dura 7 días exactos desde que se guarda la tarjeta y el cobro es al terminar (día 7)", () => {
+  it("la prueba dura 7 días exactos y el cobro es al terminar (día 7)", () => {
     const s = scheduleFor("prueba", START, BETA);
     expect(Date.parse(s.trialEndsAt) - START.getTime()).toBe(7 * DAY_MS);
     expect(s.chargeAt).toBe(s.trialEndsAt);
+  });
+  it("0043: guardar la tarjeta a mitad de la prueba no la alarga (empieza con el alta)", () => {
+    const created = "2026-11-10T15:00:00.000Z";
+    const s = scheduleFor("prueba", plus(START, 3), BETA, 7, created);
+    expect(s.trialStartedAt).toBe(created);
+    expect(s.chargeAt).toBe(plus(START, 7).toISOString());
+    expect(s.chargeAt).toBe(trialEndFor(created, BETA));
   });
   it("no se cobra antes de tiempo, sí al llegar el momento", () => {
     const r = row();
@@ -69,7 +78,12 @@ describe("qué día se cobra", () => {
     expect(reminderDue({ ...r, kind: "inmediato" }, plus(START, 5.5))).toBe(false);
   });
   it("textos exactos", () => {
-    expect(TRIAL_CARD_LINE).toBe("7 días gratis. Hoy no te cobramos. El día 7 se cobra tu plan, salvo que canceles antes.");
+    expect(TRIAL_LINE).toBe("7 días gratis con todo incluido, sin tarjeta.");
+    expect(PROMO_TITLE).toBe("Deja tu tarjeta lista y paga 50 % menos tu primer mes");
+    expect(PROMO_LINE).toMatch(/Hoy no te cobramos/);
+    expect(promoChargeLine("17 de noviembre")).toBe("Hoy no te cobramos. El 17 de noviembre se cobra tu primer mes con 50 % de descuento, salvo que canceles antes. Cancela cuando quieras desde Mi plan.");
+    expect(PROMO_TERMS).toMatch(/solo al primer mes del plan mensual, una vez por cuenta/);
+    expect(reminderLine(7.49, "prueba", "17 de noviembre", null, true)).toBe("En 2 días se cobra tu primer mes con 50 % de descuento: $7.49, el 17 de noviembre. Puedes cancelar sin costo antes de esa fecha.");
     expect(reminderLine(14.99)).toBe("En 2 días se cobra tu plan de $14.99. Puedes cancelar sin costo hasta el día 7.");
     expect(reminderLine(9.99, "beta", "1 de noviembre")).toBe("En 2 días se cobra tu plan de $9.99, el 1 de noviembre. Puedes cancelar sin costo antes de esa fecha.");
   });
@@ -120,9 +134,8 @@ describe("cancelar antes del día 7", () => {
     expect(canCancel(null)).toBe(false);
   });
   it("cancelado antes del día 7: sigue con acceso hasta el final de la prueba, nunca después", () => {
-    const card = { status: "disconnected" as const };
-    expect(trialLive(row({ status: "canceled" }), card, START.toISOString(), plus(START, 6.9), BETA)).toBe(true);
-    expect(trialLive(row({ status: "canceled" }), card, START.toISOString(), plus(START, 7), BETA)).toBe(false);
+    expect(trialLive(START.toISOString(), plus(START, 6.9), BETA)).toBe(true);
+    expect(trialLive(START.toISOString(), plus(START, 7), BETA)).toBe(false);
     expect(isDue(row({ status: "canceled", next_attempt_at: null }), plus(START, 7))).toBe(false);
   });
   it("cambiar el plan: solo programado y antes del cobro", () => {
@@ -132,24 +145,51 @@ describe("cancelar antes del día 7", () => {
   });
 });
 
-describe("prueba vigente (misma regla que _trial_live en 0026)", () => {
-  const card = { status: "active" as const };
-  it("cuenta nueva con tarjeta y cobro programado", () => expect(trialLive(row(), card, START.toISOString(), plus(START, 1), BETA)).toBe(true));
-  it("sin tarjeta no hay prueba", () => expect(trialLive(row(), null, START.toISOString(), plus(START, 1), BETA)).toBe(false));
-  it("una cuenta de la beta no recibe prueba aunque tenga fila", () => expect(trialLive(row(), card, "2026-10-15T00:00:00Z", plus(START, 1), BETA)).toBe(false));
-  it("rechazado o con reintento: muro", () => {
-    expect(trialLive(row({ status: "failed" }), card, START.toISOString(), plus(START, 1), BETA)).toBe(false);
-    expect(trialLive(row({ status: "retry_scheduled" }), card, START.toISOString(), plus(START, 1), BETA)).toBe(false);
+describe("prueba vigente (misma regla que _trial_live en 0043)", () => {
+  it("cuenta nueva sin tarjeta: 7 días desde el alta", () => {
+    expect(trialLive(START.toISOString(), plus(START, 1), BETA)).toBe(true);
+    expect(trialLive(START.toISOString(), plus(START, 7), BETA)).toBe(false);
+    expect(trialEndFor(START.toISOString(), BETA)).toBe(plus(START, 7).toISOString());
   });
-  it("solo la fila de tipo prueba", () => expect(trialLive(row({ kind: "beta" }), card, START.toISOString(), plus(START, 1), BETA)).toBe(false));
+  it("una cuenta de la beta no recibe prueba", () => {
+    expect(trialLive("2026-10-15T00:00:00Z", plus(START, 1), BETA)).toBe(false);
+    expect(trialEndFor("2026-10-15T00:00:00Z", BETA)).toBeNull();
+  });
+  it("sin fecha de alta no hay prueba", () => expect(trialLive(null, plus(START, 1), BETA)).toBe(false));
+});
+
+describe("50 % del primer mes (0043)", () => {
+  it("$9.99 → $4.99 y $14.99 → $7.49, como promete la web", () => {
+    expect(discountedMinor(999)).toBe(499);
+    expect(discountedMinor(1499)).toBe(749);
+    expect(promoPrice("entreno")).toBe(4.99);
+    expect(promoPrice("completo")).toBe(7.49);
+  });
+  it("solo mensual y solo con la promoción ganada", () => {
+    expect(firstChargeMinor("completo", "mes", "primer_mes_50")).toBe(749);
+    expect(firstChargeMinor("completo", "anual", "primer_mes_50")).toBe(8999);
+    expect(firstChargeMinor("completo", "mes", null)).toBe(1499);
+    expect(promoApplies("otra", "mes")).toBe(false);
+  });
+  it("se gana dejando la tarjeta antes del primer cobro y sin haber pagado nunca", () => {
+    expect(promoFor("prueba", false)).toBe("primer_mes_50");
+    expect(promoFor("beta", false)).toBe("primer_mes_50");
+    expect(promoFor("inmediato", false)).toBeNull();
+    expect(promoFor("prueba", true)).toBeNull();
+  });
+  it("la vista del cobro dice el monto con descuento y el precio normal", () => {
+    expect(chargeView(row({ promo: "primer_mes_50", amount_minor: 749 }), plus(START, 3))).toMatchObject({ amount: 7.49, fullAmount: 14.99, promo: true });
+    expect(chargeView(row({ promo: "primer_mes_50", billing: "anual", amount_minor: 8999 }), plus(START, 3))).toMatchObject({ promo: false, fullAmount: 89.99 });
+  });
 });
 
 describe("qué pide la pantalla de la tarjeta", () => {
   const base = { paidAccess: false, betaEndsAt: BETA };
   it("con plan pagado no pide nada", () => expect(cardStepFor({ ...base, paidAccess: true, createdAt: "2026-10-01T00:00:00Z", row: null, now: at("2026-10-20T00:00:00Z") })).toBe("none"));
   it("beta: cuenta sin tarjeta, aviso para agregarla", () => expect(cardStepFor({ ...base, createdAt: "2026-10-01T00:00:00Z", row: null, now: at("2026-10-20T00:00:00Z") })).toBe("beta"));
-  it("después de la beta: cuenta nueva empieza su prueba; cuenta de la beta paga", () => {
+  it("después de la beta: cuenta nueva en su prueba ve la oferta; al terminar, paga; cuenta de la beta paga", () => {
     expect(cardStepFor({ ...base, createdAt: "2026-11-05T00:00:00Z", row: null, now: at("2026-11-05T01:00:00Z") })).toBe("trial");
+    expect(cardStepFor({ ...base, createdAt: "2026-11-05T00:00:00Z", row: null, now: at("2026-11-12T00:00:01Z") })).toBe("pay");
     expect(cardStepFor({ ...base, createdAt: "2026-10-01T00:00:00Z", row: null, now: at("2026-11-05T01:00:00Z") })).toBe("pay");
   });
   it("rechazado: cambiar tarjeta; cancelado y ya terminó: pagar; programado: nada", () => {
