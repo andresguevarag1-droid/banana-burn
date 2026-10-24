@@ -123,7 +123,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                 <Td><SubStatus status={u.sub_status} /></Td>
                 <Td><Badge tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge></Td>
                 <Td className="text-muted whitespace-nowrap">{limited ? <Nil /> : ago(u.last_active, today)}</Td>
-                {showRefs && <Td className="text-right tabular-nums whitespace-nowrap">{refCounts.get(u.id) ? <span title="Invitados, activos y recompensas"><b className="text-ink">{fmtNum(refCounts.get(u.id)!.total)}</b><span className="text-muted"> ({fmtNum(refCounts.get(u.id)!.qualified)} activos, {fmtNum(refCounts.get(u.id)!.rewards)} premios)</span></span> : <Nil />}</Td>}
+                {showRefs && <Td className="text-right tabular-nums">{refCounts.get(u.id) ? <span title="Invitados, activos y recompensas"><b className="text-ink">{fmtNum(refCounts.get(u.id)!.total)}</b><span className="block whitespace-nowrap text-xs text-muted"> ({fmtNum(refCounts.get(u.id)!.qualified)} activos, {fmtNum(refCounts.get(u.id)!.rewards)} premios)</span></span> : <Nil />}</Td>}
                 <Td className="text-right text-muted whitespace-nowrap">{fmtDate(u.created_at)}</Td>
               </tr>
             );

@@ -81,7 +81,7 @@ export function ProgramEditor({ init, sessions: init2, names: names0 }: { init: 
         <ol className="mt-3 space-y-2">
           {meta.phases.map((p, i) => (
             <li key={i} className="grid grid-cols-[2rem_1fr_4.5rem] items-center gap-2 rounded-xl border border-line p-2 sm:grid-cols-[2rem_12rem_4.5rem_8rem_1fr_auto]">
-              <span className="grid h-10 place-items-center rounded-lg bg-cream text-sm font-extrabold text-ink">{i + 1}</span>
+              <span className="grid h-11 place-items-center rounded-lg bg-cream text-sm font-extrabold text-ink">{i + 1}</span>
               <input aria-label={`Nombre de la fase ${i + 1}`} value={p.name} maxLength={40} onChange={(e) => setPhases(meta.phases.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} className={inputSm} />
               <input aria-label={`Semanas de la fase ${i + 1}`} type="number" min={1} max={52} value={p.weeks} onChange={(e) => setPhases(meta.phases.map((x, k) => (k === i ? { ...x, weeks: Math.max(1, Number(e.target.value) || 1) } : x)))} className={small} />
               <label className="col-start-2 flex min-h-11 items-center gap-2 text-sm text-ink sm:col-start-auto"><input type="checkbox" checked={!!p.deload} onChange={(e) => setPhases(meta.phases.map((x, k) => (k === i ? { ...x, deload: e.target.checked || undefined } : x)))} className="size-4 accent-[#1B1505]" />Descarga</label>

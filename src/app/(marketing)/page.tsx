@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Barbell, BowlFood, Check, CreditCard, Lock, MonkeyBanana, Scales, Scroll, ShieldCheck, Syringe, X,
+  ArrowCounterClockwise, ArrowRight, Barbell, BowlFood, Check, CreditCard, Lock, Scales, Scroll, ShieldCheck, Syringe, X,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
@@ -156,9 +156,10 @@ export default function Landing() {
       <section aria-labelledby="metodo" className="pt-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="relative overflow-hidden rounded-[2.25rem] bg-ink p-7 text-white sm:p-12 lg:p-16">
-            <Image src={POSE.barra} alt="" width={420} height={420} sizes="260px" className="pointer-events-none absolute -right-6 -top-4 hidden w-56 lg:block xl:w-64" />
+            {/* Dentro de la tarjeta (que recorta): la cabeza del mono nunca toca el borde de arriba. */}
+            <Image src={POSE.barra} alt="" width={420} height={420} sizes="224px" className="pointer-events-none absolute right-8 top-8 hidden w-44 lg:block xl:right-12 xl:top-10 xl:w-56" />
             <p className="w-fit rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink">El método</p>
-            <h2 id="metodo" className="mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">
+            <h2 id="metodo" className="mt-5 max-w-3xl lg:max-w-[calc(100%-12rem)] xl:max-w-3xl text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">
               Recomposición corporal: <span className="text-banana">menos grasa, más músculo</span>, al mismo tiempo.
             </h2>
             <p className="mt-5 max-w-[60ch] text-lg leading-relaxed text-white/80 text-pretty">No se trata de bajar más kilos. Se trata de que lo que queda sea músculo firme. Por eso cada rutina de Banana Burn está hecha para reconstruir, no solo para sudar.</p>
@@ -177,18 +178,17 @@ export default function Landing() {
 
       {/* 4. LA APP POR DENTRO: recorrido interactivo con capturas reales y técnica animada */}
       <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
-        <div className="flex items-end gap-4">
-          <Image src={POSE.senala} alt="Coach Banana señalando las pantallas de Banana Burn" width={360} height={360} sizes="180px" className="-mb-4 w-24 shrink-0 sm:w-40" />
-          <div>
-            <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira Banana Burn por dentro.</h2>
-            <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
-          </div>
+        {/* Móvil: el título a todo el ancho y el mono junto al texto; desde sm, el mono a la izquierda de ambos. */}
+        <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 sm:items-end">
+          <h2 id="por-dentro-t" className={`${H2} col-span-2 max-w-3xl sm:col-span-1 sm:col-start-2`}>Mira Banana Burn por dentro.</h2>
+          <Image src={POSE.senala} alt="Coach Banana señalando las pantallas de Banana Burn" width={360} height={360} sizes="180px" className="mt-5 w-24 shrink-0 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:-mb-4 sm:mt-0 sm:w-40" />
+          <p className={`${LEAD} sm:col-start-2`}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
         </div>
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
         <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
           {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
-            <div key={l} className="flex flex-col-reverse">
+            <div key={l} className="flex flex-col-reverse justify-end">
               <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
               <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-ink">{v}</dd>
             </div>
@@ -280,9 +280,11 @@ export default function Landing() {
             <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink/80 text-pretty">Soy Andrés, el fundador, y soy el usuario número 1. Mi meta: de 94 a 85 kg antes del 31 de diciembre, sin perder músculo. Ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
             <p className="mt-4 max-w-[60ch] leading-relaxed text-ink/80 text-pretty">Banana Burn está en versión de prueba y la estamos puliendo con sus primeros usuarios. Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
           </div>
-          <div className="relative mx-auto aspect-square w-48 overflow-hidden rounded-[1.75rem] bg-banana lg:w-full lg:max-w-[300px]">
-            <MonkeyBanana aria-hidden className="absolute inset-0 m-auto size-1/2 text-ink/25" />
-            <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono de Banana Burn" fill sizes="(min-width: 1024px) 300px, 192px" className="object-contain" />
+          {/* El mono llega casi al borde de su imagen: el margen interno evita que la cabeza y los tenis toquen la tarjeta. */}
+          <div className="relative mx-auto aspect-square w-48 rounded-[1.75rem] bg-banana lg:w-full lg:max-w-[300px]">
+            <div className="absolute inset-[7%]">
+              <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono de Banana Burn" fill sizes="(min-width: 1024px) 260px, 168px" className="object-contain" />
+            </div>
           </div>
         </div>
       </section>
@@ -300,11 +302,11 @@ export default function Landing() {
 
       {/* 11. CTA FINAL con el mono */}
       <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-0 pt-14 text-center sm:px-16 sm:pt-16">
+        <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-6 pt-14 text-center sm:px-16 sm:pb-8 sm:pt-16">
           <h2 className={`${H2} mx-auto max-w-3xl`}>Tu cuerpo nuevo empieza con el primer entreno.</h2>
           <Link href={SIGNUP} data-cta="final" className="pressable mt-8 inline-flex h-14 items-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
           <p className="mt-4 text-sm font-semibold text-ink/80">{o.note} {o.from(FROM)}</p>
-          <ul className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:w-fit sm:grid-cols-2">
+          <ul className="mx-auto mt-8 grid w-fit max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:grid-cols-2">
             {risk().map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
           </ul>
           <Image src={POSE.salta} alt="" width={420} height={420} sizes="240px" className="mx-auto mt-8 w-44 sm:w-60" />
