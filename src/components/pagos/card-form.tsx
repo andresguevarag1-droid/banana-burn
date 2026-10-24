@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { CircleNotch, CreditCard, Info, Lock, WarningCircle } from "@/components/icons";
 import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody, onvoCardError, type CardErrors, type CardInput } from "@/lib/card-input";
 import type { PlanChoice } from "./plan-picker";
@@ -21,12 +21,31 @@ async function post(body: Record<string, unknown>): Promise<Post & { status: num
   }
 }
 
+type Provider = "onvo" | "tilopay";
+
+/** ¿Hay Tilopay para tarjetas de otros países, y cuál sugiere el servidor por país? Sin respuesta: ONVO, como siempre. */
+function useProvider(skip: boolean) {
+  const [info, setInfo] = useState<{ available: boolean; provider: Provider }>({ available: false, provider: "onvo" });
+  useEffect(() => {
+    if (skip) return;
+    let alive = true;
+    fetch("/api/pagos/tilopay", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { available?: boolean; suggested?: string }) => { if (alive && j.available) setInfo({ available: true, provider: j.suggested === "tilopay" ? "tilopay" : "onvo" }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [skip]);
+  return [info, (p: Provider) => setInfo((x) => ({ ...x, provider: p }))] as const;
+}
+
 /**
  * Formulario de tarjeta. El número, el vencimiento y el CVV van del navegador DIRECTO a ONVO con la llave publicable
  * (POST /v1/payment-methods); a nuestro servidor solo llega el ID de la tarjeta que devuelve ONVO. Nada se guarda en el
  * navegador. En modo demo se simula todo sin llamar a ONVO.
+ * Tarjetas de fuera de Costa Rica (Tilopay, 0042): la persona guarda la tarjeta en la página segura de Tilopay y vuelve a
+ * Mi plan. `beforeRedirect` deja guardado lo que haga falta antes de salir (la bienvenida guarda el plan).
  */
-export function CardForm({ choice, demo, submitLabel, note, onSaved }: { choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void }) {
+export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect }: { choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean> }) {
   const id = useId();
   const [c, setC] = useState<CardInput>({ holder: "", number: "", exp: "", cvv: "" });
   const [touched, setTouched] = useState(false);
@@ -34,6 +53,45 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved }: { choice:
   const [err, setErr] = useState<string | null>(null);
   const errors: CardErrors = touched ? cardInputErrors(c) : {};
   const up = (p: Partial<CardInput>) => setC((x) => ({ ...x, ...p }));
+  const [pay, setProvider] = useProvider(demo);
+  const tilopay = pay.available && pay.provider === "tilopay";
+
+  async function goTilopay(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setBusy("tarjeta");
+    if (beforeRedirect && !(await beforeRedirect())) { setBusy(null); return; }
+    try {
+      const r = await fetch("/api/pagos/tilopay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "tarjeta", plan: choice.plan, billing: choice.billing }) });
+      const j = (await r.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
+      if (j.ok && j.url) { window.location.assign(j.url); return; }
+      setErr(j.error ?? "No pudimos abrir la página de pago. Intenta de nuevo.");
+    } catch {
+      setErr("Sin conexión. Revisa tu internet e intenta de nuevo.");
+    }
+    setBusy(null);
+  }
+
+  const switcher = pay.available && (
+    <button type="button" onClick={() => { setErr(null); setProvider(tilopay ? "onvo" : "tilopay"); }} className="tap text-sm font-semibold text-ink underline underline-offset-2">
+      {tilopay ? "¿Tu tarjeta es de Costa Rica?" : "¿Tu tarjeta es de otro país?"}
+    </button>
+  );
+
+  if (tilopay) {
+    return (
+      <form onSubmit={goTilopay} noValidate className="space-y-3" aria-describedby={`${id}-sec`}>
+        <p className="flex items-start gap-2 rounded-2xl bg-banana-soft p-3 text-sm text-ink text-pretty"><CreditCard weight="duotone" aria-hidden className="mt-0.5 size-5 shrink-0" /><span>Vas a guardar tu tarjeta en la página segura de Tilopay, nuestro procesador para tarjetas de otros países. Al terminar vuelves aquí.</span></p>
+        {err && <p role="alert" className="flex gap-2 rounded-2xl border border-bad/20 bg-bad/5 p-3 text-sm font-semibold text-bad"><WarningCircle weight="duotone" className="size-5 shrink-0" />{err}</p>}
+        <button type="submit" disabled={Boolean(busy)} aria-busy={Boolean(busy)} className="btn-banana h-14 w-full text-base">
+          {busy ? <><CircleNotch weight="bold" className="size-5 animate-spin motion-reduce:animate-none" />Abriendo la página segura…</> : submitLabel}
+        </button>
+        <div className="text-sm text-ink text-pretty">{note}</div>
+        <div>{switcher}</div>
+        <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />El número de tu tarjeta lo escribes en Tilopay. Banana Burn no lo ve ni lo guarda. Se cobra en dólares: si tu banco lo pide, activa las compras internacionales.</p>
+      </form>
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,6 +166,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved }: { choice:
         {busy ? <><CircleNotch weight="bold" className="size-5 animate-spin motion-reduce:animate-none" />{busy === "tarjeta" ? "Guardando tu tarjeta…" : "Confirmando…"}</> : submitLabel}
       </button>
       <div className="text-sm text-ink text-pretty">{note}</div>
+      {switcher && <div>{switcher}</div>}
       <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />El número de tu tarjeta va directo a ONVO Pay, nuestro procesador de pagos. Banana Burn no lo ve ni lo guarda: solo la marca y los últimos 4 dígitos.</p>
     </form>
   );

@@ -12,14 +12,21 @@ import "server-only";
 //   4. Rechazo: muro de planes, aviso por correo, push y campanita, y un solo reintento automático al día siguiente.
 // Nunca cobra dos veces: una fila por persona, un intento a la vez, y si la respuesta de ONVO se pierde el intento queda
 // "por confirmar" hasta encontrar su suscripción por metadata (o confirmar que no existe).
+//
+// Tilopay (0042, fuera de Costa Rica): la tarjeta se guarda en la página segura de Tilopay (tilopay-billing.ts) y llega
+// aquí ya leída por saveVerifiedCard(). El cobro del día 7 es síncrono (processRecurrentPayment): si Tilopay lo aprueba,
+// se activa en el momento con activateVerified(); si la respuesta se pierde, queda "por confirmar" y se consulta la orden.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import type { Viewer } from "@/lib/supabase/server";
-import { BillingError, getOrCreateCustomer } from "@/lib/billing";
+import { BillingError, activateVerified, getOrCreateCustomer, SUB_COLS } from "@/lib/billing";
+import type { SubscriptionRow } from "@/lib/entitlements";
+import { chargeSavedCard, consultOrder, isTilopayConfigured, removeCardToken, tilopaySubId, trialOrderNumber } from "@/lib/tilopay";
+import type { PayProvider } from "@/lib/pay-provider";
 import { PLANS, type Billing, type PlanId } from "@/lib/plans";
 import {
   OnvoError, cancelSubscription, checkPaymentMethod, createChargedSubscription, detachPaymentMethod, firstChargeFailed,
-  getPaymentMethod, getSubscription, isOnvoConfigured, listCustomerSubscriptions, matchesAttempt, priceIdFor, profilePlanFor,
+  estimatePeriodEnd, getPaymentMethod, getSubscription, isOnvoConfigured, listCustomerSubscriptions, matchesAttempt, priceIdFor, profilePlanFor,
 } from "@/lib/onvo";
 import {
   STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, amountMinorFor, attemptKeyFor, canCancel, canChangePlan, chargeMoved, chargeView,
@@ -30,8 +37,9 @@ import { sendPush, type PushSub } from "@/lib/push";
 import { errInfo } from "@/lib/security/log";
 
 export const CHARGE_COLS = "id,user_id,idem_key,kind,plan,billing,amount_minor,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
-const CARD_COLS = "user_id,provider_customer_id,provider_payment_method_id,brand,last4,exp_month,exp_year,status";
-type CardFull = CardRow & { user_id: string; provider_customer_id: string; provider_payment_method_id: string };
+const CARD_COLS = "user_id,provider,provider_customer_id,provider_payment_method_id,brand,last4,exp_month,exp_year,status";
+type CardFull = CardRow & { user_id: string; provider?: string | null; provider_customer_id: string; provider_payment_method_id: string };
+const providerOf = (c: { provider?: string | null } | null | undefined): PayProvider => (c?.provider === "tilopay" ? "tilopay" : "onvo");
 
 const log = (msg: string, meta?: Record<string, unknown>) => console.info(JSON.stringify({ scope: "cobro-prueba", msg, ...meta }));
 const alert = (msg: string, meta?: Record<string, unknown>) => console.error(JSON.stringify({ scope: "cobro-prueba", msg: `ALERTA ${msg}`, ...meta }));
@@ -151,7 +159,7 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
   if (!customerId) throw new BillingError("Vuelve a intentarlo: no encontramos tu registro de pago.", 409);
   if (await hasLivePaidSubscription(db, v.id)) throw new BillingError("Ya tienes un plan activo.", 409);
 
-  let row = await loadRow(db, v.id);
+  const row = await loadRow(db, v.id);
   const { data: prof } = await db.from("profiles").select("created_at").eq("id", v.id).maybeSingle();
   const plan = onCardSaved(row, { createdAt: (prof?.created_at as string | undefined) ?? null, now });
   if (plan.do === "busy") throw new BillingError("Estamos procesando tu cobro. Revisa en unos minutos.", 409);
@@ -170,16 +178,44 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
     throw new BillingError(check.reason === "no_activa" ? "Tu banco no aprobó la tarjeta para pagos recurrentes. Prueba con otra." : "No pudimos usar esa tarjeta. Prueba con otra.", 400);
   }
   const c = check.card;
+  return saveVerifiedCard(db, v, { provider: "onvo", ...c, customerId }, { plan: input.plan, billing: input.billing }, row, plan, now);
+}
+
+export type VerifiedCard = { provider: PayProvider; customerId: string; paymentMethodId: string; brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null };
+
+/** Quita en su procesador una tarjeta que ya no se usa (si falla, solo queda sin usar). */
+async function releaseCard(userId: string, c: Pick<CardFull, "provider" | "provider_payment_method_id">, email: string | null) {
+  if (providerOf(c) === "tilopay") {
+    if (!(await removeCardToken(c.provider_payment_method_id, email ?? ""))) log("Tilopay no confirmó que quitó la tarjeta anterior", { userId });
+    return;
+  }
+  await detachPaymentMethod(c.provider_payment_method_id).catch((e) => log("no se pudo desconectar la tarjeta anterior", { userId, error: errInfo(e) }));
+}
+
+/** Para guardar una tarjeta de Tilopay: el estado del cobro programado y qué hacer con él (mismas reglas que ONVO). */
+export async function cardSaveContext(db: SupabaseClient, v: Viewer, now = new Date()) {
+  if (await hasLivePaidSubscription(db, v.id)) throw new BillingError("Ya tienes un plan activo.", 409);
+  const row = await loadRow(db, v.id);
+  const { data: prof } = await db.from("profiles").select("created_at").eq("id", v.id).maybeSingle();
+  const plan = onCardSaved(row, { createdAt: (prof?.created_at as string | undefined) ?? null, now });
+  if (plan.do === "busy") throw new BillingError("Estamos procesando tu cobro. Revisa en unos minutos.", 409);
+  return { row, plan };
+}
+
+/**
+ * Guarda una tarjeta ya verificada por el servidor (ONVO: leída con la llave secreta; Tilopay: token devuelto a nuestra
+ * vuelta firmada) y programa, reanuda o cobra el primer cobro con las reglas de trial.ts.
+ */
+export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: VerifiedCard, input: { plan: PlanId; billing: Billing }, rowIn: TrialChargeRow | null, plan: ReturnType<typeof onCardSaved>, now = new Date()): Promise<SaveCardResult> {
+  let row = rowIn;
   const prev = await loadCard(db, v.id);
   const { error: upErr } = await db.from("payment_methods").upsert({
-    user_id: v.id, provider: "onvo", provider_customer_id: customerId, provider_payment_method_id: c.paymentMethodId,
+    user_id: v.id, provider: c.provider, provider_customer_id: c.customerId, provider_payment_method_id: c.paymentMethodId,
     brand: c.brand, last4: c.last4, exp_month: c.expMonth, exp_year: c.expYear, status: "active", disconnected_at: null, updated_at: now.toISOString(),
   }, { onConflict: "user_id" });
   if (upErr) throw new BillingError("No pudimos guardar tu tarjeta. Intenta de nuevo.", 500);
-  // La tarjeta anterior ya no se usa: la desconectamos en ONVO (si falla, solo queda sin usar).
-  if (prev && prev.provider_payment_method_id !== c.paymentMethodId && prev.status === "active") {
-    await detachPaymentMethod(prev.provider_payment_method_id).catch((e) => log("no se pudo desconectar la tarjeta anterior", { userId: v.id, error: errInfo(e) }));
-  }
+  // La tarjeta anterior ya no se usa: se quita en su procesador.
+  if (prev && prev.provider_payment_method_id !== c.paymentMethodId && prev.status === "active") await releaseCard(v.id, prev, v.email);
   const card = { brand: c.brand, last4: c.last4 };
   const amount = amountMinorFor(input.plan, input.billing);
   const planFields = { plan: input.plan, billing: input.billing, amount_minor: amount };
@@ -290,12 +326,18 @@ export async function resumeTrial(v: Viewer, now = new Date()): Promise<ChargeVi
 async function disconnectCard(db: SupabaseClient, userId: string): Promise<boolean> {
   const card = await loadCard(db, userId);
   if (!card || card.status !== "active") return true;
-  try {
-    await detachPaymentMethod(card.provider_payment_method_id);
-  } catch (e) {
-    if (!(e instanceof OnvoError && e.status === 404)) {
-      log("no se pudo desconectar la tarjeta en ONVO", { userId, error: errInfo(e) });
-      return false;
+  if (providerOf(card) === "tilopay") {
+    // La ruta para quitar tarjetas en Tilopay no es pública: si no responde, igual deja de usarse aquí (nunca se cobra).
+    const email = await emailOf(db, userId);
+    if (!(await removeCardToken(card.provider_payment_method_id, email ?? ""))) log("Tilopay no confirmó que quitó la tarjeta; queda desconectada aquí", { userId });
+  } else {
+    try {
+      await detachPaymentMethod(card.provider_payment_method_id);
+    } catch (e) {
+      if (!(e instanceof OnvoError && e.status === 404)) {
+        log("no se pudo desconectar la tarjeta en ONVO", { userId, error: errInfo(e) });
+        return false;
+      }
     }
   }
   await db.from("payment_methods").update({ status: "disconnected", disconnected_at: nowIso(), updated_at: nowIso() }).eq("user_id", userId);
@@ -322,7 +364,9 @@ export type AttemptResult = "omitido" | "aplazado" | "enviado" | "rechazado" | "
  */
 export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now = new Date()): Promise<AttemptResult> {
   if (!isDue(row, now)) return "omitido";
-  if (!isOnvoConfigured()) { alert("cobro pendiente pero ONVO no está configurado", { chargeId: row.id }); return "sin_config"; }
+  const provider = providerOf(await loadCard(db, row.user_id));
+  if (provider === "onvo" && !isOnvoConfigured()) { alert("cobro pendiente pero ONVO no está configurado", { chargeId: row.id }); return "sin_config"; }
+  if (provider === "tilopay" && !isTilopayConfigured()) { alert("cobro pendiente pero Tilopay no está configurado", { chargeId: row.id }); return "sin_config"; }
   // Nunca se cobra a un tester durante su mes de tester: la base aplaza el cobro al final y aquí no se intenta.
   if (await testerHold(db, row.user_id)) { log("cobro aplazado por mes de tester", { userId: row.user_id, chargeId: row.id }); return "aplazado"; }
   const prev = { status: row.status, attempts: row.attempts, last_attempt_at: row.last_attempt_at };
@@ -353,6 +397,8 @@ export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now
     await notifyDecline(db, { ...r, status: "failed" }, null);
     return "sin_tarjeta";
   }
+
+  if (providerOf(card) === "tilopay") return tilopayCharge(db, r, row, card, now);
 
   let subId: string | null = null;
   try {
@@ -391,20 +437,82 @@ export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now
   }
 }
 
-async function recordSubscription(db: SupabaseClient, r: TrialChargeRow, customerId: string, subId: string) {
+async function recordSubscription(db: SupabaseClient, r: TrialChargeRow, customerId: string, subId: string, provider: PayProvider = "onvo") {
   const { data: exists } = await db.from("subscriptions").select("id").eq("provider_subscription_id", subId).maybeSingle();
   if (exists) return;
   const { error } = await db.from("subscriptions").insert({
-    user_id: r.user_id, provider: "onvo", provider_customer_id: customerId, provider_subscription_id: subId,
-    status: "incomplete", price_id: priceIdFor(r.plan, r.billing), plan: r.plan, billing: r.billing,
+    user_id: r.user_id, provider, provider_customer_id: customerId, provider_subscription_id: subId,
+    status: "incomplete", price_id: provider === "onvo" ? priceIdFor(r.plan, r.billing) : null, plan: r.plan, billing: r.billing,
   });
   if (error) throw new Error(`subscriptions: ${error.message}`);
 }
 
+/** Correo de la persona (Tilopay lo pide en cada cobro). */
+export async function emailOf(db: SupabaseClient, userId: string): Promise<string | null> {
+  const { data } = await db.auth.admin.getUserById(userId).catch(() => ({ data: null }));
+  return data?.user?.email ?? null;
+}
+
+// ───────────────────────── Tilopay: el cobro del día 7 ─────────────────────────
+
+/**
+ * Cobro con la tarjeta guardada en Tilopay. Síncrono: la respuesta de Tilopay (servidor a servidor) dice si se aprobó.
+ * El número de orden es el mismo para este intento: si la respuesta se pierde, la consulta por ese número lo resuelve.
+ */
+async function tilopayCharge(db: SupabaseClient, r: TrialChargeRow, before: TrialChargeRow, card: CardFull, now: Date): Promise<AttemptResult> {
+  const order = trialOrderNumber(r.idem_key, r.attempts);
+  const subId = tilopaySubId(order);
+  const email = await emailOf(db, r.user_id);
+  if (!email) {
+    await db.from("trial_charges").update({ status: before.status, attempts: before.attempts, next_attempt_at: new Date(now.getTime() + 3600_000).toISOString(), last_error: "sin correo para Tilopay", updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
+    alert("cobro Tilopay sin correo de la persona", { chargeId: r.id });
+    return "sin_config";
+  }
+  // La fila de la suscripción va primero (incomplete): si el proceso se cae después del cobro, la consulta la encuentra.
+  await recordSubscription(db, r, card.provider_customer_id, subId, "tilopay");
+  await db.from("trial_charges").update({ provider_subscription_id: subId, updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
+  const out = await chargeSavedCard({ token: card.provider_payment_method_id, email, amountMinor: r.amount_minor, orderNumber: order });
+  if (out.state === "declined") return decline(db, { ...r, provider_subscription_id: subId }, `Tilopay: ${out.description}`, subId, now, "tilopay");
+  if (out.state === "unknown") {
+    await db.from("trial_charges").update({ status: "unknown", last_error: `sin respuesta de Tilopay (${out.error})`.slice(0, 300), updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
+    alert("cobro Tilopay por confirmar", { chargeId: r.id, attempt: r.attempts });
+    return "por_confirmar";
+  }
+  await db.from("trial_charges").update({ status: "pending", updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
+  log("cobro aprobado por Tilopay", { userId: r.user_id, chargeId: r.id, attempt: r.attempts });
+  await activateTilopay(db, subId, r.amount_minor, order, now);
+  return "enviado";
+}
+
+/** Activa la suscripción de un cobro de la prueba que Tilopay aprobó (respuesta del cobro o consulta de la orden). */
+async function activateTilopay(db: SupabaseClient, subId: string, amountMinor: number, order: string, now: Date) {
+  const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", subId).maybeSingle();
+  const sub = data as SubscriptionRow | null;
+  if (!sub) { alert("cobro Tilopay aprobado sin suscripción registrada", { subscriptionId: subId }); return; }
+  const start = now.toISOString();
+  await activateVerified(db, sub, { periodStart: start, periodEnd: estimatePeriodEnd(now, sub.billing ?? "mes").toISOString(), amountMinor, currency: "USD", reference: order, provider: "tilopay" });
+}
+
+/** Intento de Tilopay "por confirmar": se consulta la orden. Nunca se reintenta a ciegas. */
+async function reconcileTilopay(db: SupabaseClient, r: TrialChargeRow, now: Date): Promise<"vinculado" | "reprogramado" | "sigue"> {
+  const order = trialOrderNumber(r.idem_key, r.attempts);
+  const res = await consultOrder(order);
+  const subId = r.provider_subscription_id ?? tilopaySubId(order);
+  if (res.state === "approved") {
+    await db.from("trial_charges").update({ status: "pending", updated_at: nowIso() }).eq("id", r.id).eq("status", "unknown");
+    await activateTilopay(db, subId, res.amountMinor ?? r.amount_minor, order, now);
+    log("cobro Tilopay por confirmar: aprobado", { chargeId: r.id });
+    return "vinculado";
+  }
+  if (res.state === "declined") { await decline(db, r, "Tilopay: rechazado (consulta)", subId, now, "tilopay"); return "vinculado"; }
+  if (now.getTime() - Date.parse(r.last_attempt_at ?? r.updated_at) > UNKNOWN_GIVE_UP_MS) alert("cobro Tilopay por confirmar sin respuesta de la consulta: revisar en el portal de Tilopay", { chargeId: r.id, userId: r.user_id, order });
+  return "sigue";
+}
+
 /** Rechazo: cancela la suscripción en ONVO (para que ONVO no reintente por su cuenta), muro y un solo reintento al día 8. */
-async function decline(db: SupabaseClient, r: TrialChargeRow, reason: string, subId: string | null, now = new Date()): Promise<"rechazado"> {
+async function decline(db: SupabaseClient, r: TrialChargeRow, reason: string, subId: string | null, now = new Date(), provider: PayProvider = "onvo"): Promise<"rechazado"> {
   if (subId) {
-    await cancelSubscription(subId).catch((e) => log("no se pudo cancelar la suscripción rechazada en ONVO", { subscriptionId: subId, error: errInfo(e) }));
+    if (provider === "onvo") await cancelSubscription(subId).catch((e) => log("no se pudo cancelar la suscripción rechazada en ONVO", { subscriptionId: subId, error: errInfo(e) }));
     await db.from("subscriptions").update({ status: "expired", updated_at: nowIso() }).eq("provider_subscription_id", subId).eq("status", "incomplete");
   }
   const next = afterDecline(r, now);
@@ -440,6 +548,7 @@ async function replayWebhooks(db: SupabaseClient, subId: string, customerId: str
 async function reconcileUnknown(db: SupabaseClient, r: TrialChargeRow, now = new Date()): Promise<"vinculado" | "reprogramado" | "sigue"> {
   const card = await loadCard(db, r.user_id);
   if (!card) return "sigue";
+  if (providerOf(card) === "tilopay" || r.provider_subscription_id?.startsWith("tlp:")) return reconcileTilopay(db, r, now);
   let subs;
   try {
     subs = await listCustomerSubscriptions(card.provider_customer_id);
@@ -471,6 +580,16 @@ async function reconcileUnknown(db: SupabaseClient, r: TrialChargeRow, now = new
 /** "pending" sin webhook después de una hora: si ONVO ya marcó la suscripción como fallida, es un rechazo. Nunca activa. */
 async function checkPending(db: SupabaseClient, r: TrialChargeRow, now = new Date()) {
   if (!r.provider_subscription_id || now.getTime() - Date.parse(r.updated_at) < 3600_000) return;
+  if (r.provider_subscription_id.startsWith("tlp:")) {
+    // Tilopay aprobó pero la activación no terminó (el proceso se cayó): se vuelve a consultar la orden.
+    const { data } = await db.from("subscriptions").select("status").eq("provider_subscription_id", r.provider_subscription_id).maybeSingle();
+    if (data?.status === "active") { await db.from("trial_charges").update({ status: "succeeded", next_attempt_at: null, updated_at: nowIso() }).eq("id", r.id).eq("status", "pending"); return; }
+    const order = r.provider_subscription_id.slice(4);
+    const res = await consultOrder(order);
+    if (res.state === "approved") await activateTilopay(db, r.provider_subscription_id, res.amountMinor ?? r.amount_minor, order, now);
+    else if (now.getTime() - Date.parse(r.updated_at) > 24 * 3600_000) alert("cobro Tilopay aprobado sin activar hace más de un día", { chargeId: r.id, subscriptionId: r.provider_subscription_id });
+    return;
+  }
   try {
     const sub = await getSubscription(r.provider_subscription_id);
     if (firstChargeFailed(sub)) await decline(db, r, `ONVO: ${String(sub.status)}`, r.provider_subscription_id, now);
