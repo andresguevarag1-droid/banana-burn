@@ -8,7 +8,7 @@ import { money } from "@/lib/copy";
 import { REMINDER_DAYS_BEFORE, type CardStep, type ChargeKind, type ChargePhase } from "@/lib/trial";
 
 /** Sube este número cuando la guía cambie lo suficiente como para volver a mostrarla a todos (profiles.guide_version). */
-export const GUIDE_VERSION = 1;
+export const GUIDE_VERSION = 2;
 
 /**
  * Consejos cortos de la primera vez (profiles.guide_tips). Formato de la base: ^[a-z0-9-]{1,24}$.
@@ -129,8 +129,9 @@ export function afterTrialLines(i: Pick<GuideInput, "trial" | "charge" | "cardSt
  *   - Prueba o beta: al final, qué pasa cuando termina (reglas de la tarjeta).
  *   - Programa Premium activo: un capítulo con su modo, hábitos y consejos.
  */
-export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
+export function guideSteps(i: GuideInput, d: GuideDates, opts: { short?: boolean } = {}): GuideStep[] {
   const variant = guideVariant(i);
+  if (opts.short) return shortSteps(i, d);
   const nutri = i.nutrition;
   const first = i.name.trim().split(/\s+/)[0] ?? "";
   const hi = first ? `Hola, ${first}` : "Hola";
@@ -349,6 +350,52 @@ export function guideSteps(i: GuideInput, d: GuideDates): GuideStep[] {
       bullets: ["Empieza hoy con lo que te toca, aunque sea un exprés de 10 minutos.", "La constancia le gana a la perfección."],
       cta: { href: "/app/entreno", label: "Empezar mi entreno" }, visual: { kind: "final" },
     });
+  }
+  return steps;
+}
+
+/**
+ * Versión corta que se abre sola la primera vez (v2): 4 pantallas y a hacer. Antes eran 16 diapositivas seguidas y la
+ * gente llegaba a Hoy sin saber qué tocar. Lo demás se aprende haciendo: "Tus primeros pasos" en Hoy, el recorrido
+ * guiado de cada pantalla y el minicurso "Aprende a entrenar". La guía completa se sigue abriendo desde el menú y Perfil.
+ */
+export function shortSteps(i: GuideInput, d: GuideDates): GuideStep[] {
+  const first = i.name.trim().split(/\s+/)[0] ?? "";
+  const hi = first ? `Hola, ${first}` : "Hola";
+  const steps: GuideStep[] = [
+    {
+      id: "inicio", chapter: "Bienvenida", title: `${hi}. Soy Coach Banana, tu entrenador`,
+      body: "Voy a decirte qué ejercicios hacer, cuántas veces y con cuánto peso. Tú solo sigues los pasos y anotas lo que hiciste.",
+      bullets: ["Esto toma un minuto.", "Después te enseño la app mientras la usas."],
+      cta: null, visual: { kind: "bienvenida" },
+    },
+    {
+      id: "hoy", chapter: "Así funciona", title: "Así funciona, en 4 pasos",
+      body: "Cada semana repites lo mismo. Es simple:",
+      bullets: [
+        "1. Abre Hoy y mira qué entrenamiento te toca.",
+        "2. Toca Empezar. La app te guía ejercicio por ejercicio.",
+        "3. Al terminar cada serie, anota lo que hiciste.",
+        "4. Cuando ya puedes más, la app te sube el peso sola.",
+      ],
+      cta: null, visual: { kind: "semana" },
+    },
+    {
+      id: "coach", chapter: "Te enseño haciendo", title: "Aprende mientras la usas",
+      body: "En Hoy vas a ver Tus primeros pasos: una lista corta que te enseña a usar la app, un toque a la vez.",
+      bullets: [
+        "Cada pantalla tiene un botón ¿Cómo se usa? que te la explica.",
+        "¿Nunca has entrenado? El minicurso Aprende a entrenar te explica todo desde cero, en lecciones de 30 segundos.",
+        `${i.nutrition ? "¿Dudas de tu entreno o tu comida?" : "¿Dudas de tu entreno?"} Pregúntame en el chat cuando quieras.`,
+      ],
+      cta: { href: "/app/aprende", label: "Ver el minicurso" }, visual: { kind: "coach" },
+    },
+  ];
+  if (guideVariant(i) === "prueba") {
+    const after = afterTrialLines(i, d);
+    steps.push({ id: "final", chapter: "Tu prueba", title: "Qué pasa cuando termina tu prueba", body: after.body, bullets: after.bullets, cta: null, visual: { kind: "final" } });
+  } else {
+    steps.push({ id: "final", chapter: "Listo", title: "Empieza por tus primeros pasos", body: "Están arriba en Hoy. El primero toma menos de un minuto.", bullets: ["La constancia le gana a la perfección."], cta: null, visual: { kind: "final" } });
   }
   return steps;
 }

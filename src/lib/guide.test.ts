@@ -198,3 +198,15 @@ describe("utilidades", () => {
     expect(demoGuideInput(completo, "otra")).toBeNull();
   });
 });
+
+describe("guía corta de la primera vez (v2)", () => {
+  const d = { lastFree: "7 de noviembre", firstPaid: "8 de noviembre", day: () => "1 de noviembre" };
+  const i = { name: "Ana", plan: "completo" as const, nutrition: true, trial: null, charge: null, cardStep: "none" as const, program: null };
+  it("son 4 pantallas y manda a aprender haciendo", async () => {
+    const { guideSteps } = await import("./guide");
+    const s = guideSteps(i, d, { short: true });
+    expect(s).toHaveLength(4);
+    expect(s[1].bullets).toHaveLength(4);
+    expect(s.some((x) => x.cta?.href === "/app/aprende")).toBe(true);
+  });
+});
