@@ -3,7 +3,7 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lifebuoy, Lock, ShieldCheck, SignOut, Sparkle, User, Users, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lifebuoy, Lock, Medal, ShieldCheck, SignOut, Sparkle, User, Users, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
@@ -25,6 +25,7 @@ const MAIN: Item[] = [
 const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador 24/7" },
   { href: "/app/retos", label: "Programas y retos", icon: BananaMedal, hint: "Programas Premium y retos gratis" },
+  { href: "/app/temporadas", label: "Temporadas", icon: Medal, hint: "Running, raquetas y cross training" },
   { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },
   { href: "/app/glp1", label: "Banana Shield", icon: ShieldCheck, hint: "Programa para GLP-1", nutri: true },

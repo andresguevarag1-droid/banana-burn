@@ -18,7 +18,7 @@ describe("0028: retos más llamativos", () => {
     expect(storeSection(by["abdomen-21"], "2026-10-23")).toBeNull();
   });
   it("cada programa Premium visible tiene su propio color y su portada ilustrada", () => {
-    const programs = SEED_CHALLENGES.filter((c) => c.kind === "programa" && c.status === "publicado");
+    const programs = SEED_CHALLENGES.filter((c) => c.kind === "programa" && c.status === "publicado" && !c.id.startsWith("temporada-"));
     expect(programs.length).toBe(8);
     expect(new Set(programs.map((c) => c.cover)).size).toBe(8);
     for (const c of programs) expect(CHALLENGE_ART[c.id], c.id).toBeTruthy();

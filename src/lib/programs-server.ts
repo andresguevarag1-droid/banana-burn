@@ -12,7 +12,7 @@ import { getCatalog, getOwned } from "@/lib/challenges-server";
 import { isProgram, type Challenge, type CoverStyle } from "@/lib/challenges";
 import { PROGRAM_SEED_BY_SLUG } from "@/lib/program-seed";
 import { SEASON_SEED_BY_SLUG } from "@/lib/season-content";
-import { isSeasonSlug, parseSeasonSlug, type SportId, type WeekPlan } from "@/lib/seasons";
+import { intakeForCoach, isSeasonSlug, parseSeasonSlug, type SportId, type WeekPlan } from "@/lib/seasons";
 import { seasonCoachId } from "@/lib/coaches";
 import { demoState, isDemoGirlProgram, type DemoState } from "@/lib/demo-persona";
 import { es419Deep } from "./num";
@@ -142,7 +142,7 @@ export type LoadedProgram = {
   /** Temporada: el equipo que eligió en su cuestionario manda sobre el de su perfil. */
   eq?: Equipment;
   /** Temporada: su semana armada alrededor del deporte (avisos incluidos). */
-  season?: { sport: SportId; plan: WeekPlan; taper: number[] };
+  season?: { sport: SportId; plan: WeekPlan; taper: number[]; note: string | null };
 };
 
 /** Carga un programa de la persona con su estado y qué toca hoy. Null si ya no existe o no tiene sesiones visibles. */
@@ -156,14 +156,14 @@ export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedPr
   const sm = parseSeasonSlug(st.slug);
   if (sm) {
     // Temporada: el programa a la medida de su cuestionario y con la coach con la ropa del deporte.
-    const { personalize } = await import("@/lib/seasons-server");
+    const { personalize, getIntake } = await import("@/lib/seasons-server");
     const { getSex } = await import("@/lib/athlete");
-    const [ps, sex] = await Promise.all([personalize(v, def), getSex(v)]);
+    const [ps, sex, intake] = await Promise.all([personalize(v, def), getSex(v), getIntake(v, st.slug)]);
     if (ps) {
       const exp = c.program.experience ? { ...c.program.experience, coach: seasonCoachId(sm.sport, sex) } : undefined;
       const meta: ProgramMeta = { ...ps.def.meta, ...(exp ? { experience: exp } : {}) };
       const pdef = { ...ps.def, meta };
-      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper } };
+      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper, note: intake ? intakeForCoach(sm.sport, intake.answers, todayFor(v).iso) : null } };
     }
   }
   return { c, def, state: st, done, run: resolveProgram(def, st, done, todayFor(v).iso) };
@@ -191,6 +191,8 @@ export const getActiveProgram = cache(async (v: Viewer): Promise<LoadedProgram |
 /** Lo que el programa activo le pone a Hoy, Entrenar, el reproductor y el coach. Datos planos (viajan al cliente). */
 export type AthleteProgram = {
   slug: string; title: string; cover: CoverStyle; icon: string; meta: ProgramMeta; state: ProgramState; run: ProgramRun;
+  /** Temporada deportiva: deporte y sus respuestas en una línea para la coach. */
+  season?: { sport: SportId; note: string | null };
   plan: PlannedDay; weekPlan: PlannedDay[]; sched: Record<number, boolean>; yesterday: PlannedDay; tomorrow: PlannedDay;
 };
 
@@ -212,7 +214,7 @@ export function programContext(p: LoadedProgram, eq0: Equipment, today: { iso: s
   const mon = mondayOf(today.iso);
   const weekPlan = [0, 1, 2, 3, 4, 5, 6].map((i) => at(addDays(mon, i)));
   return {
-    slug: c.id, title: c.title, cover: c.cover, icon: c.icon, meta: c.program, state, run, plan, weekPlan,
+    slug: c.id, title: c.title, cover: c.cover, icon: c.icon, meta: c.program, state, run, plan, weekPlan, ...(p.season ? { season: { sport: p.season.sport, note: p.season.note } } : {}),
     sched: Object.fromEntries(weekPlan.map((d) => [d.dow, isTrainingDay(d)])), yesterday: at(addDays(today.iso, -1)), tomorrow: at(addDays(today.iso, 1)),
   };
 }

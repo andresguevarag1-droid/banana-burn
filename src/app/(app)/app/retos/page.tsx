@@ -33,7 +33,8 @@ export default async function Retos() {
     todayMetrics(v).then((m) => getMyChallenges(v, m)), getCatalog(v.demo), getOwned(v), getParticipants(v), levelPerks(v), getProgramStates(v), getActiveProgram(v), getAthlete(v),
   ]);
   const activeIds = new Set(active.map((a) => a.c.id));
-  const list = [...catalog.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort - b.sort);
+  // Las temporadas viven en /app/temporadas (fechas oficiales y compra propia): aquí solo un acceso.
+  const list = [...catalog.values()].filter((c) => !c.id.startsWith("temporada-")).sort((a, b) => Number(b.featured) - Number(a.featured) || a.sort - b.sort);
   const by = (k: StoreSection) => list.filter((c) => storeSection(c, today) === k);
   const stateOf = new Map(states.map((s) => [s.slug, s]));
   // Para ella, primero los programas de chicas (Coach Platanita); a un hombre no le abrimos la tienda con ellos (van al final).
@@ -58,6 +59,7 @@ export default async function Retos() {
           <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Elige tu próxima transformación</h1>
           <p className="mt-1 max-w-[60ch] text-muted">Un programa toma el control de tu entreno por unas semanas, con un objetivo concreto. Los retos suman un hábito cada día.</p>
         </div>
+        <Link href="/app/temporadas" className="chip h-9 bg-ink text-banana">Temporadas deportivas: running, raquetas y cross training</Link>
         <Link href="/app/niveles" className="pressable inline-flex h-12 items-center gap-2 rounded-2xl border border-line bg-white pl-1.5 pr-3 text-sm font-bold text-ink hover:border-ink/25">
           <LevelBadge idx={perks.level.idx} size="sm" />
           <span className="min-w-0"><span className="block leading-tight">{perks.level.n}</span><span className="block text-[11px] font-semibold text-muted">{perks.discountPct > 0 ? `${perks.discountPct}% en Premium` : perks.extraGrace > 0 ? `+${perks.extraGrace} comodín por nivel` : "Sube de nivel para descuentos"}</span></span>

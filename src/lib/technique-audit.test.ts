@@ -6,6 +6,8 @@ import { LIB_ANIM, animFor, getLibEx } from "@/lib/library";
 import { ANIM_KEYS, SHEET_MOTION, sheetFor } from "@/lib/exercise-frames";
 import { COACHES, coachArt } from "@/lib/coaches";
 import { SHARED_SHEET, VETTED_ANIM } from "@/lib/technique-audit";
+import { SEASON_SEED } from "@/lib/season-content";
+import { AVOID_SWAPS, INJURY_SWAPS } from "@/lib/seasons";
 
 /** Animación que el código muestra para un ejercicio (la misma lógica que el reproductor, las fichas y los programas). */
 const resolved = (id: string): string | null => {
@@ -22,6 +24,9 @@ function visibleIds() {
   Object.values(ALTS).flat().forEach((a) => ids.add(a));
   Object.keys(EX).forEach((k) => ids.add(k));
   for (const p of ALL_PROGRAM_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
+  // Temporadas (0046): sus sesiones y los cambios por molestia o por lo que la persona prefiere evitar.
+  for (const p of SEASON_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
+  for (const m of [...Object.values(INJURY_SWAPS), ...Object.values(AVOID_SWAPS)]) for (const [k, v] of Object.entries(m)) { ids.add(k); if (v) ids.add(v); }
   return [...ids].sort();
 }
 
