@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { workoutXp } from "@/lib/gamify";
-import { advanceIntervals, bump, clock, comboState, cooldownFor, effortOf, effortPatch, isIntervalPlan, loadKindOf, loadsFor, nextCombo, nextPending, prsOf, readSaved, restLabel, rirOf, setXpGain, stepFor, targetText, timedPhase, volumeOf, volumeText, warmupFor, warmupText, type Row } from "./logic";
+import { advanceIntervals, bump, clock, comboState, cooldownFor, effortOf, effortPatch, isIntervalPlan, loadKindOf, loadsFor, nextCombo, nextPending, prsOf, readSaved, restLabel, rirOf, setXpGain, stepFor, targetText, volumeOf, volumeText, warmupFor, warmupText, type Row } from "./logic";
 
 const row = (p: Partial<Row> = {}): Row => ({ kg: "20", reps: "8", done: false, easy: false, ...p });
 
@@ -220,11 +220,37 @@ describe("intervalos: reconciliar con la pestaña oculta", () => {
   });
 });
 
-describe("serie por tiempo", () => {
-  it("la barra cubre solo el trabajo, no los 3 s de preparación", () => {
-    expect(timedPhase({ end: 33_000, secs: 30 }, 1_000)).toMatchObject({ prep: true, frac: 1 });
-    expect(timedPhase({ end: 33_000, secs: 30 }, 18_000)).toMatchObject({ prep: false, workLeft: 15, frac: 0.5 });
-    expect(timedPhase({ end: 33_000, secs: 30 }, 40_000)).toMatchObject({ prep: false, workLeft: 0, frac: 0 });
+describe("intervalos por lado", () => {
+  const cfg = [{ hi: 30, rest: 20, perSide: true }, { hi: 40, rest: 20 }];
+  const fresh = () => [[row({ kg: "", reps: "30" })], [row({ kg: "", reps: "40" })]];
+  it("lado derecho, cambio de 5 s y lado izquierdo; el intervalo se marca al final del segundo lado", () => {
+    // prep termina en 0; derecho 0-30 s; cambio 30-35 s; izquierdo 35-65 s
+    let r = advanceIntervals({ phase: "prep", end: 0, total: 5 }, fresh(), 0, cfg, 1_000);
+    expect(r.iv).toEqual({ phase: "work", end: 30_000, total: 30, side: 1 });
+    r = advanceIntervals(r.iv, r.rows, r.idx, cfg, 31_000);
+    expect(r.iv).toEqual({ phase: "switch", end: 35_000, total: 5, side: 2 });
+    expect(r.marked).toEqual([]);
+    r = advanceIntervals(r.iv, r.rows, r.idx, cfg, 36_000);
+    expect(r.iv).toEqual({ phase: "work", end: 65_000, total: 30, side: 2 });
+    expect(r.rows[0][0].done).toBe(false);
+    r = advanceIntervals(r.iv, r.rows, r.idx, cfg, 66_000);
+    expect(r.marked.map((m) => m.at)).toEqual([65_000]);
+    expect(r.rows[0][0]).toMatchObject({ done: true, reps: "30" }); // se anota el tiempo de un lado, no el doble
+    expect(r.iv).toEqual({ phase: "rest", end: 85_000, total: 20 });
+  });
+  it("con la pestaña oculta reconcilia los dos lados de una vez", () => {
+    const r = advanceIntervals({ phase: "prep", end: 0, total: 5 }, fresh(), 0, cfg, 90_000);
+    expect(r.marked.map((m) => m.at)).toEqual([65_000]);
+    expect(r.iv).toEqual({ phase: "work", end: 125_000, total: 40 }); // el siguiente no es por lado: sin `side`
+  });
+});
+
+describe("objetivo por lado", () => {
+  it("dice el tiempo de un lado con la marca", () => {
+    expect(targetText(row({ kg: "", reps: "35" }), { unit: "s", bw: true, perSide: true })).toBe("35 seg por lado");
+    expect(targetText(row({ kg: "", reps: "35" }), { unit: "s", bw: true })).toBe("35 seg");
+    // en reps la nota del programa ya lo dice: no se repite
+    expect(targetText(row({ kg: "", reps: "10" }), { bw: true, perSide: true })).toBe("10 reps");
   });
 });
 

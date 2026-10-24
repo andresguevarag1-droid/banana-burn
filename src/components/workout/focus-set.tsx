@@ -5,6 +5,8 @@ import css from "./workout.module.css";
 
 type Props = {
   rows: Row[]; active: number; bw: boolean; unit?: string; restSec: number; plates: number[] | null;
+  /** Por tiempo y por lado: el valor es de un lado ("35 segundos por lado"). */
+  perSide?: boolean;
   /** Sin lastre: en un programa de piso (pilates) el peso corporal no lleva el campo de kilos. */
   noBallast?: boolean;
   /** Pesos para empezar (calibración o serie sin peso): un toque y listo */
@@ -38,13 +40,13 @@ function Big({ label, unit, value, placeholder, inputMode, onMinus, onPlus, onCh
 }
 
 /** Serie ya hecha: una línea con lo que levantaste, el esfuerzo y deshacer. */
-export function DoneRow({ si, row, unit, bw, onUndo }: { si: number; row: Row; unit?: string; bw: boolean; onUndo: (si: number) => void }) {
+export function DoneRow({ si, row, unit, bw, perSide, onUndo }: { si: number; row: Row; unit?: string; bw: boolean; perSide?: boolean; onUndo: (si: number) => void }) {
   const eff = effortOf(row);
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-peel/10 pl-3 pr-1 h-12">
       <span aria-hidden className="grid place-items-center size-6 shrink-0 rounded-full bg-peel text-white"><Check weight="bold" className="size-3.5" /></span>
       <span className="shrink-0 whitespace-nowrap text-sm font-bold text-ink tabular-nums">Serie {si + 1}</span>
-      <span className="flex-1 min-w-0 truncate text-sm font-semibold text-muted tabular-nums">{targetText(row, { unit, bw })}</span>
+      <span className="flex-1 min-w-0 truncate text-sm font-semibold text-muted tabular-nums">{targetText(row, { unit, bw, perSide })}</span>
       {eff && <span className="chip h-6 shrink-0 bg-white text-ink">{EFFORTS.find((e) => e.id === eff)?.label}</span>}
       <button type="button" onClick={() => onUndo(si)} className="pressable grid place-items-center size-11 shrink-0 rounded-full text-muted hover:bg-white hover:text-ink" aria-label={`Deshacer serie ${si + 1}`}>
         <ArrowCounterClockwise weight="bold" className="size-5" />
@@ -53,14 +55,14 @@ export function DoneRow({ si, row, unit, bw, onUndo }: { si: number; row: Row; u
   );
 }
 
-export function FocusSet({ rows, active, bw, noBallast = false, unit, restSec, plates, prev, chips, onPickKg, onStep, onChange, onCopy, onUndo }: Props) {
+export function FocusSet({ rows, active, bw, noBallast = false, unit, perSide = false, restSec, plates, prev, chips, onPickKg, onStep, onChange, onCopy, onUndo }: Props) {
   const r = rows[active];
   const n = rows.length;
   const lastDone = [...rows.slice(0, active)].reverse().find((x) => x.done);
   const same = lastDone && (lastDone.kg !== r.kg || lastDone.reps !== r.reps);
   const fromPrev = prev && (String(prev.kg ?? "") !== r.kg || String(prev.reps) !== r.reps) && !same;
   const timed = unit === "s";
-  const ul = unit === "s" ? "segundos" : unit === "m" ? "metros" : "reps";
+  const ul = unit === "s" ? (perSide ? "segundos por lado" : "segundos") : unit === "m" ? "metros" : "reps";
   const showKg = !(bw && (timed || noBallast));
   const last = rows.filter((x) => !x.done).length === 1;
 
@@ -68,7 +70,7 @@ export function FocusSet({ rows, active, bw, noBallast = false, unit, restSec, p
     <div className="space-y-2">
       {/* Series hechas: compactas, con deshacer */}
       {rows.map((x, si) => x.done && (
-        <DoneRow key={si} si={si} row={x} unit={unit} bw={bw} onUndo={onUndo} />
+        <DoneRow key={si} si={si} row={x} unit={unit} bw={bw} perSide={perSide} onUndo={onUndo} />
       ))}
 
       {/* Serie actual */}
@@ -106,7 +108,7 @@ export function FocusSet({ rows, active, bw, noBallast = false, unit, restSec, p
 
         {(same || fromPrev) && (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {same && lastDone && <button type="button" onClick={() => onCopy(active, lastDone.kg, lastDone.reps)} className="chip h-11 px-4 bg-cream text-ink border border-line">Igual que la anterior: {targetText(lastDone, { unit, bw })}</button>}
+            {same && lastDone && <button type="button" onClick={() => onCopy(active, lastDone.kg, lastDone.reps)} className="chip h-11 px-4 bg-cream text-ink border border-line">Igual que la anterior: {targetText(lastDone, { unit, bw, perSide })}</button>}
             {fromPrev && prev && <button type="button" onClick={() => onCopy(active, prev.kg != null ? String(prev.kg) : "", String(prev.reps))} className="chip h-11 px-4 bg-cream text-ink border border-line">La vez pasada: {prev.kg != null ? `${kgFmt(prev.kg)} × ` : ""}{prev.reps}</button>}
           </div>
         )}
@@ -122,7 +124,7 @@ export function FocusSet({ rows, active, bw, noBallast = false, unit, restSec, p
       {rows.map((x, si) => !x.done && si !== active && (
         <div key={si} className="flex items-center gap-3 rounded-2xl border border-dashed border-line pl-3 pr-4 h-11 text-sm">
           <span className="font-bold text-muted tabular-nums">Serie {si + 1}</span>
-          <span className="ml-auto font-semibold text-muted tabular-nums">{targetText(x, { unit, bw })}</span>
+          <span className="ml-auto font-semibold text-muted tabular-nums">{targetText(x, { unit, bw, perSide })}</span>
         </div>
       ))}
     </div>

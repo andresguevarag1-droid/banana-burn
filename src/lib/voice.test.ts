@@ -39,6 +39,14 @@ describe("registro (voice)", () => {
     expect(setsReps("basico", 4, 6, 10)).toBe("4 series de 6 a 10");
     expect(setsReps("tecnico", 3, 30, 60, "s")).toBe("3×30-60 s");
   });
+  it("por tiempo y por lado se dice en el objetivo; en reps no (la nota ya lo dice)", () => {
+    expect(setsReps("intermedio", 2, 30, 40, "s", true)).toBe("2×30-40 s por lado");
+    expect(setsReps("basico", 2, 30, 40, "s", true)).toBe("2 series de 30 a 40 segundos por lado");
+    expect(setsReps("intermedio", 2, 8, 10, undefined, true)).toBe("2×8-10");
+    const rx = { type: "hold" as const, kg: null, reps: [35, 35], sets: 2 };
+    expect(rxNote("intermedio", rx, { lo: 25, hi: 35, rest: 30, unit: "s", perSide: true }, { weighted: false })).toContain("35 s de trabajo por lado y 30 s de descanso");
+    expect(rxNote("basico", rx, { lo: 25, hi: 35, rest: 30, unit: "s", perSide: true }, { weighted: false })).toContain("Trabaja 35 segundos por lado");
+  });
   it("la indicación del motor conserva peso, reps y descanso en cada registro", () => {
     const cfg = TPL.pushA.ex[1]; // banca 4×6-10
     const cases = [

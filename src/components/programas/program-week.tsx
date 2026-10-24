@@ -7,7 +7,7 @@ import { DEFAULT_VOICE, muscleText, setsReps, t, tempoLabel, type Voice } from "
 
 export type WeekSessionView = {
   day: number; title: string; focus: string; optional: boolean; done: boolean; mins: number; href: string | null;
-  exercises: { id: string; name: string; muscle: string; sets: string; cfg?: { sets: number; lo: number; hi: number; unit?: string }; rest: string; tempo?: string; note?: string }[];
+  exercises: { id: string; name: string; muscle: string; sets: string; cfg?: { sets: number; lo: number; hi: number; unit?: string; perSide?: boolean }; rest: string; tempo?: string; note?: string }[];
 };
 
 /**
@@ -48,7 +48,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
                 <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-sm font-bold text-white">{i + 1}</span>
                 <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${e.rest}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
                 {/* Series y repeticiones en el registro de la persona: "3 series de 10 a 12" en básico, "3×10-12" en técnico. */}
-                <p className={`shrink-0 font-extrabold tabular-nums text-ink text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{e.cfg ? setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit) : e.sets}</p>
+                <p className={`shrink-0 font-extrabold tabular-nums text-ink text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{e.cfg ? setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide) : e.sets}</p>
               </div>
               {e.note && <p className="mt-2 flex gap-1.5 pl-11 text-xs text-body"><Info weight="duotone" className="mt-px size-3.5 shrink-0 text-banana-ink" />{e.note}</p>}
             </li>

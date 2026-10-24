@@ -27,6 +27,11 @@ export type ProgramExercise = {
   /** Tempo bajada-pausa-subida, por ejemplo "3-1-1". */
   tempo?: string;
   note?: string;
+  /**
+   * Se hace por lado: lo, hi son por lado. Si falta, se deduce de la nota ("Por lado. ...", ver `isPerSide`), así los
+   * programas ya sembrados en la base funcionan sin migrar. Un `false` explícito manda sobre la nota.
+   */
+  perSide?: boolean;
   /** Alternativa para casa o sin equipo cuando el ejercicio necesita gimnasio. */
   home?: string;
 };
@@ -129,9 +134,14 @@ export function parseExercise(x: unknown): ProgramExercise | null {
   const tempo = txt(o.tempo, 7), note = txt(o.note, 160), home = typeof o.home === "string" && PROGRAM_EXERCISE_ID.test(o.home.trim()) ? o.home.trim() : undefined;
   return {
     id, sets: clampN(int(o.sets, 3), 1, 10), lo, hi, rest: clampN(int(o.rest, 90), 0, 600),
-    ...(unit ? { unit } : {}), ...(TEMPO_RE.test(tempo) ? { tempo } : {}), ...(note ? { note } : {}), ...(home && home !== id ? { home } : {}),
+    ...(unit ? { unit } : {}), ...(TEMPO_RE.test(tempo) ? { tempo } : {}), ...(note ? { note } : {}), ...(typeof o.perSide === "boolean" ? { perSide: o.perSide } : {}), ...(home && home !== id ? { home } : {}),
   };
 }
+
+/** Nota que empieza con "Por lado" (sin importar mayúsculas): así vienen escritos los ejercicios por lado de la siembra. */
+export const PER_SIDE_NOTE = /^\s*por\s+lado\b/i;
+/** ¿El ejercicio se hace por lado? El campo explícito manda; si no está, se lee la nota. */
+export const isPerSide = (e: Pick<ProgramExercise, "perSide" | "note">) => (typeof e.perSide === "boolean" ? e.perSide : PER_SIDE_NOTE.test(e.note ?? ""));
 
 export function parseSession(x: unknown): ProgramSession | null {
   const o = (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
@@ -468,7 +478,7 @@ export function daysLabel(meta: Pick<ProgramMeta, "daysPerWeek">, sessions: Prog
 }
 
 /** Texto de una prescripción: "3 × 8-12", "3 × 30-45 s". */
-export const setsLabel = (e: Pick<ProgramExercise, "sets" | "lo" | "hi"> & { unit?: string }) => `${e.sets} × ${e.lo === e.hi ? e.lo : `${e.lo}-${e.hi}`}${e.unit === "s" ? " s" : e.unit === "m" ? " m" : ""}`;
+export const setsLabel = (e: Pick<ProgramExercise, "sets" | "lo" | "hi"> & { unit?: string; perSide?: boolean }) => `${e.sets} × ${e.lo === e.hi ? e.lo : `${e.lo}-${e.hi}`}${e.unit === "s" ? (e.perSide ? " s por lado" : " s") : e.unit === "m" ? " m" : ""}`;
 export const restLabel = (s: number) => (s >= 120 ? `${(s / 60).toLocaleString("es-419")} min` : `${s} s`);
 
 // ───────────── Del programa a la rutina del día ─────────────
@@ -505,7 +515,7 @@ export function plannedFromSession(def: Pick<ProgramDef, "slug" | "title" | "met
     if (seen.has(id)) continue; // dos alternativas de casa iguales en la misma sesión: se queda la primera
     seen.add(id);
     const i = info(id);
-    exercises.push({ id: id as ProgramPlannedExercise["id"], name: i?.name ?? id, muscle: i?.muscle ?? "", cfg: { sets: e.sets, lo: e.lo, hi: e.hi, rest: e.rest, ...(e.unit ? { unit: e.unit } : {}) }, ...(e.tempo ? { tempo: e.tempo } : {}), ...(e.note ? { note: e.note } : {}) });
+    exercises.push({ id: id as ProgramPlannedExercise["id"], name: i?.name ?? id, muscle: i?.muscle ?? "", cfg: { sets: e.sets, lo: e.lo, hi: e.hi, rest: e.rest, ...(e.unit ? { unit: e.unit } : {}), ...(isPerSide(e) ? { perSide: true } : {}) }, ...(e.tempo ? { tempo: e.tempo } : {}), ...(e.note ? { note: e.note } : {}) });
   }
   return {
     dow, tpl: null, key: programTemplate(def.slug, week, session.day), name: session.title, tag: ph.phase.deload ? "Descarga" : ph.phase.name, icon,

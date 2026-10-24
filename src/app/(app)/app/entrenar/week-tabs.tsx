@@ -42,7 +42,7 @@ export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFA
                 <li key={e.id} className="flex items-center gap-3 rounded-2xl bg-white/80 px-3.5 py-3">
                   <span className="grid place-items-center size-8 shrink-0 rounded-xl bg-ink text-white text-sm font-bold">{i + 1}</span>
                   <div className="flex-1 min-w-0"><p className="font-bold text-ink leading-tight">{e.name}</p><p className="text-xs text-muted">{muscleText(voice, e.muscle)}, {t(voice, { basico: "descansa", intermedio: "descanso de", tecnico: "descanso" })} {restText(e.cfg.rest)}</p></div>
-                  <p className={`shrink-0 font-extrabold text-ink tabular-nums text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit)}</p>
+                  <p className={`shrink-0 font-extrabold text-ink tabular-nums text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide)}</p>
                 </li>
               ))}
             </ol>

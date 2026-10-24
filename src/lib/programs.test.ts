@@ -443,3 +443,45 @@ describe("orderProgramsFor: tienda según quién mira", () => {
     expect(orderProgramsFor(list, null)).toBe(list);
   });
 });
+
+import { PER_SIDE_NOTE, isPerSide, parseExercise, plannedFromSession, setsLabel } from "./programs";
+
+describe("ejercicios por lado", () => {
+  it("se deduce de la nota que empieza con «Por lado», sin importar mayúsculas", () => {
+    expect(isPerSide({ note: "Por lado." })).toBe(true);
+    expect(isPerSide({ note: "por lado. Cadera alta." })).toBe(true);
+    expect(isPerSide({ note: "  POR LADO, sin apuro" })).toBe(true);
+    expect(isPerSide({ note: "Pasos por lado, con banda si tienes." })).toBe(false); // no empieza así
+    expect(isPerSide({ note: "Por pierna." })).toBe(false);
+    expect(isPerSide({ note: "Por ladox" })).toBe(false);
+    expect(isPerSide({})).toBe(false);
+    expect(PER_SIDE_NOTE.test("Por lado")).toBe(true);
+  });
+  it("el campo explícito manda sobre la nota", () => {
+    expect(isPerSide({ perSide: true })).toBe(true);
+    expect(isPerSide({ perSide: false, note: "Por lado." })).toBe(false);
+  });
+  it("parseExercise acepta solo un booleano en perSide", () => {
+    expect(parseExercise({ id: "ds:0705", sets: 2, lo: 30, hi: 40, rest: 30, unit: "s", perSide: true })?.perSide).toBe(true);
+    expect(parseExercise({ id: "ds:0705", sets: 2, lo: 30, hi: 40, rest: 30, unit: "s", perSide: false })?.perSide).toBe(false);
+    expect(parseExercise({ id: "ds:0705", sets: 2, lo: 30, hi: 40, rest: 30, unit: "s", perSide: "sí" })).not.toHaveProperty("perSide");
+    expect(parseExercise({ id: "ds:0705", sets: 2, lo: 30, hi: 40, rest: 30 })).not.toHaveProperty("perSide");
+  });
+  it("la siembra de Pilates (ya en la base, sin el campo) llega al reproductor como por lado", () => {
+    const p = PROGRAM_SEED_3.find((x) => x.slug === "pilates-casa-30")!;
+    const withPlank = p.sessions.find((s) => s.exercises.some((e) => e.id === "ds:0705" && e.unit === "s"))!;
+    // Lo que vuelve de la base pasa por parseSession: el campo no está, la nota sí.
+    const fromDb = parseSession(JSON.parse(JSON.stringify(withPlank)))!;
+    expect(fromDb.exercises.some((e) => "perSide" in e)).toBe(false);
+    const plan = plannedFromSession(p, p.icon, fromDb, 1, 0, "ninguno", exInfo);
+    const plank = plan.program!.exercises.find((e) => e.id === "ds:0705")!;
+    expect(plank.cfg).toMatchObject({ unit: "s", perSide: true });
+    expect(setsLabel(plank.cfg)).toMatch(/^\d × \d+-\d+ s por lado$/);
+    // Lo que no es por lado no lleva la marca
+    for (const e of plan.program!.exercises) if (!/^por lado/i.test(e.note ?? "")) expect(e.cfg.perSide).toBeUndefined();
+  });
+  it("setsLabel solo marca por lado lo que es por tiempo", () => {
+    expect(setsLabel({ sets: 2, lo: 30, hi: 40, unit: "s", perSide: true })).toBe("2 × 30-40 s por lado");
+    expect(setsLabel({ sets: 2, lo: 8, hi: 10, perSide: true })).toBe("2 × 8-10");
+  });
+});
