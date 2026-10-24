@@ -114,7 +114,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
         <div className="space-y-6">
           <header className="overflow-hidden rounded-[1.75rem] shadow-soft">
             <ChallengeCover c={c} className="h-48 sm:h-56">
-              <div className={`absolute inset-x-0 bottom-0 p-5 ${ink}`}>
+              <div className={`absolute bottom-0 left-0 max-w-[72%] p-5 ${ink}`}>
                 <p className="text-xs font-extrabold uppercase tracking-[.14em] opacity-85">Programa Premium de {dur}</p>
                 <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight text-balance">{c.title}</h1>
               </div>

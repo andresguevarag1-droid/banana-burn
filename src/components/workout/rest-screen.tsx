@@ -144,12 +144,16 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
           )}
 
           {/* Reloj */}
-          <div className="my-auto flex items-center justify-center gap-3 py-5">
-            <button type="button" onClick={() => onAdjust(-15)} className="pressable grid place-items-center size-14 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Quitar 15 segundos">−15</button>
-            <CountRing left={left} total={total} size={228} stroke={13}>
-              <span className="mt-1 block text-xs font-bold text-white/60">de {clock(total)}</span>
-            </CountRing>
-            <button type="button" onClick={() => onAdjust(15)} className="pressable grid place-items-center size-14 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Sumar 15 segundos">+15</button>
+          {/* En 360 px, 56 + 228 + 56 no cabía en el ancho (los botones quedaban cortados en los bordes): por debajo de
+              380 px el reloj se escala al 90 % con margen negativo y los botones bajan a 48 px. */}
+          <div className="my-auto flex items-center justify-center gap-1.5 py-5 min-[380px]:gap-3">
+            <button type="button" onClick={() => onAdjust(-15)} className="pressable grid place-items-center size-12 min-[380px]:size-14 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Quitar 15 segundos">−15</button>
+            <div className="-mx-3 scale-90 min-[380px]:mx-0 min-[380px]:scale-100">
+              <CountRing left={left} total={total} size={228} stroke={13}>
+                <span className="mt-1 block text-xs font-bold text-white/60">de {clock(total)}</span>
+              </CountRing>
+            </div>
+            <button type="button" onClick={() => onAdjust(15)} className="pressable grid place-items-center size-12 min-[380px]:size-14 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Sumar 15 segundos">+15</button>
           </div>
 
           {/* Lo que sigue */}

@@ -43,13 +43,14 @@ export function PersonCard({ p }: { p: Person }) {
 export function PersonRow({ p }: { p: Person }) {
   const href = p.username ? `/app/comunidad/u/${p.username}` : null;
   return (
-    <li className="flex items-center gap-3">
+    // flex-wrap: en la columna angosta (1024 px) el botón Seguir dejaba el nombre en "F…"; ahora baja a su propia línea.
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
       <Avatar name={p.name} xp={p.xp} size="md" />
-      <span className="flex-1 min-w-0">
+      <span className="min-w-[7.5rem] flex-1">
         <span className="flex min-w-0 items-center gap-1">{href ? <Link href={href} className="-my-2.5 block py-2.5 font-bold text-ink truncate hover:underline">{p.name}</Link> : <span className="block font-bold text-ink truncate">{p.name}</span>}<NameFlair flair={p.flair} size="sm" className="shrink-0" /></span>
         <span className="block text-xs text-faint truncate">{p.activeDays > 0 ? plural(p.activeDays, "día activo", "días activos") + " en 2 semanas" : p.username ? `@${p.username}` : ""}</span>
       </span>
-      <FollowButton userId={p.id} name={p.name} />
+      <span className="ml-auto"><FollowButton userId={p.id} name={p.name} /></span>
     </li>
   );
 }

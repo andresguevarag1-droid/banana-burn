@@ -213,8 +213,9 @@ export function PostCard({ p, me, onDeleted }: { p: FeedPost; me: string; onDele
       <header className="flex items-center gap-3 p-4 pb-0">
         {href ? <Link href={href} className="rounded-full" tabIndex={-1} aria-hidden><Avatar name={p.author.name} xp={p.author.xp} /></Link> : <Avatar name={p.author.name} xp={p.author.xp} />}
         <div className="flex-1 min-w-0">
-          <p className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-            <span className="min-w-[3.5rem] font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}</span>
+          {/* flex-wrap: con insignia y nivel, un nombre corto ("Carla Mora") quedaba en "Carla M…"; ahora las insignias bajan. */}
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
+            <span className="max-w-full font-bold text-ink truncate">{href ? <Link href={href} className="hover:underline">{p.author.name}</Link> : p.author.name}</span>
             <NameFlair flair={p.author.flair} className="shrink-0" />
             <LevelBadge xp={p.author.xp} compact className={`shrink-0 ${(p.author.flair?.tier && p.author.flair.tier > 1) || p.author.tester ? "max-[419px]:hidden" : ""}`} />
             {p.author.tester && <TesterBadge compact />}

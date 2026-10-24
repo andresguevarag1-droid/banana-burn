@@ -43,7 +43,7 @@ export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", a
                 <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-ink text-xs font-extrabold text-banana tabular-nums">{i + 1}</span>
               </span>
               <span className="flex flex-1 flex-col p-3">
-                <span className="line-clamp-2 text-[15px] font-extrabold leading-tight text-ink">{e.name}</span>
+                <span className="line-clamp-3 text-[15px] font-extrabold leading-tight text-ink">{e.name}</span>
                 <span className="mt-1 text-sm font-bold text-ink tabular-nums">{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide)}{voice !== "basico" && !e.cfg.unit ? " reps" : ""}</span>
                 {e.muscle && <span className="mt-0.5 text-xs font-semibold text-ink/70">{t(voice, { basico: "Trabaja: ", intermedio: "", tecnico: "" })}{muscleText(voice, e.muscle.toLowerCase())}</span>}
                 <span className="mt-auto pt-2 text-xs font-bold text-ink/70 underline decoration-ink/25 underline-offset-2 group-hover:decoration-ink">{t(voice, { basico: "Ver cómo se hace", intermedio: "Ver técnica", tecnico: "Técnica" })}</span>

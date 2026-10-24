@@ -106,9 +106,10 @@ export function TodayPanel({ initial, nutrition, habits, dateKey, demo }: {
                 <span className="text-ink">{done ? <><Check weight="bold" className="size-5" /><span className="sr-only">Meta cumplida</span></> : it.icon}</span>
               </Ring>
               <p className="mt-1.5 text-xs font-bold text-muted">{it.label}</p>
-              <p className="text-base font-extrabold leading-tight tabular-nums text-ink">{it.fmt(it.val)}<span className="text-[11px] font-semibold text-muted"> / {it.fmt(it.goal)}{it.unit ? ` ${it.unit}` : ""}</span></p>
+              {/* La meta va en su propia línea en las tres: así "4,820 / 10,000" no parte la ficha de Pasos y los botones quedan alineados. */}
+              <p className="mb-2 text-base font-extrabold leading-tight tabular-nums text-ink">{it.fmt(it.val)}<span className="block text-[11px] font-semibold text-muted">/ {it.fmt(it.goal)}{it.unit ? ` ${it.unit}` : ""}</span></p>
               <button type="button" onClick={() => add(it.f, it.step)} aria-label={`Sumar ${it.stepLabel} a ${it.label.toLowerCase()}`}
-                className="tap pressable mt-2 inline-flex h-11 w-full items-center justify-center gap-1 rounded-xl bg-banana-soft text-xs font-bold text-ink hover:bg-banana">
+                className="tap pressable mt-auto inline-flex h-11 w-full items-center justify-center gap-1 rounded-xl bg-banana-soft text-xs font-bold text-ink hover:bg-banana">
                 <Plus weight="bold" className="size-3" />{it.stepLabel}
               </button>
             </div>
@@ -203,7 +204,7 @@ function MealToday({ meal, coach }: { meal: HoyFood; coach: NutritionNumbers["co
                 <span className="flex items-center justify-between gap-1 text-xs font-bold text-white/75">{s.label}{has && <CheckCircle weight="fill" aria-hidden className="size-4 text-banana" />}</span>
                 {has ? (
                   <>
-                    <span className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white">{s.items.join(", ")}</span>
+                    <span className="mt-1 line-clamp-3 text-sm font-bold leading-snug text-white">{s.items.join(", ")}</span>
                     <span className="mt-auto pt-1 text-[11px] font-semibold tabular-nums text-white/70">{n0(s.kcal)} kcal, {n0(s.protein)} g proteína</span>
                   </>
                 ) : (

@@ -75,7 +75,7 @@ export default async function PerfilPublico({ params }: { params: Promise<{ user
 
           <dl className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-2">
             {numbers.map(([k, n]) => (
-              <div key={k} className="flex flex-col-reverse rounded-2xl bg-cream px-2 py-2.5 text-center">
+              <div key={k} className="flex flex-col-reverse justify-end rounded-2xl bg-cream px-2 py-2.5 text-center">
                 <dt className="mt-1 text-[11px] font-semibold text-muted">{k}</dt>
                 <dd className="text-lg font-extrabold text-ink tabular-nums leading-none">{fmtNum(n)}</dd>
               </div>

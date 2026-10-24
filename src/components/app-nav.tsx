@@ -71,7 +71,9 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
             <span className="min-w-0"><span className="block text-[10px] font-extrabold uppercase tracking-[.12em] text-banana">{program.mode ?? "Programa activo"}</span><span className="block truncate text-sm font-bold">{program.title}</span></span>
           </Link>
         )}
-        <nav aria-label="Menú principal" className={`${program ? "mt-4" : "mt-8"} -mx-2 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-2`}>
+        {/* En pantallas de 768-800 px de alto el menú no cabe y se desplaza: el desvanecido al pie avisa que sigue (antes
+            el último ítem quedaba cortado a la mitad, como roto). */}
+        <nav aria-label="Menú principal" className={`${program ? "mt-4" : "mt-8"} -mx-2 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 pt-2 pb-6 [mask-image:linear-gradient(to_bottom,#000_calc(100%-1.5rem),transparent)]`}>
           {MAIN.map((it) => { const { href, label, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
               <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label}{lockMark(it)}

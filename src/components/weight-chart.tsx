@@ -17,9 +17,11 @@ export function WeightChart({ data, goal }: { data: Point[]; goal: number }) {
   const span = since ? `desde el ${since}` : `en ${r} días`;
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <p className={`flex items-center gap-1 text-sm font-extrabold tabular-nums ${delta <= 0 ? "text-peel" : "text-ember-ink"}`}>{pts.length > 1 ? <>{delta <= 0 ? <TrendDown weight="bold" className="size-4" /> : <TrendUp weight="bold" className="size-4" />}<span className="sr-only">{delta <= 0 ? "Bajaste" : "Subiste"}</span>{`${Math.abs(delta).toLocaleString("es-419", { maximumFractionDigits: 1 })} kg ${span}`}</> : " "}</p>
-        <div className="flex rounded-full bg-cream p-0.5">
+      {/* flex-wrap: en 360 px el cambio ("1.8 kg desde el 3 oct") partía en tres líneas junto a los rangos; ahora los
+          rangos bajan a su propia línea si no caben. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 mb-2">
+        <p className={`flex items-center gap-1 whitespace-nowrap text-sm font-extrabold tabular-nums ${delta <= 0 ? "text-peel" : "text-ember-ink"}`}>{pts.length > 1 ? <>{delta <= 0 ? <TrendDown weight="bold" className="size-4" /> : <TrendUp weight="bold" className="size-4" />}<span className="sr-only">{delta <= 0 ? "Bajaste" : "Subiste"}</span>{`${Math.abs(delta).toLocaleString("es-419", { maximumFractionDigits: 1 })} kg ${span}`}</> : " "}</p>
+        <div className="ml-auto flex rounded-full bg-cream p-0.5">
           {RANGES.map(([l, n]) => <button key={l} onClick={() => setR(n)} className={`tap pressable h-8 px-3 whitespace-nowrap rounded-full text-xs font-bold ${r === n ? "bg-ink text-white" : "text-muted hover:text-ink"}`} aria-pressed={r === n}>{l}</button>)}
         </div>
       </div>

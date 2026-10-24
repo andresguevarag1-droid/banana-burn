@@ -26,7 +26,7 @@ export default async function MisReportes() {
       {v.demo && <p className="rounded-2xl bg-banana-soft p-3 text-sm font-semibold text-banana-ink">Modo demo: reportes de ejemplo, no se guarda nada.</p>}
       {unavailable && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink">Los reportes todavía no están activos. Escríbenos a <a className="font-bold underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>.</p>}
       {tickets.length ? (
-        <ul className="grid gap-3" aria-label={`Tus reportes: ${tickets.length}, ${open.length} abiertos`}>
+        <ul className="grid gap-3 [&>*]:min-w-0" aria-label={`Tus reportes: ${tickets.length}, ${open.length} abiertos`}>
           {tickets.map((t) => {
             const fresh = !!t.last_staff_at && t.last_staff_at > t.last_user_at && isOpen(t.status);
             return (

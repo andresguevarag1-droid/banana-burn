@@ -31,14 +31,17 @@ const EXPRESS: [number, string, string][] = [
 export function ExpressCard({ program = false, compact = false, coach = null }: { program?: boolean; compact?: boolean; coach?: { name: string; hello: string } | null }) {
   return (
     <section aria-labelledby="expres-t" className="relative overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white shadow-soft sm:p-6">
-      {coach ? <span aria-hidden className="pointer-events-none absolute -right-2 -top-1 w-28 select-none sm:w-36"><CoachPic src={coach.hello} size={220} sizes="160px" className="aspect-square w-full rounded-3xl object-contain !bg-transparent" iconClassName="size-12" /></span>
-        : <Image src="/brand/mascota-sola.webp" alt="" aria-hidden width={220} height={220} sizes="160px" className="pointer-events-none absolute -right-4 -top-3 w-28 select-none opacity-95 sm:w-36" />}
-      <div className="relative pr-24 sm:pr-32">
-        <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-banana">{coach?.name ?? "Coach Banana"} exprés</p>
-        <h2 id="expres-t" className={`mt-1 flex items-start gap-2 font-extrabold tracking-tight text-balance ${compact ? "text-xl" : "text-2xl sm:text-[28px]"}`}>
-          <Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Te estás quedando sin tiempo? Termina con estos exprés
-        </h2>
-        <p className="mt-1 max-w-[52ch] text-sm text-white/75">Sin equipo, con tu peso, en un espacio de 2 × 2 m. Cuenta para tu racha{program ? ", aunque no reemplaza la sesión del programa" : ""}.</p>
+      {/* La mascota va en el flujo (no absoluta): nunca la corta el borde de la tarjeta y el texto no se le monta encima. */}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-banana">{coach?.name ?? "Coach Banana"} exprés</p>
+          <h2 id="expres-t" className={`mt-1 flex items-start gap-2 font-extrabold tracking-tight text-balance ${compact ? "text-xl" : "text-2xl sm:text-[28px]"}`}>
+            <Lightning weight="fill" className="mt-1 size-6 shrink-0 text-banana" aria-hidden />¿Te estás quedando sin tiempo? Termina con estos exprés
+          </h2>
+          <p className="mt-1 max-w-[52ch] text-sm text-white/75 text-pretty">Sin equipo, con tu peso, en un espacio de 2&nbsp;×&nbsp;2&nbsp;m. Cuenta para tu racha{program ? ", aunque no reemplaza la sesión del programa" : ""}.</p>
+        </div>
+        {coach ? <span aria-hidden className="pointer-events-none -mr-1 w-24 shrink-0 select-none sm:w-32"><CoachPic src={coach.hello} size={220} sizes="128px" className="aspect-square w-full rounded-3xl object-contain !bg-transparent" iconClassName="size-12" /></span>
+          : <Image src="/brand/mascota-sola.webp" alt="" aria-hidden width={220} height={220} sizes="128px" className="pointer-events-none -mr-3 w-24 shrink-0 select-none sm:w-32" />}
       </div>
       <div className="relative mt-4 grid grid-cols-3 gap-2">
         {EXPRESS.map(([m, l, d]) => (

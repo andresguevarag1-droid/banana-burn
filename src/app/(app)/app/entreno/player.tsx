@@ -756,7 +756,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
         <div className="mx-auto flex max-w-xl items-center gap-2">
           <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-11 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label="Salir del entreno"><X weight="bold" className="size-5" /></button>
           <div className="flex-1 min-w-0 text-center">
-            <p className="flex items-center justify-center gap-1.5 font-extrabold text-ink min-w-0"><BrandIcon name={icon} className="size-5 shrink-0 text-banana-ink" /><span className="truncate">{title}</span></p>
+            <p className="flex items-center justify-center gap-1.5 text-[15px] leading-tight font-extrabold text-ink min-w-0 sm:text-base"><BrandIcon name={icon} className="size-5 shrink-0 text-banana-ink" /><span className="line-clamp-2 text-balance break-words">{title}</span></p>
             <p className="flex items-center justify-center gap-3 text-xs font-semibold text-muted tabular-nums">
               <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>
               {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-3.5" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{xpNow.xp} XP</span>}
@@ -788,7 +788,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               <span className="absolute bottom-1.5 inset-x-0 text-[10px] font-bold text-ink/75">Ver técnica</span>
             </button>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="flex items-center gap-2 text-xs font-semibold text-muted min-w-0"><span className="truncate">Ejercicio {idx + 1} de {exercises.length}, {ex.muscle.toLowerCase()}</span><span className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 h-5 text-[11px] font-bold ring-1 ring-line ${badgeCls}`}><BadgeIcon weight="bold" className="size-3" />{badge}</span></p>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-muted min-w-0"><span className="min-w-0">Ejercicio {idx + 1} de {exercises.length}, {ex.muscle.toLowerCase()}</span><span className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 h-5 text-[11px] font-bold ring-1 ring-line ${badgeCls}`}><BadgeIcon weight="bold" className="size-3" />{badge}</span></p>
               <h1 className="mt-0.5 text-[22px] leading-tight font-extrabold tracking-tight text-ink line-clamp-2">{ex.name}</h1>
               {alts > 0 && (
                 <div className="mt-1.5">

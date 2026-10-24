@@ -82,7 +82,7 @@ export function PowerStats({ p }: { p: Power }) {
   return (
     <dl className="grid grid-cols-4 gap-2">
       {items.map(([k, v]) => (
-        <div key={k} className="flex flex-col-reverse rounded-2xl bg-cream px-1.5 py-2.5 text-center">
+        <div key={k} className="flex flex-col-reverse justify-end rounded-2xl bg-cream px-1.5 py-2.5 text-center">
           <dt className="mt-1 text-[11px] font-semibold leading-tight text-muted">{k}</dt>
           <dd className="text-lg font-extrabold leading-none tabular-nums text-ink">{nf(v)}</dd>
         </div>
@@ -162,7 +162,7 @@ export function InsigniasWall({ items, featured }: { items: Insignia[]; featured
             <span className="min-w-0">
               <span className="block text-[11px] font-bold uppercase tracking-[.08em] text-banana-ink">{i.id === featured ? "Destacada" : KIND_LABEL[i.kind]}</span>
               <span className="block truncate text-sm font-bold leading-tight text-ink">{i.label}</span>
-              {i.detail && <span className="block truncate text-[11px] leading-tight text-muted">{i.detail}</span>}
+              {i.detail && <span className="block text-[11px] leading-tight text-muted">{i.detail}</span>}
             </span>
           </li>
         ))}

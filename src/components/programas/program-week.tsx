@@ -28,7 +28,8 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
             <button key={x.day} type="button" role="tab" aria-selected={on} onClick={() => setSel(x.day)}
               className={`pressable relative min-h-14 rounded-2xl px-1 py-2 text-center ${on ? "bg-ink text-white shadow-lift" : x.optional ? "border border-dashed border-line bg-white/60 text-ink" : "border border-line bg-white text-ink"}`}>
               <span className={`block text-[11px] font-bold uppercase tracking-[.08em] ${on ? "text-banana" : "text-muted"}`}>{x.optional ? "Extra" : word(x.day)}</span>
-              <span className="mt-0.5 block truncate text-xs font-extrabold">{x.title.replace(/^Extra: /, "")}</span>
+              {/* Dos líneas en vez de truncar: en 360 px las cuatro decían "Cuerpo c…" y no se distinguían. */}
+              <span className="mt-0.5 line-clamp-2 break-words text-xs font-extrabold leading-tight">{x.title.replace(/^Extra: /, "")}</span>
               {x.done && <span className="absolute -top-1.5 -right-1.5 grid size-[18px] place-items-center rounded-full bg-peel text-white ring-2 ring-paper" role="img" aria-label="Hecha"><Check weight="bold" className="size-2.5" /></span>}
             </button>
           );
@@ -46,7 +47,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
             <li key={`${e.id}-${i}`} className="rounded-2xl bg-cream px-3.5 py-3">
               <div className="flex items-center gap-3">
                 <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-sm font-bold text-white">{i + 1}</span>
-                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${e.rest}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${String(e.rest).replace(/ (s|min)\b/g, "\u00a0$1")}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
                 {/* Series y repeticiones en el registro de la persona: "3 series de 10 a 12" en básico, "3×10-12" en técnico. */}
                 <p className={`shrink-0 font-extrabold tabular-nums text-ink text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{e.cfg ? setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide) : e.sets}</p>
               </div>

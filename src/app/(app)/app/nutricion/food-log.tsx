@@ -384,7 +384,7 @@ export function FoodLog({ initial, yesterday, targets, dateKey, demo, country = 
                     <li key={i.id} className="py-1 animate-enter">
                       <div className="flex items-center gap-1">
                         <button onClick={() => setEditing(open ? null : i.id)} disabled={saving} aria-expanded={open} className="pressable flex-1 min-w-0 min-h-11 rounded-xl -ml-2 px-2 py-1.5 text-left transition-colors hover:bg-cream disabled:opacity-60" aria-label={`${i.name}: cambiar porción`}>
-                          <p className="flex items-center gap-1.5 font-semibold text-ink"><span className="truncate">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-419")}</span>}</span><PencilSimple weight="bold" aria-hidden className="size-3.5 shrink-0 text-faint" /></p>
+                          <p className="flex items-start gap-1.5 font-semibold leading-snug text-ink"><span className="line-clamp-2 min-w-0">{i.name}{i.qty !== 1 && <span className="text-muted"> ×{i.qty.toLocaleString("es-419")}</span>}</span><PencilSimple weight="bold" aria-hidden className="mt-1 size-3.5 shrink-0 text-faint" /></p>
                           <p className="text-xs text-muted tabular-nums">{n0(i.kcal)} kcal, {n0(i.protein)} g de proteína</p>
                         </button>
                         <button onClick={() => remove(i)} disabled={saving} className="tap pressable grid place-items-center size-11 shrink-0 rounded-full text-muted hover:bg-cream hover:text-ink disabled:opacity-60" aria-label={`Quitar ${i.name}`}><X weight="bold" className="size-4" /></button>
