@@ -16,6 +16,7 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
 import { safeAction } from "@/lib/action-client";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
+import { WelcomeInstall } from "@/components/install/welcome-install";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
@@ -216,6 +217,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     const savedPromo = saved?.charge ? saved.charge.promo : choice.billing === "mes";
     const savedAmount = saved?.charge?.amount ?? (savedPromo ? promoPrice(choice.plan) : PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]);
     return (
+      <WelcomeInstall name={full.name.trim().split(" ")[0]}>
       <main className="min-h-dvh bg-paper grid place-items-center px-6 py-10 text-center">
         <Confetti />
         <div className="max-w-md w-full animate-rise">
@@ -246,6 +248,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           )}
         </div>
       </main>
+      </WelcomeInstall>
     );
   }
 

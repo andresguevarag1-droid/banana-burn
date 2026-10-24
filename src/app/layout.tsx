@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: { default: "Banana Burn: tu entrenador personal en el celular", template: "%s | Banana Burn" },
   description: "Baja grasa y gana fuerza con un plan de gym que cambia cada día, se adapta a tu progreso y habla tu idioma. Hecho en Costa Rica para toda Latinoamérica.",
   applicationName: "Banana Burn",
+  // LinkApp en iPhone: se abre a pantalla completa desde la pantalla de inicio, con su nombre corto.
+  appleWebApp: { capable: true, title: "Banana Burn", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = { themeColor: "#FFF8E3", width: "device-width", initialScale: 1 };
