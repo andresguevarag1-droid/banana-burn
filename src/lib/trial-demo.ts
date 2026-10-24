@@ -1,6 +1,6 @@
 // Modo demo (sin Supabase): estados de ejemplo de la tarjeta y del primer cobro, para ver cada pantalla sin llamar a ONVO.
 // /app/suscripcion?demo=beta|prueba|nueva|fallo|procesando|cancelado. Sin parámetro: "beta" durante la beta y "prueba" después.
-import { BETA_ENDS_AT, betaLive } from "./plans";
+import { BETA_GRACE_UNTIL, betaLive } from "./plans";
 import { DAY_MS, amountMinorFor, cardStepFor, firstChargeMinor, chargeView, type CardStep, type ChargeView, type TrialChargeRow } from "./trial";
 
 export const DEMO_CARD_VARIANTS = ["beta", "prueba", "nueva", "fallo", "procesando", "cancelado"] as const;
@@ -36,8 +36,8 @@ export function demoCardState(v: string | null | undefined, now = new Date()): D
   const daysLeft = (end: number) => Math.max(1, Math.ceil((end - t) / DAY_MS));
   switch (variant) {
     case "beta": {
-      const end = Date.parse(BETA_ENDS_AT);
-      return { variant, charge: null, card: null, cardStep: "beta", locked: false, trial: end > t ? { endsAt: BETA_ENDS_AT, daysLeft: daysLeft(end), beta: true } : null };
+      const end = Date.parse(BETA_GRACE_UNTIL);
+      return { variant, charge: null, card: null, cardStep: "beta", locked: false, trial: end > t ? { endsAt: BETA_GRACE_UNTIL, daysLeft: daysLeft(end), beta: true } : null };
     }
     case "nueva": {
       // 0043: cuenta nueva en su prueba sin tarjeta: todo abierto y la oferta de dejar la tarjeta lista.

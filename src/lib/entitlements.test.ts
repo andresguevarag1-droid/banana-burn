@@ -133,19 +133,22 @@ describe("período de prueba del servicio (beta)", () => {
     expect(e.locked).toBe(false);
     expect(e.nutrition).toBe(true);
     expect(e.trial?.beta).toBe(true);
-    expect(e.trial?.endsAt).toBe("2026-11-01T06:00:00.000Z");
+    // 0045: las cuentas de la beta siguen gratis hasta el final del 7 de noviembre (Costa Rica).
+    expect(e.trial?.endsAt).toBe("2026-11-08T06:00:00.000Z");
   });
-  it("quien se registra en la última semana de la beta no recibe días extra después (decisión del dueño)", () => {
+  it("0045: quien se registra en la última semana de la beta tiene gratis hasta el 7 de noviembre, igual que todos", () => {
     const e = entitlementsFrom({ ...beta, now: new Date("2026-10-30T12:00:00Z"), createdAt: "2026-10-29T12:00:00Z" });
     expect(e.trial?.beta).toBe(true);
-    expect(e.trial?.endsAt).toBe("2026-11-01T06:00:00.000Z");
+    expect(e.trial?.endsAt).toBe("2026-11-08T06:00:00.000Z");
   });
   it("cuenta de la beta sin tarjeta: el aviso pide agregarla", () => {
     expect(entitlementsFrom({ ...beta, createdAt: daysAgo(30) }).cardStep).toBe("beta");
   });
-  it("desde el 1 de noviembre aplican las reglas normales", () => {
-    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-02T12:00:00Z"), createdAt: "2026-10-01T12:00:00Z" });
-    expect(e.locked).toBe(true);
+  it("0045: del 1 al 7 de noviembre una cuenta de la beta sigue gratis (con la oferta de la tarjeta); desde el 8, muro", () => {
+    const during = entitlementsFrom({ ...beta, now: new Date("2026-11-02T12:00:00Z"), createdAt: "2026-10-01T12:00:00Z" });
+    expect(during).toMatchObject({ locked: false, access: "trial", cardStep: "trial" });
+    expect(during.trial?.endsAt).toBe("2026-11-08T06:00:00.000Z");
+    expect(entitlementsFrom({ ...beta, now: new Date("2026-11-08T06:00:00Z"), createdAt: "2026-10-01T12:00:00Z" }).locked).toBe(true);
   });
   it("con plan pagado no se muestra la beta", () => {
     const e = entitlementsFrom({ ...beta, createdAt: daysAgo(30), profilePlan: "completo" });
@@ -193,19 +196,20 @@ describe("regalos de meses (0025)", () => {
 
 describe("fin de la beta: el muro aplica en el servidor", () => {
   const beta = { ...base, betaEndsAt: "2026-11-01T06:00:00.000Z" };
-  it("el 1 de noviembre a las 00:00 de Costa Rica se bloquea quien no pagó y ya pasó su prueba", () => {
-    expect(entitlementsFrom({ ...beta, now: new Date("2026-11-01T05:59:59Z"), createdAt: "2026-09-01T00:00:00Z" }).locked).toBe(false);
-    const after = entitlementsFrom({ ...beta, now: new Date("2026-11-01T06:00:00Z"), createdAt: "2026-09-01T00:00:00Z" });
+  it("0045: el 8 de noviembre a las 00:00 de Costa Rica se bloquea la cuenta de la beta que no pagó (no el 1)", () => {
+    expect(entitlementsFrom({ ...beta, now: new Date("2026-11-01T06:00:00Z"), createdAt: "2026-09-01T00:00:00Z" }).locked).toBe(false);
+    expect(entitlementsFrom({ ...beta, now: new Date("2026-11-08T05:59:59Z"), createdAt: "2026-09-01T00:00:00Z" }).locked).toBe(false);
+    const after = entitlementsFrom({ ...beta, now: new Date("2026-11-08T06:00:00Z"), createdAt: "2026-09-01T00:00:00Z" });
     expect(after).toMatchObject({ locked: true, app: false, nutrition: false, access: "none" });
   });
-  it("quien se registró en la última semana de la beta sin tarjeta: muro desde el 1 de noviembre, sin días extra", () => {
-    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-03T12:00:00Z"), createdAt: "2026-10-30T12:00:00Z" });
+  it("quien se registró en la última semana de la beta sin tarjeta: muro desde el 8 de noviembre, sin más días", () => {
+    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-08T12:00:00Z"), createdAt: "2026-10-30T12:00:00Z" });
     expect(e).toMatchObject({ locked: true, access: "none", cardStep: "pay" });
-    expect(e.trialEndsAt).toBe("2026-11-01T06:00:00.000Z");
+    expect(e.trialEndsAt).toBe("2026-11-08T06:00:00.000Z");
   });
-  it("cuenta de la beta con tarjeta guardada: no tiene prueba; si el cobro del 1 de noviembre aún no se confirma, muro", () => {
-    const tc = { ...trialCharge(10), kind: "beta" as const, trial_started_at: "2026-10-25T12:00:00.000Z", trial_ends_at: "2026-11-01T06:00:00.000Z", charge_at: "2026-11-01T06:00:00.000Z", next_attempt_at: "2026-11-01T06:00:00.000Z" };
-    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-01T07:00:00Z"), createdAt: "2026-10-01T12:00:00Z", trialCharge: tc, card: CARD });
+  it("cuenta de la beta con tarjeta guardada: si el cobro del 8 de noviembre aún no se confirma, muro", () => {
+    const tc = { ...trialCharge(10), kind: "beta" as const, trial_started_at: "2026-10-25T12:00:00.000Z", trial_ends_at: "2026-11-08T06:00:00.000Z", charge_at: "2026-11-08T06:00:00.000Z", next_attempt_at: "2026-11-08T06:00:00.000Z" };
+    const e = entitlementsFrom({ ...beta, now: new Date("2026-11-08T07:00:00Z"), createdAt: "2026-10-01T12:00:00Z", trialCharge: tc, card: CARD });
     expect(e).toMatchObject({ locked: true, cardStep: "none" });
     expect(e.charge?.due).toBe(true);
   });

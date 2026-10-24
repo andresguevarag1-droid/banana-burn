@@ -19,7 +19,7 @@ import { BETA_ENDS_AT, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
 import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
 import { bestLiveComp, compChainEnd, compPlan } from "@/lib/gifts";
-import { cardStepFor, chargeView, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
+import { cardStepFor, chargeView, graceUntil, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -165,7 +165,8 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime();
   const ownEnd = trialEndFor(i.createdAt, betaEndsAt);
   const ownTrial = !beta && trialLive(i.createdAt, now, betaEndsAt);
-  const trialEnd = beta ? new Date(betaEnd) : ownTrial && ownEnd ? new Date(ownEnd) : null;
+  // Las cuentas de la beta siguen gratis 7 días después del lanzamiento (0045): durante la beta su acceso llega hasta ahí.
+  const trialEnd = beta ? new Date(graceUntil(betaEndsAt)) : ownTrial && ownEnd ? new Date(ownEnd) : null;
   const live = !!trialEnd && trialEnd.getTime() > now.getTime();
   // Para el muro: cuándo terminó el acceso gratis (su prueba de 7 días, o la beta para las cuentas de la beta).
   const endedAt = trialEnd ?? (ownEnd ? new Date(ownEnd) : signedUpInBeta(i.createdAt, betaEndsAt) && Number.isFinite(betaEnd) ? new Date(betaEnd) : null);

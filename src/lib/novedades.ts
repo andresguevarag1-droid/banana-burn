@@ -117,7 +117,7 @@ export const NOVEDADES: Release[] = [
       },
       {
         title: "Tarjeta guardada y cobro con aviso",
-        benefit: "Puedes guardar tu tarjeta en Mi plan: ese día no se cobra nada, te avisamos 2 días antes del cobro y cancelas cuando quieras. Si estás en la beta, tu acceso gratis llega hasta el 31 de octubre.",
+        benefit: "Puedes guardar tu tarjeta en Mi plan: ese día no se cobra nada, te avisamos 2 días antes del cobro y cancelas cuando quieras. Si creaste tu cuenta durante la beta, tu acceso gratis llega hasta el 7 de noviembre y el primer cobro es el 8 de noviembre.",
         icon: "shield", href: "/app/suscripcion", cta: "Ver mi plan",
       },
       {

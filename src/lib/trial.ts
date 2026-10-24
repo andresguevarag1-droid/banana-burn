@@ -11,10 +11,11 @@
 //     nosotros (trial_charges).
 //   - Si el cobro del día 7 falla: muro de planes, aviso para cambiar la tarjeta y un solo reintento automático al día 8.
 //   - Cancelar antes del día 7: no se cobra y el acceso sigue hasta el fin de la prueba.
-//   - Cuentas de la beta: sin días extra. Si guardan tarjeta antes del fin de la beta, se cobra al terminar la beta;
-//     si la guardan después, se cobra en ese momento.
+//   - Cuentas de la beta (creadas antes del lanzamiento, BETA_ENDS_AT): gratis hasta BETA_GRACE_UNTIL (final del 7 de
+//     noviembre en Costa Rica, 7 días después del lanzamiento). Si guardan la tarjeta antes de esa fecha (kind "beta"), se
+//     cobra ese día, con el 50 % del primer mes si aplica; nunca antes. Si la guardan después, se cobra en ese momento.
 //   - Aviso 2 días antes del cobro (día 5), por correo, push y en la app.
-import { BETA_ENDS_AT, PLANS, TRIAL_DAYS, type Billing, type PlanId } from "./plans";
+import { BETA_ENDS_AT, BETA_GRACE_UNTIL, PLANS, TRIAL_DAYS, betaGraceFor, type Billing, type PlanId } from "./plans";
 
 export const DAY_MS = 864e5;
 /** Aviso antes del cobro: "En 2 días se cobra tu plan". */
@@ -118,21 +119,26 @@ export const idemKeyFor = (userId: string) => `trial:${userId}`;
 /** Clave de cada intento de cobro: la lleva la suscripción de ONVO en `metadata` para reconocerla después de un corte. */
 export const attemptKeyFor = (row: Pick<TrialChargeRow, "idem_key" | "attempts">) => `${row.idem_key}:${row.attempts}`;
 
+/** Fin del acceso gratis de las cuentas de la beta: 7 días después del lanzamiento (BETA_GRACE_UNTIL, 0045). */
+export const graceUntil = (betaEndsAt = BETA_ENDS_AT) => (betaEndsAt === BETA_ENDS_AT ? BETA_GRACE_UNTIL : betaGraceFor(betaEndsAt));
+
 /**
- * Fin de la prueba sin tarjeta (0043): cuentas creadas desde el fin de la beta, alta + 7 días. null para las de la beta
- * (ellas tuvieron la beta gratis y no tienen días extra) o sin fecha de alta.
+ * Fin del acceso gratis sin tarjeta. Cuentas creadas desde el lanzamiento (0043): alta + 7 días. Cuentas de la beta (0045):
+ * hasta 7 días después del lanzamiento (graceUntil). null sin fecha de alta.
  */
 export function trialEndFor(createdAt: string | null | undefined, betaEndsAt = BETA_ENDS_AT, trialDays = TRIAL_DAYS): string | null {
   const c = ms(createdAt);
-  if (!Number.isFinite(c) || signedUpInBeta(createdAt, betaEndsAt)) return null;
+  if (!Number.isFinite(c)) return null;
+  if (signedUpInBeta(createdAt, betaEndsAt)) return graceUntil(betaEndsAt);
   return iso(c + trialDays * DAY_MS);
 }
 
 /** Qué tipo de primer cobro corresponde a una tarjeta que se guarda ahora. */
 export function kindFor({ createdAt, now = new Date(), betaEndsAt = BETA_ENDS_AT }: { createdAt: string | null | undefined; now?: Date; betaEndsAt?: string }): ChargeKind {
-  if (!cardRequired(now, betaEndsAt)) return "beta";
+  // Cuenta de la beta: se cobra al final de su acceso gratis (graceUntil), nunca antes; si ya pasó, en ese momento.
+  if (!cardRequired(now, betaEndsAt) || signedUpInBeta(createdAt, betaEndsAt)) return now.getTime() < Date.parse(graceUntil(betaEndsAt)) ? "beta" : "inmediato";
   const end = trialEndFor(createdAt, betaEndsAt);
-  // Cuenta nueva con la prueba corriendo: el cobro queda para el final de SU prueba. Si ya terminó (o es de la beta): ya.
+  // Cuenta nueva con la prueba corriendo: el cobro queda para el final de SU prueba. Si ya terminó: ya.
   return end && Date.parse(end) > now.getTime() ? "prueba" : "inmediato";
 }
 
@@ -144,9 +150,24 @@ export function scheduleFor(kind: ChargeKind, now = new Date(), betaEndsAt = BET
   const t = now.getTime();
   const c = ms(createdAt);
   const start = kind === "prueba" && Number.isFinite(c) && c <= t ? c : t;
-  const end = kind === "prueba" ? start + trialDays * DAY_MS : kind === "beta" ? Math.max(t, Date.parse(betaEndsAt)) : t;
+  const end = kind === "prueba" ? start + trialDays * DAY_MS : kind === "beta" ? Math.max(t, Date.parse(graceUntil(betaEndsAt))) : t;
   return { trialStartedAt: iso(start), trialEndsAt: iso(end), chargeAt: iso(end) };
 }
+
+/**
+ * Cobro "por confirmar" (o aprobado sin activar) que lleva más de un día sin respuesta del procesador: queda marcado para
+ * revisión del equipo (last_error empieza con REVIEW_PREFIX, alerta y fila en app_errors). Mientras tanto ya no bloquea a la
+ * persona: puede pagar en la página de pago o guardar otra tarjeta (que NO cobra sola: card_only). La reconciliación sigue
+ * consultando al procesador; si después resulta cobrado, se activa y, si la persona pagó otra vez, cancelOthers avisa del
+ * reembolso.
+ */
+export const REVIEW_PREFIX = "revisar:";
+export const REVIEW_AFTER_MS = 24 * 3600_000;
+export const inReview = (row: Pick<TrialChargeRow, "status" | "last_error"> | null | undefined) =>
+  !!row && (row.status === "unknown" || row.status === "pending") && !!row.last_error?.startsWith(REVIEW_PREFIX);
+/** ¿Hay un cobro en curso que bloquea pagar o guardar otra tarjeta? (los marcados para revisión ya no bloquean). */
+export const chargeBusy = (row: Pick<TrialChargeRow, "status" | "last_error"> | null | undefined) =>
+  !!row && (row.status === "charging" || row.status === "pending" || row.status === "unknown") && !inReview(row);
 
 /** ¿Toca intentar el cobro ahora? Solo programados o con reintento, con la fecha ya cumplida. */
 export function isDue(row: Pick<TrialChargeRow, "status" | "next_attempt_at"> | null | undefined, now = new Date()): boolean {
@@ -200,7 +221,7 @@ export type CardSavedPlan =
   | { do: "busy" }
   | { do: "card_only" };
 
-export function onCardSaved(row: Pick<TrialChargeRow, "status" | "trial_ends_at" | "attempts"> | null | undefined, ctx: { createdAt: string | null | undefined; now?: Date; betaEndsAt?: string }): CardSavedPlan {
+export function onCardSaved(row: (Pick<TrialChargeRow, "status" | "trial_ends_at" | "attempts"> & { last_error?: string | null }) | null | undefined, ctx: { createdAt: string | null | undefined; now?: Date; betaEndsAt?: string }): CardSavedPlan {
   const now = ctx.now ?? new Date();
   if (!row) return { do: "create", kind: kindFor({ createdAt: ctx.createdAt, now, betaEndsAt: ctx.betaEndsAt }) };
   switch (row.status) {
@@ -208,9 +229,9 @@ export function onCardSaved(row: Pick<TrialChargeRow, "status" | "trial_ends_at"
     case "canceled": return now.getTime() < ms(row.trial_ends_at) ? { do: "resume" } : row.attempts >= MAX_ATTEMPTS ? { do: "card_only" } : { do: "charge_now" };
     case "retry_scheduled":
     case "failed": return row.attempts >= MAX_ATTEMPTS ? { do: "card_only" } : { do: "charge_now" };
-    case "charging":
+    case "charging": return { do: "busy" };
     case "pending":
-    case "unknown": return { do: "busy" };
+    case "unknown": return row.last_error?.startsWith(REVIEW_PREFIX) ? { do: "card_only" } : { do: "busy" };
     default: return { do: "card_only" };
   }
 }

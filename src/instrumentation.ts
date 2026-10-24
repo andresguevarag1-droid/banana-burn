@@ -9,6 +9,16 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { installServerMonitor } = await import("./lib/monitor/node");
     installServerMonitor();
+    // NEXT_PUBLIC_BETA_ENDS_AT es solo para pruebas locales: la base tiene la fecha fija (_beta_ends_at, 0025) y en
+    // producción la app y la base dirían cosas distintas sobre el acceso y los cobros.
+    const { BETA_DATE_OVERRIDDEN, BETA_ENDS_AT } = await import("./lib/plans");
+    if (BETA_DATE_OVERRIDDEN && process.env.VERCEL_ENV === "production") {
+      console.warn(JSON.stringify({ level: "warn", area: "config", code: "beta_date_override", msg: "NEXT_PUBLIC_BETA_ENDS_AT está puesta en producción: la app usa otra fecha que la base. Quítala.", value: BETA_ENDS_AT }));
+    }
+    // Tilopay: la vuelta se firma con TILOPAY_STATE_SECRET; sin ella se usa la contraseña de la API (un secreto para dos cosas).
+    if (process.env.TILOPAY_API_PASSWORD && !process.env.TILOPAY_STATE_SECRET) {
+      console.warn(JSON.stringify({ level: "warn", area: "config", code: "tilopay_state_secret", msg: "Falta TILOPAY_STATE_SECRET: la vuelta de Tilopay se firma con la contraseña de la API." }));
+    }
   }
 }
 

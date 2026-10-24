@@ -26,9 +26,12 @@ describe("apilar regalos (espejo de _access_covered_until)", () => {
     const w = giftWindow({ ...base, createdAt: d(-2), plan: "entreno", months: 1 });
     expect(w.startsAt).toBe(d(5));
   });
-  it("durante la beta: empieza cuando termina la beta", () => {
+  it("0045: cuenta de la beta: empieza cuando terminan sus 7 días después del lanzamiento", () => {
     const now = new Date("2026-10-20T12:00:00Z");
-    expect(coveredUntil({ now, plan: "completo", createdAt: "2026-09-01T00:00:00Z", betaEndsAt: PAST_BETA }).toISOString()).toBe(PAST_BETA);
+    const grace = new Date(Date.parse(PAST_BETA) + 7 * 864e5).toISOString();
+    expect(coveredUntil({ now, plan: "completo", createdAt: "2026-09-01T00:00:00Z", betaEndsAt: PAST_BETA }).toISOString()).toBe(grace);
+    // Después del lanzamiento y antes del 8, igual.
+    expect(coveredUntil({ now: new Date(Date.parse(PAST_BETA) + 864e5), plan: "completo", createdAt: "2026-09-01T00:00:00Z", betaEndsAt: PAST_BETA }).toISOString()).toBe(grace);
   });
   it("con un regalo vigente: el nuevo empieza cuando termina el anterior", () => {
     const first = giftWindow({ ...base, plan: "completo", months: 3 });

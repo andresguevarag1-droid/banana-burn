@@ -295,9 +295,21 @@ export type ReturnState = { u: string; p: ReturnPurpose; plan: PlanId; billing: 
 /** Vigencia del estado: 2 horas para llenar la tarjeta en Tilopay y volver. */
 export const STATE_MAX_AGE_MS = 2 * 3600_000;
 
+let fallbackWarned = false;
+/**
+ * Secreto para firmar la vuelta: TILOPAY_STATE_SECRET (en producción desde el 24 oct 2026). Sin ella se usa la contraseña
+ * de la API (un secreto para dos cosas) y se avisa una vez en los registros.
+ */
 function stateSecret(env: NodeJS.ProcessEnv = process.env): string | null {
-  const s = env.TILOPAY_STATE_SECRET?.trim() || env.TILOPAY_API_PASSWORD?.trim();
-  return s ? `bb-tilopay-vuelta:${s}` : null;
+  const own = env.TILOPAY_STATE_SECRET?.trim();
+  if (own) return `bb-tilopay-vuelta:${own}`;
+  const pw = env.TILOPAY_API_PASSWORD?.trim();
+  if (!pw) return null;
+  if (!fallbackWarned) {
+    fallbackWarned = true;
+    console.warn(JSON.stringify({ level: "warn", area: "tilopay", code: "state_secret_fallback", msg: "Falta TILOPAY_STATE_SECRET: se firma con la contraseña de la API." }));
+  }
+  return `bb-tilopay-vuelta:${pw}`;
 }
 
 export function signState(s: Omit<ReturnState, "t">, now = Date.now(), env: NodeJS.ProcessEnv = process.env): string {

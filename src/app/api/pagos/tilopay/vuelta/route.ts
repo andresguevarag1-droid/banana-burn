@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const { outcome } = await handleTilopayReturn(v, s, url.searchParams);
     return go(outcome);
   } catch (e) {
-    if (e instanceof BillingError) return go(e.status === 409 ? "ocupado" : "error");
+    if (e instanceof BillingError) return go(e.status === 409 ? "ocupado" : e.status === 400 ? "rechazada" : "error");
     logError("pagos", "tilopay_return_failed", { kind: errCode(e) });
     return go("error");
   }
