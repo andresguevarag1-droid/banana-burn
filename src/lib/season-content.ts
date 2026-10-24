@@ -28,7 +28,7 @@ const S = "3-1-1";
 /** Fases iguales para los tres deportes (la persona recibe una descarga extra antes de su evento: seasons-server). */
 export const SEASON_PHASES: ProgramMeta["phases"] = [
   { name: "Base", weeks: 3, focus: "Técnica, fuerza general y tendones fuertes. Cargas cómodas, 2 o 3 repeticiones en reserva." },
-  { name: "Descarga", weeks: 1, deload: true, focus: "Semana ligera: menos series y carga. Llegas fresco a la fase de potencia." },
+  { name: "Descarga", weeks: 1, deload: true, focus: "Semana ligera: menos series y carga. Llegas con energía a la fase de potencia." },
   { name: "Potencia", weeks: 3, focus: "Más carga en los básicos y saltos más explosivos. Lo que ganaste en la base se vuelve velocidad." },
   { name: "Afinar y prueba", weeks: 1, deload: true, focus: "Volumen bajo y tu prueba final: compara con la semana 1." },
 ];
@@ -172,7 +172,7 @@ const META_BASE = (sport: SportId): Omit<ProgramMeta, "experience"> => ({
   phases: SEASON_PHASES, daysPerWeek: 4, sessionMinutes: 45, level: "todos", equipment: "Gimnasio, con versión para casa", adapt: true,
   who: {
     running: "Para quien corre de 5K a maratón o trail y quiere correr más fuerte y con menos lesiones, con fuerza acomodada alrededor de sus días de carrera.",
-    raquetas: "Para quien juega tenis o pádel y quiere más potencia, mejores desplazamientos y cuidar codo y hombro, sin llegar cansado al partido.",
+    raquetas: "Para quien juega tenis o pádel y quiere más potencia, mejores desplazamientos y cuidar codo y hombro, sin llegar sin energía al partido.",
     cross: "Para quien va a un box o entrena funcional y quiere más fuerza, mejor técnica y más aguante, con escalas para cada movimiento.",
   }[sport],
   result: {
@@ -193,7 +193,7 @@ const META_BASE = (sport: SportId): Omit<ProgramMeta, "experience"> => ({
 const EXPERIENCE = (sport: SportId): NonNullable<ProgramMeta["experience"]> => ({
   running: {
     mode: SPORTS.running.mode,
-    welcome: "Bienvenido a tu Temporada de Running. Tu fuerza va lejos de tu carrera larga: corres igual que siempre y llegas más fuerte cada semana.",
+    welcome: "Te damos la bienvenida a tu Temporada de Running. Tu fuerza va lejos de tu carrera larga: corres igual que siempre y llegas más fuerte cada semana.",
     habits: [
       { key: "entreno", label: "Tu sesión de fuerza o tu carrera", kind: "entreno" as const },
       { key: "carbo", label: "Carbohidratos antes de correr", kind: "check" as const },
@@ -204,7 +204,7 @@ const EXPERIENCE = (sport: SportId): NonNullable<ProgramMeta["experience"]> => (
       "Semana 1: cargas cómodas. Termina cada serie sintiendo que podías hacer 2 o 3 más; tus tendones se adaptan más lento que tus músculos.",
       "Semana 2: nunca piernas pesadas el día antes de tu carrera larga. Si la mueves, mueve también tu fuerza.",
       "Semana 3: el sóleo (pantorrilla con rodilla doblada) carga más que cualquier otro músculo al correr. No te saltes ese ejercicio.",
-      "Semana 4: semana ligera. Menos series para llegar fresco a la fase de potencia.",
+      "Semana 4: semana ligera. Menos series para llegar con energía a la fase de potencia.",
       "Semana 5: empieza la potencia. En los saltos, cada repetición es rápida y limpia; si se vuelven lentos, para.",
       "Semana 6: si un día tus piernas no responden, haz la sesión con menos carga. Correr bien manda.",
       "Semana 7: última semana fuerte. Mira cuánto subieron tus pesos desde la semana 1.",
@@ -216,7 +216,7 @@ const EXPERIENCE = (sport: SportId): NonNullable<ProgramMeta["experience"]> => (
   },
   raquetas: {
     mode: SPORTS.raquetas.mode,
-    welcome: "Bienvenido a tu Temporada de Raquetas. Más potencia, mejores desplazamientos y brazo sano, sin llegar cansado a tus partidos.",
+    welcome: "Te damos la bienvenida a tu Temporada de Raquetas. Más potencia, mejores desplazamientos y brazo sano, con energía para tus partidos.",
     habits: [
       { key: "entreno", label: "Tu sesión o tu partido", kind: "entreno" as const },
       { key: "brazo", label: "5 minutos de hombro y muñeca", kind: "check" as const },
@@ -231,7 +231,7 @@ const EXPERIENCE = (sport: SportId): NonNullable<ProgramMeta["experience"]> => (
       "Semana 5: potencia de rotación: gira desde la cadera, no desde el brazo.",
       "Semana 6: en los saltos laterales, frena firme como cuando llegas a una bola abierta.",
       "Semana 7: última semana fuerte. Compara tus saltos laterales con la semana 1.",
-      "Semana 8: afina y prueba. Llega fresco a tus partidos.",
+      "Semana 8: afina y prueba. Llega con energía a tus partidos.",
     ],
     coachFocus: "Tenis y pádel: fuerza de piernas, potencia de rotación, agilidad lateral y salud de hombro, codo y muñeca, acomodado a sus partidos. Habla de sus partidos y torneos.",
     restDay: "Juega según tu plan o camina 20 minutos y haz movilidad de hombro",
@@ -239,7 +239,7 @@ const EXPERIENCE = (sport: SportId): NonNullable<ProgramMeta["experience"]> => (
   },
   cross: {
     mode: SPORTS.cross.mode,
-    welcome: "Bienvenido a tu Temporada de Cross Training. Fuerza, técnica y acondicionamiento con escalas: primero el movimiento, después la carga.",
+    welcome: "Te damos la bienvenida a tu Temporada de Cross Training. Fuerza, técnica y acondicionamiento con escalas: primero el movimiento, después la carga.",
     habits: [
       { key: "entreno", label: "Tu sesión o tu clase", kind: "entreno" as const },
       { key: "proteina", label: "Proteína en cada comida", kind: "proteina" as const },

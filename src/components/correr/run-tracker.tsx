@@ -131,7 +131,6 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
     watch.current = navigator.geolocation.watchPosition(onPoint, (e) => {
       if (e.code === e.PERMISSION_DENIED) { setPhase("denied"); stopWatch(); }
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onPoint]);
   const stopWatch = () => { if (watch.current != null) navigator.geolocation.clearWatch(watch.current); watch.current = null; };
   useEffect(() => () => { stopWatch(); void lock.current?.release().catch(() => {}); }, []);

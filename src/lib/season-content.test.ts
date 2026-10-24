@@ -33,6 +33,8 @@ describe("contenido de la Temporada 1", () => {
     expect(all).not.toMatch(/\bIA\b/);
     expect(all).not.toMatch(/ · /);
     expect(all).not.toMatch(/banano/i);
+    // Lenguaje neutro (0039): sin adjetivos con género para la persona.
+    expect(all).not.toMatch(/\b(fresco|cansado|Bienvenido|listo para)\b/);
   });
   it("la experiencia transforma la app con el modo del deporte", () => {
     for (const p of SEASON_SEED) expect(p.meta.experience?.mode).toMatch(/^Modo (Running|Raquetas|Cross Training)$/);

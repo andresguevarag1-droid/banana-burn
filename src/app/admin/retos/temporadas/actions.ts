@@ -62,7 +62,7 @@ export async function generateSeasonDraft(_: ActionState, fd: FormData): Promise
 }
 
 export async function updateSeasonDraft(_: ActionState, fd: FormData): Promise<ActionState> {
-  return run("content.challenges", fd, async ({ v, sb }) => {
+  return run("content.challenges", fd, async ({ sb }) => {
     const id = val.int(fd, "id", { required: true, min: 1, max: 1e12, label: "Borrador" })!;
     const title = val.text(fd, "title", { required: true, min: 3, max: 80, label: "Título" });
     const notes = val.text(fd, "notes", { max: 3800, label: "Notas" });

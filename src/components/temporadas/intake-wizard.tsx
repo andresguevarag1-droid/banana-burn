@@ -159,13 +159,14 @@ export function IntakeWizard({ slug, sport, initial, started, startsLabel }: { s
       </Q>
     ) });
     s.push({ key: "evento", ok: () => true, node: () => (
-      <Q title="¿Tienes una competencia o un evento importante?" sub="Opcional. Si cae dentro de la temporada, bajamos el volumen los días antes para que llegues fresco.">
+      <Q title="¿Tienes una competencia o un evento importante?" sub="Opcional. Si cae dentro de la temporada, bajamos el volumen los días antes para que llegues con energía.">
         <label className="block"><span className="text-sm font-bold text-ink">Fecha</span><input type="date" value={(d.eventDate as string) ?? ""} onChange={(e) => up({ eventDate: e.target.value || null })} className="input mt-1.5 h-12" /></label>
         {d.eventDate ? <label className="block"><span className="text-sm font-bold text-ink">¿Qué es?</span><input value={(d.eventType as string) ?? ""} onChange={(e) => up({ eventType: e.target.value.slice(0, 60) })} placeholder={sport === "running" ? "Por ejemplo: 21K de mi ciudad" : sport === "raquetas" ? "Por ejemplo: torneo del club" : "Por ejemplo: competencia del box"} className="input mt-1.5 h-12" /></label> : null}
         {d.eventDate ? <button type="button" onClick={() => up({ eventDate: null, eventType: null })} className="tap text-sm font-semibold text-muted underline underline-offset-4">No tengo un evento</button> : null}
       </Q>
     ) });
     return s;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- upS y sp se recalculan con d en cada render
   }, [d, sp, sport, info.name]);
 
   const intake = parseIntake(d, sport);

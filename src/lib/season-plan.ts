@@ -55,7 +55,7 @@ export function personalPhases(base: ProgramMeta["phases"], taper: number[]): { 
     const last = phases.at(-1);
     if (last && from.at(-1) === src && !!last.deload === deload) { last.weeks++; continue; }
     const extra = deload && !base[src].deload;
-    phases.push({ name: extra ? "Afinar para tu evento" : base[src].name, weeks: 1, ...(deload ? { deload: true } : {}), focus: extra ? "Volumen bajo para llegar fresco a tu evento. Mantén la técnica y la intensidad, con menos series." : base[src].focus });
+    phases.push({ name: extra ? "Afinar para tu evento" : base[src].name, weeks: 1, ...(deload ? { deload: true } : {}), focus: extra ? "Volumen bajo para llegar con energía a tu evento. Mantén la técnica y la intensidad, con menos series." : base[src].focus });
     from.push(src);
   }
   return { phases, from: from.map((x) => x + 1) };
