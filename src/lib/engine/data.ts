@@ -76,7 +76,11 @@ export const SLOTS: Record<string, ExerciseId[]> = {
   pump_sh: ["lateralc", "laterall", "lateral"],
 };
 
-export type SlotCfg = { id?: ExerciseId; slot?: string; sets: number; lo: number; hi: number; rest: number; unit?: Unit };
+export type SlotCfg = {
+  id?: ExerciseId; slot?: string; sets: number; lo: number; hi: number; rest: number; unit?: Unit;
+  /** Se hace por lado (plancha lateral, estiramiento de un lado): el objetivo es por lado. Por tiempo, el reproductor cuenta dos tiempos. */
+  perSide?: boolean;
+};
 /** `n`: nombre que se ve (los ids pushA, pullA... no cambian: así se guardan en workouts.template). `hook`: una línea que da ganas de entrenar.
  * `nf` / `hookF`: versión para ella cuando el nombre de él suena masculino ("Espalda de gorila"). */
 export type Template = { n: string; hook: string; nf?: string; hookF?: string; tag: string; light?: boolean; mins?: number; cardio?: string; finisher?: boolean; icon: string; ex: SlotCfg[] };

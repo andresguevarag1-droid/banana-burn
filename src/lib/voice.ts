@@ -116,10 +116,12 @@ export function strengthCue(v: Voice, opts: { tempo?: string; rest?: number; uni
 /* ───────────── Series y repeticiones ───────────── */
 
 /** "4×6-10" (técnico/intermedio) o "4 series de 6 a 10" (básico). Los números no cambian. */
-export function setsReps(v: Voice, sets: number, lo: number, hi: number, unit?: string) {
+/** `perSide`: por tiempo y por lado ("2×30-40 s por lado"); en reps la nota del programa ya lo dice. */
+export function setsReps(v: Voice, sets: number, lo: number, hi: number, unit?: string, perSide = false) {
   const u = unit === "s" ? " s" : unit === "m" ? " m" : "";
-  if (v === "basico") return `${sets} ${plural(sets, "serie", "series")} de ${lo === hi ? lo : `${lo} a ${hi}`}${unit ? ` ${unitWord(v, unit, hi)}` : ""}`;
-  return `${sets}×${lo === hi ? lo : `${lo}-${hi}`}${u}`;
+  const side = perSide && unit === "s" ? " por lado" : "";
+  if (v === "basico") return `${sets} ${plural(sets, "serie", "series")} de ${lo === hi ? lo : `${lo} a ${hi}`}${unit ? ` ${unitWord(v, unit, hi)}` : ""}${side}`;
+  return `${sets}×${lo === hi ? lo : `${lo}-${hi}`}${u}${side}`;
 }
 
 /** Leyenda corta para entender "4×6-10" la primera vez (en técnico no hace falta). */
@@ -198,15 +200,16 @@ export function rxBadge(v: Voice, type: RxType, unit?: string) {
  * La indicación de cada ejercicio en el registro de la persona. Mismos números que `prescribe` (motor):
  * peso, repeticiones, series y descanso no cambian; solo cómo se dicen.
  */
-export function rxNote(v: Voice, rx: { type: RxType; kg: number | null; reps: number[]; sets: number }, cfg: { lo: number; hi: number; rest: number; unit?: string }, o: { weighted: boolean }): string {
+export function rxNote(v: Voice, rx: { type: RxType; kg: number | null; reps: number[]; sets: number }, cfg: { lo: number; hi: number; rest: number; unit?: string; perSide?: boolean }, o: { weighted: boolean }): string {
   const { lo, hi } = cfg;
+  const side = cfg.perSide ? " por lado" : "";
   const r = rx.reps[0] ?? lo;
   const kg = rx.kg != null ? n(rx.kg) : null;
   if (cfg.unit === "s" && cfg.rest <= 30) {
     return t(v, {
-      basico: `Trabaja ${hi} segundos y descansa ${cfg.rest}. Ve a tu ritmo; si la forma se rompe, baja la velocidad.`,
-      intermedio: `Intervalos: ${hi} s de trabajo y ${cfg.rest} s de descanso. Ritmo firme y técnica limpia; si se rompe la forma, baja la velocidad.`,
-      tecnico: `Intervalos ${hi}:${cfg.rest} s (trabajo:descanso). Si la técnica se degrada, baja la cadencia.`,
+      basico: `Trabaja ${hi} segundos${side} y descansa ${cfg.rest}. Ve a tu ritmo; si la forma se rompe, baja la velocidad.`,
+      intermedio: `Intervalos: ${hi} s de trabajo${side} y ${cfg.rest} s de descanso. Ritmo firme y técnica limpia; si se rompe la forma, baja la velocidad.`,
+      tecnico: `Intervalos ${hi}:${cfg.rest} s (trabajo:descanso)${side ? ", por lado" : ""}. Si la técnica se degrada, baja la cadencia.`,
     });
   }
   switch (rx.type) {

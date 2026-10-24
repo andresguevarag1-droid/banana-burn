@@ -4,7 +4,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { CaretDown, Copy, MagnifyingGlass, Plus, Trash, WarningCircle } from "@/components/icons";
 import { Field, btnGhost, inputSm, panel, textareaSm } from "@/components/admin/ui";
-import { HABIT_KINDS, HABIT_KIND_LABEL, MAX_HABITS, MAX_TIPS, type HabitKind, type ProgramExperience, type ProgramHabit, LEVEL_LABEL, MAX_DAYS_PER_WEEK, MAX_EXERCISES, MAX_PHASES, MODE_LABEL, TEMPO_RE, programErrors, weeksOf, type ProgramExercise, type ProgramLevel, type ProgramMeta, type ProgramMode, type ProgramSession } from "@/lib/programs";
+import { HABIT_KINDS, HABIT_KIND_LABEL, MAX_HABITS, MAX_TIPS, type HabitKind, type ProgramExperience, type ProgramHabit, LEVEL_LABEL, MAX_DAYS_PER_WEEK, MAX_EXERCISES, MAX_PHASES, MODE_LABEL, TEMPO_RE, isPerSide, programErrors, weeksOf, type ProgramExercise, type ProgramLevel, type ProgramMeta, type ProgramMode, type ProgramSession } from "@/lib/programs";
 import { searchExercises, type ExerciseHit } from "./actions";
 
 export const EMPTY_META: ProgramMeta = {
@@ -134,6 +134,8 @@ export function ProgramEditor({ init, sessions: init2, names: names0 }: { init: 
                 <input aria-label="Nota" placeholder="Nota para la persona (opcional)" maxLength={160} value={e.note ?? ""} onChange={(x) => putEx(i, { note: x.target.value || undefined })} className={inputSm} />
                 <input aria-label="Alternativa en casa (id)" placeholder="En casa: id (glutebridge, ds:0710)" maxLength={30} value={e.home ?? ""} onChange={(x) => putEx(i, { home: x.target.value.trim() || undefined })} className={inputSm} />
               </div>
+              {/* Por lado: lo dice la nota ("Por lado. ...") o se marca aquí. Por tiempo, el reproductor cuenta los dos lados. */}
+              <label className="mt-2 flex min-h-11 items-center gap-2 text-sm text-ink"><input type="checkbox" checked={isPerSide(e)} onChange={(x) => putEx(i, { perSide: x.target.checked })} className="size-4 accent-[#1B1505]" />Por lado{e.unit === "s" ? " (dos tiempos: derecho y luego izquierdo)" : ""}</label>
             </li>
           ))}
         </ol>

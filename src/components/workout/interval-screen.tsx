@@ -2,6 +2,7 @@
 import { Pause, Play, SkipForward, Timer, X } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { clock, type IvPhase } from "./logic";
+import { SIDE_LABEL } from "./sides";
 import { CountRing } from "./ui";
 import css from "./workout.module.css";
 
@@ -10,17 +11,19 @@ type Ex = { name: string; anim?: string; setNo: number; sets: number; exNo: numb
 
 /**
  * Modo intervalos (exprés): pantalla completa con estados de color que se leen de lejos.
- * TRABAJA = banana, DESCANSA = tinta, PREPÁRATE = tinta con el aro naranja. Avanza solo.
+ * TRABAJA = banana, DESCANSA = tinta, PREPÁRATE y CAMBIA DE LADO = tinta con el aro naranja. Avanza solo.
+ * Por lado (`side`), el trabajo dice qué lado va: "Lado derecho", cambio de lado, "Lado izquierdo".
  */
-export function IntervalScreen({ title, phase, left, total, paused, cur, next, plan, done, all, elapsed, workSec, restSec, onStart, onPause, onResume, onSkip, onExit, onFinish }: {
-  title: string; phase: IvPhase; left: number; total: number; paused: boolean; cur: Ex | null; next: Ex | null; plan: { name: string; anim?: string; sets: number; done: number }[]; done: number; all: number; elapsed: number; workSec: number; restSec: number;
+export function IntervalScreen({ title, phase, side, left, total, paused, cur, next, plan, done, all, elapsed, workSec, restSec, onStart, onPause, onResume, onSkip, onExit, onFinish }: {
+  title: string; phase: IvPhase; side?: 1 | 2; left: number; total: number; paused: boolean; cur: Ex | null; next: Ex | null; plan: { name: string; anim?: string; sets: number; done: number; perSide?: boolean }[]; done: number; all: number; elapsed: number; workSec: number; restSec: number;
   onStart: () => void; onPause: () => void; onResume: () => void; onSkip: () => void; onExit: () => void; onFinish: () => void;
 }) {
   const work = phase === "work";
   const show = phase === "rest" || phase === "prep" ? next ?? cur : cur;
+  const pause = phase === "prep" || phase === "switch";
   const bg = work ? "bg-banana text-ink" : phase === "ready" ? "bg-paper text-ink" : "bg-ink text-white";
   const sub = work ? "text-ink/70" : phase === "ready" ? "text-muted" : "text-white/65";
-  const word = phase === "work" ? "Trabaja" : phase === "rest" ? "Descansa" : phase === "prep" ? "Prepárate" : "";
+  const word = phase === "work" ? (side ? SIDE_LABEL[side] : "Trabaja") : phase === "rest" ? "Descansa" : phase === "prep" ? "Prepárate" : phase === "switch" ? "Cambia de lado" : "";
 
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${bg} transition-colors duration-(--dur-base) ease-out`}>
@@ -49,7 +52,7 @@ export function IntervalScreen({ title, phase, left, total, paused, cur, next, p
                 <li key={i} className="flex items-center gap-3 rounded-[1.25rem] bg-white border border-line/70 p-2 pr-4">
                   <span className="relative block size-14 shrink-0 overflow-hidden rounded-xl bg-banana">{p.anim ? <ExerciseMotion anim={p.anim} label={false} className="absolute inset-0.5" /> : null}</span>
                   <span className="flex-1 min-w-0 font-bold text-ink leading-tight">{p.name}</span>
-                  <span className="text-sm font-bold text-muted tabular-nums">{p.done ? `${p.done} de ${p.sets}` : `${p.sets} × ${workSec} s`}</span>
+                  <span className="text-sm font-bold text-muted tabular-nums">{p.done ? `${p.done} de ${p.sets}` : `${p.sets} × ${workSec} s${p.perSide ? " por lado" : ""}`}</span>
                 </li>
               ))}
             </ol>
@@ -58,10 +61,10 @@ export function IntervalScreen({ title, phase, left, total, paused, cur, next, p
       ) : (
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center px-5 py-4 text-center">
-            <p key={phase} aria-hidden className={`${css.phase} text-[44px] leading-none font-extrabold tracking-tight`}>{word}</p>
+            <p key={`${phase}-${side ?? 0}`} aria-hidden className={`${css.phase} ${word.length > 10 ? "text-[38px]" : "text-[44px]"} leading-none font-extrabold tracking-tight`}>{word}</p>
             <div className="mt-4">
               <CountRing left={left} total={total} size={256} stroke={16}
-                track={work ? "rgb(27 21 5 / .14)" : "rgb(255 255 255 / .12)"} color={work ? "#1B1505" : phase === "prep" ? "#F2A100" : "#FFD60A"}
+                track={work ? "rgb(27 21 5 / .14)" : "rgb(255 255 255 / .12)"} color={work ? "#1B1505" : pause ? "#F2A100" : "#FFD60A"}
                 tip={work ? "text-banana" : "text-ink"} text={work ? "text-ink" : "text-white"}>
                 {paused && <span className="mt-1 block text-sm font-extrabold">En pausa</span>}
               </CountRing>
@@ -72,7 +75,7 @@ export function IntervalScreen({ title, phase, left, total, paused, cur, next, p
                   {show.anim ? <ExerciseMotion anim={show.anim} label={false} className="absolute inset-1" /> : null}
                 </span>
                 <div className="min-w-0">
-                  <p className={`text-xs font-bold ${work ? "text-ink/70" : "text-banana"}`}>{work ? "Ahora" : phase === "prep" ? "Empiezas con" : "Sigue"}</p>
+                  <p className={`text-xs font-bold ${work ? "text-ink/70" : "text-banana"}`}>{work ? "Ahora" : phase === "prep" ? "Empiezas con" : phase === "switch" ? "Segundo lado" : "Sigue"}</p>
                   <p className="text-xl font-extrabold leading-tight line-clamp-2">{show.name}</p>
                   <p className={`mt-0.5 text-sm font-semibold tabular-nums ${sub}`}>Ejercicio {show.exNo} de {show.exTotal}, ronda {show.setNo} de {show.sets}</p>
                 </div>
@@ -95,7 +98,7 @@ export function IntervalScreen({ title, phase, left, total, paused, cur, next, p
               {paused ? (
                 <button type="button" onClick={onFinish} className={`pressable h-16 px-5 rounded-full text-base font-extrabold ${work ? "bg-ink/10" : "bg-white/10"}`}>Terminar</button>
               ) : (
-                <button type="button" onClick={onSkip} aria-label={work ? "Terminar este intervalo" : "Saltar descanso"}
+                <button type="button" onClick={onSkip} aria-label={work ? (side === 1 ? "Terminar este lado" : "Terminar este intervalo") : phase === "switch" ? "Saltar el cambio de lado" : "Saltar descanso"}
                   className={`pressable grid place-items-center size-16 rounded-full ${work ? "bg-ink/10" : "bg-white/10"}`}><SkipForward weight="fill" className="size-6" /></button>
               )}
             </>

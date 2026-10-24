@@ -15,13 +15,15 @@ import { usePresence, useSticky } from "@/components/use-presence";
 import { buzz, canSpeak, hush, say, sfx, store, unlockAudio, useHiddenAlarm, useNow, usePrefs, useWakeLock } from "@/components/workout/device";
 import {
   EFFORTS, FUN_LABELS, PREP_SECONDS, advanceIntervals, beatsBest, bump, cap, clock, comboState, cooldownFor, effortOf, effortPatch, isIntervalPlan, isRushed, kgFmt, liveXp,
-  loadsFor, nextCombo, nextPending, num, prsOf, readSaved, restLabel, rirOf, setXpGain, speechFor, stepFor, targetText, timedPhase, unitLbl, volumeOf, warmupFor, warmupText,
+  loadsFor, nextCombo, nextPending, num, prsOf, readSaved, restLabel, rirOf, setXpGain, speechFor, stepFor, targetText, unitLbl, volumeOf, warmupFor, warmupText,
   type Effort, type IvClock, type LoadKind, type Row,
 } from "@/components/workout/logic";
 import { DoneRow, FocusSet } from "@/components/workout/focus-set";
 import { ListSets } from "@/components/workout/list-sets";
 import { RestPill, RestScreen, type RestInfo } from "@/components/workout/rest-screen";
 import { IntervalScreen } from "@/components/workout/interval-screen";
+import { SIDE_LABEL, advanceTimed, pauseTimed, resumeTimed, segCue, skipTimed, startTimed as startTimed0, timedSegments, timedView, type TimedRun } from "@/components/workout/sides";
+import { TimedBar } from "@/components/workout/timed-bar";
 import { Recap } from "@/components/workout/recap";
 import { CoachArtFill, CoachPic } from "@/components/coach-pic";
 import { Tour, type TourStep } from "@/components/workout/tour";
@@ -41,7 +43,8 @@ type Mode = "normal" | "suave" | "fuerte";
 type Rest = { end: number; total: number } | null;
 type Sheet = null | "tech" | "swap" | "exit" | "sound";
 type Iv = IvClock & { paused: number | null };
-type Work = { end: number; secs: number; si: number; ex: number } | null;
+/** Serie por tiempo en curso: sus tramos (preparación, trabajo y, por lado, cambio y segundo lado). */
+type Work = { run: TimedRun; si: number; ex: number } | null;
 
 const RX_BADGE: Record<Prescription["type"], [string, string, React.ComponentType<{ className?: string; weight?: "bold" }>]> = {
   cal: ["Calibración", "text-sky", Target],
@@ -211,7 +214,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const announce = (t: string) => setLive(t);
 
   // Presenta cada ejercicio al llegar a él (solo con la voz encendida)
-  const introFor = useCallback((e: PlayerExercise, r: Row | undefined) => speechFor("exercise", { name: e.name, sets: e.rx.sets, target: r ? targetText(r, { unit: e.cfg.unit, bw: e.bw }) : undefined, cue: e.tech?.cues[0] }), []);
+  const introFor = useCallback((e: PlayerExercise, r: Row | undefined) => speechFor("exercise", { name: e.name, sets: e.rx.sets, target: r ? targetText(r, { unit: e.cfg.unit, bw: e.bw, perSide: e.cfg.perSide }) : undefined, cue: e.tech?.cues[0] }), []);
   const spokeFor = useRef<string | null>(null);
   useEffect(() => {
     if (phase !== "play" || gate || interval || !prefs.voice || !ex) return;
@@ -264,9 +267,29 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   }, [rest, restLeft]);
 
   /* ---------- Serie por tiempo (plancha, etc.) fuera del modo exprés ---------- */
-  const tp = work ? timedPhase(work, now) : null;
+  // Por lado: lado derecho, 5 s para cambiar y lado izquierdo; la serie se marca (y empieza el descanso) al final.
+  const tp = work ? timedView(work.run, now) : null;
+  const sideTick = useRef<number | null>(null);
   useEffect(() => {
-    if (work && now >= work.end) { const w = work; setWork(null); ping("go"); buzz([200, 100, 200]); if (w.ex === idx && !rows[idx][w.si].done) complete(w.si); }
+    if (!work) { sideTick.current = null; return; }
+    const res = advanceTimed(work.run, now);
+    if (res.finished) { const w = work; setWork(null); ping("go"); buzz([200, 100, 200]); if (w.ex === idx && !rows[idx][w.si].done) complete(w.si); return; }
+    if (res.entered.length) {
+      setWork({ ...work, run: res.run });
+      sideTick.current = null;
+      // Al volver de otra app con varios tramos pasados, solo se avisa el actual.
+      const cue = segCue(res.run.segs[res.entered[res.entered.length - 1]]);
+      if (cue) { ping("go"); buzz(res.run.segs[res.run.i].kind === "switch" ? [200, 100, 200] : 60); speak(cue.say, true); announce(cue.live); }
+      return;
+    }
+    // 3, 2, 1 antes de empezar el segundo lado (igual que al final del descanso)
+    const v = timedView(work.run, now);
+    if (v.seg.kind !== "switch" || v.paused) return;
+    const whole = Math.ceil(v.left);
+    if (whole === sideTick.current) return;
+    const prev = sideTick.current;
+    sideTick.current = whole;
+    if (prev != null && prev - whole === 1 && whole <= 3 && whole >= 1) { if (prefs.voice) say(String(whole), { interrupt: true, rate: 1.15 }); else ping("tick"); buzz(40); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [work, now]);
 
@@ -370,7 +393,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       finished: finishedEx ? ex.name : null, bananas: { got: nextRows.filter((r) => r.every((s) => s.done)).length, total: nextRows.length },
       next: {
         title: isNew ? tex.name : `Serie ${target.si + 1} de ${nextRows[target.ex].length}`,
-        detail: isNew ? `${nextRows[target.ex].length} series, ${targetText(nextRows[target.ex][target.si], { unit: tex.cfg.unit, bw: tex.bw })}` : targetText(nextRows[target.ex][target.si], { unit: tex.cfg.unit, bw: tex.bw }),
+        detail: isNew ? `${nextRows[target.ex].length} series, ${targetText(nextRows[target.ex][target.si], { unit: tex.cfg.unit, bw: tex.bw, perSide: tex.cfg.perSide })}` : targetText(nextRows[target.ex][target.si], { unit: tex.cfg.unit, bw: tex.bw, perSide: tex.cfg.perSide }),
         anim: tex.tech?.anim || undefined, isNew, last: pendingLeft === 1,
       },
     });
@@ -438,7 +461,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     ivFired.current = iv.end;
     tickRef.current = null;
     // Encadena las fases desde el final exacto de la anterior: si la pestaña estuvo oculta, se ponen al día todas.
-    const res = advanceIntervals(iv, rows, idx, exercises.map((e) => ({ hi: e.cfg.hi, rest: e.cfg.rest })), Date.now());
+    const res = advanceIntervals(iv, rows, idx, exercises.map((e) => ({ hi: e.cfg.hi, rest: e.cfg.rest, perSide: e.cfg.perSide })), Date.now());
     let nextRows = res.rows;
     if (res.marked.length) {
       let c = combo, la = lastAt, b = bestCombo;
@@ -453,8 +476,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     setIv({ ...res.iv, paused: null });
     if (res.iv.phase === "work") {
       const name = exercises[res.idx].name;
-      speak(speechFor("work", { name }), true);
-      announce(`Trabaja: ${name}, ${res.iv.total} segundos`);
+      const side = res.iv.side ? SIDE_LABEL[res.iv.side] : null;
+      speak(side ? `${res.iv.side === 1 ? `${name}. ` : ""}${side}. Ya.` : speechFor("work", { name }), true);
+      announce(`Trabaja: ${name}${side ? `, ${side.toLowerCase()}` : ""}, ${res.iv.total} segundos`);
+    } else if (res.iv.phase === "switch") {
+      speak("Cambia de lado.", true);
+      announce(`Cambia de lado: ${res.iv.total} segundos`);
     } else {
       const nx = nextPending(nextRows, res.idx);
       const name = nx ? exercises[nx.ex].name : "";
@@ -467,9 +494,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   /* ---------- Avisos con la pestaña oculta ---------- */
   const ivNextName = ivTarget ? exercises[ivTarget.ex]?.name ?? "" : "";
   const alarm = interval
-    ? (iv.phase === "prep" || iv.phase === "rest") && iv.paused == null ? { at: iv.end, t: "A trabajar", b: ivNextName } : { at: null, t: "", b: "" }
+    ? (iv.phase === "prep" || iv.phase === "rest" || iv.phase === "switch") && iv.paused == null ? { at: iv.end, t: iv.phase === "switch" ? "Cambia de lado" : "A trabajar", b: ivNextName } : { at: null, t: "", b: "" }
     : rest ? { at: rest.end, t: "Descanso terminado", b: ivNextName ? `Sigue: ${ivNextName}` : "Vuelve a Banana Burn para seguir" }
-    : work ? { at: work.end, t: "Serie terminada", b: "Vuelve a Banana Burn para seguir" } : { at: null, t: "", b: "" };
+    : work && work.run.paused == null ? (() => {
+      const nx = work.run.segs[work.run.i + 1];
+      return { at: work.run.end, t: !nx ? "Serie terminada" : nx.kind === "switch" ? "Cambia de lado" : nx.side ? SIDE_LABEL[nx.side] : "A trabajar", b: !nx ? "Vuelve a Banana Burn para seguir" : nx.kind === "switch" ? "Sigue con el lado izquierdo" : "Vuelve a Banana Burn para seguir" };
+    })() : { at: null, t: "", b: "" };
   useHiddenAlarm(phase === "play" ? alarm.at : null, alarm.t, alarm.b);
 
   /* ---------- Resumen y guardado ---------- */
@@ -597,7 +627,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
                   <fieldset className="mt-3 card p-5">
                     <legend className="sr-only">Esfuerzo de la última serie</legend>
                     <p className="font-bold text-ink">¿Cómo se sintió la última serie?</p>
-                    <p className="text-sm text-muted">{exercises[lastSet.ex].name}, {targetText(last, { unit: exercises[lastSet.ex].cfg.unit, bw: exercises[lastSet.ex].bw })}. Con esto ajusto el peso de la próxima vez.</p>
+                    <p className="text-sm text-muted">{exercises[lastSet.ex].name}, {targetText(last, { unit: exercises[lastSet.ex].cfg.unit, bw: exercises[lastSet.ex].bw, perSide: exercises[lastSet.ex].cfg.perSide })}. Con esto ajusto el peso de la próxima vez.</p>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       {EFFORTS.map((e) => {
                         const on = effortOf(last) === e.id;
@@ -665,8 +695,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     const nextShown = iv.phase === "work" ? (after ? exAt(after.ex, after.si) : null) : cur;
     return (
       <>
-        <IntervalScreen title={title} phase={iv.phase} left={iv.phase === "ready" ? 0 : ivLeft} total={iv.total} paused={iv.paused != null} cur={cur} next={nextShown}
-          plan={exercises.map((e, i) => ({ name: e.name, anim: e.tech?.anim || undefined, sets: rows[i].length, done: rows[i].filter((s) => s.done).length }))}
+        <IntervalScreen title={title} phase={iv.phase} side={iv.side} left={iv.phase === "ready" ? 0 : ivLeft} total={iv.total} paused={iv.paused != null} cur={cur} next={nextShown}
+          plan={exercises.map((e, i) => ({ name: e.name, anim: e.tech?.anim || undefined, sets: rows[i].length, done: rows[i].filter((s) => s.done).length, perSide: !!e.cfg.perSide }))}
           done={doneSets} all={totalSets} elapsed={elapsed} workSec={exercises[0].cfg.hi} restSec={exercises[0].cfg.rest}
           onStart={() => { unlockAudio(); tickRef.current = null; setIv({ phase: "prep", end: Date.now() + 5000, total: 5, paused: null }); speak(`Prepárate. Empiezas con ${exercises[ivTarget?.ex ?? 0].name}.`, true); }}
           onPause={() => { setIv((v) => ({ ...v, paused: Math.max(0, v.end - Date.now()) })); hush(); announce("En pausa"); }}
@@ -694,13 +724,26 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const focus = prefs.view === "focus";
   const nextEx = nextPending(rows.map((r, i) => (i === idx ? r.map((s) => ({ ...s, done: true })) : r)), idx);
   const timerOn = !!work && work.si === activeSet && work.ex === idx;
-  const startTimed = () => { unlockAudio(); const n = num(here[activeSet].reps) || ex.cfg.hi; setWork({ end: Date.now() + (n + PREP_SECONDS) * 1000, secs: n, si: activeSet, ex: idx }); buzz(20); speak(`${n} segundos. Prepárate.`, true); };
+  const perSide = timed && !!ex.cfg.perSide;
+  const sideWord = perSide ? " por lado" : "";
+  const startTimed = () => {
+    unlockAudio(); const n = num(here[activeSet].reps) || ex.cfg.hi;
+    setWork({ run: startTimed0(timedSegments(n, perSide, PREP_SECONDS), Date.now()), si: activeSet, ex: idx }); buzz(20);
+    speak(perSide ? `${n} segundos por lado. Prepárate: empiezas con el ${SIDE_LABEL[1].toLowerCase()}.` : `${n} segundos. Prepárate.`, true);
+    if (perSide) announce(`${n} segundos por lado. Empiezas con el ${SIDE_LABEL[1].toLowerCase()}`);
+  };
+  const timerCtl = {
+    onPause: () => { setWork((w) => w && { ...w, run: pauseTimed(w.run, Date.now()) }); hush(); announce("En pausa"); },
+    onResume: () => { setWork((w) => w && { ...w, run: resumeTimed(w.run, Date.now()) }); announce("Sigue"); },
+    onSkip: () => setWork((w) => w && { ...w, run: skipTimed(w.run, Date.now()) }),
+    onStop: () => { setWork(null); hush(); },
+  };
   const loads = loadsFor(ex.load);
   const missingKg = needsLoad(ex) && activeSet >= 0 && num(here[activeSet].kg) <= 0;
   const chips = activeSet >= 0 && needsLoad(ex) && loads && (ex.rx.type === "cal" || missingKg) ? loads.chips : null;
   const tourSteps: TourStep[] = [
     timed
-      ? { target: "done", title: "Empieza la serie", body: "Toca Iniciar: cuenta 3 segundos para que te acomodes y luego el tiempo de trabajo. Al terminar se marca sola." }
+      ? { target: "done", title: "Empieza la serie", body: perSide ? "Toca Iniciar: cuenta 3 segundos para que te acomodes, el tiempo del lado derecho, 5 segundos para cambiar de lado y el del izquierdo. Al terminar se marca sola." : "Toca Iniciar: cuenta 3 segundos para que te acomodes y luego el tiempo de trabajo. Al terminar se marca sola." }
       : { target: "done", title: "Marca la serie", body: t(voice, { basico: "Haz las repeticiones y toca Hecho. Si usaste otro peso, cámbialo antes con los botones grandes.", intermedio: "Haz las reps y toca Hecho. Si levantaste otro peso, cámbialo antes con los botones grandes.", tecnico: "Completa la serie y toca Hecho. Ajusta antes la carga real si cambió." }) },
     { target: "rest", title: "Descansa", body: "Al marcar arranca el descanso con cuenta regresiva. Te avisamos con sonido y vibración cuando toca seguir." },
     { target: "swap", title: "¿Máquina ocupada?", body: "Toca Cambiar y elige otro ejercicio del mismo patrón. Tus series se ajustan solas." },
@@ -799,25 +842,21 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
           <div className="mt-2.5">
             {focus && activeSet >= 0 ? (
-              <FocusSet rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
+              <FocusSet rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} perSide={perSide} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
                 chips={chips} onPickKg={pickKg} onStep={step} onChange={change} onCopy={copy} onUndo={undo} />
             ) : focus ? (
               <div className="space-y-2">
-                {here.map((x, si) => <DoneRow key={si} si={si} row={x} unit={ex.cfg.unit} bw={ex.bw} onUndo={undo} />)}
+                {here.map((x, si) => <DoneRow key={si} si={si} row={x} unit={ex.cfg.unit} perSide={perSide} bw={ex.bw} onUndo={undo} />)}
               </div>
             ) : (
-              <ListSets rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} unitLabel={unit} plates={plates} last={here.map((_, si) => ex.lastSets?.[si])} needsKg={needsLoad(ex)}
+              <ListSets rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} unitLabel={`${unit}${sideWord}`} plates={plates} last={here.map((_, si) => ex.lastSets?.[si])} needsKg={needsLoad(ex)}
                 pop={pop && pop.ex === idx ? pop : null} onStep={step} onChange={change} onToggle={toggle} onEffort={(si, e) => setEffort(idx, si, e)}
                 timedSlot={timed && !rest ? (
                   <div className="px-3 pb-3">
                     {timerOn && tp ? (
-                      <div className="flex items-center gap-3 rounded-2xl bg-peel text-white p-3" role="timer" aria-label="Serie por tiempo">
-                        <span className="w-20 text-center leading-tight">{tp.prep ? <><span className="block text-[11px] font-bold text-white/80">Prepárate</span><span className="text-2xl font-extrabold tabular-nums">{Math.ceil(tp.prepLeft)}</span></> : <span className="text-3xl font-extrabold tabular-nums">{Math.ceil(tp.workLeft)}</span>}</span>
-                        <div aria-hidden className="flex-1 h-2 rounded-full bg-white/30 overflow-hidden"><div className="h-full w-full rounded-full bg-white" style={{ transform: `translateX(${-tp.frac * 100}%)`, transition: "transform .25s linear" }} /></div>
-                        <button onClick={() => setWork(null)} className="tap pressable h-11 px-4 rounded-full bg-white/20 text-sm font-bold">Parar</button>
-                      </div>
+                      <TimedBar view={tp} size="sm" {...timerCtl} />
                     ) : (
-                      <button onClick={startTimed} className="pressable w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-peel text-white font-extrabold"><Play weight="fill" className="size-4" />Iniciar {num(here[activeSet]?.reps) || ex.cfg.hi} s</button>
+                      <button onClick={startTimed} className="pressable w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-peel text-white font-extrabold"><Play weight="fill" className="size-4" />Iniciar {num(here[activeSet]?.reps) || ex.cfg.hi} s{sideWord}</button>
                     )}
                   </div>
                 ) : undefined} />
@@ -835,15 +874,9 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           {focus && activeSet >= 0 ? (
             timed ? (
               timerOn && tp ? (
-                <div className="flex items-center gap-3 h-[72px] rounded-[1.75rem] bg-peel text-white px-4" role="timer" aria-label="Serie por tiempo">
-                  {tp.prep
-                    ? <span className="w-24 text-center leading-tight"><span className="block text-xs font-bold text-white/80">Prepárate</span><span className="text-3xl font-extrabold tabular-nums">{Math.ceil(tp.prepLeft)}</span></span>
-                    : <span className="text-4xl font-extrabold tabular-nums w-24 text-center">{Math.ceil(tp.workLeft)}</span>}
-                  <div aria-hidden className="flex-1 h-2.5 rounded-full bg-white/30 overflow-hidden"><div className="h-full w-full rounded-full bg-white" style={{ transform: `translateX(${-tp.frac * 100}%)`, transition: "transform .25s linear" }} /></div>
-                  <button onClick={() => setWork(null)} className="tap pressable h-11 px-4 rounded-full bg-white/20 text-sm font-bold">Parar</button>
-                </div>
+                <TimedBar view={tp} {...timerCtl} />
               ) : (
-                <button data-tour="done" onClick={startTimed} disabled={missingKg} className="pressable w-full h-[72px] inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] disabled:bg-line disabled:text-muted disabled:shadow-none"><Play weight="fill" className="size-6" />{missingKg ? "Elige un peso" : `Iniciar ${num(here[activeSet]?.reps) || ex.cfg.hi} s`}</button>
+                <button data-tour="done" onClick={startTimed} disabled={missingKg} className="pressable w-full h-[72px] inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] disabled:bg-line disabled:text-muted disabled:shadow-none"><Play weight="fill" className="size-6" />{missingKg ? "Elige un peso" : `Iniciar ${num(here[activeSet]?.reps) || ex.cfg.hi} s${sideWord}`}</button>
               )
             ) : (
               <button data-tour="done" onClick={() => complete(activeSet)} disabled={missingKg} className="relative pressable w-full h-[72px] inline-flex items-center justify-center gap-2.5 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] hover:brightness-95 disabled:bg-line disabled:text-muted disabled:shadow-none disabled:hover:brightness-100" aria-describedby="serie-actual">

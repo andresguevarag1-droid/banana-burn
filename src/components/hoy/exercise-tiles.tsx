@@ -12,7 +12,7 @@ import { DS_ID, animFor, getLibEx } from "@/lib/library";
 import { setsReps, t, type Voice, muscleText } from "@/lib/voice";
 import type { SlotCfg } from "@/lib/engine";
 
-export type TileExercise = { id: string; name: string; muscle: string; cfg: Pick<SlotCfg, "sets" | "lo" | "hi" | "unit"> };
+export type TileExercise = { id: string; name: string; muscle: string; cfg: Pick<SlotCfg, "sets" | "lo" | "hi" | "unit" | "perSide"> };
 
 /** Animación de técnica de un ejercicio del motor ("squat") o de la biblioteca ("ds:0043"). */
 function animOf(id: string): string | null {
@@ -44,7 +44,7 @@ export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", a
               </span>
               <span className="flex flex-1 flex-col p-3">
                 <span className="line-clamp-2 text-[15px] font-extrabold leading-tight text-ink">{e.name}</span>
-                <span className="mt-1 text-sm font-bold text-ink tabular-nums">{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit)}{voice !== "basico" && !e.cfg.unit ? " reps" : ""}</span>
+                <span className="mt-1 text-sm font-bold text-ink tabular-nums">{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide)}{voice !== "basico" && !e.cfg.unit ? " reps" : ""}</span>
                 {e.muscle && <span className="mt-0.5 text-xs font-semibold text-ink/70">{t(voice, { basico: "Trabaja: ", intermedio: "", tecnico: "" })}{muscleText(voice, e.muscle.toLowerCase())}</span>}
                 <span className="mt-auto pt-2 text-xs font-bold text-ink/70 underline decoration-ink/25 underline-offset-2 group-hover:decoration-ink">{t(voice, { basico: "Ver cómo se hace", intermedio: "Ver técnica", tecnico: "Técnica" })}</span>
               </span>

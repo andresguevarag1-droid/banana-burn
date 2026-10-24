@@ -1,6 +1,7 @@
 // Lógica pura del reproductor de entreno (sin React ni navegador) para poder probarla.
 import { MIN_SET_SECONDS, workoutXp } from "@/lib/gamify";
 import { BARBELL } from "@/lib/engine/data";
+import { SWITCH_SECONDS } from "./sides";
 
 export type Effort = "f" | "j" | "l";
 /** Una serie en pantalla. `eff` es opcional para leer sesiones guardadas antes de que existiera. */
@@ -126,9 +127,9 @@ export function nextPending(rows: Row[][], from: number): Target {
 }
 export const isLastSet = (rows: Row[][], ex: number) => rows[ex].filter((r) => !r.done).length === 1;
 
-/** "10 kg × 8 reps", "PC × 12 reps", "40 seg". */
-export function targetText(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean }) {
-  const u = unitLbl(o.unit);
+/** "10 kg × 8 reps", "PC × 12 reps", "40 seg", "35 seg por lado" (por tiempo y por lado: el valor es de un lado). */
+export function targetText(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean; perSide?: boolean }) {
+  const u = unitLbl(o.unit) + (o.unit === "s" && o.perSide ? " por lado" : "");
   const kg = num(r.kg);
   if (o.unit === "s" && o.bw) return `${r.reps} ${u}`;
   if (kg > 0) return `${kgFmt(kg)} kg × ${r.reps} ${u}`;
@@ -205,24 +206,31 @@ export function speechFor(kind: "exercise" | "rest" | "go" | "last" | "done" | "
 /** Exprés: todo el entreno es por tiempo con descansos cortos. */
 export const isIntervalPlan = (ex: { cfg: { unit?: string; rest: number } }[]) => ex.length > 0 && ex.every((e) => e.cfg.unit === "s" && e.cfg.rest <= 30);
 
-export type IvPhase = "ready" | "prep" | "work" | "rest";
-export type IvClock = { phase: IvPhase; end: number; total: number };
+export type IvPhase = "ready" | "prep" | "work" | "switch" | "rest";
+/** `side`: en un ejercicio por lado, el lado que se trabaja (o el que viene, durante el cambio). */
+export type IvClock = { phase: IvPhase; end: number; total: number; side?: 1 | 2 };
 /**
  * Avanza el reloj de intervalos hasta `now` encadenando cada fase desde el final exacto de la anterior.
  * Si la pestaña estuvo oculta, al volver se reconcilian todas las fases que pasaron (sin perder ni inventar tiempo).
  * `marked` son las marcas de tiempo de los intervalos de trabajo que terminaron.
+ * Por lado (`perSide`): trabajo del lado derecho, cambio de lado y lado izquierdo; el intervalo se marca al final del segundo.
  */
-export function advanceIntervals(iv: IvClock, rows: Row[][], idx: number, cfg: { hi: number; rest: number }[], now: number) {
+export function advanceIntervals(iv: IvClock, rows: Row[][], idx: number, cfg: { hi: number; rest: number; perSide?: boolean }[], now: number) {
   let s = iv, r = rows, i = idx, finished = false;
   const marked: { ex: number; si: number; at: number }[] = [];
   for (let guard = 0; s.phase !== "ready" && s.end <= now && guard < 400; guard++) {
     const t = s.end;
     const tg = nextPending(r, i);
     if (!tg) { finished = true; s = { phase: "ready", end: 0, total: 0 }; break; }
-    if (s.phase === "prep" || s.phase === "rest") {
+    if (s.phase === "prep" || s.phase === "rest" || s.phase === "switch") {
       const secs = num(r[tg.ex][tg.si].reps) || cfg[tg.ex].hi;
       i = tg.ex;
-      s = { phase: "work", end: t + secs * 1000, total: secs };
+      const side = cfg[tg.ex].perSide ? (s.phase === "switch" ? 2 : 1) : undefined;
+      s = { phase: "work", end: t + secs * 1000, total: secs, ...(side ? { side } : {}) };
+      continue;
+    }
+    if (cfg[tg.ex].perSide && s.side !== 2) {
+      s = { phase: "switch", end: t + SWITCH_SECONDS * 1000, total: SWITCH_SECONDS, side: 2 };
       continue;
     }
     r = r.map((x, k) => (k !== tg.ex ? x : x.map((y, j) => (j === tg.si ? { ...y, done: true, at: t } : y))));
@@ -236,13 +244,8 @@ export function advanceIntervals(iv: IvClock, rows: Row[][], idx: number, cfg: {
   return { iv: s, rows: r, idx: i, marked, finished };
 }
 
-/** Serie por tiempo con 3 s de preparación: la barra cubre solo el trabajo. */
+/** Serie por tiempo con 3 s de preparación (los tramos de la serie viven en sides.ts). */
 export const PREP_SECONDS = 3;
-export function timedPhase(w: { end: number; secs: number }, now: number) {
-  const left = Math.max(0, (w.end - now) / 1000);
-  const prep = left > w.secs;
-  return { prep, prepLeft: prep ? left - w.secs : 0, workLeft: Math.min(left, w.secs), frac: prep ? 1 : Math.min(1, left / Math.max(1, w.secs)) };
-}
 
 /* ---------- Sesión guardada en el teléfono ---------- */
 export type Saved = { rows: Row[][]; idx: number; startedAt: string; choice: number[]; combo?: number; best?: number; lastAt?: number; warm?: boolean; mode?: string; repeat?: boolean; /** Ids elegidos por ejercicio (el índice cambia si la lista de opciones cambia). */ choiceIds?: string[]; /** Hitos ya mostrados (no se repiten al deshacer) */ ms?: string[]; /** Series del plan antes de pasar a modo exprés */ plan?: number };
