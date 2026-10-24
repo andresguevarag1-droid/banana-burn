@@ -2,14 +2,15 @@
 import { TECHNIQUE_COUNT } from "@/lib/exercise-frames";
 import Link from "next/link";
 import { ArrowRight, Check, Minus, X } from "@/components/icons";
-import { PLANS, perMonthAnnual } from "@/lib/plans";
+import { PLANS } from "@/lib/plans";
 import { GLP1, TRIAL_DAYS, money } from "@/lib/copy";
 import { offer } from "@/lib/offer";
 import { COACH_LIMITS } from "@/lib/coach-quota";
 
 export const [ENTRENO, COMPLETO] = PLANS;
 /** Precio de entrada: Entreno con pago anual, por mes. */
-export const FROM = money(perMonthAnnual(ENTRENO));
+/** Precio de entrada en la web: el mensual real de Entreno (sin "equivalentes" del anual). */
+export const FROM = money(ENTRENO.price.mes);
 export const SIGNUP = "/entrar?modo=registro";
 /** Registro con intención de Banana Shield: el plan que lo incluye queda elegido para después de la prueba. */
 export const SIGNUP_GLP1 = `${SIGNUP}&programa=glp1&plan=${COMPLETO.id}&pago=anual`;
@@ -25,7 +26,7 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   const o = offer(now);
   return [
   ["¿Cómo funciona la prueba gratis?", o.faqTrial(COMPLETO.name)],
-  ["¿Por qué pagar si hay rutinas gratis en internet?", `Una rutina gratis no sabe cuánto levantaste ayer, cuánto tiempo tienes hoy ni qué comiste. Banana Burn ajusta tu plan en cada sesión y cada semana. Pruébalo ${TRIAL_DAYS} días gratis y decide; con el plan anual son ${FROM} al mes.`],
+  ["¿Por qué pagar si hay rutinas gratis en internet?", `Una rutina gratis no sabe cuánto levantaste ayer, cuánto tiempo tienes hoy ni qué comiste. Banana Burn ajusta tu plan en cada sesión y cada semana. Pruébalo ${TRIAL_DAYS} días gratis y decide; después cuesta ${FROM} al mes, o ${money(ENTRENO.price.anual)} al año si pagas el año completo.`],
   ["No tengo tiempo. ¿Me sirve?", "Sí. Eliges cuántos minutos tienes por sesión, de 15 a 60, y en los días apretados hay entrenos exprés de 10, 20 o 30 minutos sin equipo."],
   ["¿Sirve si entreno en casa o sin equipo?", "Sí. Eliges gym, casa (mancuernas o bandas) o sin equipo, y el plan cambia los ejercicios por variantes que puedes hacer con lo que tienes."],
   ["¿Necesito experiencia en el gym?", "No. Cada ejercicio trae animación y guía de técnica. La primera semana es de calibración: Coach Banana aprende tus pesos."],

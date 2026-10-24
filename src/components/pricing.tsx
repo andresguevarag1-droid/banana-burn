@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
-import { PLANS, PREMIUM_RETOS_NOTE, annualSavingPct, perMonthAnnual, type Billing, type PlanId } from "@/lib/plans";
+import { PLANS, PREMIUM_RETOS_NOTE, annualSavingPct, type Billing, type PlanId } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/env";
 import { intentPath } from "@/lib/checkout-intent";
 import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
@@ -90,12 +90,11 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
               <h3 className={`text-lg font-extrabold ${hot ? "text-banana" : "text-ink"}`}>{p.name}</h3>
               <p className={`text-sm ${hot ? "text-white/75" : "text-muted"}`}>{hot && reason ? reason : p.tagline}</p>
               <p className="mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                {annual && <s className={`text-xl font-bold ${hot ? "text-white/60" : "text-faint"}`}><span className="sr-only">Antes </span>{money(p.price.mes)}</s>}
-                <span className={`text-5xl font-extrabold tracking-tight tabular-nums ${hot ? "" : "text-ink"}`}>{money(annual ? perMonthAnnual(p) : p.price.mes)}</span>
-                <span className={hot ? "text-white/75" : "text-muted"}>al mes</span>
+                <span className={`text-5xl font-extrabold tracking-tight tabular-nums ${hot ? "" : "text-ink"}`}>{money(annual ? p.price.anual : p.price.mes)}</span>
+                <span className={hot ? "text-white/75" : "text-muted"}>{annual ? "al año" : "al mes"}</span>
               </p>
               <p className={`mt-2 min-h-10 text-sm font-semibold tabular-nums text-pretty ${annual ? (hot ? "text-banana" : "text-peel") : hot ? "text-white/75" : "text-muted"}`}>
-                {annual ? `Un solo pago de ${money(p.price.anual)} al año. Ahorras ${money(saved)}.` : "Sin permanencia. Cancela cuando quieras."}
+                {annual ? `Un solo pago al año. Ahorras ${money(saved)} frente a ${money(p.price.mes)} al mes.` : "Sin permanencia. Cancela cuando quieras."}
               </p>
               <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] flex-1 ${hot ? "border-white/15" : "border-line"}`}>
                 {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{noBreakGlp1(f)}</li>)}

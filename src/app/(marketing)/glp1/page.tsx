@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Barbell, Drop, Egg, Monkey, ShieldCheck, Sun, Syringe } from "@/components/icons";
 import { Phone } from "@/components/phone";
-import { perMonthAnnual } from "@/lib/plans";
 import { TRIAL_DAYS, money } from "@/lib/copy";
 import { Faq, Marker } from "../parts";
 import { StickyCta } from "../sticky-cta";
@@ -29,11 +28,11 @@ const faq = () => [
   ["¿Qué medicamentos aplica?", `${GLP1} recetados como semaglutida (Ozempic, Wegovy), tirzepatida (Mounjaro, Zepbound) o liraglutida (Saxenda). No trabajamos con péptidos sin aprobación ni compuestos de mercado gris.`],
   ["¿Por qué importa el músculo?", "Al bajar de peso rápido una parte puede ser músculo. Perder músculo baja tu metabolismo y tu fuerza y facilita el rebote. La fuerza y la proteína son las herramientas con más evidencia para protegerlo."],
   ["¿Y si dejo el medicamento?", "Los hábitos que construyes (fuerza, proteína, pesarte cada semana) son tu seguro. La app ajusta tus calorías con tu peso real para una transición gradual, siempre con tu médico."],
-  ["¿Cuánto cuesta?", `${offer().card ? `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido: guardas tu tarjeta, hoy no te cobramos y el día ${TRIAL_DAYS} se cobra tu plan, salvo que canceles antes.` : `Los primeros ${TRIAL_DAYS} días son gratis y sin tarjeta, con Banana Shield incluido.`} Después, Banana Shield viene en ${COMPLETO.name}: ${money(COMPLETO.price.mes)} al mes o ${money(COMPLETO.price.anual)} al año (equivale a ${money(perMonthAnnual(COMPLETO))} al mes).`],
+  ["¿Cuánto cuesta?", `${offer().card ? `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido: guardas tu tarjeta, hoy no te cobramos y el día ${TRIAL_DAYS} se cobra tu plan, salvo que canceles antes.` : `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido.`} Después, Banana Shield viene en ${COMPLETO.name}: ${money(COMPLETO.price.mes)} al mes o ${money(COMPLETO.price.anual)} al año.`],
 ] as const;
 
 export default function Glp1Landing() {
-  const from = money(perMonthAnnual(COMPLETO));
+  const from = money(COMPLETO.price.mes);
   const o = offer();
   const FAQ = faq();
   return (
@@ -47,7 +46,7 @@ export default function Glp1Landing() {
             <Link href={SIGNUP} data-cta="glp1-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
             <a href="#como" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Cómo funciona</a>
           </div>
-          <p className="mt-5 text-sm font-semibold text-ink text-pretty">{o.note} Después, incluido en {COMPLETO.name} desde {from} al mes con el plan anual.</p>
+          <p className="mt-5 text-sm font-semibold text-ink text-pretty">{o.note} Después, incluido en {COMPLETO.name} por {from} al mes.</p>
         </div>
         <div className="relative isolate grid place-items-center py-10 sm:py-12 lg:py-0 lg:h-[min(calc(100dvh-8rem),680px)]">
           <div aria-hidden className="absolute inset-0 sm:inset-x-8 lg:inset-x-0 lg:inset-y-6 -z-10 rounded-[2rem] bg-ink" />
@@ -110,7 +109,7 @@ export default function Glp1Landing() {
         <div className="rounded-[2rem] bg-ink text-white px-6 py-14 sm:p-16 text-center">
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-balance">Que cada kilo que bajes valga la pena.</h2>
           <Link href={SIGNUP} data-cta="glp1-final" className="mt-8 btn-banana shadow-none h-14 px-8 text-base">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
-          <p className="mt-4 text-sm text-white/75 text-pretty">{o.note} Después, incluido en {COMPLETO.name} desde {from} al mes con el plan anual.</p>
+          <p className="mt-4 text-sm text-white/75 text-pretty">{o.note} Después, incluido en {COMPLETO.name} por {from} al mes.</p>
         </div>
       </section>
 
@@ -121,7 +120,7 @@ export default function Glp1Landing() {
         <p>Las capturas de la app muestran datos de ejemplo.</p>
         <p>Banana Burn no vende ni receta medicamentos y no reemplaza la atención médica. Ozempic®, Wegovy®, Mounjaro®, Zepbound® y Saxenda® son marcas de sus respectivos dueños; Banana Burn no está afiliado a ellos.</p>
       </aside>
-      <StickyCta note={o.card ? `Banana Shield gratis ${TRIAL_DAYS} días. Hoy no te cobramos.` : `Banana Shield gratis ${TRIAL_DAYS} días. Sin tarjeta.`}><Link href={SIGNUP} data-cta="glp1-sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={o.card ? `Banana Shield gratis ${TRIAL_DAYS} días. Hoy no te cobramos.` : `Banana Shield gratis ${TRIAL_DAYS} días con todo incluido.`}><Link href={SIGNUP} data-cta="glp1-sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }

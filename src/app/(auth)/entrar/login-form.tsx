@@ -41,7 +41,7 @@ function GoogleG() {
 }
 
 /** `signupChecks`: las dos marcas bajo el registro según la fecha (offer.ts, las calcula el servidor para no depender del reloj del teléfono). */
-export function LoginForm({ configured, googleEnabled = false, signupChecks = ["Sin tarjeta", "Sin cobros automáticos"] }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string] }) {
+export function LoginForm({ configured, googleEnabled = false, signupChecks = ["7 días gratis", "Todo incluido"] }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string] }) {
   const params = useSearchParams();
   const router = useRouter();
   const isSignup = params.get("modo") === "registro";

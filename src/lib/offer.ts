@@ -1,4 +1,5 @@
-// Textos de la oferta según la fecha (BETA_ENDS_AT). Hasta el fin de la beta: la prueba sin tarjeta, igual que siempre.
+// Textos de la oferta según la fecha (BETA_ENDS_AT). Hasta el fin de la beta: la prueba gratis sin mencionar la tarjeta
+// (desde el 1 de noviembre se pide, así que no prometemos "sin tarjeta" en la web).
 // Desde el fin de la beta: la tarjeta se guarda, hoy no se cobra y el día 7 se cobra el plan, salvo que se cancele antes.
 // Las páginas públicas se regeneran cada hora (revalidate = 3600), así que el cambio sale solo en la primera hora del
 // 1 de noviembre. Nunca guardes estos textos en constantes de módulo: se calculan en cada render.
@@ -45,21 +46,21 @@ export function offer(now = new Date()): Offer {
   if (betaLive(now)) {
     return {
       card: false,
-      note: `${TRIAL_DAYS} días gratis con todo incluido. Sin tarjeta.`,
+      note: `${TRIAL_DAYS} días gratis con todo incluido.`,
       from: (p) => `Después, desde ${p} al mes.`,
-      faqCtaExtra: " Sin cobros automáticos al terminar.",
-      seo: `Prueba ${TRIAL_DAYS} días gratis, sin tarjeta.`,
-      riskLine: "Sin tarjeta y sin cobros automáticos",
-      statLabel: "gratis, sin tarjeta",
-      pricingIntro: (s) => `Pruébalo ${TRIAL_DAYS} días gratis con todo incluido y sin tarjeta. Después eliges tu plan; con el pago anual ahorras ${s} %.`,
-      pricingTrial: "En la prueba tienes todo incluido y no pedimos tarjeta.",
-      faqTrial: (n) => `Creas tu cuenta y tienes ${TRIAL_DAYS} días con todo incluido: entreno, Coach Banana, nutrición y Banana Shield. No pedimos tarjeta, así que no hay cobros sorpresa. Al terminar eliges Entreno o ${n}; si todavía no eliges, tu progreso queda guardado para cuando vuelvas.`,
-      faqCancel: "Durante la prueba no hay nada que cancelar, porque no pedimos tarjeta. Si ya pagas un plan, lo cancelas cuando quieras desde Mi plan y conservas el acceso hasta el final del periodo pagado. Además tienes 8 días hábiles de derecho de retracto desde la compra.",
-      guarantee: [`${TRIAL_DAYS} días gratis, sin tarjeta`, "Pruebas todo antes de pagar, incluida la nutrición y Banana Shield. Como no pedimos tarjeta, no hay cobros sorpresa cuando termina."],
-      signupChecks: ["Sin tarjeta", "Sin cobros automáticos"],
-      signupLine: "Sin tarjeta. Al terminar eliges si sigues.",
-      ogLine: `Prueba gratis ${TRIAL_DAYS} días, sin tarjeta`,
-      llms: `Prueba gratis de ${TRIAL_DAYS} días con todo incluido, sin tarjeta.`,
+      faqCtaExtra: " Cancela cuando quieras desde Mi plan.",
+      seo: `Prueba ${TRIAL_DAYS} días gratis con todo incluido.`,
+      riskLine: "Pruebas todo antes de pagar",
+      statLabel: "gratis, con todo incluido",
+      pricingIntro: (s) => `Pruébalo ${TRIAL_DAYS} días gratis con todo incluido. Después eliges tu plan; con el pago anual ahorras ${s} %.`,
+      pricingTrial: "En la prueba tienes todo incluido.",
+      faqTrial: (n) => `Creas tu cuenta y tienes ${TRIAL_DAYS} días con todo incluido: entreno, Coach Banana, nutrición y Banana Shield. Al terminar eliges Entreno o ${n}; si todavía no eliges, tu progreso queda guardado para cuando vuelvas.`,
+      faqCancel: "Desde Mi plan, sin llamadas. Si ya pagas un plan, lo cancelas cuando quieras desde Mi plan y conservas el acceso hasta el final del periodo pagado. Además tienes 8 días hábiles de derecho de retracto desde la compra.",
+      guarantee: [`${TRIAL_DAYS} días gratis`, "Pruebas todo antes de pagar, incluida la nutrición y Banana Shield. Cancelas cuando quieras desde Mi plan, sin llamadas."],
+      signupChecks: [`${TRIAL_DAYS} días gratis`, "Todo incluido"],
+      signupLine: "Al terminar eliges si sigues.",
+      ogLine: `Prueba gratis ${TRIAL_DAYS} días`,
+      llms: `Prueba gratis de ${TRIAL_DAYS} días con todo incluido.`,
     };
   }
   return {
