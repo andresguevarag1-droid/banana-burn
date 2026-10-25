@@ -169,6 +169,13 @@ export async function sendTeamAffiliatePayouts(d: { period: string; count: numbe
   return sendEmail(to, T.pagosReferidoresEquipo({ period: d.period, count: d.count, total: T.money(d.totalMinor / 100) }), { idempotencyKey: `referidores-pagos/${d.period}/${d.count}/${d.totalMinor}`, tags: { kind: "referidor" } });
 }
 
+/** Condominios afiliados (0053): el mes gratis del residente termina en 3 días. Idempotente por `key`. Transaccional. */
+export async function sendCondoEndingEmail(r: Recipient & { condo: string; until: string; key: string }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  return sendEmail(to.to, T.condominioMesTermina({ name: to.name, condo: r.condo, until: r.until }), { idempotencyKey: `condominio-fin/${r.key}`, tags: { kind: "condominio" } });
+}
+
 /** Condominios (0052): aviso al equipo y confirmación a quien pidió la reunión. Idempotentes por solicitud. */
 export async function sendCondoLeadEmails(d: T.CondoLeadMail): Promise<{ team: SendResult; lead: SendResult }> {
   const teamTo = (process.env.OPS_ALERT_EMAIL || process.env.FEEDBACK_EMAIL || "hola@bananaburn.app").trim();

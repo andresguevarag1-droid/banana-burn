@@ -33,6 +33,7 @@ const S: LegalSection[] = [
   { id: "terceros", t: "Con quién los compartimos", p: [
     "Trabajamos con proveedores que procesan datos por cuenta nuestra y bajo contrato:",
     ["Supabase: base de datos, autenticación y almacenamiento de fotos.", "Vercel: alojamiento de la aplicación.", "Anthropic: genera las respuestas del Coach Banana. Le enviamos tu mensaje y un resumen de tu plan, sin tu correo.", "Resend: envío de correos.", "ONVO Pay: procesamiento de pagos en Costa Rica.", "Meta Platforms (Instagram y Facebook): con el Meta Pixel y su API de Conversiones medimos qué anuncios llevan a una visita, un registro o una suscripción. Meta recibe la página visitada, el tipo de evento (por ejemplo, registro o suscripción y su precio), tu dirección IP, tu navegador y sus propias cookies. No recibe tu correo, tu nombre ni ningún dato de salud."],
+    "Si te uniste con el enlace de tu condominio, la administración del condominio no recibe tus datos personales: solo sabe cuántos residentes se unieron y cuántos entrenaron en la semana, en total. Nunca ve tu nombre, tu correo, tu peso, tus entrenos ni tu comida.",
     "Algunos de estos proveedores almacenan datos fuera de tu país y de Costa Rica (principalmente en Estados Unidos). Al aceptar esta política autorizas esa transferencia, que hacemos con medidas de seguridad equivalentes a las exigidas por la ley costarricense.",
   ] },
   { id: "derechos", t: "Tus derechos", p: [
@@ -59,5 +60,5 @@ const S: LegalSection[] = [
 ];
 
 export default function Page() {
-  return <LegalPage title="Política de privacidad" updated="24 de octubre de 2026" intro="Tus datos de salud son tuyos. Esta política explica qué datos usamos, para qué, con quién los compartimos y cómo ejercer tus derechos. Como la empresa está en Costa Rica, se rige por la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales y su reglamento, sin perjuicio de los derechos que te dé la ley de tu país." sections={S} />;
+  return <LegalPage title="Política de privacidad" updated="25 de octubre de 2026" intro="Tus datos de salud son tuyos. Esta política explica qué datos usamos, para qué, con quién los compartimos y cómo ejercer tus derechos. Como la empresa está en Costa Rica, se rige por la Ley N.º 8968 de Protección de la Persona frente al Tratamiento de sus Datos Personales y su reglamento, sin perjuicio de los derechos que te dé la ley de tu país." sections={S} />;
 }
