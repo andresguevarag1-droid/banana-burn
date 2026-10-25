@@ -51,6 +51,9 @@ export const STEP_KEY: Record<StepId, string> = {
 /** La persona cerró la tarjeta, o ya vio la celebración final. */
 export const PP_HIDDEN = "pp-oculto";
 export const PP_CELEBRATED = "pp-listo";
+/** "Lo mejor de Banana Burn" en Hoy: se ve cuando la lista de primeros pasos ya no está, hasta que la persona la cierre. */
+export const LO_MEJOR_HIDDEN = "lo-mejor-oculto";
+export const showLoMejor = (keys: readonly string[]) => (keys.includes(PP_HIDDEN) || keys.includes(PP_CELEBRATED)) && !keys.includes(LO_MEJOR_HIDDEN);
 
 /**
  * Los pasos de la primera semana, en el orden en que tienen sentido: primero mirar, luego hacer.
