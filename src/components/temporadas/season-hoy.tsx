@@ -29,7 +29,17 @@ async function pendingFeedback(v: Viewer, slug: string, today: string) {
   return exercises.length ? { week: t.week, day: t.day, exercises } : null;
 }
 
+/** Hoy nunca se rompe por la temporada: si algo falla al leerla, la tarjeta simplemente no aparece. */
 export async function SeasonHoy({ v }: { v: Viewer }) {
+  try {
+    return await SeasonHoyInner({ v });
+  } catch (e) {
+    console.error("[temporadas] hoy", e instanceof Error ? e.name : "error");
+    return null;
+  }
+}
+
+async function SeasonHoyInner({ v }: { v: Viewer }) {
   const [view, states] = await Promise.all([getSeasonsView(v), getProgramStates(v)]);
   const owned = view.seasons.filter((s) => view.owned.has(s.slug));
   if (!owned.length) return null;
