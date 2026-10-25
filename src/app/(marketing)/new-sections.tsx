@@ -41,7 +41,7 @@ export function LearnSection() {
   if (!src) return null;
   const second = shot("primeros-pasos");
   return (
-    <section aria-labelledby="aprende-t" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+    <section aria-labelledby="aprende-t" className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
       <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink"><GraduationCap weight="duotone" aria-hidden className="size-4" />Aunque nunca hayas entrenado</p>
@@ -50,7 +50,7 @@ export function LearnSection() {
           <Points items={["Qué es una serie y una repetición", "Cuánto peso usar y cuánto descansar", "Cómo ver la técnica de cada ejercicio", "Cómo te hace progresar la app"]} />
         </div>
         <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
-          <Phone src={src} alt="Pantalla de Aprende a entrenar en Banana Burn" sizes="240px" className="w-[230px] sm:w-[250px]" />
+          <Phone src={src} alt="Pantalla de Aprende a entrenar en Banana Burn" sizes="240px" className="w-[210px] sm:w-[250px]" />
           {second && <Phone src={second} alt="Tus primeros pasos en Banana Burn: una lista que te lleva a cada pantalla" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
         </div>
       </div>
@@ -65,7 +65,7 @@ export function PlatanitaSection() {
   if (!a) return null;
   const pl = COACHES.platanita;
   return (
-    <section aria-labelledby="platanita-t" className="pt-24">
+    <section aria-labelledby="platanita-t" className="pt-16 sm:pt-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-10 overflow-hidden rounded-[2.25rem] bg-banana-soft p-7 sm:p-12 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
           <div>
@@ -79,7 +79,7 @@ export function PlatanitaSection() {
             </div>
           </div>
           <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
-            <Phone src={a} alt="Entrenamiento de Pilates con Coach Platanita en Banana Burn" sizes="240px" className="w-[230px] sm:w-[250px]" />
+            <Phone src={a} alt="Entrenamiento de Pilates con Coach Platanita en Banana Burn" sizes="240px" className="w-[200px] sm:w-[250px]" />
             {b && <Phone src={b} alt="Programa Pilates en casa 30 días en Banana Burn" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
           </div>
         </div>
@@ -146,7 +146,7 @@ export function OfferBand() {
   const src = shot("oferta");
   const [entreno, completo] = PLANS;
   return (
-    <section aria-labelledby="oferta-t" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+    <section aria-labelledby="oferta-t" className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
       <div className="grid items-center gap-8 rounded-[2.25rem] bg-banana p-7 sm:p-12 lg:grid-cols-[1.3fr_1fr]">
         <div>
           <h2 id="oferta-t" className="text-4xl sm:text-5xl font-extrabold tracking-[-0.03em] text-ink text-balance">Tu primer mes a mitad de precio.</h2>
@@ -162,7 +162,44 @@ export function OfferBand() {
           <p className="mt-3 text-sm text-ink/75">Una vez por cuenta. El plan anual no tiene este descuento. Cancelas cuando quieras desde Mi plan.</p>
           <Link href={SIGNUP} data-cta="oferta" className="pressable mt-6 inline-flex h-14 items-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black">Empezar gratis <ArrowRight weight="bold" className="size-5" /></Link>
         </div>
-        {src && <div className="mx-auto w-full max-w-[260px]"><Phone src={src} alt="Oferta del primer mes con 50 % de descuento en Mi plan" sizes="260px" /></div>}
+        {src && <div className="mx-auto hidden w-full max-w-[260px] lg:block"><Phone src={src} alt="Oferta del primer mes con 50 % de descuento en Mi plan" sizes="260px" /></div>}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Extras para el inicio: temporadas deportivas y GPS para correr en un bloque corto. Quien llega de un anuncio viene por
+ * lo principal (aprender a entrenar sin perder músculo); el detalle completo vive en /temporadas.
+ */
+export function ExtrasSection() {
+  const seasons = shot("temporadas");
+  const run = shot("correr");
+  if (!seasons && !run) return null;
+  const list = SPORT_IDS.map((id) => `${SPORTS[id].name} ${money(SEASON_PRICE_MINOR[id] / 100)}`);
+  return (
+    <section aria-labelledby="extras-t" className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
+      <h2 id="extras-t" className="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-ink text-balance">Y si haces deporte, también te acompaña.</h2>
+      <div className="mt-6 grid gap-3 lg:grid-cols-2">
+        {seasons && (
+          <Link href="/temporadas" data-cta="temporadas" className="group flex gap-4 rounded-[1.75rem] bg-ink p-6 text-white transition-shadow duration-200 hover:shadow-lift">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-banana text-ink"><Medal weight="duotone" aria-hidden className="size-7" /></span>
+            <span>
+              <span className="block text-xl font-extrabold">Temporadas deportivas</span>
+              <span className="mt-1 block text-white/75 text-pretty">8 semanas enfocadas en tu deporte, desde el {longDate(T1_START)}. Pago único: {list.join(", ")}. El plan anual incluye 1 gratis.</span>
+              <span className="mt-2 inline-flex items-center gap-1.5 font-bold text-banana">Ver las temporadas <ArrowRight weight="bold" className="size-4 transition-transform duration-200 group-hover:translate-x-1" /></span>
+            </span>
+          </Link>
+        )}
+        {run && (
+          <div className="flex gap-4 rounded-[1.75rem] bg-cream p-6">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-banana text-ink"><PersonSimpleRun weight="duotone" aria-hidden className="size-7" /></span>
+            <span>
+              <span className="block text-xl font-extrabold text-ink">GPS para tus carreras</span>
+              <span className="mt-1 block text-muted text-pretty">Distancia, tiempo y ritmo por kilómetro, con la app abierta y la pantalla encendida. Tus carreras son privadas.</span>
+            </span>
+          </div>
+        )}
       </div>
     </section>
   );
