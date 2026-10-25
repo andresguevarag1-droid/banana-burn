@@ -1,4 +1,4 @@
-// Carreras con GPS (/app/correr, 0048). Puro: lo usan el navegador (en vivo) y el servidor (que recalcula todo y no
+// Carreras con GPS (/app/correr, 0049). Puro: lo usan el navegador (en vivo) y el servidor (que recalcula todo y no
 // confía en lo que manda el cliente). Sin dependencias.
 
 export type GeoPoint = { t: number; lat: number; lng: number; acc: number };

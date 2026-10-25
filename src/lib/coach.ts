@@ -81,7 +81,7 @@ function coachData(a: Athlete, weights: Point[], workouts: { d: string; tpl: str
       // 0027: el enfoque del programa manda sobre el método general mientras dure.
       ...(coachOf(d.program.meta.experience).she ? { coach: `${coachOf(d.program.meta.experience).name}: mientras dure el programa ese es tu nombre (no Coach Banana); habla como ella, en femenino y con calidez.` } : {}),
       ...(d.program.meta.experience ? { modo: dataText(d.program.meta.experience.mode, 40), enfoque: dataText(d.program.meta.experience.coachFocus, 300), consejo_semana: dataText(tipFor(d.program.meta.experience, d.program.run.week) ?? "", 220), habitos: d.program.meta.experience.habits.map((h) => dataText(h.label, 60)), comida: nutrition ? d.program.meta.experience.food.map((f) => dataText(f, 200)) : undefined } : {}) } : null,
-    // Temporada deportiva (0047): sus respuestas del cuestionario (días de deporte, evento, molestias) y sus últimas carreras.
+    // Temporada deportiva (0048): sus respuestas del cuestionario (días de deporte, evento, molestias) y sus últimas carreras.
     temporada: d.program?.season?.note ? dataText(d.program.season.note, 900) : null,
     rutina_hoy: { nombre: d.plan.name, ejercicios: d.plan.exercises.map((e) => `${e.name} ${e.cfg.sets}x${e.cfg.lo}-${e.cfg.hi}`), cardio: d.plan.cardio },
     ayer: d.yesterday.name, manana: d.tomorrow.name,

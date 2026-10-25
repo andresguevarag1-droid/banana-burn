@@ -11,6 +11,7 @@ import { RichTip } from "@/components/rich-tip";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Barbell, Check, Monkey } from "@/components/icons";
 import { getVoice } from "@/lib/voice-server";
 import { strengthCue } from "@/lib/voice";
+import { MarkLearn } from "@/components/primeros-pasos/mark-learn";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const e = getLibEx((await params).id);
@@ -41,6 +42,7 @@ export default async function Ejercicio({ params }: { params: Promise<{ id: stri
 
   return (
     <article className="space-y-5 animate-enter max-w-3xl">
+      <MarkLearn k="pp-tecnica" />
       <Link href="/app/ejercicios" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Biblioteca</Link>
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{e.n}</h1>

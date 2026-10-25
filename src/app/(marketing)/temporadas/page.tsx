@@ -8,7 +8,7 @@ import { Faq, Marker } from "../parts";
 import { faqJsonLd, ldScript, social } from "../seo";
 import { FaqCta, SIGNUP, TRIAL_CTA } from "../content";
 
-// Página pública de las temporadas deportivas (0047). Fechas reales de la Temporada 1; sin contadores ni urgencia falsa.
+// Página pública de las temporadas deportivas (0048). Fechas reales de la Temporada 1; sin contadores ni urgencia falsa.
 export const revalidate = 3600;
 
 const TITLE = "Temporadas deportivas: running, raquetas y cross training";

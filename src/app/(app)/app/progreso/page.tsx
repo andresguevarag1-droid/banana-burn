@@ -174,7 +174,7 @@ export default async function Progreso() {
         <summary className="cursor-pointer list-none p-5 flex items-center justify-between"><H icon={Target}>Mi perfil y meta</H><CaretDown weight="bold" className="size-5 text-muted transition-transform duration-(--dur-fast) ease-out group-open:rotate-180" /></summary>
         <div className="px-5 pb-5"><ProfileForm a={{ name: a.name, dob: a.dob, heightCm: a.heightCm, startWeight: a.startWeight, goalWeight: a.goalWeight, goalDate: a.goalDate, mode: a.mode, sex: a.sex }} /></div>
       </details>
-      {/* Carreras con GPS (0048): km por semana, solo si ya registró alguna. */}
+      {/* Carreras con GPS (0049): km por semana, solo si ya registró alguna. */}
       {runs.length > 0 && <Link href="/app/correr" className="block transition-transform duration-150 active:scale-[.99]"><WeeklyKm weeks={weeklyKm(runs, todayFor(v).iso)} title="Km corridos por semana" /></Link>}
     </div>
   );

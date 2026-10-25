@@ -1,4 +1,4 @@
-// Guardar y borrar carreras con GPS (0048). El servidor recalcula todo con los puntos y guarda el mapa recortado.
+// Guardar y borrar carreras con GPS (0049). El servidor recalcula todo con los puntos y guarda el mapa recortado.
 // Idempotente: el navegador manda un id de carrera (client_id); si ya existe, responde con la misma carrera.
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { isSameOrigin } from "@/lib/security";

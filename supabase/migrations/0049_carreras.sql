@@ -1,4 +1,4 @@
--- 0048_carreras.sql: carreras con GPS (/app/correr).
+-- 0049_carreras.sql: carreras con GPS (/app/correr).
 --   1. public.runs: una fila por carrera, privada (solo su dueña o dueño la ve; ni el staff lee el recorrido).
 --      El servidor recalcula distancia y tiempos con los puntos (src/lib/runs.ts) y guarda el mapa ya recortado
 --      200 m al inicio y al final. Aquí van los topes de plausibilidad por si alguien escribe directo con su sesión.
@@ -36,7 +36,7 @@ revoke all on public.runs from anon;
 revoke update on public.runs from authenticated;
 grant select, insert, delete on public.runs to authenticated;
 
--- 4. El panel de temporadas (0047) suma las carreras de la temporada (solo totales, sin recorridos).
+-- 4. El panel de temporadas (0048) suma las carreras de la temporada (solo totales, sin recorridos).
 create or replace function public.admin_season_stats(p_slug text)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 declare v jsonb;
@@ -52,7 +52,7 @@ begin
        select jsonb_agg(distinct (regexp_match(w.template, ':(\d{1,2})\.\d$'))[1]::int) as ws
          from public.workouts w where w.template like 'p:' || p_slug || ':%' group by w.user_id) x), '[]'::jsonb),
     'intakes', coalesce((select jsonb_agg(answers) from public.season_intake where slug = p_slug), '[]'::jsonb),
-    -- Carreras con GPS (0048) de quienes tienen la temporada, dentro de sus fechas: solo totales.
+    -- Carreras con GPS (0049) de quienes tienen la temporada, dentro de sus fechas: solo totales.
     'runs', (select jsonb_build_object('count', count(*), 'km', round(coalesce(sum(r.distance_m), 0) / 1000.0, 1))
        from public.runs r join public._season_of(p_slug) s on r.day between s.starts_on and s.ends_on
        where r.user_id in (select user_id from public.challenge_entitlements where challenge_slug = p_slug))

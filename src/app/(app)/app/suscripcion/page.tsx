@@ -98,6 +98,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Perfil</Link>
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
+        <Link href="/app/incluye" className="tap mt-1 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">Lo que incluye tu plan, explicado fácil</Link>
       </header>
 
       {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}

@@ -1,4 +1,4 @@
--- 0047: Temporadas deportivas (Running, Raquetas y Cross Training). Idempotente: se puede correr más de una vez.
+-- 0048: Temporadas deportivas (Running, Raquetas y Cross Training). Idempotente: se puede correr más de una vez.
 -- Requiere 0018 (tienda), 0024/0028/0037 (programas) y 0042 (suscripciones con billing).
 --
 -- Qué hace:
@@ -146,7 +146,7 @@ begin
   if c.price_usd > 0 and not public._owns_challenge(v_uid, p_slug) then raise exception 'Compra este programa para empezarlo' using errcode = '42501'; end if;
   if not exists (select 1 from public.program_sessions where slug = p_slug) then raise exception 'Este programa todavía no tiene sesiones' using errcode = 'P0001'; end if;
   select * into s from public.seasons where slug = p_slug;
-  -- 0047: una temporada terminada no se empieza ni se repite.
+  -- 0048: una temporada terminada no se empieza ni se repite.
   if s.slug is not null and p_day > s.ends_on then raise exception 'Esta temporada ya terminó' using errcode = 'P0001'; end if;
   if s.slug is not null and cur.status = 'completado' then raise exception 'Esta temporada no se repite' using errcode = 'P0001'; end if;
   if cur.id is not null and cur.status = 'activo' then return 'activo'; end if;

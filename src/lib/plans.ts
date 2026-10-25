@@ -41,7 +41,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
 ];
 
 /** Los retos Premium nunca vienen dentro de un plan: se compran aparte. */
-/** Plan anual (0047): cada año pagado incluye una temporada deportiva gratis. */
+/** Plan anual (0048): cada año pagado incluye una temporada deportiva gratis. */
 export const ANNUAL_SEASON_NOTE = "Incluye 1 temporada deportiva gratis";
 export const PREMIUM_RETOS_NOTE = "Los retos Premium se compran aparte con un pago único, en cualquier plan. Subir de nivel te da descuento en ellos.";
 

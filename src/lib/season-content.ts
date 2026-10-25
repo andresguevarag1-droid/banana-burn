@@ -275,9 +275,9 @@ export function seasonSeed(sport: SportId): ProgramSeed {
 export const SEASON_SEED: ProgramSeed[] = (["running", "raquetas", "cross"] as SportId[]).map(seasonSeed);
 export const SEASON_SEED_BY_SLUG: Record<string, ProgramSeed> = Object.fromEntries(SEASON_SEED.map((p) => [p.slug, p]));
 
-// ───────────── SQL de la siembra (scripts/gen-temporadas-seed.ts; season-content.test.ts comprueba 0047) ─────────────
+// ───────────── SQL de la siembra (scripts/gen-temporadas-seed.ts; season-content.test.ts comprueba 0048) ─────────────
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
-/** Bloque 2 de 0047: los programas de la Temporada 1 y sus filas en public.seasons (sin pisar lo editado en el panel). */
+/** Bloque 2 de 0048: los programas de la Temporada 1 y sus filas en public.seasons (sin pisar lo editado en el panel). */
 export function seasonSeedSql(): string {
   const out = [programSeedSql(SEASON_SEED).replace(/^-- ─+ 6\. Siembra[^\n]*\n/, "-- ───────────── 2. Siembra de la Temporada 1 (generada con scripts/gen-temporadas-seed.ts) ─────────────\n").replace(/-- Retos Premium que pasan a ser programas[^\n]*\n/, "")];
   out.push("insert into public.seasons (slug, sport, number, starts_on, ends_on, enroll_until, price_minor) values");
