@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runReminders } from "@/lib/notify-run";
 import { sweepChallenges } from "@/lib/challenges-server";
 import { sweepAffiliates } from "@/lib/affiliates-server";
+import { sweepCondos } from "@/lib/condos-server";
 import { deliverPendingGifts } from "@/lib/gifts-server";
 import { deliverTesterNotices } from "@/lib/testers-server";
 import { deliverSupportNotices } from "@/lib/support-server";
@@ -32,6 +33,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * También el monitoreo (0041): purga de errores viejos, aviso si se dispararon y registro de esta corrida.
  * Y la limpieza de tablas que crecen sin fin (0040).
  * Y las renovaciones con Tilopay (0042), que cobramos nosotros con la tarjeta guardada.
+ * Y los condominios afiliados (0053): plan del condominio para sus residentes y aviso de fin del mes gratis.
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -59,6 +61,8 @@ export async function GET(req: Request) {
   const renovaciones = await sweepTilopayRenewals(new Date(), { deadline: t0 + 47_000, chargeBy }).catch((e) => { logError("cron:renovaciones", "run_failed", { kind: errCode(e) }); return null; });
   // Primer mes con 50 % en ONVO (0043): al terminar ese mes se crea la suscripción normal a precio completo.
   const primerMes = await sweepOnvoIntro(new Date(), { deadline: t0 + 50_000, chargeBy }).catch((e) => { logError("cron:primer-mes", "run_failed", { kind: errCode(e) }); return null; });
+  // Condominios afiliados (0053): plan del condominio activo para sus residentes y aviso de fin del mes gratis.
+  const condominios = await sweepCondos(new Date(), { deadline: t0 + 51_500 }).catch((e) => { logError("cron:condominios", "run_failed", { kind: errCode(e) }); return null; });
   const retos = await sweepChallenges(new Date(), { deadline: t0 + 52_000 }).catch((e) => { logError("cron:retos", "run_failed", { kind: errCode(e) }); return null; });
   const regalos = await deliverPendingGifts({ limit: 200 }).catch((e) => { logError("cron:regalos", "run_failed", { kind: errCode(e) }); return null; });
   // Testers (0029): correo y push de asignaciones sin avisar, aviso de 3 días antes del final y agradecimiento al terminar.
@@ -74,5 +78,5 @@ export async function GET(req: Request) {
   const referidores = await sweepAffiliates(new Date(), { deadline: t0 + 59_000 }).catch((e) => { logError("cron:referidores", "run_failed", { kind: errCode(e) }); return null; });
   // Última corrida, para /admin/salud: solo conteos.
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
-  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, referidores, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, referidores, condominios, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
 }

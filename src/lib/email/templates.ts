@@ -689,21 +689,45 @@ export function pagosReferidoresEquipo(d: { period: string; count: number; total
   return { subject, preheader: `${d.count} pagos, ${d.total}`, html: layout({ preheader: `${d.count} pagos, ${d.total}`, hero, body, reason }), text: textLayout([subject, "", `${d.count} pagos por ${d.total}.`, "", `Abrir pagos: ${abs("/admin/referidores#pagos")}`], undefined, reason) };
 }
 
+// ───────────── Condominios afiliados (0053): fin del mes gratis del residente ─────────────
+
+/** El mes gratis que regaló el condominio termina pronto y el condominio todavía no eligió plan. Transaccional. */
+export function condominioMesTermina(d: { name: string; condo: string; until: string }): Email {
+  const n = firstName(d.name);
+  const day = longDate(d.until);
+  const subject = "Tu mes gratis del condominio termina pronto";
+  const lead = `${n}, el mes gratis que te regaló ${d.condo} termina el ${day}.`;
+  const hero: Hero = { eyebrow: "Banana Burn para condominios", title: esc(subject), lead: esc(lead) };
+  const lines = [
+    "Si el condominio elige un plan para sus residentes, tu acceso sigue solo y no tienes que hacer nada.",
+    "Si no, puedes seguir con un plan individual desde Mi plan o dejar de usar la app. No te cobramos nada automáticamente.",
+    "Tu historial, tus récords y tu plan se quedan guardados.",
+  ];
+  const body = list(lines.map((l) => `${dot()}${esc(l)}`)) + button("Ver mi plan", "/app/suscripcion");
+  const reason = "Recibes este correo porque te uniste a Banana Burn con el enlace de tu condominio.";
+  return {
+    subject, preheader: lead,
+    html: layout({ preheader: lead, hero, body, reason }),
+    text: textLayout([subject, "", lead, "", ...lines.map((l) => `- ${l}`), "", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
+  };
+}
+
 // ───────────── Condominios (0052): solicitudes de reunión desde /condominios ─────────────
 
-export type CondoLeadMail = { name: string; role: string; org: string; units?: string | null; location?: string | null; email: string; phone?: string | null; times?: string | null; days?: string | null; comment?: string | null; id: number };
+export type CondoLeadMail = { name: string; role: string; org: string; units?: string | null; location?: string | null; email: string; phone?: string | null; times?: string | null; days?: string | null; portfolio?: string | null; comment?: string | null; id: number };
 
 /** Aviso interno: llegó una solicitud de reunión de un condominio. Transaccional, solo para el equipo. */
 export function condominioEquipo(d: CondoLeadMail): Email {
-  const subject = `Condominio quiere reunión: ${d.org}`;
+  const subject = `Condominio quiere reunión virtual: ${d.org}`;
   const lead = `De <b>${esc(d.name)}</b> (${esc(d.role)}).`;
   const hero: Hero = { eyebrow: "Condominios", title: esc(subject), lead };
   const r: [string, string][] = [
     ["Condominio", d.org], ["Contacto", d.name], ["Cargo", d.role], ["Correo", d.email], ["Teléfono o WhatsApp", d.phone || "Sin dato"],
-    ["Unidades o residentes", d.units || "Sin dato"], ["Ubicación", d.location || "Sin dato"], ["Horario preferido", d.times || "Sin dato"], ["Días", d.days || "Sin dato"],
+    ["Unidades o residentes", d.units || "Sin dato"], ["¿Varios condominios?", d.portfolio || "Sin dato"], ["Ubicación", d.location || "Sin dato"],
+    ["Hora preferida para la reunión virtual", d.times || "Sin dato"], ["Día preferido para la reunión virtual", d.days || "Sin dato"],
   ];
   const quote = d.comment ? `<blockquote style="margin:0 0 16px;padding:14px 16px;background:${C.soft};border-radius:16px;font-size:16px;line-height:24px;color:${C.ink};white-space:pre-wrap;">${esc(d.comment)}</blockquote>` : "";
-  const body = quote + rows(r) + p("Respóndele en menos de 24 horas hábiles para agendar la reunión.") + button("Ver en el panel", "/admin/condominios");
+  const body = quote + rows(r) + p("Respóndele en menos de 24 horas hábiles con la fecha, la hora y el enlace de la videollamada (unos 30 minutos).") + button("Ver en el panel", "/admin/condominios");
   const reason = "Aviso interno del panel de Banana Burn.";
   return {
     subject, preheader: `${d.name}, ${d.role}. ${d.org}`,
@@ -716,17 +740,18 @@ export function condominioEquipo(d: CondoLeadMail): Email {
 export function condominioRecibido(d: { name: string; org: string }): Email {
   const n = firstName(d.name);
   const subject = "Recibimos tu solicitud de reunión";
-  const lead = `${n}, gracias por escribirnos. Te contactamos en menos de 24 horas hábiles para agendar la reunión sobre ${d.org}.`;
+  const lead = `${n}, gracias por escribirnos. En menos de 24 horas hábiles te confirmamos la reunión virtual sobre ${d.org} y te enviamos el enlace de la videollamada.`;
   const hero: Hero = { eyebrow: "Banana Burn para condominios", title: "Recibimos tu solicitud", lead: esc(lead), mascot: true };
   const body = eyebrow("Qué pasa ahora") + steps([
-    ["Te escribimos", "Coordinamos contigo el día y la hora de la reunión, por correo o WhatsApp."],
-    ["Reunión de 20 minutos", "Te mostramos la app por dentro y resolvemos las dudas de la administración."],
-    ["Primer mes gratis para todos", "Si deciden sumarse, cada residente usa la app completa el primer mes sin pagar nada."],
+    ["Te enviamos el enlace", "Te confirmamos el día y la hora y te enviamos el enlace de la videollamada."],
+    ["Reunión virtual de 30 minutos", "Te mostramos el sistema por dentro, cómo se implementa en el condominio y resolvemos las dudas."],
+    ["Primer mes gratis para todos", "Si deciden sumarse, te damos el enlace y el afiche con QR del condominio, y cada residente tiene el primer mes gratis con todo incluido."],
+    ["El condominio elige el plan", "Al terminar el mes, el condominio elige el plan que quiere pagar para sus residentes."],
   ]) + small(`¿Necesitas algo antes? Escríbenos a ${SUPPORT}.`);
   const reason = "Recibes este correo porque pediste una reunión desde la página de Banana Burn para condominios.";
   return {
     subject, preheader: lead,
     html: layout({ preheader: lead, hero, body, reason }),
-    text: textLayout([subject, "", lead, "", "Qué pasa ahora:", "1. Te escribimos para coordinar el día y la hora.", "2. Reunión de 20 minutos: te mostramos la app y resolvemos dudas.", "3. Si deciden sumarse, el primer mes es gratis para todos los residentes.", "", `¿Necesitas algo antes? ${SUPPORT}`], undefined, reason),
+    text: textLayout([subject, "", lead, "", "Qué pasa ahora:", "1. Te confirmamos el día y la hora y te enviamos el enlace de la videollamada.", "2. Reunión virtual de 30 minutos: te mostramos el sistema y cómo se implementa.", "3. Si deciden sumarse, el primer mes es gratis para todos los residentes.", "4. Al terminar el mes, el condominio elige el plan que quiere pagar para sus residentes.", "", `¿Necesitas algo antes? ${SUPPORT}`], undefined, reason),
   };
 }

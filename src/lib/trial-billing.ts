@@ -75,7 +75,7 @@ async function loadCard(db: SupabaseClient, userId: string): Promise<CardFull | 
 }
 
 /** ¿Tiene una suscripción pagada vigente? (la prueba o el cobro programado ya no aplican). */
-async function hasLivePaidSubscription(db: SupabaseClient, userId: string): Promise<boolean> {
+export async function hasLivePaidSubscription(db: SupabaseClient, userId: string): Promise<boolean> {
   const { data } = await db.from("subscriptions").select("plan,status,current_period_end,cancel_at_period_end").eq("user_id", userId).in("status", ["active", "trialing", "past_due", "canceled"]);
   return ((data as { plan: string | null; status: string; current_period_end: string | null; cancel_at_period_end: boolean }[] | null) ?? []).some((r) => profilePlanFor(r) !== "free");
 }
@@ -469,6 +469,14 @@ export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now
   if (provider === "tilopay" && !isTilopayConfigured()) { alert("cobro pendiente pero Tilopay no está configurado", { chargeId: row.id }); return "sin_config"; }
   // Nunca se cobra a un tester durante su mes de tester: la base aplaza el cobro al final y aquí no se intenta.
   if (await testerHold(db, row.user_id)) { log("cobro aplazado por mes de tester", { userId: row.user_id, chargeId: row.id }); return "aplazado"; }
+  // 0053: a un residente de un condominio afiliado no se le cobra su prueba individual (el acceso lo da el condominio).
+  // Normalmente el cobro ya quedó reemplazado al vincularse; esto cubre una carrera entre el enlace y el cobro.
+  const { data: condoGrant } = await db.from("comp_grants").select("id").eq("user_id", row.user_id).eq("source", "condominio").is("revoked_at", null).gt("expires_at", now.toISOString()).limit(1);
+  if (condoGrant?.length) {
+    await db.from("trial_charges").update({ status: "superseded", next_attempt_at: null, updated_at: nowIso() }).eq("id", row.id).eq("status", row.status).eq("attempts", row.attempts);
+    log("cobro reemplazado: residente de un condominio afiliado", { userId: row.user_id, chargeId: row.id });
+    return "reemplazado";
+  }
   // 0045: ninguna cuenta de la beta se cobra antes del fin de sus 7 días después del lanzamiento (BETA_GRACE_UNTIL).
   if (row.kind === "beta" && now.getTime() < Date.parse(BETA_GRACE_UNTIL)) {
     await db.from("trial_charges").update({ next_attempt_at: BETA_GRACE_UNTIL, updated_at: nowIso() }).eq("id", row.id).eq("status", row.status).eq("attempts", row.attempts);

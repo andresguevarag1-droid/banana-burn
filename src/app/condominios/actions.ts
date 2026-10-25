@@ -19,7 +19,7 @@ export async function requestMeeting(_: LeadState, fd: FormData): Promise<LeadSt
   // Campo trampa: los bots lo llenan. Se responde como si todo saliera bien y no se guarda nada.
   if (String(fd.get("website") ?? "").trim()) return { ok: true, message: "Recibido.", at: Date.now() };
   const f: Record<string, unknown> = {};
-  for (const k of ["name", "role", "org", "units", "location", "email", "phone", "days", "comment", "source"]) f[k] = fd.get(k);
+  for (const k of ["name", "role", "org", "units", "location", "email", "phone", "days", "portfolio", "comment", "source"]) f[k] = fd.get(k);
   f.times = fd.getAll("times");
   const parsed = parseLead(f);
   if (!parsed.ok) return fail(parsed.error);
@@ -34,17 +34,24 @@ export async function requestMeeting(_: LeadState, fd: FormData): Promise<LeadSt
     // Demo o entorno sin base: el formulario responde igual para poder revisarlo.
     return { ok: true, message: "Recibido (modo demo: no se guardó).", at: Date.now() };
   }
-  const { data, error } = await db.from("b2b_leads").insert({
+  const row = {
     name: lead.name, role: lead.role, org_name: lead.org, units: lead.units, location: lead.location, email: lead.email,
-    phone: lead.phone, times: lead.times, days: lead.days, comment: lead.comment, source: lead.source, ip_hash: keyPart(`b2b:${ip}`),
-  }).select("id").single();
+    phone: lead.phone, times: lead.times, days: lead.days, portfolio: lead.portfolio, comment: lead.comment, source: lead.source, ip_hash: keyPart(`b2b:${ip}`),
+  };
+  let { data, error } = await db.from("b2b_leads").insert(row).select("id").single();
+  // Sin 0053 (falta la columna portfolio): se guarda igual, con ese dato en el comentario.
+  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+    const { portfolio, ...rest } = row;
+    const comment = portfolio ? [rest.comment, `Varios condominios: ${portfolio}`].filter(Boolean).join("\n").slice(0, 1000) : rest.comment;
+    ({ data, error } = await db.from("b2b_leads").insert({ ...rest, comment }).select("id").single());
+  }
   if (error || !data) {
     logError("condominios", "insert_failed", { code: error?.code ?? "sin_fila" });
     return fail("No pudimos enviar tu solicitud. Intenta de nuevo o escríbenos a hola@bananaburn.app.");
   }
   await sendCondoLeadEmails({
     id: data.id as number, name: lead.name, role: roleLabel(lead.role), org: lead.org, units: lead.units, location: lead.location,
-    email: lead.email, phone: lead.phone, times: lead.times.map(timeLabel).join(", ") || null, days: lead.days, comment: lead.comment,
+    email: lead.email, phone: lead.phone, times: lead.times.map(timeLabel).join(", ") || null, days: lead.days, portfolio: lead.portfolio, comment: lead.comment,
   }).catch((e) => logError("condominios", "email_failed", { kind: errCode(e) }));
   return { ok: true, message: "Recibido.", at: Date.now() };
 }

@@ -25,7 +25,7 @@ export type LeadStatus = (typeof STATUSES)[number][0];
 
 export type LeadInput = {
   name: string; role: LeadRole; org: string; units: string | null; location: string | null; email: string;
-  phone: string | null; times: LeadTime[]; days: string | null; comment: string | null; source: string | null;
+  phone: string | null; times: LeadTime[]; days: string | null; portfolio: string | null; comment: string | null; source: string | null;
 };
 
 /** Texto plano de una línea: sin etiquetas ni caracteres de control, espacios colapsados y recortado a `max`. */
@@ -67,7 +67,7 @@ export function parseLead(f: Record<string, unknown>): { ok: true; lead: LeadInp
     lead: {
       name, role: roleRaw as LeadRole, org, email, phone: phone || null, times,
       units: clean(f.units, 40) || null, location: clean(f.location, 100) || null,
-      days: clean(f.days, 80) || null, comment: cleanMulti(f.comment, 1000) || null, source: clean(f.source, 60) || null,
+      days: clean(f.days, 80) || null, portfolio: clean(f.portfolio, 40) || null, comment: cleanMulti(f.comment, 1000) || null, source: clean(f.source, 60) || null,
     },
   };
 }

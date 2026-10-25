@@ -46,11 +46,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const items: NavItem[] = NAV.filter((n) => canSee(v.role, n.key)).map((n) => ({ ...n, badge: n.key === "comunidad" ? reports : n.key === "verificaciones" ? verifs : n.key === "soporte" ? tickets : undefined }));
 
   return (
-    <div className="min-h-dvh bg-[#FAF7EE]">
+    <div className="min-h-dvh bg-[#FAF7EE] print:bg-white">
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-white">Saltar al contenido</a>
-      {v.demo && <DemoBanner />}
+      {v.demo && <div className="print:hidden"><DemoBanner /></div>}
       <div className="flex">
-        <aside className="hidden md:flex sticky top-0 h-dvh w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-5" aria-label="Navegación del panel">
+        <aside className="hidden md:flex print:hidden! sticky top-0 h-dvh w-60 shrink-0 flex-col border-r border-line bg-white px-3 py-5" aria-label="Navegación del panel">
           <div className="flex items-center gap-2 px-2"><Logo href="/admin" small /><span className="chip h-5 bg-ink px-2 text-[11px] text-white">Admin</span></div>
           <AdminSidebarNav items={items} />
           <div className="mt-3 shrink-0 space-y-3 px-1">
@@ -70,7 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </aside>
 
         <div className="min-w-0 flex-1 overflow-x-clip">
-          <header className="sticky top-0 z-30 border-b border-line bg-white/95 px-4 backdrop-blur sm:px-8">
+          <header className="sticky top-0 z-30 border-b border-line bg-white/95 px-4 backdrop-blur sm:px-8 print:hidden">
             <div className="flex h-14 items-center gap-3 md:h-16">
               <Link href="/admin" aria-label="Banana Burn, panel de administración" className="grid size-11 shrink-0 place-items-center rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-banana/50 md:hidden">
                 <Image src="/icons/logo.svg" alt="" width={32} height={32} unoptimized className="size-8 rounded-[10px]" />
@@ -90,7 +90,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
             <AdminTabsNav items={items} />
           </header>
-          <main id="admin-main" className="max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+          <main id="admin-main" className="max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8 print:max-w-none print:p-0">{children}</main>
         </div>
       </div>
     </div>
