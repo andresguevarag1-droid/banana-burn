@@ -40,6 +40,7 @@ from (values
   (35,'0046_linkapp.sql',             exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'app_installed_at') and to_regprocedure('public.app_mark_installed()') is not null),
   (36,'0047_primeros_pasos.sql',      exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'learn_keys') and to_regprocedure('public.learn_mark(text)') is not null),
   (37,'0048_temporadas.sql',          to_regclass('public.seasons') is not null and to_regclass('public.season_intake') is not null and to_regclass('public.season_feedback') is not null and to_regclass('public.season_redemptions') is not null and to_regprocedure('public.admin_season_stats(text)') is not null and exists (select 1 from public.seasons where slug = 'temporada-running-1')),
-  (38,'0049_carreras.sql',            to_regclass('public.runs') is not null and exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'runs' and policyname = 'carreras: crear con plan'))
+  (38,'0049_carreras.sql',            to_regclass('public.runs') is not null and exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'runs' and policyname = 'carreras: crear con plan')),
+  (39,'0050_temporadas_tecnica.sql',  exists (select 1 from public.program_sessions where slug = 'temporada-running-1' and phase = 1 and day = 1 and exercises::text like '%ds:0417%'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

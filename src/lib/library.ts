@@ -179,6 +179,8 @@ export const LIB_ANIM: Readonly<Record<string, string>> = {
   "0381": "dbrearlunge", "0431": "stepup", "0597": "abductor", "0333": "kickback", "0430": "ohext", "0372": "preacher",
   "0194": "cableohext", "0318": "inclinecurl", "0687": "russiantwist", "0872": "revcrunch",
   "0175": "cablecrunch", "0274": "crunch", "1757": "dbslrdl", "0459": "flutter", "0688": "scappull", "0970": "bandpullup", "1774": "sideplankabd", "0228": "cablehipext", "3561": "bridgemarch",
+  // Temporadas (25/10)
+  "1373": "calfraise", "0417": "calfraise_db", "1379": "calfseated", "1377": "calfstretch", "0696": "nordic", "3645": "slbridge", "0979": "pallof", "0243": "cabletwist", "1775": "sideplankadd", "0235": "extrotcable", "0864": "extrotdb", "1016": "wristcurlband", "0994": "wristextband", "1410": "laterallunge", "3361": "skater", "2612": "jumprope", "1354": "mbslam", "0549": "kbswing", "0535": "kbclean", "1700": "pushpress", "0550": "kbthruster", "2142": "skierg", "1358": "sidestretch", "1363": "spinestretch", "1511": "hamstretch", "2329": "spinetwist",
 };
 export function animFor(e: Pick<LibEx, "id">): string | null {
   return LIB_ANIM[e.id] ?? null;

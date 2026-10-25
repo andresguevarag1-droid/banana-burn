@@ -68,18 +68,40 @@ export const VETTED_ANIM: Readonly<Record<string, string | null>> = {
   "ds:0710": "sideabd", // side hip abduction (Platanita)
   "ds:0872": "revcrunch", // reverse crunch (Platanita)
   "ds:0970": "bandpullup", // band assisted pull-up
-  "ds:0979": null, // band pallof press (la hoja generada no muestra el empuje: rechazada; Platanita sí tiene)
   "ds:1014": null, // band v-up (Platanita)
-  "ds:1358": null, // side lying floor stretch (Platanita)
-  "ds:1363": null, // spine stretch (Platanita)
   "ds:1422": null, // pelvic tilt into bridge (Platanita)
   "ds:1757": "dbslrdl", // dumbbell single leg deadlift (con mancuernas; slrdl es sin pesas)
   "ds:1774": "sideplankabd", // side bridge hip abduction (2.º intento; el 1.º salió con la cadera en el piso)
-  "ds:2329": null, // spine twist (Platanita)
   "ds:3006": null, // band seated hip abduction (Platanita)
   "ds:3147": null, // pelvic tilt (Platanita)
   "ds:3433": null, // swimmer kicks (Platanita)
   "ds:3561": "bridgemarch", // glute bridge march (también Platanita)
-  "ds:3645": null, // single leg bridge (Platanita)
   "ds:3667": null, // side lying hip adduction (Platanita)
+  // Temporadas (25/10): hojas propias revisadas cuadro por cuadro.
+  "ds:1373": "calfraise", // bodyweight standing calf raise
+  "ds:0417": "calfraise_db", // dumbbell standing calf raise
+  "ds:1379": "calfseated", // dumbbell seated calf raise
+  "ds:1377": "calfstretch", // calf stretch with hands against wall
+  "ds:0696": "nordic", // self assisted inverse leg curl (floor)
+  "ds:3645": "slbridge", // single leg bridge with outstretched leg
+  "ds:0979": "pallof", // band horizontal pallof press
+  "ds:0243": "cabletwist", // cable twist
+  "ds:1775": "sideplankadd", // side plank hip adduction
+  "ds:0235": "extrotcable", // cable standing shoulder external rotation
+  "ds:0864": "extrotdb", // dumbbell upright shoulder external rotation
+  "ds:1016": "wristcurlband", // band wrist curl
+  "ds:0994": "wristextband", // band reverse wrist curl
+  "ds:1410": "laterallunge", // barbell lateral lunge
+  "ds:3361": "skater", // skater hops
+  "ds:2612": "jumprope", // jump rope
+  "ds:1354": "mbslam", // medicine ball overhead slam
+  "ds:0549": "kbswing", // kettlebell swing
+  "ds:0535": "kbclean", // kettlebell hang clean
+  "ds:1700": "pushpress", // dumbbell push press
+  "ds:0550": "kbthruster", // kettlebell thruster
+  "ds:2142": "skierg", // ski ergometer
+  "ds:1358": "sidestretch", // side lying floor stretch
+  "ds:1363": "spinestretch", // spine stretch
+  "ds:1511": "hamstretch", // hamstring stretch
+  "ds:2329": "spinetwist", // spine twist
 };

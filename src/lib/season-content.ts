@@ -47,21 +47,23 @@ function running(): ProgramSession[] {
         x(pw ? "squat" : "goblet", pw ? 4 : 3, pw ? 4 : 8, pw ? 6 : 10, pw ? 150 : 90, { tempo: S, home: "goblet", note: (pw ? "Pesado y limpio: sube con intención." : "Baja controlado, cadera atrás.") + test }),
         x("rdl", 3, pw ? 5 : 8, pw ? 6 : 10, 120, { tempo: S, home: "dbrdl", note: "Isquiotibiales y glúteo: espalda neutra." }),
         x("bulgarian", 3, pw ? 6 : 8, pw ? 8 : 10, 90, { perSide: true, note: "Por lado. La rodilla sigue la línea del pie." }),
-        x("ds:0431", 3, 8, 10, 60, { perSide: true, note: "Por lado. Tobillo y rodilla firmes al subir; baja lento." }),
-        x(pw ? "ds:0586" : "glutebridge", pw ? 3 : 2, pw ? 6 : 10, pw ? 8 : 12, 90, pw ? { home: "slrdl", note: "Femorales: talones al glúteo y baja en 3 segundos." } : { note: "Aprieta el glúteo 2 segundos arriba." }),
+        x("ds:0417", 3, 12, 15, 60, { tempo: "2-1-2", home: "ds:1373", note: "Pantorrilla: sube completo y baja lento." }),
+        x("ds:1379", 3, 12, 15, 60, { tempo: "2-1-2", note: "Sóleo, rodilla doblada: protege Aquiles y tibia." }),
+        x(pw ? "ds:0696" : "ds:3645", pw ? 3 : 2, pw ? 4 : 8, pw ? 6 : 10, 90, pw ? { note: "Curl nórdico asistido: baja lo más lento que puedas." } : { perSide: true, note: "Por lado. Puente a una pierna: cadera nivelada." }),
         x("plank", 2, 30, 45, 45, { unit: "s" }),
       ]),
       ses(p, 2, "Potencia y zancada", "Saltos cortos y rápidos para una zancada más elástica. Calidad sobre cantidad.", [
-        x("jacks", 3, pw ? 40 : 30, pw ? 60 : 40, 60, { unit: "s", note: "Saltos cortos y rápidos sobre las puntas, rodillas casi rectas." }),
+        x("ds:2612", 3, pw ? 40 : 30, pw ? 60 : 40, 60, { unit: "s", note: "Saltos de tobillo cortos y rápidos, sin flexionar mucho la rodilla." }),
         x("jumpsquat", 3, pw ? 5 : 6, pw ? 6 : 8, 90, { note: "Aterriza suave y en silencio. Descansa completo." }),
-        x("lunge", 3, 6, 8, 60, { perSide: true, note: "Por lado. Paso largo y quédate firme 1 s abajo." }),
+        x("ds:3361", 3, 6, 8, 60, { perSide: true, note: "Por lado. Salto lateral y quédate firme 1 s al caer." }),
+        x("ds:0431", 3, 8, 10, 60, { perSide: true, note: "Por lado. Empuja con el pie de arriba, sin impulso del de abajo." }),
         x("slrdl", 2, 8, 10, 60, { perSide: true, note: "Por lado. Equilibrio y cadera estable." }),
-        x("ds:1774", 2, 8, 12, 45, { perSide: true, note: "Por lado. Cadera alta: protege rodilla y cadera." }),
+        x("ds:1775", 2, 15, 25, 45, { unit: "s", perSide: true, note: "Por lado. Aductores fuertes: protegen ingle y rodilla." }),
       ]),
       ses(p, 3, "Tren superior y core", "Brazos y tronco para mantener la postura en los últimos kilómetros. Piernas ligeras.", [
         x("pushup", 3, 8, 12, 60),
         x("dbrow", 3, 10, 12, 60, { perSide: true, note: "Por lado. Codo cerca del cuerpo." }),
-        x("planktap", 3, 16, 20, 45, { note: "Toques alternos. Cadera quieta: no dejes que gire." }),
+        x("ds:0979", 3, 10, 12, 45, { perSide: true, note: "Por lado. Pallof: no dejes que la banda te gire." }),
         x("ds:0276", 3, 8, 10, 45, { perSide: true, note: "Por lado. Espalda baja pegada al piso." }),
         x("ytw", 2, 8, 10, 45),
         x("carry", 3, 30, 40, 60, { unit: "m", note: "Camina erguido, hombros abajo." }),
@@ -69,8 +71,9 @@ function running(): ProgramSession[] {
       ses(p, 4, "Recuperación y movilidad", "Después de tu carrera larga: sangre a las piernas y movilidad, sin cansarte.", [
         x("ds:3561", 2, 10, 12, 30, { note: "Puente con marcha: cadera quieta." }),
         x("ds:0628", 2, 10, 12, 30, { perSide: true, note: "Por lado. Pasos cortos con la banda." }),
-        x("ds:0276", 2, 8, 10, 30, { perSide: true, note: "Por lado. Lento y respirando." }),
-        x("ytw", 1, 8, 10, 30, { note: "Sin peso: abre el pecho y respira lento." }),
+        x("ds:1377", 2, 30, 45, 0, { unit: "s", perSide: true, note: "Por lado. Pantorrilla contra la pared." }),
+        x("ds:1511", 2, 30, 45, 0, { unit: "s", perSide: true, note: "Por lado. Isquiotibiales, sin rebotar." }),
+        x("ds:1358", 1, 30, 45, 0, { unit: "s", perSide: true, note: "Por lado. Respira lento." }),
       ]),
     );
   }
@@ -86,26 +89,26 @@ function raquetas(): ProgramSession[] {
     out.push(
       ses(p, 1, "Fuerza de piernas", "Piernas fuertes para frenar, cambiar de dirección y aguantar el partido.", [
         x(pw ? "squat" : "goblet", pw ? 4 : 3, pw ? 5 : 8, pw ? 6 : 10, pw ? 150 : 90, { tempo: S, home: "goblet" }),
-        x("ds:0628", 3, 10, 12, 60, { perSide: true, note: "Por lado. Pasos laterales: frena con la cadera, no con la rodilla." }),
+        x("ds:1410", 3, 8, 10, 90, { perSide: true, home: "lunge", note: "Por lado. Zancada lateral: frena con la cadera, no con la rodilla." }),
         x("ds:0381", 3, 8, 10, 90, { perSide: true, note: "Por lado. Paso atrás largo y torso firme." }),
         x("ds:1757", 3, 8, 10, 60, { perSide: true, home: "slrdl", note: "Por lado. Equilibrio y glúteo." }),
-        x("ds:0431", 3, 8, 10, 60, { perSide: true, note: "Por lado. Tobillo y rodilla firmes para el desplazamiento." }),
+        x("ds:0417", 3, 12, 15, 60, { tempo: "2-1-2", home: "ds:1373", note: "Tobillos fuertes para el desplazamiento." }),
         x("ds:0705", 2, 25, 40, 45, { unit: "s", perSide: true, note: `${test}Por lado. Plancha lateral firme.` }),
       ]),
       ses(p, 2, "Potencia de rotación y agilidad", "El golpe nace en las piernas y el tronco. Rotaciones rápidas y saltos laterales.", [
-        x("lunge", 3, 6, 8, 60, { perSide: true, note: "Por lado. Paso largo y freno firme: como llegar a la bola." }),
+        x("ds:3361", 3, 6, 8, 60, { perSide: true, note: "Por lado. Salto lateral y freno firme: como llegar a la bola." }),
         x("jumpsquat", 3, pw ? 4 : 5, pw ? 6 : 8, 90, { note: "Explota hacia arriba y cae suave." }),
-        x("ds:0687", 3, 8, 10, 60, { perSide: true, note: "Por lado. Gira desde el tronco, controlado." }),
-        x("burpee", 3, 6, 8, 60, { note: "Todo el cuerpo, explosivo y con buena técnica." }),
-        x("jacks", 3, 30, 45, 45, { unit: "s", note: "Pies rápidos y ligeros." }),
-        x("planktap", 2, 16, 20, 45, { note: "Antirrotación: el tronco no se mueve." }),
+        x("ds:0243", 3, 8, 10, 60, { perSide: true, home: "ds:0687", note: "Por lado. Gira desde la cadera, brazos largos." }),
+        x("ds:1354", 3, 6, 8, 60, { note: "Slam con balón medicinal: todo el cuerpo." }),
+        x("ds:2612", 3, 30, 45, 45, { unit: "s", note: "Pies rápidos y ligeros." }),
+        x("ds:0979", 2, 10, 12, 45, { perSide: true, note: "Por lado. Antirrotación: el tronco no se mueve." }),
       ]),
       ses(p, 3, "Hombro, antebrazo y core", "Brazo sano: manguito rotador, escápula y muñeca. Piernas ligeras.", [
-        x("ytw", 3, 8, 10, 45, { note: "Manguito rotador y escápula: lento y sin peso." }),
-        x("facepull", 3, 12, 15, 60, { home: "bandpull", note: "Codos altos y abre al final: rotación externa del hombro." }),
+        x("ds:0235", 3, 12, 15, 45, { perSide: true, home: "ds:0864", note: "Por lado. Rotación externa: codo pegado y lento." }),
+        x("facepull", 3, 12, 15, 60, { home: "ytw" }),
         x("dbrow", 3, 10, 12, 60, { perSide: true }),
-        x("carry", 2, 30, 40, 45, { unit: "m", note: "Agarre firme: antebrazo y muñeca." }),
-        x("suitcase", 2, 20, 30, 45, { unit: "m", perSide: true, note: "Por lado. Muñeca recta y tronco firme. Cuida el codo." }),
+        x("ds:1016", 2, 15, 20, 45, { note: "Flexores de muñeca: rango completo." }),
+        x("ds:0994", 3, 12, 15, 45, { tempo: "1-0-4", note: "Extensores de muñeca: baja en 4 s. Cuida el codo." }),
         x("pushup", 2, 8, 12, 60),
         x("ds:0276", 2, 8, 10, 45, { perSide: true }),
       ]),
@@ -113,8 +116,8 @@ function raquetas(): ProgramSession[] {
         x("ds:0628", 2, 10, 12, 30, { perSide: true, note: "Por lado. Activa el glúteo medio." }),
         x("ds:3561", 2, 10, 12, 30),
         x("ytw", 2, 8, 10, 30, { note: "Escápulas atrás y abajo, sin peso." }),
-        x("ds:0276", 2, 6, 8, 20, { perSide: true, note: "Por lado. Con calma, respirando." }),
-        x("bearcrawl", 2, 20, 30, 30, { unit: "s", note: "Lento y controlado: hombro y cadera." }),
+        x("ds:2329", 2, 6, 8, 20, { perSide: true, note: "Por lado. Gira la columna con calma." }),
+        x("ds:1363", 2, 6, 8, 20, { tempo: "3-1-3" }),
       ]),
     );
   }
@@ -136,17 +139,17 @@ function cross(): ProgramSession[] {
         x("row", 3, 8, 10, 90, { home: "dbrow" }),
       ]),
       ses(p, 2, "Técnica y potencia", "Olímpicos y kettlebell con cargas ligeras: primero el movimiento, después el peso.", [
-        x("dbrdl", 4, 10, 12, 60, { note: "Bisagra de cadera, la base del swing: la cadera empuja." }),
-        x("frontsquat", 4, pw ? 3 : 5, pw ? 5 : 6, 90, { home: "goblet", note: "Posición de recepción de la cargada: codos altos. Técnica antes que carga." }),
-        x("dbpress", 3, 5, 8, 90, { note: "Estricto y bloquea arriba." }),
+        x("ds:0549", 4, 12, 15, 60, { note: "Swing: la cadera empuja, los brazos solo guían." }),
+        x("ds:0535", 4, pw ? 3 : 5, pw ? 5 : 6, 90, { perSide: true, note: "Por lado. Cargada colgante: técnica antes que carga." }),
+        x("ds:1700", 3, 5, 8, 90, { note: "Push press: impulso de piernas y bloquea arriba." }),
         x("jumpsquat", 3, 5, 6, 90, { note: "Escala: sentadilla rápida sin salto." }),
         x("ds:0688", 3, 6, 8, 60, { note: "Gimnásticos: solo escápulas, codos rectos." }),
       ]),
       ses(p, 3, "Acondicionamiento con escalas", "Circuito de 3 a 5 rondas a ritmo sostenible, con la escala que te deja moverte bien todo el tiempo.", [
-        x("goblet", 3, pw ? 10 : 8, pw ? 12 : 10, 30, { note: `Sentadilla goblet a ritmo.${bench}` }),
+        x("ds:0550", 3, pw ? 10 : 8, pw ? 12 : 10, 30, { home: "goblet", note: `Thruster con kettlebell. Escala: goblet sin empuje.${bench}` }),
         x("burpee", 3, pw ? 8 : 6, pw ? 12 : 8, 30, { note: "Escala: sin salto o con las manos en un banco." }),
-        x("mountain", 3, 30, 45, 30, { unit: "s", note: "A ritmo sostenible." }),
-        x("jacks", 3, 40, 60, 30, { unit: "s", note: "Ligeros y constantes." }),
+        x("ds:2142", 3, 30, 45, 30, { unit: "s", home: "jacks", note: "SkiErg. Escala: jumping jacks." }),
+        x("ds:2612", 3, 40, 60, 30, { unit: "s", note: "Saltos simples con cuerda." }),
         x(pw ? "kneeraise" : "legraisef", 3, 8, 12, 30, { home: "legraisef" }),
         x("carry", 3, 30, 40, 45, { unit: "m" }),
       ]),
@@ -155,7 +158,8 @@ function cross(): ProgramSession[] {
         x("pikepush", 3, 5, 8, 60, { note: "Progresión hacia el pino. Escala: manos en un banco." }),
         x("ds:0276", 3, 8, 10, 45, { perSide: true, note: "Por lado. Base para el hollow." }),
         x("plank", 2, 30, 45, 45, { unit: "s" }),
-        x("ds:3561", 2, 8, 10, 20, { note: "Cadera quieta, movilidad de cadera." }),
+        x("ds:1363", 2, 6, 8, 20, { tempo: "3-1-3" }),
+        x("ds:1377", 2, 30, 45, 0, { unit: "s", perSide: true }),
       ]),
     );
   }
@@ -181,7 +185,7 @@ const META_BASE = (sport: SportId): Omit<ProgramMeta, "experience"> => ({
     raquetas: ["Piernas que frenan y cambian de dirección", "Rotación potente desde la cadera", "Hombro, codo y muñeca más fuertes", "Prueba final para comparar con la semana 1"],
     cross: ["Sentadilla, peso muerto y press más fuertes", "Técnica de cargada y swing", "Más rondas en el mismo tiempo", "Benchmark en las semanas 1 y 8"],
   }[sport],
-  keyLifts: { running: ["squat", "rdl"], raquetas: ["squat", "ds:0431"], cross: ["squat", "deadlift"] }[sport],
+  keyLifts: { running: ["squat", "rdl"], raquetas: ["squat", "ds:0417"], cross: ["squat", "deadlift"] }[sport],
   nutrition: { mode: "recomp", proteinPerKg: 1.6, note: "Come para rendir: carbohidratos antes de tu deporte y proteína en cada comida." },
   previewExercise: { running: "rdl", raquetas: "goblet", cross: "goblet" }[sport],
 });
@@ -283,5 +287,20 @@ export function seasonSeedSql(): string {
   out.push("insert into public.seasons (slug, sport, number, starts_on, ends_on, enroll_until, price_minor) values");
   out.push(SEASONS_T1.map((s) => `  (${[q(s.slug), q(s.sport), s.number, q(s.startsOn), q(s.endsOn), q(s.enrollUntil), s.priceMinor].join(", ")})`).join(",\n"));
   out.push("on conflict (slug) do nothing;");
+  return out.join("\n") + "\n";
+}
+
+const jj = (v: unknown) => `$j$${JSON.stringify(v)}$j$::jsonb`;
+/**
+ * 0050: la Temporada 1 vuelve a sus ejercicios originales, ahora con animación propia (25/10). 0048 ya sembró la
+ * versión con sustitutos y su siembra no pisa nada; esto actualiza solo lo que nadie editó en el panel.
+ */
+export function seasonTechniqueSql(): string {
+  const out = ["-- 0050: Temporada 1 con sus ejercicios originales (cada uno con su animación de técnica revisada).",
+    "-- Generado con scripts/gen-temporadas-seed.ts --0050. Solo toca filas que nadie editó en el panel (updated_by nulo). Idempotente.", ""];
+  for (const p of SEASON_SEED) {
+    out.push(`update public.challenges_catalog set program = ${jj(p.meta)} where slug = ${q(p.slug)} and kind = 'programa' and updated_by is null;`);
+    for (const s of p.sessions) out.push(`update public.program_sessions set title = ${q(s.title)}, focus = ${q(s.focus)}, optional = ${!!s.optional}, exercises = ${jj(s.exercises)}, updated_at = now() where slug = ${q(p.slug)} and phase = ${s.phase} and day = ${s.day} and updated_by is null;`);
+  }
   return out.join("\n") + "\n";
 }

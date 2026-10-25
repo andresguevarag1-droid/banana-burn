@@ -2021,6 +2021,8 @@ set role authenticated; select bbtest.login('S');
 select bbtest.ok('0048: el panel lee el resumen sin identificar a nadie', (select (v->>'owners')::int = 1 and (v->'runs'->>'count')::int >= 0 and jsonb_array_length(v->'feedback') = 1 and jsonb_array_length(v->'intakes') = 1 and not (v::text ~ '0f0f0f0f') from (select public.admin_season_stats('temporada-running-1') v) x));
 reset role;
 
+select bbtest.ok('0050: la Temporada 1 trae sus ejercicios originales con animación', exists (select 1 from public.program_sessions where slug = 'temporada-running-1' and phase = 1 and day = 1 and exercises::text like '%ds:0417%'));
+
 -- ───────────── 21. Carreras con GPS (0049) ─────────────
 set role authenticated; select bbtest.login('A');
 select bbtest.ok('0049: guarda su carrera', bbtest.affected($q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s, pace_s_km, splits, track) values ('11111111-2222-4333-8444-555555555555', current_date, now() - interval '40 minutes', now() - interval '10 minutes', 5000, 1500, 300, '[{"km":1,"seconds":300}]', '[]') $q$) = 1);
