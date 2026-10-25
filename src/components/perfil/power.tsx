@@ -65,7 +65,7 @@ export function TierProgress({ points, compact = false }: { points: number; comp
         <span className="shrink-0 tabular-nums text-muted">{nf(points)} pts</span>
       </div>
       <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={nx ? `Avance a ${nx.tier.name}` : "Nivel máximo"}>
-        <div className="bar-fill h-full w-full origin-left rounded-full bg-[linear-gradient(90deg,#FFD60A,#F2A100)]" style={{ transform: `scaleX(${pct / 100})` }} />
+        <div className="bar-fill h-full w-full origin-left rounded-full bg-[linear-gradient(90deg,var(--color-banana),var(--color-ember))]" style={{ transform: `scaleX(${pct / 100})` }} />
       </div>
     </div>
   );

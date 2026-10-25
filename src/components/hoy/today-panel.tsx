@@ -35,8 +35,8 @@ function Ring({ v, size, stroke, track, color, children }: { v: number; size: nu
     <div className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="absolute inset-0 -rotate-90" aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c}
-          strokeDashoffset={c * (1 - clamp01(v, 0.001))} style={{ transition: "stroke-dashoffset var(--dur-fill) var(--ease-out)" }} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c}
+          strokeDashoffset={c * (1 - clamp01(v, 0.001))} style={{ stroke: color, transition: "stroke-dashoffset var(--dur-fill) var(--ease-out)" }} />
       </svg>
       <div className="relative text-center">{children}</div>
     </div>
@@ -142,7 +142,7 @@ function Numbers({ n, log, base }: { n: NutritionNumbers; log: DailyLog; base: M
 
       <div className="relative mt-4 grid items-center gap-5 sm:grid-cols-[auto_1fr]">
         <div className="flex items-center gap-4 sm:flex-col sm:gap-2">
-          <Ring v={kcal / t.kcal} size={152} stroke={14} track="rgb(255 255 255 / .1)" color={left < 0 ? "#F2A100" : "#FFD60A"}>
+          <Ring v={kcal / t.kcal} size={152} stroke={14} track="rgb(255 255 255 / .1)" color={left < 0 ? "var(--color-ember)" : "var(--color-banana)"}>
             <p className="text-[11px] font-bold text-white/75">{left >= 0 ? "Te quedan" : "Te pasaste"}</p>
             <p className="text-[34px] font-extrabold leading-none tabular-nums text-banana">{n0(Math.abs(left))}</p>
             <p className="mt-0.5 text-[11px] font-bold text-white/75">kcal</p>

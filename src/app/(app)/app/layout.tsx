@@ -35,6 +35,8 @@ import { NewsLauncher } from "@/components/novedades/news-dialog";
 import { getNewsState } from "@/lib/novedades-server";
 import { NEWS_STAFF_ROLES, newsView } from "@/lib/novedades";
 import { coachOf } from "@/lib/coaches";
+import { appThemeFor } from "@/lib/app-theme";
+import { ThemeRoot } from "@/components/theme/theme-root";
 import { getSex } from "@/lib/athlete";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +68,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Guía de la app: cambia con el plan, la prueba y el programa activo (lib/guide.ts).
   const px = live?.c.program.experience ?? null;
   const liveCoach = live ? coachOf(px) : null;
+  // Con Coach Platanita de coach (sus programas o una temporada con ella) la app entera se vuelve rosada.
+  const theme = appThemeFor(px?.coach ?? null);
   const guideInput: GuideInput = {
     name: v.name, plan: ent.plan, nutrition: ent.nutrition, cardStep,
     trial: trial ? { beta: Boolean(trial.beta), endsAt: trial.endsAt, daysLeft: trial.daysLeft } : null,
@@ -76,7 +80,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const news = newsView({ nutrition: ent.nutrition, plan: ent.plan, program: Boolean(live), staff: NEWS_STAFF_ROLES.includes(v.role) }, newsState);
   const banner = bannerFor({ betaLive: betaLive(), fromSubscription: ent.fromSubscription, cardStep, charge, trial: Boolean(trial) });
   return (
-    <div className="lg:pl-64" style={live ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
+    <div data-theme={theme ?? undefined} className={theme ? "lg:pl-64 min-h-dvh bg-paper bg-[radial-gradient(110%_420px_at_50%_0%,var(--color-plat-soft),transparent)] bg-no-repeat" : "lg:pl-64"} style={live && !theme ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
+      <ThemeRoot theme={theme} />
       {/* Programa activo: la app toma su color en una franja arriba (y en la cinta y los hábitos). */}
       {live && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-[var(--program)]" />}
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>

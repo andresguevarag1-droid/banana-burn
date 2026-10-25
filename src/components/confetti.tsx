@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 
-const COLORS = ["#FFD60A", "#F2A100", "#3F6B0E", "#8A6200", "#1B1505"];
+// Variables del tema: con Platanita salen en rosado (banana, ember y banana-ink se remapean).
+const COLORS = ["var(--color-banana)", "var(--color-ember)", "#3F6B0E", "var(--color-banana-ink)", "#1B1505"];
 
 /**
  * Confeti CSS ligero (sin librerías), solo para el cierre de un entreno: un momento raro, así que se permite el gusto.
