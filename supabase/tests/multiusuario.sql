@@ -2149,6 +2149,38 @@ select bbtest.zero('0052: soporte no las cambia por la API (lo hace el servidor)
 reset role;
 delete from public.b2b_leads;
 
+-- ───────────── 23. Condominios afiliados (0053): cada residente ve solo su vínculo, nadie escribe por la API ─────────────
+reset role;
+select bbtest.login(null);
+insert into public.condos (code, name, notes) values ('condo-uno', 'Condominio Uno', 'nota interna'), ('condo-dos', 'Condominio Dos', null);
+select bbtest.fails('0053: código con mayúsculas o espacios no entra', $q$ insert into public.condos (code, name) values ('Condo Uno', 'X Y') $q$, '23514');
+select bbtest.fails('0053: activo sin plan ni fecha no entra', $q$ insert into public.condos (code, name, status) values ('condo-tres', 'Tres', 'activo') $q$, '23514');
+insert into public.comp_grants (user_id, plan, starts_at, expires_at, source) values (bbtest.u('A'), 'completo', now(), now() + interval '30 days', 'condominio');
+select bbtest.fails('0053: una sola cortesía de condominio por cuenta', $q$ insert into public.comp_grants (user_id, plan, starts_at, expires_at, source) values (bbtest.u('A'), 'completo', now(), now() + interval '30 days', 'condominio') $q$, '23505');
+insert into public.condo_members (condo_id, user_id, grant_id) select c.id, bbtest.u('A'), (select g.id from public.comp_grants g where g.user_id = bbtest.u('A') and g.source = 'condominio') from public.condos c where c.code = 'condo-uno';
+insert into public.condo_members (condo_id, user_id) select c.id, bbtest.u('B') from public.condos c where c.code = 'condo-dos';
+select bbtest.fails('0053: una cuenta en un solo condominio', $q$ insert into public.condo_members (condo_id, user_id) select c.id, bbtest.u('A') from public.condos c where c.code = 'condo-dos' $q$, '23505');
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0053: el residente ve solo su vínculo', bbtest.num($q$ select 1 from public.condo_members $q$) = 1);
+select bbtest.ok('0053: el residente ve solo su condominio', bbtest.num($q$ select 1 from public.condos $q$) = 1 and bbtest.num($q$ select 1 from public.condos where code = 'condo-dos' $q$) = 0);
+select bbtest.fails('0053: el residente no lee las notas internas', $q$ select notes from public.condos $q$, '42501');
+select bbtest.fails('0053: el residente no se vincula por la API', $q$ insert into public.condo_members (condo_id, user_id) select id, auth.uid() from public.condos $q$, '42501');
+select bbtest.zero('0053: el residente no cambia su condominio', $q$ update public.condos set status = 'terminado' $q$);
+select bbtest.zero('0053: el residente no borra su vínculo', $q$ delete from public.condo_members $q$);
+select bbtest.fails('0053: el residente no se regala otra cortesía', $q$ insert into public.comp_grants (user_id, plan, starts_at, expires_at, source) values (auth.uid(), 'completo', now(), now() + interval '1 year', 'condominio') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('D');
+select bbtest.ok('0053: una cuenta sin condominio no ve ninguno ni ve residentes', bbtest.num($q$ select 1 from public.condos $q$) = 0 and bbtest.num($q$ select 1 from public.condo_members $q$) = 0);
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0053: anon no lee condominios', $q$ select 1 from public.condos $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.ok('0053: soporte ve condominios y residentes', bbtest.num($q$ select 1 from public.condos $q$) = 2 and bbtest.num($q$ select 1 from public.condo_members $q$) = 2);
+select bbtest.zero('0053: soporte no cambia condominios por la API (lo hace el servidor)', $q$ update public.condos set status = 'terminado' $q$);
+reset role;
+delete from public.condo_members; delete from public.condos; delete from public.comp_grants where source = 'condominio';
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

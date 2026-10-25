@@ -1,7 +1,8 @@
 // Banana Burn para condominios: página oculta para administraciones y juntas directivas (se envía por correo).
 // noindex y fuera del sitemap y de la navegación. ?c=<nombre> personaliza el saludo (texto plano, 60 caracteres).
 // Reglas de texto (libro de marca): tú, sin emojis, sin rayas largas ni cadenas con "·", sin hablar de inteligencia
-// artificial, cifras es-419 y nada que no sea verdad hoy (sin precios inventados para condominios ni reportes que no existen).
+// artificial, cifras es-419 y nada que no sea verdad hoy. Paga el condominio, no el residente: los precios públicos
+// solo aparecen como precio individual de referencia.
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -56,26 +57,27 @@ const FEATURES: [PhosphorIcon, string, string][] = [
 ];
 
 const STEPS: [string, string][] = [
-  ["Reunión de 20 minutos", "Te mostramos la app por dentro, vemos el gimnasio del condominio y resolvemos las dudas de la administración o la junta."],
-  ["Preparamos el acceso del condominio", "Activamos el acceso para los residentes y te damos el enlace para compartir."],
-  ["Los residentes se registran", "Cada uno entra desde su celular con el enlace del condominio. Toma 2 minutos y no necesita tarjeta."],
-  ["Primer mes gratis para todos", "Todos usan la app completa durante el primer mes. Después, el condominio decide con qué plan continúa."],
+  ["Reunión virtual de 30 minutos", "Por videollamada te mostramos la app por dentro, te explicamos cómo se implementa y resolvemos las dudas de la administración o la junta directiva."],
+  ["Activamos el condominio", "Creamos el acceso del condominio y te damos su enlace, un afiche con código QR para el gimnasio y un mensaje listo para el grupo de WhatsApp."],
+  ["Los residentes se registran", "Cada uno entra con el enlace del condominio desde su celular y tiene el primer mes gratis con todo incluido. Toma 2 minutos y no necesita tarjeta."],
+  ["El condominio elige su plan", "Al terminar el mes, el condominio elige el plan que quiere pagar para sus residentes. Los residentes no pagan nada por su cuenta."],
 ];
 
 const ADMIN_BENEFITS: [PhosphorIcon, string, string][] = [
   [Buildings, "Un amenity que suma valor", "El gimnasio deja de ser un cuarto con máquinas y se convierte en un servicio que los residentes usan y valoran."],
   [Users, "Residentes más contentos", "Cada persona tiene su propio plan, a su nivel y a su ritmo, desde el primer día."],
   [ShieldCheck, "Cero costo de personal", "No hay que contratar entrenadores ni coordinar horarios. La app acompaña a cada residente."],
-  [QrCode, "Arranque sencillo", "Te damos el material para anunciarlo: un afiche con código QR para el gimnasio y un mensaje listo para el grupo de WhatsApp."],
+  [QrCode, "Arranque sencillo", "Te damos el enlace del condominio, un afiche con código QR para el gimnasio y un mensaje listo para el grupo de WhatsApp."],
 ];
 
 const FAQ: [string, string][] = [
-  ["¿Tiene costo el primer mes?", "No. Durante el primer mes, todos los residentes del condominio usan Banana Burn completo sin pagar nada, ni la administración ni los residentes."],
+  ["¿Tiene costo el primer mes?", "No. Durante el primer mes, todos los residentes que se registran con el enlace del condominio usan Banana Burn completo, con entreno y nutrición. No paga la administración ni pagan los residentes, y nadie necesita tarjeta."],
+  ["¿Quién paga después?", "El condominio. Al terminar el mes gratis, la administración elige el plan para sus residentes y lo paga directamente con nosotros. Los residentes no pagan de forma individual."],
   ["¿Qué necesitan los residentes?", "Solo su celular. Banana Burn es una LinkApp: se abre desde el navegador y se instala en la pantalla de inicio en segundos, sin tiendas de apps."],
   ["¿Sirve en el gimnasio del condominio y en casa?", "Sí. Al registrarse, cada residente indica con qué equipo cuenta y el plan se arma con eso: máquinas y pesas del gimnasio, mancuernas o bandas en casa, o sin equipo."],
-  ["¿Qué pasa después del mes gratis?", `El condominio decide con qué plan continúa: Entreno (${money(ENTRENO.price.mes)} al mes por residente) o Entreno + Nutrición (${money(COMPLETO.price.mes)} al mes por residente). Las condiciones por volumen las definimos juntos en la reunión.`],
+  ["¿Qué pasa después del mes gratis?", `El condominio decide. Puede elegir ${ENTRENO.name} o ${COMPLETO.name} para todos sus residentes, con un precio por residente según el volumen que definimos en la reunión. Si el condominio no continúa, cada residente puede seguir con un plan individual o dejar de usar la app, sin ningún cobro automático.`],
   ["¿Hay contrato de permanencia?", "No pedimos permanencia, igual que en los planes normales. Los detalles del acuerdo con el condominio los dejamos por escrito en la reunión."],
-  ["¿Qué pasa con los datos de los residentes?", "Los datos de cada residente son privados: su peso, sus entrenos y su comida solo los ve esa persona. La administración no tiene acceso a información personal."],
+  ["¿Qué pasa con los datos de los residentes?", "Los datos de cada residente son privados: su peso, sus entrenos y su comida solo los ve esa persona. La administración solo recibe cuántos residentes se registraron y cuántos entrenaron en la semana, nunca información personal."],
   ["¿Para qué edades sirve?", "Para personas adultas de cualquier nivel, desde quien nunca ha entrenado hasta quien ya va al gimnasio. Cada plan se ajusta a su nivel."],
 ];
 
@@ -99,7 +101,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
       <header className="sticky top-0 z-30 border-b border-line/70 bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Logo href="/condominios" compact />
-          <a href={CTA} className="btn-primary h-11! px-4! text-sm! sm:px-5!">Agendar una reunión</a>
+          <a href={CTA} className="btn-primary h-11! px-4! text-sm! sm:px-5!">Agendar una reunión virtual</a>
         </div>
       </header>
 
@@ -117,11 +119,11 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
                 Banana Burn convierte el gimnasio del condominio en el amenity más usado: cada residente recibe su plan, la técnica de cada ejercicio y un coach 24/7 en su celular.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <a href={CTA} className="btn-primary h-14! px-7! text-base!">Agendar una reunión <ArrowRight weight="bold" className="size-5" /></a>
+                <a href={CTA} className="btn-primary h-14! px-7! text-base!">Agendar una reunión virtual <ArrowRight weight="bold" className="size-5" /></a>
                 <a href="#como-funciona" className="tap inline-flex h-12 items-center justify-center gap-1 px-2 font-bold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">Ver cómo funciona</a>
               </div>
               <ul className="mt-7 grid gap-2.5 text-[15px] font-semibold text-ink sm:grid-cols-2">
-                {["Primer mes gratis para todos los residentes", "Sin costo para la administración ese mes", "Funciona en el celular, sin instalar nada raro", "En el gimnasio del condominio o en casa"].map((t) => (
+                {["Primer mes gratis para todos los residentes", "Después, el condominio elige el plan y lo paga", "Los residentes no pagan ni usan tarjeta", "En el gimnasio del condominio o en casa"].map((t) => (
                   <li key={t} className="flex items-start gap-2"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3" /></span>{t}</li>
                 ))}
               </ul>
@@ -197,7 +199,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
                   </li>
                 ))}
               </ol>
-              <a href={CTA} className="btn-primary mt-8 h-13! px-6!">Agendar una reunión <ArrowRight weight="bold" className="size-5" /></a>
+              <a href={CTA} className="btn-primary mt-8 h-13! px-6!">Agendar una reunión virtual <ArrowRight weight="bold" className="size-5" /></a>
             </div>
             <Photo src={IMG.reunion} alt="Coach Banana conversa con la administradora del condominio en el lobby" sizes="(min-width: 1024px) 540px, 100vw" className="lg:mt-10" />
           </div>
@@ -228,7 +230,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
           <div className="rounded-[2rem] bg-cream p-6 ring-1 ring-line sm:p-10">
             <div className="max-w-3xl">
               <Eyebrow>Inversión</Eyebrow>
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">El primer mes es gratis para todos. Después, el condominio decide.</h2>
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">El primer mes es gratis para todos. Después, paga el condominio.</h2>
             </div>
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="rounded-[1.5rem] bg-banana p-6">
@@ -238,13 +240,14 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
               </div>
               {[ENTRENO, COMPLETO].map((p) => (
                 <div key={p.id} className="rounded-[1.5rem] bg-white p-6 ring-1 ring-line">
-                  <p className="text-sm font-bold text-muted">Después, si eligen</p>
+                  <p className="text-sm font-bold text-muted">Opción para el condominio</p>
                   <p className="mt-1 text-xl font-extrabold text-ink">{p.name}</p>
-                  <p className="mt-2"><span className="text-4xl font-extrabold tabular-nums text-ink">{money(p.price.mes)}</span> <span className="text-muted">al mes por residente</span></p>
+                  <p className="mt-2 font-semibold text-ink">{p.id === "completo" ? "Plan de entreno y plan de comidas para cada residente." : "Plan de entreno, técnica y Coach Banana para cada residente."}</p>
+                  <p className="mt-3 text-sm text-muted">Precio por residente según el volumen. Precio individual de referencia: {money(p.price.mes)} al mes.</p>
                 </div>
               ))}
             </div>
-            <p className="mt-6 flex items-start gap-2 text-[15px] text-ink"><UsersThree weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" />Las condiciones por volumen para el condominio las definimos juntos en la reunión.</p>
+            <p className="mt-6 flex items-start gap-2 text-[15px] text-ink"><UsersThree weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" />El condominio elige el plan y lo paga para sus residentes. El precio por residente según el volumen lo definimos juntos en la reunión virtual.</p>
           </div>
         </section>
 
@@ -262,12 +265,12 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
         <section id="reunion" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-20 pt-20 sm:px-6 sm:pt-24">
           <div className="grid gap-8 rounded-[2rem] bg-banana p-6 sm:p-10 lg:grid-cols-[.9fr_1.1fr] lg:gap-12">
             <div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">Agenda una reunión de 20 minutos.</h2>
-              <p className="mt-4 text-lg text-ink/85 text-pretty">Déjanos tus datos y te contactamos en menos de 24 horas hábiles para coordinar el día y la hora. Puede ser en el condominio o por videollamada.</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">Agenda una reunión virtual de 30 minutos.</h2>
+              <p className="mt-4 text-lg text-ink/85 text-pretty">Déjanos tus datos y el día y la hora que prefieres. Te confirmamos en menos de 24 horas hábiles y te enviamos el enlace de la videollamada.</p>
               <ul className="mt-6 space-y-3 font-semibold text-ink">
-                <li className="flex gap-2.5"><DeviceMobile weight="duotone" className="size-6 shrink-0" />Te mostramos la app por dentro</li>
+                <li className="flex gap-2.5"><DeviceMobile weight="duotone" className="size-6 shrink-0" />Te mostramos el sistema y cómo se implementa</li>
                 <li className="flex gap-2.5"><Barbell weight="duotone" className="size-6 shrink-0" />Vemos cómo aprovechar el gimnasio que ya tienen</li>
-                <li className="flex gap-2.5"><WhatsappLogo weight="duotone" className="size-6 shrink-0" />Te dejamos el material para anunciarlo a los residentes</li>
+                <li className="flex gap-2.5"><WhatsappLogo weight="duotone" className="size-6 shrink-0" />Te explicamos el enlace, el afiche con QR y el mensaje para los residentes</li>
               </ul>
               <p className="mt-6 text-sm text-ink/75">¿Prefieres escribirnos? <a href="mailto:hola@bananaburn.app?subject=Banana%20Burn%20para%20condominios" className="font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a></p>
             </div>
