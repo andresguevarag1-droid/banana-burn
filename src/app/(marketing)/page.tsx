@@ -11,6 +11,7 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq, Marker } from "./parts";
 import { StickyCta } from "./sticky-cta";
 import { InstallSection } from "./install-section";
+import { LearnSection, OfferBand, PlatanitaSection, RunSection, SeasonsSection } from "./new-sections";
 import { AppTour } from "./app-tour";
 import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
@@ -69,6 +70,9 @@ const PILLARS: { n: string; t: string; d: string }[] = [
   { n: "03", t: "Proteína suficiente, con tu comida", d: "Sin proteína no hay músculo. Con Entreno + Nutrición sabes cuánta comer y la registras con la comida latina que ya comes." },
 ];
 
+/** Lo que hace la app, entendido en 5 segundos. */
+const HERO_POINTS = ["Te dice qué entrenar hoy y con cuánto peso", "Te enseña cada ejercicio, aunque nunca hayas entrenado", "Se ajusta sola a tu progreso"];
+
 const STEPS: [string, string][] = [
   ["Cuéntanos de dónde vienes", "Tu peso, tu meta, cuántos días puedes entrenar y con qué equipo. Toma 2 minutos."],
   ["Recibe tu rutina de recomposición", "Tu plan de la semana, con cada ejercicio, series, repeticiones y el peso que te toca."],
@@ -115,6 +119,11 @@ export default function Landing() {
             <p className="mt-6 max-w-[34rem] text-lg sm:text-xl leading-relaxed text-ink/85 text-pretty">
               Banana Burn es <b className="text-ink">tu entrenador personal en el celular</b>. Una rutina de recomposición corporal para personas que bajaron rápido de peso: recuperas firmeza y fuerza mientras sigues bajando grasa.
             </p>
+            <ul className="mt-6 grid gap-2">
+              {HERO_POINTS.map((t) => (
+                <li key={t} className="flex items-center gap-2.5 text-[17px] font-bold text-ink"><span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3.5" /></span>{t}</li>
+              ))}
+            </ul>
             <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link href={SIGNUP} data-cta="hero" className="pressable inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
               <a href="#instalar" data-cta="hero-instalar" className="tap inline-flex items-center gap-2 font-bold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink"><DeviceMobile weight="bold" aria-hidden className="size-5" />Instálala en tu celular</a>
@@ -131,6 +140,23 @@ export default function Landing() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* 2. CÓMO FUNCIONA: en 3 pasos, justo después del hero */}
+      <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
+        <div className="flex items-end justify-between gap-4">
+          <h2 id="como-t" className={`${H2} max-w-3xl`}>Empiezas hoy, en 2 minutos.</h2>
+          <Image src={POSE.saluda} alt="Coach Banana saludando con el celular en la mano" width={360} height={360} sizes="180px" className="-mb-6 w-28 shrink-0 sm:w-44" />
+        </div>
+        <ol className="mt-10 grid gap-4 lg:grid-cols-3">
+          {STEPS.map(([t, d], i) => (
+            <li key={t} className="rounded-[1.75rem] bg-cream p-6 sm:p-7">
+              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-ink text-xl font-extrabold tabular-nums text-banana">{i + 1}</span>
+              <h3 className="mt-4 text-xl font-extrabold text-ink text-balance">{t}</h3>
+              <p className="mt-2 leading-relaxed text-muted text-pretty">{d}</p>
+            </li>
+          ))}
+        </ol>
       </section>
 
       {/* 2. DOLOR: lo que vive quien bajó rápido */}
@@ -197,6 +223,8 @@ export default function Landing() {
         </dl>
       </section>
 
+      <LearnSection />
+
       {/* 5. ENTRENADOR VS APP */}
       <section aria-labelledby="entrenador" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
         <div className="grid items-center gap-8 lg:grid-cols-[1fr_1fr] lg:gap-14">
@@ -217,22 +245,8 @@ export default function Landing() {
 
       <Compare />
 
-      {/* 6. CÓMO FUNCIONA */}
-      <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 id="como-t" className={`${H2} max-w-3xl`}>Empiezas hoy, en 2 minutos.</h2>
-          <Image src={POSE.saluda} alt="Coach Banana saludando con el celular en la mano" width={360} height={360} sizes="180px" className="-mb-6 w-28 shrink-0 sm:w-44" />
-        </div>
-        <ol className="mt-10 grid gap-4 lg:grid-cols-3">
-          {STEPS.map(([t, d], i) => (
-            <li key={t} className="rounded-[1.75rem] bg-cream p-6 sm:p-7">
-              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-ink text-xl font-extrabold tabular-nums text-banana">{i + 1}</span>
-              <h3 className="mt-4 text-xl font-extrabold text-ink text-balance">{t}</h3>
-              <p className="mt-2 leading-relaxed text-muted text-pretty">{d}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <SeasonsSection />
+      <RunSection />
 
       {/* 7. COACH BANANA: el mono que te acompaña */}
       <section aria-labelledby="mono" className="pt-24">
@@ -250,6 +264,8 @@ export default function Landing() {
         </ul>
         <p className="mx-auto mt-3 max-w-6xl px-4 text-xs text-faint sm:px-6">Escenas ilustrativas creadas para mostrar cómo te acompaña Coach Banana.</p>
       </section>
+
+      <PlatanitaSection />
 
       {/* 8. PARA QUIÉN */}
       <section aria-labelledby="para-quien" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
@@ -289,6 +305,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <OfferBand />
 
       {/* 10. PRECIOS */}
       <section id="precios" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">

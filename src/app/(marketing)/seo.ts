@@ -84,7 +84,7 @@ export function appJsonLd() {
     areaServed: AREA,
     image: `${SITE_URL}/brand/mascota.jpg`,
     publisher: { "@id": `${SITE_URL}/#org` },
-    featureList: ["Rutina de gym, casa o sin equipo ajustada a tu nivel", "Peso sugerido para cada serie con progresión automática", "Técnica animada de cada ejercicio", "Coach Banana resuelve tus dudas en español", "Registro de agua, pasos y sueño", "Retos gratis, rachas, niveles y comunidad", "Plan Entreno + Nutrición: calorías y macros, registro de comidas con comida latina y recetas", "Plan Entreno + Nutrición: Banana Shield, programa para quienes usan Ozempic, Wegovy o Mounjaro", "Retos Premium con pago único, aparte del plan"],
+    featureList: ["Rutina de gym, casa o sin equipo ajustada a tu nivel", "Peso sugerido para cada serie con progresión automática", "Técnica animada de cada ejercicio", "Coach Banana resuelve tus dudas en español", "Registro de agua, pasos y sueño", "Retos gratis, rachas, niveles y comunidad", "Plan Entreno + Nutrición: calorías y macros, registro de comidas con comida latina y recetas", "Plan Entreno + Nutrición: Banana Shield, programa para quienes usan Ozempic, Wegovy o Mounjaro", "Retos Premium con pago único, aparte del plan", "Programas para chicas con Coach Platanita", "LinkApp: se instala en la pantalla de inicio sin tiendas de apps, con recordatorios"],
     offers,
   };
 }

@@ -16,7 +16,7 @@ export function GET() {
 
 > App de recomposición corporal en español que reemplaza al entrenador personal, pensada para personas que bajaron rápido de peso. Rutina de gym, casa o sin equipo ajustada a tu nivel, el peso sugerido de cada serie, técnica animada, Coach Banana para tus dudas y nutrición con comida latina. ${o.llms}
 
-Banana Burn es una app web (PWA) que se instala desde el navegador en iPhone, Android o computadora. La opera Atlas Resources SRL desde San José, Costa Rica, para usuarios de México, Centroamérica, el Caribe, Sudamérica, hispanos en Estados Unidos y España.
+Banana Burn es una LinkApp (marca registrada en Costa Rica, usada con permiso): una app que se abre desde el navegador y se instala en la pantalla de inicio de iPhone o Android en segundos, sin tiendas de apps. Instalada, envía recordatorios de entreno y avisos del coach. La opera Atlas Resources SRL desde San José, Costa Rica, para usuarios de México, Centroamérica, el Caribe, Sudamérica, hispanos en Estados Unidos y España.
 
 ## Qué hace
 - Arma tu rutina del día según tu objetivo (bajar grasa, recomposición o ganar fuerza), días por semana (3 a 6), minutos por sesión (15 a 60), equipo (gym, casa o sin equipo) y nivel.
@@ -25,6 +25,8 @@ Banana Burn es una app web (PWA) que se instala desde el navegador en iPhone, An
 - Coach Banana responde tus dudas en español y conoce tu plan, tu peso y tus entrenos.
 - Registro de agua, pasos y sueño; progreso de peso, medidas, fuerza y fotos.
 - Retos gratis, rachas, niveles y comunidad.
+- Programas para chicas con Coach Platanita (por ejemplo Pilates en casa 30 días), que guía la técnica y responde en el chat.
+- Primer mes del plan mensual con 50 % de descuento si la persona deja su tarjeta lista antes de su primer cobro (una vez por cuenta).
 - En el plan Entreno + Nutrición: metas de calorías y macros, registro de comidas con platos típicos de Latinoamérica, recetas y ajuste semanal según el peso real.
 - En el plan Entreno + Nutrición: Banana Shield, programa para quienes usan medicamentos GLP-1 (Ozempic, Wegovy, Mounjaro) que prioriza fuerza y proteína para cuidar el músculo. No da indicaciones sobre el medicamento.
 
