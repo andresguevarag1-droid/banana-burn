@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email";
 import { safeNext as toSafePath } from "@/lib/security/redirect";
 import { isSupabaseConfigured } from "@/lib/env";
-import { attributeReferral } from "@/lib/referrals-server";
+import { attributeNewAccount } from "@/lib/attribution-server";
 
 /** Tipos de enlace de correo aceptados (lista cerrada) → tipo de verifyOtp. */
 const OTP_TYPES = { email: "email", magiclink: "email", signup: "signup", recovery: "recovery", email_change: "email_change", invite: "invite" } as const;
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (!error) {
       if (data.user && (otpType === "signup" || otpType === "invite")) {
         await sendWelcomeEmail({ userId: data.user.id, to: data.user.email ?? undefined }).catch(() => {});
-        await attributeReferral(data.user.id, data.user.email); // invitación: solo cuentas nuevas (la base lo valida)
+        await attributeNewAccount(data.user.id, data.user.email); // invitación: solo cuentas nuevas (la base lo valida)
       }
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     if (!error) {
       if (data.user && !recovery) {
         await sendWelcomeEmail({ userId: data.user.id, to: data.user.email ?? undefined }).catch(() => {});
-        await attributeReferral(data.user.id, data.user.email); // Google o enlace de correo: la base solo atribuye cuentas de menos de 72 h
+        await attributeNewAccount(data.user.id, data.user.email); // Google o enlace de correo: la base solo atribuye cuentas de menos de 72 h
       }
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
