@@ -2,25 +2,25 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Barbell, BowlFood, Check, CreditCard, DeviceMobile, Lock, Scales, Scroll, ShieldCheck, Syringe, X,
+  ArrowCounterClockwise, ArrowRight, Barbell, Check, CreditCard, House, Lock, Scales, Scroll, ShieldCheck, Syringe, Timer,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
 import { PLANS, annualSavingPct } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
-import { Faq, Marker } from "./parts";
+import { Faq } from "./parts";
 import { StickyCta } from "./sticky-cta";
 import { InstallSection } from "./install-section";
-import { LearnSection, OfferBand, PlatanitaSection, RunSection, SeasonsSection } from "./new-sections";
+import { ExtrasSection, LearnSection, OfferBand, PlatanitaSection } from "./new-sections";
 import { AppTour } from "./app-tour";
 import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
-import { ANIMATED_TECHNIQUES, Compare, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, faq } from "./content";
+import { ANIMATED_TECHNIQUES, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, homeFaq } from "./content";
 import { offer } from "@/lib/offer";
 import { LIB_COUNT } from "@/lib/library";
 
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
-const CTA = "Empezar gratis";
+const CTA = "Crear mi plan gratis";
 
 const TITLE = "Banana Burn: reconstruye tu cuerpo después de bajar de peso";
 /** Descripción según la fecha (offer.ts): la prueba sin tarjeta hasta el fin de la beta, con tarjeta después. */
@@ -47,22 +47,6 @@ const POSE = {
   saluda: `${UGC_BASE}hf_20261023_061412_513c4e96-cb2a-46a6-ad65-6065ac48bb64.png`,
 };
 
-/** Escenas ilustrativas (persona real + Coach Banana en caricatura). No son clientes ni testimonios. */
-const SCENES: [string, string][] = [
-  ["hf_20261022_153719_0be6b29d-ae57-4937-a122-798fdf72baa4", "En el gym: te muestra la técnica de cada ejercicio."],
-  ["hf_20261022_155001_e82f1d0e-5f20-4eba-9039-6f62a9d79152", "En la casa: sin equipo y sin excusas."],
-  ["hf_20261022_155042_171fc15e-6a39-489f-a615-de397a0bcec2", "A cualquier edad: cargas a tu nivel."],
-  ["hf_20261022_155003_11f3b250-6cbe-4354-ab64-49e1d65832ec", "Cada récord se celebra."],
-];
-
-/** Lo que vive quien bajó rápido de peso. */
-const PAINS: [string, string][] = [
-  ["La báscula bajó, pero te ves flácido.", "Bajaste kilos y aun así no te gusta lo que ves en el espejo. Falta firmeza."],
-  ["Perdiste fuerza y energía.", "Subir escaleras o cargar las bolsas cuesta más que antes. Eso también es músculo que se fue."],
-  ["Te da miedo recuperar todo.", "Sin músculo, tu cuerpo gasta menos y es más fácil volver a subir."],
-  ["Un entrenador cuesta demasiado.", "Pagar sesiones cada semana no está en el presupuesto, y en internet nadie te dice qué hacer a ti."],
-];
-
 /** Los tres pilares del método. */
 const PILLARS: { n: string; t: string; d: string }[] = [
   { n: "01", t: "Fuerza que sube cada semana", d: "Cada serie trae el peso exacto. Si completas tus repeticiones, la próxima vez sube. Así le pides al cuerpo que reconstruya músculo." },
@@ -71,7 +55,7 @@ const PILLARS: { n: string; t: string; d: string }[] = [
 ];
 
 /** Lo que hace la app, entendido en 5 segundos. */
-const HERO_POINTS = ["Te dice qué entrenar hoy y con cuánto peso", "Te enseña cada ejercicio, aunque nunca hayas entrenado", "Se ajusta sola a tu progreso"];
+const HERO_TRUST = [`${TRIAL_DAYS} días gratis`, "Sin tarjeta", "Cancelas cuando quieras", "Te enseñamos desde cero"];
 
 const STEPS: [string, string][] = [
   ["Cuéntanos de dónde vienes", "Tu peso, tu meta, cuántos días puedes entrenar y con qué equipo. Toma 2 minutos."],
@@ -80,10 +64,10 @@ const STEPS: [string, string][] = [
 ];
 
 const FOR_WHO: { icon: typeof Syringe; t: string; d: string }[] = [
-  { icon: Syringe, t: "Usaste Ozempic o Mounjaro", d: `Con ${GLP1} se baja rápido y el músculo sufre. Banana Shield lo protege.` },
-  { icon: Scales, t: "Hiciste una dieta muy estricta", d: "Bajaste mucho en poco tiempo y quieres verte firme, no solo más delgado." },
-  { icon: Barbell, t: "Nunca has entrenado fuerza", d: "Empiezas desde cero, con técnica guiada y cargas a tu nivel." },
-  { icon: BowlFood, t: "Quieres mantener lo que lograste", d: "El músculo es lo que te ayuda a no recuperar lo que tanto te costó bajar." },
+  { icon: Scales, t: "Estás bajando de peso rápido", d: "Con dieta o con Ozempic o Mounjaro. Quieres que lo que bajes sea grasa, no tu músculo." },
+  { icon: Barbell, t: "Nunca has entrenado", d: "No sabes qué hacer en el gym ni cuánto peso usar. Te lo enseñamos paso a paso." },
+  { icon: Timer, t: "Tienes poco tiempo", d: "Sesiones de 15 a 60 minutos, y entrenos exprés de 10 minutos para los días apretados." },
+  { icon: House, t: "Entrenas en casa o en el gym", d: "El plan usa lo que tienes: gym, mancuernas, bandas o sin equipo." },
 ];
 
 const risk = (): [typeof Lock, string][] => [
@@ -98,122 +82,93 @@ const LEAD = "mt-5 text-lg sm:text-xl text-muted leading-relaxed text-pretty max
 
 export default function Landing() {
   const o = offer();
-  const faqItems = faq();
+  const faqItems = homeFaq();
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(appJsonLd())} />
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(orgJsonLd())} />
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(faqItems))} />
 
-      {/* 1. HERO: qué es, para quién y la promesa, con la app y el mono a la vista */}
+      {/* 1. HERO: en 5 segundos, qué es, para quién y qué hacer. Un solo botón principal; la ayuda de instalación va más abajo. */}
       <section id="hero" className="relative overflow-hidden bg-banana">
         <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 size-[28rem] rounded-full bg-white/25 blur-3xl" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:pb-20 lg:pt-16">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 pb-12 pt-6 sm:px-6 sm:pt-12 lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:pb-20 lg:pt-16">
           <div className="animate-rise">
-            <p className="inline-flex items-center gap-2 rounded-full bg-ink px-3.5 py-1.5 text-sm font-bold text-banana">
-              <Barbell weight="duotone" aria-hidden className="size-4" />Recomposición corporal
+            <p className="inline-flex items-center gap-2 rounded-full bg-ink px-3.5 py-1.5 text-[13px] font-bold text-banana sm:text-sm">
+              <Barbell weight="duotone" aria-hidden className="size-4" />Para quien bajó de peso rápido
             </p>
-            <h1 className="mt-5 text-[2.75rem] leading-[1.02] sm:text-6xl lg:text-[4.25rem] font-extrabold tracking-[-0.04em] text-ink text-balance">
-              Bajaste de peso. Ahora reconstruye tu cuerpo.
+            <h1 className="mt-4 text-[2.5rem] leading-[1.03] sm:text-6xl lg:text-[4.25rem] font-extrabold tracking-[-0.04em] text-ink text-balance">
+              Bajaste de peso. Ahora no pierdas tu músculo.
             </h1>
-            <p className="mt-6 max-w-[34rem] text-lg sm:text-xl leading-relaxed text-ink/85 text-pretty">
-              Banana Burn es <b className="text-ink">tu entrenador personal en el celular</b>. Una rutina de recomposición corporal para personas que bajaron rápido de peso: recuperas firmeza y fuerza mientras sigues bajando grasa.
+            <p className="mt-4 max-w-[34rem] text-[17px] sm:text-xl leading-relaxed text-ink/85 text-pretty">
+              <b className="text-ink">Tu entrenador personal en el celular.</b> Te dice qué entrenar hoy, con cuánto peso y cómo se hace cada ejercicio, aunque nunca hayas entrenado.
             </p>
-            <ul className="mt-6 grid gap-2">
-              {HERO_POINTS.map((t) => (
-                <li key={t} className="flex items-center gap-2.5 text-[17px] font-bold text-ink"><span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3.5" /></span>{t}</li>
-              ))}
-            </ul>
-            <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div data-sticky-anchor className="mt-6">
               <Link href={SIGNUP} data-cta="hero" className="pressable inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
-              <a href="#instalar" data-cta="hero-instalar" className="tap inline-flex items-center gap-2 font-bold text-ink underline decoration-ink/30 decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink"><DeviceMobile weight="bold" aria-hidden className="size-5" />Instálala en tu celular</a>
             </div>
-            <p className="mt-4 text-sm font-semibold text-ink">{o.note} {o.from(FROM)}</p>
-            <p className="mt-1 text-sm text-ink/75">¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
+            <ul aria-label="Condiciones" className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-sm font-bold text-ink">
+              {HERO_TRUST.map((t) => <li key={t} className="flex items-center gap-1.5"><Check weight="bold" aria-hidden className="size-4 shrink-0" />{t}</li>)}
+            </ul>
+            <p className="mt-3 text-sm text-ink/75">{o.from(FROM)} ¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
           </div>
 
-          <div className="relative isolate mx-auto h-[600px] w-full max-w-[470px] sm:h-[640px]">
+          <div className="relative isolate mx-auto h-[460px] w-full max-w-[470px] sm:h-[640px]">
             <Phone src="/landing/hoy2.png" alt="" sizes="220px" className="absolute left-0 top-10 hidden w-[210px] -rotate-6 opacity-95 sm:block" />
-            <HeroPlayer className="absolute left-1/2 top-0 w-[275px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[300px] sm:translate-x-0" />
-            <div className="absolute -bottom-2 -left-3 w-[165px] sm:w-[230px] animate-rise [animation-delay:200ms]">
-              <Image src={POSE.flex} alt="Coach Banana, el entrenador de Banana Burn" width={460} height={460} priority sizes="230px" className="drop-shadow-xl" />
+            <HeroPlayer className="absolute left-1/2 top-0 w-[225px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[300px] sm:translate-x-0" />
+            <div className="absolute -bottom-2 -left-2 w-[135px] sm:w-[230px]">
+              <Image src={POSE.flex} alt="Coach Banana, el entrenador de Banana Burn" width={460} height={460} sizes="(min-width: 640px) 230px, 135px" className="drop-shadow-xl" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. CÓMO FUNCIONA: en 3 pasos, justo después del hero */}
-      <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 id="como-t" className={`${H2} max-w-3xl`}>Empiezas hoy, en 2 minutos.</h2>
-          <Image src={POSE.saluda} alt="Coach Banana saludando con el celular en la mano" width={360} height={360} sizes="180px" className="-mb-6 w-28 shrink-0 sm:w-44" />
-        </div>
-        <ol className="mt-10 grid gap-4 lg:grid-cols-3">
-          {STEPS.map(([t, d], i) => (
-            <li key={t} className="rounded-[1.75rem] bg-cream p-6 sm:p-7">
-              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-ink text-xl font-extrabold tabular-nums text-banana">{i + 1}</span>
-              <h3 className="mt-4 text-xl font-extrabold text-ink text-balance">{t}</h3>
-              <p className="mt-2 leading-relaxed text-muted text-pretty">{d}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* 2. DOLOR: lo que vive quien bajó rápido */}
-      <section aria-labelledby="dolor" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <h2 id="dolor" className={`${H2} max-w-3xl`}>¿Bajaste rápido y te pasó esto?</h2>
-          <Image src={POSE.bascula} alt="Coach Banana mirando una báscula" width={360} height={360} sizes="180px" className="-mb-6 w-28 shrink-0 sm:w-44" />
-        </div>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2">
-          {PAINS.map(([t, d]) => (
-            <li key={t} className="flex gap-4 rounded-[1.75rem] border border-line bg-white p-6">
-              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-banana-soft text-ink"><X weight="bold" className="size-4" /></span>
+      {/* 2. PARA TI SI: que la persona se reconozca de inmediato */}
+      <section aria-labelledby="para-quien" className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
+        <h2 id="para-quien" className={`${H2} max-w-3xl`}>Es para ti si…</h2>
+        <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {FOR_WHO.map(({ icon: I, t, d }) => (
+            <li key={t} className="flex gap-4 rounded-[1.5rem] border border-line bg-white p-5 lg:flex-col">
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-banana text-ink"><I weight="duotone" aria-hidden className="size-6" /></span>
               <div>
-                <p className="text-xl font-extrabold text-ink text-balance">{t}</p>
-                <p className="mt-1.5 leading-relaxed text-muted text-pretty">{d}</p>
+                <h3 className="text-lg font-extrabold text-ink text-balance">{t}</h3>
+                <p className="mt-1 leading-relaxed text-muted text-pretty">{d}</p>
               </div>
             </li>
           ))}
         </ul>
-        <p className="mt-6 max-w-[62ch] text-lg font-semibold text-ink text-pretty">No es tu culpa. Cuando bajas de peso muy rápido, una parte de lo que pierdes es músculo. La buena noticia: el músculo se recupera.</p>
+        <p className="mt-6 max-w-[62ch] text-lg font-semibold text-ink text-pretty">Cuando bajas rápido, parte de lo que pierdes es músculo: por eso te ves flácido, tienes menos fuerza y es más fácil recuperar el peso. La buena noticia: el músculo se recupera, y te enseñamos cómo.</p>
       </section>
 
-      {/* 3. MÉTODO: recomposición corporal explicada simple */}
-      <section aria-labelledby="metodo" className="pt-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-[2.25rem] bg-ink p-7 text-white sm:p-12 lg:p-16">
-            {/* Dentro de la tarjeta (que recorta): la cabeza del mono nunca toca el borde de arriba. */}
-            <Image src={POSE.barra} alt="" width={420} height={420} sizes="224px" className="pointer-events-none absolute right-8 top-8 hidden w-44 lg:block xl:right-12 xl:top-10 xl:w-56" />
-            <p className="w-fit rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink">El método</p>
-            <h2 id="metodo" className="mt-5 max-w-3xl lg:max-w-[calc(100%-12rem)] xl:max-w-3xl text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">
-              Recomposición corporal: <span className="text-banana">menos grasa, más músculo</span>, al mismo tiempo.
-            </h2>
-            <p className="mt-5 max-w-[60ch] text-lg leading-relaxed text-white/80 text-pretty">No se trata de bajar más kilos. Se trata de que lo que queda sea músculo firme. Por eso cada rutina de Banana Burn está hecha para reconstruir, no solo para sudar.</p>
-            <ol className="mt-10 grid gap-4 lg:grid-cols-3">
-              {PILLARS.map((p) => (
-                <li key={p.n} className="rounded-[1.5rem] bg-white/[.06] p-6">
-                  <p className="text-4xl font-extrabold tabular-nums text-banana">{p.n}</p>
-                  <h3 className="mt-3 text-xl font-extrabold text-balance">{p.t}</h3>
-                  <p className="mt-2 leading-relaxed text-white/75 text-pretty">{p.d}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
+      {/* 3. CÓMO FUNCIONA: 3 pasos */}
+      <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-16 sm:px-6 sm:pt-24">
+        <div className="flex items-end justify-between gap-4">
+          <h2 id="como-t" className={`${H2} max-w-3xl`}>Así de fácil funciona.</h2>
+          <Image src={POSE.saluda} alt="Coach Banana saludando con el celular en la mano" width={360} height={360} sizes="(min-width: 640px) 176px, 96px" className="-mb-4 w-24 shrink-0 sm:w-44" />
         </div>
+        <ol className="mt-8 grid gap-3 lg:grid-cols-3">
+          {STEPS.map(([t, d], i) => (
+            <li key={t} className="flex gap-4 rounded-[1.5rem] bg-cream p-5 sm:p-6 lg:flex-col">
+              <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-full bg-ink text-lg font-extrabold tabular-nums text-banana">{i + 1}</span>
+              <div>
+                <h3 className="text-lg font-extrabold text-ink text-balance">{t}</h3>
+                <p className="mt-1 leading-relaxed text-muted text-pretty">{d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <Link href={SIGNUP} data-cta="pasos" className="pressable mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
       </section>
 
-      {/* 4. LA APP POR DENTRO: recorrido interactivo con capturas reales y técnica animada */}
-      <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
-        {/* Móvil: el título a todo el ancho y el mono junto al texto; desde sm, el mono a la izquierda de ambos. */}
-        <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 sm:items-end">
-          <h2 id="por-dentro-t" className={`${H2} col-span-2 max-w-3xl sm:col-span-1 sm:col-start-2`}>Mira Banana Burn por dentro.</h2>
-          <Image src={POSE.senala} alt="Coach Banana señalando las pantallas de Banana Burn" width={360} height={360} sizes="180px" className="mt-5 w-24 shrink-0 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:-mb-4 sm:mt-0 sm:w-40" />
-          <p className={`${LEAD} sm:col-start-2`}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
-        </div>
+      {/* 4. PRUEBA REAL: te enseñamos desde cero (capturas reales) */}
+      <LearnSection />
+
+      {/* 5. LA APP POR DENTRO: recorrido con capturas reales y técnica animada */}
+      <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-16 sm:px-6 sm:pt-24">
+        <h2 id="por-dentro-t" className={`${H2} max-w-3xl`}>Mira Banana Burn por dentro.</h2>
+        <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
-        <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
+        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
           {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
             <div key={l} className="flex flex-col-reverse justify-end">
               <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
@@ -223,84 +178,53 @@ export default function Landing() {
         </dl>
       </section>
 
-      <LearnSection />
-
-      {/* 5. ENTRENADOR VS APP */}
-      <section aria-labelledby="entrenador" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <div className="grid items-center gap-8 lg:grid-cols-[1fr_1fr] lg:gap-14">
-          <div>
-            <h2 id="entrenador" className={H2}>Todo lo de un entrenador personal. <Marker>Sin pagar sesiones.</Marker></h2>
-            <p className={LEAD}>Un entrenador te arma la rutina, te dice cuánto levantar, corrige tu técnica y te empuja a volver. Banana Burn hace eso todos los días, a la hora que entrenes, por menos de lo que cuesta una sola sesión al mes.</p>
-            <Image src={POSE.entrenador} alt="Coach Banana como entrenador personal, con tabla y silbato" width={400} height={400} sizes="220px" className="mt-6 w-40 sm:w-52" />
+      {/* 6. MÉTODO: por qué funciona, explicado simple */}
+      <section aria-labelledby="metodo" className="pt-16 sm:pt-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="relative overflow-hidden rounded-[2.25rem] bg-ink p-6 text-white sm:p-12 lg:p-16">
+            <Image src={POSE.barra} alt="" width={420} height={420} sizes="224px" className="pointer-events-none absolute right-8 top-8 hidden w-44 lg:block xl:right-12 xl:top-10 xl:w-56" />
+            <p className="w-fit rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink">El método</p>
+            <h2 id="metodo" className="mt-5 max-w-3xl lg:max-w-[calc(100%-12rem)] xl:max-w-3xl text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">
+              Menos grasa, <span className="text-banana">más músculo</span>, al mismo tiempo.
+            </h2>
+            <ol className="mt-8 grid gap-3 lg:grid-cols-3">
+              {PILLARS.map((p) => (
+                <li key={p.n} className="rounded-[1.5rem] bg-white/[.06] p-5 sm:p-6">
+                  <p className="text-3xl font-extrabold tabular-nums text-banana">{p.n}</p>
+                  <h3 className="mt-2 text-lg font-extrabold text-balance">{p.t}</h3>
+                  <p className="mt-1.5 leading-relaxed text-white/75 text-pretty">{p.d}</p>
+                </li>
+              ))}
+            </ol>
           </div>
-          <ul className="grid gap-3">
-            {["Te arma la rutina según tu nivel y tu equipo", "Te dice el peso exacto de cada serie", "Te muestra la técnica con animación", "Sube las cargas cuando ya puedes más", "Te responde dudas a cualquier hora", "Te mantiene constante con retos y niveles"].map((t) => (
-              <li key={t} className="flex items-center gap-3 rounded-2xl bg-white p-4 font-bold text-ink shadow-[0_1px_0_var(--color-line)]">
-                <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-banana"><Check weight="bold" className="size-4" /></span>{t}
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
 
-      <Compare />
-
-      <SeasonsSection />
-      <RunSection />
-
-      {/* 7. COACH BANANA: el mono que te acompaña */}
-      <section aria-labelledby="mono" className="pt-24">
-        <div className="mx-auto grid max-w-6xl items-end gap-4 px-4 sm:px-6 lg:grid-cols-[1.2fr_1fr]">
-          <h2 id="mono" className={H2}>Conoce a Coach Banana.</h2>
-          <p className="max-w-[52ch] text-lg leading-relaxed text-muted text-pretty">Coach Banana te enseña la técnica, te marca el ritmo y celebra cada récord contigo. En el gym, en la casa o en el parque.</p>
-        </div>
-        <ul tabIndex={0} aria-label="Escenas de Coach Banana entrenando" className="mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-ink sm:mx-auto sm:grid sm:max-w-6xl sm:grid-cols-2 sm:overflow-visible sm:px-6 lg:grid-cols-4">
-          {SCENES.map(([id, t]) => (
-            <li key={id} className="relative aspect-[4/5] w-[78%] shrink-0 snap-center overflow-hidden rounded-[1.5rem] bg-banana sm:w-auto">
-              <Image src={`${UGC_BASE}${id}.png`} alt={t} fill sizes="(min-width: 1024px) 280px, 80vw" className="object-cover" />
-              <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/40 to-transparent px-4 pb-4 pt-12 text-[15px] font-bold leading-snug text-white text-balance">{t}</p>
-            </li>
-          ))}
-        </ul>
-        <p className="mx-auto mt-3 max-w-6xl px-4 text-xs text-faint sm:px-6">Escenas ilustrativas creadas para mostrar cómo te acompaña Coach Banana.</p>
+      {/* 7. GLP-1: Banana Shield */}
+      <section aria-label="Banana Shield" className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
+        <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="group grid items-center gap-4 rounded-[1.75rem] bg-banana-soft p-6 text-ink sm:grid-cols-[auto_1fr_auto] sm:p-8 transition-shadow duration-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink">
+          <span className="grid size-14 place-items-center rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" aria-hidden className="size-8" /></span>
+          <span>
+            <span className="block text-2xl font-extrabold text-balance">¿Usas {GLP1}? Banana Shield es para ti.</span>
+            <span className="mt-1 block text-ink/75 text-pretty">Fuerza y proteína para cuidar tu músculo, con un modo suave en tu día de inyección. Siempre con la guía de tu médico.</span>
+          </span>
+          <span className="inline-flex items-center gap-2 font-bold text-ink">Empezar con Banana Shield <ArrowRight weight="bold" className="size-5 transition-transform duration-200 ease-[cubic-bezier(.23,1,.32,1)] group-hover:translate-x-1" /></span>
+        </Link>
       </section>
 
       <PlatanitaSection />
 
-      {/* 8. PARA QUIÉN */}
-      <section aria-labelledby="para-quien" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <h2 id="para-quien" className={`${H2} max-w-3xl`}>Hecho para ti si…</h2>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FOR_WHO.map(({ icon: I, t, d }) => (
-            <li key={t} className="flex flex-col rounded-[1.75rem] border border-line bg-white p-6">
-              <span className="grid size-12 place-items-center rounded-2xl bg-banana text-ink"><I weight="duotone" aria-hidden className="size-7" /></span>
-              <h3 className="mt-4 text-xl font-extrabold text-ink text-balance">{t}</h3>
-              <p className="mt-1.5 leading-relaxed text-muted text-pretty">{d}</p>
-            </li>
-          ))}
-        </ul>
-        <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="group mt-4 grid items-center gap-4 rounded-[1.75rem] bg-ink p-6 text-white sm:grid-cols-[auto_1fr_auto] sm:p-8 transition-shadow duration-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana">
-          <span className="grid size-14 place-items-center rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" aria-hidden className="size-8" /></span>
-          <span>
-            <span className="block text-2xl font-extrabold text-balance">Banana Shield, para personas en {GLP1}</span>
-            <span className="mt-1 block text-white/75 text-pretty">Fuerza y proteína para no perder músculo, con modo suave en tu día de inyección.</span>
-          </span>
-          <span className="inline-flex items-center gap-2 font-bold text-banana">Empezar con Banana Shield <ArrowRight weight="bold" className="size-5 transition-transform duration-200 ease-[cubic-bezier(.23,1,.32,1)] group-hover:translate-x-1" /></span>
-        </Link>
-      </section>
-
       {/* 9. FUNDADOR: historia real, sin testimonios inventados */}
-      <section className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <div className="grid items-center gap-8 rounded-[2rem] bg-banana-soft p-7 sm:p-12 lg:grid-cols-[1.6fr_1fr] lg:gap-14">
+      <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
+        <div className="grid items-center gap-6 rounded-[2rem] bg-cream p-6 sm:p-12 lg:grid-cols-[1.6fr_1fr] lg:gap-14">
           <div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">La hice porque yo la necesitaba.</h2>
             <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink/80 text-pretty">Soy Andrés, el fundador, y soy el usuario número 1. Mi meta: de 94 a 85 kg antes del 31 de diciembre, sin perder músculo. Ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
-            <p className="mt-4 max-w-[60ch] leading-relaxed text-ink/80 text-pretty">Banana Burn está en versión de prueba y la estamos puliendo con sus primeros usuarios. Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
+            <p className="mt-3 max-w-[60ch] leading-relaxed text-ink/80 text-pretty">Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
           </div>
-          {/* El mono llega casi al borde de su imagen: el margen interno evita que la cabeza y los tenis toquen la tarjeta. */}
-          <div className="relative mx-auto aspect-square w-48 rounded-[1.75rem] bg-banana lg:w-full lg:max-w-[300px]">
+          <div className="relative mx-auto hidden aspect-square w-full max-w-[260px] rounded-[1.75rem] bg-banana lg:block">
             <div className="absolute inset-[7%]">
-              <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono de Banana Burn" fill sizes="(min-width: 1024px) 260px, 168px" className="object-contain" />
+              <Image src="/brand/mascota-sola.webp" alt="Coach Banana, el mono de Banana Burn" fill sizes="240px" className="object-contain" />
             </div>
           </div>
         </div>
@@ -309,7 +233,7 @@ export default function Landing() {
       <OfferBand />
 
       {/* 10. PRECIOS */}
-      <section id="precios" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-24 sm:px-6">
+      <section id="precios" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-16 sm:px-6 sm:pt-24">
         <div className="mx-auto mb-10 max-w-3xl text-center">
           <h2 className={H2}>Menos que una sesión con un entrenador.</h2>
           <p className="mt-4 text-lg text-muted text-pretty">{o.pricingIntro(SAVE)}</p>
@@ -317,20 +241,23 @@ export default function Landing() {
         <Pricing trialGuarantee={o.guarantee} />
       </section>
 
+      {/* 11. EXTRAS: temporadas deportivas y GPS (secundario para quien llega de un anuncio) */}
+      <ExtrasSection />
+
       <InstallSection />
 
       <Faq id="faq" items={faqItems} aside={<FaqCta cta="faq" />} />
 
-      {/* 11. CTA FINAL con el mono */}
-      <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-6 pt-14 text-center sm:px-16 sm:pb-8 sm:pt-16">
+      {/* 12. CTA FINAL con el mono */}
+      <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
+        <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-6 pt-12 text-center sm:px-16 sm:pb-8 sm:pt-16">
           <h2 className={`${H2} mx-auto max-w-3xl`}>Tu cuerpo nuevo empieza con el primer entreno.</h2>
-          <Link href={SIGNUP} data-cta="final" className="pressable mt-8 inline-flex h-14 items-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
+          <Link href={SIGNUP} data-cta="final" className="pressable mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
           <p className="mt-4 text-sm font-semibold text-ink/80">{o.note} {o.from(FROM)}</p>
-          <ul className="mx-auto mt-8 grid w-fit max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:grid-cols-2">
+          <ul className="mx-auto mt-6 grid w-fit max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:grid-cols-2">
             {risk().map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
           </ul>
-          <Image src={POSE.salta} alt="" width={420} height={420} sizes="240px" className="mx-auto mt-8 w-44 sm:w-60" />
+          <Image src={POSE.salta} alt="" width={420} height={420} sizes="(min-width: 640px) 240px, 176px" className="mx-auto mt-6 w-36 sm:w-60" />
         </div>
       </section>
 

@@ -44,6 +44,25 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   ];
 };
 
+/** Inicio: primero las dudas de quien llega de un anuncio y nunca ha entrenado; luego las de dinero. */
+export const homeFaq = (now = new Date()) => {
+  const f = faq(now);
+  const pick = (q: string) => f.find(([k]) => k === q)!;
+  return [
+    ["Nunca he entrenado. ¿Me sirve?", "Sí, está hecha para empezar de cero. Tu primer entreno es guiado paso a paso, cada ejercicio trae su animación y en Aprende a entrenar tienes 10 lecciones de 30 segundos. La primera semana Coach Banana aprende tus pesos."] as const,
+    pick("Uso Ozempic o Mounjaro. ¿Es para mí?"),
+    pick("¿Sirve si entreno en casa o sin equipo?"),
+    ["¿Cuánto tiempo al día necesito?", "Tú eliges: sesiones de 15 a 60 minutos, de 3 a 6 días por semana. En los días apretados hay entrenos exprés de 10, 20 o 30 minutos sin equipo."] as const,
+    ["¿Me cobran algo hoy?", `No. Creas tu cuenta sin tarjeta y pruebas todo gratis. ${pick("¿Cómo funciona la prueba gratis?")[1]}`] as const,
+    pick("¿Hay descuento en el primer mes?"),
+    pick("¿Cómo cancelo? ¿Hay reembolso?"),
+    pick("¿Tengo que descargarla de una tienda?"),
+    pick("¿Por qué pagar si hay rutinas gratis en internet?"),
+    pick("¿Cuánto peso voy a bajar?"),
+    pick("¿Qué diferencia hay entre los planes?"),
+  ] as (readonly [string, string])[];
+};
+
 /** Preguntas de /precios: las de dinero primero. */
 export const pricingFaq = (now = new Date()) => { const f = faq(now); return [0, 10, 7, 8, 1, 5, 11].map((i) => f[i]); };
 
