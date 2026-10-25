@@ -9,7 +9,7 @@ export function HeroPlayer({ className = "" }: { className?: string }) {
       <div aria-hidden className="flex aspect-[390/800] flex-col overflow-hidden rounded-[2.1rem] bg-cream">
         <div className="flex items-center justify-between px-4 pt-4">
           <span className="grid size-8 place-items-center rounded-full bg-white text-ink"><X weight="bold" className="size-4" /></span>
-          <p className="text-[13px] font-extrabold text-ink">Piernas de acero y pecho firme</p>
+          <p className="truncate px-2 text-[13px] font-extrabold text-ink">Piernas de acero</p>
           <span className="rounded-full bg-banana px-2 py-0.5 text-[11px] font-extrabold tabular-nums text-ink">18:42</span>
         </div>
         <div className="mx-4 mt-3 flex gap-1">

@@ -114,7 +114,10 @@ export default function Landing() {
 
           <div className="relative isolate mx-auto h-[460px] w-full max-w-[470px] sm:h-[640px]">
             <Phone src="/landing/hoy2.png" alt="" sizes="220px" className="absolute left-0 top-10 hidden w-[210px] -rotate-6 opacity-95 sm:block" />
-            <HeroPlayer className="absolute left-1/2 top-0 w-[225px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[300px] sm:translate-x-0" />
+            {/* El teléfono se dibuja siempre a 300 px (como en escritorio) y se escala en el celular: así nada se aprieta ni se corta. */}
+            <div className="absolute left-1/2 top-0 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0">
+              <HeroPlayer className="w-[300px] origin-top scale-[.76] sm:scale-100" />
+            </div>
             <div className="absolute -bottom-2 -left-2 w-[135px] sm:w-[230px]">
               <Image src={POSE.flex} alt="Coach Banana, el entrenador de Banana Burn" width={460} height={460} sizes="(min-width: 640px) 230px, 135px" className="drop-shadow-xl" />
             </div>
