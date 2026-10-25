@@ -11,7 +11,7 @@ describe("demo de chica (solo modo demo)", () => {
   it("sin cookies es el demo de siempre: Andrés con el programa insignia", () => {
     expect(parseDemoState(get({}))).toEqual({ program: "si", day: 12, status: "activo", girl: false, season: null });
   });
-  it("un programa de chicas trae a Valeria; ?persona= lo fuerza", () => {
+  it("un programa de chicas trae a Sofía; ?persona= lo fuerza", () => {
     expect(parseDemoState(get({ bb_demo_programa: "pilates-casa-30", bb_demo_dia: "29" }))).toMatchObject({ program: "pilates-casa-30", day: 29, girl: true });
     expect(parseDemoState(get({ bb_demo_programa: "banana-girl" }))).toMatchObject({ day: 9, girl: true });
     expect(parseDemoState(get({ bb_demo_programa: "no", bb_demo_persona: "chica" }))).toMatchObject({ program: "no", girl: true });

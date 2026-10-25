@@ -2,8 +2,8 @@
 // Las cookies las pone el middleware desde la URL (?programa=, ?dia=, ?estado=, ?persona=) y duran una hora.
 //   ?programa=no                 sin programa activo (la rutina del motor)
 //   ?programa=si                 el demo de siempre: Andrés en Reconstrucción 8 semanas, semana 2 (por defecto)
-//   ?programa=pilates-casa-30    Valeria en Pilates en casa 30 días (con Coach Platanita)
-//   ?programa=banana-girl        Valeria en Banana Girl (6 semanas, con Coach Platanita)
+//   ?programa=pilates-casa-30    Sofía en Pilates en casa 30 días (con Coach Platanita)
+//   ?programa=banana-girl        Sofía en Banana Girl (6 semanas, con Coach Platanita)
 //   ?dia=N                       día del programa de chicas (1 = bienvenida; 29 = prueba final; 31 = terminado)
 //   ?estado=activo|pausado|completado   estado del programa de chicas
 //   ?persona=chica|chico         fuerza la persona (sin programa, por ejemplo) y se borra con ?persona=auto
@@ -20,7 +20,7 @@ export type DemoState = {
   /** Día del programa de chicas (1-based). */
   day: number;
   status: "activo" | "pausado" | "completado";
-  /** Persona del demo: Valeria (chica) o Andrés. */
+  /** Persona del demo: Sofía (chica) o Andrés. */
   girl: boolean;
   /** Temporada activa del demo (?temporada=running|raquetas|cross): empezó hace 9 días, en la semana 2. */
   season: "running" | "raquetas" | "cross" | null;
@@ -50,4 +50,4 @@ export async function demoState(): Promise<DemoState> {
 }
 
 /** La chica del demo (mismos pesajes de demo-story que Andrés, para que las gráficas cuadren). */
-export const DEMO_GIRL = { name: "Valeria", heightCm: 165, goalWeight: 85 } as const;
+export const DEMO_GIRL = { name: "Sofía", heightCm: 165, goalWeight: 85 } as const;

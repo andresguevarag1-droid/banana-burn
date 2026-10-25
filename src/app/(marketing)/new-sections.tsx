@@ -82,8 +82,8 @@ export function PlatanitaSection() {
             </div>
           </div>
           <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
-            <Phone src={a} alt="Entrenamiento de Pilates con Coach Platanita en Banana Burn" sizes="240px" className="w-[200px] sm:w-[250px]" />
-            {b && <Phone src={b} alt="Programa Pilates en casa 30 días en Banana Burn" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
+            <Phone src={a} alt="Pantalla Hoy en rosado con Coach Platanita en Banana Burn" sizes="240px" className="w-[200px] sm:w-[250px]" />
+            {b && <Phone src={b} alt="Chat con Coach Platanita en Banana Burn" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
           </div>
         </div>
       </div>
