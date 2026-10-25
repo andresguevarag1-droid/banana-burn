@@ -2128,6 +2128,27 @@ reset role;
 delete from public.affiliate_payout_methods; delete from public.affiliate_commissions; delete from public.affiliate_referrals; delete from public.affiliates;
 delete from auth.users where id = '5a5a5a5a-0000-4000-8000-00000000005a';
 
+-- ───────────── 22. Solicitudes de condominios (0052): solo el staff de soporte lee, nadie escribe por la API ─────────────
+reset role;
+select bbtest.login(null);
+insert into public.b2b_leads (name, role, org_name, email) values ('Prueba Admin', 'administrador', 'Condominio Prueba', 'admin@condo.test');
+select bbtest.fails('0052: correo inválido no entra', $q$ insert into public.b2b_leads (name, role, org_name, email) values ('X Y', 'otro', 'Condo', 'no-es-correo') $q$, '23514');
+select bbtest.fails('0052: cargo fuera de la lista no entra', $q$ insert into public.b2b_leads (name, role, org_name, email) values ('X Y', 'dueño', 'Condo', 'a@b.co') $q$, '23514');
+set role anon; select bbtest.login(null);
+select bbtest.fails('0052: anon no lee solicitudes', $q$ select 1 from public.b2b_leads $q$, '42501');
+select bbtest.fails('0052: anon no crea solicitudes por la API', $q$ insert into public.b2b_leads (name, role, org_name, email) values ('Bot Bot', 'otro', 'Spam', 'bot@spam.co') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0052: una cuenta normal no ve solicitudes', bbtest.num($q$ select 1 from public.b2b_leads $q$) = 0);
+select bbtest.fails('0052: una cuenta normal no crea solicitudes', $q$ insert into public.b2b_leads (name, role, org_name, email) values ('Ana A', 'otro', 'Condo', 'ana@x.co') $q$, '42501');
+select bbtest.zero('0052: una cuenta normal no cambia solicitudes', $q$ update public.b2b_leads set status = 'cerrado' $q$);
+reset role;
+set role authenticated; select bbtest.login('P');
+select bbtest.ok('0052: soporte ve las solicitudes', bbtest.num($q$ select 1 from public.b2b_leads $q$) = 1);
+select bbtest.zero('0052: soporte no las cambia por la API (lo hace el servidor)', $q$ update public.b2b_leads set status = 'cerrado' $q$);
+reset role;
+delete from public.b2b_leads;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

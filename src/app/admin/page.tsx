@@ -11,7 +11,7 @@ import { DemoNotice, Empty, Kpi, Notice, PageHeader, SectionHeading, Table, Td, 
 
 export const metadata = { title: "Resumen" };
 
-const SECTION_NAME: Record<Section, string> = { resumen: "Resumen", usuarios: "Usuarios", pagos: "Pagos", contenido: "Contenido", retos: "Retos", comunidad: "Comunidad", verificaciones: "Verificaciones", soporte: "Soporte", auditoria: "Auditoría", salud: "Salud", referidores: "Referidores" };
+const SECTION_NAME: Record<Section, string> = { resumen: "Resumen", usuarios: "Usuarios", pagos: "Pagos", contenido: "Contenido", retos: "Retos", comunidad: "Comunidad", verificaciones: "Verificaciones", soporte: "Soporte", auditoria: "Auditoría", salud: "Salud", referidores: "Referidores", condominios: "Condominios" };
 
 function RetCell({ c }: { c: Cell }) {
   if (c.rate === null) return <span className="text-xs text-muted" title={`${c.eligible} de la cohorte ya cumplieron esta ventana`}>En curso</span>;

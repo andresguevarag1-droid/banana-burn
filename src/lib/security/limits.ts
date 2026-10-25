@@ -33,6 +33,8 @@ export const RULES = {
   // ── Pagos (checkout, retos y tarjeta ya tienen sus propios límites en la ruta)
   "pagos:prueba": { windows: [{ sec: HOUR, max: 10 }], db: true, msg: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
   "pagos:cancelar": { windows: [{ sec: HOUR, max: 10 }], db: true, msg: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
+  // ── Público sin sesión (por red, con hash): solicitudes de reunión de condominios (0052)
+  "condominios:solicitud": { windows: [{ sec: 10 * MIN, max: 3 }, { sec: DAY, max: 10 }], db: true, msg: "Ya recibimos tu solicitud. Si necesitas algo más, escríbenos a hola@bananaburn.app." },
   // ── Avisos
   "push:suscribir": { windows: [{ sec: HOUR, max: 20 }], db: true, msg: SLOW },
   // ── Comunidad (publicar y comentar ya tienen tope por tabla en 0012; aquí lo que se puede alternar sin fin)

@@ -38,7 +38,8 @@ export type Capability =
   | "community.moderate"
   | "audit.view"
   | "ops.health"           // salud técnica: versión, base, errores de la app, cron y webhooks fallidos (0041)
-  | "affiliates.manage";   // programa de referidores (0051): invitar, asignar, comisiones y pagos. Solo el dueño
+  | "affiliates.manage"    // programa de referidores (0051): invitar, asignar, comisiones y pagos. Solo el dueño
+  | "leads.b2b";           // solicitudes de reunión de condominios (0052): ver, cambiar estado y notas
 
 const ALL_STAFF = STAFF_ROLES;
 const COACH_ADMIN: Role[] = ["coach", "admin", "superadmin"];
@@ -73,13 +74,14 @@ export const MATRIX: Record<Capability, Role[]> = {
   "audit.view": PRIVILEGED,
   "ops.health": PRIVILEGED, // igual que public.is_admin() en app_errors y ops_heartbeats (0041)
   "affiliates.manage": ["superadmin"], // igual que public.is_superadmin() en las tablas de 0051
+  "leads.b2b": SUPPORT_ADMIN, // igual que public.is_support_staff() en b2b_leads (0052)
 };
 
 export function can(role: Role | null | undefined, cap: Capability): boolean {
   return !!role && MATRIX[cap].includes(role);
 }
 
-export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud" | "referidores";
+export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud" | "referidores" | "condominios";
 
 /** Una sección es visible si el rol tiene al menos una de sus capacidades. */
 export const SECTION_CAPS: Record<Section, Capability[]> = {
@@ -94,6 +96,7 @@ export const SECTION_CAPS: Record<Section, Capability[]> = {
   auditoria: ["audit.view"],
   salud: ["ops.health"],
   referidores: ["affiliates.manage"],
+  condominios: ["leads.b2b"],
 };
 
 export function canSee(role: Role | null | undefined, section: Section): boolean {
