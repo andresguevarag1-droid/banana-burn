@@ -23,12 +23,12 @@ export function shot(name: string): string | null {
   try { return fs.existsSync(path.join(process.cwd(), "public", "landing", `${name}.webp`)) ? `/landing/${name}.webp` : null; } catch { return null; }
 }
 
-function Points({ items, dark = false }: { items: string[]; dark?: boolean }) {
+function Points({ items, dark = false, dot = "bg-banana text-ink" }: { items: string[]; dark?: boolean; dot?: string }) {
   return (
     <ul className="mt-6 grid gap-2.5">
       {items.map((t) => (
         <li key={t} className={`flex items-start gap-3 text-[17px] font-semibold ${dark ? "text-white" : "text-ink"}`}>
-          <span aria-hidden className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-banana text-ink"><Check weight="bold" className="size-3.5" /></span>{t}
+          <span aria-hidden className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full ${dot}`}><Check weight="bold" className="size-3.5" /></span>{t}
         </li>
       ))}
     </ul>
@@ -64,18 +64,21 @@ export function PlatanitaSection() {
   const b = shot("platanita-programa");
   if (!a) return null;
   const pl = COACHES.platanita;
+  // Donde Platanita es la protagonista, la experiencia se vuelve rosada (decisión del dueño, oct 2026). Variables locales
+  // por ahora; los tokens compartidos --color-plat* llegan con el tema rosado de la app.
+  const pink = { "--plat": "#FF8FC8", "--plat-soft": "#FFE6F2", "--plat-tint": "#FFF4F9", "--plat-ink": "#B0175E" } as React.CSSProperties;
   return (
-    <section aria-labelledby="platanita-t" className="pt-16 sm:pt-24">
+    <section aria-labelledby="platanita-t" className="pt-16 sm:pt-24" style={pink}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid items-center gap-10 overflow-hidden rounded-[2.25rem] bg-banana-soft p-7 sm:p-12 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+        <div className="grid items-center gap-10 overflow-hidden rounded-[2.25rem] bg-[var(--plat)] p-7 sm:p-12 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
           <div>
-            <p className="w-fit rounded-full bg-ink px-3.5 py-1.5 text-sm font-extrabold text-banana">Para ellas</p>
+            <p className="w-fit rounded-full bg-[var(--plat-ink)] px-3.5 py-1.5 text-sm font-extrabold text-white">Para ellas</p>
             <h2 id="platanita-t" className={`${H2} mt-5`}>Conoce a Coach Platanita.</h2>
-            <p className={LEAD}>En los programas para chicas te acompaña Coach Platanita: te da la bienvenida, te enseña cada ejercicio y te responde en el chat. Glúteos, abdomen, postura y Pilates en casa con poco equipo.</p>
-            <Points items={["Pilates en casa en 30 días", "Glúteos y espalda esculpidos", "Ejercicios con técnica guiada por ella"]} />
-            <div className="mt-6 flex items-center gap-3">
-              <Image src={pl.avatar} alt="Coach Platanita" width={64} height={64} sizes="64px" className="size-16 rounded-2xl bg-banana object-cover" />
-              <p className="text-sm text-muted text-pretty">Coach Platanita aparece cuando eliges un programa para chicas.</p>
+            <p className={`${LEAD} !text-ink/85`}>En los programas para chicas te acompaña Coach Platanita: te da la bienvenida, te enseña cada ejercicio y te responde en el chat. Glúteos, abdomen, postura y Pilates en casa con poco equipo.</p>
+            <Points dot="bg-[var(--plat-ink)] text-white" items={["Pilates en casa en 30 días", "Glúteos y espalda esculpidos", "Ejercicios con técnica guiada por ella"]} />
+            <div className="mt-6 flex items-center gap-3 rounded-[1.5rem] bg-[var(--plat-tint)] p-3">
+              <Image src={pl.avatar} alt="Coach Platanita" width={64} height={64} sizes="64px" className="size-16 rounded-2xl bg-[var(--plat-soft)] object-cover" />
+              <p className="text-sm font-semibold text-ink/80 text-pretty">Coach Platanita aparece cuando eliges un programa para chicas.</p>
             </div>
           </div>
           <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
