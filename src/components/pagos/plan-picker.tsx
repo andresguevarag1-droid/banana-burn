@@ -1,6 +1,6 @@
 "use client";
 import { Check } from "@/components/icons";
-import { ANNUAL_SEASON_NOTE, PLANS, annualSavingPct, perMonthAnnual, usd, type Billing, type PlanId } from "@/lib/plans";
+import { ANNUAL_SEASON_NOTE, PLANS, annualSaving, annualSavingPct, usd, type Billing, type PlanId } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { PROMO_PCT, promoPrice } from "@/lib/trial";
 
@@ -44,7 +44,7 @@ export function PlanPicker({ value, onChange, disabled, promo = false }: { value
                 ) : (
                   <span className="text-right shrink-0">
                     <span className="block font-extrabold tabular-nums text-ink">{usd(p.price[value.billing])}</span>
-                    <span className="block text-xs text-muted">{value.billing === "anual" ? `al año, ${money(perMonthAnnual(p))} al mes` : "al mes"}</span>
+                    <span className="block text-xs text-muted">{value.billing === "anual" ? `al año, ahorras ${money(annualSaving(p))}` : "al mes"}</span>
                     {value.billing === "anual" && <span className="block text-xs font-semibold text-peel">{ANNUAL_SEASON_NOTE}</span>}
                   </span>
                 )}

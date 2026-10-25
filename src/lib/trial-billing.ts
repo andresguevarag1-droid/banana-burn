@@ -882,7 +882,7 @@ export async function runDueForUser(userId: string, now = new Date()): Promise<A
 export type SweepStats = { reminders: number; attempted: number; sent: number; declined: number; unknown: number; tidied: number; errors: number };
 
 /** Cron diario (/api/cron/recordatorios): avisos del día 5, cobros del día 7 y reintentos del día 8, y reconciliación. */
-export async function sweepTrialCharges(now = new Date(), opts: { deadline?: number; limit?: number; chargeBy?: number } = {}): Promise<SweepStats> {
+export async function sweepTrialCharges(now = new Date(), opts: { deadline?: number; limit?: number; chargeBy?: number; concurrency?: number; skipReminders?: boolean } = {}): Promise<SweepStats> {
   const out: SweepStats = { reminders: 0, attempted: 0, sent: 0, declined: 0, unknown: 0, tidied: 0, errors: 0 };
   const db = adminClient();
   if (!db) return out;
@@ -892,21 +892,28 @@ export async function sweepTrialCharges(now = new Date(), opts: { deadline?: num
   try {
     const soon = new Date(now.getTime() + 2 * 864e5).toISOString();
     const { data: rem } = await db.from("trial_charges").select(CHARGE_COLS).eq("status", "scheduled").is("reminder_sent_at", null).gt("charge_at", at).lte("charge_at", soon).order("charge_at").limit(limit);
-    for (const r of (rem as TrialChargeRow[] | null) ?? []) { if (!time()) break; if (await sendReminderIfDue(db, r, now)) out.reminders++; }
+    if (!opts.skipReminders) for (const r of (rem as TrialChargeRow[] | null) ?? []) { if (!time()) break; if (await sendReminderIfDue(db, r, now)) out.reminders++; }
 
     const { data: open } = await db.from("trial_charges").select(CHARGE_COLS).in("status", ["charging", "unknown", "pending"]).order("updated_at").limit(limit);
     for (const r of (open as TrialChargeRow[] | null) ?? []) { if (!time()) break; await tidy(db, r, now); out.tidied++; }
 
     const { data: due } = await db.from("trial_charges").select(CHARGE_COLS).in("status", ["scheduled", "retry_scheduled"]).lte("next_attempt_at", at).order("next_attempt_at").limit(limit);
-    for (const r of (due as TrialChargeRow[] | null) ?? []) {
-      // Un cobro nuevo puede tardar hasta 20 s: no se empieza si no alcanza el tiempo de la función (lo toma la próxima corrida).
-      if (!time() || (opts.chargeBy && Date.now() >= opts.chargeBy)) break;
-      out.attempted++;
-      const res = await attemptCharge(db, r, now).catch((e) => { out.errors++; log("intento falló", { chargeId: r.id, error: errInfo(e) }); return null; });
-      if (res === "enviado") out.sent++;
-      else if (res === "rechazado" || res === "sin_tarjeta") out.declined++;
-      else if (res === "por_confirmar") out.unknown++;
-    }
+    // Varios cobros a la vez (el 8 de noviembre vencen todas las cuentas de la beta con tarjeta): cada fila se reclama con un
+    // UPDATE condicional en attemptCharge, así que dos trabajadores nunca cobran la misma.
+    const queue = [...((due as TrialChargeRow[] | null) ?? [])];
+    const worker = async () => {
+      for (let r = queue.shift(); r; r = queue.shift()) {
+        // Un cobro nuevo puede tardar hasta 20 s: no se empieza si no alcanza el tiempo de la función (lo toma la próxima corrida).
+        if (!time() || (opts.chargeBy && Date.now() >= opts.chargeBy)) return;
+        out.attempted++;
+        const row = r;
+        const res = await attemptCharge(db, row, now).catch((e) => { out.errors++; log("intento falló", { chargeId: row.id, error: errInfo(e) }); return null; });
+        if (res === "enviado") out.sent++;
+        else if (res === "rechazado" || res === "sin_tarjeta") out.declined++;
+        else if (res === "por_confirmar") out.unknown++;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.concurrency ?? 1, 6)) }, worker));
   } catch (e) {
     out.errors++;
     log("barrido falló", { error: errInfo(e) });

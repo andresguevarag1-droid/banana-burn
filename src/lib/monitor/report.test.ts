@@ -65,6 +65,10 @@ describe("ruido, huella y navegador", () => {
     expect(isNoise("Script error.")).toBe(true);
     expect(isNoise("x", "AbortError")).toBe(true);
     expect(isNoise("Cannot read properties of null")).toBe(false);
+    // Inyectado por otras apps y navegadores (no es nuestro código).
+    expect(isNoise("undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')")).toBe(true);
+    expect(isNoise("undefined is not an object (evaluating 'window.__firefox__.reader')")).toBe(true);
+    expect(isNoise("Error invoking postMessage: Java object is gone")).toBe(true);
   });
   it("misma huella para el mismo error", () => {
     const a = { source: "client" as const, kind: "TypeError", route: "/app", message: "m" };
