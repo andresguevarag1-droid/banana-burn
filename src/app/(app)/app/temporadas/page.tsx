@@ -38,7 +38,7 @@ export default async function Temporadas({ searchParams }: { searchParams: Promi
             <li key={s.slug} style={{ ["--sport" as string]: info.accent, ["--sport-soft" as string]: info.accentSoft }}>
               <Link href={`/app/temporadas/${s.slug}`} className="card group flex h-full flex-col overflow-hidden transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(.23,1,.32,1)] hover:-translate-y-0.5 active:scale-[.99]">
                 <div className="relative aspect-[4/3] bg-[var(--sport-soft)]">
-                  <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-contain object-bottom p-3" />
+                  <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-contain object-bottom p-3 mix-blend-multiply" />
                   <span className="absolute left-3 top-3 chip h-7 bg-[var(--sport)] text-white">{info.name}</span>
                 </div>
                 <div className="flex flex-1 flex-col gap-2 p-5">

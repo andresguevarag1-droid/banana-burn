@@ -68,7 +68,7 @@ export default function TemporadasLanding() {
           return (
             <article key={sport} className="card overflow-hidden flex flex-col">
               <div className="relative aspect-[4/3]" style={{ backgroundColor: info.accentSoft }}>
-                <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-contain object-bottom p-3" />
+                <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-contain object-bottom p-3 mix-blend-multiply" />
               </div>
               <div className="flex flex-1 flex-col gap-3 p-5">
                 <span className="chip h-7 w-fit text-white" style={{ backgroundColor: info.accent }}>{info.mode}</span>
