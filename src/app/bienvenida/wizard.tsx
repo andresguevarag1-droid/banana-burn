@@ -398,8 +398,15 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           </>)}
 
           {step === STEPS && cardOffer && (<>
+            {/* La tarjeta es opcional y se dice primero: muchas personas preguntaban si era obligatoria para usar la prueba. */}
+            <div className="rounded-3xl bg-ink p-5 text-white">
+              <p className="text-xl font-extrabold text-balance">La tarjeta es opcional</p>
+              <p className="mt-1 text-sm text-white/80 text-pretty">{trialBeta && betaLastFree ? `Puedes usar todo gratis hasta el ${betaLastFree} sin dejar ninguna tarjeta.` : `Tus ${TRIAL_DAYS} días gratis funcionan igual sin tarjeta.`} No te pedimos nada para empezar.</p>
+              <button type="button" data-cta="bienvenida-sin-tarjeta-arriba" disabled={pending} onClick={() => finish()} className="btn-banana mt-4 w-full h-14 text-base">Empezar gratis sin tarjeta <ArrowRight className="size-5" /></button>
+            </div>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{PROMO_TITLE}</h1>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Opcional</p>
+              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink text-balance">{PROMO_TITLE}</h1>
               <p className="mt-2 text-muted text-pretty">{trialBeta && betaLastFree ? `Tienes todo incluido gratis hasta el ${betaLastFree}, con o sin tarjeta.` : `Tus ${TRIAL_DAYS} días gratis ya empezaron, con o sin tarjeta.`} Si la dejas lista hoy, tu primer mes cuesta la mitad.</p>
             </div>
             <ul className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink space-y-1.5">
@@ -432,7 +439,10 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           ) : step === STEPS - 1 ? (
             <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardOffer ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
           ) : step === STEPS && cardOffer ? (
-            <button data-cta="bienvenida-sin-tarjeta" disabled={pending} onClick={() => finish()} className="btn-ghost w-full h-12 text-base">Seguir sin tarjeta</button>
+            <>
+              <button data-cta="bienvenida-sin-tarjeta" disabled={pending} onClick={() => finish()} className="btn-primary w-full h-14 text-base">Empezar gratis sin tarjeta <ArrowRight className="size-5" /></button>
+              <p className="mt-1.5 text-center text-xs text-muted">Si quieres el 50 %, puedes dejar tu tarjeta después desde Mi plan.</p>
+            </>
           ) : null}
         </div>
       </footer>
