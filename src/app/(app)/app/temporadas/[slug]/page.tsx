@@ -60,7 +60,7 @@ export default async function Temporada({ params, searchParams }: P) {
 
       <section className="card overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="relative aspect-square md:aspect-auto md:min-h-80 bg-[var(--sport-soft)]">
-          <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-contain object-bottom p-4" />
+          <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-contain object-bottom p-4 mix-blend-multiply" />
         </div>
         <div className="space-y-4 p-5 sm:p-7">
           <span className="chip h-7 w-fit bg-[var(--sport)] text-white">{info.mode}</span>

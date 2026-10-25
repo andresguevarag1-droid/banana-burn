@@ -202,7 +202,7 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
           </section>
         )}
         <section className="card overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-          <div className="relative aspect-[4/3] md:aspect-auto md:min-h-72 bg-[#FFEDD5]"><SafeImage src={coachSrc} alt={`${coachName} con ropa de correr`} fill priority sizes="(min-width: 768px) 40vw, 100vw" className="object-contain object-bottom p-3" /></div>
+          <div className="relative aspect-[4/3] md:aspect-auto md:min-h-72 bg-[#FFEDD5]"><SafeImage src={coachSrc} alt={`${coachName} con ropa de correr`} fill priority sizes="(min-width: 768px) 40vw, 100vw" className="object-contain object-bottom p-3 mix-blend-multiply" /></div>
           <div className="space-y-4 p-5 sm:p-7">
             <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Registra tu carrera</h1>
             <p className="text-body text-pretty">Usamos el GPS de tu teléfono para medir distancia, tiempo y ritmo por kilómetro. Tu recorrido es privado: solo tú lo ves, y el mapa guardado no muestra los primeros ni los últimos 200 m.</p>
