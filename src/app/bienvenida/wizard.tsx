@@ -103,7 +103,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   startOnCard?: boolean;
   /** "1 de noviembre": primer día con cobro (para el resumen de la beta). */
   betaFirstPaid?: string;
-  /** Último día gratis de la beta ("31 de octubre"), el mismo que muestra el aviso de la tarjeta. */
+  /** Último día gratis de la beta ("7 de noviembre"), el mismo que muestra el aviso de la tarjeta. */
   betaLastFree?: string;
   /** El acceso gratis viene del período de prueba del servicio (beta), no solo de los 7 días. */
   trialBeta?: boolean;

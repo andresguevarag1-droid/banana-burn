@@ -173,6 +173,18 @@ describe("el cobro del día 7 es idempotente", () => {
     await tb.runDueForUser(NEW_USER, now);
     expect(onvo.createChargedSubscription).toHaveBeenCalledOnce();
   });
+  it("8 de noviembre: el cron de cobros con 4 a la vez cobra cada cuenta una sola vez, aunque corran dos barridos juntos", async () => {
+    const f = setup(); scheduled(f);
+    f.tables.payment_methods.push({ user_id: OLD_USER, provider_customer_id: "cus_old", provider_payment_method_id: "pm_2", brand: "visa", last4: "1111", exp_month: 12, exp_year: 2030, status: "active" });
+    f.tables.trial_charges.push({ ...(f.tables.trial_charges[0] as Record<string, unknown>), id: 2, user_id: OLD_USER, idem_key: idemKeyFor(OLD_USER) });
+    let n = 0;
+    onvo.createChargedSubscription.mockImplementation(async () => { await new Promise((x) => setTimeout(x, 5)); return { id: `sub_${++n}` }; });
+    const now = plus(T0, 7.1);
+    const [a, b] = await Promise.all([tb.sweepTrialCharges(now, { concurrency: 4, skipReminders: true }), tb.sweepTrialCharges(now, { concurrency: 4, skipReminders: true })]);
+    expect(onvo.createChargedSubscription).toHaveBeenCalledTimes(2);
+    expect(a.sent + b.sent).toBe(2);
+    expect(f.tables.trial_charges.map((r) => (r as unknown as TrialChargeRow).status)).toEqual(["pending", "pending"]);
+  });
   it("si ya pagó por otro lado, no cobra (reemplazado)", async () => {
     const f = setup({ subscriptions: [{ id: 9, user_id: NEW_USER, status: "active", plan: "completo", current_period_end: plus(T0, 30).toISOString(), cancel_at_period_end: false }] });
     const r = scheduled(f);

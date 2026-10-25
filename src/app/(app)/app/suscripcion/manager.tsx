@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowCounterClockwise, ArrowRight, CircleNotch, Handshake, Lock, MonkeyBanana, Scroll } from "@/components/icons";
-import { PLANS, annualSavingPct, perMonthAnnual, usd, type Billing, type PlanId } from "@/lib/plans";
+import { PLANS, annualSaving, annualSavingPct, usd, type Billing, type PlanId } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { INTENT_COOKIE, type CheckoutIntent } from "@/lib/checkout-intent";
 import { useCheckout } from "@/components/pagos/use-checkout";
@@ -89,7 +89,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
                     {b === "anual" && !up && !down && !hot && <span className="chip h-6 bg-banana-soft text-banana-ink">−{annualSavingPct(p)} %</span>}
                   </span>
                   <span className="mt-1 flex items-center justify-between gap-2 text-sm text-muted">
-                    <span>{b === "anual" ? "Anual" : "Mensual"}: <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}{b === "anual" && <span className="block text-xs tabular-nums">Equivale a {money(perMonthAnnual(p))} al mes, ahorras {annualSavingPct(p)} %</span>}</span>
+                    <span>{b === "anual" ? "Anual" : "Mensual"}: <b className="text-ink tabular-nums">{usd(p.price[b])}</b>{b === "anual" ? "/año" : "/mes"}{b === "anual" && <span className="block text-xs tabular-nums">Un solo pago al año: ahorras {money(annualSaving(p))} frente al mensual</span>}</span>
                     {checkout.busy === key ? <CircleNotch weight="bold" className="size-4 shrink-0 animate-spin" /> : <ArrowRight weight="bold" className="size-4 shrink-0" />}
                   </span>
                 </button>

@@ -23,7 +23,7 @@ const SAVE = Math.max(...PLANS.map(annualSavingPct));
 const CTA = "Crear mi plan gratis";
 
 const TITLE = "Banana Burn: reconstruye tu cuerpo después de bajar de peso";
-/** Descripción según la fecha (offer.ts): la prueba sin tarjeta hasta el fin de la beta, con tarjeta después. */
+/** Descripción según la fecha (offer.ts): la prueba nunca pide tarjeta; dejarla lista da 50 % del primer mes. */
 const description = () => `La app de recomposición corporal que reemplaza a tu entrenador personal: rutina exacta, el peso de cada serie y ejercicios con técnica animada. ${offer().seo}`;
 
 export function generateMetadata(): Metadata {

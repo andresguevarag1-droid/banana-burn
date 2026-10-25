@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowCounterClockwise, ArrowLeft, Check, Lock, MonkeyBanana, Scroll } from "@/components/icons";
 import { FunnelTracker } from "@/components/analytics";
 import { createClient, getViewer } from "@/lib/supabase/server";
-import { PLANS, perMonthAnnual } from "@/lib/plans";
+import { PLANS, annualSaving } from "@/lib/plans";
 import { money, noBreakGlp1 } from "@/lib/copy";
 import { OnvoPayForm } from "./onvo-pay-form";
 
@@ -46,7 +46,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="font-extrabold text-ink">{plan.name}</p>
-            <p className="text-sm text-muted">{annual ? `Pago anual, equivale a ${money(perMonthAnnual(plan))} al mes.` : "Pago mensual, sin permanencia."}</p>
+            <p className="text-sm text-muted">{annual ? `Un solo pago al año: ahorras ${money(annualSaving(plan))} frente al mensual.` : "Pago mensual, sin permanencia."}</p>
           </div>
           <p className="text-right shrink-0">
             <span className="block text-2xl font-extrabold tabular-nums text-ink">{money(price)}</span>

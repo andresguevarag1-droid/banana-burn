@@ -128,8 +128,13 @@ export function cleanReport(raw: unknown, ua?: string | null): ErrorReport | nul
   };
 }
 
-/** Errores que no son nuestros o no se pueden accionar: extensiones, scripts de otros dominios, ruido del navegador. */
-const NOISE = /ResizeObserver loop|^Script error\.?$|chrome-extension:|moz-extension:|safari-(web-)?extension:|Non-Error promise rejection captured|AbortError|The operation was aborted|NEXT_REDIRECT|NEXT_NOT_FOUND/i;
+/**
+ * Errores que no son nuestros o no se pueden accionar: extensiones, scripts de otros dominios, ruido del navegador.
+ * También código que los navegadores de otras apps inyectan en la página (oct 2026, con tráfico de anuncios): billeteras
+ * cripto (window.ethereum), el lector de Firefox en iPhone (window.__firefox__) y el puente de Android de los navegadores
+ * dentro de Facebook o Instagram ("Java object is gone"). No vienen de nuestro código y solo ensucian /admin/salud.
+ */
+const NOISE = /ResizeObserver loop|^Script error\.?$|chrome-extension:|moz-extension:|safari-(web-)?extension:|Non-Error promise rejection captured|AbortError|The operation was aborted|NEXT_REDIRECT|NEXT_NOT_FOUND|window\.ethereum|__firefox__|Java object is gone|Error invoking postMessage|webkit\.messageHandlers/i;
 export function isNoise(message: string, kind = ""): boolean {
   return NOISE.test(message) || NOISE.test(kind);
 }

@@ -7,7 +7,7 @@ export const metadata = { title: "Salud" };
 export const dynamic = "force-dynamic";
 
 const SOURCE: Record<string, string> = { client: "Navegador", boundary: "Pantalla de error", server: "Servidor" };
-const TASK: Record<string, string> = { "cron:recordatorios": "Cron diario (avisos, cobros, retos, limpieza)" };
+const TASK: Record<string, string> = { "cron:recordatorios": "Cron diario (avisos, cobros, retos, limpieza)", "cron:cobros": "Cron de cobros (00:20, solo cobros)" };
 const INTEGRATION: Record<string, string> = {
   supabase: "Supabase (base y login)", serviceRole: "Service role (tareas del servidor)", anthropic: "Coach Banana (Anthropic)", onvo: "Pagos de planes (ONVO)",
   onvoOneTime: "Pagos de retos (ONVO)", resend: "Correos (Resend)", vapid: "Avisos push (VAPID)", cron: "Cron (CRON_SECRET)", emailUnsub: "Baja de correos firmada",
@@ -50,6 +50,7 @@ export default async function SaludPage() {
   const t7 = h.errors7d ? totals(h.errors7d) : null;
   const routes24 = h.errors24 ? byRoute(h.errors24).slice(0, 8) : [];
   const cron = h.beats?.find((b) => b.name === "cron:recordatorios");
+  const cobros = h.beats?.find((b) => b.name === "cron:cobros");
 
   return (
     <div className="space-y-7">
@@ -75,6 +76,12 @@ export default async function SaludPage() {
             {cron ? (
               <p className="text-sm text-muted">Última corrida: {fmtDateTime(cron.last_at)}{cron.ms !== null ? `, ${fmtNum(Math.round(cron.ms / 100) / 10)} s` : ""}. Corre todos los días a las 7:00 a. m. (hora de Costa Rica).</p>
             ) : <p className="text-sm text-muted">Todavía no hay registros. Aparecen después de la próxima corrida del cron con 0041 aplicada.</p>}
+          </div>
+          <div className={`${panel} p-4 space-y-2`}>
+            <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-bold text-ink">{TASK["cron:cobros"]}</h3><BeatBadge b={cobros} /></div>
+            {cobros ? (
+              <p className="text-sm text-muted">Última corrida: {fmtDateTime(cobros.last_at)}{cobros.ms !== null ? `, ${fmtNum(Math.round(cobros.ms / 100) / 10)} s` : ""}. Corre todos los días a las 12:20 a. m. (hora de Costa Rica), 4 cobros a la vez.</p>
+            ) : <p className="text-sm text-muted">Todavía no hay registros. Aparece después de su primera corrida.</p>}
           </div>
           <div className={`${panel} p-4 space-y-2`}>
             <div className="flex flex-wrap items-center justify-between gap-2">

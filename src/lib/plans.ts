@@ -49,6 +49,11 @@ export const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractio
 /** Ahorro del plan anual vs. pagar 12 meses. */
 export const annualSavingPct = (p: (typeof PLANS)[number]) => Math.round((1 - p.price.anual / (p.price.mes * 12)) * 100);
 export const perMonthAnnual = (p: (typeof PLANS)[number]) => Math.round((p.price.anual / 12) * 100) / 100;
+/**
+ * Cuánto se ahorra al año pagando anual (en dólares, al centavo). En la app se muestra esto en vez del "equivale a $5.00
+ * al mes": ese número chocaba con el primer mes al 50 % ($4.99 / $7.49) y confundía (oct 2026).
+ */
+export const annualSaving = (p: (typeof PLANS)[number]) => Math.round((p.price.mes * 12 - p.price.anual) * 100) / 100;
 
 /** Días de prueba gratis con todo incluido, contados desde la creación de la cuenta (profiles.created_at). */
 export const TRIAL_DAYS = 7;
