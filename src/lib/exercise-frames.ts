@@ -95,8 +95,9 @@ const SHEETS: Record<string, string> = {
   cablehipext: "hf_20261024_081013_becddf32-55cf-4244-9647-52946b1ad665",
   bridgemarch: "hf_20261024_081013_4f489c67-86af-4599-ad5f-165813876828",
   // Temporadas (25/10, gpt_image_2_5): un movimiento propio para cada ejercicio de las temporadas, revisado cuadro por cuadro.
-  calfraise: "hf_20261025_055356_2377c3c6-4219-4b62-992c-90b6e6d2a7a1",
-  calfraise_db: "hf_20261025_055356_7cf23d88-6502-4ada-8c11-96dd4177af50",
+  // Rehechas tras revisión: cargada colgante (el brazo libre iba al frente; ahora termina en rack), pantorrillas (talones más altos) y giro de columna (rotación visible).
+  calfraise: "hf_20261025_061749_b0908cc1-a23b-498b-836b-908e74476f85",
+  calfraise_db: "hf_20261025_061749_0f3f5438-aca4-4868-b085-ad58ff4e7597",
   calfseated: "hf_20261025_055752_27aeb5c4-e3fb-48da-87b3-1d0d974655b0",
   calfstretch: "hf_20261025_055356_6c4770d3-8652-4f2f-9e5a-cf433b79728a",
   nordic: "hf_20261025_055612_72e3e549-bd98-4d7a-a347-654f65fae44c",
@@ -113,14 +114,14 @@ const SHEETS: Record<string, string> = {
   jumprope: "hf_20261025_055905_6057ab5d-fcf0-4ac5-816c-c8455201d21b",
   mbslam: "hf_20261025_055956_283702bf-b7d6-4a1d-9b29-07021a5a9579",
   kbswing: "hf_20261025_055955_06b992f3-c3d2-4826-a137-454648173818",
-  kbclean: "hf_20261025_055955_833c24c5-812c-4947-968a-da2b1a600839",
+  kbclean: "hf_20261025_061707_4bd447ab-1811-499a-bd45-fbdcde9197c1",
   pushpress: "hf_20261025_055955_d72190e5-0171-4f80-814b-19d1ec52a3a3",
   kbthruster: "hf_20261025_060040_cfd03388-92a0-4e48-a930-bd03ad9c2498",
   skierg: "hf_20261025_060040_76fa903a-23ca-4802-9da2-015247d2b618",
   sidestretch: "hf_20261025_060126_f269de46-cdf6-4f97-b7f3-16af672cce39",
   spinestretch: "hf_20261025_060127_00370aa7-07c6-4e4f-b82e-4c530fbb60eb",
   hamstretch: "hf_20261025_060127_b10d0051-0eda-43df-a90d-8b2cb5fb5f40",
-  spinetwist: "hf_20261025_060126_8c381cec-ca0e-4a0d-a6c5-1da4e9ac8653",
+  spinetwist: "hf_20261025_061958_9b293a75-29bf-41ea-98da-93ae03ff85b6",
 };
 
 /** Hojas 3x3 (9 fotogramas, movimiento más suave). Si un ejercicio está aquí, tiene prioridad sobre la 2x2. */
