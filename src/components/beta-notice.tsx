@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Flask } from "@/components/icons";
-import { BETA_GRACE_UNTIL, betaLive } from "@/lib/plans";
+import { ArrowRight, Sparkle } from "@/components/icons";
+import { BETA_GRACE_UNTIL } from "@/lib/plans";
 
 const TZ = "America/Costa_Rica";
 const day = (ms: number) => new Date(ms).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: TZ });
@@ -14,34 +14,25 @@ export function betaDates() {
   return { lastFree: day(end - 1), firstPaid: day(end) };
 }
 
-/** Aviso del período de prueba dentro de la app (compacto: una línea y el detalle al tocar). */
+/**
+ * Aviso de acceso anticipado dentro de la app (compacto: una línea y el detalle al tocar). Tono de agradecimiento, no de
+ * "versión de prueba" (decisión del dueño, oct 2026): la app mejora a diario y las fechas de cobro quedan dichas con claridad.
+ */
 export function BetaBanner() {
   const { lastFree, firstPaid } = betaDates();
   return (
-    <aside aria-label="Versión de prueba" className="mb-5 rounded-2xl border border-banana bg-banana-soft text-sm">
+    <aside aria-label="Acceso anticipado" className="mb-5 rounded-2xl border border-banana bg-banana-soft text-sm">
       <details className="group">
         <summary className="tap flex min-h-11 list-none items-center gap-2.5 px-3.5 py-2 [&::-webkit-details-marker]:hidden">
-          <Flask weight="duotone" className="size-5 shrink-0 text-banana-ink" aria-hidden />
-          <span className="min-w-0 flex-1 text-pretty text-ink"><b>Versión de prueba:</b> gratis hasta el {lastFree}. Desde el {firstPaid} se cobran los planes.</span>
+          <Sparkle weight="duotone" className="size-5 shrink-0 text-banana-ink" aria-hidden />
+          <span className="min-w-0 flex-1 text-pretty text-ink"><b>Eres de los primeros en Banana Burn.</b> Todo incluido y gratis hasta el {lastFree}.</span>
           <span className="shrink-0 text-xs font-bold text-banana-ink underline underline-offset-4 group-open:hidden">Más info</span>
         </summary>
         <div className="px-3.5 pb-3 pl-11 text-body text-pretty">
-          <p>Mientras tanto tienes todo incluido. Desde esa fecha empezaremos a cobrar los planes a todas las cuentas. Si algo falla o se puede mejorar, cuéntanos.</p>
+          <p>Gracias por tu confianza. La app mejora todos los días, así que vas a ver cambios y novedades seguido. Si algo falla o se te ocurre una mejora, cuéntanos desde Soporte: lo leemos todo.</p><p className="mt-1.5">Desde el {firstPaid} se cobran los planes. Te avisamos antes.</p>
           <Link href="/app/suscripcion" className="tap mt-1 inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Ver planes y precios<ArrowRight weight="bold" className="size-4" /></Link>
         </div>
       </details>
-    </aside>
-  );
-}
-
-/** Franja superior del sitio público durante la beta. */
-export function BetaStrip() {
-  if (!betaLive()) return null;
-  const { lastFree, firstPaid } = betaDates();
-  return (
-    <aside aria-label="Versión de prueba" className="bg-ink px-4 py-1.5 text-center text-xs font-semibold text-white/90 text-pretty">
-      <Flask weight="fill" className="mr-1.5 inline size-3.5 -translate-y-px text-banana" aria-hidden />
-      Versión de prueba: gratis para todos hasta el {lastFree}. Desde el {firstPaid} se cobran los planes.
     </aside>
   );
 }

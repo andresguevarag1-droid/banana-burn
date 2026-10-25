@@ -103,7 +103,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
       {v.demo && <p className="flex items-start gap-2.5 rounded-2xl bg-ink text-white/90 p-4 text-sm"><Info weight="duotone" className="size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> todavía no se hacen cobros. Aquí verás tu plan, la fecha de renovación y tus recibos.</span></p>}
       {!v.demo && !payments && <p className="rounded-2xl bg-banana-soft p-4 text-sm text-banana-ink font-semibold">Los pagos todavía no están activos. Si necesitas activar tu plan, escríbenos a <a className="underline" href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>.</p>}
-      {ent.trial?.beta && !charge && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Estás en la versión de prueba: todo incluido gratis hasta el {betaDates().lastFree}.</b> Todavía no guardaste una tarjeta, así que no hay ningún cobro programado. Desde el {betaDates().firstPaid} la app se paga; si dejas tu tarjeta lista antes, tu primer mes cuesta 50 % menos.</p>}
+      {ent.trial?.beta && !charge && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Eres de los primeros en Banana Burn: todo incluido gratis hasta el {betaDates().lastFree}.</b> Todavía no guardaste una tarjeta, así que no hay ningún cobro programado. Desde el {betaDates().firstPaid} la app se paga; si dejas tu tarjeta lista antes, tu primer mes cuesta 50 % menos.</p>}
       {ent.locked && cardStep !== "trial" && charge?.phase !== "procesando" && charge?.phase !== "reintento" && charge?.phase !== "fallido" && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
       {tlp && (
@@ -118,7 +118,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-muted">Tu plan actual</p>
-            <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : ent.trial?.beta ? "Versión de prueba (todo incluido)" : ent.trial ? "Prueba gratis (todo incluido)" : "Sin plan"}</h2>
+            <h2 id="plan-actual" className="mt-1 text-2xl font-extrabold text-ink">{plan ? plan.name : ent.trial?.beta ? "Acceso anticipado (todo incluido)" : ent.trial ? "Prueba gratis (todo incluido)" : "Sin plan"}</h2>
             {price !== null && <p className="text-muted"><b className="text-ink tabular-nums">{usd(price)}</b> {ent.billing === "anual" ? "/año" : "/mes"}</p>}
           </div>
           <span className={`chip shrink-0 ${st.cls}`}>{st.label}</span>

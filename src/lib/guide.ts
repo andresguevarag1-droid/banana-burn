@@ -110,7 +110,7 @@ export function afterTrialLines(i: Pick<GuideInput, "trial" | "charge" | "cardSt
   const keep = "Tu progreso, tus entrenos y tus datos quedan guardados pase lo que pase.";
   const choose = `Si eliges ${ENTRENO.name}, la nutrición y Banana Shield quedan fuera al terminar la prueba.`;
   if (i.trial?.beta) {
-    const body = `Estás en la versión de prueba: tienes todo incluido y gratis hasta el ${d.lastFree}. Desde el ${d.firstPaid} se cobran los planes.`;
+    const body = `Eres de los primeros en Banana Burn: tienes todo incluido y gratis hasta el ${d.lastFree}. Desde el ${d.firstPaid} se cobran los planes.`;
     if (c && c.kind === "beta" && c.phase === "programado") return { body, bullets: [`Ya guardaste tu tarjeta: el ${d.day(c.chargeAt)} se cobra ${planName(c.plan)} por ${money(c.amount)}, salvo que canceles antes en Mi plan.`, `Te avisamos ${REMINDER_DAYS_BEFORE} días antes del cobro.`, choose, keep] };
     if (c && c.phase === "cancelado") return { body, bullets: ["Cancelaste tu plan: no se te cobrará.", `Desde el ${d.firstPaid} verás la pantalla de planes hasta que elijas uno.`, keep] };
     return { body, bullets: [`Si dejas tu tarjeta lista antes del ${d.firstPaid}, hoy no se cobra nada y ese día se cobra tu primer mes con 50 % de descuento (plan mensual), salvo que canceles antes.`, `Si no la agregas, desde el ${d.firstPaid} verás la pantalla de planes hasta que pagues. No hay días gratis extra.`, prices, keep] };

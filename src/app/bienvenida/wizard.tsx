@@ -230,7 +230,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             </p>
           ) : trialEnd && (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              {trialBeta ? `Estás en la versión de prueba de Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}, sin tarjeta.`}
+              {trialBeta ? `Eres de los primeros en Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}, sin tarjeta.`}
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
