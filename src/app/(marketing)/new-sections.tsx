@@ -13,6 +13,7 @@ import { PROMO_PCT, promoPrice } from "@/lib/trial";
 import { PLANS } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { SIGNUP } from "./content";
+import { SEASON_PRICE_MINOR, SPORTS, SPORT_IDS, T1_START, longDate } from "@/lib/seasons";
 
 const H2 = "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-ink text-balance";
 const LEAD = "mt-5 text-lg sm:text-xl text-muted leading-relaxed text-pretty max-w-[58ch]";
@@ -91,11 +92,7 @@ export function PlatanitaSection() {
 export function SeasonsSection() {
   const src = shot("temporadas");
   if (!src) return null;
-  const SPORTS: [string, string, string][] = [
-    ["Running", "$14.99", "Fuerza para correr más rápido y sin lesiones, acomodada a tus días de carrera."],
-    ["Raquetas", "$16.99", "Tenis y pádel: potencia de rotación, desplazamiento lateral y hombro fuerte."],
-    ["Cross Training", "$18.99", "Fuerza, gimnasia y circuitos, con una versión más fácil de cada movimiento."],
-  ];
+  const SPORTS_LIST: [string, string, string][] = SPORT_IDS.map((id) => [SPORTS[id].name, money(SEASON_PRICE_MINOR[id] / 100), SPORTS[id].tagline]);
   return (
     <section aria-labelledby="temporadas-t" className="pt-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -106,14 +103,15 @@ export function SeasonsSection() {
               <h2 id="temporadas-t" className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-balance">Entrena para <span className="text-banana">tu deporte</span>.</h2>
               <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-white/80 text-pretty">8 semanas en las que toda la app se enfoca en tu deporte: tus entrenamientos, tus consejos y tu coach con su ropa de deporte. Cada temporada llega mejorada con lo que más gustó en la anterior.</p>
               <ul className="mt-8 grid gap-3">
-                {SPORTS.map(([t, p, d]) => (
+                {SPORTS_LIST.map(([t, p, d]) => (
                   <li key={t} className="flex items-start justify-between gap-4 rounded-[1.25rem] bg-white/[.06] p-4">
                     <span><span className="block text-lg font-extrabold">{t}</span><span className="block text-sm text-white/70 text-pretty">{d}</span></span>
                     <span className="shrink-0 text-right"><span className="block text-xl font-extrabold tabular-nums text-banana">{p}</span><span className="block text-xs text-white/60">pago único</span></span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 text-sm font-semibold text-banana">Incluye 1 temporada gratis en los planes anuales.</p>
+              <p className="mt-4 text-sm font-semibold text-banana">Los planes anuales incluyen 1 temporada gratis. Temporada 1: desde el {longDate(T1_START)}.</p>
+              <Link href="/temporadas" data-cta="temporadas" className="tap mt-5 inline-flex items-center gap-2 font-bold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">Ver las temporadas <ArrowRight weight="bold" className="size-4" /></Link>
             </div>
             <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
               <Phone src={src} alt="Temporadas deportivas en Banana Burn" sizes="240px" className="w-[230px] sm:w-[250px]" />
@@ -136,7 +134,7 @@ export function RunSection() {
         <div className="order-1 lg:order-2">
           <p className="inline-flex items-center gap-2 rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink"><PersonSimpleRun weight="duotone" aria-hidden className="size-4" />Para correr</p>
           <h2 id="correr-t" className={`${H2} mt-5`}>Registra tus carreras con GPS.</h2>
-          <p className={LEAD}>Mapa de tu recorrido, distancia, ritmo por kilómetro y tus parciales. Tus carreras son privadas y ajustan tu plan de fuerza.</p>
+          <p className={LEAD}>Distancia, tiempo, ritmo por kilómetro y tus kilómetros de cada semana. Tus carreras son privadas y, con la Temporada de Running, acomodan tu plan de fuerza. Funciona con la app abierta y la pantalla encendida.</p>
         </div>
       </div>
     </section>
