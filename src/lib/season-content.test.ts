@@ -42,10 +42,16 @@ describe("contenido de la Temporada 1", () => {
 });
 
 import { readFileSync } from "node:fs";
-import { seasonSeedSql } from "./season-content";
+import { seasonSeedSql, seasonTechniqueSql } from "./season-content";
 describe("0048", () => {
   it("la siembra de la migración coincide con el código", () => {
     const sql = readFileSync(new URL("../../supabase/migrations/0048_temporadas.sql", import.meta.url), "utf8");
     expect(sql).toContain(seasonSeedSql());
+  });
+  it("0050 trae la Temporada 1 con sus ejercicios originales (generada desde el código)", () => {
+    const sql = readFileSync(new URL("../../supabase/migrations/0050_temporadas_tecnica.sql", import.meta.url), "utf8");
+    expect(sql).toBe(seasonTechniqueSql());
+    expect(sql).toContain('"ds:0417"');
+    expect(sql).not.toMatch(/delete |drop /i);
   });
 });
