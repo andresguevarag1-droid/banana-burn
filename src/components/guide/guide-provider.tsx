@@ -27,7 +27,7 @@ function readLocal(): { version: number | null; tips: TipKey[] } {
 }
 function writeLocal(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* modo privado o almacenamiento bloqueado */ } }
 
-type Ctx = { open: () => void; guideOpen: boolean; tipSeen: (k: TipKey) => boolean; dismissTip: (k: TipKey) => void };
+type Ctx = { open: () => void; guideOpen: boolean; settled: boolean; tipSeen: (k: TipKey) => boolean; dismissTip: (k: TipKey) => void };
 const GuideCtx = createContext<Ctx | null>(null);
 export const useGuide = () => useContext(GuideCtx);
 
@@ -47,10 +47,14 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [override, setOverride] = useState<GuideInput | null>(null);
+  // La primera vez (se abre sola) va la versión corta; desde el menú o Perfil, la guía completa.
+  const [short, setShort] = useState(false);
   // Hasta leer este dispositivo, ningún consejo se muestra (evita que parpadeen).
   const [local, setLocal] = useState<{ version: number | null; tips: TipKey[] } | null>(null);
   const [seenTips, setSeenTips] = useState<TipKey[]>(tips);
   const autoDone = useRef(false);
+  // Ya se decidió si la guía se abre sola: los recorridos de cada pantalla esperan a esto para no encimarse.
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => { setLocal(readLocal()); }, []);
 
@@ -61,22 +65,25 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
 
   // Se abre sola una vez. Se marca como vista al abrirse: si la persona cierra la pestaña, no vuelve a saltar.
   useEffect(() => {
-    if (!local || autoDone.current) return;
+    if (!local) return;
+    if (autoDone.current) { setSettled(true); return; }
     // Demo: /app?guia=entreno|completo|prueba|programa abre la guía con esa variante (solo para revisar las pantallas).
     if (demo) {
       const v = new URLSearchParams(window.location.search).get("guia");
       const o = demoGuideInput(input, v);
-      if (o) { autoDone.current = true; setOverride(o); setOpen(true); return; }
+      if (o) { autoDone.current = true; setOverride(o); setOpen(true); setSettled(true); return; }
     }
     if (shouldAutoOpen({ seenVersion, localVersion: local.version, locked, busy, path })) {
       autoDone.current = true;
+      setShort(true);
       setOpen(true);
       remember();
     }
+    setSettled(true);
   }, [local, demo, input, seenVersion, locked, busy, path, remember]);
 
   useEffect(() => {
-    const h = () => { setOverride(null); setOpen(true); };
+    const h = () => { setOverride(null); setShort(false); setOpen(true); };
     window.addEventListener(OPEN_GUIDE_EVENT, h);
     return () => window.removeEventListener(OPEN_GUIDE_EVENT, h);
   }, []);
@@ -96,10 +103,10 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
   const steps = useMemo(() => {
     const { lastFree, firstPaid } = betaDates();
     const day = (iso: string) => { try { return new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: tz }); } catch { return ""; } };
-    return guideSteps(override ?? input, { lastFree, firstPaid, day });
-  }, [override, input, tz]);
+    return guideSteps(override ?? input, { lastFree, firstPaid, day }, { short });
+  }, [override, input, tz, short]);
 
-  const ctx = useMemo<Ctx>(() => ({ open: () => { setOverride(null); setOpen(true); }, guideOpen: open, tipSeen, dismissTip }), [open, tipSeen, dismissTip]);
+  const ctx = useMemo<Ctx>(() => ({ open: () => { setOverride(null); setShort(false); setOpen(true); }, guideOpen: open, settled, tipSeen, dismissTip }), [open, settled, tipSeen, dismissTip]);
 
   return (
     <GuideCtx.Provider value={ctx}>

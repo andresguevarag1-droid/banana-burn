@@ -14,7 +14,12 @@ const visible = (t: string) => { const el = document.querySelector<HTMLElement>(
  * La tarjeta nunca tapa el encabezado ni el objetivo: va pegada al objetivo, del lado con más espacio.
  * Es un diálogo: Escape lo cierra, el foco queda en "Siguiente". Se recuerda en el teléfono.
  */
-export function Tour({ steps: all, onDone, extra }: { steps: TourStep[]; onDone: () => void; extra?: React.ReactNode }) {
+/** Alto aproximado de la tarjeta: si no cabe del lado elegido, se pega al borde para no salirse de la pantalla. */
+const CARD_H = 240;
+const fitBelow = (top: number): React.CSSProperties => (top + CARD_H > window.innerHeight ? { bottom: 16 } : { top });
+const fitAbove = (bottom: number, minTop: number): React.CSSProperties => (window.innerHeight - bottom - CARD_H < minTop ? { top: Math.max(minTop, 16) } : { bottom });
+
+export function Tour({ steps: all, onDone, extra, finalLabel = "A entrenar" }: { steps: TourStep[]; onDone: () => void; extra?: React.ReactNode; finalLabel?: string }) {
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   const [i, setI] = useState(0);
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -38,19 +43,42 @@ export function Tour({ steps: all, onDone, extra }: { steps: TourStep[]; onDone:
       setHeaderBottom(head ? head.getBoundingClientRect().bottom : 0);
       const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
       if (!el) { setBox(null); return; }
-      el.scrollIntoView({ block: "nearest" });
+      // Objetivo más alto que media pantalla (por ejemplo, el panel de números de Hoy): se lleva arriba y la tarjeta va
+      // fija abajo, para que nunca quede fuera de la pantalla.
+      const tall = el.getBoundingClientRect().height > window.innerHeight * 0.55;
+      el.scrollIntoView({ block: tall ? "start" : "center", behavior: "instant" as ScrollBehavior });
       const r = el.getBoundingClientRect(), pad = 8;
       setBox({ top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
     };
     measure();
+    // Mide de nuevo si algo se mueve (desplazamiento suave, imágenes que cargan): el recorte sigue al objetivo.
+    const remeasure = () => {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
+      if (!el) return;
+      const r = el.getBoundingClientRect(), pad = 8;
+      setBox({ top: r.top - pad, left: r.left - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
+    };
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    window.addEventListener("scroll", remeasure, true);
+    const t = setTimeout(remeasure, 400);
+    return () => { window.removeEventListener("resize", measure); window.removeEventListener("scroll", remeasure, true); clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step?.target]);
 
   useEffect(() => { next.current?.focus({ preventScroll: true }); }, [i, steps]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.preventDefault(); onDone(); } };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.preventDefault(); onDone(); return; }
+      // Foco atrapado en la tarjeta: Tab y Mayús+Tab dan la vuelta entre sus botones.
+      if (e.key === "Tab") {
+        const card = document.querySelector<HTMLElement>("[data-tour-card]");
+        const els = card ? [...card.querySelectorAll<HTMLElement>("button, a[href]")] : [];
+        if (!els.length) return;
+        const i = els.indexOf(document.activeElement as HTMLElement);
+        e.preventDefault();
+        els[(i + (e.shiftKey ? -1 : 1) + els.length) % els.length].focus();
+      }
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onDone]);
@@ -60,9 +88,11 @@ export function Tour({ steps: all, onDone, extra }: { steps: TourStep[]; onDone:
   // Objetivo arriba: la tarjeta va justo debajo. Objetivo abajo: justo encima. Nunca sobre el encabezado.
   const gap = 12;
   const below = box ? box.top + box.height / 2 < window.innerHeight / 2 : false;
+  const tall = box ? box.height > window.innerHeight * 0.55 : false;
   const place: React.CSSProperties = !box
     ? { top: Math.max(headerBottom + gap, 16) }
-    : below ? { top: Math.max(box.top + box.height + gap, headerBottom + gap) } : { bottom: Math.max(window.innerHeight - box.top + gap, 16) };
+    : tall ? { bottom: 16 }
+    : below ? fitBelow(Math.max(box.top + box.height + gap, headerBottom + gap)) : fitAbove(Math.max(window.innerHeight - box.top + gap, 16), headerBottom + gap);
 
   return (
     <Portal>
@@ -73,7 +103,7 @@ export function Tour({ steps: all, onDone, extra }: { steps: TourStep[]; onDone:
           <div aria-hidden className="absolute inset-0 bg-ink/60" />
         )}
         <div className="absolute inset-x-0 px-4" style={place}>
-          <div key={i} className="animate-enter mx-auto max-w-md rounded-[1.75rem] bg-paper p-5 shadow-lift">
+          <div key={i} data-tour-card className="animate-enter mx-auto max-w-md rounded-[1.75rem] bg-paper p-5 shadow-lift">
             <div className="flex items-start gap-3">
               <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><Monkey className="size-7" /></span>
               <div className="min-w-0">
@@ -86,7 +116,7 @@ export function Tour({ steps: all, onDone, extra }: { steps: TourStep[]; onDone:
             <div className="mt-4 flex items-center gap-2">
               <button type="button" onClick={onDone} className="btn h-12 px-4 text-muted hover:text-ink">Saltar</button>
               <div aria-hidden className="mx-auto flex gap-1.5">{steps.map((_, k) => <span key={k} className={`h-1.5 rounded-full transition-[width,background-color] duration-(--dur-fast) ${k === i ? "w-5 bg-ink" : "w-1.5 bg-line"}`} />)}</div>
-              <button ref={next} type="button" onClick={() => (last ? onDone() : setI(i + 1))} className="btn-primary h-12 px-6">{last ? "A entrenar" : "Siguiente"}</button>
+              <button ref={next} type="button" onClick={() => (last ? onDone() : setI(i + 1))} className="btn-primary h-12 px-6">{last ? finalLabel : "Siguiente"}</button>
             </div>
           </div>
         </div>

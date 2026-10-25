@@ -3,7 +3,7 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lifebuoy, Lock, ShieldCheck, SignOut, Sparkle, User, Users, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, GraduationCap, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lifebuoy, Lock, ShieldCheck, SignOut, Sparkle, User, Users, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
@@ -24,6 +24,7 @@ const MAIN: Item[] = [
 ];
 const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador 24/7" },
+  { href: "/app/aprende", label: "Aprende a entrenar", icon: GraduationCap, hint: "10 lecciones de 30 segundos" },
   { href: "/app/retos", label: "Programas y retos", icon: BananaMedal, hint: "Programas Premium y retos gratis" },
   { href: "/app/niveles", label: "Niveles", icon: BananaCoin, hint: "XP, racha y recompensas" },
   { href: "/app/ejercicios", label: "Ejercicios", icon: BookOpen, hint: `Más de ${(1300).toLocaleString("es-419")} con técnica` },

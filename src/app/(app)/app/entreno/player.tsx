@@ -4,7 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning, WifiSlash } from "@/components/icons";
-import { platesPerSide, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
+import { platesPerSide, prescribe, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
+import { nextTimeLine } from "@/lib/primeros-pasos";
+import { learn } from "@/components/primeros-pasos/learn-store";
 import { FULL_BONUS, SET_XP, levelCrossed, workoutXp } from "@/lib/gamify";
 import type { Technique } from "@/lib/engine/technique";
 import { ExerciseMotion } from "@/components/exercise-motion";
@@ -503,6 +505,14 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   useHiddenAlarm(phase === "play" ? alarm.at : null, alarm.t, alarm.b);
 
   /* ---------- Resumen y guardado ---------- */
+  // Lo que cambia la próxima vez, con los mismos números que usará el motor (prescribe) con lo que se anotó hoy.
+  const nextTime = useMemo(() => exercises.flatMap((e, i) => {
+    if (e.id.startsWith("ds:") || e.cfg.unit) return [];
+    const sets = rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) }));
+    if (!sets.length) return [];
+    const line = nextTimeLine(prescribe(e.id, e.cfg, e.lastSets?.length ? [e.lastSets, sets] : [sets]), e.cfg.lo);
+    return line ? [{ name: e.name, line }] : [];
+  }).slice(0, 4), [exercises, rows]);
   const summary = useMemo(() => ({ vol: volumeOf(rows), ...(noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed })) }), [rows, doneSets, planTotal, prs.length, elapsed, noXp]);
   const prNames = prs.map((p) => p.name);
   const outId = outboxId({ template, startedAt });
@@ -517,6 +527,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     setSaved(res);
     setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
     setPhase("saved");
+    learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
     buzz([60, 40, 60, 40, 200]);
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
       title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
@@ -588,7 +599,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   }
 
   if (phase === "saved") {
-    return <Recap sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
+    return <Recap next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
       done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} />;
   }
 
@@ -741,12 +752,16 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const loads = loadsFor(ex.load);
   const missingKg = needsLoad(ex) && activeSet >= 0 && num(here[activeSet].kg) <= 0;
   const chips = activeSet >= 0 && needsLoad(ex) && loads && (ex.rx.type === "cal" || missingKg) ? loads.chips : null;
+  // Primer entreno: cada parte se explica en el momento, en frases cortas (lo que ve, qué tocar y qué pasa después).
   const tourSteps: TourStep[] = [
+    { target: "tech", title: "Mira cómo se hace", body: "Toca el dibujo para ver el movimiento y los pasos. Míralo antes de tu primera serie." },
+    { target: "sets", title: "Tu meta en esta serie", body: needsLoad(ex) ? "Aquí ves el peso y cuántas repeticiones hacer. La primera vez, elige un peso con el que te queden 2 repeticiones de sobra." : "Aquí ves cuántas repeticiones o segundos hacer. Hazlas con buena técnica, sin apurarte." },
     timed
       ? { target: "done", title: "Empieza la serie", body: perSide ? "Toca Iniciar: cuenta 3 segundos para que te acomodes, el tiempo del lado derecho, 5 segundos para cambiar de lado y el del izquierdo. Al terminar se marca sola." : "Toca Iniciar: cuenta 3 segundos para que te acomodes y luego el tiempo de trabajo. Al terminar se marca sola." }
       : { target: "done", title: "Marca la serie", body: t(voice, { basico: "Haz las repeticiones y toca Hecho. Si usaste otro peso, cámbialo antes con los botones grandes.", intermedio: "Haz las reps y toca Hecho. Si levantaste otro peso, cámbialo antes con los botones grandes.", tecnico: "Completa la serie y toca Hecho. Ajusta antes la carga real si cambió." }) },
     { target: "rest", title: "Descansa", body: "Al marcar arranca el descanso con cuenta regresiva. Te avisamos con sonido y vibración cuando toca seguir." },
     { target: "swap", title: "¿Máquina ocupada?", body: "Toca Cambiar y elige otro ejercicio del mismo patrón. Tus series se ajustan solas." },
+    { target: "trail", title: "Tus ejercicios de hoy", body: "Aquí ves todos. Al terminar el último, te mostramos tu resumen y lo que cambia la próxima vez." },
   ];
 
   return (
@@ -771,7 +786,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           <SessionRing value={doneSets / Math.max(1, totalSets)} />
         </div>
         <div className="mx-auto mt-2 max-w-xl">
-          <BananaTrail items={exercises.map((e, i) => ({ name: e.name, done: rows[i].filter((s) => s.done).length, total: rows[i].length }))} current={idx} fresh={fresh} onPick={(i) => { setIdx(i); setWork(null); }} />
+          <div data-tour="trail"><BananaTrail items={exercises.map((e, i) => ({ name: e.name, done: rows[i].filter((s) => s.done).length, total: rows[i].length }))} current={idx} fresh={fresh} onPick={(i) => { setIdx(i); setWork(null); }} /></div>
           {goal && <LevelMeter idx={goal.level.idx} progress={goal.level.progress} text={levelGoalText(goal, setWord)} className="mt-2 px-1" />}
         </div>
       </header>
@@ -780,7 +795,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
         <div className={`mx-auto max-w-xl px-4 pt-4 ${rest && !restOpen ? "pb-28" : "pb-6"}`}>
           {/* Ejercicio: el mosaico abre la técnica; el único botón al lado es Cambiar */}
           <section key={ex.id} className="flex gap-3 items-stretch animate-enter">
-            <button onClick={() => setSheet("tech")} className={`pressable relative shrink-0 w-[88px] min-h-[104px] rounded-3xl overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver técnica de ${ex.name}`}>
+            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative shrink-0 w-[88px] min-h-[104px] rounded-3xl overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver técnica de ${ex.name}`}>
               {(() => {
                 const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-11 text-ink/80" />;
                 return ex.art ? <CoachArtFill src={ex.art} sizes="88px" className="object-contain pb-4" fallback={still} /> : still;
@@ -840,7 +855,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
             </div>
           </div>
 
-          <div className="mt-2.5">
+          <div data-tour="sets" className="mt-2.5">
             {focus && activeSet >= 0 ? (
               <FocusSet rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} perSide={perSide} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
                 chips={chips} onPickKg={pickKg} onStep={step} onChange={change} onCopy={copy} onUndo={undo} />

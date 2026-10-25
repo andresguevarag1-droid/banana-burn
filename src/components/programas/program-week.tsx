@@ -14,7 +14,7 @@ export type WeekSessionView = {
  * `dayLabel`: nombre de cada sesión. Por defecto "Día 1, 2, 3" de la semana; un programa contado en días pasa el día
  * del programa ("Día 12"), así coincide con "Día 12 de 30".
  */
-export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE, dayLabel }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice; dayLabel?: Record<number, number> }) {
+export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones de la semana", voice = DEFAULT_VOICE, dayLabel, tech = {} }: { sessions: WeekSessionView[]; current: number | null; cta?: boolean; label?: string; voice?: Voice; dayLabel?: Record<number, number>; tech?: Record<string, string> }) {
   const word = (day: number) => `Día ${dayLabel?.[day] ?? day}`;
   const [sel, setSel] = useState(current ?? sessions[0]?.day ?? 1);
   // Si la fila de pestañas se desliza (5 o más sesiones), la de hoy empieza a la vista (solo se mueve la fila, no la página).
@@ -30,7 +30,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
     <div className="space-y-3">
       {/* Con 5 o más sesiones (Pilates) las pestañas tienen un ancho mínimo y la fila se desliza: en 390 px quedaban de
           60 px y "bailarina" se partía a la mitad. pt/pr dejan ver el check de "hecha" que sobresale de la esquina. */}
-      <div ref={tabs} role="tablist" aria-label={label} className="relative -mx-1 grid gap-1.5 overflow-x-auto overscroll-x-contain px-1 pt-2 pr-2 pb-1 -mt-2" style={{ gridTemplateColumns: `repeat(${sessions.length}, minmax(${sessions.length > 4 ? "6.5rem" : "0"}, 1fr))` }}>
+      <div ref={tabs} data-tour="ent-dias" role="tablist" aria-label={label} className="relative -mx-1 grid gap-1.5 overflow-x-auto overscroll-x-contain px-1 pt-2 pr-2 pb-1 -mt-2" style={{ gridTemplateColumns: `repeat(${sessions.length}, minmax(${sessions.length > 4 ? "6.5rem" : "0"}, 1fr))` }}>
         {sessions.map((x) => {
           const on = x.day === sel;
           return (
@@ -51,12 +51,12 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
           {s.done ? <span className="chip bg-peel text-white"><Check weight="bold" className="size-3.5" />Hecha</span> : <span className="chip bg-cream text-ink"><Clock weight="duotone" className="size-3.5" />{s.mins} min</span>}
         </div>
         <h3 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">{s.title}</h3>
-        <ol className="mt-4 space-y-2">
+        <ol id="ejercicios" className="mt-4 space-y-2 scroll-mt-6">
           {s.exercises.map((e, i) => (
-            <li key={`${e.id}-${i}`} className="rounded-2xl bg-cream px-3.5 py-3">
+            <li key={`${e.id}-${i}`} data-tour={i === 0 ? "ent-ejercicio" : undefined} className="relative rounded-2xl bg-cream px-3.5 py-3">
               <div className="flex items-center gap-3">
                 <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink text-sm font-bold text-white">{i + 1}</span>
-                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${String(e.rest).replace(/ (s|min)\b/g, "\u00a0$1")}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-bold leading-tight text-ink">{tech[e.id] ? <Link href={tech[e.id]} className="after:absolute after:inset-0 after:rounded-2xl hover:underline underline-offset-2">{e.name}<span className="sr-only">: ver cómo se hace</span></Link> : e.name}</p><p className="text-xs text-muted">{[muscleText(voice, e.muscle), `${t(voice, { basico: "descansa", intermedio: "descanso", tecnico: "descanso" })} ${String(e.rest).replace(/ (s|min)\b/g, "\u00a0$1")}`, e.tempo ? tempoLabel(voice, e.tempo) : ""].filter(Boolean).join(", ")}</p></div>
                 {/* Series y repeticiones en el registro de la persona: "3 series de 10 a 12" en básico, "3×10-12" en técnico. */}
                 <p className={`shrink-0 font-extrabold tabular-nums text-ink text-right ${voice === "basico" ? "max-w-[9rem] text-sm leading-tight" : "whitespace-nowrap"}`}>{e.cfg ? setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide) : e.sets}</p>
               </div>
@@ -68,7 +68,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
           s.done ? (
             <Link href={`${s.href}${s.href.includes("?") ? "&" : "?"}repetir=1`} className="btn-ghost mt-5 h-13 w-full px-6 sm:w-auto"><Repeat weight="bold" className="size-5" />Repetir (no suma XP)</Link>
           ) : (
-            <Link href={s.href} className={`mt-5 h-13 w-full px-6 sm:w-auto ${s.day === current ? "btn-primary" : "btn-ghost"}`}>{s.day === current ? "Empezar esta sesión" : `Hacer ${s.title} ahora`}<ArrowRight weight="bold" className="size-5" /></Link>
+            <Link data-tour="ent-empezar" href={s.href} className={`mt-5 h-13 w-full px-6 sm:w-auto ${s.day === current ? "btn-primary" : "btn-ghost"}`}>{s.day === current ? "Empezar esta sesión" : `Hacer ${s.title} ahora`}<ArrowRight weight="bold" className="size-5" /></Link>
           )
         ) : <p className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-muted"><Lock weight="duotone" className="size-4" />Disponible al empezar el programa.</p>)}
       </section>
