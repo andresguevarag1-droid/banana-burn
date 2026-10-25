@@ -41,6 +41,7 @@ import { getLearnState } from "@/lib/primeros-pasos-server";
 import { FirstSteps } from "@/components/primeros-pasos/first-steps";
 import { HowToButton, PageTour } from "@/components/primeros-pasos/page-tour";
 import { WeekRecap } from "@/components/primeros-pasos/week-recap";
+import { LoMejor } from "@/components/primeros-pasos/lo-mejor";
 import { weekRecapFor } from "@/lib/week-recap-server";
 
 export const metadata = { title: "Hoy" };
@@ -110,6 +111,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />
       <FirstSteps server={{ keys: learnState.keys, workouts: learnState.workouts, weights: learnState.weights, coachMessages: learnState.coachMessages, push: learnState.push }} coach={{ name: guideCoach?.name ?? "Coach Banana", avatar: guideCoach?.avatar ?? null }} />
+      <LoMejor serverKeys={learnState.keys} />
       {recap && <WeekRecap r={recap} />}
       <AnnouncementBanner />
       <InstallCard />
