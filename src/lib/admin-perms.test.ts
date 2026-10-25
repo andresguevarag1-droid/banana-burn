@@ -11,9 +11,9 @@ describe("matriz de permisos", () => {
       expect(can(null, cap)).toBe(false);
     }
   });
-  it("admin y superadmin lo ven todo", () => {
+  it("admin y superadmin lo ven todo (salvo referidores: solo el dueño)", () => {
     for (const cap of Object.keys(MATRIX) as Capability[]) {
-      expect(can("admin", cap)).toBe(true);
+      expect(can("admin", cap)).toBe(cap !== "affiliates.manage");
       expect(can("superadmin", cap)).toBe(true);
     }
   });
@@ -80,6 +80,11 @@ describe("matriz de permisos", () => {
 
 describe("cambio de rol", () => {
   const base = { actorId: "A", targetId: "T" };
+  it("referidores (0051): solo superadmin invita, asigna y paga", () => {
+    for (const r of ["free", "pro", "coach", "support", "admin"] as Role[]) expect(can(r, "affiliates.manage")).toBe(false);
+    expect(can("superadmin", "affiliates.manage")).toBe(true);
+    expect(canSee("admin", "referidores")).toBe(false);
+  });
   it("solo superadmin otorga admin/superadmin", () => {
     expect(assignableRoles("admin")).toEqual(["free", "pro", "coach", "support"]);
     expect(assignableRoles("superadmin")).toEqual(ROLES);

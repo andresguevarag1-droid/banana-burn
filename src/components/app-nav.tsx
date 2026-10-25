@@ -3,7 +3,7 @@ import { ViewSwitch } from "@/components/view-switch";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Barbell, BookOpen, BowlFood, GraduationCap, ChartLine, Compass, CreditCard, DotsThree, Gift, House, Lifebuoy, Lock, Medal, PersonSimpleRun, ShieldCheck, SignOut, Sparkle, User, Users, type PhosphorIcon } from "@/components/icons";
+import { Barbell, BookOpen, BowlFood, GraduationCap, ChartLine, Compass, CreditCard, DotsThree, Gift, HandCoins, House, Lifebuoy, Lock, Medal, PersonSimpleRun, ShieldCheck, SignOut, Sparkle, User, Users, type PhosphorIcon } from "@/components/icons";
 import { BananaCoin, BananaMedal, Monkey } from "@/components/icons/brand";
 import { Logo } from "./brand";
 import { NotificationBell } from "./notifications/bell";
@@ -35,6 +35,8 @@ const EXTRA: Item[] = [
   { href: "/app/soporte", label: "Ayuda y reportes", icon: Lifebuoy, hint: "Reporta un problema y sigue tu caso" },
   { href: "/app/novedades", label: "Novedades", icon: Sparkle, hint: "Lo nuevo en la app" },
 ];
+/** Referidores (0051): "Mis referidos" reemplaza a "Invita y gana" (no se juntan las dos recompensas). */
+const AFF_ITEM: Item = { href: "/app/afiliados", label: "Mis referidos", icon: HandCoins, hint: "Tus comisiones y tu enlace" };
 const NEWS_HREF = "/app/novedades";
 /** Barra inferior en móvil: 4 secciones + Coach al centro + "Más". */
 const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
@@ -42,8 +44,9 @@ const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
 /** `program`: programa activo (0024). Se marca en el menú con un distintivo discreto. */
 /** `news`: novedades sin ver (0036). Pone un punto "Nuevo" en Novedades y en "Más". */
 /** `coachName`: la coach del programa activo (Coach Platanita) reemplaza a Coach Banana en el menú mientras dura. */
-export function AppNav({ name, staff, nutrition, program = null, news = null, coachName = null }: { name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string; mode?: string | null } | null; news?: { latestId: string | null; unseen: boolean; persisted: boolean } | null; coachName?: string | null }) {
+export function AppNav({ name, staff, nutrition, program = null, news = null, coachName = null, affiliate = false }: { affiliate?: boolean; name: string; staff: boolean; nutrition: boolean; program?: { slug: string; title: string; mode?: string | null } | null; news?: { latestId: string | null; unseen: boolean; persisted: boolean } | null; coachName?: string | null }) {
   const path = usePathname();
+  const extra = affiliate ? EXTRA.map((i) => (i.href === "/app/referidos" ? AFF_ITEM : i)) : EXTRA;
   const label = (i: Item) => (coachName && i.href === "/app/coach" ? coachName : i.label);
   const newsDot = useNewsDot(news);
   const newMark = (i: Item) => (newsDot && i.href === NEWS_HREF ? <span className="ml-auto rounded-full bg-banana px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-ink">Nuevo<span className="sr-only"> (hay novedades sin ver)</span></span> : null);
@@ -81,7 +84,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
             </Link>
           ); })}
           <div className="my-3 border-t border-line" />
-          {EXTRA.map((it) => { const { href, icon: Icon } = it; return (
+          {extra.map((it) => { const { href, icon: Icon } = it; return (
             <Link key={href} href={href} aria-current={active(href) ? "page" : undefined} className={sideLink(active(href))}>
               <Icon className="size-5" weight={active(href) ? "fill" : "duotone"} />{label(it)}{lockMark(it)}{newMark(it)}
             </Link>
@@ -126,7 +129,7 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
       <Sheet id="menu-mas" open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
         <ul className="mt-3 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...EXTRA.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Mi plan", icon: CreditCard, hint: "Plan, tarjeta y recibos" }].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
+          {[MAIN[2], MAIN[3], ...extra.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Mi plan", icon: CreditCard, hint: "Plan, tarjeta y recibos" }].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
             <li key={href}>
               <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-1.5 rounded-2xl p-3.5 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}{newMark(it)}</span>

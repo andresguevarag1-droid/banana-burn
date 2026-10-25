@@ -37,6 +37,19 @@ export async function GET() {
     // Referidos (0025): a quién invitaste (solo inicial y estado), tus recompensas y lo que guardamos para evitar abusos.
     const [mine, rewards] = await Promise.all([sb.rpc("my_referrals"), sb.from("referral_rewards").select("group_no,months,plan,created_at,upgraded_at,revoked_at").eq("referrer", v.id)]);
     out.referidos = { invitados: mine.data ?? [], recompensas: rewards.data ?? [] };
+    // Referidores (0051): si eres referidor, tu código, tus referidos (anonimizados), comisiones, pagos y método de pago.
+    const aff = await sb.from("affiliates").select("code,active,created_at,revoked_at,perk_since").eq("user_id", v.id).maybeSingle();
+    if (aff.data) {
+      const [refs, lines, pays, meth] = await Promise.all([
+        sb.rpc("my_affiliate_referrals"),
+        sb.from("affiliate_commissions").select("created_at,kind,provider,plan,billing,gross_minor,fee_minor,tax_minor,net_minor,rate_pct,commission_minor,status,available_at,paid_at").eq("affiliate_id", v.id),
+        sb.from("affiliate_payouts").select("period,amount_minor,status,method,reference,paid_at,created_at").eq("affiliate_id", v.id),
+        sb.from("affiliate_payout_methods").select("*").eq("user_id", v.id),
+      ]);
+      out.referidor = { cuenta: aff.data, referidos: refs.data ?? [], comisiones: lines.data ?? [], pagos: pays.data ?? [], metodo_de_pago: meth.data ?? [] };
+    }
+    // Si llegaste por el enlace de un referidor guardamos de quién (sin datos tuyos para él, solo nombre e inicial) y los UTM.
+    out.referidor_atribucion = "Si creaste tu cuenta desde el enlace de un referidor, guardamos a qué referidor corresponde y los parámetros UTM de la visita. El referidor solo ve tu nombre y la inicial de tu apellido.";
     // Soporte (0034): la conversación de tus reportes, con los mensajes que puedes leer en la app.
     const msgs = await sb.from("support_messages").select("ticket_id,author_kind,body,created_at").eq("internal", false).order("created_at");
     out.support_messages = msgs.error ? { error: "no disponible" } : msgs.data ?? [];

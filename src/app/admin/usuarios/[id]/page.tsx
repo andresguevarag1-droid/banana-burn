@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Flask, Gift, Lock, ArrowCounterClockwise as RotateCcw, Trash, UserGear as UserCog, ShieldWarning } from "@/components/icons";
+import { Flask, Gift, HandCoins, Lock, ArrowCounterClockwise as RotateCcw, Trash, UserGear as UserCog, ShieldWarning } from "@/components/icons";
 import { requireSection } from "@/lib/admin-auth";
 import { CATEGORY_LABEL, STATUS_LABEL, type SupportCategory, type SupportStatus } from "@/lib/support";
 import { ACTIVITY_LABEL, getUserDetail, PLAN_LABEL, statusOf } from "@/lib/admin";
@@ -15,6 +15,7 @@ import { Badge, DemoNotice, MetaList, Nil, Notice, PageHeader, PlanText, RoleBad
 import { changeRole, deleteUserAccount, grantComp, resetOnboarding, revokeComp, setSuspended } from "../../actions";
 import { giftMonths, reviewReferral, revokeReferralReward } from "../../regalos-actions";
 import { GiftFields, type GiftCover } from "@/components/admin/gift-fields";
+import { assignAffiliateById } from "../../referidores/actions";
 import { getReferralOverview, REFERRAL_FLAG_LABEL, REFERRAL_STATUS_LABEL } from "@/lib/admin-referrals";
 import { GIFT_STATUS_LABEL, giftStatus, monthsLabel } from "@/lib/gifts";
 import { BETA_ENDS_AT } from "@/lib/plans";
@@ -371,6 +372,18 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   </ConfirmAction>
                 ) : <p className="text-sm text-muted">Solo admin y superadmin regalan meses.</p>}
               </div>
+
+              {can(v.role, "affiliates.manage") && (
+                <div className="space-y-2 border-t border-line pt-4">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><HandCoins className="size-4" aria-hidden />Referidor</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ConfirmAction action={assignAffiliateById} trigger="Hacer referidor" title={`Hacer referidor a ${a.full_name || "este usuario"}`} hidden={{ target: a.id }} confirmLabel="Asignar"
+                      description="Recibe un enlace propio y gana un porcentaje de lo que pagan sus referidos. Le llega un correo de bienvenida. Si ya lo era, se reactiva con su mismo código.">
+                    </ConfirmAction>
+                    <Link href={`/admin/referidores/${a.id}`} className={link}>Ver como referidor</Link>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 border-t border-line pt-4">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><ShieldWarning className="size-4" aria-hidden />Comunidad</h3>

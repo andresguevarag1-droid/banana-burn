@@ -5,7 +5,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
 import { clientIpFrom, memoryRateLimit } from "@/lib/security";
 import { dbRateLimitAll, keyPart } from "@/lib/security/db-rate-limit";
-import { attributeReferral } from "@/lib/referrals-server";
+import { attributeNewAccount } from "@/lib/attribution-server";
 import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./validate";
 
 // Acceso sin correo de confirmación: si producción no tiene SMTP, el correo de confirmación nunca llega y la persona
@@ -73,7 +73,7 @@ export async function signUpConfirmed(email: string, password: string): Promise<
   const { data, error } = await admin.auth.admin.createUser({ email: mail, password, email_confirm: true });
   if (!error) {
     // Invitación (/r/<código>): se atribuye aquí, en el servidor, al crear la cuenta. Nunca bloquea el registro.
-    if (data.user) await attributeReferral(data.user.id, mail);
+    if (data.user) await attributeNewAccount(data.user.id, mail);
     return { ok: true };
   }
   if (/already|registered|exists/i.test(error.message)) return { ok: false, error: "Ya existe una cuenta con ese correo. Entra con tu contraseña." };

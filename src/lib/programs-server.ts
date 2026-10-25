@@ -58,7 +58,7 @@ function demoDone(today: string): DoneSession[] {
 }
 
 /**
- * Demo de chica (?programa=pilates-casa-30&dia=12): Valeria va por el día `day` y no se saltó ninguna sesión.
+ * Demo de chica (?programa=pilates-casa-30&dia=12): Sofía va por el día `day` y no se saltó ninguna sesión.
  * En pausa, la pausó hace 3 días en ese mismo día; completado, lo cerró ayer.
  */
 export function girlDemoState(d: DemoState, today: string): ProgramState {

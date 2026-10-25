@@ -261,16 +261,22 @@ export async function activateVerified(db: SupabaseClient, row: SubscriptionRow,
   }
   // Renovación: el periodo nuevo empieza donde terminó el anterior (activate nunca retrocede el fin).
   const plan = await activate(db, row, { periodStart: a.periodStart, periodEnd: a.periodEnd, customerId: null });
-  await notifyPaid(row, a.amountMinor, a.currency, a.periodEnd, a.reference, a.expectedMinor != null && row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : null);
+  await notifyPaid(db, a.provider, row, a.amountMinor, a.currency, a.periodEnd, a.reference, a.expectedMinor != null && row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : null);
   await done("processed", check.note ? `${check.note}, plan=${plan}` : `plan=${plan}`);
   log("cobro verificado activado", { provider: a.provider, userId: row.user_id, subscriptionId: row.provider_subscription_id, plan });
   return { ok: true, plan };
 }
 
-/** Recibo por correo (idempotente por referencia). Nunca bloquea el webhook. */
-async function notifyPaid(row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string, promoFull: number | null = null) {
+/**
+ * Todo pago verificado pasa por aquí (ONVO webhook, primer mes con 50 %, Tilopay, renovaciones y anuales): recibo por correo
+ * (idempotente por referencia) y comisión del referidor si la persona llegó con un enlace de referidor (0051, idempotente por
+ * pago). Nunca bloquea el webhook ni el cobro.
+ */
+async function notifyPaid(db: SupabaseClient, provider: "onvo" | "tilopay", row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string, promoFull: number | null = null) {
   const amount = amountMinor != null ? amountMinor / 100 : row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0;
   await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd, promoFull }).catch(() => {});
+  const { affiliateOnPaid } = await import("@/lib/affiliates-server");
+  await affiliateOnPaid(db, { userId: row.user_id, provider, reference, amountMinor, currency, plan: row.plan, billing: row.billing }).catch(() => "error");
 }
 
 /**
@@ -337,7 +343,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       }
       const note = check.note;
       const plan = await activate(db, row, action);
-      await notifyPaid(row, action.amountMinor, action.currency, action.periodEnd, action.paymentIntentId ?? key);
+      await notifyPaid(db, "onvo", row, action.amountMinor, action.currency, action.periodEnd, action.paymentIntentId ?? key);
       return finish("processed", note ? `${note}, plan=${plan}` : `plan=${plan}`, row.user_id);
     }
 
@@ -372,7 +378,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const st = await fetchSubscriptionState(row.provider_subscription_id);
       if (st.active) {
         const plan = await activate(db, row, { periodStart: st.periodStart, periodEnd: st.periodEnd, customerId: action.customerId });
-        await notifyPaid(row, null, null, st.periodEnd, piId ?? key);
+        await notifyPaid(db, "onvo", row, null, null, st.periodEnd, piId ?? key);
         return finish("processed", `activada vía payment intent (ONVO status=${st.status}), plan=${plan}`, row.user_id);
       }
     }

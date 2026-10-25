@@ -20,5 +20,7 @@ export const EXPORT_BY_USER = [
  * nadie lee por la API; el conteo de preguntas ya va completo en coach_usage.
  * card_fingerprints (0045) va descrita: una huella (sha256) de la tarjeta para que la promoción del primer mes sea una por
  * tarjeta; no es el número ni se puede revertir, y nadie la lee por la API.
+ * Referidores (0051): affiliates, affiliate_payout_methods (y sus comisiones y pagos) van en `referidor`; affiliate_referrals
+ * va descrita en `referidor_atribucion` (de quién viene la cuenta; el referidor solo ve nombre e inicial).
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals"] as const;

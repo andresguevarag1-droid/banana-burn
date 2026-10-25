@@ -17,7 +17,7 @@ function rng(seed: number) {
   };
 }
 
-const FIRST_F = ["María José", "Valeria", "Sofía", "Camila", "Fernanda", "Mariana", "Gabriela", "Natalia", "Paula", "Laura", "Melissa", "Daniela", "Priscilla", "Karla", "Raquel", "Adriana", "Tatiana", "Marcela", "Yendry", "Hazel", "Sharon", "Fabiola", "Silvia", "Andrea"];
+const FIRST_F = ["María José", "Sofía", "Camila", "Fernanda", "Mariana", "Gabriela", "Natalia", "Paula", "Laura", "Melissa", "Daniela", "Priscilla", "Karla", "Raquel", "Adriana", "Tatiana", "Marcela", "Yendry", "Hazel", "Sharon", "Fabiola", "Silvia", "Andrea"];
 const FIRST_M = ["José Pablo", "Daniel", "Luis Diego", "Diego", "Carlos", "Pablo", "Jorge", "Esteban", "Kevin", "Ricardo", "Alonso", "Mauricio", "Fabián", "Randall", "Óscar", "Allan", "Josué", "Bryan", "Gerardo", "Andrés", "Adrián", "Rodolfo", "Marco", "Sebastián"];
 const LAST = ["Rodríguez", "Jiménez", "Mora", "Vargas", "Solano", "Rojas", "Alfaro", "Chaves", "Quesada", "Castro", "Arias", "Herrera", "Calderón", "Salazar", "Brenes", "Monge", "Ramírez", "Araya", "Sánchez", "Villalobos", "Umaña", "Zúñiga", "Campos", "Segura", "Madrigal", "Badilla", "Cordero", "Fallas", "Porras", "Ulate"];
 

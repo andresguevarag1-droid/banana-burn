@@ -2,9 +2,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { BookOpen, CreditCard, IdentificationCard, Medal, SquaresFour as LayoutDashboard, Scroll as ScrollText, ShieldWarning as ShieldAlert, Users, Lifebuoy, Heartbeat } from "@/components/icons";
+import { BookOpen, CreditCard, IdentificationCard, Medal, SquaresFour as LayoutDashboard, Scroll as ScrollText, ShieldWarning as ShieldAlert, Users, Lifebuoy, Heartbeat, HandCoins } from "@/components/icons";
 
-const ICONS = { resumen: LayoutDashboard, usuarios: Users, pagos: CreditCard, contenido: BookOpen, retos: Medal, comunidad: ShieldAlert, verificaciones: IdentificationCard, soporte: Lifebuoy, auditoria: ScrollText, salud: Heartbeat } as const;
+const ICONS = { resumen: LayoutDashboard, usuarios: Users, pagos: CreditCard, contenido: BookOpen, retos: Medal, comunidad: ShieldAlert, verificaciones: IdentificationCard, soporte: Lifebuoy, auditoria: ScrollText, salud: Heartbeat, referidores: HandCoins } as const;
 export type NavItem = { key: keyof typeof ICONS; href: string; label: string; badge?: number };
 
 const isActive = (path: string, href: string) => (href === "/admin" ? path === "/admin" : path === href || path.startsWith(href + "/"));

@@ -29,7 +29,7 @@ const missingRpc = (e: { code?: string } | null) => !!e && ["PGRST202", "42883"]
 // ───────────── Modo demo: una sola historia, coherente con demo-story ─────────────
 const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
 const DEMO_AUTHORS: Author[] = [
-  { id: "d1", username: "carla.fit", name: "Carla Mora", xp: 3420, tester: true, flair: DEMO_FLAIR.d1 }, { id: "d2", username: "diego.sol", name: "Diego Solís", xp: 5180, flair: DEMO_FLAIR.d2 }, { id: "d3", username: "vale.run", name: "Valeria Jiménez", xp: 1240, flair: DEMO_FLAIR.d3 },
+  { id: "d1", username: "carla.fit", name: "Carla Mora", xp: 3420, tester: true, flair: DEMO_FLAIR.d1 }, { id: "d2", username: "diego.sol", name: "Diego Solís", xp: 5180, flair: DEMO_FLAIR.d2 }, { id: "d3", username: "dani.run", name: "Daniela Jiménez", xp: 1240, flair: DEMO_FLAIR.d3 },
 ];
 /** El Andrés del demo: Cosecha con su certificado de Abdomen marcado (coherente con demoPower en profile-power-server). */
 const DEMO_ME_FLAIR: Flair = { verified: false, tier: 3, featured: { id: "prog:abdomen-marcado", label: "Core de acero", icon: "target", cover: "sky" } };
@@ -39,7 +39,7 @@ const DEMO_SUGGEST: (Author & { bio: string; sameCountry: boolean; sameGoal: boo
   { id: "d5", username: "mariela.q", name: "Mariela Quesada", xp: 860, flair: DEMO_FLAIR.d5, bio: "Mamá de dos, entreno exprés en casa.", sameCountry: true, sameGoal: false, activeDays: 6, followers: 14 },
   { id: "d6", username: "jp.vargas", name: "José Pablo Vargas", xp: 420, flair: DEMO_FLAIR.d6, bio: "Empezando de cero, aquí vamos.", sameCountry: false, sameGoal: true, activeDays: 3, followers: 5 },
 ];
-const DEMO_BIO: Record<string, string> = { "carla.fit": "Fuerza 4 días por semana. Bajando de 78 a 68 kg.", "diego.sol": "Volví al gym después de 3 años.", "vale.run": "Corro y levanto. Exprés cuando viajo." };
+const DEMO_BIO: Record<string, string> = { "carla.fit": "Fuerza 4 días por semana. Bajando de 78 a 68 kg.", "diego.sol": "Volví al gym después de 3 años.", "dani.run": "Corro y levanto. Exprés cuando viajo." };
 const weekDemo = (v: Viewer) => {
   const t = todayFor(v).iso, mon = mondayIso(t);
   const all = demoWorkouts(t);
@@ -314,7 +314,7 @@ export async function getLeaderboard(v: Viewer, scope: BoardScope = "siguiendo")
       { userId: "d2", username: "diego.sol", name: "Diego Solís", workouts: 6, xp: 905, totalXp: 5180, me: false },
       { userId: v.id, username: "andres", name: "Andrés", workouts: w.week, xp: w.week * 140, totalXp: demoXp(w.today), me: true },
       { userId: "d1", username: "carla.fit", name: "Carla Mora", workouts: 5, xp: 690, totalXp: 3420, me: false },
-      { userId: "d3", username: "vale.run", name: "Valeria Jiménez", workouts: 3, xp: 395, totalXp: 1240, me: false },
+      { userId: "d3", username: "dani.run", name: "Daniela Jiménez", workouts: 3, xp: 395, totalXp: 1240, me: false },
     ];
     const extra = DEMO_SUGGEST.map((s, i) => ({ userId: s.id, username: s.username, name: s.name, workouts: s.activeDays > 6 ? 4 : 2, xp: [760, 320, 140][i], totalXp: s.xp ?? 0, me: false, sameCountry: s.sameCountry }));
     const rows = scope === "siguiendo" ? base : scope === "global" ? [...base, ...extra] : [base[1], base[0], ...extra.filter((x) => x.sameCountry)];

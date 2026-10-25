@@ -37,7 +37,7 @@ export const getSex = cache(async (v: Viewer): Promise<Sex> => {
 /** Una lectura por request (React cache): página, layout y componentes comparten el resultado. */
 export const getAthlete = cache(async function getAthlete(v: Viewer): Promise<Athlete> {
   if (v.demo) {
-    // Demo de chica (?programa=pilates-casa-30 o ?persona=chica): Valeria, mujer; en Pilates entrena en casa.
+    // Demo de chica (?programa=pilates-casa-30 o ?persona=chica): Sofía, mujer; en Pilates entrena en casa.
     const ds = await demoState();
     const girl: Partial<Athlete> = ds.girl ? { name: DEMO_GIRL.name, sex: "f", heightCm: DEMO_GIRL.heightCm, goalWeight: DEMO_GIRL.goalWeight, trainDays: 5, ...(ds.program === "pilates-casa-30" ? { equipment: "casa" as Equipment, level: "principiante" as Level } : {}) } : {};
     return withProgram(v, { ...DEMO, ...girl, voice: await getVoice(v), tz: v.tz, country: v.country, startWeight: DEMO_START_KG, currentWeight: DEMO_NOW_KG, startDate: demoStartDate(todayFor(v).iso) });
