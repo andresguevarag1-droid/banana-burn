@@ -28,7 +28,7 @@ export function BigStepper({ label, unit, value, placeholder, inputMode, onMinus
  * Cuenta regresiva circular. El arco restante se vacía y una banana viaja en su punta.
  * Solo anima transform y stroke-dashoffset, con transición lineal del mismo largo que el tick.
  */
-export function CountRing({ left, total, size = 248, stroke = 14, track = "rgb(255 255 255 / .12)", color = "#FFD60A", tip = "text-ink", text = "text-white", children }: {
+export function CountRing({ left, total, size = 248, stroke = 14, track = "rgb(255 255 255 / .12)", color = "var(--color-banana)", tip = "text-ink", text = "text-white", children }: {
   left: number; total: number; size?: number; stroke?: number; track?: string; color?: string; tip?: string; text?: string; children?: React.ReactNode;
 }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
@@ -38,8 +38,8 @@ export function CountRing({ left, total, size = 248, stroke = 14, track = "rgb(2
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90" aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - frac)}
-          style={{ transition: "stroke-dashoffset 250ms linear" }} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - frac)}
+          style={{ stroke: color, transition: "stroke-dashoffset 250ms linear" }} />
       </svg>
       {/* La banana va en la punta del arco */}
       <div aria-hidden className="absolute inset-0" style={{ transform: `rotate(${frac * 360}deg)`, transition: "transform 250ms linear" }}>

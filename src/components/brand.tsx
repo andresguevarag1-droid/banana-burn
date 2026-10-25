@@ -9,7 +9,7 @@ export function Logo({ href = "/", small = false, compact = false }: { href?: st
   return (
     <Link href={href} className="tap inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl font-extrabold tracking-tight text-ink outline-none focus-visible:ring-4 focus-visible:ring-banana/60" aria-label="Banana Burn, inicio">
       <Image src="/icons/logo.svg" alt="" width={36} height={36} unoptimized priority className={`rounded-[10px] ${icon}`} />
-      <span className={`whitespace-nowrap ${text}`}>Banana<span className="text-ember-ink">Burn</span></span>
+      <span className={`whitespace-nowrap ${text}`}>Banana<span className="text-[#8A5300]">Burn</span></span>
     </Link>
   );
 }

@@ -17,6 +17,12 @@
   --color-peel: #3F6B0E;
   --color-sky: #7A5A00;
   --color-bad: #C62A2F;
+  /* Coach Platanita (decisión del dueño, oct 2026): con ella de coach la app se vuelve rosada. Contraste AA revisado:
+     ink sobre plat 8.7:1 · plat-ink sobre blanco 6.7:1, sobre plat-tint 6.3:1, sobre plat-soft 5.7:1 · blanco sobre plat-ink 6.7:1. */
+  --color-plat: #FF8FC8;
+  --color-plat-soft: #FFE6F2;
+  --color-plat-tint: #FFF4F9;
+  --color-plat-ink: #B0175E;
   --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --radius-xl2: 1.5rem;
   --shadow-soft: 0 1px 2px rgb(27 21 5 / .04), 0 8px 24px -8px rgb(27 21 5 / .10);
@@ -50,6 +56,24 @@
   @media (hover: hover) and (pointer: fine) {
     &:hover { @slot; }
   }
+}
+
+/*
+  Tema Platanita: cuando su programa está activo (o una temporada con ella de coach), la app remapea los colores
+  semánticos a rosado. Va en <html> (para que diálogos y avisos en portales también cambien) y en el contenedor de la app.
+  El logo de Banana Burn conserva sus colores (usa valores fijos, no estas variables).
+*/
+[data-theme="platanita"] {
+  --color-banana: var(--color-plat);
+  --color-banana-soft: var(--color-plat-soft);
+  --color-banana-ink: var(--color-plat-ink);
+  --color-paper: var(--color-plat-tint);
+  --color-cream: #FFF9FC;
+  --color-line: #F5D3E4;
+  --color-ember: #F25CA2;
+  --color-ember-ink: #A3124F;
+  --color-sky: var(--color-plat-ink);
+  --program: var(--color-plat);
 }
 
 html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
