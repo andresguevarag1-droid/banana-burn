@@ -38,19 +38,19 @@ function Points({ items, dark = false }: { items: string[]; dark?: boolean }) {
 export function LearnSection() {
   const src = shot("aprende");
   if (!src) return null;
-  const second = shot("primer-entreno");
+  const second = shot("primeros-pasos");
   return (
     <section aria-labelledby="aprende-t" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
       <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink"><GraduationCap weight="duotone" aria-hidden className="size-4" />Aunque nunca hayas entrenado</p>
           <h2 id="aprende-t" className={`${H2} mt-5`}>Te enseñamos a entrenar desde cero.</h2>
-          <p className={LEAD}>Tu primer entreno es guiado paso a paso: qué hacer, cómo anotar tu serie y para qué es el descanso. Y en Aprende a entrenar tienes lecciones de 30 segundos para entender todo, sin palabras raras.</p>
+          <p className={LEAD}>Al entrar, Tus primeros pasos te lleva a cada pantalla con un toque, y tu primer entreno es guiado: qué hacer, cómo anotar tu serie y para qué es el descanso. En Aprende a entrenar tienes 10 lecciones de 30 segundos, sin palabras raras.</p>
           <Points items={["Qué es una serie y una repetición", "Cuánto peso usar y cuánto descansar", "Cómo ver la técnica de cada ejercicio", "Cómo te hace progresar la app"]} />
         </div>
         <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
           <Phone src={src} alt="Pantalla de Aprende a entrenar en Banana Burn" sizes="240px" className="w-[230px] sm:w-[250px]" />
-          {second && <Phone src={second} alt="Primer entrenamiento guiado en Banana Burn" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
+          {second && <Phone src={second} alt="Tus primeros pasos en Banana Burn: una lista que te lleva a cada pantalla" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
         </div>
       </div>
     </section>
