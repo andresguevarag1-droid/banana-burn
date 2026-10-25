@@ -6,6 +6,7 @@ import { parseMeta, type ProgramMeta } from "./programs";
 import { RESTYLE } from "./catalog-0028";
 import { FREE_HIDE, FREE_REWORK } from "./catalog-0033";
 import { es419Deep, es419Text } from "./num";
+import { SEASON_SEED } from "./season-content";
 
 /** Catálogo de respaldo con los nombres, colores y estados de 0028 (la base ya los tiene después de la migración). */
 function restyle(c0: Challenge): Challenge {
@@ -118,7 +119,7 @@ function fromProgramSeedRaw(p: ProgramSeed, source: "app" | "admin" = "app"): Ch
 
 /** Los 6 retos con los que nació la app (sus ids se guardan en user_challenges desde 0008). */
 export const BASE_IDS = ["banana-30", "flexiones-30", "plancha-30", "pasos-30", "proteina-21", "agua-21"];
-export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...ALL_PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p))].map(restyle);
+export const SEED_CHALLENGES: Challenge[] = [...SEED.map((s) => fromSeed(s)), ...ALL_PROGRAM_SEED.filter((p) => p.insert).map((p) => fromProgramSeed(p)), ...SEASON_SEED.map((p) => fromProgramSeed(p))].map(restyle);
 export const CHALLENGES: Challenge[] = SEED_CHALLENGES.filter((c) => BASE_IDS.includes(c.id));
 export const CHALLENGE_BY_ID: Record<string, Challenge> = Object.fromEntries(SEED_CHALLENGES.map((c) => [c.id, c]));
 

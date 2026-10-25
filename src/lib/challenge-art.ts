@@ -13,6 +13,10 @@ export const CHALLENGE_ART: Record<string, string> = {
   "pilates-casa-30": art("hf_20261023_211803_efcae25f-dcd2-496b-8443-c7656e7f3037"),
   "dominadas-desde-cero": art("hf_20261023_173153_8398b29a-131c-4fda-9248-cb2aeddde375"),
   "pierde-3kg-6-semanas": art("hf_20261023_173154_f80d7a16-b4b2-415e-a016-98729e55030e"),
+  // Temporadas: Coach Banana con la ropa del deporte (las mismas de coaches.ts)
+  "temporada-running-1": art("hf_20261024_165124_cd9498db-f538-48fc-af74-ced4cfb8877f"),
+  "temporada-raquetas-1": art("hf_20261024_165230_40ff47dc-d852-44a8-a92e-949174e0e3f1"),
+  "temporada-cross-1": art("hf_20261024_165231_81406a62-fbcb-4958-aa5a-7b106e557f40"),
   // Retos de hábitos
   "banana-30": art("hf_20261023_173154_dc12a21c-2928-42d9-87ac-b3118ae384e8"),
   "flexiones-30": art("hf_20261023_173053_14403f02-7b01-4f3b-8928-ab2e45d49ea3"),

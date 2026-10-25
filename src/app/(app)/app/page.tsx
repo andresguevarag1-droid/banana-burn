@@ -35,6 +35,7 @@ import { getXpSummary } from "@/lib/xp-server";
 import { toView } from "@/lib/challenge-view";
 import { TesterCard } from "@/components/testers/tester-card";
 import { getMyTester } from "@/lib/testers-server";
+import { SeasonHoy } from "@/components/temporadas/season-hoy";
 import { COACHES } from "@/lib/coaches";
 import { getLearnState } from "@/lib/primeros-pasos-server";
 import { FirstSteps } from "@/components/primeros-pasos/first-steps";
@@ -123,6 +124,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
           <CaretRight weight="bold" className="size-5 shrink-0 text-faint" />
         </Link>
       )}
+
+      {/* Temporada deportiva: cuenta regresiva, activar, su semana y la opinión de la última sesión. */}
+      <SeasonHoy v={v} />
 
       {/* Sin programa: el entreno de hoy va primero y a todo lo ancho (con imágenes de cada ejercicio). */}
       {!d.program && <div data-tour="hoy-entreno"><WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}

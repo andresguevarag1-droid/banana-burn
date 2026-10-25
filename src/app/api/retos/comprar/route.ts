@@ -17,6 +17,8 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { slug?: unknown };
   const slug = typeof body.slug === "string" && /^[a-z0-9-]{2,60}$/.test(body.slug) ? body.slug : null;
   if (!slug) return NextResponse.json({ ok: false, error: "Reto inválido." }, { status: 400 });
+  // Las temporadas se compran por /api/temporadas/comprar (precio fijo, ventana de inscripción y sin repetir).
+  if (slug.startsWith("temporada-")) return NextResponse.json({ ok: false, error: "Compra la temporada desde su página." }, { status: 400 });
   if (v.demo) return NextResponse.json({ ok: false, demo: true, error: "Modo demo: aquí no se cobra. En la app real pagas con tarjeta en USD." }, { status: 409 });
   // Cada intento crea un cobro en ONVO: límite en memoria (por instancia) y en la base (compartido, 0023).
   if (!memoryRateLimit(`reto-compra:${v.id}`, 10, 10 * 60_000) || !(await dbRateLimit(adminClient(), `reto-compra:${v.id}`, 3600, 20)))

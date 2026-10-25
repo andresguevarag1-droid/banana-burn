@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient, getViewer, STAFF } from "@/lib/supabase/server";
 import { fromCatalogRow, isProgram, type CatalogRow } from "@/lib/challenges";
 import { ProgramDetail } from "@/components/programas/program-detail";
@@ -32,6 +32,8 @@ const TYPE_LABEL: Record<string, string> = { reps: "Repeticiones", tiempo: "Tiem
 
 export default async function RetoDetalle({ params, searchParams }: P) {
   const { slug } = await params;
+  // Las temporadas tienen su propia página (fechas oficiales, cuestionario y compra sin repetir).
+  if (slug.startsWith("temporada-")) redirect(`/app/temporadas/${slug}`);
   const sp = (await searchParams) ?? {};
   const v = (await getViewer())!;
   const today = todayFor(v).iso;

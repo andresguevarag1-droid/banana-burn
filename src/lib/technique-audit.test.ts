@@ -6,6 +6,8 @@ import { LIB_ANIM, animFor, getLibEx } from "@/lib/library";
 import { ANIM_KEYS, SHEET_MOTION, sheetFor } from "@/lib/exercise-frames";
 import { COACHES, coachArt } from "@/lib/coaches";
 import { SHARED_SHEET, VETTED_ANIM } from "@/lib/technique-audit";
+import { SEASON_SEED } from "@/lib/season-content";
+import { AVOID_SWAPS, INJURY_SWAPS } from "@/lib/seasons";
 
 /** Animación que el código muestra para un ejercicio (la misma lógica que el reproductor, las fichas y los programas). */
 const resolved = (id: string): string | null => {
@@ -22,6 +24,9 @@ function visibleIds() {
   Object.values(ALTS).flat().forEach((a) => ids.add(a));
   Object.keys(EX).forEach((k) => ids.add(k));
   for (const p of ALL_PROGRAM_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
+  // Temporadas (0048): sus sesiones y los cambios por molestia o por lo que la persona prefiere evitar.
+  for (const p of SEASON_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
+  for (const m of [...Object.values(INJURY_SWAPS), ...Object.values(AVOID_SWAPS)]) for (const [k, v] of Object.entries(m)) { ids.add(k); if (v) ids.add(v); }
   return [...ids].sort();
 }
 
@@ -92,5 +97,21 @@ describe("Coach Platanita", () => {
     const p = PROGRAM_SEED_BY_SLUG["banana-girl"];
     const ids = new Set(p.sessions.flatMap((s) => s.exercises.flatMap((e) => [e.id, ...(e.home ? [e.home] : [])])));
     expect([...ids].filter((id) => !coachArt(pl, id) && !(VETTED_ANIM[id] && sheetFor(VETTED_ANIM[id]!)))).toEqual([]);
+  });
+});
+
+describe("temporadas: ningún ejercicio sin animación de técnica", () => {
+  test("cada ejercicio de las sesiones y de los cambios por molestia muestra su hoja revisada", () => {
+    const ids = new Set<string>();
+    for (const p of SEASON_SEED) for (const s of p.sessions) for (const e of s.exercises) { ids.add(e.id); if (e.home) ids.add(e.home); }
+    for (const m of [...Object.values(INJURY_SWAPS), ...Object.values(AVOID_SWAPS)]) for (const [k, v] of Object.entries(m)) { ids.add(k); if (v) ids.add(v); }
+    const sinHoja = [...ids].filter((id) => !(VETTED_ANIM[id] && sheetFor(VETTED_ANIM[id]!)) || resolved(id) !== VETTED_ANIM[id]);
+    expect(sinHoja).toEqual([]);
+  });
+  test("sin ejercicios repetidos dentro de una sesión", () => {
+    for (const p of SEASON_SEED) for (const s of p.sessions) {
+      const xs = s.exercises.map((e) => e.id);
+      expect(xs.length, `${p.slug} f${s.phase} d${s.day}`).toBe(new Set(xs).size);
+    }
   });
 });

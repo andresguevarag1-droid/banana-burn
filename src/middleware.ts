@@ -16,6 +16,7 @@ const DEMO_PARAMS: [string, string, RegExp][] = [
   ["dia", "bb_demo_dia", /^([1-9]|[1-5]\d|60)$/],
   ["estado", "bb_demo_estado", /^(activo|pausado|completado)$/],
   ["persona", "bb_demo_persona", /^(chica|chico|auto)$/],
+  ["temporada", "bb_demo_temporada", /^(no|running|raquetas|cross)$/],
 ];
 
 /**

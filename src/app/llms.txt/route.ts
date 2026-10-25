@@ -27,16 +27,19 @@ Banana Burn es una app web (PWA) que se instala desde el navegador en iPhone, An
 - Retos gratis, rachas, niveles y comunidad.
 - En el plan Entreno + Nutrición: metas de calorías y macros, registro de comidas con platos típicos de Latinoamérica, recetas y ajuste semanal según el peso real.
 - En el plan Entreno + Nutrición: Banana Shield, programa para quienes usan medicamentos GLP-1 (Ozempic, Wegovy, Mounjaro) que prioriza fuerza y proteína para cuidar el músculo. No da indicaciones sobre el medicamento.
+- Temporadas deportivas: programas de 8 semanas con fechas oficiales para running, raquetas (tenis y pádel) y cross training, acomodados a los días de deporte de cada persona. Temporada 1: del 9 de noviembre de 2026 al 3 de enero de 2027.
 
 ## Precios (USD)
 ${plans}
 - ${PREMIUM_RETOS_NOTE}
+- Temporadas: pago único de $14.99 (Running), $16.99 (Raquetas) o $18.99 (Cross Training), sobre un plan activo o la prueba gratis. El plan anual incluye 1 temporada deportiva gratis por cada año pagado.
 - ${o.llms} Pago con tarjeta de crédito o débito procesado por ONVO Pay (Costa Rica) o Tilopay (otros países). Se cancela cuando quieras.
 
 ## Enlaces
 - Inicio: ${SITE_URL}/
 - Precios: ${SITE_URL}/precios
 - Banana Shield (GLP-1): ${SITE_URL}/glp1
+- Temporadas deportivas: ${SITE_URL}/temporadas
 - Términos: ${SITE_URL}/terminos
 - Privacidad: ${SITE_URL}/privacidad
 - Contacto: hola@bananaburn.app
