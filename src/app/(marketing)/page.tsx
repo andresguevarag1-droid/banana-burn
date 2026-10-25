@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowCounterClockwise, ArrowRight, Barbell, Check, CreditCard, House, Lock, Scales, Scroll, ShieldCheck, Syringe, Timer,
+  ArrowCounterClockwise, ArrowRight, Barbell, Check, CreditCard, House, Lock, Scales, Scroll, Syringe, Timer,
 } from "@/components/icons";
 import { Phone } from "@/components/phone";
 import { Pricing } from "@/components/pricing";
@@ -11,13 +11,13 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { Faq } from "./parts";
 import { StickyCta } from "./sticky-cta";
 import { InstallSection } from "./install-section";
-import { ExtrasSection, LearnSection, OfferBand, PlatanitaSection } from "./new-sections";
+import { OfferBand, PlatanitaSection } from "./new-sections";
+import { Showcase } from "./showcase";
 import { AppTour } from "./app-tour";
 import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
-import { ANIMATED_TECHNIQUES, FaqCta, FROM, GLP1, SIGNUP, SIGNUP_GLP1, homeFaq } from "./content";
+import { FaqCta, FROM, SIGNUP, homeFaq } from "./content";
 import { offer } from "@/lib/offer";
-import { LIB_COUNT } from "@/lib/library";
 
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
 const CTA = "Crear mi plan gratis";
@@ -142,6 +142,9 @@ export default function Landing() {
         <p className="mt-6 max-w-[62ch] text-lg font-semibold text-ink text-pretty">Cuando bajas rápido, parte de lo que pierdes es músculo: por eso te ves flácido, tienes menos fuerza y es más fácil recuperar el peso. La buena noticia: el músculo se recupera, y te enseñamos cómo.</p>
       </section>
 
+      {/* 2b. LO MEJOR: lo que hace distinto a Banana Burn, en los primeros dos deslizamientos */}
+      <Showcase />
+
       {/* 3. CÓMO FUNCIONA: 3 pasos */}
       <section id="como-funciona" aria-labelledby="como-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-16 sm:px-6 sm:pt-24">
         <div className="flex items-end justify-between gap-4">
@@ -162,8 +165,6 @@ export default function Landing() {
         <Link href={SIGNUP} data-cta="pasos" className="pressable mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
       </section>
 
-      {/* 4. PRUEBA REAL: te enseñamos desde cero (capturas reales) */}
-      <LearnSection />
 
       {/* 5. LA APP POR DENTRO: recorrido con capturas reales y técnica animada */}
       <section id="por-dentro" aria-labelledby="por-dentro-t" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-16 sm:px-6 sm:pt-24">
@@ -171,14 +172,6 @@ export default function Landing() {
         <p className={LEAD}>Todo lo que haría un entrenador personal, en tu bolsillo. Toca cada pantalla.</p>
         <AppTour />
         <p className="mt-3 text-sm text-muted">Capturas reales de la app en modo demostración, con datos de ejemplo.</p>
-        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-8 sm:grid-cols-4">
-          {([[LIB_COUNT.toLocaleString("es-419"), "ejercicios con guía"], [String(ANIMATED_TECHNIQUES), "técnicas animadas por Coach Banana"], ["10 min", "el entreno exprés más corto"], [`${TRIAL_DAYS} días`, o.statLabel]] as const).map(([v, l]) => (
-            <div key={l} className="flex flex-col-reverse justify-end">
-              <dt className="mt-1 text-sm text-muted text-pretty">{l}</dt>
-              <dd className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-ink">{v}</dd>
-            </div>
-          ))}
-        </dl>
       </section>
 
       {/* 6. MÉTODO: por qué funciona, explicado simple */}
@@ -203,17 +196,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 7. GLP-1: Banana Shield */}
-      <section aria-label="Banana Shield" className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
-        <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="group grid items-center gap-4 rounded-[1.75rem] bg-banana-soft p-6 text-ink sm:grid-cols-[auto_1fr_auto] sm:p-8 transition-shadow duration-200 hover:shadow-lift focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink">
-          <span className="grid size-14 place-items-center rounded-2xl bg-banana text-ink"><ShieldCheck weight="duotone" aria-hidden className="size-8" /></span>
-          <span>
-            <span className="block text-2xl font-extrabold text-balance">¿Usas {GLP1}? Banana Shield es para ti.</span>
-            <span className="mt-1 block text-ink/75 text-pretty">Fuerza y proteína para cuidar tu músculo, con un modo suave en tu día de inyección. Siempre con la guía de tu médico.</span>
-          </span>
-          <span className="inline-flex items-center gap-2 font-bold text-ink">Empezar con Banana Shield <ArrowRight weight="bold" className="size-5 transition-transform duration-200 ease-[cubic-bezier(.23,1,.32,1)] group-hover:translate-x-1" /></span>
-        </Link>
-      </section>
 
       <PlatanitaSection />
 
@@ -245,7 +227,6 @@ export default function Landing() {
       </section>
 
       {/* 11. EXTRAS: temporadas deportivas y GPS (secundario para quien llega de un anuncio) */}
-      <ExtrasSection />
 
       <InstallSection />
 
