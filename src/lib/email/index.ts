@@ -168,3 +168,13 @@ export async function sendTeamAffiliatePayouts(d: { period: string; count: numbe
   const to = (process.env.OPS_ALERT_EMAIL || process.env.FEEDBACK_EMAIL || "hola@bananaburn.app").trim();
   return sendEmail(to, T.pagosReferidoresEquipo({ period: d.period, count: d.count, total: T.money(d.totalMinor / 100) }), { idempotencyKey: `referidores-pagos/${d.period}/${d.count}/${d.totalMinor}`, tags: { kind: "referidor" } });
 }
+
+/** Condominios (0052): aviso al equipo y confirmación a quien pidió la reunión. Idempotentes por solicitud. */
+export async function sendCondoLeadEmails(d: T.CondoLeadMail): Promise<{ team: SendResult; lead: SendResult }> {
+  const teamTo = (process.env.OPS_ALERT_EMAIL || process.env.FEEDBACK_EMAIL || "hola@bananaburn.app").trim();
+  const [team, lead] = await Promise.all([
+    sendEmail(teamTo, T.condominioEquipo(d), { idempotencyKey: `condominio-equipo/${d.id}`, tags: { kind: "condominio" } }),
+    sendEmail(d.email, T.condominioRecibido({ name: d.name, org: d.org }), { idempotencyKey: `condominio-recibido/${d.id}`, tags: { kind: "condominio" } }),
+  ]);
+  return { team, lead };
+}

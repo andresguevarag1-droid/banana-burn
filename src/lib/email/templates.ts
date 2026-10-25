@@ -688,3 +688,45 @@ export function pagosReferidoresEquipo(d: { period: string; count: number; total
   const reason = "Aviso interno del panel de Banana Burn.";
   return { subject, preheader: `${d.count} pagos, ${d.total}`, html: layout({ preheader: `${d.count} pagos, ${d.total}`, hero, body, reason }), text: textLayout([subject, "", `${d.count} pagos por ${d.total}.`, "", `Abrir pagos: ${abs("/admin/referidores#pagos")}`], undefined, reason) };
 }
+
+// ───────────── Condominios (0052): solicitudes de reunión desde /condominios ─────────────
+
+export type CondoLeadMail = { name: string; role: string; org: string; units?: string | null; location?: string | null; email: string; phone?: string | null; times?: string | null; days?: string | null; comment?: string | null; id: number };
+
+/** Aviso interno: llegó una solicitud de reunión de un condominio. Transaccional, solo para el equipo. */
+export function condominioEquipo(d: CondoLeadMail): Email {
+  const subject = `Condominio quiere reunión: ${d.org}`;
+  const lead = `De <b>${esc(d.name)}</b> (${esc(d.role)}).`;
+  const hero: Hero = { eyebrow: "Condominios", title: esc(subject), lead };
+  const r: [string, string][] = [
+    ["Condominio", d.org], ["Contacto", d.name], ["Cargo", d.role], ["Correo", d.email], ["Teléfono o WhatsApp", d.phone || "Sin dato"],
+    ["Unidades o residentes", d.units || "Sin dato"], ["Ubicación", d.location || "Sin dato"], ["Horario preferido", d.times || "Sin dato"], ["Días", d.days || "Sin dato"],
+  ];
+  const quote = d.comment ? `<blockquote style="margin:0 0 16px;padding:14px 16px;background:${C.soft};border-radius:16px;font-size:16px;line-height:24px;color:${C.ink};white-space:pre-wrap;">${esc(d.comment)}</blockquote>` : "";
+  const body = quote + rows(r) + p("Respóndele en menos de 24 horas hábiles para agendar la reunión.") + button("Ver en el panel", "/admin/condominios");
+  const reason = "Aviso interno del panel de Banana Burn.";
+  return {
+    subject, preheader: `${d.name}, ${d.role}. ${d.org}`,
+    html: layout({ preheader: `${d.name}, ${d.role}. ${d.org}`, hero, body, reason }),
+    text: textLayout([subject, "", ...(d.comment ? [`"${d.comment}"`, ""] : []), ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver en el panel: ${abs("/admin/condominios")}`], undefined, reason),
+  };
+}
+
+/** Confirmación a la persona que pidió la reunión desde /condominios. Transaccional. */
+export function condominioRecibido(d: { name: string; org: string }): Email {
+  const n = firstName(d.name);
+  const subject = "Recibimos tu solicitud de reunión";
+  const lead = `${n}, gracias por escribirnos. Te contactamos en menos de 24 horas hábiles para agendar la reunión sobre ${d.org}.`;
+  const hero: Hero = { eyebrow: "Banana Burn para condominios", title: "Recibimos tu solicitud", lead: esc(lead), mascot: true };
+  const body = eyebrow("Qué pasa ahora") + steps([
+    ["Te escribimos", "Coordinamos contigo el día y la hora de la reunión, por correo o WhatsApp."],
+    ["Reunión de 20 minutos", "Te mostramos la app por dentro y resolvemos las dudas de la administración."],
+    ["Primer mes gratis para todos", "Si deciden sumarse, cada residente usa la app completa el primer mes sin pagar nada."],
+  ]) + small(`¿Necesitas algo antes? Escríbenos a ${SUPPORT}.`);
+  const reason = "Recibes este correo porque pediste una reunión desde la página de Banana Burn para condominios.";
+  return {
+    subject, preheader: lead,
+    html: layout({ preheader: lead, hero, body, reason }),
+    text: textLayout([subject, "", lead, "", "Qué pasa ahora:", "1. Te escribimos para coordinar el día y la hora.", "2. Reunión de 20 minutos: te mostramos la app y resolvemos dudas.", "3. Si deciden sumarse, el primer mes es gratis para todos los residentes.", "", `¿Necesitas algo antes? ${SUPPORT}`], undefined, reason),
+  };
+}
