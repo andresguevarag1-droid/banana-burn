@@ -49,7 +49,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
   const go = useRef<HTMLButtonElement>(null);
   const min = useRef(onMinimize);
   useEffect(() => { min.current = onMinimize; }, [onMinimize]);
-  // El foco entra al descanso y vuelve al botón Hecho al salir. Escape lo minimiza.
+  // El foco entra al descanso y vuelve al botón Terminé la serie al salir. Escape lo minimiza.
   useEffect(() => {
     go.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
@@ -80,7 +80,19 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </button>
           </div>
 
-          {info.goal && <LevelMeter tone="dark" idx={info.goal.idx} progress={info.goal.progress} text={info.goal.text} className="mt-3" />}
+          {/* Reloj: lo más grande de la pantalla. Los botones de ±15 van debajo para que el reloj use todo el ancho
+              (en 360 px no cabían al lado). En pantallas bajas se achica un poco para que entre lo que sigue. */}
+          <div className="flex flex-col items-center pt-2">
+            <div className="-my-6 scale-[.82] land:-my-14 land:scale-[.6] [@media(min-height:740px)]:my-0 [@media(min-height:740px)]:scale-100">
+              <CountRing left={left} total={total} size={288} stroke={15}>
+                <span className="mt-1 block text-sm font-bold text-white/60">de {clock(total)}</span>
+              </CountRing>
+            </div>
+            <div className="mt-3 flex gap-3">
+              <button type="button" onClick={() => onAdjust(-15)} className="pressable h-12 px-5 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Quitar 15 segundos">−15 s</button>
+              <button type="button" onClick={() => onAdjust(15)} className="pressable h-12 px-5 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Sumar 15 segundos">+15 s</button>
+            </div>
+          </div>
 
           {/* Recompensa */}
           <div className="mt-3 flex min-h-10 flex-wrap items-center justify-center gap-2">
@@ -124,6 +136,21 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </div>
           )}
 
+          {/* Lo que sigue */}
+          {info.next && (
+            <div className="mt-4 flex items-center gap-3 rounded-[1.5rem] bg-white/[.07] p-3">
+              {info.next.isNew && info.next.anim ? (
+                <span className="relative block size-16 shrink-0 overflow-hidden rounded-2xl bg-banana"><ExerciseMotion anim={info.next.anim} label={false} className="absolute inset-1" /></span>
+              ) : (
+                <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-white/10 text-2xl font-extrabold tabular-nums">{info.next.title.match(/\d+/)?.[0] ?? ""}</span>
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-banana">{info.next.last ? "Última serie" : info.next.isNew ? "Siguiente ejercicio" : "Sigue"}</p>
+                <p className="font-extrabold leading-tight truncate">{info.next.title}</p>
+                <p className="text-sm font-semibold text-white/70 tabular-nums truncate">{info.next.detail}</p>
+              </div>
+            </div>
+          )}
           {/* Esfuerzo: una pregunta, un toque */}
           {info.setNo != null && (
             <fieldset className="mt-4">
@@ -143,36 +170,10 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </fieldset>
           )}
 
-          {/* Reloj */}
-          {/* En 360 px, 56 + 228 + 56 no cabía en el ancho (los botones quedaban cortados en los bordes): por debajo de
-              380 px el reloj se escala al 90 % con margen negativo y los botones bajan a 48 px. */}
-          <div className="my-auto flex items-center justify-center gap-1.5 py-5 min-[380px]:gap-3">
-            <button type="button" onClick={() => onAdjust(-15)} className="pressable grid place-items-center size-12 min-[380px]:size-14 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Quitar 15 segundos">−15</button>
-            <div className="-mx-3 scale-90 min-[380px]:mx-0 min-[380px]:scale-100">
-              <CountRing left={left} total={total} size={228} stroke={13}>
-                <span className="mt-1 block text-xs font-bold text-white/60">de {clock(total)}</span>
-              </CountRing>
-            </div>
-            <button type="button" onClick={() => onAdjust(15)} className="pressable grid place-items-center size-12 min-[380px]:size-14 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Sumar 15 segundos">+15</button>
-          </div>
+          {info.goal && <LevelMeter tone="dark" idx={info.goal.idx} progress={info.goal.progress} text={info.goal.text} className="mt-4" />}
 
-          {/* Lo que sigue */}
-          {info.next && (
-            <div className="flex items-center gap-3 rounded-[1.5rem] bg-white/[.07] p-3">
-              {info.next.isNew && info.next.anim ? (
-                <span className="relative block size-16 shrink-0 overflow-hidden rounded-2xl bg-banana"><ExerciseMotion anim={info.next.anim} label={false} className="absolute inset-1" /></span>
-              ) : (
-                <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-white/10 text-2xl font-extrabold tabular-nums">{info.next.title.match(/\d+/)?.[0] ?? ""}</span>
-              )}
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-banana">{info.next.last ? "Última serie" : info.next.isNew ? "Siguiente ejercicio" : "Sigue"}</p>
-                <p className="font-extrabold leading-tight truncate">{info.next.title}</p>
-                <p className="text-sm font-semibold text-white/70 tabular-nums truncate">{info.next.detail}</p>
-              </div>
-            </div>
-          )}
           {(info.finish || info.fact) && (
-            <div className="mt-2 space-y-1.5 px-1">
+            <div className="mt-3 space-y-1.5 px-1">
               {info.finish && <p className="flex gap-2 text-[13px] font-semibold text-white/80"><BananaCoin className="mt-px size-4 shrink-0 text-banana" /><span>{info.finish}</span></p>}
               {info.fact && <p className="flex gap-2 text-[13px] font-semibold text-white/80"><Lightbulb weight="fill" className="mt-px size-4 shrink-0 text-banana" /><span>{info.fact}</span></p>}
             </div>

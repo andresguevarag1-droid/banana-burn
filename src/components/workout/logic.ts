@@ -136,6 +136,19 @@ export function targetText(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: 
   return o.bw ? `${r.reps} ${u}` : `${r.reps} ${u}`;
 }
 
+/**
+ * La meta de la serie en una frase que se entiende sin saber de gimnasio: "10 repeticiones con 20 kg",
+ * "30 segundos por lado". Con peso corporal y lastre, el peso se dice como extra.
+ */
+export function plainTarget(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean; perSide?: boolean }) {
+  const n = num(r.reps), kg = num(r.kg);
+  const what = o.unit === "s" ? `${n} ${n === 1 ? "segundo" : "segundos"}${o.perSide ? " por lado" : ""}`
+    : o.unit === "m" ? `${n} metros`
+    : `${n} ${n === 1 ? "repetición" : "repeticiones"}`;
+  if (kg > 0 && !(o.unit === "s" && o.bw)) return `${what} con ${kgFmt(kg)} kg${o.bw ? " extra" : ""}`;
+  return what;
+}
+
 /* ---------- Calentamiento y vuelta a la calma ---------- */
 export type Warm = { kg: number | null; reps: number }[];
 /**
