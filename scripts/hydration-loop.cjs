@@ -2,6 +2,7 @@
 // parecidos). Sirve para errores intermitentes que no salen en desarrollo (oct 2026: el Meta Pixel en ~5 % de cargas).
 // Uso: npm run build && npx next start -p 3931 & ; BASE=http://localhost:3931 N=30 node scripts/hydration-loop.cjs
 // Sale con código 1 si encuentra alguno.
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- script de QA en CommonJS (playwright está instalado global)
 const { chromium } = require("playwright"); // global en el entorno de QA (no es dependencia del proyecto)
 
 const base = process.env.BASE || "http://localhost:3000";

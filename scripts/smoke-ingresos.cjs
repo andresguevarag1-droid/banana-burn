@@ -2,6 +2,7 @@
 // Mi plan → muro de planes, en celular, también con el navegador de Instagram. Revisa errores, botones sin destino y que
 // los precios coincidan con plans.ts y las reglas de la oferta (50 % solo en el primer mes mensual).
 // Uso: BASE=http://localhost:3931 NODE_PATH=$(npm root -g) node scripts/smoke-ingresos.cjs
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- script de QA en CommonJS (playwright está instalado global)
 const { chromium } = require("playwright");
 const base = process.env.BASE || "http://localhost:3000";
 const IG = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0.0.0 (iPhone14,5; iOS 17_5; es_CR; es-CR; scale=3.00; 1170x2532)";
