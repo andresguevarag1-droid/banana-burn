@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { after } from "next/server";
 import { AppNav } from "@/components/app-nav";
+import { isAffiliate } from "@/lib/affiliate-page";
 import { DemoBanner } from "@/components/brand";
 import { InstallBeacon } from "@/components/install/install-beacon";
 import { TzSync } from "@/components/tz-sync";
@@ -47,7 +48,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app");
   if (!v.onboarded) redirect("/bienvenida");
+  const affP = isAffiliate(v);
   const [ent, xp, prog, unseen, tester, guide, newsState] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false })), getMyTester(v).catch(() => null), getGuideState(v).catch(() => ({ seenVersion: null, tips: [], persisted: false })), getNewsState(v).catch(() => ({ seenId: null, seenAt: null, createdAt: null, persisted: false }))]);
+  const affiliate = await affP;
   // Un regalo creado por la base (recompensa de referidos) todavía sin correo ni push: se manda después de responder.
   // Programa activo: solo con acceso a la app (sin acceso queda guardado y vuelve al renovar).
   const live = prog && ent.app ? prog : null;
@@ -86,7 +89,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {live && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-[var(--program)]" />}
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
       {v.demo && <DemoBanner />}
-      <AppNav name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} coachName={liveCoach && liveCoach.id !== "banana" ? liveCoach.name : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
+      <AppNav affiliate={affiliate} name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} coachName={liveCoach && liveCoach.id !== "banana" ? liveCoach.name : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
       <InstallBeacon />
       <TzSync current={v.tz} />
       <ConnectionStatus />

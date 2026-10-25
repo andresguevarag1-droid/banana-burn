@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runReminders } from "@/lib/notify-run";
 import { sweepChallenges } from "@/lib/challenges-server";
+import { sweepAffiliates } from "@/lib/affiliates-server";
 import { deliverPendingGifts } from "@/lib/gifts-server";
 import { deliverTesterNotices } from "@/lib/testers-server";
 import { deliverSupportNotices } from "@/lib/support-server";
@@ -69,7 +70,9 @@ export async function GET(req: Request) {
   const soporte = await deliverSupportNotices({ limit: 200 }).catch((e) => { logError("cron:soporte", "run_failed", { kind: errCode(e) }); return null; });
   // Novedades (0036): una vez por versión, entre el día 3 y el 14, a quien no la vio. Reclamado en notification_log.
   const novedades = await nudgeUnseenNews({ limit: 300, deadline: t0 + 58_500 }).catch((e) => { logError("cron:novedades", "run_failed", { kind: errCode(e) }); return null; });
+  // Referidores (0051): comisiones en espera → disponibles, acceso gratis del nivel máximo y limpieza de clics.
+  const referidores = await sweepAffiliates(new Date(), { deadline: t0 + 59_000 }).catch((e) => { logError("cron:referidores", "run_failed", { kind: errCode(e) }); return null; });
   // Última corrida, para /admin/salud: solo conteos.
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
-  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, referidores, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
 }

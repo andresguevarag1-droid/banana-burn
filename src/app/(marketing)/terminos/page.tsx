@@ -41,7 +41,7 @@ function trialSection(now = new Date()): LegalSection {
   ] };
 }
 
-const DESCRIPTION = `Condiciones de uso de Banana Burn: servicio, salud, prueba gratis de ${TRIAL_DAYS} días y primer cobro, suscripciones, comunidad y responsabilidad.`;
+const DESCRIPTION = `Condiciones de uso de Banana Burn: servicio, salud, prueba gratis de ${TRIAL_DAYS} días y primer cobro, suscripciones, programa de referidos, comunidad y responsabilidad.`;
 export const metadata = { title: "Términos y condiciones", description: DESCRIPTION, ...social({ title: "Términos y condiciones de Banana Burn", description: DESCRIPTION, path: "/terminos" }) };
 
 /** La sección "prueba" se arma en cada render con trialSection() (depende de la fecha). */
@@ -76,6 +76,10 @@ const SECTIONS: LegalSection[] = [
     "Si contrataste a distancia puedes ejercer tu derecho de retracto dentro de los 8 días hábiles siguientes a la compra, conforme a la Ley N.º 7472 de Promoción de la Competencia y Defensa Efectiva del Consumidor, escribiendo a hola@bananaburn.app. Fuera de ese plazo no hacemos reembolsos proporcionales de periodos ya iniciados, salvo cuando la ley lo exija o por un error de cobro de nuestra parte.",
     "Cuando el primer cobro se hace al terminar la prueba gratis, los 8 días hábiles se cuentan desde ese cobro, no desde que guardaste la tarjeta.",
   ] },
+  { id: "afiliados", t: "Programa de referidos (afiliados)", p: [
+    "Algunas personas invitadas por Banana Burn tienen un enlace de referido y ganan una comisión cuando alguien crea su cuenta con ese enlace y paga un plan. Solo Banana Burn invita o asigna referidores y puede retirar el rol; lo ya ganado se paga igual.",
+    ["Cuenta quien crea una cuenta nueva desde el enlace dentro de los 60 días siguientes a su visita. Si visitó el enlace de otra persona después, cuenta el último. Las cuentas que ya existían no cuentan.", "La comisión va del 10 % al 40 % de lo que paga cada referido, sin impuestos y sin la comisión del procesador de pagos, según cuántos referidos estén pagando hoy (1 a 10: 10 %; 11 a 20: 20 %; 21 a 30: 30 %; 31 o más: 40 %). El porcentaje aplica a todos sus pagos desde que se alcanza el nivel.", "Con 31 o más referidos pagando, el referidor no paga su propio plan mientras se mantenga en ese nivel. Si baja, el acceso gratis dura hasta el final del mes y se le avisa antes.", "No cuentan la propia cuenta, otras cuentas de la misma persona ni pagos con la misma tarjeta. Las pruebas gratis, las cortesías y los regalos no generan comisión. Si un pago se reembolsa o tiene un contracargo, su comisión se anula o se descuenta del siguiente pago.", "Las comisiones esperan 30 días y se pagan una vez al mes por SINPE Móvil o transferencia, desde $20. Cada referidor declara sus ingresos según las leyes de su país.", "Quien comparte un enlace de referido debe decir que gana una comisión, no puede prometer resultados de peso ni descuentos que no existen, y no puede usar la marca en anuncios pagados sin permiso. Si no cumple, se puede retirar el rol y anular lo ganado con fraude."],
+  ] },
   { id: "comunidad", t: "Reglas de la comunidad", p: [
     "La comunidad existe para motivarnos. No se permite:",
     ["Acoso, discriminación, contenido sexual o violento.", "Promover dietas extremas, purgas, ayunos peligrosos, esteroides o fármacos para bajar de peso.", "Vender productos, publicar enlaces de spam o hacerte pasar por otra persona.", "Publicar datos o fotos de otras personas sin su permiso."],
@@ -94,5 +98,5 @@ const SECTIONS: LegalSection[] = [
 
 export default function Page() {
   const S = SECTIONS.map((x) => (x.id === "prueba" ? trialSection() : x));
-  return <LegalPage title="Términos y condiciones" updated="24 de octubre de 2026" intro="Estas condiciones explican cómo funciona Banana Burn, qué puedes esperar de nosotros y qué esperamos de ti. Están escritas para leerse en cinco minutos." sections={S} />;
+  return <LegalPage title="Términos y condiciones" updated="25 de octubre de 2026" intro="Estas condiciones explican cómo funciona Banana Burn, qué puedes esperar de nosotros y qué esperamos de ti. Están escritas para leerse en cinco minutos." sections={S} />;
 }

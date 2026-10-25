@@ -155,3 +155,16 @@ export async function sendSupportEmail(r: Recipient & Omit<Parameters<typeof T.s
   void _u; void _t; void _n;
   return sendEmail(to.to, T.soporteAviso({ ...d, name: to.name }), { idempotencyKey: `soporte/${eventId}`, tags: { kind: "soporte" } });
 }
+
+/** Programa de referidores (0051). Idempotente por `key`. Transaccional. */
+export async function sendAffiliateEmail(r: Recipient & { key: string; kind: T.AffiliateMailKind; code?: string | null; until?: string | null; min?: number }): Promise<SendResult> {
+  const to = await resolve(r);
+  if (!to) return skip();
+  return sendEmail(to.to, T.referidor({ name: to.name, kind: r.kind, code: r.code, until: r.until, min: r.min }), { idempotencyKey: `referidor/${r.key}`, tags: { kind: "referidor" } });
+}
+
+/** Aviso al dueño: pagos de referidores listos (OPS_ALERT_EMAIL, FEEDBACK_EMAIL o el correo de ayuda). */
+export async function sendTeamAffiliatePayouts(d: { period: string; count: number; totalMinor: number }): Promise<SendResult> {
+  const to = (process.env.OPS_ALERT_EMAIL || process.env.FEEDBACK_EMAIL || "hola@bananaburn.app").trim();
+  return sendEmail(to, T.pagosReferidoresEquipo({ period: d.period, count: d.count, total: T.money(d.totalMinor / 100) }), { idempotencyKey: `referidores-pagos/${d.period}/${d.count}/${d.totalMinor}`, tags: { kind: "referidor" } });
+}

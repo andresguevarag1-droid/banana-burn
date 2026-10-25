@@ -644,3 +644,47 @@ export function authTemplates(): AuthTemplate[] {
       "Es solo un paso de seguridad. Tu cuenta sigue protegida.", "Recibes este correo porque se pidió un código de seguridad para tu cuenta de Banana Burn."),
   ];
 }
+
+export type AffiliateMailKind = "bienvenida" | "nivel_maximo" | "nivel_baja";
+
+/** Programa de referidores (0051): bienvenida al programa, llegada al nivel máximo y aviso de que el acceso gratis vence. */
+export function referidor(d: { name: string; kind: AffiliateMailKind; code?: string | null; until?: string | null; min?: number }): Email {
+  const n = firstName(d.name);
+  const c: Record<AffiliateMailKind, { subject: string; title: string; lead: string; lines: string[]; cta: [string, string] }> = {
+    bienvenida: {
+      subject: "Bienvenido al programa de referidores de Banana Burn",
+      title: "Ya eres referidor de Banana Burn",
+      lead: `${esc(n)}, desde hoy ganas una parte de lo que pagan las personas que lleguen con tu enlace.`,
+      lines: ["De 1 a 10 referidos pagando: 10 %.", "De 11 a 20: 20 %.", "De 21 a 30: 30 %.", "31 o más: 40 % y Banana Burn no te cobra."],
+      cta: ["Ver mi enlace", "/app/afiliados"],
+    },
+    nivel_maximo: {
+      subject: "Llegaste al nivel máximo: 40 % y la app gratis",
+      title: "Llegaste al nivel máximo",
+      lead: `${esc(n)}, tienes ${d.min ?? 31} o más referidos pagando. Ahora ganas el 40 % y Banana Burn ya no te cobra.`,
+      lines: ["Si tenías un plan pagado, ya no se renueva: no se te cobrará más.", "Tu acceso gratis se mantiene mientras sigas en el nivel máximo.", "Tus ganancias se pagan cada mes por SINPE Móvil o transferencia."],
+      cta: ["Ver mis referidos", "/app/afiliados"],
+    },
+    nivel_baja: {
+      subject: "Tu acceso gratis de referidor vence pronto",
+      title: "Tu acceso gratis vence pronto",
+      lead: `${esc(n)}, ahora tienes menos de ${d.min ?? 31} referidos pagando.${d.until ? ` Si no vuelves al nivel máximo, tu acceso gratis termina el ${esc(longDate(d.until))}.` : ""}`,
+      lines: ["Tus ganancias siguen: solo cambia el porcentaje según tu nivel.", "Para no perder el acceso, puedes elegir un plan en Mi plan.", "Si vuelves a llegar al nivel máximo, el acceso gratis sigue solo."],
+      cta: ["Ver mi plan", "/app/suscripcion"],
+    },
+  };
+  const x = c[d.kind];
+  const hero: Hero = { eyebrow: "Programa de referidores", title: esc(x.title), lead: x.lead };
+  const body = list(x.lines.map((l) => `${dot()}${esc(l)}`)) + button(x.cta[0], x.cta[1]) + small("Cuando promociones Banana Burn, di que recibes una comisión por las personas que se suscriban con tu enlace.");
+  const reason = "Recibes este correo porque eres parte del programa de referidores de Banana Burn.";
+  return { subject: x.subject, preheader: x.lines[0], html: layout({ preheader: x.lines[0], hero, body, reason }), text: textLayout([x.subject, "", x.lead.replace(/<[^>]+>/g, ""), "", ...x.lines.map((l) => `- ${l}`), "", `${x.cta[0]}: ${abs(x.cta[1])}`], undefined, reason) };
+}
+
+/** Aviso interno: el pago mensual de referidores está listo para pagar. */
+export function pagosReferidoresEquipo(d: { period: string; count: number; total: string }): Email {
+  const subject = `Pagos de referidores listos: ${d.period}`;
+  const hero: Hero = { eyebrow: "Referidores", title: esc(subject), lead: `${d.count} pago${d.count === 1 ? "" : "s"} por un total de <b>${esc(d.total)}</b>.` };
+  const body = p("Revisa cada método de pago, paga por SINPE Móvil o transferencia y márcalo como pagado con la referencia.") + button("Abrir pagos", "/admin/referidores#pagos");
+  const reason = "Aviso interno del panel de Banana Burn.";
+  return { subject, preheader: `${d.count} pagos, ${d.total}`, html: layout({ preheader: `${d.count} pagos, ${d.total}`, hero, body, reason }), text: textLayout([subject, "", `${d.count} pagos por ${d.total}.`, "", `Abrir pagos: ${abs("/admin/referidores#pagos")}`], undefined, reason) };
+}

@@ -2076,6 +2076,58 @@ select bbtest.ok('0047: tope de 64 claves', (select cardinality(learn_keys) = 64
 reset role;
 update public.profiles set learn_keys = '{}' where id = bbtest.u('A');
 
+-- ───────────── 0051 Referidores ─────────────
+reset role;
+select bbtest.login(null);
+insert into public.affiliates (user_id, code) values (bbtest.u('A'), 'ana-fit');
+insert into auth.users (id, email, raw_user_meta_data) values ('5a5a5a5a-0000-4000-8000-00000000005a', 'referida@prueba.test', '{"full_name":"Lucía Pérez"}');
+select bbtest.ok('0051: atribuye una cuenta nueva al código', public.affiliate_attribute('5a5a5a5a-0000-4000-8000-00000000005a', 'ANA-FIT', '{"utm_source":"ig"}', now()) = 'atribuida');
+select bbtest.ok('0051: una sola atribución por cuenta', public.affiliate_attribute('5a5a5a5a-0000-4000-8000-00000000005a', 'ana-fit') = 'ya_atribuida');
+select bbtest.ok('0051: no se refiere a sí mismo', public.affiliate_attribute(bbtest.u('A'), 'ana-fit') = 'propio');
+select bbtest.ok('0051: código inexistente', public.affiliate_attribute(bbtest.u('B'), 'no-existe') = 'codigo_invalido');
+update auth.users set created_at = now() - interval '10 days' where id = bbtest.u('D');
+select bbtest.ok('0051: una cuenta vieja no se atribuye', public.affiliate_attribute(bbtest.u('D'), 'ana-fit') = 'cuenta_existente');
+select bbtest.fails('0051: no se puede referir a uno mismo ni con insert directo', $q$ insert into public.affiliate_referrals (user_id, affiliate_id) values ('a1a1a1a1-0000-4000-8000-0000000000a1', 'a1a1a1a1-0000-4000-8000-0000000000a1') $q$, '23514');
+insert into public.affiliate_commissions (affiliate_id, referred_user, payment_ref, provider, gross_minor, net_minor, rate_pct, commission_minor)
+  values (bbtest.u('A'), '5a5a5a5a-0000-4000-8000-00000000005a', 'onvo:pay_sql_1', 'onvo', 999, 810, 10, 81);
+select bbtest.fails('0051: una comisión por pago (payment_ref único)', $q$ insert into public.affiliate_commissions (affiliate_id, payment_ref, commission_minor) values ('a1a1a1a1-0000-4000-8000-0000000000a1', 'onvo:pay_sql_1', 81) $q$, '23505');
+select bbtest.fails('0051: un pago no genera comisión negativa', $q$ insert into public.affiliate_commissions (affiliate_id, payment_ref, kind, commission_minor) values ('a1a1a1a1-0000-4000-8000-0000000000a1', 'onvo:neg', 'pago', -5) $q$, '23514');
+select bbtest.ok('0051: anon y authenticated no atribuyen', not has_function_privilege('authenticated', 'public.affiliate_attribute(uuid,text,jsonb,timestamp with time zone)', 'execute') and not has_function_privilege('anon', 'public.affiliate_attribute(uuid,text,jsonb,timestamp with time zone)', 'execute'));
+select bbtest.ok('0051: anon no lee estadísticas de referidor', not has_function_privilege('anon', 'public.my_affiliate_stats()', 'execute'));
+select bbtest.ok('0051: authenticated no cuenta activos de otros', not has_function_privilege('authenticated', 'public.affiliate_active_count(uuid)', 'execute'));
+
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0051: A ve su fila de referidor', bbtest.num($q$ select 1 from public.affiliates $q$) = 1);
+select bbtest.zero('0051: A no cambia su código ni se reactiva', $q$ update public.affiliates set code = 'otro', active = true $q$);
+select bbtest.fails('0051: A no se asigna otro referidor', $q$ insert into public.affiliates (user_id, code) values ('b2b2b2b2-0000-4000-8000-0000000000b2', 'beto') $q$, '42501');
+select bbtest.ok('0051: A ve su comisión', bbtest.num($q$ select 1 from public.affiliate_commissions $q$) = 1);
+select bbtest.fails('0051: A no se anota comisiones', $q$ insert into public.affiliate_commissions (affiliate_id, payment_ref, commission_minor) values ('a1a1a1a1-0000-4000-8000-0000000000a1', 'x:1', 999) $q$, '42501');
+select bbtest.zero('0051: A no marca su comisión como disponible', $q$ update public.affiliate_commissions set status = 'available' $q$);
+select bbtest.ok('0051: A no ve la tabla de atribuciones (correos ni ids)', bbtest.num($q$ select 1 from public.affiliate_referrals $q$) = 0);
+select bbtest.zero('0051: A no cambia atribuciones', $q$ update public.affiliate_referrals set affiliate_id = auth.uid() $q$);
+select bbtest.ok('0051: A ve a su referida anonimizada', (select count(*) = 1 and bool_and(label = 'Lucía P.') from public.my_affiliate_referrals()));
+select bbtest.ok('0051: A ve sus registros', (public.my_affiliate_stats() ->> 'signups_total')::int = 1);
+select bbtest.ok('0051: A lee los ajustes del programa', bbtest.num($q$ select 1 from public.affiliate_settings $q$) = 1);
+select bbtest.zero('0051: A no cambia los ajustes', $q$ update public.affiliate_settings set tax_pct = 0 $q$);
+select bbtest.ok('0051: A guarda su método de pago', bbtest.affected($q$ insert into public.affiliate_payout_methods (user_id, kind, sinpe_phone, holder_name) values (auth.uid(), 'sinpe', '88884821', 'Ana Test') $q$) = 1);
+select bbtest.fails('0051: SINPE de 8 dígitos', $q$ update public.affiliate_payout_methods set sinpe_phone = '123' $q$, '23514');
+select bbtest.zero('0051: A no se crea pagos', $q$ update public.affiliate_payouts set status = 'pagado' $q$);
+reset role;
+
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('0051: B no ve referidores', bbtest.num($q$ select 1 from public.affiliates $q$) = 0);
+select bbtest.ok('0051: B no ve comisiones de A', bbtest.num($q$ select 1 from public.affiliate_commissions $q$) = 0);
+select bbtest.ok('0051: B no ve el método de pago de A', bbtest.num($q$ select 1 from public.affiliate_payout_methods $q$) = 0);
+select bbtest.fails('0051: B no guarda método de pago sin ser referidor', $q$ insert into public.affiliate_payout_methods (user_id, kind, sinpe_phone, holder_name) values (auth.uid(), 'sinpe', '88880000', 'Beto') $q$, '42501');
+select bbtest.zero('0051: B no borra el método de A', $q$ delete from public.affiliate_payout_methods $q$);
+select bbtest.ok('0051: B no ve ajustes ni invitaciones', bbtest.num($q$ select 1 from public.affiliate_settings $q$) = 0 and bbtest.num($q$ select 1 from public.affiliate_invites $q$) = 0);
+select bbtest.ok('0051: B no tiene estadísticas de referidor', public.my_affiliate_stats() is null);
+select bbtest.ok('0051: B no ve referidos de nadie', (select count(*) = 0 from public.my_affiliate_referrals()));
+select bbtest.fails('0051: B no lee clics', $q$ select 1 from public.affiliate_clicks $q$, '42501');
+reset role;
+delete from public.affiliate_payout_methods; delete from public.affiliate_commissions; delete from public.affiliate_referrals; delete from public.affiliates;
+delete from auth.users where id = '5a5a5a5a-0000-4000-8000-00000000005a';
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

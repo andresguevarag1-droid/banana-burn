@@ -1,3 +1,4 @@
+import { RefCapture } from "@/components/ref-capture";
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./globals.css";
@@ -23,7 +24,7 @@ export const viewport: Viewport = { themeColor: "#FFF8E3", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es-419">
-      <body className="min-h-dvh">{children}<ErrorReporter release={(process.env.BB_RELEASE || "").slice(0, 12)} /><MetaPixel /></body>
+      <body className="min-h-dvh">{children}<ErrorReporter release={(process.env.BB_RELEASE || "").slice(0, 12)} /><MetaPixel /><RefCapture /></body>
     </html>
   );
 }
