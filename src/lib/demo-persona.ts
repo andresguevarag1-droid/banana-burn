@@ -22,10 +22,12 @@ export type DemoState = {
   status: "activo" | "pausado" | "completado";
   /** Persona del demo: Valeria (chica) o Andrés. */
   girl: boolean;
+  /** Temporada activa del demo (?temporada=running|raquetas|cross): empezó hace 9 días, en la semana 2. */
+  season: "running" | "raquetas" | "cross" | null;
 };
 
 /** Valores que el middleware acepta para cada cookie (lo mismo se valida al leer). */
-export const DEMO_COOKIE = { program: "bb_demo_programa", day: "bb_demo_dia", status: "bb_demo_estado", persona: "bb_demo_persona" } as const;
+export const DEMO_COOKIE = { program: "bb_demo_programa", day: "bb_demo_dia", status: "bb_demo_estado", persona: "bb_demo_persona", season: "bb_demo_temporada" } as const;
 
 export function parseDemoState(get: (k: string) => string | undefined): DemoState {
   const p = get(DEMO_COOKIE.program);
@@ -36,7 +38,9 @@ export function parseDemoState(get: (k: string) => string | undefined): DemoStat
   const status = s === "pausado" || s === "completado" ? s : "activo";
   const per = get(DEMO_COOKIE.persona);
   const girl = per === "chica" ? true : per === "chico" ? false : isDemoGirlProgram(program);
-  return { program, day, status, girl };
+  const se = get(DEMO_COOKIE.season);
+  const season = se === "running" || se === "raquetas" || se === "cross" ? se : null;
+  return { program, day, status, girl, season };
 }
 
 /** Estado del demo para esta petición (siempre el de Andrés fuera del modo demo: nadie más lo llama). */

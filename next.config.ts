@@ -27,13 +27,16 @@ const ONVO = "https://*.onvopay.com";
 const META_JS = "https://connect.facebook.net";
 const META_TR = "https://www.facebook.com";
 
+// Mapas de las carreras con GPS (/app/correr): teselas de OpenStreetMap.
+const OSM_TILES = "https://tile.openstreetmap.org";
+
 const src = (...xs: (string | null | false | undefined)[]) => xs.filter(Boolean).join(" ");
 
 const CSP = [
   `default-src 'self'`,
   `script-src ${src("'self'", "'unsafe-inline'", isDev && "'unsafe-eval'", "https://sdk.onvopay.com", ONVO, META_JS, isPreview && "https://vercel.live")}`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src ${src("'self'", "data:", "blob:", supabase, media, ONVO, META_TR, isPreview && "https://vercel.live https://vercel.com")}`,
+  `img-src ${src("'self'", "data:", "blob:", supabase, media, ONVO, META_TR, OSM_TILES, isPreview && "https://vercel.live https://vercel.com")}`,
   `media-src ${src("'self'", "blob:", media)}`,
   `font-src ${src("'self'", "data:", isPreview && "https://vercel.live")}`,
   `connect-src ${src("'self'", supabase, supabaseWs, ONVO, META_TR, META_JS, isDev && "ws:", isPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
@@ -55,7 +58,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   // Cámara solo para fotos de progreso (nuestro origen); pago para el formulario de ONVO (Apple/Google Pay).
-  { key: "Permissions-Policy", value: `camera=(self), microphone=(), geolocation=(), payment=(self "https://sdk.onvopay.com" "https://checkout.onvopay.com"), usb=()` },
+  { key: "Permissions-Policy", value: `camera=(self), microphone=(), geolocation=(self), payment=(self "https://sdk.onvopay.com" "https://checkout.onvopay.com"), usb=()` },
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
 

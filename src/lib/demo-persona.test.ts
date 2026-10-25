@@ -9,7 +9,7 @@ const get = (o: Record<string, string>) => (k: string) => o[k];
 
 describe("demo de chica (solo modo demo)", () => {
   it("sin cookies es el demo de siempre: Andrés con el programa insignia", () => {
-    expect(parseDemoState(get({}))).toEqual({ program: "si", day: 12, status: "activo", girl: false });
+    expect(parseDemoState(get({}))).toEqual({ program: "si", day: 12, status: "activo", girl: false, season: null });
   });
   it("un programa de chicas trae a Valeria; ?persona= lo fuerza", () => {
     expect(parseDemoState(get({ bb_demo_programa: "pilates-casa-30", bb_demo_dia: "29" }))).toMatchObject({ program: "pilates-casa-30", day: 29, girl: true });
@@ -18,14 +18,14 @@ describe("demo de chica (solo modo demo)", () => {
     expect(parseDemoState(get({ bb_demo_programa: "pilates-casa-30", bb_demo_persona: "chico" })).girl).toBe(false);
   });
   it("valores raros se ignoran", () => {
-    expect(parseDemoState(get({ bb_demo_programa: "otro", bb_demo_dia: "0", bb_demo_estado: "x" }))).toEqual({ program: "si", day: 12, status: "activo", girl: false });
+    expect(parseDemoState(get({ bb_demo_programa: "otro", bb_demo_dia: "0", bb_demo_estado: "x" }))).toEqual({ program: "si", day: 12, status: "activo", girl: false, season: null });
     expect(parseDemoState(get({ bb_demo_dia: "61" })).day).toBe(12);
   });
   const p = PROGRAM_SEED_BY_SLUG["pilates-casa-30"];
   const def = { meta: p.meta, sessions: p.sessions };
   const today = "2026-11-12";
   const at = (day: number, status: "activo" | "pausado" | "completado" = "activo") => {
-    const st = girlDemoState({ program: "pilates-casa-30", day, status, girl: true }, today);
+    const st = girlDemoState({ program: "pilates-casa-30", day, status, girl: true, season: null }, today);
     return { st, run: resolveProgram(def, st, girlDemoDone(st, today), today) };
   };
   it("día N del demo: va al día, sin sesiones perdidas", () => {

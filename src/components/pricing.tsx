@@ -3,7 +3,7 @@ import { PROMO_PCT } from "@/lib/trial";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
-import { PLANS, PREMIUM_RETOS_NOTE, annualSavingPct, type Billing, type PlanId } from "@/lib/plans";
+import { ANNUAL_SEASON_NOTE, PLANS, PREMIUM_RETOS_NOTE, annualSavingPct, type Billing, type PlanId } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/env";
 import { intentPath } from "@/lib/checkout-intent";
 import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
@@ -98,7 +98,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
                 <span className={hot ? "text-white/75" : "text-muted"}>{annual ? "al año" : "al mes"}</span>
               </p>
               <p className={`mt-2 min-h-10 text-sm font-semibold tabular-nums text-pretty ${annual ? (hot ? "text-banana" : "text-peel") : hot ? "text-white/75" : "text-muted"}`}>
-                {annual ? `Un solo pago al año. Ahorras ${money(saved)} frente a ${money(p.price.mes)} al mes.` : "Sin permanencia. Cancela cuando quieras."}
+                {annual ? `Un solo pago al año. Ahorras ${money(saved)} frente a ${money(p.price.mes)} al mes. ${ANNUAL_SEASON_NOTE}.` : "Sin permanencia. Cancela cuando quieras."}
               </p>
               <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} />
               <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] ${hot ? "border-white/15" : "border-line"}`}>
