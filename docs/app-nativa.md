@@ -125,14 +125,73 @@ El `viewport` no tiene `viewport-fit=cover`, pero la interfaz ya usa `env(safe-a
 12. **"Beta" en la interfaz.** Apple rechaza apps marcadas como beta o prueba (regla 2.2). En la app nativa no debe
     aparecer esa palabra.
 
-## 5. Fase 1 (cascarón): orden de trabajo
+## 5. Fase 1 (cascarón): lo que quedó hecho
 
-1. Capacitor 8, `capacitor.config.ts`, proyectos `ios/` y `android/`, `native/www` con la pantalla sin conexión.
-2. `src/lib/platform.ts` (navegador) y su par del servidor (user agent), con pruebas.
-3. Sensación nativa solo en la app: `viewport-fit=cover`, sin zoom con pellizco, sin rebote, sin selección accidental,
-   status bar y splash con la marca. En la web nada cambia (el zoom sigue por accesibilidad).
-4. Íconos y splash con `@capacitor/assets` desde el logo (llama banana sobre ink).
-5. `apple-app-site-association` y `assetlinks.json` desde Next.js y el manejo de deep links (`@capacitor/app`).
-6. Login nativo con Google y Apple (`signInWithIdToken`); ocultar LinkApp y Web Push en la app.
-7. Borrar cuenta: arreglo de proveedores, aviso de suscripciones de tienda y página pública para Google Play.
-8. GitHub Actions: APK de debug como artefacto y build de iOS para simulador.
+| Pieza | Dónde |
+|---|---|
+| Capacitor 8.5, proyectos `ios/` (Swift Package Manager, solo iPhone) y `android/` | `capacitor.config.ts`, `ios/`, `android/` |
+| Pantalla sin conexión empaquetada (logo, fuente, botón de reintentar) | `native/www/offline.html`, `scripts/native-prepare.mjs` |
+| Helper único de plataforma (navegador, servidor y React) | `src/lib/platform.ts`, `src/lib/platform-server.ts`, `src/lib/platform-ua.ts`, `src/components/platform-provider.tsx` |
+| Sensación nativa: sin zoom, sin rebote, sin selección accidental, notch y barra de estado, splash, botón Atrás, links externos | `src/lib/native/boot.ts`, `src/components/native-shell.tsx`, `src/app/globals.css` (`html[data-native]`) |
+| Íconos y splash (llama banana sobre ink) en todos los tamaños | `npm run native:icons` (`scripts/native-icons.mjs` + `@capacitor/assets`) |
+| Universal Links y App Links (`/app`, `/entrar`, `/bienvenida`, `/auth/*`) | `src/app/.well-known/*`, `src/lib/native/app-links.ts`, `ios/App/App/App.entitlements`, `AndroidManifest.xml` |
+| Login con Google y Apple nativos (`signInWithIdToken` con nonce) | `src/lib/native/auth.ts`, `src/lib/native/auth-options.ts`, `src/app/(auth)/entrar/login-form.tsx` |
+| Sin LinkApp, service worker ni Web Push dentro de la app | `src/lib/install-env.ts`, `src/components/install/*`, `src/components/notifications/enable-push.tsx` |
+| Meta Pixel y API de conversiones apagados dentro de la app (sin permiso de rastreo) | `src/components/meta-pixel.tsx`, `src/app/api/track/route.ts` |
+| Borrar cuenta según el procesador (arreglo para Tilopay) y página pública `/eliminar-cuenta` | `src/lib/admin-account.ts`, `src/app/(marketing)/eliminar-cuenta/page.tsx` |
+| "Descargar mis datos" en la app: guarda el JSON y abre Compartir | `src/lib/native/files.ts`, `src/app/(app)/app/perfil/settings.tsx` |
+| APK de debug en cada cambio y build de iOS para simulador a pedido | `.github/workflows/native.yml` |
+
+**En la web no cambia nada.** Todo lo nativo depende de `isNativeApp()` o del user agent de la app; Capacitor y los
+plugins se cargan con `import()` dinámico solo dentro de la app (revisado en el build: ningún trozo con Capacitor está
+en lo que la web descarga al entrar). Lo único que cambia para todos es un arreglo: borrar la cuenta ya no falla para
+quien paga con Tilopay.
+
+### Cómo se prueba
+
+La app carga la web de producción. Lo que vive en la web (login nativo, sin zoom, sin LinkApp) se ve en la app cuando
+esta rama llega a `main`; antes de eso, el APK puede cargar un preview de Vercel (Actions, "App nativa", Run workflow,
+con la URL del preview en `server_url`).
+
+**Android (tu teléfono, por USB):**
+1. GitHub, pestaña Actions, workflow "App nativa", el último run de `feature/app-nativa`, sección Artifacts:
+   descarga `banana-burn-debug-apk` y descomprímelo (`app-debug.apk`).
+2. Con el teléfono preparado (ver `pendientes-andres.md`, punto 3): `adb install -r app-debug.apk`.
+3. Revisa: splash ink con la llama, abre en Hoy (o en Entrar), entrar con correo y contraseña o con código, Perfil,
+   Atrás de Android (cierra hojas y vuelve), modo avión al abrir (pantalla "Estás sin conexión" y vuelve sola al
+   reconectar), un enlace externo (se abre dentro de la app con botón de cerrar).
+4. Si algo falla: `adb logcat | grep -i -E "capacitor|chromium|bananaburn"` y me pasas lo que salga.
+
+**iPhone (tu Mac):**
+1. Instala Xcode desde el App Store y ábrelo una vez para que termine de instalar sus componentes.
+2. En la terminal:
+   ```bash
+   git clone https://github.com/andresguevarag1-droid/banana-burn.git && cd banana-burn
+   git switch feature/app-nativa
+   npm ci
+   npm run native:ios        # sincroniza y abre Xcode
+   ```
+3. En Xcode, arriba elige un simulador (por ejemplo iPhone 17) y toca Run (el triángulo). Para el simulador no hace
+   falta cuenta de Apple.
+4. En un iPhone físico hace falta la cuenta de Apple Developer pagada: "Asociar dominios" y "Continuar con Apple" no
+   funcionan con una cuenta gratis.
+
+### Qué queda para cerrar la Fase 1
+
+- Merge de esta rama a `main` (aprobado: cambios que en la web no se notan), para que la app vea su parte web.
+- Las llaves y cuentas de `pendientes-andres.md` para el login con Google y Apple y para los App Links.
+- Tu prueba del APK en tu Android.
+
+## 6. Notas para las fases siguientes
+
+- **Reproductor (Fase 2):** con el descanso en pantalla ink, la barra de estado debe pasar a texto claro (hoy queda
+  oscura). `navigator.vibrate` y la alarma del service worker se reemplazan por `@capacitor/haptics` y notificaciones
+  locales.
+- **Push (Fase 2):** la tarjeta de avisos hoy no aparece en la app; vuelve con push nativo y la tabla de tokens.
+- **Revocar "Continuar con Apple" al borrar la cuenta:** Apple lo exige; necesita la llave de Sign in with Apple (`.p8`).
+  Va cuando exista la cuenta de Apple.
+- **Aviso de IA (regla 5.1.2(i) de Apple):** consentimiento antes del primer uso del Coach dentro de la app, nombrando al
+  proveedor. Antes de enviar a revisión.
+- **Política de privacidad:** hoy dice que el GPS nunca corre en segundo plano; cambia con el GPS de la Fase 2.
+- **Textos de borrar cuenta:** cuando existan compras de tienda (Fase 3), el aviso de "cancelamos tu suscripción" debe
+  explicar que las de App Store y Google Play se cancelan en la tienda.

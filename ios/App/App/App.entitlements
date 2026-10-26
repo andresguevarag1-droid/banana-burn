@@ -8,5 +8,10 @@
 		<string>applinks:www.bananaburn.app</string>
 		<string>webcredentials:www.bananaburn.app</string>
 	</array>
+	<!-- "Continuar con Apple" nativo (src/lib/native/auth.ts). -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

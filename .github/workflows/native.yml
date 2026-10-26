@@ -76,15 +76,20 @@ jobs:
       - name: Compilar APK de debug
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
-      - name: Huella del certificado (para assetlinks.json)
+      - name: Huellas del certificado (assetlinks.json y Google Cloud)
         run: |
+          prints=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)
           {
             echo "### APK de debug"
             echo "Servidor: ${CAP_SERVER_URL:-https://www.bananaburn.app}"
             echo
-            echo "Huella SHA-256 de la llave de debug:"
+            echo "Huella SHA-256 (ANDROID_CERT_SHA256 en Vercel, para App Links):"
             echo '```'
-            keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep "SHA256:" | sed 's/.*SHA256: //'
+            echo "$prints" | grep "SHA256:" | sed 's/.*SHA256: //'
+            echo '```'
+            echo "Huella SHA-1 (cliente OAuth Android en Google Cloud, para el login con Google):"
+            echo '```'
+            echo "$prints" | grep "SHA1:" | sed 's/.*SHA1: //'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
