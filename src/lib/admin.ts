@@ -164,13 +164,15 @@ async function profileNames(sb: SB, ids: string[]): Promise<Map<string, string>>
 
 // ─────────── Usuarios ───────────
 
-export type UserFilters = { q?: string; plan?: string; role?: string; status?: string; from?: string; to?: string; page?: number };
+export type UserFilters = { q?: string; plan?: string; role?: string; status?: string; from?: string; to?: string; page?: number; /** 0056 */ country?: string; season?: string };
 export type UserRow = {
   id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; last_active: string | null; comp_until: string | null;
   /** Estado y periodicidad de la suscripción más reciente (misma fila que muestra Pagos). */
   sub_status: string | null; billing: string | null;
   /** Fin del mes de tester vigente (0029), o null. */
   tester_until?: string | null;
+  /** 0056: país y cuenta bloqueada (en la app o en el inicio de sesión). */
+  country?: string | null; blocked?: boolean;
 };
 
 export const USER_STATUS = [["activo", "Activo (7 d)"], ["inactivo", "Inactivo"], ["pendiente", "Sin terminar bienvenida"], ["cortesia", "Con cortesía"], ["tester", "Testers"]] as const;
@@ -192,7 +194,20 @@ function demoUserRow(u: DemoUser): UserRow {
     last_active: lastOf(u.days), comp_until: comp && u.plan === comp.plan && !(u.sub && PAYING_STATUSES.has(u.sub.status ?? "")) ? comp.expires_at : null,
     sub_status: u.sub?.status ?? null, billing: u.sub?.billing ?? null,
     tester_until: u.tester && Date.parse(u.tester.expires_at) > Date.now() ? u.tester.expires_at : null,
+    country: u.country, blocked: false,
   };
+}
+
+/** Temporadas para el filtro de la lista (0056). */
+export async function seasonOptions(v: Viewer): Promise<{ slug: string; title: string }[]> {
+  if (v.demo) return [{ slug: "temporada-running-1", title: "Temporada Running 1" }, { slug: "temporada-raquetas-1", title: "Temporada Raquetas 1" }, { slug: "temporada-cross-1", title: "Temporada Cross Training 1" }];
+  const sb = await createClient();
+  const { data: seasons } = await sb.from("seasons").select("slug").order("starts_on", { ascending: false }).limit(30);
+  const slugs = ((seasons ?? []) as { slug: string }[]).map((x) => x.slug);
+  if (!slugs.length) return [];
+  const { data } = await sb.from("challenges_catalog").select("slug,title").in("slug", slugs);
+  const t = new Map(((data ?? []) as { slug: string; title: string }[]).map((x) => [x.slug, x.title]));
+  return slugs.map((slug) => ({ slug, title: t.get(slug) ?? slug }));
 }
 
 export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: UserRow[]; total: number; limited: boolean }> {
@@ -206,15 +221,19 @@ export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: User
       (!q || norm(u.full_name).includes(q) || norm(u.email).includes(q) || u.id === q) &&
       (!f.plan || u.plan === f.plan) && (!f.role || u.role === f.role) &&
       (!f.from || crDay(u.created_at) >= f.from) && (!f.to || crDay(u.created_at) <= f.to) &&
+      (!f.country || (u.country ?? "CR") === f.country) &&
       (!f.status || (f.status === "cortesia" ? !!u.comp_until : f.status === "tester" ? !!u.tester_until : statusOf(u, today) === f.status)));
     rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
     return { rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: rows.length, limited: false };
   }
   const sb = await createClient();
-  const { data, error } = await sb.rpc("admin_list_users", {
+  const base = {
     p_q: f.q || null, p_plan: f.plan || null, p_role: f.role || null, p_status: f.status || null,
     p_from: f.from || null, p_to: f.to || null, p_limit: PAGE_SIZE, p_offset: (page - 1) * PAGE_SIZE,
-  });
+  };
+  // 0056: país, temporada y estados nuevos. Sin la migración, la lista de siempre.
+  let { data, error } = await sb.rpc("admin_list_users_v2", { ...base, p_country: f.country || null, p_season: f.season || null });
+  if (error && ["42883", "PGRST202"].includes(error.code ?? "")) ({ data, error } = await sb.rpc("admin_list_users", base));
   if (!error) {
     const rows = (data ?? []) as (Omit<UserRow, "sub_status" | "billing"> & { total: number })[];
     return { rows: await withSubs(sb, rows), total: Number(rows[0]?.total ?? 0), limited: false };

@@ -157,7 +157,7 @@ export const STREAK_TIERS = [
 /** Tope del bono de racha por día (protege contra abusos y mantiene el tope diario de 1.500 XP). */
 export const STREAK_BONUS_MAX = 150;
 /** Tipos que no suman a la base del bono: premios de reto completo, el propio bono y la bienvenida. */
-export const BONUS_EXCLUDED = new Set(["challenge", "streak_bonus", "onboard", "challenge_milestone"]);
+export const BONUS_EXCLUDED = new Set(["challenge", "streak_bonus", "onboard", "challenge_milestone", "ajuste"]);
 
 export function streakMultiplier(streakDays: number) {
   const d = Math.max(0, Math.floor(streakDays));

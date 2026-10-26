@@ -43,4 +43,4 @@ export async function authorize(cap: Capability): Promise<{ ok: true; v: Viewer 
 }
 
 /** Capacidades con tope propio (además del general del panel). */
-const HEAVY: Partial<Record<Capability, "admin:masivo" | "admin:borrar-cuenta">> = { "users.delete": "admin:borrar-cuenta" };
+const HEAVY: Partial<Record<Capability, "admin:masivo" | "admin:borrar-cuenta" | "admin:cuentas">> = { "users.delete": "admin:borrar-cuenta", "users.manage": "admin:cuentas" };

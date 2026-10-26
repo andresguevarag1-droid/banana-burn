@@ -8,7 +8,7 @@ export { BrandIcon, LevelIcon } from "./named";
 export {
   ArrowLeft, ArrowRight, ArrowUp, ArrowsLeftRight, ArrowCounterClockwise, Barbell, Bell, BellSlash, BookOpen, BowlFood, Brain, Camera,
   CaretLeft, CaretRight, CaretDown, ChartLine, ChatCircle, Check, CheckCircle, Checks, CircleNotch, Clock, Copy, Printer, CreditCard, DeviceMobile, DownloadSimple, Drop,
-  Egg, Envelope, Fish, Flag, Footprints, ForkKnife, Gear, Gift, GraduationCap, Handshake, Heart, Heartbeat, House, Info, Lightning, Lock, MagnifyingGlass,
+  Egg, Envelope, Fish, Flag, Footprints, ForkKnife, Gear, Gift, GraduationCap, Handshake, Heart, Heartbeat, House, Info, Lightning, Lock, LockKey, MagnifyingGlass,
   Megaphone, Minus, Moon, PaperPlaneTilt, Plus, PlusSquare, Question, Receipt, Repeat, Ruler, Scales, Scroll, ShareNetwork, Shield, ShieldCheck,
   ShieldWarning, SignOut, Sparkle, SquaresFour, Target, Timer, Trash, TrendDown, TrendUp, User, UserGear, Users, Warning, WarningCircle,
   Watch, X, Sun, Globe, Grains, Lightbulb, SunHorizon, Wine, Moon as Night, Medal, Play, Pause, SkipForward, SpeakerHigh, SpeakerSlash, Calendar, CalendarCheck, PersonSimpleRun,

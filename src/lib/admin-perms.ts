@@ -39,7 +39,8 @@ export type Capability =
   | "audit.view"
   | "ops.health"           // salud técnica: versión, base, errores de la app, cron y webhooks fallidos (0041)
   | "affiliates.manage"    // programa de referidores (0051): invitar, asignar, comisiones y pagos. Solo el dueño
-  | "leads.b2b";           // solicitudes de reunión de condominios (0052): ver, cambiar estado y notas
+  | "leads.b2b"            // solicitudes de reunión de condominios (0052): ver, cambiar estado y notas
+  | "users.manage";        // gestión completa de la cuenta (0056): nombre, correo, acceso, bloqueo, temporadas, retos, insignias y XP. Solo el dueño
 
 const ALL_STAFF = STAFF_ROLES;
 const COACH_ADMIN: Role[] = ["coach", "admin", "superadmin"];
@@ -75,6 +76,7 @@ export const MATRIX: Record<Capability, Role[]> = {
   "ops.health": PRIVILEGED, // igual que public.is_admin() en app_errors y ops_heartbeats (0041)
   "affiliates.manage": ["superadmin"], // igual que public.is_superadmin() en las tablas de 0051
   "leads.b2b": SUPPORT_ADMIN, // igual que public.is_support_staff() en b2b_leads (0052)
+  "users.manage": ["superadmin"], // igual que public.is_superadmin() en las RPC de 0056
 };
 
 export function can(role: Role | null | undefined, cap: Capability): boolean {

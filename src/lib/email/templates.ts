@@ -358,6 +358,28 @@ export function cobroCancelado(d: { name: string; plan: string; accessUntil?: st
   };
 }
 
+/** El correo de la cuenta cambió desde soporte (0056). `pending`: el cambio se completa al abrir `link` (vence en 1 hora). */
+export function correoCambiado(d: { name: string; email: string; pending: boolean; link?: string }): Email {
+  const n = (d.name || "").trim().split(/\s+/)[0];
+  const hi = n ? `${esc(n)}, ` : "";
+  const subject = d.pending ? "Confirma tu nuevo correo en Banana Burn" : "Tu cuenta de Banana Burn ahora usa este correo";
+  const preheader = d.pending ? "Toca el botón para terminar el cambio de correo. El enlace vence en 1 hora." : "Desde ahora entras a Banana Burn con este correo.";
+  const hero: Hero = d.pending
+    ? { eyebrow: "Seguridad", title: "Confirma tu nuevo correo", lead: `${hi}soporte de Banana Burn preparó el cambio de tu cuenta a <b>${esc(d.email)}</b>.` }
+    : { eyebrow: "Seguridad", title: "Tu correo cambió", lead: `${hi}desde ahora entras a Banana Burn con <b>${esc(d.email)}</b>.` };
+  const body = d.pending && d.link
+    ? button("Confirmar mi nuevo correo", d.link) + small(`El enlace vence en 1 hora. Si no pediste este cambio, ignora este correo y escríbenos a ${SUPPORT}.`)
+    : p("Tu progreso, tus entrenos y tu plan siguen igual.") + small(`Si no pediste este cambio, escríbenos de inmediato a ${SUPPORT}.`) + button("Entrar a Banana Burn", "/entrar");
+  const reason = "Recibes este correo porque se cambió el correo de tu cuenta de Banana Burn.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason }),
+    text: textLayout(d.pending && d.link
+      ? [`${n ? `${n}, s` : "S"}oporte preparó el cambio de tu cuenta a ${d.email}.`, "", `Confírmalo aquí (vence en 1 hora): ${d.link}`, "", `Si no lo pediste, ignora este correo y escríbenos a ${SUPPORT}.`]
+      : [`${n ? `${n}, d` : "D"}esde ahora entras a Banana Burn con ${d.email}.`, "Tu progreso sigue igual.", "", `Si no pediste este cambio, escríbenos a ${SUPPORT}.`], undefined, reason),
+  };
+}
+
 export function suscripcionCancelada(d: { name: string; plan: string; accessUntil?: string | null }): Email {
   const n = firstName(d.name);
   const subject = "Tu suscripción fue cancelada";

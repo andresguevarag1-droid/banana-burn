@@ -15,3 +15,8 @@ alter default privileges in schema public grant all on sequences to anon, authen
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 grant all on storage.objects to anon, authenticated, service_role;
 grant all on storage.buckets to service_role;
+-- Auth (0056): bloqueo en el inicio de sesión y sesiones, con las columnas que usa el panel.
+alter table auth.users add column if not exists banned_until timestamptz;
+alter table auth.users add column if not exists email_confirmed_at timestamptz;
+create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, created_at timestamptz default now());
+create table auth.refresh_tokens (id bigserial primary key, user_id varchar(255), session_id uuid references auth.sessions(id) on delete cascade, token varchar(255));

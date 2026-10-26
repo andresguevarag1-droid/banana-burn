@@ -5,7 +5,7 @@ import { ArrowRight, Banana, Check, Monkey, MonkeyBanana, SignOut } from "@/comp
 import { FunnelTracker } from "@/components/analytics";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { isSupabaseConfigured } from "@/lib/env";
-import { getViewer } from "@/lib/supabase/server";
+import { blockedSession, getViewer } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { REF_COOKIE, normalizeCode } from "@/lib/referrals";
 import { LoginForm } from "./login-form";
@@ -27,6 +27,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   const signup = (await searchParams).modo === "registro";
   // Con sesión abierta no rebotamos a la app: mostramos con qué cuenta estás y dejamos cambiarla.
   const v = isSupabaseConfigured ? await getViewer() : null;
+  const blocked = !v && (await blockedSession().catch(() => false));
   const invited = signup && !v && !!normalizeCode((await cookies()).get(REF_COOKIE)?.value);
   const o = offer();
   return (
@@ -37,7 +38,17 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
         <main className="flex-1 grid place-items-center py-10">
           <div className="w-full max-w-[400px]">
             {/* Google solo si el proveedor está activo en Supabase (NEXT_PUBLIC_GOOGLE_AUTH=1); si no, el botón fallaría. */}
-            {v ? (
+            {blocked ? (
+              <div className="animate-rise">
+                <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
+                <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Tu cuenta está pausada</h1>
+                <p className="mt-2 text-muted text-pretty">Por ahora no puedes entrar con esta cuenta. Escríbenos a <a href="mailto:hola@bananaburn.app" className="font-semibold text-ink underline underline-offset-2">hola@bananaburn.app</a> y te ayudamos a resolverlo.</p>
+                <form action="/auth/salir" method="post" className="mt-8">
+                  <input type="hidden" name="next" value="/entrar" />
+                  <button className="btn-ghost w-full h-13"><SignOut weight="bold" className="size-5" />Entrar con otra cuenta</button>
+                </form>
+              </div>
+            ) : v ? (
               <div className="animate-rise">
                 <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
                 <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Ya tienes la sesión abierta</h1>

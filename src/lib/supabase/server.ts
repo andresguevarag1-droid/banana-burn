@@ -46,6 +46,20 @@ export const getViewer = cache(async function getViewer(): Promise<Viewer | null
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
-  const { data: p } = await sb.from("profiles").select("full_name, role, plan, onboarded, country").eq("id", user.id).maybeSingle();
+  // 0056: una cuenta bloqueada desde el panel no entra (sin 0056 aplicada, la columna no existe y se lee como antes).
+  const first = await sb.from("profiles").select("full_name, role, plan, onboarded, country, blocked_at").eq("id", user.id).maybeSingle();
+  let p: { full_name: string | null; role: string; plan: string; onboarded: boolean; country: string | null; blocked_at?: string | null } | null = first.data;
+  if (first.error?.code === "42703") p = (await sb.from("profiles").select("full_name, role, plan, onboarded, country").eq("id", user.id).maybeSingle()).data;
+  if (p?.blocked_at) return null;
   return { demo: false, id: user.id, email: user.email ?? "", name: p?.full_name || user.email?.split("@")[0] || "atleta", role: (p?.role as Role) ?? "free", plan: p?.plan ?? "free", onboarded: Boolean(p?.onboarded), tz: await viewerTz(), country: p?.country ?? null };
 });
+
+/** ¿Hay una sesión abierta de una cuenta bloqueada desde el panel (0056)? Para mostrarle un aviso claro en /entrar. */
+export async function blockedSession(): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  const sb = await createClient();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return false;
+  const { data, error } = await sb.from("profiles").select("blocked_at").eq("id", user.id).maybeSingle();
+  return !error && !!(data as { blocked_at?: string | null } | null)?.blocked_at;
+}

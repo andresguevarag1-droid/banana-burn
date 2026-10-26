@@ -2233,6 +2233,90 @@ select bbtest.ok('0055: se sale de la tabla', bbtest.affected($q$ delete from pu
 delete from public.run_shoes; delete from public.runs where client_id = '22222222-2222-4333-8444-555555555555';
 reset role;
 
+-- ───────────── 0056 Panel del superadmin: cuentas ─────────────
+-- Z: superadmin. Solo Z usa las acciones nuevas; A (persona), S (admin) y P (soporte) no. Nadie las imita por la API.
+insert into auth.users (id, email) values ('9a9a9a9a-0000-4000-8000-00000000009a', 'super@prueba.test');
+update public.profiles set role = 'superadmin', full_name = 'Super' where id = '9a9a9a9a-0000-4000-8000-00000000009a';
+create function bbtest.login_super() returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', '', false);
+  perform set_config('request.jwt.claims', json_build_object('sub', '9a9a9a9a-0000-4000-8000-00000000009a', 'role', 'authenticated')::text, false);
+end $$;
+set role authenticated; select bbtest.login('A');
+select bbtest.fails('0056: A no edita perfiles ajenos', $q$ select public.admin_update_profile(bbtest.u('B'), 'Otro nombre', 'CR', 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: A no bloquea cuentas', $q$ select public.admin_set_blocked(bbtest.u('B'), true, 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: A no se regala XP', $q$ select public.admin_adjust_xp(auth.uid(), 500, 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: A no se otorga insignias', $q$ select public.admin_set_badge(auth.uid(), 'w50', 'otorgada', 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: A no lee la ficha del superadmin', $q$ select public.admin_user_manage(bbtest.u('B')) $q$, '42501');
+select bbtest.fails('0056: A no quita retos', $q$ select public.admin_revoke_challenge(bbtest.u('B'), 'abdomen-21', 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: A no se da una cortesía larga', $q$ select public.admin_grant_comp_long(auth.uid(), 'completo', now() + interval '2 years', 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: A no lista usuarios', $q$ select * from public.admin_list_users_v2() $q$, '42501');
+select bbtest.fails('0056: A no cierra sesiones', $q$ select public.admin_sign_out_all(bbtest.u('B')) $q$, '42501');
+select bbtest.fails('0056: A no cambia su bloqueo por la API', $q$ update public.profiles set blocked_reason = 'x' where id = auth.uid() $q$, '42501');
+select bbtest.fails('0056: A no se escribe insignias a mano', $q$ insert into public.badge_overrides (user_id, badge_id, mode) values (auth.uid(), 'w50', 'otorgada') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.fails('0056: un admin no usa las acciones del superadmin', $q$ select public.admin_update_profile(bbtest.u('B'), 'Otro nombre', 'CR', 'prueba de permisos') $q$, '42501');
+select bbtest.fails('0056: un admin no ajusta XP', $q$ select public.admin_adjust_xp(bbtest.u('B'), 100, 'prueba de permisos') $q$, '42501');
+select bbtest.ok('0056: el staff sí lista usuarios con los filtros nuevos', bbtest.num($q$ select 1 from public.admin_list_users_v2(p_country => 'CR') $q$) >= 1);
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0056: anon no lee insignias a mano', $q$ select 1 from public.badge_overrides $q$, '42501');
+reset role;
+
+set role authenticated; select bbtest.login_super();
+select bbtest.fails('0056: motivo obligatorio', $q$ select public.admin_update_profile(bbtest.u('B'), 'Beto Nuevo', 'CR', 'no') $q$, 'P0001');
+select bbtest.fails('0056: nombre con etiquetas no', $q$ select public.admin_update_profile(bbtest.u('B'), '<b>Beto</b>', 'CR', 'cambio pedido por correo') $q$, 'P0001');
+select bbtest.ok('0056: el superadmin edita el nombre', bbtest.affected($q$ select public.admin_update_profile(bbtest.u('B'), 'Beto Nuevo', 'gt', 'cambio pedido por correo') $q$) = 1);
+select bbtest.fails('0056: sin cambios no guarda', $q$ select public.admin_update_profile(bbtest.u('B'), 'Beto Nuevo', 'GT', 'cambio pedido por correo') $q$, 'P0001');
+select bbtest.fails('0056: no se bloquea a sí mismo', $q$ select public.admin_set_blocked(auth.uid(), true, 'prueba de permisos') $q$, 'P0001');
+select bbtest.ok('0056: bloquea a B', bbtest.affected($q$ select public.admin_set_blocked(bbtest.u('B'), true, 'fraude con tarjetas') $q$) = 1);
+select bbtest.ok('0056: la lista muestra a B como bloqueado', bbtest.num($q$ select 1 from public.admin_list_users_v2(p_status => 'bloqueado') where id = bbtest.u('B') $q$) = 1);
+select bbtest.fails('0056: no se bloquea dos veces', $q$ select public.admin_set_blocked(bbtest.u('B'), true, 'fraude con tarjetas') $q$, 'P0001');
+reset role;
+set role authenticated; select bbtest.login('B');
+select bbtest.fails('0056: B bloqueado no se desbloquea', $q$ update public.profiles set blocked_at = null where id = auth.uid() $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login_super();
+select bbtest.ok('0056: desbloquea a B', bbtest.affected($q$ select public.admin_set_blocked(bbtest.u('B'), false, 'se aclaró el caso') $q$) = 1);
+select bbtest.fails('0056: nivel no se cambia a mano', $q$ select public.admin_set_badge(bbtest.u('B'), 'nivel', 'quitada', 'prueba de reglas') $q$, 'P0001');
+select bbtest.fails('0056: verificado no se otorga a mano', $q$ select public.admin_set_badge(bbtest.u('B'), 'verificado', 'otorgada', 'prueba de reglas') $q$, 'P0001');
+select bbtest.ok('0056: otorga 50 entrenos a B', bbtest.affected($q$ select public.admin_set_badge(bbtest.u('B'), 'w50', 'otorgada', 'migró sus entrenos de otra app') $q$) = 1);
+select bbtest.ok('0056: la ficha muestra la insignia otorgada', (select public.admin_user_manage(bbtest.u('B')) -> 'badges' @> '[{"id":"w50"}]'::jsonb));
+select bbtest.ok('0056: devuelve la insignia a lo calculado', bbtest.affected($q$ select public.admin_set_badge(bbtest.u('B'), 'w50', 'ninguna', 'fue un error') $q$) = 1);
+select bbtest.ok('0056: sin la otorgada ya no se ve', not (select public.admin_user_manage(bbtest.u('B')) -> 'badges' @> '[{"id":"w50"}]'::jsonb));
+select bbtest.ok('0056: quita una insignia ganada', bbtest.affected($q$ select public.admin_set_badge(bbtest.u('B'), 'prog:abdomen-marcado', 'quitada', 'certificado por error') $q$) = 1);
+select bbtest.ok('0056: la quitada no se ve', not (select public.admin_user_manage(bbtest.u('B')) -> 'badges' @> '[{"id":"prog:abdomen-marcado"}]'::jsonb));
+select bbtest.ok('0056: la devuelve', bbtest.affected($q$ select public.admin_set_badge(bbtest.u('B'), 'prog:abdomen-marcado', 'ninguna', 'se aclaró') $q$) = 1);
+select bbtest.ok('0056: suma XP a B', (select public.admin_adjust_xp(bbtest.u('B'), 120, 'compensación por error')) >= 120);
+select bbtest.fails('0056: el XP no queda bajo 0', $q$ select public.admin_adjust_xp(bbtest.u('B'), -20000, 'quitar todo') $q$, 'P0001');
+select bbtest.fails('0056: ajuste de XP en 0 no', $q$ select public.admin_adjust_xp(bbtest.u('B'), 0, 'nada que hacer') $q$, 'P0001');
+select bbtest.ok('0056: regala un reto de pago', bbtest.affected($q$ select public.admin_grant_challenge(bbtest.u('B'), 'abdomen-21', 'prueba del panel') $q$) = 1);
+select bbtest.ok('0056: lo quita y dice de dónde venía', (select public.admin_revoke_challenge(bbtest.u('B'), 'abdomen-21', 'prueba del panel')) = 'cortesia');
+select bbtest.fails('0056: no quita lo que no tiene', $q$ select public.admin_revoke_challenge(bbtest.u('B'), 'abdomen-21', 'prueba del panel') $q$, 'P0001');
+select bbtest.fails('0056: sin progreso no reinicia', $q$ select public.admin_reset_challenge(bbtest.u('B'), 'reto-que-no-existe', 'prueba del panel') $q$, 'P0001');
+select bbtest.fails('0056: sin cuestionario no reinicia', $q$ select public.admin_reset_season_intake(bbtest.u('B'), 'temporada-running-1', 'prueba del panel') $q$, 'P0001');
+select bbtest.ok('0056: cortesía de 5 años', bbtest.affected($q$ select public.admin_grant_comp_long(bbtest.u('B'), 'entreno', now() + interval '5 years', 'embajador de la marca') $q$) = 1);
+select bbtest.fails('0056: cortesía de más de 10 años no', $q$ select public.admin_grant_comp_long(bbtest.u('B'), 'entreno', now() + interval '11 years', 'embajador de la marca') $q$, 'P0001');
+select bbtest.fails('0056: el superadmin tampoco cierra sesiones por la API', $q$ select public.admin_sign_out_all(bbtest.u('B')) $q$, '42501');
+reset role;
+select bbtest.ok('0056: cada acción quedó en auditoría con antes y después', (select count(*) >= 6 from public.audit_log
+  where actor = '9a9a9a9a-0000-4000-8000-00000000009a' and meta ? 'before' and meta ? 'after'));
+select bbtest.ok('0056: auditoría del nombre con el valor anterior', exists (select 1 from public.audit_log where action = 'user.profile_update'
+  and target = bbtest.u('B')::text and meta -> 'after' ->> 'country' = 'GT'));
+insert into auth.sessions (user_id) values (bbtest.u('B'));
+insert into auth.refresh_tokens (user_id, session_id, token) select bbtest.u('B')::text, id, 'tok' from auth.sessions where user_id = bbtest.u('B');
+set role service_role; select bbtest.login(null);
+select bbtest.ok('0056: el servidor cierra las sesiones de B', (select public.admin_sign_out_all(bbtest.u('B'))) = 1);
+reset role;
+select bbtest.ok('0056: sin sesiones ni tokens de B', not exists (select 1 from auth.sessions where user_id = bbtest.u('B')) and not exists (select 1 from auth.refresh_tokens where user_id = bbtest.u('B')::text));
+-- Deja a B como estaba para el resumen.
+update public.profiles p set plan = g.previous_plan from public.comp_grants g where g.user_id = p.id and p.id = bbtest.u('B') and g.source = 'cortesia' and g.revoked_at is null;
+update public.comp_grants set revoked_at = now() where user_id = bbtest.u('B') and source = 'cortesia' and revoked_at is null;
+update public.profiles p set full_name = a.meta -> 'before' ->> 'full_name', country = a.meta -> 'before' ->> 'country'
+  from public.audit_log a where p.id = bbtest.u('B') and a.action = 'user.profile_update' and a.target = p.id::text;
+delete from public.xp_events where user_id = bbtest.u('B') and kind = 'ajuste';
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

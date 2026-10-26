@@ -108,6 +108,12 @@ export async function startCheckout(v: Viewer, plan: PlanId, billing: Billing): 
 
 /** Cancela al final del periodo: corta la renovación en ONVO ya y conserva el acceso hasta current_period_end. */
 export async function cancelAtPeriodEnd(v: Viewer, reason?: string): Promise<{ endsAt: string | null }> {
+  return cancelAtPeriodEndFor(v.id, reason);
+}
+
+/** Igual que cancelAtPeriodEnd, por id de cuenta (el panel del superadmin, 0056). */
+export async function cancelAtPeriodEndFor(userId: string, reason?: string): Promise<{ endsAt: string | null }> {
+  const v = { id: userId };
   const db = admin();
   const { data: rows } = await db.from("subscriptions").select(SUB_COLS).eq("user_id", v.id).in("status", ["active", "trialing", "past_due"]).eq("cancel_at_period_end", false);
   const subs = (rows as SubscriptionRow[] | null) ?? [];
