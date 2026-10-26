@@ -233,7 +233,7 @@ export async function listUsers(v: Viewer, f: UserFilters): Promise<{ rows: User
   };
   // 0056: país, temporada y estados nuevos. Sin la migración, la lista de siempre.
   let { data, error } = await sb.rpc("admin_list_users_v2", { ...base, p_country: f.country || null, p_season: f.season || null });
-  if (error && ["42883", "PGRST202"].includes(error.code ?? "")) ({ data, error } = await sb.rpc("admin_list_users", base));
+  if (error) ({ data, error } = await sb.rpc("admin_list_users", base));
   if (!error) {
     const rows = (data ?? []) as (Omit<UserRow, "sub_status" | "billing"> & { total: number })[];
     return { rows: await withSubs(sb, rows), total: Number(rows[0]?.total ?? 0), limited: false };

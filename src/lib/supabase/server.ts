@@ -46,10 +46,11 @@ export const getViewer = cache(async function getViewer(): Promise<Viewer | null
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
-  // 0056: una cuenta bloqueada desde el panel no entra (sin 0056 aplicada, la columna no existe y se lee como antes).
+  // 0056: una cuenta bloqueada desde el panel no entra. Si la lectura con blocked_at falla (p. ej. sin 0056 aplicada),
+  // se lee como antes: nunca se deja a nadie sin perfil por esta columna.
   const first = await sb.from("profiles").select("full_name, role, plan, onboarded, country, blocked_at").eq("id", user.id).maybeSingle();
   let p: { full_name: string | null; role: string; plan: string; onboarded: boolean; country: string | null; blocked_at?: string | null } | null = first.data;
-  if (first.error?.code === "42703") p = (await sb.from("profiles").select("full_name, role, plan, onboarded, country").eq("id", user.id).maybeSingle()).data;
+  if (first.error) p = (await sb.from("profiles").select("full_name, role, plan, onboarded, country").eq("id", user.id).maybeSingle()).data;
   if (p?.blocked_at) return null;
   return { demo: false, id: user.id, email: user.email ?? "", name: p?.full_name || user.email?.split("@")[0] || "atleta", role: (p?.role as Role) ?? "free", plan: p?.plan ?? "free", onboarded: Boolean(p?.onboarded), tz: await viewerTz(), country: p?.country ?? null };
 });
