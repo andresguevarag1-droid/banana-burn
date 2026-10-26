@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SEASON_SEED_BY_SLUG } from "./season-content";
-import { DEFAULT_INTAKE, adaptExercises, personalPhases, personalSeason, personalWeeks, swapsFor } from "./season-plan";
-import { SEASON_BY_SLUG, type SeasonIntake } from "./seasons";
+import { DEFAULT_INTAKE, adaptExercises, personalPhases, personalSeason, personalWeeks, swapsFor, withRaceGoal } from "./season-plan";
+import { SEASON_BY_SLUG, parseIntake, planWeek, type SeasonIntake } from "./seasons";
 import { calendarSlot, resolveProgram, type ProgramDef } from "./programs";
 import { knownExercise } from "./programs-server";
 
@@ -60,5 +60,27 @@ describe("temporada a la medida", () => {
     expect(personalWeeks(p)).toBe(true);
     const w7 = personalPhases(seed(run.slug).meta.phases, [4, 7]).phases;
     expect(w7.map((x) => `${x.name}:${x.weeks}:${!!x.deload}`)).toEqual(["Base:3:false", "Descarga:1:true", "Potencia:2:false", "Afinar para tu evento:1:true", "Afinar y prueba:1:true"]);
+  });
+});
+
+describe("la carrera objetivo acomoda la fuerza (running)", () => {
+  const intake = parseIntake({ level: "recreativo", trainDays: [0, 1, 2, 3, 4, 5, 6], sessions: 3, minutes: 45, place: "gym", goal: "marca", running: { runDays: [1, 3, 5, 6], longRunDay: 6, kmWeek: 30, target: "21k" } }, "running")!;
+  const heavyOk = (w: ReturnType<typeof planWeek>, key: number[]) => w.slots.filter((s) => s.kind === "fuerza" || s.kind === "potencia").every((s) => !key.includes(s.dow) && !key.includes((s.dow + 1) % 7));
+  it("con el plan de Banana Run: ni piernas pesadas en series ni el día antes", () => {
+    const i = withRaceGoal(intake, { raceDate: "2026-12-13", name: "Mi 21K", ownPlan: false, hardDays: [] }, "2026-10-25");
+    expect(i.eventDate).toBe("2026-12-13");
+    expect(i.running!.qualityDays!.length).toBe(2);
+    const key = [6, ...i.running!.qualityDays!];
+    expect(heavyOk(planWeek("running", i), key)).toBe(true);
+  });
+  it("con su propio plan: respeta los días que marcó", () => {
+    const i = withRaceGoal(intake, { raceDate: "2026-12-13", name: null, ownPlan: true, hardDays: [2] }, "2026-10-25");
+    expect(i.running!.qualityDays).toEqual([2]);
+    expect(heavyOk(planWeek("running", i), [2, 6])).toBe(true);
+    expect(i.eventType).toBe("carrera");
+  });
+  it("sin carrera, o ya pasada, no cambia nada", () => {
+    expect(withRaceGoal(intake, null, "2026-10-25")).toBe(intake);
+    expect(withRaceGoal(intake, { raceDate: "2026-10-01", name: null, ownPlan: false, hardDays: [] }, "2026-10-25")).toBe(intake);
   });
 });

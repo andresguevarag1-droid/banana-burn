@@ -21,8 +21,8 @@ function PaceChart({ splits }: { splits: { km: number; seconds: number }[] }) {
     <figure className="card p-5 space-y-2">
       <figcaption className="text-xl font-extrabold text-ink">Ritmo por kilómetro</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Ritmo por kilómetro: ${full.map((s) => `km ${s.km}, ${fmtPace(s.pace)}`).join("; ")}`}>
-        <polyline points={full.map((s, i) => `${x(i)},${y(s.pace)}`).join(" ")} fill="none" stroke="#C2410C" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
-        {full.map((s, i) => <g key={s.km}><circle cx={x(i)} cy={y(s.pace)} r={4} fill="#C2410C" /><text x={x(i)} y={H - 4} textAnchor="middle" fontSize="10" fill="#6B6B6B">{s.km}</text></g>)}
+        <polyline points={full.map((s, i) => `${x(i)},${y(s.pace)}`).join(" ")} fill="none" style={{ stroke: "var(--run)" }} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+        {full.map((s, i) => <g key={s.km}><circle cx={x(i)} cy={y(s.pace)} r={4} style={{ fill: "var(--run)" }} /><text x={x(i)} y={H - 4} textAnchor="middle" fontSize="10" fill="#6B6B6B">{s.km}</text></g>)}
       </svg>
       <p className="text-xs text-muted">Más arriba es más rápido.</p>
     </figure>

@@ -31,7 +31,7 @@ export function RunMap({ track, here, className = "", label = "Mapa del recorrid
           className="absolute max-w-none select-none" style={{ left: `${((x * TILE - ox) / W) * 100}%`, top: `${((y * TILE - oy) / H) * 100}%`, width: `${(TILE / W) * 100}%`, height: `${(TILE / H) * 100}%` }} />
       ))}
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 size-full" aria-hidden>
-        {track.map((seg, i) => seg.length > 1 && <polyline key={i} points={seg.map(P).join(" ")} fill="none" stroke="#C2410C" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />)}
+        {track.map((seg, i) => seg.length > 1 && <polyline key={i} points={seg.map(P).join(" ")} fill="none" style={{ stroke: "var(--run)" }} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />)}
         {first && !here && <circle cx={P(first).split(",")[0]} cy={P(first).split(",")[1]} r={6} fill="#17703A" stroke="#fff" strokeWidth={2} />}
         {last && !here && pts.length > 1 && <circle cx={P(last).split(",")[0]} cy={P(last).split(",")[1]} r={6} fill="#1A1A1A" stroke="#fff" strokeWidth={2} />}
         {here && <circle cx={W / 2} cy={H / 2} r={8} fill="#2563EB" stroke="#fff" strokeWidth={3} />}

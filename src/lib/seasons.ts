@@ -180,6 +180,8 @@ export const GOALS: Record<SportId, { id: string; label: string }[]> = {
 export type RunningAnswers = {
   runDays: number[]; longRunDay: number | null; kmWeek: number; paceDist: "5k" | "10k" | null; paceTime: string | null;
   target: "5k" | "10k" | "21k" | "42k" | "trail"; surface: ("calle" | "pista" | "montana")[]; watch: "no" | "reloj" | "strava" | "ambos";
+  /** Días de series o tempo (de su plan de carrera de Banana Run o del suyo propio). Los pone el servidor, no el cuestionario. */
+  qualityDays?: number[];
 };
 export type RacketAnswers = {
   which: "tenis" | "padel" | "ambos"; playDays: number[]; competitiveDays: number[]; hand: "derecha" | "izquierda";
@@ -265,7 +267,8 @@ export type WeekPlan = { days: DayPlan[]; /** dow (0 = lunes) de cada sesión el
 /** Días del deporte: los "clave" son la carrera larga, los partidos competitivos y los días de box; el resto, normales. */
 export function sportDays(sport: SportId, i: SeasonIntake): { key: number[]; normal: number[] } {
   if (sport === "running" && i.running) {
-    const key = i.running.longRunDay !== null ? [i.running.longRunDay] : [];
+    // Clave: la carrera larga y los días de series o tempo (la fuerza pesada no va ese día ni el anterior).
+    const key = [...new Set([...(i.running.longRunDay !== null ? [i.running.longRunDay] : []), ...(i.running.qualityDays ?? []).filter((d) => d >= 0 && d <= 6)])].sort((a, b) => a - b);
     return { key, normal: i.running.runDays.filter((d) => !key.includes(d)) };
   }
   if (sport === "raquetas" && i.raquetas) {
