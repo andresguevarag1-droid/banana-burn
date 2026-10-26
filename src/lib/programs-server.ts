@@ -160,12 +160,12 @@ export async function loadProgram(v: Viewer, st: ProgramState): Promise<LoadedPr
     const { getSex } = await import("@/lib/athlete");
     const { listRuns } = await import("@/lib/runs-server");
     const { runsForCoach } = await import("@/lib/runs");
-    const [ps, sex, intake, runs] = await Promise.all([personalize(v, def), getSex(v), getIntake(v, st.slug), listRuns(v, 14).catch(() => [])]);
+    const [ps, sex, intake, runs, runNote] = await Promise.all([personalize(v, def), getSex(v), getIntake(v, st.slug), listRuns(v, 14).catch(() => []), sm.sport === "running" ? runningCoachNote(v).catch(() => null) : Promise.resolve(null)]);
     if (ps) {
       const exp = c.program.experience ? { ...c.program.experience, coach: seasonCoachId(sm.sport, sex) } : undefined;
       const meta: ProgramMeta = { ...ps.def.meta, ...(exp ? { experience: exp } : {}) };
       const pdef = { ...ps.def, meta };
-      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper, note: [intake ? intakeForCoach(sm.sport, intake.answers, todayFor(v).iso) : null, runsForCoach(runs)].filter(Boolean).join(" ") || null } };
+      return { c: { ...c, program: meta }, def: pdef, state: st, done, run: resolveProgram(pdef, st, done, todayFor(v).iso), eq: ps.eq, season: { sport: sm.sport, plan: ps.plan, taper: ps.taper, note: [intake ? intakeForCoach(sm.sport, intake.answers, todayFor(v).iso) : null, runNote, runsForCoach(runs)].filter(Boolean).join(" ") || null } };
     }
   }
   return { c, def, state: st, done, run: resolveProgram(def, st, done, todayFor(v).iso) };
@@ -265,4 +265,20 @@ export function sessionViews(def: Pick<ProgramDef, "slug" | "title" | "meta">, i
       exercises: (p.program?.exercises ?? []).map((e) => ({ id: e.id, name: e.name, muscle: e.muscle, sets: setsLabel(e.cfg), cfg: { sets: e.cfg.sets, lo: e.cfg.lo, hi: e.cfg.hi, unit: e.cfg.unit, ...(e.cfg.perSide ? { perSide: true } : {}) }, rest: restLabel(e.cfg.rest), tempo: e.tempo, note: e.note })),
     };
   });
+}
+
+/** Running para la coach: carrera objetivo, fase del plan, ritmos y marcas (solo números, sin lugares). */
+async function runningCoachNote(v: Viewer): Promise<string | null> {
+  const { getRunningView } = await import("@/lib/running-server");
+  const { planForCoach } = await import("@/lib/run-plan");
+  const { fmtTime } = await import("@/lib/run-fitness");
+  const r = await getRunningView(v);
+  const parts: string[] = [];
+  if (r.goal && r.plan) parts.push(planForCoach(r.plan, r.today, r.goal.name));
+  else if (r.goal) parts.push(`Prepara una carrera de ${Math.round(r.goal.distanceM / 100) / 10} km el ${r.goal.raceDate}${r.goal.ownPlan ? " con su propio plan de carrera" : ""}.`);
+  if (r.goal?.goalS) parts.push(`Meta: ${fmtTime(r.goal.goalS)}${r.check ? ` (estimado hoy ${fmtTime(r.check.now)})` : ""}.`);
+  const b = r.bests;
+  const pb = [b.km5 ? `5 km en ${fmtTime(b.km5.seconds)}` : null, b.km10 ? `10 km en ${fmtTime(b.km10.seconds)}` : null, b.longest ? `la más larga ${Math.round(b.longest.distanceM / 100) / 10} km` : null].filter(Boolean);
+  if (pb.length) parts.push(`Marcas: ${pb.join(", ")}.`);
+  return parts.join(" ") || null;
 }

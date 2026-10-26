@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarCheck, CheckCircle, List, ShieldCheck, TrendUp } from "@/components/icons";
 import { SafeImage } from "@/components/safe-image";
+import { Phone } from "@/components/phone";
 import { COACHES, seasonCoachId } from "@/lib/coaches";
 import { usd } from "@/lib/challenges";
 import { SEASONS_T1, SPORTS, canEnroll, longDate, seasonStatus, type SportId } from "@/lib/seasons";
@@ -83,6 +84,17 @@ export default function TemporadasLanding() {
             </article>
           );
         })}
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16" aria-labelledby="run-plus">
+        <div className="grid items-center gap-8 rounded-[2.25rem] bg-[#FFEDD5] p-7 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
+          <div>
+            <h2 id="run-plus" className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">La Temporada Running trae Banana Run completo</h2>
+            <p className="mt-4 text-body text-pretty">Además de la fuerza: tu plan de carrera hasta tu 5K, 10K, 21K, 42K o trail, tus ritmos, sesiones guiadas con voz, tabla de ritmos y técnica de carrera.</p>
+            <Link href="/running" data-cta="temporadas-running" className="btn-primary mt-6 h-12">Conoce Banana Run <ArrowRight className="size-4" /></Link>
+          </div>
+          <div className="mx-auto flex w-full max-w-[420px] justify-center gap-4"><Phone src="/landing/running-plan.webp" alt="Plan de carrera con km por semana y tus ritmos" sizes="200px" className="w-[190px]" /><Phone src="/landing/running-guiada.webp" alt="Modo carrera km por km" sizes="200px" className="mt-10 hidden w-[180px] sm:block" /></div>
+        </div>
       </section>
 
       <section className="bg-cream py-16">

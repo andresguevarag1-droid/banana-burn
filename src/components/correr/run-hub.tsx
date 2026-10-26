@@ -258,3 +258,36 @@ export function IntakeNeeded({ slug }: { slug: string }) {
     </section>
   );
 }
+
+/** Logros de running: ganados con su fecha y los que vienen con su avance. */
+export function BadgesCard({ badges }: { badges: { id: string; label: string; desc: string; earnedOn: string | null; progress: number }[] }) {
+  const won = badges.filter((b) => b.earnedOn), next = badges.filter((b) => !b.earnedOn).sort((a, b) => b.progress - a.progress).slice(0, 3);
+  return (
+    <section className="card space-y-3 p-5" aria-labelledby="badges">
+      <h2 id="badges" className="text-xl font-extrabold text-ink">Logros de running <span className="text-sm font-semibold text-muted">{won.length} de {badges.length}</span></h2>
+      {won.length > 0 && <ul className="flex flex-wrap gap-2">{won.map((b) => <li key={b.id} className="chip h-8 bg-[var(--run)] text-sm font-bold text-white" title={b.desc}>{b.label}</li>)}</ul>}
+      <ul className="space-y-2">
+        {next.map((b) => (
+          <li key={b.id}>
+            <p className="flex justify-between text-sm"><span className="font-bold text-ink">{b.label}</span><span className="tabular-nums text-muted">{Math.round(b.progress * 100)} %</span></p>
+            <div className="h-2 overflow-hidden rounded-full bg-line" aria-hidden><div className="h-full rounded-full bg-ink" style={{ width: `${Math.max(2, b.progress * 100)}%` }} /></div>
+            <p className="text-xs text-muted">{b.desc}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Reto del mes (gratis): km del mes contra una meta que sube sobre el mes pasado. */
+export function MonthChallengeCard({ c }: { c: { title: string; goalKm: number; km: number; daysLeft: number; done: boolean } }) {
+  const pct = Math.min(100, Math.round((c.km / c.goalKm) * 100));
+  return (
+    <section className="card space-y-3 p-5" aria-labelledby="reto-mes">
+      <p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--run)]">Reto del mes</p>
+      <h2 id="reto-mes" className="text-2xl font-extrabold text-ink">{c.title}</h2>
+      <div className="h-3 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Avance del reto ${c.title}`}><div className="h-full rounded-full bg-[var(--run)]" style={{ width: `${Math.max(2, pct)}%` }} /></div>
+      <p className="text-sm text-body">{c.done ? `Lo lograste: ${c.km} km. La meta del próximo mes sube un poco.` : `Llevas ${c.km} km. ${c.daysLeft === 0 ? "Hoy es el último día." : `Quedan ${c.daysLeft} ${c.daysLeft === 1 ? "día" : "días"}.`}`}</p>
+    </section>
+  );
+}

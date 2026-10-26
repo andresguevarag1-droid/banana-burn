@@ -2205,6 +2205,34 @@ set role authenticated; select bbtest.login('A');
 select bbtest.ok('0054: borra su carrera objetivo', bbtest.affected($q$ delete from public.race_goals $q$) = 1);
 reset role;
 
+-- ───────────── 0055 Running: XP, tenis y tabla semanal ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0055: sin carrera no hay XP de correr', bbtest.affected($q$ insert into public.xp_events (user_id, kind, xp) values (auth.uid(), 'run', 50) $q$) = 0);
+select bbtest.ok('0055: guarda una carrera', bbtest.affected($q$ insert into public.runs (client_id, day, started_at, ended_at, distance_m, moving_s) values ('22222222-2222-4333-8444-555555555555', (now() at time zone 'America/Costa_Rica')::date, now() - interval '40 minutes', now() - interval '10 minutes', 6000, 1800) $q$) = 1);
+select bbtest.ok('0055: la carrera suma XP una vez', bbtest.affected($q$ insert into public.xp_events (user_id, kind, xp) values (auth.uid(), 'run', 80) $q$) = 1 and bbtest.affected($q$ insert into public.xp_events (user_id, kind, xp) values (auth.uid(), 'run', 80) $q$) = 0);
+select bbtest.fails('0055: XP de correr con tope', $q$ insert into public.xp_events (user_id, kind, xp) values (auth.uid(), 'run', 500) $q$, '22023');
+select bbtest.ok('0055: agrega sus tenis', bbtest.affected($q$ insert into public.run_shoes (name, start_km) values ('Tenis de prueba', 120) $q$) = 1);
+select bbtest.fails('0055: un solo par activo', $q$ insert into public.run_shoes (name) values ('Otros') $q$, '23505');
+select bbtest.ok('0055: retira sus tenis', bbtest.affected($q$ update public.run_shoes set retired_on = current_date $q$) = 1);
+select bbtest.ok('0055: A no está en la tabla y no la ve', bbtest.num($q$ select 1 from public.run_weekly_board() $q$) = 0);
+select bbtest.ok('0055: A se suma a la tabla', bbtest.affected($q$ insert into public.run_board default values $q$) = 1);
+select bbtest.ok('0055: A ve la tabla con sus km', (select km = 6.0 and me from public.run_weekly_board() limit 1));
+select bbtest.fails('0055: no suma a otra persona', $q$ insert into public.run_board (user_id) values (bbtest.u('B')) $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('0055: B no ve tenis ajenos', bbtest.num($q$ select 1 from public.run_shoes $q$) = 0);
+select bbtest.zero('0055: B no edita tenis ajenos', $q$ update public.run_shoes set name = 'x' $q$);
+select bbtest.ok('0055: B sin sumarse no ve la tabla', bbtest.num($q$ select 1 from public.run_weekly_board() $q$) = 0);
+select bbtest.ok('0055: B no ve quién se sumó', bbtest.num($q$ select 1 from public.run_board $q$) = 0);
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0055: anon no lee la tabla', $q$ select * from public.run_weekly_board() $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0055: se sale de la tabla', bbtest.affected($q$ delete from public.run_board $q$) = 1);
+delete from public.run_shoes; delete from public.runs where client_id = '22222222-2222-4333-8444-555555555555';
+reset role;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

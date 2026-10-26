@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { getRunningSeason } from "@/lib/running-server";
-import { DRILLS, GROUP_HINT, GROUP_LABEL, drillAnim, drillsBy, type Drill, type DrillGroup } from "@/lib/run-drills";
+import { DRILLS, drillDose, GROUP_HINT, GROUP_LABEL, drillAnim, drillsBy, type Drill, type DrillGroup } from "@/lib/run-drills";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { Locked } from "@/components/correr/run-hub";
 
@@ -17,7 +17,7 @@ function DrillCard({ d }: { d: Drill }) {
       <div className="aspect-square bg-[var(--run-soft)]">{anim ? <ExerciseMotion anim={anim} label={false} className="h-full w-full" cues={d.cues} /> : <div className="grid h-full place-items-center p-6 text-center text-sm font-bold text-[var(--run)]">Corre 20 segundos, acelerando poco a poco hasta un ritmo rápido y suelto.</div>}</div>
       <div className="space-y-1 p-4">
         <h3 className="text-lg font-extrabold text-ink">{d.name}</h3>
-        <p className="text-sm font-bold text-[var(--run)]">{d.dose}</p>
+        <p className="text-sm font-bold text-[var(--run)]">{drillDose(d)}</p>
         <ul className="text-sm text-body">{d.cues.map((c) => <li key={c}>{c}</li>)}</ul>
       </div>
     </li>
@@ -40,7 +40,7 @@ export default async function Tecnica() {
         </section>
       )) : (
         <Locked title={`${DRILLS.length} ejercicios de técnica`} why="Skipping, carioca, saltos de tobillo, fuerza para corredores y estiramientos, con la animación de tu coach. Se agregan solos a tus sesiones." href={seasonHref}>
-          <ul className="grid grid-cols-2 gap-2">{DRILLS.slice(4, 8).map((d) => <li key={d.id} className="rounded-2xl bg-paper p-3 font-bold text-ink">{d.name}<span className="block text-xs font-semibold text-muted">{d.dose}</span></li>)}</ul>
+          <ul className="grid grid-cols-2 gap-2">{DRILLS.slice(4, 8).map((d) => <li key={d.id} className="rounded-2xl bg-paper p-3 font-bold text-ink">{d.name}<span className="block text-xs font-semibold text-muted">{drillDose(d)}</span></li>)}</ul>
         </Locked>
       )}
       <p className="text-xs text-muted">Si un ejercicio te causa dolor, sáltalo. No reemplaza la indicación de un profesional de salud.</p>

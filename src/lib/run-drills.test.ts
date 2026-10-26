@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DRILLS, drillAnim, drillsBy, drillsFor } from "@/lib/run-drills";
+import { DRILLS, drillAnim, drillDose, drillsBy, drillsFor } from "@/lib/run-drills";
 import { sheetFor } from "@/lib/exercise-frames";
 
 describe("técnica de carrera", () => {
@@ -17,6 +17,13 @@ describe("técnica de carrera", () => {
     expect(drillsFor("larga", false).after).toEqual(["enfriar"]);
     expect(drillsFor("facil", true).after).toEqual(["tecnica"]);
     expect(drillsFor("facil", false)).toEqual({ before: [], after: [] });
+  });
+  it("dosis con las palabras del reproductor", () => {
+    const by = (id: string) => drillDose(DRILLS.find((d) => d.id === id)!);
+    expect(by("askip")).toBe("2 x 20 metros");
+    expect(by("calfstretch")).toBe("30 segundos por lado");
+    expect(by("calfraise")).toBe("3 x 15 repeticiones");
+    for (const d of DRILLS) expect(drillDose(d)).not.toMatch(/undefined|NaN/);
   });
   it("sin raya larga ni punto medio", () => {
     expect(JSON.stringify(DRILLS)).not.toMatch(/[—·]/);

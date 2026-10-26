@@ -42,6 +42,7 @@ ${plans}
 - Precios: ${SITE_URL}/precios
 - Banana Shield (GLP-1): ${SITE_URL}/glp1
 - Temporadas deportivas: ${SITE_URL}/temporadas
+- Banana Run para corredores (plan de carrera, ritmos, sesiones guiadas con voz, modo carrera): ${SITE_URL}/running
 - Términos: ${SITE_URL}/terminos
 - Privacidad: ${SITE_URL}/privacidad
 - Contacto: hola@bananaburn.app

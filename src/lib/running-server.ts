@@ -88,3 +88,19 @@ export const getRunningView = cache(async (v: Viewer): Promise<RunningView> => {
 
 /** Predicción simple para la vista previa (sin temporada): solo el tiempo estimado hoy. */
 export const previewPrediction = (goal: RaceGoal, fitness: Fitness) => predictRace(fitness.vdot, goal.kind, goal.distanceM);
+
+export type Shoe = { id: string; name: string; km: number; since: string };
+export type BoardRow = { pos: number; name: string; km: number; me: boolean };
+
+/** Tenis activos con sus km (los iniciales más las carreras desde que los estrenaste) y la tabla semanal. */
+export const getRunSocial = cache(async (v: Viewer, runs: RunRow[]): Promise<{ shoe: Shoe | null; joined: boolean; board: BoardRow[] }> => {
+  if (v.demo) return { shoe: { id: "demo", name: "Mis tenis de diario", km: 412.6, since: "2026-06-01" }, joined: false, board: [] };
+  const sb = await (await import("@/lib/supabase/server")).createClient();
+  const [{ data: s }, { data: j }, board] = await Promise.all([
+    sb.from("run_shoes").select("id,name,start_km,since").eq("user_id", v.id).is("retired_on", null).maybeSingle(),
+    sb.from("run_board").select("user_id").eq("user_id", v.id).maybeSingle(),
+    sb.rpc("run_weekly_board").then((r) => (r.error ? [] : ((r.data ?? []) as BoardRow[])), () => []),
+  ]);
+  const shoe = s ? { id: String(s.id), name: String(s.name), since: String(s.since), km: Math.round((Number(s.start_km) + runs.filter((r) => r.day >= String(s.since)).reduce((a, r) => a + r.distanceM, 0) / 1000) * 10) / 10 } : null;
+  return { shoe, joined: !!j, board: board.map((b) => ({ pos: Number(b.pos), name: String(b.name), km: Number(b.km), me: !!b.me })) };
+});
