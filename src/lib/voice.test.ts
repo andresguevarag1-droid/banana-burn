@@ -13,7 +13,7 @@ describe("registro (voice)", () => {
     expect(t("basico", { basico: "a", intermedio: "b", tecnico: "c" })).toBe("a");
     expect(t("tecnico", { basico: "a", intermedio: "b", tecnico: "c" })).toBe("c");
     expect(parseVoice("raro")).toBe(DEFAULT_VOICE);
-    expect(parseVoice(null)).toBe("intermedio");
+    expect(parseVoice(null)).toBe("basico");
     expect(parseVoice("basico")).toBe("basico");
     expect(isVoice("tecnico")).toBe(true);
     expect(isVoice("experto")).toBe(false);

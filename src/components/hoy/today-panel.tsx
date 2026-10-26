@@ -200,7 +200,7 @@ function MealToday({ meal, coach }: { meal: HoyFood; coach: NutritionNumbers["co
           const has = s.items.length > 0;
           return (
             <li key={s.slot}>
-              <Link href="/app/nutricion" aria-label={has ? `${s.label}: ${s.items.join(", ")}` : `${s.label}: registrar`}
+              <Link href="/app/nutricion"
                 className={`pressable flex h-full min-h-[5.5rem] flex-col rounded-2xl p-3 ${has ? "bg-white/[.07] hover:bg-white/10" : "border border-dashed border-white/20 hover:border-white/40"}`}>
                 <span className="flex items-center justify-between gap-1 text-xs font-bold text-white/75">{s.label}{has && <CheckCircle weight="fill" aria-hidden className="size-4 text-banana" />}</span>
                 {has ? (

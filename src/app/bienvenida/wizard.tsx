@@ -121,7 +121,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
   const [o, setO] = useState<Draft>(() => ({
     name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
-    days: 4, equipment: "gym", level: "intermedio", voice: "intermedio", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
+    days: 4, equipment: "gym", level: "intermedio", voice: "basico", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
   }));
   const [dob, setDob] = useState<Dob>(startOnCard ? { d: 27, m: 1, y: 1999 } : { d: null, m: null, y: null });
   const [touchedDate, setTouchedDate] = useState(false);
@@ -336,7 +336,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             <div className="pt-2">
               <h2 className="text-xl font-extrabold tracking-tight text-ink">¿Cómo quieres que te hable?</h2>
               <p className="mt-1 text-sm text-muted">Coach Banana te explica cada serie a tu manera. Los números son los mismos; lo cambias cuando quieras en tu perfil.</p>
-              <div className="mt-3"><VoicePicker value={o.voice ?? "intermedio"} onChange={(voice) => { setVoiceTouched(true); up({ voice }); }} /></div>
+              <div className="mt-3"><VoicePicker value={o.voice ?? "basico"} onChange={(voice) => { setVoiceTouched(true); up({ voice }); }} /></div>
             </div>
           </>)}
 

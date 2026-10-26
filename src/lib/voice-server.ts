@@ -8,7 +8,7 @@ export const DEMO_VOICE_COOKIE = "bb_demo_lenguaje";
 
 /**
  * Registro del lenguaje de quien mira ("Cómo te hablo", 0035). Nunca rompe la pantalla:
- * sin la columna (0035 sin correr) o con un error, se usa el intermedio.
+ * sin la columna (0035 sin correr) o con un error, se usa el básico.
  */
 export const getVoice = cache(async function getVoice(v: Viewer): Promise<Voice> {
   if (v.demo) return parseVoice((await cookies()).get(DEMO_VOICE_COOKIE)?.value);

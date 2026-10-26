@@ -22,6 +22,8 @@ import { CoachPic } from "@/components/coach-pic";
 import { hoyFood } from "@/lib/hoy-food";
 import { localHour } from "@/lib/recipes";
 import { WeekCard } from "@/components/hoy/week-card";
+import { WeekLine } from "@/components/hoy/week-line";
+import { PromptQueue } from "@/components/hoy/prompt-queue";
 import { WeighIn } from "@/components/weigh-in";
 import { ExpressCard } from "@/components/express-chips";
 import { NotificationBell } from "@/components/notifications/bell";
@@ -110,41 +112,42 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       </header>
 
       <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />
-      <FirstSteps server={{ keys: learnState.keys, workouts: learnState.workouts, weights: learnState.weights, coachMessages: learnState.coachMessages, push: learnState.push }} coach={{ name: guideCoach?.name ?? "Coach Banana", avatar: guideCoach?.avatar ?? null }} />
-      <LoMejor serverKeys={learnState.keys} />
-      {recap && <WeekRecap r={recap} />}
-      <AnnouncementBanner />
-      <InstallCard />
-      <PushWhenReady trained={g.trainedToday || g.streak.days > 0 || !!lastTime} />
-      {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
 
+      {/* 1. Lo que toca hoy, con el botón grande para empezar. Con un programa activo, su sesión. */}
+      {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
+        : <div data-tour="hoy-entreno"><WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+          readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>}
 
-      {paused && (
-        <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cream text-ink"><Pause weight="duotone" className="size-5" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{paused.title} está en pausa</span><span className="block text-sm text-muted">{paused.at}. Mientras tanto entrenas tu rutina normal; reanúdalo cuando quieras.</span></span>
-          <CaretRight weight="bold" className="size-5 shrink-0 text-faint" />
-        </Link>
-      )}
+      {/* 2. Cómo vas, en una línea. */}
+      <WeekLine week={g.week} sched={d.sched} todayIso={d.today.iso} streak={g.streak.days} todayDone={g.streak.todayDone} />
 
-      {/* Temporada deportiva: cuenta regresiva, activar, su semana y la opinión de la última sesión. */}
-      <SeasonHoy v={v} />
+      {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
+      <PromptQueue>
+        {paused && (
+          <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cream text-ink"><Pause weight="duotone" className="size-5" /></span>
+            <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{paused.title} está en pausa</span><span className="block text-sm text-muted">{paused.at}. Mientras tanto entrenas tu rutina normal; reanúdalo cuando quieras.</span></span>
+            <CaretRight weight="bold" className="size-5 shrink-0 text-faint" />
+          </Link>
+        )}
+        {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
+        <FirstSteps server={{ keys: learnState.keys, workouts: learnState.workouts, weights: learnState.weights, coachMessages: learnState.coachMessages, push: learnState.push }} coach={{ name: guideCoach?.name ?? "Coach Banana", avatar: guideCoach?.avatar ?? null }} />
+        {recap && <WeekRecap r={recap} />}
+        <AnnouncementBanner />
+        <LoMejor serverKeys={learnState.keys} />
+        <PushWhenReady trained={g.trainedToday || g.streak.days > 0 || !!lastTime} />
+        <InstallCard />
+        {/* Temporada deportiva: cuenta regresiva, activar, su semana y la opinión de la última sesión. */}
+        <SeasonHoy v={v} />
+      </PromptQueue>
 
-      {/* Sin programa: el entreno de hoy va primero y a todo lo ancho (con imágenes de cada ejercicio). */}
-      {!d.program && <div data-tour="hoy-entreno"><WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
-        readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>}
-
-      {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño */}
-      {/* items-start: cada tarjeta mide lo que su contenido (sin estirarse al alto de la vecina con un hueco vacío); el
-          exprés, más corto, acompaña fijo (sticky) mientras bajas por tus números en escritorio. */}
+      {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño.
+          El exprés acompaña al lado en escritorio (fijo mientras bajas). */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <div data-tour="hoy-numeros"><TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} /></div>
-        {/* Con un programa activo, su héroe reemplaza al entreno de hoy; sin programa, aquí va el exprés */}
-        {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div> : !g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={false} compact /></div>}
+        {!g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} /></div>}
       </div>
-      {d.program && !g.trainedToday && <ExpressCard program={d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} />}
       {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
-      {!g.streak.todayDone && g.streak.days > 0 && <p className="-mt-2 flex items-center gap-1.5 px-1 text-xs font-semibold text-ember-ink"><BananaFlame className="size-4 shrink-0" />Entrena o registra algo hoy para mantener tu racha de {g.streak.days} días.</p>}
 
 
       {/* Semana y retos */}

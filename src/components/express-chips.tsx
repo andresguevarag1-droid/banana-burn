@@ -45,8 +45,8 @@ export function ExpressCard({ program = false, compact = false, coach = null }: 
       </div>
       <div className="relative mt-4 grid grid-cols-3 gap-2">
         {EXPRESS.map(([m, l, d]) => (
-          <Link key={m} href={`/app/entreno?expres=${m}`} aria-label={`Entreno exprés de ${m} minutos: ${l}`} className="pressable rounded-2xl bg-white/10 px-2 py-4 text-center ring-1 ring-white/10 hover:bg-white/15 hover:ring-banana/50">
-            <p className="text-3xl font-extrabold leading-none tabular-nums text-banana sm:text-4xl">{m}<span className="ml-0.5 text-sm font-bold">min</span></p>
+          <Link key={m} href={`/app/entreno?expres=${m}`} className="pressable rounded-2xl bg-white/10 px-2 py-4 text-center ring-1 ring-white/10 hover:bg-white/15 hover:ring-banana/50">
+            <span className="sr-only">Entreno exprés de </span><p className="text-3xl font-extrabold leading-none tabular-nums text-banana sm:text-4xl">{m}<span className="ml-0.5 text-sm font-bold">min</span></p>
             <p className="mt-1.5 text-sm font-extrabold text-white">{l}</p>
             <p className="mt-0.5 hidden text-xs text-white/70 sm:block">{d}</p>
           </Link>

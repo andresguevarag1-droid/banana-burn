@@ -101,7 +101,7 @@ export function Showcase() {
         </div>
 
         {/* Celular: tarjetas que se deslizan de lado (el desplazamiento queda dentro de la sección). Escritorio: 2 x 2. */}
-        <ul className="mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] sm:px-6 lg:mx-auto lg:grid lg:max-w-6xl lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+        <ul tabIndex={0} aria-label="Lo que hace distinto a Banana Burn" className="mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] sm:px-6 lg:mx-auto lg:grid lg:max-w-6xl lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
           {cards.map((c) => (
             <li key={c.n} className="flex w-[86%] max-w-[420px] shrink-0 snap-center flex-col overflow-hidden rounded-[2rem] bg-white/[.06] ring-1 ring-white/10 lg:w-auto lg:max-w-none">
               <div className="p-6 sm:p-7">

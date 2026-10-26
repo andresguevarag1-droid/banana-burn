@@ -20,7 +20,7 @@ const MAIN: Item[] = [
   { href: "/app/entrenar", label: "Entrenar", icon: Barbell },
   { href: "/app/nutricion", label: "Comida", icon: BowlFood, hint: "Calorías, recetas y menú", nutri: true },
   { href: "/app/progreso", label: "Progreso", icon: ChartLine, hint: "Peso, medidas y fotos" },
-  { href: "/app/comunidad", label: "Comunidad", icon: Users },
+  { href: "/app/comunidad", label: "Comunidad", icon: Users, hint: "Comparte y anímate con otros" },
 ];
 const EXTRA: Item[] = [
   { href: "/app/coach", label: "Coach Banana", icon: Monkey, hint: "Tu entrenador 24/7" },
@@ -38,8 +38,15 @@ const EXTRA: Item[] = [
 /** Referidores (0051): "Mis referidos" reemplaza a "Invita y gana" (no se juntan las dos recompensas). */
 const AFF_ITEM: Item = { href: "/app/afiliados", label: "Mis referidos", icon: HandCoins, hint: "Tus comisiones y tu enlace" };
 const NEWS_HREF = "/app/novedades";
-/** Barra inferior en móvil: 4 secciones + Coach al centro + "Más". */
-const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[4]];
+/** Barra inferior en móvil: Hoy, Entrenar, Coach al centro, Progreso y "Más" (lo demás, agrupado). */
+const MOBILE: Item[] = [MAIN[0], MAIN[1], EXTRA[0], MAIN[3]];
+/** "Más" en grupos con nombre, para encontrar las cosas sin leer una lista larga. Las rutas salen de MAIN y EXTRA. */
+const GROUPS: { title: string; hrefs: string[] }[] = [
+  { title: "Tu día", hrefs: ["/app/nutricion", "/app/comunidad", "/app/correr"] },
+  { title: "Programas y metas", hrefs: ["/app/retos", "/app/temporadas", "/app/niveles", "/app/glp1"] },
+  { title: "Aprender", hrefs: ["/app/aprende", "/app/ejercicios"] },
+  { title: "Tu cuenta y ayuda", hrefs: ["/app/perfil", "/app/suscripcion", "/app/referidos", "/app/afiliados", "/app/soporte", "/app/novedades"] },
+];
 
 /** `program`: programa activo (0024). Se marca en el menú con un distintivo discreto. */
 /** `news`: novedades sin ver (0036). Pone un punto "Nuevo" en Novedades y en "Más". */
@@ -106,19 +113,19 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
           {MOBILE.map(({ href, label, icon: Icon }, i) => {
             const on = active(href);
             if (i === 2) return (
-              <Link key={href} href={href} aria-current={on ? "page" : undefined} className="pressable flex flex-col items-center gap-1 pt-1 pb-2.5 text-[11px] font-semibold text-ink">
+              <Link key={href} href={href} aria-current={on ? "page" : undefined} className="pressable flex flex-col items-center gap-1 pt-1 pb-2.5 text-xs font-bold text-ink">
                 <span className={`-mt-5 grid place-items-center size-14 rounded-2xl shadow-lift ring-4 ring-white transition ${on ? "bg-banana text-ink" : "bg-ink text-banana"}`}><Icon className="size-8" weight="duotone" /></span>Coach
               </Link>
             );
             return (
-              <Link key={href} href={href} aria-current={on ? "page" : undefined} className={`pressable flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${on ? "text-ink" : "text-muted"}`}>
+              <Link key={href} href={href} aria-current={on ? "page" : undefined} className={`pressable flex flex-col items-center gap-1 py-2.5 text-xs font-bold ${on ? "text-ink" : "text-muted"}`}>
                 <span className={`relative grid place-items-center h-8 w-12 rounded-full transition ${on ? "bg-banana" : ""}`}><Icon className="size-5" weight={on ? "fill" : "duotone"} />
                   {program && href === "/app/entrenar" && <span aria-hidden className="absolute right-2 top-0.5 size-2 rounded-full bg-ember ring-2 ring-white" />}
                 </span>{label}{program && href === "/app/entrenar" && <span className="sr-only"> (programa activo: {program.title})</span>}
               </Link>
             );
           })}
-          <button type="button" onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more} aria-controls={more ? "menu-mas" : undefined} className={`pressable flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${inMore ? "text-ink" : "text-muted"}`}>
+          <button type="button" onClick={() => setMore(true)} aria-haspopup="dialog" aria-expanded={more} aria-controls={more ? "menu-mas" : undefined} className={`pressable flex flex-col items-center gap-1 py-2.5 text-xs font-bold ${inMore ? "text-ink" : "text-muted"}`}>
             <span className={`relative grid place-items-center h-8 w-12 rounded-full transition ${inMore ? "bg-banana" : ""}`}><DotsThree className="size-6" weight="bold" />
               {newsDot && <span aria-hidden className="absolute right-2 top-0.5 size-2 rounded-full bg-ember ring-2 ring-white" />}
             </span>Más{newsDot && <span className="sr-only"> (hay novedades sin ver)</span>}
@@ -128,26 +135,42 @@ export function AppNav({ name, staff, nutrition, program = null, news = null, co
 
       <Sheet id="menu-mas" open={more} onClose={() => setMore(false)} className="px-5">
         <SheetTitle className="text-xl font-extrabold text-ink">Todo Banana Burn</SheetTitle>
-        <ul className="mt-3 grid grid-cols-2 gap-2">
-          {[MAIN[2], MAIN[3], ...extra.slice(1), { href: "/app/perfil", label: "Perfil", icon: User, hint: "Plan, avisos y cuenta" }, { href: "/app/suscripcion", label: "Mi plan", icon: CreditCard, hint: "Plan, tarjeta y recibos" }].map((it: Item) => { const { href, label, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
+        {(() => {
+          const all: Item[] = [...MAIN, ...extra, AFF_ITEM, { href: "/app/perfil", label: "Perfil", icon: User, hint: "Tus datos, avisos y cuenta" }, { href: "/app/suscripcion", label: "Mi plan", icon: CreditCard, hint: "Plan, tarjeta y recibos" }];
+          const shown = new Set(extra.map((i) => i.href).concat(MAIN.map((i) => i.href), ["/app/perfil", "/app/suscripcion"]));
+          const tile = (it: Item) => { const { href, icon: Icon } = it; const hint = locked(it) ? NUTRI_HINT : program && href === "/app/retos" ? `Programa activo: ${program.title}` : it.hint; return (
             <li key={href}>
-              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full flex-col gap-1.5 rounded-2xl p-3.5 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
+              <Link href={href} aria-current={active(href) ? "page" : undefined} className={`pressable flex h-full min-h-[4.5rem] flex-col gap-1.5 rounded-2xl p-3.5 ${active(href) ? "bg-ink text-white" : "bg-white border border-line/70 text-ink hover:bg-banana-soft"}`}>
                 <span className="flex items-center justify-between gap-2"><Icon className={`size-6 ${active(href) ? "text-banana" : "text-banana-ink"}`} weight="duotone" />{locked(it) && <Lock weight="bold" aria-hidden className="size-4 opacity-70" />}{newMark(it)}</span>
-                <span className="font-extrabold leading-tight">{label}</span>
-                {hint && <span className={`text-xs ${active(href) ? "text-white/70" : "text-muted"}`}>{hint}</span>}
+                <span className="font-extrabold leading-tight">{label(it)}</span>
+                {hint && <span className={`text-[13px] leading-snug ${active(href) ? "text-white/75" : "text-muted"}`}>{hint}</span>}
               </Link>
             </li>
-          ); })}
-          <li>
-            {/* La hoja se cierra primero (200 ms) y luego se abre la guía: así no se pisan el bloqueo de scroll ni el foco. */}
-            <button type="button" aria-haspopup="dialog" onClick={() => { setMore(false); setTimeout(openGuide, 220); }} className="pressable flex h-full w-full flex-col gap-1.5 rounded-2xl border border-line/70 bg-white p-3.5 text-left text-ink hover:bg-banana-soft">
-              <Compass className="size-6 text-banana-ink" weight="duotone" aria-hidden />
-              <span className="font-extrabold leading-tight">Guía de la app</span>
-              <span className="text-xs text-muted">Cómo usar Banana Burn</span>
-            </button>
-          </li>
-          {staff && <li className="col-span-2"><p className="mb-2 text-xs font-bold text-muted">Eres parte del equipo</p><ViewSwitch current="usuario" /></li>}
-        </ul>
+          ); };
+          return GROUPS.map((g) => {
+            const items = g.hrefs.filter((h) => shown.has(h)).map((h) => all.find((i) => i.href === h)!).filter(Boolean);
+            if (!items.length) return null;
+            return (
+              <section key={g.title} className="mt-4 first:mt-3" aria-labelledby={`mas-${g.title}`}>
+                <h3 id={`mas-${g.title}`} className="mb-2 text-sm font-bold text-muted">{g.title}</h3>
+                <ul className="grid grid-cols-2 gap-2">
+                  {items.map(tile)}
+                  {g.title === "Aprender" && (
+                    <li>
+                      {/* La hoja se cierra primero (200 ms) y luego se abre la guía: así no se pisan el bloqueo de scroll ni el foco. */}
+                      <button type="button" aria-haspopup="dialog" onClick={() => { setMore(false); setTimeout(openGuide, 220); }} className="pressable flex h-full min-h-[4.5rem] w-full flex-col gap-1.5 rounded-2xl border border-line/70 bg-white p-3.5 text-left text-ink hover:bg-banana-soft">
+                        <Compass className="size-6 text-banana-ink" weight="duotone" aria-hidden />
+                        <span className="font-extrabold leading-tight">Guía de la app</span>
+                        <span className="text-[13px] leading-snug text-muted">Cómo usar Banana Burn</span>
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              </section>
+            );
+          });
+        })()}
+        {staff && <div className="mt-4"><p className="mb-2 text-xs font-bold text-muted">Eres parte del equipo</p><ViewSwitch current="usuario" /></div>}
         <form action="/auth/salir" method="post" className="mt-4"><button className="btn-ghost w-full"><SignOut className="size-5" weight="bold" />Cerrar sesión</button></form>
       </Sheet>
     </>
