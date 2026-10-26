@@ -28,17 +28,18 @@ import { SIDE_LABEL, advanceTimed, segLabel, pauseTimed, resumeTimed, segCue, sk
 import { TimedBar } from "@/components/workout/timed-bar";
 import { Recap } from "@/components/workout/recap";
 import { CoachArtFill, CoachPic } from "@/components/coach-pic";
-import { Tour, type TourStep } from "@/components/workout/tour";
-import { BananaTrail, LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/components/workout/ui";
+import { ExerciseBrief } from "@/components/workout/brief";
+import { briefSteps, formatExerciseTask, leftText, planChips, plainMuscles, secondsLeft } from "@/components/workout/task";
+import { LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/components/workout/ui";
 import { MILESTONES, expressRows, finishValue, lastVolume, levelGoal, levelGoalText, nextMilestone, pickFact, reachedMilestones, restFacts, volumeWithHistory, type LevelGoal } from "@/components/workout/motivation";
 import type { SaveResult } from "./actions";
 import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/components/offline/outbox";
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
 import { hookLine } from "@/lib/engine";
-import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, t, type Voice } from "@/lib/voice";
+import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice } from "@/lib/voice";
 
-export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null };
+export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null; /** Tempo del programa ("3-1-1"): se explica en simple durante la serie. */ tempo?: string };
 /** `sex`: nombres de nivel para ella ("Mona fuerte"). */
 export type Gam = { xp: number; streak: number; todayDone: boolean; sex?: string | null };
 type Mode = "normal" | "suave" | "fuerte";
@@ -56,6 +57,14 @@ const RX_BADGE: Record<Prescription["type"], [string, string, React.ComponentTyp
   reset: ["Reinicio −10 %", "text-ember-ink", ArrowCounterClockwise],
   deload: ["Descarga", "text-sky", TreePalm],
 };
+/** Una línea corta para el descanso: cosas útiles de verdad, sin promesas. Rota en cada descanso. */
+const REST_CHEERS = [
+  "Respira hondo por la nariz y suelta los hombros.",
+  "Toma un poco de agua si la tienes cerca.",
+  "Serie hecha. La siguiente, igual de limpia.",
+  "Camina un poco o muévete suave mientras esperas.",
+  "Piensa en la clave del ejercicio antes de volver.",
+] as const;
 const FUN = [SmileySad, SmileyMeh, Smiley, Banana, MonkeyBanana] as const;
 const TOUR_KEY = "bb.tour.player.v1";
 const TIP_COMBO = "bb.tip.combo.v1";
@@ -129,7 +138,10 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const [pop, setPop] = useState<{ ex: number; si: number; xp: number; k: number } | null>(null);
   const [fresh, setFresh] = useState<number | null>(null);
   const [live, setLive] = useState("");
-  const [tour, setTour] = useState(false);
+  /** Ejercicios cuya tarjeta "Tu plan en este ejercicio" ya se cerró con Empezar (por id de ejercicio en su lugar). */
+  const [briefDone, setBriefDone] = useState<string[]>([]);
+  /** Primera vez en el reproductor: la tarjeta del plan suma una línea de cómo funciona. */
+  const [firstTime, setFirstTime] = useState(false);
   const [iv, setIv] = useState<Iv>({ phase: "ready", end: 0, total: 0, paused: null });
   const [prefs, setPrefs] = usePrefs();
   const loaded = useRef(false);
@@ -185,7 +197,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       }
     }
     loaded.current = true;
-    if (!started && !store.get(TOUR_KEY) && !isIntervalPlan(options.map((o) => o[0]))) setTour(true);
+    if (!started && !store.get(TOUR_KEY) && !isIntervalPlan(options.map((o) => o[0]))) setFirstTime(true);
   }, [key, options]); // eslint-disable-line react-hooks/exhaustive-deps -- preswap se aplica solo al cargar
   useEffect(() => {
     if (loaded.current && phase === "play" && !gate) store.set(key, { rows, idx, startedAt, choice, choiceIds: exercises.map((e) => e.id), combo, best: bestCombo, lastAt, warm: warmDone, mode: sessMode, ms: seen, ...(plan ? { plan } : {}), ...(doneToday ? { repeat: true } : {}) });
@@ -395,11 +407,17 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       setNo: ex.cfg.unit === "s" ? null : si + 1, effort: null, hints, xp, xpKey: t, combo: c, pr: isPr && !rushed ? ex.name : null,
       rushed: rushed && !noXp, tip: tipCombo ? "combo" : tipXp ? "xp" : null,
       finished: finishedEx ? ex.name : null, bananas: { got: nextRows.filter((r) => r.every((s) => s.done)).length, total: nextRows.length },
-      next: {
-        title: isNew ? tex.name : `Serie ${target.si + 1} de ${nextRows[target.ex].length}`,
-        detail: isNew ? `${nextRows[target.ex].length} series, ${targetText(nextRows[target.ex][target.si], { unit: tex.cfg.unit, bw: tex.bw, perSide: tex.cfg.perSide })}` : targetText(nextRows[target.ex][target.si], { unit: tex.cfg.unit, bw: tex.bw, perSide: tex.cfg.perSide }),
-        anim: tex.tech?.anim || undefined, isNew, last: pendingLeft === 1,
-      },
+      next: (() => {
+        const nr = nextRows[target.ex];
+        const tk = formatExerciseTask({ unit: tex.cfg.unit, reps: nr[target.si].reps, kg: nr[target.si].kg, lo: tex.cfg.lo, hi: tex.cfg.hi, bw: tex.bw, perSide: !!tex.cfg.perSide, calibration: tex.rx.type === "cal", setNo: target.si + 1, sets: nr.length });
+        const what = `${tk.line}${tk.load?.startsWith("con") ? ` ${tk.load}` : ""}`;
+        return {
+          title: isNew ? tex.name : pendingLeft === 1 ? "Última serie" : `Serie ${target.si + 1} de ${nr.length}`,
+          detail: isNew ? `${nr.length} ${nr.length === 1 ? "serie" : "series"} de ${what}` : what,
+          anim: tex.tech?.anim || undefined, isNew, last: pendingLeft === 1,
+        };
+      })(),
+      cheer: REST_CHEERS[(restCount.current - 1 + REST_CHEERS.length) % REST_CHEERS.length],
     });
     restTarget.current = { ex: idx, si };
     setRest({ end: t + ex.cfg.rest * 1000, total: ex.cfg.rest });
@@ -565,12 +583,6 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     return () => window.removeEventListener(OUTBOX_EVENT, h);
   }); // sin dependencias a propósito: se vuelve a suscribir en cada render con el estado más reciente
 
-  const finishTour = useCallback(() => {
-    setTour(false); store.set(TOUR_KEY, 1);
-    // El recorrido desplaza la pantalla para mostrar cada parte: al terminar, vuelve al ejercicio
-    document.querySelector('[aria-label="Series del ejercicio"]')?.scrollTo({ top: 0 });
-  }, []);
-
   /* ---------- Pantallas especiales ---------- */
   if (!exercises.length) {
     return (
@@ -699,6 +711,9 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
     );
   }
 
+  // Cuánto falta para terminar (trabajo de cada serie pendiente más los descansos entre ellas).
+  const leftLine = leftText(secondsLeft(rows, exercises.map((e) => ({ unit: e.cfg.unit, rest: e.cfg.rest, perSide: e.cfg.perSide, hi: e.cfg.hi })), rest ? restLeft : 0));
+
   /* ---------- Exprés ---------- */
   if (interval) {
     const exAt = (i: number, si: number) => ({ name: exercises[i].name, anim: exercises[i].tech?.anim || undefined, setNo: si + 1, sets: rows[i].length, exNo: i + 1, exTotal: exercises.length });
@@ -710,7 +725,7 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       <>
         <IntervalScreen title={title} phase={iv.phase} side={iv.side} left={iv.phase === "ready" ? 0 : ivLeft} total={iv.total} paused={iv.paused != null} cur={cur} next={nextShown}
           plan={exercises.map((e, i) => ({ name: e.name, anim: e.tech?.anim || undefined, sets: rows[i].length, done: rows[i].filter((s) => s.done).length, perSide: !!e.cfg.perSide }))}
-          done={doneSets} all={totalSets} elapsed={elapsed} workSec={exercises[0].cfg.hi} restSec={exercises[0].cfg.rest}
+          done={doneSets} all={totalSets} elapsed={elapsed} workSec={exercises[0].cfg.hi} restSec={exercises[0].cfg.rest} leftLine={leftLine}
           onStart={() => { unlockAudio(); tickRef.current = null; setIv({ phase: "prep", end: Date.now() + 5000, total: 5, paused: null }); speak(`Prepárate. Empiezas con ${exercises[ivTarget?.ex ?? 0].name}.`, true); }}
           onPause={() => { setIv((v) => ({ ...v, paused: Math.max(0, v.end - Date.now()) })); hush(); announce("En pausa"); }}
           onResume={() => { tickRef.current = null; setIv((v) => ({ ...v, end: Date.now() + (v.paused ?? 0), paused: null })); }}
@@ -756,18 +771,22 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const loads = loadsFor(ex.load);
   const missingKg = needsLoad(ex) && activeSet >= 0 && num(here[activeSet].kg) <= 0;
   const chips = activeSet >= 0 && needsLoad(ex) && loads && (ex.rx.type === "cal" || missingKg) ? loads.chips : null;
-  // Primer entreno: cada parte se explica en el momento, en frases cortas (lo que ve, qué tocar y qué pasa después).
-  const tourSteps: TourStep[] = [
-    { target: "tech", title: "Mira cómo se hace", body: "Aquí ves el movimiento en grande. Tócalo para verlo paso a paso antes de tu primera serie." },
-    { target: "sets", title: "Tu meta en esta serie", body: needsLoad(ex) ? "Aquí ves el peso y cuántas repeticiones hacer. La primera vez, elige un peso con el que te queden 2 repeticiones de sobra." : "Aquí ves cuántas repeticiones o segundos hacer. Hazlas con buena técnica, sin apurarte." },
-    timed
-      ? { target: "done", title: "Empieza la serie", body: perSide ? "Toca Iniciar: cuenta 3 segundos para que te acomodes, el tiempo del lado derecho, 5 segundos para cambiar de lado y el del izquierdo. Al terminar se marca sola." : "Toca Iniciar: cuenta 3 segundos para que te acomodes y luego el tiempo de trabajo. Al terminar se marca sola." }
-      : { target: "done", title: "Marca la serie", body: t(voice, { basico: "Haz las repeticiones y toca Terminé la serie. Si usaste otro peso, cámbialo antes con los botones + y −.", intermedio: "Haz las reps y toca Terminé la serie. Si levantaste otro peso, cámbialo antes con + y −.", tecnico: "Completa la serie y toca Terminé la serie. Ajusta antes la carga real si cambió." }) },
-    { target: "rest", title: "Descansa", body: "Al marcar arranca el descanso con cuenta regresiva. Te avisamos con sonido y vibración cuando toca seguir." },
-    { target: "swap", title: "¿Máquina ocupada?", body: "Toca Cambiar y elige otro ejercicio que trabaja lo mismo. Tus series se ajustan solas." },
-    { target: "trail", title: "Tus ejercicios de hoy", body: "Aquí ves todos. Al terminar el último, te mostramos tu resumen y lo que cambia la próxima vez." },
-  ];
-
+  // Qué hacer ahora, en palabras simples y sin huecos ("12 repeticiones", "con 20 kg", "30 segundos por lado").
+  const isCal = ex.rx.type === "cal";
+  const curRow = activeSet >= 0 ? here[activeSet] : undefined;
+  const task = formatExerciseTask({ unit: ex.cfg.unit, reps: curRow?.reps ?? "", kg: curRow?.kg ?? "", lo: ex.cfg.lo, hi: ex.cfg.hi, bw: ex.bw, needsKg: missingKg, perSide: !!ex.cfg.perSide, calibration: isCal, setNo: activeSet + 1, sets: here.length, side: perSide ? 1 : undefined });
+  const tempoCue = ex.tempo ? cap(tempoText(voice, ex.tempo)) : null;
+  // Tarjeta "Tu plan en este ejercicio": antes de la primera serie de cada ejercicio, una vez. Se cierra con Empezar.
+  const exKey = `${idx}:${ex.id}`;
+  const showBrief = focus && activeSet === 0 && !here.some((r) => r.done) && !briefDone.includes(exKey) && !timerOn;
+  const startEx = () => {
+    setBriefDone((d) => (d.includes(exKey) ? d : [...d, exKey]));
+    if (firstTime) { store.set(TOUR_KEY, 1); setFirstTime(false); }
+    unlockAudio();
+    if (timed && !missingKg) { startTimed(); return; }
+    document.querySelector('[aria-label="Ejercicio y series"]')?.scrollTo({ top: 0 });
+    announce(task.say);
+  };
   return (
     <Shell>
       <div className="contents" inert={!!rest && restOpen}>
@@ -788,8 +807,25 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           </button>
           <SessionRing value={doneSets / Math.max(1, totalSets)} />
         </div>
-        <div className="mx-auto mt-1.5 max-w-xl land:hidden">
-          <div data-tour="trail"><BananaTrail items={exercises.map((e, i) => ({ name: e.name, done: rows[i].filter((s) => s.done).length, total: rows[i].length }))} current={idx} fresh={fresh} onPick={(i) => { setIdx(i); setWork(null); }} /></div>
+        <div data-tour="trail" className="mx-auto mt-1 max-w-xl">
+          {/* Cuánto llevas y cuánto falta: un segmento por ejercicio (se llena con sus series) y los minutos que quedan. */}
+          <div className="flex items-center justify-between gap-3 text-[13px] font-bold tabular-nums">
+            <span className="text-ink">Ejercicio {idx + 1} de {exercises.length}</span>
+            <span className="text-muted">{leftLine}</span>
+          </div>
+          <nav aria-label="Ejercicios del entreno" className="-mb-1 flex gap-1">
+            {exercises.map((e, i) => {
+              const d = rows[i].filter((s) => s.done).length, tot = rows[i].length, full = d >= tot && tot > 0, on = i === idx;
+              return (
+                <button key={i} type="button" onClick={() => { setIdx(i); setWork(null); }} aria-current={on ? "step" : undefined} aria-label={`${e.name}, ${d} de ${tot} ${tot === 1 ? "serie" : "series"}${full ? ", completo" : ""}`}
+                  className="pressable flex-1 min-w-0 h-7 flex items-center rounded-md">
+                  <span aria-hidden className={`block w-full rounded-full overflow-hidden ${on ? "h-2.5 bg-ink/15" : "h-1.5 bg-line"} ${fresh === i ? "animate-enter" : ""}`}>
+                    <span className={`bar-fill block h-full w-full rounded-full ${full ? "bg-peel" : "bg-ink"}`} style={{ transform: `translateX(${(d / Math.max(1, tot) - 1) * 100}%)` }} />
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </header>
 
@@ -798,31 +834,41 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           {/* Lo primero que se ve: el movimiento en grande y el nombre del ejercicio. En horizontal, lado a lado. */}
           <div className="land:grid land:grid-cols-2 land:items-start land:gap-4">
           <section key={ex.id} className="animate-enter">
-            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative block w-full h-[clamp(190px,36dvh,440px)] [@media(min-height:800px)]:h-[clamp(200px,42dvh,480px)] land:h-[54dvh]! rounded-[2rem] overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`}>
+            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative block w-full h-[clamp(150px,26dvh,440px)] [@media(min-height:800px)]:h-[clamp(200px,36dvh,480px)] land:h-[54dvh]! rounded-[2rem] overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`}>
               <span aria-hidden className="contents">{(() => {
                 const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-4 top-4 bottom-14" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-24 text-ink/80" />;
                 return ex.art ? <CoachArtFill src={ex.art} sizes="(min-width: 640px) 576px, 100vw" className="object-contain pb-12" fallback={still} /> : still;
               })()}</span>
-              <span aria-hidden className="absolute top-3 left-3 inline-flex items-center h-8 px-3 rounded-full bg-white/90 text-sm font-bold text-ink tabular-nums">Ejercicio {idx + 1} de {exercises.length}</span>
               {!(timerOn && tp) && <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold"><Eye weight="bold" className="size-4" aria-hidden />Ver cómo se hace<span className="sr-only"> {ex.name}</span></span>}
               {timerOn && tp && <span className="sr-only">Ver cómo se hace {ex.name}</span>}
               {/* Serie por tiempo en marcha: la cuenta regresiva es lo más grande de la pantalla (encima del movimiento). */}
               {timerOn && tp && (
                 <span aria-hidden className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 pt-16 text-left ${tp.seg.kind === "switch" ? "bg-ink/85" : "bg-gradient-to-t from-ink/85 via-ink/55 to-transparent"} text-white`}>
                   <span className="text-[96px] leading-[.85] font-extrabold tracking-tight tabular-nums">{Math.ceil(tp.left)}</span>
-                  <span className="pb-2 text-lg font-extrabold leading-tight">{tp.paused ? "En pausa" : segLabel(tp.seg)}</span>
+                  <span className="pb-2 leading-tight">
+                    <span className={`block font-extrabold uppercase tracking-wide ${(tp.paused ? "En pausa" : segLabel(tp.seg)).length > 9 ? "text-lg" : "text-2xl"}`}>{tp.paused ? "En pausa" : segLabel(tp.seg)}</span>
+                    <span className="block text-sm font-bold text-white/80">{task.step}{tp.seg.kind === "work" ? `: ${task.line}` : ""}</span>
+                  </span>
                 </span>
               )}
             </button>
           </section>
 
           <div className="land:pt-1">
-            <h1 className="mt-3 land:mt-0 text-[clamp(28px,8.4vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink line-clamp-2 text-balance">{ex.name}</h1>
-            {ex.tech?.cues[0] && <p className="mt-1 text-[17px] leading-snug font-semibold text-body text-pretty">{cap(ex.tech.cues[0])}</p>}
+            <h1 className="mt-3 land:mt-0 text-[clamp(26px,7.6vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink line-clamp-2 text-balance">{ex.name}</h1>
+            {!showBrief && ex.tech?.cues[0] && <p className="mt-0.5 text-[16px] leading-snug font-semibold text-body text-pretty">Clave: {ex.tech.cues[0].replace(/^./, (c) => c.toLowerCase())}</p>}
 
-            <div data-tour="sets" className="mt-4">
-            {focus && activeSet >= 0 ? (
-              <FocusSet rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} perSide={perSide} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
+            <div data-tour="sets" className="mt-3">
+            {showBrief ? (
+              <ExerciseBrief chips={planChips({ sets: here.length, lo: ex.cfg.lo, hi: ex.cfg.hi, unit: ex.cfg.unit, reps: num(here[0]?.reps), kg: num(here[0]?.kg), bw: ex.bw, perSide: !!ex.cfg.perSide, rest: ex.cfg.rest, calibration: isCal })}
+                muscles={plainMuscles(ex.tech?.mus, ex.muscle)} steps={briefSteps(ex.tech?.how)} mistake={ex.tech?.err[0] ?? null} tempo={tempoCue} firstTime={firstTime} onHow={() => setSheet("tech")}
+                extra={firstTime && canSpeak() ? (
+                  <button type="button" onClick={() => setPrefs({ voice: !prefs.voice })} aria-pressed={prefs.voice} className={`mt-2 w-full chip h-11 justify-center text-sm ${prefs.voice ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>
+                    {prefs.voice ? <Check weight="bold" className="size-4" /> : <SpeakerHigh weight="bold" className="size-4" />}{prefs.voice ? "Coach de voz activado" : "Activar coach de voz"}
+                  </button>
+                ) : undefined} />
+            ) : focus && activeSet >= 0 ? (
+              <FocusSet rows={here} active={activeSet} task={task} tempo={tempoCue} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} perSide={!!ex.cfg.perSide} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
                 chips={chips} onPickKg={pickKg} onStep={step} onChange={change} onCopy={copy} onUndo={undo} />
             ) : focus ? (
               <div className="space-y-2">
@@ -912,7 +958,11 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
 
       <footer className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line bg-white/95 backdrop-blur">
         <div className="mx-auto max-w-xl">
-          {focus && activeSet >= 0 ? (
+          {showBrief ? (
+            <button data-tour="done" onClick={startEx} className="pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)]">
+              <Play weight="fill" className="size-6" />{timed && !missingKg ? `Empezar: ${num(here[0]?.reps) || ex.cfg.hi} s${sideWord}` : `Empezar serie 1 de ${here.length}`}
+            </button>
+          ) : focus && activeSet >= 0 ? (
             timed ? (
               timerOn && tp ? (
                 <TimedBar view={tp} {...timerCtl} />
@@ -1025,13 +1075,6 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
       {levelUp && <LevelUpBurst idx={levelUp.idx} name={levelUp.n} k={levelUp.k} />}
       <p aria-live="polite" className="sr-only">{live}</p>
 
-      {tour && phase === "play" && !rest && !sheet && (
-        <Tour onDone={finishTour} steps={tourSteps} extra={canSpeak() ? (
-          <button onClick={() => setPrefs({ voice: !prefs.voice })} aria-pressed={prefs.voice} className={`mt-3 w-full chip h-11 justify-center text-sm ${prefs.voice ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>
-            {prefs.voice ? <Check weight="bold" className="size-4" /> : <SpeakerHigh weight="bold" className="size-4" />}{prefs.voice ? "Coach de voz activado" : "Activar coach de voz"}
-          </button>
-        ) : undefined} />
-      )}
     </Shell>
   );
 }
