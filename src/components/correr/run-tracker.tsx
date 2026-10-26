@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CircleNotch, MapPin, Pause, Play, ShieldCheck, Stop } from "@/components/icons";
 import { SafeImage } from "@/components/safe-image";
 import { RunMap } from "./run-map";
+import { GuidePanel, useVoice } from "./run-guide-panel";
+import { kmCue, type Guide } from "@/lib/run-guide";
 import { GAP_MS, acceptPoint, haversine, currentPace, fmtDuration, fmtKm, fmtPace, runStats, type GeoPoint, type Track } from "@/lib/runs";
 
 type Saved = { clientId: string; segments: Track; startedAt: number; activeMs: number };
@@ -37,7 +39,10 @@ const allRuns = () => idbDo<Saved[]>("readonly", (s) => s.getAll() as IDBRequest
 
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16)));
 
-export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachName: string }) {
+export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: string; coachName: string; guide?: Guide | null }) {
+  const voice = useVoice();
+  const [guided, setGuided] = useState(!!guide);
+  const kmSaid = useRef(0);
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("intro");
   const [segments, setSegments] = useState<Track>([]);
@@ -142,6 +147,9 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
     setSegments(run.current.segments);
     setActiveMs(run.current.activeMs);
     setPending(null);
+    kmSaid.current = 0;
+    // La voz necesita un toque para arrancar en iPhone: la primera frase sale aquí, con el toque de Empezar.
+    voice.say(guide && guided ? "Vamos. Buscando señal de GPS." : "Vamos.", true);
     setPhase(resume ? "running" : "waiting");
     void wakeLock();
     startWatch();
@@ -183,6 +191,14 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
   const holdEnd = () => { if (holdTimer.current) window.clearInterval(holdTimer.current); holdTimer.current = null; setHold(0); };
 
   const stats = runStats(segments);
+  const fullSplits = stats.splits.filter((x) => Number.isInteger(x.km)).map((x) => x.seconds);
+  const showGuide = !!guide && guided;
+  // Sin sesión guiada, la voz igual avisa cada km.
+  useEffect(() => {
+    if (showGuide || phase !== "running" || fullSplits.length <= kmSaid.current) return;
+    kmSaid.current = fullSplits.length;
+    voice.say(kmCue(fullSplits.length, fullSplits[fullSplits.length - 1], fullSplits.reduce((a, b) => a + b, 0)));
+  }, [fullSplits, showGuide, phase, voice]);
   const cur = segments[segments.length - 1] ?? [];
   const moving = Math.round(activeMs / 1000);
   const avg = stats.distanceM >= 50 ? Math.round(moving / (stats.distanceM / 1000)) : null;
@@ -219,6 +235,13 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
               </div>
             )}
             {phase === "unsupported" && <p role="alert" className="rounded-2xl bg-ember/10 p-4 text-sm font-semibold text-ember-ink">Este navegador no tiene GPS. Abre Banana Burn en el navegador de tu teléfono.</p>}
+            {guide && (
+              <div className="space-y-2 rounded-2xl bg-[var(--run-soft)] p-4">
+                <label className="flex items-start gap-3"><input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} className="mt-1 size-5 accent-ink" /><span><span className="block font-extrabold text-ink">{guide.race ? "Modo carrera" : `Guiarme: ${guide.title}`}</span><span className="block text-sm text-body">{guide.race ? "Tu tabla de ritmos en pantalla y en voz, km por km." : "Te decimos cada tramo y tu ritmo objetivo en voz alta."}</span></span></label>
+                <label className="flex items-center gap-3 text-sm font-semibold text-ink"><input type="checkbox" checked={voice.on} onChange={voice.toggle} className="size-5 accent-ink" />Voz en español</label>
+              </div>
+            )}
+            {!guide && <label className="flex items-center gap-3 text-sm font-semibold text-ink"><input type="checkbox" checked={voice.on} onChange={voice.toggle} className="size-5 accent-ink" />Avisarme cada km en voz alta</label>}
             <button type="button" onClick={() => begin()} className="btn-banana w-full h-16 text-lg">{phase === "denied" ? "Intentar de nuevo" : "Empezar carrera"}<ArrowRight className="size-5" /></button>
           </div>
         </section>
@@ -228,6 +251,7 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
 
   return (
     <div className="space-y-4">
+      {showGuide && <GuidePanel guide={guide!} distM={stats.distanceM} timeS={moving} pace={phase === "running" && !autoPaused ? currentPace(cur) : null} splits={fullSplits} active={phase === "running" && !autoPaused} say={voice.say} voiceOn={voice.on} toggleVoice={voice.toggle} />}
       <RunMap track={segments} here={here} label="Mapa de tu carrera en vivo" />
       {phase === "waiting" && <p role="status" className="flex items-center gap-2 rounded-2xl bg-cream p-3 text-sm font-semibold text-ink"><CircleNotch weight="bold" className="size-5 animate-spin" />Buscando señal de GPS{here ? ` (precisión ${Math.round(here.acc)} m)` : ""}. Sal a un lugar abierto.</p>}
       {!lockOk && <p className="rounded-2xl bg-cream p-3 text-sm text-body">Tu navegador no deja mantener la pantalla encendida: no bloquees el teléfono mientras corres.</p>}
