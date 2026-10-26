@@ -58,8 +58,6 @@ export default async function Entrenar() {
       <PageTour tour="entrenar" steps={tourSteps} serverKeys={learnState.keys} finalLabel="A entrenar" />
       <div className="-mb-3 flex justify-end"><HowToButton tour="entrenar" /></div>
       <FirstTip id="entrenar" coach={coach} title={p ? "Las sesiones de tu programa" : "Tu semana de entreno"}>{p ? "Haz las sesiones en orden. Si se te pasa un día, hazla al siguiente: la progresión sube sola con tu historial." : t(voice, { basico: "Toca el día de hoy para empezar. Si se te pasa uno, hazlo mañana: Coach Banana mantiene el orden y te dice qué peso usar.", intermedio: "Toca el día que te toca para empezar. Si se te pasa uno, hazlo mañana: el orden se mantiene y los pesos se ajustan solos.", tecnico: "Sigue el orden de la semana. Si saltas un día, retómalo al siguiente: la progresión de cargas se recalcula con tu historial." })}</FirstTip>
-      {/* Exprés arriba: la salida para los días ocupados (antes quedaba al final y casi nadie la veía). */}
-      <ExpressCard program={!!p} coach={coach} />
       {p ? (
         <>
           {/* Programa activo: su portada, la semana del programa y sus sesiones */}
@@ -97,6 +95,9 @@ export default async function Entrenar() {
           <WeekTabs voice={voice} tech={tech} days={d.weekPlan} todayDow={d.today.dow} done={done} todayDone={!!todayTpl && doneTpls.includes(todayTpl)} />
         </>
       )}
+      {/* Primero tu semana y el entreno de hoy; justo después, el exprés para los días ocupados (antes iba arriba y
+          competía con el plan; al final de todo casi nadie lo veía). */}
+      <ExpressCard program={!!p} coach={coach} compact />
       <Link href="/app/ejercicios" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft text-banana-ink" aria-hidden><Books weight="duotone" className="size-6" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Biblioteca de {LIB_COUNT.toLocaleString("es-419")} ejercicios</span><span className="block text-sm text-muted">Busca por músculo o equipo, con pasos en español.</span></span><CaretRight weight="bold" className="size-5 shrink-0 text-faint" /></Link>
     </div>
   );

@@ -55,7 +55,7 @@ export function WeekTabs({ days, todayDow, done, todayDone = false, voice = DEFA
                 <Link href="/app/entreno?repetir=1" className="btn-ghost mt-3 w-full sm:w-auto h-13 px-6"><Repeat weight="bold" className="size-5" />Repetir (no suma XP)</Link>
               </div>
             ) : (
-              <Link data-tour="ent-empezar" href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto h-13 px-6 ${isToday ? "btn-primary" : "btn-ghost"}`}>{isToday ? "Empezar entreno de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
+              <Link data-tour="ent-empezar" href={isToday ? "/app/entreno" : `/app/entreno?dia=${p.dow}`} className={`mt-5 w-full sm:w-auto ${isToday ? "btn-primary h-16 px-8 text-lg font-extrabold shadow-lift" : "btn-ghost h-13 px-6"}`}>{isToday ? "Empezar entrenamiento de hoy" : `Hacer ${p.name} ahora`} <ArrowRight weight="bold" className="size-5" /></Link>
             )}
           </>
         ) : (

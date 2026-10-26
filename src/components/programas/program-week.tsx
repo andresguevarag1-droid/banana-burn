@@ -68,7 +68,7 @@ export function ProgramWeek({ sessions, current, cta = true, label = "Sesiones d
           s.done ? (
             <Link href={`${s.href}${s.href.includes("?") ? "&" : "?"}repetir=1`} className="btn-ghost mt-5 h-13 w-full px-6 sm:w-auto"><Repeat weight="bold" className="size-5" />Repetir (no suma XP)</Link>
           ) : (
-            <Link data-tour="ent-empezar" href={s.href} className={`mt-5 h-13 w-full px-6 sm:w-auto ${s.day === current ? "btn-primary" : "btn-ghost"}`}>{s.day === current ? "Empezar esta sesión" : `Hacer ${s.title} ahora`}<ArrowRight weight="bold" className="size-5" /></Link>
+            <Link data-tour="ent-empezar" href={s.href} className={`mt-5 w-full sm:w-auto ${s.day === current ? "btn-primary h-16 px-8 text-lg font-extrabold shadow-lift" : "btn-ghost h-13 px-6"}`}>{s.day === current ? "Empezar esta sesión" : `Hacer ${s.title} ahora`}<ArrowRight weight="bold" className="size-5" /></Link>
           )
         ) : <p className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-muted"><Lock weight="duotone" className="size-4" />Disponible al empezar el programa.</p>)}
       </section>

@@ -130,10 +130,13 @@ export default async function Comunidad({ searchParams }: { searchParams: Promis
                 {people.length ? (
                   <ul className="grid gap-3 sm:grid-cols-2">{people.map((p) => <PersonCard key={p.id} p={p} />)}</ul>
                 ) : (
-                  <p className="card p-5 text-sm text-muted">
-                    {filter === "todos" ? "Por ahora no hay más perfiles públicos. Invita a alguien de tu gym y entrenen juntos." : filter === "cerca" ? `Todavía no hay perfiles públicos ${country ? `en ${country}` : "en tu país"} que no sigas.` : filter === "objetivo" ? "Todavía no hay perfiles públicos con tu mismo objetivo que no sigas." : "Nadie con perfil público entrenó en las últimas dos semanas."}
-                    {filter !== "todos" && <> <Link href="/app/comunidad?vista=descubrir" className="font-bold text-ink underline">Ver todos</Link></>}
-                  </p>
+                  <div className="card p-5 text-sm text-muted">
+                    <p>{filter === "todos" ? "Por ahora no hay más perfiles públicos. Invita a alguien de tu gym y entrenen juntos." : filter === "cerca" ? `Todavía no hay perfiles públicos ${country ? `en ${country}` : "en tu país"} que no sigas.` : filter === "objetivo" ? "Todavía no hay perfiles públicos con tu mismo objetivo que no sigas." : "Nadie con perfil público entrenó en las últimas dos semanas."}</p>
+                    {/* Un solo paso siguiente, claro: invitar a alguien o ver a todos. */}
+                    {filter === "todos"
+                      ? <Link href="/app/referidos" className="btn-primary mt-3 h-12 px-5">Invitar a alguien<ArrowRight weight="bold" className="size-4" /></Link>
+                      : <Link href="/app/comunidad?vista=descubrir" className="btn-ghost mt-3 h-12 px-5">Ver todos</Link>}
+                  </div>
                 )}
               </section>
               <section aria-labelledby="publicas-t" className="space-y-4 pt-2">
