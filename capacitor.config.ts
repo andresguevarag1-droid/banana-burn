@@ -52,6 +52,8 @@ const config: CapacitorConfig = {
     backgroundColor: "#FFF8E3",
   },
   plugins: {
+    // Login nativo: solo Google y Apple (sin el SDK de Facebook ni otros dentro de la app). src/lib/native/auth.ts
+    SocialLogin: { providers: { google: true, apple: true, facebook: false, twitter: false } },
     SystemBars: { insetsHandling: "native", initialViewportFitValueHint: "cover", style: "LIGHT" },
     SplashScreen: {
       // La web la esconde apenas pinta (src/lib/native/boot.ts). El tope de 3 s cubre la pantalla sin conexión de Android,

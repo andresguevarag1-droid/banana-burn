@@ -6,6 +6,8 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
 import { clientIpFrom, memoryRateLimit } from "@/lib/security";
 import { dbRateLimitAll, keyPart } from "@/lib/security/db-rate-limit";
 import { attributeNewAccount } from "@/lib/attribution-server";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { sendWelcomeEmail } from "@/lib/email";
 import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./validate";
 
 // Acceso sin correo de confirmación: si producción no tiene SMTP, el correo de confirmación nunca llega y la persona
@@ -102,4 +104,18 @@ export async function confirmAndCheck(email: string, password: string): Promise<
     if (error) return { ok: false, error: "No pudimos confirmar tu cuenta. Escríbenos a hola@bananaburn.app." };
   }
   return (await passwordCheck(mail, password)) === "ok" ? { ok: true } : BAD;
+}
+
+/**
+ * Después de entrar con Google o Apple desde la app nativa (signInWithIdToken: no pasa por /auth/callback), lo mismo
+ * que hace el callback: correo de bienvenida y atribución de invitaciones. Idempotente: el correo sale una vez por
+ * persona (claimOnce) y la base solo atribuye cuentas de menos de 72 h.
+ */
+export async function afterSocialSignIn(): Promise<void> {
+  const sb = await createServerClient();
+  const { data } = await sb.auth.getUser();
+  const user = data.user;
+  if (!user) return;
+  await sendWelcomeEmail({ userId: user.id, to: user.email ?? undefined }).catch(() => {});
+  await attributeNewAccount(user.id, user.email).catch(() => {});
 }

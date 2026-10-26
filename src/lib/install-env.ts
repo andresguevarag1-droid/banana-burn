@@ -19,13 +19,16 @@ export type InstallEnv =
   /** Computadora: se ofrece instalarla en el celular con un código QR. */
   | "desktop";
 
+import { nativeAgentFrom } from "./platform-ua";
+
 const INAPP = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|musical_ly|TikTok|BytedanceWebview|Line\/|Snapchat|Twitter|Pinterest|LinkedInApp|GSA\/)/i;
 
 export type EnvHints = { standalone?: boolean; maxTouchPoints?: number };
 
 /** Clasifica el navegador. `standalone`: matchMedia('(display-mode: standalone)') o navigator.standalone. */
 export function detectInstallEnv(ua: string, hints: EnvHints = {}): InstallEnv {
-  if (hints.standalone) return "standalone";
+  // La app de las tiendas (Capacitor) ya está instalada: nada de "instala la LinkApp" ni "ábrela en Safari".
+  if (hints.standalone || nativeAgentFrom(ua)) return "standalone";
   const s = ua || "";
   // iPadOS se presenta como Mac: lo delata la pantalla táctil.
   const ios = /iPhone|iPad|iPod/i.test(s) || (/Macintosh/i.test(s) && (hints.maxTouchPoints ?? 0) > 1);

@@ -1,6 +1,8 @@
 import { Bell, CheckCircle, Lightning, SquaresFour, type PhosphorIcon } from "@/components/icons";
 import { InstallHelper } from "@/components/install/install-helper";
 import { installQrSvg } from "@/lib/install-qr";
+import { isNativeRequest } from "@/lib/platform-server";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Instala tu LinkApp" };
 
@@ -12,6 +14,8 @@ const WHY: [PhosphorIcon, string, string][] = [
 ];
 
 export default async function Instalar() {
+  // La app de las tiendas ya está instalada.
+  if (await isNativeRequest()) redirect("/app");
   const qr = await installQrSvg();
   return (
     <div className="space-y-5 animate-enter max-w-2xl">

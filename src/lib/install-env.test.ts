@@ -52,3 +52,14 @@ describe("avisos y tarjeta de instalar", () => {
     expect(installCardDue(now - INSTALL_CARD_SNOOZE_MS, now)).toBe(true);
   });
 });
+
+describe("app nativa (tiendas)", () => {
+  const iosApp = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BananaBurnApp/1 (ios)";
+  const androidApp = "Mozilla/5.0 (Linux; Android 15; Pixel 8 Build/AP3A.241005.015; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.122 Mobile Safari/537.36 BananaBurnApp/1 (android)";
+  it("cuenta como instalada: sin tarjeta de instalar ni 'ábrela en Safari o Chrome'", () => {
+    expect(detectInstallEnv(iosApp)).toBe("standalone");
+    expect(detectInstallEnv(androidApp)).toBe("standalone");
+    expect(canSuggestInstall(detectInstallEnv(androidApp))).toBe(false);
+    expect(pushNeedsInstall(detectInstallEnv(iosApp))).toBe(false);
+  });
+});

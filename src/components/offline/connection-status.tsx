@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CloudArrowUp, WifiSlash, CheckCircle } from "@/components/icons";
+import { isNativeApp } from "@/lib/platform";
 import { OUTBOX_EVENT, flushWorkouts, pendingWorkouts, type OutboxEvent } from "./outbox";
 
 type State = { kind: "offline" } | { kind: "syncing"; n: number } | { kind: "synced"; n: number } | null;
@@ -55,7 +56,8 @@ export function ConnectionStatus() {
     const ev = (e: Event) => { const d = (e as CustomEvent<OutboxEvent>).detail; if (d?.result?.ok && !busy.current) router.refresh(); };
     if (!navigator.onLine) off();
     // Service worker mínimo (push + página "sin conexión"). Nunca guarda pantallas de la app, así que no deja versiones viejas.
-    try { if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {}); } catch { /* */ }
+    // En la app nativa no: la pantalla sin conexión viene dentro de la app (native/www/offline.html).
+    try { if ("serviceWorker" in navigator && !isNativeApp()) navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {}); } catch { /* */ }
     const t = setTimeout(() => void sync(), 1500);
     window.addEventListener("offline", off);
     window.addEventListener("online", on);
