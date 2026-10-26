@@ -2,6 +2,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cancelSubscription, detachPaymentMethod, OnvoError } from "@/lib/onvo";
+import { removeCardToken } from "@/lib/tilopay";
 
 const BUCKET = "progreso";
 const ID_BUCKET = "identidad";
@@ -10,17 +11,31 @@ export type DeleteResult = { ok: true } | { ok: false; status: number; error: st
 
 /**
  * Orden (si un paso falla, no se sigue):
- *  1. Cancela en ONVO las suscripciones que aún cobran (si falla, NO borramos: la persona seguiría pagando sin cuenta).
+ *  1. Cancela en ONVO las suscripciones de ONVO que aún cobran (si falla, NO borramos: la persona seguiría pagando sin
+ *     cuenta). Las de Tilopay las cobra nuestro motor desde la base: caen en cascada y no se cobra más (cancelStepFor).
  *  2. Borra todas sus fotos de Storage (carpeta `${uid}/` en 'progreso' y en 'identidad'): Storage no se borra en cascada.
  *  3. Quita datos personales de lo que no cae en cascada (scrub_deleted_user: cuerpo de webhooks, extractos de reportes).
  *  4. Borra el usuario en Auth; las tablas públicas caen en cascada (payment_events conserva el registro contable con user_id nulo).
  * `admin` debe ser el cliente con service_role.
  */
+/**
+ * Qué hacer con cada suscripción viva al borrar la cuenta. Pura (admin-account.test.ts).
+ * - ONVO: cancelarla en ONVO (si no, ONVO seguiría cobrando).
+ * - Tilopay: nada afuera; los cobros los hace nuestro motor (cron/cobros) desde estas filas, que caen en cascada.
+ * - "onvo-pi:…": el 50 % del primer mes fue un pago único (PaymentIntent), no una suscripción de ONVO.
+ * - Otros proveedores (tiendas de apps): no se cancelan desde aquí; Apple solo deja cancelar desde Ajustes.
+ */
+export function cancelStepFor(s: { provider?: string | null; provider_subscription_id?: string | null }): "onvo" | "skip" {
+  const id = s.provider_subscription_id ?? "";
+  if (!id || id.startsWith("onvo-pi:")) return "skip";
+  return (s.provider ?? "onvo") === "onvo" ? "onvo" : "skip";
+}
+
 export async function deleteAccountData(admin: SupabaseClient, userId: string, scope = "cuenta"): Promise<DeleteResult> {
   // 1) Suscripciones que todavía pueden cobrar.
-  const { data: subs } = await admin.from("subscriptions").select("id,provider_subscription_id,status").eq("user_id", userId).in("status", ["active", "trialing", "past_due", "incomplete"]);
+  const { data: subs } = await admin.from("subscriptions").select("id,provider,provider_subscription_id,status").eq("user_id", userId).in("status", ["active", "trialing", "past_due", "incomplete"]);
   for (const s of subs ?? []) {
-    if (!s.provider_subscription_id) continue;
+    if (cancelStepFor(s) !== "onvo") continue;
     try {
       await cancelSubscription(s.provider_subscription_id as string);
     } catch (e) {
@@ -32,10 +47,18 @@ export async function deleteAccountData(admin: SupabaseClient, userId: string, s
   }
 
   // 1b) Tarjeta guardada (0026): el cobro programado cae en cascada con la cuenta (no se cobra nada); la tarjeta se
-  //     desconecta en ONVO. Si ONVO no responde, se sigue: sin cuenta ni cobro programado nadie la vuelve a usar.
-  const { data: card } = await admin.from("payment_methods").select("provider_payment_method_id,status").eq("user_id", userId).maybeSingle();
+  //     desconecta en su procesador (ONVO o Tilopay). Si no responde, se sigue: sin cuenta ni cobro programado nadie la
+  //     vuelve a usar.
+  const { data: card } = await admin.from("payment_methods").select("provider,provider_payment_method_id,status").eq("user_id", userId).maybeSingle();
   if (card?.status === "active" && card.provider_payment_method_id) {
-    await detachPaymentMethod(card.provider_payment_method_id as string).catch(() => console.error(JSON.stringify({ scope, msg: "no se pudo desconectar la tarjeta en ONVO antes de borrar", userId })));
+    const pm = card.provider_payment_method_id as string;
+    if (card.provider === "tilopay") {
+      const email = (await admin.auth.admin.getUserById(userId).catch(() => null))?.data?.user?.email ?? "";
+      const removed = email ? await removeCardToken(pm, email) : false;
+      if (!removed) console.error(JSON.stringify({ scope, msg: "no se pudo quitar la tarjeta en Tilopay antes de borrar", userId }));
+    } else {
+      await detachPaymentMethod(pm).catch(() => console.error(JSON.stringify({ scope, msg: "no se pudo desconectar la tarjeta en ONVO antes de borrar", userId })));
+    }
   }
 
   // 2) Fotos de progreso (paginado).

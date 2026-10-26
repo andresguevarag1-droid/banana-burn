@@ -43,3 +43,38 @@ describe("deleteAccountData con tarjeta guardada (0026)", () => {
     expect(calls.at(-1)).toBe("deleteUser:u3");
   });
 });
+
+describe("cancelStepFor (qué se cancela afuera al borrar)", () => {
+  it("solo las suscripciones de ONVO se cancelan en ONVO", async () => {
+    const { cancelStepFor } = await import("./admin-account");
+    expect(cancelStepFor({ provider: "onvo", provider_subscription_id: "sub_1" })).toBe("onvo");
+    expect(cancelStepFor({ provider_subscription_id: "sub_viejo" })).toBe("onvo");
+    expect(cancelStepFor({ provider: "tilopay", provider_subscription_id: "bb-123" })).toBe("skip");
+    expect(cancelStepFor({ provider: "onvo", provider_subscription_id: "onvo-pi:pi_9" })).toBe("skip");
+    expect(cancelStepFor({ provider: "app_store", provider_subscription_id: "1000000" })).toBe("skip");
+    expect(cancelStepFor({ provider: "onvo", provider_subscription_id: null })).toBe("skip");
+  });
+});
+
+describe("deleteAccountData con suscripción y tarjeta de Tilopay", () => {
+  it("no llama a ONVO por una suscripción de Tilopay: borra la cuenta aunque ONVO no exista", async () => {
+    const calls: string[] = [];
+    const query = {
+      select: () => query, eq: () => query,
+      in: async () => ({ data: [{ id: "s1", provider: "tilopay", provider_subscription_id: "bb-123", status: "active" }] }),
+      maybeSingle: async () => ({ data: { provider: "tilopay", provider_payment_method_id: "tok_abcdefgh", status: "active" } }),
+    };
+    const admin = {
+      from: (t: string) => { calls.push(`from:${t}`); return query; },
+      storage: { from: () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ error: null }) }) },
+      rpc: async () => ({ error: null }),
+      auth: { admin: {
+        getUserById: async () => { calls.push("getUserById"); return { data: { user: { email: "a@b.co" } } }; },
+        deleteUser: async (id: string) => { calls.push(`deleteUser:${id}`); return { error: null }; },
+      } },
+    } as unknown as SupabaseClient;
+    expect(await deleteAccountData(admin, "u4")).toEqual({ ok: true });
+    expect(calls).toContain("getUserById");
+    expect(calls.at(-1)).toBe("deleteUser:u4");
+  });
+});
