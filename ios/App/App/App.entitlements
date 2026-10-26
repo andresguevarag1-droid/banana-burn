@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links y contraseñas guardadas de www.bananaburn.app (rutas en src/lib/native/app-links.ts). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:www.bananaburn.app</string>
+		<string>webcredentials:www.bananaburn.app</string>
+	</array>
+</dict>
+</plist>

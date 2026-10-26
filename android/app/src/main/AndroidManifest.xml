@@ -18,6 +18,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- App Links de www.bananaburn.app, verificados con /.well-known/assetlinks.json (src/lib/native/app-links.ts). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.bananaburn.app" />
+                <data android:path="/app" />
+                <data android:pathPrefix="/app/" />
+                <data android:pathPrefix="/auth/" />
+                <data android:path="/entrar" />
+                <data android:pathPrefix="/entrar/" />
+                <data android:path="/bienvenida" />
+            </intent-filter>
         </activity>
 
         <provider
