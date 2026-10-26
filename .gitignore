@@ -48,3 +48,4 @@ next-env.d.ts
 /native/www/server.js
 /native/www/logo.svg
 /native/www/jakarta.woff2
+/.android-user

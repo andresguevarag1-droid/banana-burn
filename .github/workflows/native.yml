@@ -49,6 +49,10 @@ jobs:
     name: Android (APK de debug)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Carpeta donde el plugin de Android de Gradle guarda (o crea) la llave de debug. Fija, para que la llave del
+      # secreto se use de verdad y las huellas salgan de la misma llave que firmó el APK.
+      ANDROID_USER_HOME: ${{ github.workspace }}/.android-user
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,8 +73,8 @@ jobs:
           KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
         if: env.KEYSTORE_B64 != ''
         run: |
-          mkdir -p ~/.android
-          echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+          mkdir -p "$ANDROID_USER_HOME"
+          echo "$KEYSTORE_B64" | base64 -d > "$ANDROID_USER_HOME/debug.keystore"
       - name: Sincronizar Capacitor
         run: npm run native:sync
       - name: Compilar APK de debug
@@ -79,7 +83,12 @@ jobs:
       - name: Huellas del certificado (assetlinks.json y Google Cloud)
         # Las huellas salen del certificado con openssl: el keytool de algunas versiones de Java ya no imprime la SHA-1.
         run: |
-          cert=$(keytool -exportcert -rfc -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android)
+          ks="$ANDROID_USER_HOME/debug.keystore"
+          if [ ! -f "$ks" ]; then
+            echo "::error::No está la llave de debug en $ks. Llaves encontradas: $(find "$HOME" "$GITHUB_WORKSPACE" -name debug.keystore 2>/dev/null | tr '\n' ' ')"
+            exit 1
+          fi
+          cert=$(keytool -exportcert -rfc -keystore "$ks" -alias androiddebugkey -storepass android)
           sha256=$(echo "$cert" | openssl x509 -noout -fingerprint -sha256 | sed 's/.*=//')
           sha1=$(echo "$cert" | openssl x509 -noout -fingerprint -sha1 | sed 's/.*=//')
           {
