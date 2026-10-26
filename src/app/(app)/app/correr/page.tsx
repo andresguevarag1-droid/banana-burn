@@ -10,8 +10,9 @@ import { longDate } from "@/lib/seasons";
 import { mondayOf, type MatchedRun } from "@/lib/run-plan";
 import { trainingPaces } from "@/lib/run-fitness";
 import { RunTracker } from "@/components/correr/run-tracker";
+import { paceBand, raceGuide, toGuide, type Guide } from "@/lib/run-guide";
 import { WeeklyKm } from "@/components/correr/weekly-km";
-import { BestsCard, IntakeNeeded, Locked, NextRunCard, OwnPlanCard, PlanWeekList, RaceCard, RunWeek } from "@/components/correr/run-hub";
+import { RunTools, BestsCard, IntakeNeeded, Locked, NextRunCard, OwnPlanCard, PlanWeekList, RaceCard, RunWeek } from "@/components/correr/run-hub";
 
 export const metadata = { title: "Banana Run" };
 
@@ -23,7 +24,8 @@ const SAMPLE_RUNS: MatchedRun[] = [
   { id: "c", date: "2026-11-14", dow: 5, kind: "larga", title: "Carrera larga", detail: "12 km a ritmo fácil", distM: 12000, steps: [{ kind: "continuo", distM: 12000, zone: "facil", label: "Carrera larga" }], strides: false, key: true, status: "pendiente" },
 ];
 
-export default async function Correr() {
+export default async function Correr({ searchParams }: { searchParams: Promise<{ modo?: string }> }) {
+  const modo = (await searchParams).modo;
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app/correr");
   const [sex, r] = await Promise.all([getSex(v), getRunningView(v)]);
@@ -31,11 +33,19 @@ export default async function Correr() {
   const seasonHref = r.season ? `/app/temporadas/${r.season.slug}` : "/app/temporadas";
   const thisMon = mondayOf(r.today);
   const runsThisWeek = r.runs.filter((x) => x.day >= thisMon).length;
+  // Sesión guiada (Temporada Running): el día de la carrera (o con ?modo=carrera), el modo carrera con la tabla de
+  // ritmos; otro día, la sesión del plan que toca hoy.
+  let guide: Guide | null = null;
+  if (r.owned && r.goal && r.check && (modo === "carrera" || r.goal.raceDate === r.today)) {
+    const goalS = r.goal.goalS && r.check.status !== "muy_ambiciosa" ? r.goal.goalS : r.check.withPlan;
+    guide = raceGuide(r.goal.name ?? "Tu carrera", paceBand(r.goal.distanceM, goalS, "pareja"), goalS);
+  } else if (r.owned && r.plan && r.next?.status === "hoy" && r.next.kind !== "carrera") guide = toGuide(r.next.title, r.next.steps, r.plan.paces);
   return (
     <div className="space-y-6 animate-rise">
-      <RunTracker coachSrc={coach.hello} coachName={coach.name} />
+      <RunTracker coachSrc={coach.hello} coachName={coach.name} guide={guide} />
       <RunWeek km={r.weekKm} goal={r.weekGoal} runs={runsThisWeek} dayStreak={r.dayStreak} weekStreak={r.weekStreak} />
       <RaceCard goal={r.goal} days={r.daysToRace} check={r.check} owned={r.owned} />
+      <RunTools owned={r.owned} />
 
       {r.owned ? (
         r.goal?.ownPlan ? <OwnPlanCard goal={r.goal} runDays={r.intake?.running?.runDays ?? []} longDay={r.intake?.running?.longRunDay ?? null} />

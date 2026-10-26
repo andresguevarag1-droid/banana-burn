@@ -8,6 +8,34 @@ import { fmtTime, RACE_SHORT, ZONE_LABEL, zonePace, type Bests, type GoalCheck, 
 import { PHASE_LABEL, type MatchedRun, type RacePlan } from "@/lib/run-plan";
 import { DOW_LONG, longDate } from "@/lib/seasons";
 import type { RaceGoal } from "@/lib/running-server";
+import { GROUP_LABEL, drillsFor } from "@/lib/run-drills";
+
+/** "Antes: calentamiento dinámico. Después: enfriamiento" con enlace a la técnica. */
+export function DrillLinks({ run }: { run: MatchedRun }) {
+  const d = drillsFor(run.kind, run.strides);
+  if (!d.before.length && !d.after.length) return null;
+  return (
+    <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
+      {d.before.map((g) => <Link key={`b${g}`} href={`/app/correr/tecnica#${g}`} className="text-[var(--run)] underline underline-offset-2">Antes: {GROUP_LABEL[g].toLowerCase()}</Link>)}
+      {d.after.map((g) => <Link key={`a${g}`} href={`/app/correr/tecnica#${g}`} className="text-[var(--run)] underline underline-offset-2">Después: {GROUP_LABEL[g].toLowerCase()}</Link>)}
+    </p>
+  );
+}
+
+/** Accesos del hub: plan, día de carrera y técnica. */
+export function RunTools({ owned }: { owned: boolean }) {
+  const items: [string, string, string][] = [["/app/correr/plan", "Mi plan", "Semana a semana"], ["/app/correr/carrera", "Día de carrera", "Ritmos y checklist"], ["/app/correr/tecnica", "Técnica", "Skipping y más"]];
+  return (
+    <nav aria-label="Herramientas de running" className="grid grid-cols-3 gap-2">
+      {items.map(([href, t, d]) => (
+        <Link key={href} href={href} className="card flex flex-col gap-1 p-3 transition-transform duration-150 active:scale-[.98]">
+          <span className="flex items-center gap-1 font-extrabold text-ink">{t}{!owned && <Lock weight="duotone" className="size-4 text-muted" aria-label="Incluido en la Temporada Running" />}</span>
+          <span className="text-xs text-muted">{d}</span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export const UNLOCK = "Desbloquear con la Temporada Running";
 
@@ -117,6 +145,7 @@ export function NextRunCard({ run, paces, plan }: { run: MatchedRun | null; pace
               <p className="text-body">{run.detail}</p>
               <p className="mt-1 text-sm font-semibold text-ink"><Timer weight="duotone" className="mr-1 inline size-4 align-[-3px] text-[var(--run)]" />Ritmo: {runTarget(run, paces)}</p>
               {run.status !== "hoy" && <p className="text-sm text-muted">El {DOW_LONG[run.dow]} {longDate(run.date)}</p>}
+              <DrillLinks run={run} />
               {run.note && <p className="mt-2 rounded-xl bg-paper p-2.5 text-sm text-body">{run.note}</p>}
             </div>
           </div>
@@ -140,6 +169,7 @@ export function PlanWeekList({ runs, paces, compact = false }: { runs: MatchedRu
             <p className="font-bold text-ink">{r.title}<span className="sr-only">. {r.status === "hecha" ? "Hecha" : r.status === "hoy" ? "Hoy" : r.status === "perdida" ? "Pendiente de un día que pasó" : "Pendiente"}</span></p>
             <p className="text-sm text-body">{r.detail}</p>
             {!compact && <p className="text-xs text-muted">{DOW_LONG[r.dow]} {longDate(r.date)}. Ritmo {runTarget(r, paces)}</p>}
+            {!compact && <DrillLinks run={r} />}
             {r.note && <p className="mt-1 text-xs font-semibold text-[var(--run)]">{r.note}</p>}
           </div>
           <span className="shrink-0 text-sm font-bold tabular-nums text-muted">{(r.distM / 1000).toFixed(1)} km</span>

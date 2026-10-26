@@ -96,6 +96,17 @@ const SHEETS: Record<string, string> = {
   bridgemarch: "hf_20261024_081013_4f489c67-86af-4599-ad5f-165813876828",
   // Temporadas (25/10, gpt_image_2_5): un movimiento propio para cada ejercicio de las temporadas, revisado cuadro por cuadro.
   // Rehechas tras revisión: cargada colgante (el brazo libre iba al frente; ahora termina en rack), pantorrillas (talones más altos) y giro de columna (rotación visible).
+  // Técnica de carrera (26/10, gpt_image_2_5, misma referencia): revisadas cuadro por cuadro. Skipping A y talones al
+  // glúteo dibujan casi la misma pose en los 4 cuadros (la posición clave, correcta); carioca usa solo los cuadros 0 a 2
+  // (en el 3 la cola cambia de lado).
+  askip: "hf_20261026_021234_0a0edb2d-e78e-4a99-9350-80afd23b9d6b",
+  bskip: "hf_20261026_021650_11df8f06-6326-4a40-a23f-2dc2b5248604",
+  highknees: "hf_20261026_021650_b31b0752-b801-40b6-a592-6736030cc04d",
+  buttkicks: "hf_20261026_021234_845400a6-8018-4141-a61b-f24ce5295b71",
+  carioca: "hf_20261026_021703_a996f49a-5586-48b3-a3c4-016a4141194d",
+  pogo: "hf_20261026_021701_d67d7798-4393-4880-8468-51b50e8b5d64",
+  legswing: "hf_20261026_021234_1051cfcf-420b-47cd-a980-ff42e2893f30",
+  quadstretch: "hf_20261026_021233_74c57e4c-31e8-4f93-a6fd-1b952f3a8e6a",
   calfraise: "hf_20261025_061749_b0908cc1-a23b-498b-836b-908e74476f85",
   calfraise_db: "hf_20261025_061749_0f3f5438-aca4-4868-b085-ad58ff4e7597",
   calfseated: "hf_20261025_055752_27aeb5c4-e3fb-48da-87b3-1d0d974655b0",
@@ -240,6 +251,14 @@ export const SHEET_MOTION: Record<string, { ph: SheetPhase[]; loop?: boolean; di
   bridgemarch: { loop: true, dir: "none", ph: [[1, 0.8, "Rodilla arriba", "con"], [2, 0.6, "Cadera alta", "hold"], [3, 0.8, "Otra rodilla", "con"], [0, 0.6, "Sin dejar caer la cadera", "hold"]] },
   towelcurl: { dir: "none", ph: [["B", 1.2, "Tira de la toalla", "con"], ["B", 2.5, "Aguanta con todo", "hold"], ["A", 1, "Suelta y respira", "ecc"]] },
   // Temporadas (25/10)
+  askip: { loop: true, dir: "none", ph: [[1, 0.35, "Rodilla a la cadera", "con"], [2, 0.3, "Pie abajo, bajo la cadera", "ecc"], [3, 0.35, "Punta del pie arriba", "con"], [0, 0.3, "Brazo contrario", "air"]] },
+  bskip: { loop: true, dir: "none", ph: [[1, 0.4, "Estira la pierna", "con"], [2, 0.4, "Barre hacia atrás", "ecc"], [3, 0.3, "Apoya bajo la cadera", "hold"], [0, 0.35, "Rodilla arriba", "con"]] },
+  highknees: { loop: true, dir: "none", ph: [[1, 0.22, "Apoya en puntas", "ecc"], [2, 0.22, "Rodilla arriba", "con"], [3, 0.22, "Apoya rápido", "ecc"], [0, 0.22, "Brazos rápidos", "con"]] },
+  buttkicks: { loop: true, dir: "none", ph: [[1, 0.25, "Talón al glúteo", "con"], [2, 0.25, "Rodilla apunta abajo", "hold"], [3, 0.25, "Cambia rápido", "con"], [0, 0.25, "Torso alto", "hold"]] },
+  carioca: { loop: true, dir: "none", ph: [[1, 0.4, "Cruza por delante", "con"], [2, 0.4, "Abre el paso", "air"], [0, 0.4, "Hombros al frente", "hold"]] },
+  pogo: { loop: true, dir: "none", ph: [[1, 0.22, "Rebota con los tobillos", "air"], [2, 0.22, "Aterriza en puntas", "ecc"], [3, 0.22, "Rodillas casi rectas", "air"], [0, 0.22, "Talones sin tocar el piso", "hold"]] },
+  legswing: { loop: true, dir: "none", ph: [[1, 0.6, "Adelante, suelto", "con"], [2, 0.5, "Pasa por el centro", "air"], [3, 0.6, "Atrás, torso alto", "con"], [0, 0.5, "Pierna de apoyo recta", "air"]] },
+  quadstretch: { dir: "back", ph: [["B", 1.2, "Talón al glúteo", "ecc"], ["B", 3, "Rodillas juntas", "hold"], ["A", 1, "Suelta despacio", "con"], ["A", 0.6, "Cadera al frente", "hold"]] },
   calfraise: { dir: "up", ph: pull("Sube en puntas", "Arriba 1 segundo", "Baja en 2 segundos", "Rodillas rectas") },
   calfraise_db: { dir: "up", ph: pull("Sube en puntas", "Arriba 1 segundo", "Baja en 2 segundos", "Brazos sueltos") },
   calfseated: { dir: "up", ph: pull("Talones arriba", "Aprieta 1 segundo", "Baja lento", "Rodillas a 90 grados") },
