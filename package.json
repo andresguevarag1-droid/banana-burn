@@ -12,7 +12,8 @@
     "a11y": "node scripts/a11y-scan.cjs",
     "native:sync": "node scripts/native-prepare.mjs && cap sync",
     "native:android": "npm run native:sync && cap open android",
-    "native:ios": "npm run native:sync && cap open ios"
+    "native:ios": "npm run native:sync && cap open ios",
+    "native:icons": "node scripts/native-icons.mjs && npx --yes @capacitor/assets@3.0.5 generate --ios --android --iconBackgroundColor '#1B1505' --iconBackgroundColorDark '#1B1505' --splashBackgroundColor '#1B1505' --splashBackgroundColorDark '#1B1505'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
