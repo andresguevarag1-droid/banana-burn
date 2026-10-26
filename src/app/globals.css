@@ -49,6 +49,9 @@
   --dur-enter: 300ms;
   --dur-exit: 200ms;
   --dur-fill: 450ms;
+  /* Running (Banana Run): acento naranja; con Platanita, rosado (abajo). Contraste AA sobre blanco. */
+  --run: #C2410C;
+  --run-soft: #FFEDD5;
 }
 
 /* El hover solo existe con puntero fino: en táctil el "hover" pegado tras un toque se ve roto. */
@@ -77,6 +80,8 @@
   --color-ember-ink: #A3124F;
   --color-sky: var(--color-plat-ink);
   --program: var(--color-plat);
+  --run: var(--color-plat-ink);
+  --run-soft: var(--color-plat-soft);
 }
 
 html { color-scheme: light; -webkit-tap-highlight-color: transparent; }

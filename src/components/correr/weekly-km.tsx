@@ -11,7 +11,7 @@ export function WeeklyKm({ weeks, title = "Km por semana" }: { weeks: { weekStar
         {weeks.map((w, i) => (
           <li key={w.weekStart} className="flex h-full flex-col items-center justify-end gap-1" aria-label={`Semana del ${longDate(w.weekStart)}: ${w.km} km`}>
             <span className="text-[11px] tabular-nums text-muted">{w.km ? w.km : ""}</span>
-            <span className={`w-full rounded-t-md ${i === weeks.length - 1 ? "bg-[#C2410C]" : "bg-ink/80"}`} style={{ height: `${Math.max(w.km ? 6 : 2, (w.km / max) * 88)}px` }} />
+            <span className={`w-full rounded-t-md ${i === weeks.length - 1 ? "bg-[var(--run)]" : "bg-ink/80"}`} style={{ height: `${Math.max(w.km ? 6 : 2, (w.km / max) * 88)}px` }} />
             <span className="text-[11px] text-muted">{Number(w.weekStart.slice(8))}</span>
           </li>
         ))}

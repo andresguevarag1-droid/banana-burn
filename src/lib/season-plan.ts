@@ -7,6 +7,7 @@ import {
   AVOID_SWAPS, EX_PER_MINUTES, INJURY_SWAPS, SESSION_DAY, SESSION_ORDER, SEASON_WEEKS, planWeek, taperWeeks,
   type Area, type SeasonInfo, type SeasonIntake, type SessionKind, type SportId, type WeekPlan,
 } from "./seasons";
+import { pickLongDay, pickQualityDays, qualityCount } from "./run-plan";
 
 /** Sin cuestionario todavía: 3 sesiones lunes, miércoles y viernes, en gimnasio, 45 minutos. */
 export const DEFAULT_INTAKE: SeasonIntake = {
@@ -90,3 +91,17 @@ export function personalSeason(def: ProgramDef, season: Pick<SeasonInfo, "sport"
 /** Número de semanas (siempre 8) para comprobar que el calendario no cambió. */
 export const personalWeeks = (p: PersonalSeason) => p.def.meta.phases.reduce((a, x) => a + x.weeks, 0) === SEASON_WEEKS;
 export { SESSION_ORDER };
+
+/**
+ * Running: la carrera objetivo cambia la fuerza de la temporada. Su fecha es el evento (para afinar antes) y sus días de
+ * series o tempo cuentan como días clave, igual que la larga. Con su propio plan, los días que marcó; con el de Banana
+ * Run, los que arma el plan.
+ */
+export function withRaceGoal(i: SeasonIntake, g: { raceDate: string; name: string | null; ownPlan: boolean; hardDays: number[] } | null, today: string): SeasonIntake {
+  if (!g || !i.running || g.raceDate < today) return i;
+  const r = i.running;
+  const days = r.runDays.length ? r.runDays : [1, 3, 5];
+  const qualityDays = g.ownPlan ? g.hardDays : pickQualityDays(days, pickLongDay(days, r.longRunDay), qualityCount("construccion", days.length, i.level));
+  const longRunDay = g.ownPlan ? r.longRunDay : pickLongDay(days, r.longRunDay);
+  return { ...i, eventDate: g.raceDate, eventType: g.name ?? i.eventType ?? "carrera", running: { ...r, longRunDay, qualityDays } };
+}

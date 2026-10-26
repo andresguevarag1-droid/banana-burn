@@ -8,11 +8,12 @@ import { getOwned } from "@/lib/challenges-server";
 import { getEntitlements } from "@/lib/entitlements";
 import { demoState } from "@/lib/demo-persona";
 import { SEASON_SEED_BY_SLUG } from "@/lib/season-content";
-import { personalSeason, type PersonalSeason } from "@/lib/season-plan";
+import { personalSeason, withRaceGoal, type PersonalSeason } from "@/lib/season-plan";
 import {
   SEASONS_T1, SPORT_IDS, canRedeemAnnual, currentSeason, isSeasonSlug, parseIntake, parseSeasonSlug, type AnnualSub, type SeasonInfo, type SeasonIntake, type SportId,
 } from "@/lib/seasons";
 import type { ProgramDef } from "@/lib/programs";
+import { getRaceGoal } from "@/lib/race-goal-server";
 
 type SeasonRow = { slug: string; sport: string; number: number; starts_on: string; ends_on: string; enroll_until: string; price_minor: number };
 const toInfo = (r: SeasonRow, title?: string): SeasonInfo => ({
@@ -108,7 +109,7 @@ export async function personalize(v: Viewer, def: ProgramDef): Promise<PersonalS
   const season = (await getSeason(v.demo, def.slug)) ?? SEASONS_T1.find((s) => s.slug === def.slug) ?? null;
   if (!season) return null;
   const intake = await getIntake(v, def.slug);
-  return personalSeason(def, season, intake?.answers ?? null);
+  return personalSeason(def, season, meta.sport === "running" && intake ? withRaceGoal(intake.answers, await getRaceGoal(v), todayFor(v).iso) : intake?.answers ?? null);
 }
 
 /** Sesiones completas de una temporada en el código (respaldo del demo). */
