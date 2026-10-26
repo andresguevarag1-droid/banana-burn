@@ -23,7 +23,7 @@ GitHub Actions (funciona igual, solo tarda un poco más). Si prefieres que lo co
 2. **Network access** → agrega `dl.google.com` en **Allowed domains** (deja marcada la casilla de package managers).
 3. Guarda. Pasos oficiales: https://code.claude.com/docs/en/cloud-environments#network-access
 
-### [ ] 3. Preparar tu Android para instalar el APK de prueba
+### [x] 3. Preparar tu Android para instalar el APK de prueba
 1. Ajustes → Acerca del teléfono → toca 7 veces **Número de compilación** (se activan las Opciones de desarrollador).
 2. Ajustes → Sistema → Opciones de desarrollador → activa **Depuración por USB**.
 3. En tu computadora instala **Android Platform Tools** (https://developer.android.com/tools/releases/platform-tools).
@@ -118,7 +118,54 @@ Lista que necesito (en USD; las tiendas convierten a cada país):
 - Cada Temporada (Running, Raquetas, CrossFit).
 - Cada reto pagado que quieras vender en la app (cada uno es un producto aparte en cada tienda).
 
+## Fase 2: avisos, Salud y GPS
+
+### [ ] 14. Aplicar las migraciones 0057 y 0058 en Supabase (producción)
+0057 crea la tabla de teléfonos para los avisos de la app y 0058 agrega la energía activa al registro diario. Las dos
+solo agregan (no cambian ni borran nada) y el código funciona sin ellas, pero sin 0057 no hay avisos en la app y sin
+0058 Salud guarda solo los pasos.
+1. Supabase, proyecto de producción, **SQL Editor**, **New query**.
+2. Abre `supabase/migrations/0057_push_nativo.sql` en GitHub (rama `feature/app-nativa` o `main` después del merge),
+   copia todo, pégalo y toca **Run**. Debe decir "Success".
+3. Lo mismo con `supabase/migrations/0058_salud.sql`.
+4. Para confirmar: pega `supabase/revisar_migraciones.sql` completo y toca **Run**. Las filas `0057_push_nativo.sql` y
+   `0058_salud.sql` deben decir "Ya está".
+
+### [ ] 15. Firebase para los avisos en Android
+1. https://console.firebase.google.com, **Agregar proyecto**, nombre "Banana Burn" (Google Analytics: no hace falta).
+2. En el proyecto, **Agregar app**, Android: paquete `app.bananaburn`, apodo "Banana Burn Android". Descarga
+   `google-services.json` (lo demás del asistente, como agregar el SDK, ya está hecho).
+3. En tu Mac: `base64 -i google-services.json | pbcopy`. GitHub, repo `banana-burn`, Settings, Secrets and variables,
+   Actions, **New repository secret**: nombre `GOOGLE_SERVICES_JSON_B64`, valor: pega.
+4. Firebase, engrane, **Configuración del proyecto**, **Cuentas de servicio**, **Generar nueva clave privada**. Se
+   descarga un JSON: es una llave, no la compartas.
+5. Vercel, proyecto `banana-burn`, Settings, Environment Variables: nombre `FCM_SERVICE_ACCOUNT_JSON`, valor: el
+   contenido completo de ese JSON, entorno **Production** (y Preview si quieres probar en previews), marcado como
+   **Sensitive**.
+6. Actions, "App nativa", **Run workflow** en `feature/app-nativa`: el APK nuevo ya trae Firebase. Instálalo.
+7. Vercel: `NEXT_PUBLIC_NATIVE_PUSH` = `1` y **Redeploy** de producción. Desde ahí la app ofrece "Activar avisos".
+   Importante: solo cuando el APK que usan las personas trae Firebase (hoy solo tú lo tienes); un APK sin Firebase se
+   cierra al activar avisos.
+
+### [ ] 16. Llave de APNs para los avisos en iPhone (cuando exista la cuenta de Apple, punto 10)
+1. https://developer.apple.com/account, Certificates, Identifiers & Profiles, **Keys**, botón **+**.
+2. Nombre "Banana Burn APNs", marca **Apple Push Notifications service (APNs)**, Continue, Register.
+3. Descarga el `.p8` (solo se puede una vez; guárdalo fuera del repo) y anota el **Key ID** (10 caracteres) y tu
+   **Team ID** (arriba a la derecha en la cuenta).
+4. Vercel, Environment Variables (Production, Sensitive): `APNS_KEY_ID` = Key ID, `APNS_TEAM_ID` = Team ID,
+   `APNS_PRIVATE_KEY` = el contenido completo del `.p8` (abre el archivo con TextEdit y copia todo), `APNS_ENV` = `auto`.
+5. En Identifiers, el App ID `app.bananaburn` debe tener marcadas **Push Notifications**, **HealthKit**, **Associated
+   Domains** y **Sign In with Apple** (Xcode lo hace solo con firma automática).
+
+### [ ] 17. Declaraciones de Google Play (antes de publicar, Fase 4)
+Google revisa a mano dos permisos de la app. Lo preparo yo con textos listos en `docs/tiendas.md`; tú los envías:
+1. **Health Connect:** Play Console, Contenido de la app, **Permisos de salud**: pasos, peso y calorías activas
+   quemadas, solo lectura, para el registro diario y el progreso.
+2. **Servicio en primer plano de ubicación:** Play Console, Contenido de la app, **Permisos de servicios en primer
+   plano**: "Medir una carrera con la pantalla apagada", con un video corto (30 s) de empezar una carrera, bloquear el
+   teléfono y ver el aviso fijo.
+
 ## Cosas que se agregan a medida que avanzamos
 
-Los pasos de Firebase, llaves de APNs, RevenueCat, "Iniciar sesión con Apple", cliente de Google para iOS y Android,
-y los ajustes de dominio en Vercel se agregan aquí, con instrucciones exactas, al llegar a cada fase.
+RevenueCat y los productos de las tiendas (Fase 3), el cliente de Google para iOS y los ajustes de dominio en Vercel
+se agregan aquí, con instrucciones exactas, al llegar a cada fase.

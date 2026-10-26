@@ -182,16 +182,73 @@ con la URL del preview en `server_url`).
 - Las llaves y cuentas de `pendientes-andres.md` para el login con Google y Apple y para los App Links.
 - Tu prueba del APK en tu Android.
 
-## 6. Notas para las fases siguientes
+## 6. Fase 2 (funciones nativas): lo que quedó hecho
 
-- **Reproductor (Fase 2):** con el descanso en pantalla ink, la barra de estado debe pasar a texto claro (hoy queda
-  oscura). `navigator.vibrate` y la alarma del service worker se reemplazan por `@capacitor/haptics` y notificaciones
-  locales.
-- **Push (Fase 2):** la tarjeta de avisos hoy no aparece en la app; vuelve con push nativo y la tabla de tokens.
+Cascarón 2 (`NATIVE_SHELL = 2` en `capacitor.config.ts`): la web nueva pregunta por cada plugin (`hasNativePlugin`), así
+que el APK de la Fase 1 sigue funcionando igual que antes y lo nuevo aparece al instalar el APK nuevo.
+
+| Pieza | Dónde |
+|---|---|
+| Plugins: avisos push, avisos locales, haptics, pantalla encendida, Salud, GPS en segundo plano | `package.json`, `capacitor.config.ts`, `android/`, `ios/` |
+| Reproductor: vibración del sistema al cambiar de ejercicio y al terminar el descanso, pantalla encendida, aviso local del fin del descanso con la app en segundo plano (se ofrece en el primer descanso, nunca al abrir) | `src/lib/native/device.ts`, `src/components/workout/device.ts`, `src/components/workout/rest-alert-offer.tsx` |
+| Barra de estado clara sobre el descanso y los intervalos en ink | `useDarkStatusBar` en `src/components/workout/device.ts` |
+| Push nativo: FCM (Android) y APNs (iPhone) desde el servidor, con los mismos recordatorios, regalos, soporte y novedades que la web | `src/lib/push-native.ts`, `src/lib/push.ts`, `src/app/api/push/native/route.ts`, migración `0057` |
+| Permiso de avisos en contexto (tarjeta "Activar avisos" en Hoy, Perfil y Tus primeros pasos), el toque abre la pantalla del aviso, al cerrar sesión el teléfono deja de recibir | `src/lib/native/push.ts`, `src/components/notifications/native-push.tsx`, `src/lib/native/boot.ts` |
+| Salud: Apple Salud (HealthKit) y Health Connect, solo lectura de pasos, peso y energía activa | `src/lib/native/salud.ts`, `src/app/actions/salud.ts`, `src/lib/salud-sync.ts`, migración `0058` |
+| Conexiones solo en la app (en la web sigue cerrada), con entrada "Pasos y peso" en Perfil | `src/app/(app)/app/conexiones/*`, `src/app/(app)/app/perfil/page.tsx` |
+| GPS de carreras con la pantalla apagada o en otra app | `src/lib/native/gps.ts`, `src/components/correr/run-tracker.tsx` |
+| Privacidad: Salud conectada, proveedores de avisos (Apple y Google) y GPS de la app | `src/app/(marketing)/privacidad/page.tsx` |
+
+### Decisiones de la Fase 2
+
+- **Salud, qué se guarda** (`src/lib/salud-sync.ts`, con pruebas):
+  - Hoy: pasos y energía activa llenan el registro del día como si los anotaras (mismo XP de registro, cuentan para
+    retos y racha).
+  - Días pasados (hasta 7): solo se completan los pasos de días que ya tenían registro. Nunca se crea un día pasado,
+    así caminar no reescribe la racha hacia atrás.
+  - Los pasos solo suben: si anotaste más a mano, se respeta.
+  - Pesajes de 30 días (una báscula conectada) solo en días sin peso. Solo el de hoy da XP de pesaje.
+  - Solo sincroniza para la cuenta que conectó Salud en ese teléfono; si entra otra cuenta, no se guarda nada hasta
+    que esa persona la conecte.
+- **Salud, cuándo:** al abrir la app y al volver a ella, como mucho cada 30 minutos, más el botón "Actualizar". No
+  hay lectura en segundo plano (no hace falta y suma permisos).
+- **GPS:** en iPhone se pide solo "Al usar la app" (el plugin pedía "Siempre", que Apple suele rechazar si no hace
+  falta); la carrera empieza con la app abierta y sigue con el indicador azul. En Android, servicio en primer plano
+  con el aviso fijo "Midiendo tu carrera" y `useLegacyBridge` para que la web siga recibiendo puntos después de 5 min.
+- **Push:** apagado hasta que pongas `NEXT_PUBLIC_NATIVE_PUSH=1` en Vercel (en Android, registrarse sin Firebase cierra
+  la app). Los tokens viven en `native_push_tokens` con RLS y tope de 10 teléfonos por persona.
+- **Android minSdk 26** (Android 8.0): lo pide Health Connect. Android 7 es menos del 1 % de los teléfonos activos.
+
+### Cómo se prueba la Fase 2
+
+Antes: tus pasos de `pendientes-andres.md` 14 (migraciones), y para push, 15 y 16.
+
+**Android (tu teléfono):**
+1. Actions, "App nativa", último run de `feature/app-nativa`, artifact `banana-burn-debug-apk`; `adb install -r app-debug.apk`.
+   Para ver la parte web nueva antes del merge, corre el workflow con la URL del preview en `server_url`.
+2. Entreno: empieza uno. Al cambiar de ejercicio vibra; la pantalla no se apaga; en el primer descanso aparece "¿Te
+   avisamos al terminar el descanso?". Acepta, sal de la app en el descanso y espera: llega el aviso con sonido.
+3. Salud: Perfil, "Pasos y peso", Conectar. Si tu Android no trae Health Connect, te lleva a Google Play. Da permiso a
+   Pasos, Peso y Calorías activas quemadas. Deben aparecer tus pasos de hoy; en Hoy, el registro de pasos se llena solo.
+4. GPS: Correr, Empezar carrera, permite la ubicación "mientras se usa la app". Bloquea el teléfono y camina unos
+   minutos: arriba queda el aviso fijo de Banana Burn. Al desbloquear, la distancia siguió sumando.
+5. Avisos (cuando tengas Firebase, puntos 15 y 16): Perfil, Avisos, "Activar avisos" y el botón de prueba.
+
+**iPhone (simulador en tu Mac):** `npm run native:ios`, Run.
+- Salud: en el simulador abre la app Salud y agrega datos a mano (Pasos, Peso, Energía activa); luego en Banana Burn,
+  Perfil, "Pasos y peso", Conectar.
+- GPS: en el simulador, menú Features, Location, "City Run"; empieza una carrera y bloquea el simulador (Cmd+L).
+- Push en iPhone necesita la cuenta de Apple Developer (la llave de APNs, punto 16 de `pendientes-andres.md`).
+
+## 7. Notas para las fases siguientes
+
 - **Revocar "Continuar con Apple" al borrar la cuenta:** Apple lo exige; necesita la llave de Sign in with Apple (`.p8`).
   Va cuando exista la cuenta de Apple.
 - **Aviso de IA (regla 5.1.2(i) de Apple):** consentimiento antes del primer uso del Coach dentro de la app, nombrando al
   proveedor. Antes de enviar a revisión.
-- **Política de privacidad:** hoy dice que el GPS nunca corre en segundo plano; cambia con el GPS de la Fase 2.
 - **Textos de borrar cuenta:** cuando existan compras de tienda (Fase 3), el aviso de "cancelamos tu suscripción" debe
   explicar que las de App Store y Google Play se cancelan en la tienda.
+- **Voz por kilómetro con la pantalla apagada:** el GPS sigue midiendo, pero la voz del navegador puede callarse con el
+  teléfono bloqueado (sobre todo en Android). Si importa, en una fase siguiente se pasa a un plugin de voz nativo.
+- **Declaraciones de Google Play** (Fase 4): Health Connect (formulario de permisos de salud) y servicio en primer plano
+  de ubicación (con un video corto de la carrera). Están en `pendientes-andres.md`.
