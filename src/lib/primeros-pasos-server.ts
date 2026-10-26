@@ -25,13 +25,15 @@ export const getLearnState = cache(async (v: Viewer): Promise<LearnState> => {
     if (extra) q = extra(q as never) as typeof q;
     return q.limit(1);
   };
-  const [p, w, kg, c, push] = await Promise.all([
+  const [p, w, kg, c, push, phone] = await Promise.all([
     sb.from("profiles").select("learn_keys").eq("id", v.id).maybeSingle(),
     count("workouts"),
     count("weights"),
     sb.from("coach_messages").select("id", { count: "exact", head: true }).eq("user_id", v.id).eq("role", "user").limit(1),
     sb.from("push_subscriptions").select("endpoint", { count: "exact", head: true }).eq("user_id", v.id).limit(1),
+    // Avisos en la app nativa (0057). Sin la tabla, cuenta como cero.
+    sb.from("native_push_tokens").select("id", { count: "exact", head: true }).eq("user_id", v.id).limit(1),
   ]);
   const keys = !p.error && Array.isArray(p.data?.learn_keys) ? (p.data!.learn_keys as unknown[]).filter(isLearnKey) : [];
-  return { keys, workouts: w.count ?? 0, weights: kg.count ?? 0, coachMessages: c.count ?? 0, push: (push.count ?? 0) > 0, persisted: !p.error };
+  return { keys, workouts: w.count ?? 0, weights: kg.count ?? 0, coachMessages: c.count ?? 0, push: (push.count ?? 0) + (phone.error ? 0 : phone.count ?? 0) > 0, persisted: !p.error };
 });

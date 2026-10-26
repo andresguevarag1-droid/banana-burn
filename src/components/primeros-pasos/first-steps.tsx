@@ -12,6 +12,7 @@ import { EnablePush } from "@/components/notifications/enable-push";
 import { InstallHelper } from "@/components/install/install-helper";
 import { PP_CELEBRATED, PP_HIDDEN, STEP_KEY, checklistState, nextStep, type FirstStep, type StepSignals } from "@/lib/primeros-pasos";
 import { isNativeApp } from "@/lib/platform";
+import { nativePushAvailable } from "@/lib/native/push-flag";
 import { useLearnKeys } from "./learn-store";
 
 /** Evento para abrir el ayudante de instalación de la LinkApp desde otra pieza. Si nadie lo atiende (preventDefault), se abre aquí. */
@@ -19,8 +20,8 @@ export const INSTALL_EVENT = "bb:instalar";
 
 type Device = { pushSupported: boolean; mobile: boolean; standalone: boolean; pushOn: boolean };
 function readDevice(): Device {
-  // App de las tiendas: ya está instalada (sin paso de LinkApp) y sus avisos son nativos (llegan en la Fase 2 de la app).
-  if (isNativeApp()) return { pushSupported: false, mobile: false, standalone: true, pushOn: false };
+  // App de las tiendas: ya está instalada (sin paso de LinkApp) y sus avisos son nativos (src/lib/native/push.ts).
+  if (isNativeApp()) return { pushSupported: nativePushAvailable(), mobile: false, standalone: true, pushOn: false };
   try {
     const ua = navigator.userAgent;
     const ios = /iphone|ipad|ipod/i.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);

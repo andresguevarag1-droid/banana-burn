@@ -11,7 +11,7 @@ import { coachOf } from "@/lib/coaches";
 import { getDaily, prefetchDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, DeviceMobile, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, DeviceMobile, Heart, Heartbeat, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -27,7 +27,7 @@ import { OpenGuideButton } from "@/components/guide/open-guide";
 import { VoiceSettings } from "./voice-settings";
 import { getVoice } from "@/lib/voice-server";
 import { nfmt } from "@/lib/num";
-import { isNativeRequest } from "@/lib/platform-server";
+import { requestNativeAgent } from "@/lib/platform-server";
 
 function H({ icon: I, children, className = "" }: { icon: PhosphorIcon; children: React.ReactNode; className?: string }) {
   return <h2 className={`flex items-center gap-2 font-extrabold text-ink ${className}`}><span className="grid place-items-center size-8 shrink-0 rounded-lg bg-banana-soft text-banana-ink"><I weight="duotone" className="size-5" /></span>{children}</h2>;
@@ -45,8 +45,8 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
   const [a, data, ent, prefs, power, verif, tester, voice] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null), getVoice(v)]);
   const isTester = tester?.phase === "activo" || tester?.phase === "pronto";
-  // En la app de las tiendas no se ofrece instalar la LinkApp.
-  const native = await isNativeRequest();
+  // En la app de las tiendas no se ofrece instalar la LinkApp; en su lugar, conectar Salud (Conexiones).
+  const native = (await requestNativeAgent())?.platform ?? null;
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   let cp = { username: "andres", bio: "Bajando de 94 a 85 kg con Banana Burn", visibility: "seguidores" as "publico" | "seguidores" | "privado", share: true };
   if (!v.demo) cp = { username: (data?.username as string) ?? "", bio: (data?.bio as string) ?? "", visibility: (data?.visibility as typeof cp.visibility) ?? "seguidores", share: data?.share_workouts !== false };
@@ -121,7 +121,13 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
         <OpenGuideButton className="btn-ghost mt-3 h-11 text-sm px-4" />
       </section>
 
-      {!native && (
+      {native ? (
+        <section className="card p-5">
+          <H icon={native === "ios" ? Heart : Heartbeat}>Pasos y peso</H>
+          <p className="mt-1 text-sm text-muted">Conecta {native === "ios" ? "la app Salud" : "Health Connect"} y tus pasos, tu energía activa y tu peso entran solos a tu día.</p>
+          <Link href="/app/conexiones" className="btn-ghost mt-3 h-11 text-sm px-4">{native === "ios" ? "Conectar Salud" : "Conectar Health Connect"}<ArrowRight weight="bold" className="size-4" aria-hidden /></Link>
+        </section>
+      ) : (
         <section className="card p-5">
           <H icon={DeviceMobile}>Instalar app</H>
           <p className="mt-1 text-sm text-muted">Banana Burn es una LinkApp: se instala en tu pantalla de inicio, sin tiendas de apps. Así entras con un toque y recibes tus recordatorios.</p>

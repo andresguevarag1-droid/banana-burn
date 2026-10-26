@@ -1,7 +1,15 @@
 "use client";
 // Todo lo que toca el teléfono: vibración, pitidos, voz y pantalla encendida.
 // Cada función falla en silencio: si el navegador no lo soporta, el entreno sigue igual.
+// Dentro de la app nativa, vibración, pantalla encendida, aviso de fin de descanso y barra de estado usan el sistema
+// (src/lib/native/device.ts, cargado con import() solo en la app); en la web todo sigue igual.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { isNativeApp } from "@/lib/platform";
+
+type NativeDevice = typeof import("@/lib/native/device");
+let nativeDevice: Promise<NativeDevice> | null = null;
+/** Módulo nativo del reproductor, o null en la web. */
+const native = (): Promise<NativeDevice> | null => (isNativeApp() ? (nativeDevice ??= import("@/lib/native/device")) : null);
 
 export const store = {
   get<T>(k: string): T | null { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : null; } catch { return null; } },
@@ -9,7 +17,13 @@ export const store = {
   del(k: string) { try { localStorage.removeItem(k); } catch { /* */ } },
 };
 
-export const buzz = (p: number | number[]) => { try { navigator.vibrate?.(p); } catch { /* */ } };
+const webBuzz = (p: number | number[]) => { try { navigator.vibrate?.(p); } catch { /* */ } };
+/** Vibración: en la app, el motor del sistema (Haptics); si la app no lo trae o en la web, navigator.vibrate. */
+export const buzz = (p: number | number[]) => {
+  const n = native();
+  if (!n) return webBuzz(p);
+  void n.then((m) => m.haptic(p)).then((ok) => { if (!ok) webBuzz(p); }).catch(() => webBuzz(p));
+};
 
 /* ---------- Preferencias del reproductor ---------- */
 export type Prefs = { sound: boolean; voice: boolean; view: "focus" | "list" };
@@ -96,6 +110,13 @@ export function useWakeLock(active: boolean) {
   const lock = useRef<Sentinel | null>(null);
   useEffect(() => {
     if (!active) return;
+    // App nativa: KeepAwake del sistema (no se suelta al cambiar de app). Sin el plugin, el Wake Lock web de abajo.
+    const n = native();
+    if (n) {
+      let on = false;
+      void n.then((m) => m.keepAwake(true)).then((ok) => { on = ok; }).catch(() => {});
+      return () => { if (on) void n.then((m) => m.keepAwake(false)).catch(() => {}); };
+    }
     const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<Sentinel> } };
     if (!nav.wakeLock) return;
     let alive = true;
@@ -142,8 +163,21 @@ async function swReg() {
 export function useHiddenAlarm(at: number | null, title: string, body: string) {
   const text = useRef({ title, body });
   useEffect(() => { text.current = { title, body }; }, [title, body]);
+  // App nativa: notificación local programada al pasar a segundo plano (suena con la pantalla bloqueada, aunque el
+  // WebView esté dormido) y cancelada al volver. Solo con el permiso ya dado (RestAlertOffer lo pide en contexto).
   useEffect(() => {
-    if (at == null) return;
+    const n = native();
+    if (!n || at == null) return;
+    const sync = () => {
+      if (document.visibilityState === "hidden") void n.then((m) => m.scheduleAlarm(at, text.current.title, text.current.body)).catch(() => {});
+      else void n.then((m) => m.cancelAlarm()).catch(() => {});
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => { document.removeEventListener("visibilitychange", sync); void n.then((m) => m.cancelAlarm()).catch(() => {}); };
+  }, [at]);
+  useEffect(() => {
+    if (at == null || isNativeApp()) return;
     const ms = at - Date.now();
     if (ms <= 0) return;
     const t = setTimeout(() => {
@@ -163,6 +197,16 @@ export function useHiddenAlarm(at: number | null, title: string, body: string) {
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
+}
+
+/** Pantalla de fondo ink a pantalla completa (descanso, intervalos): en la app, hora y batería en claro. */
+export function useDarkStatusBar(dark: boolean) {
+  useEffect(() => {
+    const n = native();
+    if (!n || !dark) return;
+    void n.then((m) => m.darkStatusBar(true)).catch(() => {});
+    return () => { void n.then((m) => m.darkStatusBar(false)).catch(() => {}); };
+  }, [dark]);
 }
 
 /** Prefiere-movimiento-reducido, leído en vivo. */

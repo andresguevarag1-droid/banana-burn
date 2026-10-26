@@ -22,5 +22,6 @@ export const EXPORT_BY_USER = [
  * tarjeta; no es el número ni se puede revertir, y nadie la lee por la API.
  * Referidores (0051): affiliates, affiliate_payout_methods (y sus comisiones y pagos) van en `referidor`; affiliate_referrals
  * va descrita en `referidor_atribucion` (de quién viene la cuenta; el referidor solo ve nombre e inicial).
+ * native_push_tokens (0057) va sin el token: plataforma, versión de la app y fechas.
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals"] as const;

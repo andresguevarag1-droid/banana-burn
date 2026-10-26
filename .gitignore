@@ -49,3 +49,6 @@ next-env.d.ts
 /native/www/logo.svg
 /native/www/jakarta.woff2
 /.android-user
+
+# Firebase de Android (push): lo escribe el CI desde un secreto; en local, cada quien con el suyo
+/android/app/google-services.json

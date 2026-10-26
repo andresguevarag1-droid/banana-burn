@@ -45,9 +45,22 @@ export async function bootNative(navigate: Navigate) {
     else void App.minimizeApp();
   });
 
+  // Avisos push (si ya hay permiso, el token se renueva) y toques en un aviso. Al cerrar sesión, el teléfono deja de
+  // recibir los avisos de esa cuenta.
+  void import("./push").then((m) => m.bootPush(go)).catch(() => {});
+  watchSignOut();
+
+  // Salud (si la persona la conectó en Conexiones): pasos, energía activa y pesajes al abrir y al volver a la app, como
+  // mucho cada 30 min. Sin conectar no carga nada.
+  const salud = () => { if (localStorageHas("bb.salud.owner")) void import("./salud").then((m) => m.syncSalud()).catch(() => {}); };
+  salud();
+  await App.addListener("appStateChange", ({ isActive }) => { if (isActive) salud(); });
+
   // La web ya pintó: fuera el splash (si la red tarda, se va solo a los 3 s; capacitor.config.ts).
   requestAnimationFrame(() => { void SplashScreen.hide({ fadeOutDuration: 200 }); });
 }
+
+const localStorageHas = (k: string) => { try { return localStorage.getItem(k) !== null; } catch { return false; } };
 
 /**
  * La app nunca hace zoom (el diseño ya es grande y táctil) y usa toda la pantalla: el CSS respeta el notch y la barra
@@ -65,6 +78,25 @@ function lockViewport() {
   };
   apply();
   new MutationObserver(apply).observe(document.head, { childList: true, subtree: true, attributes: true, attributeFilter: ["content"] });
+}
+
+/**
+ * Cerrar sesión es un formulario POST a /auth/salir: antes de enviarlo se borra el token de avisos de este teléfono
+ * (si no, seguiría recibiendo los avisos de la cuenta anterior). Máximo 2 s de espera: cerrar sesión nunca se traba.
+ */
+function watchSignOut() {
+  document.addEventListener(
+    "submit",
+    (e) => {
+      const form = e.target as HTMLFormElement | null;
+      if (!form || form.dataset.pushCleared || !/\/auth\/salir$/.test(new URL(form.action, window.location.href).pathname)) return;
+      e.preventDefault();
+      form.dataset.pushCleared = "1";
+      const forget = import("./push").then((m) => m.forgetNativePush({ off: false })).catch(() => {});
+      void Promise.race([forget, new Promise((r) => setTimeout(r, 2000))]).then(() => form.submit());
+    },
+    true,
+  );
 }
 
 /** Enlaces y window.open: lo nuestro se queda, otra web va al navegador dentro de la app, WhatsApp y correo al sistema. */

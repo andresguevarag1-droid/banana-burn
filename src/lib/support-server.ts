@@ -7,7 +7,7 @@ import { createClient, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { sendFeedbackToTeam, sendSupportEmail } from "@/lib/email";
 import type { SupportMailKind } from "@/lib/email/templates";
-import { sendPush, type PushSub } from "@/lib/push";
+import { pushToUser } from "@/lib/push";
 import { errInfo } from "@/lib/security/log";
 import { CATEGORY_LABEL, OPEN_STATUSES, SUPPORT_STATUSES, slaLate, ticketNumber, type SupportCategory, type SupportStatus } from "@/lib/support";
 
@@ -173,8 +173,7 @@ const MAIL_KIND = (e: { kind: string; status: string | null }): SupportMailKind 
 async function pushTo(admin: SupabaseClient, userId: string, payload: { title: string; body: string; url: string; tag: string }): Promise<number> {
   const { data: prefs } = await admin.from("notification_prefs").select("push_reminders").eq("user_id", userId).maybeSingle();
   if (prefs?.push_reminders === false) return 0;
-  const { data: subs } = await admin.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", userId);
-  return subs?.length ? sendPush(admin, subs as PushSub[], payload) : 0;
+  return pushToUser(admin, userId, payload);
 }
 
 const PUSH_TITLE: Record<SupportMailKind, string> = {

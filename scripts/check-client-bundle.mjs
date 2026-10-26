@@ -21,6 +21,9 @@ export const SERVER_SECRETS = [
   "VAPID_PRIVATE_KEY",
   "REFERRAL_SECRET",
   "SENTRY_AUTH_TOKEN",
+  // Push de la app nativa (src/lib/push-native.ts)
+  "FCM_SERVICE_ACCOUNT_JSON",
+  "APNS_PRIVATE_KEY",
 ];
 
 /** Prefijos de llaves secretas reales: si aparecen en el cliente, alguien pegó una llave en código o en NEXT_PUBLIC_. */

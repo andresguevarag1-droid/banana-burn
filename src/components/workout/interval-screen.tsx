@@ -4,6 +4,7 @@ import { ExerciseMotion } from "@/components/exercise-motion";
 import { clock, type IvPhase } from "./logic";
 import { SIDE_LABEL } from "./sides";
 import { CountRing } from "./ui";
+import { useDarkStatusBar } from "./device";
 import css from "./workout.module.css";
 
 export type { IvPhase };
@@ -24,6 +25,7 @@ export function IntervalScreen({ title, phase, side, left, total, paused, cur, n
   const show = phase === "rest" || phase === "prep" ? next ?? cur : cur;
   const pause = phase === "prep" || phase === "switch";
   const bg = work ? "bg-banana text-ink" : phase === "ready" ? "bg-paper text-ink" : "bg-ink text-white";
+  useDarkStatusBar(!work && phase !== "ready");
   const sub = work ? "text-ink/70" : phase === "ready" ? "text-muted" : "text-white/65";
   const word = phase === "work" ? (side ? SIDE_LABEL[side] : "Trabaja") : phase === "rest" ? "Descansa" : phase === "prep" ? "Prepárate" : phase === "switch" ? "Cambia de lado" : "";
 

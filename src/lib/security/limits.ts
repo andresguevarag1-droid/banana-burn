@@ -50,6 +50,8 @@ export const RULES = {
   "carreras:guardar": { windows: [{ sec: HOUR, max: 20 }, { sec: DAY, max: 60 }], db: true, msg: "Guardaste muchas carreras seguidas. Espera un momento." },
   "progreso": { windows: [{ sec: HOUR, max: 120 }], db: true, msg: SLOW },
   "registro": { windows: [{ sec: 10 * MIN, max: 300 }], db: false, msg: SLOW },
+  // Salud en la app nativa: se sincroniza sola cada 30 min con la app abierta y con el botón "Actualizar".
+  "salud:sincronizar": { windows: [{ sec: HOUR, max: 30 }], db: true, msg: SLOW },
   "retos": { windows: [{ sec: HOUR, max: 60 }], db: true, msg: SLOW },
   "programas": { windows: [{ sec: HOUR, max: 30 }], db: true, msg: SLOW },
   // ── Panel (staff): una cuenta de staff comprometida no puede hacer daño masivo en minutos

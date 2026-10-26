@@ -4,6 +4,8 @@ import { BananaCoin, BananaFlame, BananaTrophy, CaretDown, Check, FlagCheckered,
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { EFFORTS, clock, type Effort } from "./logic";
 import { CountRing, GoldBanana, LevelMeter } from "./ui";
+import { useDarkStatusBar } from "./device";
+import { RestAlertOffer } from "./rest-alert-offer";
 import css from "./workout.module.css";
 
 export type RestInfo = {
@@ -49,6 +51,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
   onEffort: (e: Effort) => void; onAdjust: (d: number) => void; onSkip: () => void; onMinimize: () => void;
 }) {
   const go = useRef<HTMLButtonElement>(null);
+  useDarkStatusBar(true);
   const min = useRef(onMinimize);
   useEffect(() => { min.current = onMinimize; }, [onMinimize]);
   // El foco entra al descanso y vuelve al botón Terminé la serie al salir. Escape lo minimiza.
@@ -112,6 +115,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </div>
           )}
           {info.cheer && <p className="mt-2 text-center text-[14px] font-semibold text-white/75">{info.cheer}</p>}
+          <RestAlertOffer />
 
           {/* Recompensa */}
           <div className="mt-3 flex min-h-10 flex-wrap items-center justify-center gap-2">

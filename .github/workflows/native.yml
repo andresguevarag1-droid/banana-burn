@@ -75,6 +75,13 @@ jobs:
         run: |
           mkdir -p "$ANDROID_USER_HOME"
           echo "$KEYSTORE_B64" | base64 -d > "$ANDROID_USER_HOME/debug.keystore"
+      # Push en Android (FCM): google-services.json del proyecto de Firebase, como secreto (no va al repo). Sin él, el
+      # APK compila igual y la web no ofrece avisos (NEXT_PUBLIC_NATIVE_PUSH en Vercel).
+      - name: Firebase (google-services.json)
+        env:
+          GOOGLE_SERVICES_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        if: env.GOOGLE_SERVICES_B64 != ''
+        run: echo "$GOOGLE_SERVICES_B64" | base64 -d > android/app/google-services.json
       - name: Sincronizar Capacitor
         run: npm run native:sync
       - name: Compilar APK de debug

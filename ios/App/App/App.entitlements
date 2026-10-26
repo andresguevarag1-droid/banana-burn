@@ -8,6 +8,14 @@
 		<string>applinks:www.bananaburn.app</string>
 		<string>webcredentials:www.bananaburn.app</string>
 	</array>
+	<!-- Push (APNs). Xcode lo pasa a "production" al exportar para el App Store. -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Salud: solo lectura de pasos, peso y energía activa (src/lib/native/salud.ts). -->
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.access</key>
+	<array/>
 	<!-- "Continuar con Apple" nativo (src/lib/native/auth.ts). -->
 	<key>com.apple.developer.applesignin</key>
 	<array>

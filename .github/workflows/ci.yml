@@ -55,6 +55,8 @@ jobs:
       EMAIL_UNSUB_SECRET: ci_canary_unsub_secret_4a8b59
       VAPID_PRIVATE_KEY: ci_canary_vapid_private_6c0d71
       REFERRAL_SECRET: ci_canary_referral_secret_1f3e24
+      FCM_SERVICE_ACCOUNT_JSON: ci_canary_fcm_service_account_8d2c16
+      APNS_PRIVATE_KEY: ci_canary_apns_private_key_3a9e57
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

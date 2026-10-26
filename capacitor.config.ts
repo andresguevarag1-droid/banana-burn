@@ -11,7 +11,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  *   saber (por ejemplo, un plugin nuevo): una app vieja puede cargar una web nueva.
  */
 const PROD_URL = "https://www.bananaburn.app";
-const NATIVE_SHELL = 1;
+const NATIVE_SHELL = 2; // 2: push, notificaciones locales, haptics, keep-awake, Salud y GPS en segundo plano
 
 function origin(u: string | undefined): string | null {
   const raw = (u ?? "").trim().replace(/^(["'])(.*)\1$/, "$2");
@@ -50,10 +50,17 @@ const config: CapacitorConfig = {
   android: {
     appendUserAgent: ua("android"),
     backgroundColor: "#FFF8E3",
+    // GPS de carreras con la pantalla apagada: con el puente nuevo, Android deja de entregar ubicaciones a la web a los
+    // 5 minutos en segundo plano (background-geolocation, issue 89). El puente clásico se expone también a iframes de
+    // terceros: dentro de la app no se carga ninguno (los pagos web, el único caso, no existen en la app).
+    useLegacyBridge: true,
   },
   plugins: {
     // Login nativo: solo Google y Apple (sin el SDK de Facebook ni otros dentro de la app). src/lib/native/auth.ts
     SocialLogin: { providers: { google: true, apple: true, facebook: false, twitter: false } },
+    // Avisos: ícono de la llama (android/app/src/main/res/drawable/ic_stat_bananaburn.xml) en color banana.
+    LocalNotifications: { smallIcon: "ic_stat_bananaburn", iconColor: "#F2A100" },
+    PushNotifications: { presentationOptions: ["badge", "sound", "alert"] },
     SystemBars: { insetsHandling: "native", initialViewportFitValueHint: "cover", style: "LIGHT" },
     SplashScreen: {
       // La web la esconde apenas pinta (src/lib/native/boot.ts). El tope de 3 s cubre la pantalla sin conexión de Android,

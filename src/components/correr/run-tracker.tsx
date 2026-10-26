@@ -2,6 +2,8 @@
 // Registrar una carrera con el GPS del teléfono. Explica antes de pedir permiso, mantiene la pantalla encendida
 // (Wake Lock, se vuelve a pedir al regresar a la app), guarda cada punto en el teléfono (IndexedDB) por si se cierra
 // la pestaña, y al terminar manda los puntos al servidor, que recalcula todo. Los cortes de señal quedan como pausa.
+// En la app nativa (iOS y Android) mide también con la pantalla apagada o en otra app (src/lib/native/gps.ts), así que
+// no hace falta mantener la pantalla encendida.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CircleNotch, MapPin, Pause, Play, ShieldCheck, Stop } from "@/components/icons";
@@ -10,6 +12,8 @@ import { RunMap } from "./run-map";
 import { GuidePanel, useVoice } from "./run-guide-panel";
 import { kmCue, type Guide } from "@/lib/run-guide";
 import { GAP_MS, acceptPoint, haversine, currentPace, fmtDuration, fmtKm, fmtPace, runStats, type GeoPoint, type Track } from "@/lib/runs";
+import { hasNativePlugin, nativePlatform } from "@/lib/platform";
+import type { Fix } from "@/lib/native/gps";
 
 type Saved = { clientId: string; segments: Track; startedAt: number; activeMs: number };
 type Phase = "intro" | "denied" | "unsupported" | "waiting" | "running" | "paused" | "saving" | "error";
@@ -55,6 +59,12 @@ export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: st
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Saved | null>(null);
   const [lockOk, setLockOk] = useState(true);
+  /** App nativa con GPS en segundo plano (cascarón 2 o más). En la web siempre false. */
+  const [bgGps, setBgGps] = useState(false);
+  useEffect(() => { setBgGps(hasNativePlugin("BackgroundGeolocation")); }, []);
+  const bgGpsRef = useRef(false);
+  bgGpsRef.current = bgGps;
+  const nativeStop = useRef<(() => void) | null>(null);
 
   const run = useRef<Saved | null>(null);
   const watch = useRef<number | null>(null);
@@ -73,6 +83,7 @@ export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: st
   useEffect(() => { allRuns().then((xs) => { if (xs?.length) setPending(xs.sort((a, b) => b.startedAt - a.startedAt)[0]); }); }, []);
 
   const wakeLock = useCallback(async () => {
+    if (bgGpsRef.current) return; // en la app se puede bloquear el teléfono: el GPS sigue
     try {
       if (!("wakeLock" in navigator)) { setLockOk(false); return; }
       lock.current = await navigator.wakeLock.request("screen");
@@ -106,7 +117,7 @@ export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: st
     if (force || now - lastSave.current > 8000) { lastSave.current = now; void putRun({ ...r, segments: r.segments.map((s) => [...s]) }); }
   }, []);
 
-  const onPoint = useCallback((pos: GeolocationPosition) => {
+  const onPoint = useCallback((pos: Fix) => {
     const p: GeoPoint = { t: pos.timestamp || Date.now(), lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
     setHere({ lat: p.lat, lng: p.lng, acc: p.acc });
     if (phaseRef.current === "waiting" && p.acc <= 30) { setPhase("running"); phaseRef.current = "running"; }
@@ -133,12 +144,26 @@ export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: st
   }, [persist]);
 
   const startWatch = useCallback(() => {
-    if (watch.current != null) return;
+    if (watch.current != null || nativeStop.current) return;
+    if (bgGpsRef.current) {
+      nativeStop.current = () => {}; // marca de "arrancando" (evita dos vigías)
+      const denied = () => { setPhase("denied"); stopWatch(); };
+      void import("@/lib/native/gps").then((m) => m.watchRun(onPoint, denied)).then((stop) => {
+        // Si la carrera terminó mientras arrancaba, se apaga de una vez.
+        if (nativeStop.current) nativeStop.current = stop; else stop();
+      }).catch(() => { nativeStop.current = null; setPhase("unsupported"); });
+      return;
+    }
     watch.current = navigator.geolocation.watchPosition(onPoint, (e) => {
       if (e.code === e.PERMISSION_DENIED) { setPhase("denied"); stopWatch(); }
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 });
   }, [onPoint]);
-  const stopWatch = () => { if (watch.current != null) navigator.geolocation.clearWatch(watch.current); watch.current = null; };
+  const stopWatch = () => {
+    if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+    watch.current = null;
+    nativeStop.current?.();
+    nativeStop.current = null;
+  };
   useEffect(() => () => { stopWatch(); void lock.current?.release().catch(() => {}); }, []);
 
   const begin = (resume?: Saved) => {
@@ -225,9 +250,18 @@ export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: st
             <p className="text-body text-pretty">Distancia, tiempo y ritmo por kilómetro con el GPS de tu teléfono. Tu recorrido es privado: solo tú lo ves.</p>
             <ul className="space-y-2 text-sm text-body">
               <li className="flex gap-2"><MapPin weight="duotone" className="mt-0.5 size-5 shrink-0 text-[var(--run)]" />Al empezar te pedimos tu ubicación. Elige permitirla mientras usas la app.</li>
-              <li className="flex gap-2"><ShieldCheck weight="duotone" className="mt-0.5 size-5 shrink-0 text-[var(--run)]" />Deja la app abierta con la pantalla encendida: el navegador no mide con el teléfono bloqueado. El mapa guardado no muestra los primeros ni los últimos 200 m.</li>
+              {bgGps
+                ? <li className="flex gap-2"><ShieldCheck weight="duotone" className="mt-0.5 size-5 shrink-0 text-[var(--run)]" />Puedes bloquear el teléfono o abrir otra app: seguimos midiendo hasta que termines{nativePlatform() === "android" ? " (verás un aviso fijo de Banana Burn)" : ""}. El mapa guardado no muestra los primeros ni los últimos 200 m.</li>
+                : <li className="flex gap-2"><ShieldCheck weight="duotone" className="mt-0.5 size-5 shrink-0 text-[var(--run)]" />Deja la app abierta con la pantalla encendida: el navegador no mide con el teléfono bloqueado. El mapa guardado no muestra los primeros ni los últimos 200 m.</li>}
             </ul>
-            {phase === "denied" && (
+            {phase === "denied" && bgGps && (
+              <div role="alert" className="space-y-2 rounded-2xl bg-ember/10 p-4 text-sm text-ember-ink">
+                <p className="font-bold">Banana Burn no tiene permiso de ubicación.</p>
+                <p>{nativePlatform() === "ios" ? "En Ajustes, Banana Burn, Ubicación, elige “Al usar la app” y enciende “Ubicación exacta”." : "En Ajustes, Banana Burn, Permisos, Ubicación, elige “Permitir solo mientras se usa la app” y enciende “Usar ubicación precisa”."}</p>
+                <button type="button" onClick={() => void import("@/lib/native/gps").then((m) => m.openLocationSettings())} className="btn-ghost h-12">Abrir ajustes</button>
+              </div>
+            )}
+            {phase === "denied" && !bgGps && (
               <div role="alert" className="space-y-2 rounded-2xl bg-ember/10 p-4 text-sm text-ember-ink">
                 <p className="font-bold">El permiso de ubicación está bloqueado.</p>
                 <p><b>iPhone:</b> abre Ajustes, Privacidad y seguridad, Localización. Activa la localización, entra a Safari (o a tu navegador) y elige “Al usar la app” con “Ubicación exacta” encendida. Luego recarga esta página.</p>
@@ -254,6 +288,7 @@ export function RunTracker({ coachSrc, coachName, guide = null }: { coachSrc: st
       {showGuide && <GuidePanel guide={guide!} distM={stats.distanceM} timeS={moving} pace={phase === "running" && !autoPaused ? currentPace(cur) : null} splits={fullSplits} active={phase === "running" && !autoPaused} say={voice.say} voiceOn={voice.on} toggleVoice={voice.toggle} />}
       <RunMap track={segments} here={here} label="Mapa de tu carrera en vivo" />
       {phase === "waiting" && <p role="status" className="flex items-center gap-2 rounded-2xl bg-cream p-3 text-sm font-semibold text-ink"><CircleNotch weight="bold" className="size-5 animate-spin" />Buscando señal de GPS{here ? ` (precisión ${Math.round(here.acc)} m)` : ""}. Sal a un lugar abierto.</p>}
+      {phase === "waiting" && bgGps && here && here.acc > 500 && <p className="rounded-2xl bg-cream p-3 text-sm text-body">Tu ubicación parece aproximada. Enciende la ubicación exacta (precisa) para Banana Burn en los ajustes del teléfono.</p>}
       {!lockOk && <p className="rounded-2xl bg-cream p-3 text-sm text-body">Tu navegador no deja mantener la pantalla encendida: no bloquees el teléfono mientras corres.</p>}
       {autoPaused && phase === "running" && <p role="status" className="rounded-2xl bg-cream p-3 text-sm font-semibold text-ink">Pausa automática: sigue cuando vuelvas a moverte.</p>}
       <section className="card grid grid-cols-2 gap-4 p-5" aria-label="Datos de tu carrera" aria-live="off">

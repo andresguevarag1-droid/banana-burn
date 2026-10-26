@@ -8,7 +8,7 @@ import { EX, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from 
 import { parseVoice, type Voice } from "@/lib/voice";
 import { streakOf } from "@/lib/gamify";
 import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHour, liftFact, liftLine, localClock, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
-import { sendPush, type PushSub } from "@/lib/push";
+import { sendPush, type NativeToken, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import * as T from "@/lib/email/templates";
 import { forEachLimit } from "@/lib/concurrency";
@@ -130,7 +130,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const since = isoMinus(utcToday, 61);
   // 100 usuarios × 61 días pasan de las 1000 filas que devuelve Supabase por respuesta: se lee por páginas.
   // Sin esto, alguien activo quedaba fuera del corte, parecía inactivo y recibía "te extrañamos".
-  const [wk, dl, ws, logs, subs, gl] = await Promise.all([
+  const [wk, dl, ws, logs, subs, gl, phones] = await Promise.all([
     allPages((a, b) => admin.from("workouts").select("user_id,day").in("user_id", ids).gte("day", since).order("id").range(a, b)),
     allPages((a, b) => admin.from("daily_logs").select("user_id,day").in("user_id", ids).gte("day", since).order("user_id").order("day").range(a, b)),
     allPages((a, b) => admin.from("weights").select("user_id,day,kg").in("user_id", ids).gte("day", isoMinus(utcToday, 21)).order("user_id").order("day").range(a, b)),
@@ -138,6 +138,8 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
     allPages((a, b) => admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids).order("endpoint").range(a, b)),
     // Meta activa: personaliza los correos ("te faltan X kg"). Si falla, los correos salen sin la tarjeta de meta.
     allPages((a, b) => admin.from("goals").select("user_id,start_weight,goal_weight,goal_date").in("user_id", ids).eq("active", true).order("id").range(a, b)),
+    // Teléfonos con la app nativa (0057). Si la tabla aún no existe, el lote sigue solo con Web Push.
+    allPages((a, b) => admin.from("native_push_tokens").select("user_id,token,platform").in("user_id", ids).order("id").range(a, b)),
   ]);
   // Si falla una lectura, el lote se salta: con datos incompletos alguien activo parecería inactivo y recibiría "te extrañamos".
   const failed = [wk, dl, ws, logs, subs].find((r) => r.error);
@@ -153,6 +155,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const wsBy = group(ws.data as { user_id: string; day: string; kg: number }[]);
   const logBy = group(logs.data as { user_id: string; kind: string; local_day: string; pushes: number }[]);
   const subBy = group(subs.data as (PushSub & { user_id: string })[]);
+  const phoneBy = group((phones.error ? [] : phones.data) as (NativeToken & { user_id: string })[]);
   const goalBy = new Map<string, GoalRow>();
   for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
 
@@ -160,7 +163,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
   await forEachLimit(users, USER_CONCURRENCY, async (u) => {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
-    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, goalBy }); }
+    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
   });
 }
@@ -172,6 +175,7 @@ const USER_CONCURRENCY = 8;
 type Grouped = {
   wkBy: Map<string, { user_id: string; day: string }[]>; dlBy: Map<string, { user_id: string; day: string }[]>; wsBy: Map<string, { user_id: string; day: string; kg: number }[]>;
   logBy: Map<string, { user_id: string; kind: string; local_day: string; pushes: number }[]>; subBy: Map<string, (PushSub & { user_id: string })[]>;
+  phoneBy: Map<string, (NativeToken & { user_id: string })[]>;
   goalBy: Map<string, GoalRow>;
 };
 type GoalRow = { user_id: string; start_weight: number | string; goal_weight: number | string; goal_date: string | null };
@@ -186,7 +190,7 @@ export function goalFor(g: GoalRow | undefined, weights: { day: string; kg: numb
   return { start, current: Number.isFinite(current) ? current : start, goal, date: g.goal_date };
 }
 
-async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, goalBy }: Grouped) {
+async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy }: Grouped) {
   {
     const prefs = prefsOf.get(u.id)!;
     const c = localClock(now, prefs.timezone);
@@ -200,6 +204,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const plan = planDay(c.dow, 0, sched, { equipment: eq, sex: u.sex });
     const streak = streakOf(active, c.iso).days;
     const userSubs = subBy.get(u.id) ?? [];
+    const userPhones = (phoneBy.get(u.id) ?? []).map((t) => ({ token: t.token, platform: t.platform }));
 
     const decisions = decide({
       now, prefs, mode,
@@ -210,7 +215,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       daysInactive: last ? daysBetween(last, c.iso) : null,
       sentToday: todayLogs.map((l) => l.kind),
       pushesToday: todayLogs.reduce((a, l) => a + (l.pushes ?? 0), 0),
-      hasPushSubscription: userSubs.length > 0,
+      hasPushSubscription: userSubs.length + userPhones.length > 0,
       hasEmail: true,
     });
     if (!decisions.length) return;
@@ -237,7 +242,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       const copy = copyFor(d.kind, { name, routine: plan.name, mins: plan.mins, streak, trainingDay: plan.tpl !== null, voice, hook: plan.hook, lift, workouts: weekly?.workouts, kgDelta: weekly && weekly.kgStart != null && weekly.kgEnd != null ? weekly.kgEnd - weekly.kgStart : null, day: c.iso });
 
       if (d.inapp) await admin.from("notifications").insert({ user_id: u.id, kind: d.kind, title: copy.title, body: copy.body, url: copy.url });
-      if (d.push) stats.push += await sendPush(admin, userSubs, { ...copy, tag: d.kind });
+      if (d.push) stats.push += await sendPush(admin, { web: userSubs, native: userPhones }, { ...copy, tag: d.kind });
       if (d.email) {
         const to = await getEmail();
         if (to) {

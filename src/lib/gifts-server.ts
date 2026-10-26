@@ -6,7 +6,7 @@ import { createClient, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { planLabel, toGiftView, type GiftView } from "@/lib/gifts";
 import { sendGiftEmail } from "@/lib/email";
-import { sendPush, type PushSub } from "@/lib/push";
+import { pushToUser } from "@/lib/push";
 import { errInfo } from "@/lib/security/log";
 
 const COLS = "id,source,plan,months,message,starts_at,expires_at,revoked_at,seen_at,notified_at";
@@ -69,8 +69,7 @@ export async function deliverPendingGifts(opts: { userId?: string; limit?: numbe
       if (mail?.ok) out.email++;
       const { data: prefs } = await admin.from("notification_prefs").select("push_reminders").eq("user_id", g.user_id).maybeSingle();
       if (prefs?.push_reminders === false) continue;
-      const { data: subs } = await admin.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", g.user_id);
-      if (subs?.length) out.push += await sendPush(admin, subs as PushSub[], { title: view.title, body: startsNow ? "Ya está activo en tu cuenta." : "Se suma al final de tu acceso actual.", url: "/app/suscripcion", tag: `regalo-${g.id}` });
+      out.push += await pushToUser(admin, g.user_id, { title: view.title, body: startsNow ? "Ya está activo en tu cuenta." : "Se suma al final de tu acceso actual.", url: "/app/suscripcion", tag: `regalo-${g.id}` });
     }
   } catch (e) {
     console.error("[regalos] entrega", errInfo(e));
