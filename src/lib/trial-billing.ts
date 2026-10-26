@@ -42,7 +42,7 @@ import {
   firstChargeMinor, idemKeyFor, inReview, isDue, onCardSaved, promoApplies, promoFor, reminderDue, reminderLine, scheduleFor, type CardRow, type CardSavedPlan, type ChargeView, type TrialChargeRow,
 } from "@/lib/trial";
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
-import { sendPush, type PushSub } from "@/lib/push";
+import { pushToUser } from "@/lib/push";
 import { errInfo } from "@/lib/security/log";
 
 export const CHARGE_COLS = "id,user_id,idem_key,kind,plan,billing,amount_minor,promo,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
@@ -101,8 +101,7 @@ async function pushTo(db: SupabaseClient, userId: string, payload: { title: stri
   try {
     const { data: prefs } = await db.from("notification_prefs").select("push_reminders").eq("user_id", userId).maybeSingle();
     if (prefs?.push_reminders === false) return 0;
-    const { data: subs } = await db.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", userId);
-    return subs?.length ? await sendPush(db, subs as PushSub[], payload) : 0;
+    return await pushToUser(db, userId, payload);
   } catch (e) {
     log("push falló", { userId, error: errInfo(e) });
     return 0;

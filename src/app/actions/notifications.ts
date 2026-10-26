@@ -4,7 +4,7 @@ import { createClient, getViewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { DEFAULT_PREFS, cronModeFrom, isHHMM, isValidTimeZone, type Prefs } from "@/lib/notify";
 import { isEmailConfigured } from "@/lib/email/send";
-import { isPushConfigured, sendPush, type PushSub } from "@/lib/push";
+import { isPushConfigured, sendPush, type NativeToken, type PushSub } from "@/lib/push";
 import { limitError } from "@/lib/security/limits";
 
 export type InAppNotification = { id: number; kind: string; title: string; body: string | null; url: string | null; read_at: string | null; created_at: string };
@@ -64,10 +64,13 @@ export async function sendTestNotification(): Promise<{ ok: boolean; demo?: bool
   const body = "Te avisaremos qué te toca entrenar y cuándo tu racha necesita un empujón.";
   const ins = await sb.from("notifications").insert({ user_id: v.id, kind: "test", title, body, url: "/app" });
   if (ins.error) return { ok: false, push: 0, devices: 0, error: /Demasiadas/.test(ins.error.message) ? "Ya probaste varias veces. Intenta en una hora." : "No pudimos enviar el aviso de prueba. Intenta de nuevo.", retryIn: TEST_COOLDOWN_S };
-  const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", v.id);
-  const list = (subs ?? []) as PushSub[];
-  const push = await sendPush(adminClient(), list, { title, body, url: "/app", tag: "test" });
-  return { ok: true, push, devices: list.length, retryIn: TEST_COOLDOWN_S };
+  const [{ data: subs }, { data: phones }] = await Promise.all([
+    sb.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", v.id),
+    sb.from("native_push_tokens").select("token,platform").eq("user_id", v.id),
+  ]);
+  const devices = { web: (subs ?? []) as PushSub[], native: (phones ?? []) as NativeToken[] };
+  const push = await sendPush(adminClient(), devices, { title, body, url: "/app", tag: "test" });
+  return { ok: true, push, devices: devices.web.length + devices.native.length, retryIn: TEST_COOLDOWN_S };
 }
 
 const DEMO_ITEMS = async (): Promise<InAppNotification[]> => {

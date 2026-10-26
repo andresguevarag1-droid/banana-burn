@@ -45,6 +45,11 @@ export async function bootNative(navigate: Navigate) {
     else void App.minimizeApp();
   });
 
+  // Avisos push (si ya hay permiso, el token se renueva) y toques en un aviso. Al cerrar sesión, el teléfono deja de
+  // recibir los avisos de esa cuenta.
+  void import("./push").then((m) => m.bootPush(go)).catch(() => {});
+  watchSignOut();
+
   // La web ya pintó: fuera el splash (si la red tarda, se va solo a los 3 s; capacitor.config.ts).
   requestAnimationFrame(() => { void SplashScreen.hide({ fadeOutDuration: 200 }); });
 }
@@ -65,6 +70,25 @@ function lockViewport() {
   };
   apply();
   new MutationObserver(apply).observe(document.head, { childList: true, subtree: true, attributes: true, attributeFilter: ["content"] });
+}
+
+/**
+ * Cerrar sesión es un formulario POST a /auth/salir: antes de enviarlo se borra el token de avisos de este teléfono
+ * (si no, seguiría recibiendo los avisos de la cuenta anterior). Máximo 2 s de espera: cerrar sesión nunca se traba.
+ */
+function watchSignOut() {
+  document.addEventListener(
+    "submit",
+    (e) => {
+      const form = e.target as HTMLFormElement | null;
+      if (!form || form.dataset.pushCleared || !/\/auth\/salir$/.test(new URL(form.action, window.location.href).pathname)) return;
+      e.preventDefault();
+      form.dataset.pushCleared = "1";
+      const forget = import("./push").then((m) => m.forgetNativePush({ off: false })).catch(() => {});
+      void Promise.race([forget, new Promise((r) => setTimeout(r, 2000))]).then(() => form.submit());
+    },
+    true,
+  );
 }
 
 /** Enlaces y window.open: lo nuestro se queda, otra web va al navegador dentro de la app, WhatsApp y correo al sistema. */

@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createClient, type Viewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { notifyInApp } from "@/lib/email";
-import { sendPush, type PushSub } from "@/lib/push";
+import { hasDevices, loadDevices, sendPush } from "@/lib/push";
 import { DEFAULT_PREFS, inQuietHours, localClock } from "@/lib/notify";
 import { errInfo } from "@/lib/security/log";
 import { NUDGE_COPY, needsNudge, nudgeRelease, releaseStart } from "@/lib/novedades";
@@ -59,27 +59,26 @@ export async function nudgeUnseenNews(opts: { now?: Date; limit?: number; deadli
       const due = (data as { id: string; timezone: string | null; created_at: string | null; news_seen: string | null; news_seen_at: string | null }[]).filter((p) => needsNudge(r, p));
       if (due.length) {
         const ids = due.map((p) => p.id);
-        const [{ data: prefRows }, { data: subRows }] = await Promise.all([
+        const [{ data: prefRows }, devices] = await Promise.all([
           admin.from("notification_prefs").select("user_id,push_reminders,quiet_start,quiet_end,timezone").in("user_id", ids),
-          admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids),
+          // Navegadores con Web Push y teléfonos con la app nativa (0057).
+          loadDevices(admin, ids),
         ]);
         const prefs = new Map(((prefRows ?? []) as { user_id: string; push_reminders: boolean | null; quiet_start: string | null; quiet_end: string | null; timezone: string | null }[]).map((x) => [x.user_id, x]));
-        const subs = new Map<string, PushSub[]>();
-        for (const s of (subRows ?? []) as (PushSub & { user_id: string })[]) subs.set(s.user_id, [...(subs.get(s.user_id) ?? []), { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth }]);
         for (const p of due) {
           if (out.claimed >= limit || (opts.deadline && Date.now() > opts.deadline)) { out.partial = true; break; }
           const pr = prefs.get(p.id);
           const tz = pr?.timezone || p.timezone || DEFAULT_PREFS.timezone;
           const quiet = inQuietHours(localClock(now, tz), pr ? pr.quiet_start : DEFAULT_PREFS.quiet_start, pr ? pr.quiet_end : DEFAULT_PREFS.quiet_end);
           if (quiet) continue;
-          const wantsPush = pr?.push_reminders !== false && (subs.get(p.id)?.length ?? 0) > 0;
+          const wantsPush = pr?.push_reminders !== false && hasDevices(devices.get(p.id));
           const { data: claimed, error: claimErr } = await admin.from("notification_log")
             .upsert({ user_id: p.id, kind: "novedades", local_day: r.date, channels: wantsPush ? ["inapp", "push"] : ["inapp"], pushes: wantsPush ? 1 : 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
             .select("id");
           if (claimErr || !claimed?.length) continue;
           out.claimed++;
           if (await notifyInApp(p.id, { kind: "novedades", ...copy })) out.inApp++;
-          if (wantsPush) out.push += await sendPush(admin, subs.get(p.id)!, { ...copy, tag: `novedades-${r.id}` }).catch(() => 0);
+          if (wantsPush) out.push += await sendPush(admin, devices.get(p.id)!, { ...copy, tag: `novedades-${r.id}` }).catch(() => 0);
         }
       }
       if (data.length < PAGE || out.partial) break;

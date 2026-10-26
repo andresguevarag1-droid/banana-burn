@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BananaFlame, Barbell, Bell, BellSlash, Check, Export, Moon, PlusSquare } from "@/components/icons";
 import { useIsNativeApp } from "@/components/platform-provider";
+import { NativePush } from "./native-push";
 
 type State = "checking" | "unsupported" | "ios-install" | "not-configured" | "default" | "denied" | "subscribed" | "working";
 
@@ -98,8 +99,9 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
   const markInstalled = () => { setInstallDone(true); try { localStorage.setItem(INSTALL_DONE_KEY, "1"); } catch { /* */ } };
   const snooze = () => { setSnoozed(true); try { localStorage.setItem(SNOOZE_KEY, String(Date.now())); } catch { /* */ } };
 
-  // App nativa: sus avisos son nativos (Fase 2 de la app, docs/app-nativa.md). Web Push no funciona dentro de la app.
-  if (native || state === "checking") return null;
+  // App nativa: avisos del sistema (FCM y APNs). Web Push no funciona dentro de la app.
+  if (native) return <NativePush hideWhenSnoozed={hideWhenSnoozed} onChange={onChange} hourly={hourly} />;
+  if (state === "checking") return null;
   if (hideWhenSnoozed && (snoozed || state === "subscribed" || state === "unsupported" || state === "not-configured" || state === "denied")) return null;
 
   if (state === "subscribed") {

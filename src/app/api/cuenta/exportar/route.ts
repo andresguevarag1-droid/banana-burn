@@ -24,16 +24,19 @@ export async function GET() {
     // Tarjeta guardada (0026): solo lo que guardamos y la persona puede leer. El número de la tarjeta lo tiene ONVO.
     const card = await sb.from("payment_methods").select("brand,last4,exp_month,exp_year,status,created_at,updated_at").eq("user_id", v.id);
     out.payment_methods = card.error ? { error: "no disponible" } : card.data ?? [];
-    const [fl1, fl2, rp, push] = await Promise.all([
+    const [fl1, fl2, rp, push, nativePush] = await Promise.all([
       sb.from("follows").select("*").eq("follower", v.id),
       sb.from("follows").select("*").eq("followee", v.id),
       sb.from("reports").select("id,target_type,target_id,reason,details,status,created_at").eq("reporter", v.id),
       // Sin las llaves criptográficas del navegador: solo qué dispositivos tienen avisos.
       sb.from("push_subscriptions").select("id,user_agent,created_at,last_used_at").eq("user_id", v.id),
+      // App nativa (0057): qué teléfonos tienen avisos, sin el token (es una llave de envío del teléfono).
+      sb.from("native_push_tokens").select("id,platform,app_version,created_at,last_used_at").eq("user_id", v.id),
     ]);
     out.follows = { sigues: fl1.data ?? [], te_siguen: fl2.data ?? [] };
     out.reports = rp.data ?? [];
     out.push_subscriptions = push.data ?? [];
+    out.native_push_tokens = nativePush.error ? [] : nativePush.data ?? [];
     // Referidos (0025): a quién invitaste (solo inicial y estado), tus recompensas y lo que guardamos para evitar abusos.
     const [mine, rewards] = await Promise.all([sb.rpc("my_referrals"), sb.from("referral_rewards").select("group_no,months,plan,created_at,upgraded_at,revoked_at").eq("referrer", v.id)]);
     out.referidos = { invitados: mine.data ?? [], recompensas: rewards.data ?? [] };

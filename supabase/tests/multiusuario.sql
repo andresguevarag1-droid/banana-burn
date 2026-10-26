@@ -99,7 +99,7 @@ begin
     ('public.meals','user_id'), ('public.workouts','user_id'), ('public.workout_sets','user_id'), ('public.coach_messages','user_id'),
     ('public.xp_events','user_id'), ('public.coach_usage','user_id'), ('public.subscriptions','user_id'), ('public.billing_customers','user_id'),
     ('public.payment_events','user_id'), ('public.comp_grants','user_id'), ('public.trial_charges','user_id'), ('public.notification_prefs','user_id'),
-    ('public.push_subscriptions','user_id'), ('public.notification_log','user_id'), ('public.notifications','user_id'),
+    ('public.push_subscriptions','user_id'), ('public.native_push_tokens','user_id'), ('public.notification_log','user_id'), ('public.notifications','user_id'),
     ('public.progress_photos','user_id'), ('public.user_challenges','user_id'), ('public.challenge_checkins','user_id'),
     ('public.device_interest','user_id'), ('public.posts','user_id'), ('public.comments','user_id'), ('public.kudos','user_id'),
     ('public.follows','follower'), ('public.reports','reporter'), ('public.saved_foods','user_id'), ('public.user_recipes','user_id')
@@ -182,6 +182,7 @@ begin
   insert into public.comp_grants (user_id, plan, expires_at, revoked_at) values (u, 'entreno', now() + interval '1 day', now());
   insert into public.notification_prefs (user_id) values (u);
   insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values (u, 'https://fcm.googleapis.com/fcm/send/' || n, 'llave', 'secreto');
+  insert into public.native_push_tokens (user_id, platform, token) values (u, 'android', 'fcm-token-de-prueba-' || n || '-0123456789abcdef');
   insert into public.notification_log (user_id, kind, local_day) values (u, 'recordatorio', old);
   insert into public.notifications (user_id, kind, title) values (u, 'semanal', 'Tu semana');
   insert into public.progress_photos (user_id, day, path) values (u, old, u || '/semilla.jpg');
@@ -291,12 +292,14 @@ set role authenticated; select bbtest.login('P');
 select bbtest.ok('soporte no lee pesos ajenos', bbtest.num('select 1 from public.weights') = 0);
 select bbtest.ok('soporte no lee chats del coach', bbtest.num('select 1 from public.coach_messages') = 0);
 select bbtest.ok('soporte no lee llaves de push', bbtest.num('select 1 from public.push_subscriptions') = 0);
+select bbtest.ok('0057: soporte no lee tokens de la app', bbtest.num('select 1 from public.native_push_tokens') = 0);
 select bbtest.zero('soporte no edita perfiles ajenos por la API', $q$ update public.profiles set plan = 'completo' where id = 'a1a1a1a1-0000-4000-8000-0000000000a1' $q$);
 reset role;
 set role authenticated; select bbtest.login('S');
 select bbtest.ok('admin lee pesos (datos de salud para coaching)', bbtest.num($q$ select 1 from public.weights where user_id = 'a1a1a1a1-0000-4000-8000-0000000000a1' $q$) = 1);
 select bbtest.ok('admin NO lee chats del coach', bbtest.num('select 1 from public.coach_messages') = 0);
 select bbtest.ok('admin NO lee llaves de push', bbtest.num('select 1 from public.push_subscriptions') = 0);
+select bbtest.ok('0057: admin NO lee tokens de la app', bbtest.num('select 1 from public.native_push_tokens') = 0);
 select bbtest.fails('admin no cambia planes por la API', $q$ update public.profiles set plan = 'completo' where id = 'a1a1a1a1-0000-4000-8000-0000000000a1' $q$, '42501');
 select bbtest.fails('admin no cambia roles por la API', $q$ update public.profiles set role = 'superadmin' where id = auth.uid() $q$, '42501');
 select bbtest.ok('admin sí regala cortesía por RPC', (select public.admin_grant_comp('d4d4d4d4-0000-4000-8000-0000000000d4', 'completo', now() + interval '30 days', 'prueba')) > 0);
@@ -2316,6 +2319,26 @@ update public.comp_grants set revoked_at = now() where user_id = bbtest.u('B') a
 update public.profiles p set full_name = a.meta -> 'before' ->> 'full_name', country = a.meta -> 'before' ->> 'country'
   from public.audit_log a where p.id = bbtest.u('B') and a.action = 'user.profile_update' and a.target = p.id::text;
 delete from public.xp_events where user_id = bbtest.u('B') and kind = 'ajuste';
+
+-- ───────────── 0057: push de la app nativa ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0057: A ve solo su token', bbtest.num('select 1 from public.native_push_tokens') = 1);
+select bbtest.fails('0057: plataforma desconocida no', $q$ insert into public.native_push_tokens (user_id, platform, token) values (bbtest.u('A'), 'windows', 'token-de-prueba-0123456789abcdef-xyz') $q$, '23514');
+select bbtest.fails('0057: token corto o raro no', $q$ insert into public.native_push_tokens (user_id, platform, token) values (bbtest.u('A'), 'ios', 'abc <script>') $q$, '23514');
+select bbtest.fails('0057: A no registra un token a nombre de B', $q$ insert into public.native_push_tokens (user_id, platform, token) values (bbtest.u('B'), 'ios', 'token-ajeno-0123456789abcdef0123456789') $q$, '42501');
+do $$ begin
+  for i in 1..12 loop
+    insert into public.native_push_tokens (user_id, platform, token) values (bbtest.u('A'), 'ios', 'apns' || lpad(i::text, 2, '0') || repeat('a', 60));
+  end loop;
+end $$;
+select bbtest.ok('0057: tope de 10 teléfonos por persona', bbtest.num('select 1 from public.native_push_tokens') = 10);
+select bbtest.ok('0057: el tope borra los más viejos', bbtest.num($q$ select 1 from public.native_push_tokens where token like 'apns12%' $q$) = 1);
+delete from public.native_push_tokens where token like 'apns%';
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0057: anon no lee tokens', 'select * from public.native_push_tokens', '42501');
+reset role;
+select bbtest.ok('0057: los tokens de B siguen intactos', (select count(*) = 1 from public.native_push_tokens where user_id = bbtest.u('B')));
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
