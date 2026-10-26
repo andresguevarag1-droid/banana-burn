@@ -14,7 +14,9 @@ type Ex = { name: string; anim?: string; setNo: number; sets: number; exNo: numb
  * TRABAJA = banana, DESCANSA = tinta, PREPÁRATE y CAMBIA DE LADO = tinta con el aro naranja. Avanza solo.
  * Por lado (`side`), el trabajo dice qué lado va: "Lado derecho", cambio de lado, "Lado izquierdo".
  */
-export function IntervalScreen({ title, phase, side, left, total, paused, cur, next, plan, done, all, elapsed, workSec, restSec, onStart, onPause, onResume, onSkip, onExit, onFinish }: {
+export function IntervalScreen({ title, phase, side, left, total, paused, cur, next, plan, done, all, elapsed, workSec, restSec, leftLine, onStart, onPause, onResume, onSkip, onExit, onFinish }: {
+  /** "Faltan unos 8 min". */
+  leftLine?: string;
   title: string; phase: IvPhase; side?: 1 | 2; left: number; total: number; paused: boolean; cur: Ex | null; next: Ex | null; plan: { name: string; anim?: string; sets: number; done: number; perSide?: boolean }[]; done: number; all: number; elapsed: number; workSec: number; restSec: number;
   onStart: () => void; onPause: () => void; onResume: () => void; onSkip: () => void; onExit: () => void; onFinish: () => void;
 }) {
@@ -33,7 +35,8 @@ export function IntervalScreen({ title, phase, side, left, total, paused, cur, n
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between text-xs font-bold tabular-nums">
               <span className={sub}>{done} de {all} intervalos</span>
-              <span className={`inline-flex items-center gap-1 ${sub}`}><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>
+              {leftLine && phase !== "ready" ? <span className={sub}>{leftLine}</span>
+                : <span className={`inline-flex items-center gap-1 ${sub}`}><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>}
             </div>
             <div aria-hidden className={`mt-1.5 h-2 rounded-full overflow-hidden ${work ? "bg-ink/15" : phase === "ready" ? "bg-line" : "bg-white/15"}`}>
               <div className={`bar-fill h-full w-full rounded-full ${work || phase === "ready" ? "bg-ink" : "bg-banana"}`} style={{ transform: `translateX(${(done / Math.max(1, all) - 1) * 100}%)` }} />
@@ -61,7 +64,9 @@ export function IntervalScreen({ title, phase, side, left, total, paused, cur, n
       ) : (
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center px-5 py-4 text-center">
-            <p key={`${phase}-${side ?? 0}`} aria-hidden className={`${css.phase} ${word.length > 10 ? "text-[38px]" : "text-[44px]"} leading-none font-extrabold tracking-tight`}>{word}</p>
+            <p key={`${phase}-${side ?? 0}`} aria-hidden className={`${css.phase} ${word.length > 10 ? "text-[36px]" : "text-[48px]"} leading-none font-extrabold tracking-tight uppercase`}>{word}</p>
+            {cur && (phase === "work" || phase === "switch") && <p className={`mt-2 text-xl font-extrabold tabular-nums ${work ? "text-ink" : "text-white"}`}>Ronda {cur.setNo} de {cur.sets}{phase === "work" ? `: ${total} s fuerte` : ""}</p>}
+            {phase === "rest" && <p className="mt-2 text-xl font-extrabold tabular-nums text-white">Respira. Recupera el aire.</p>}
             <div className="mt-4">
               <CountRing left={left} total={total} size={256} stroke={16}
                 track={work ? "rgb(27 21 5 / .14)" : "rgb(255 255 255 / .12)"} color={work ? "#1B1505" : pause ? "var(--color-ember)" : "var(--color-banana)"}
@@ -81,6 +86,7 @@ export function IntervalScreen({ title, phase, side, left, total, paused, cur, n
                 </div>
               </div>
             )}
+            {work && next && <p className="mt-3 text-[15px] font-bold text-ink/75">Después: {next.name}{next.name === cur?.name ? `, ronda ${next.setNo}` : ""}</p>}
           </div>
         </div>
       )}

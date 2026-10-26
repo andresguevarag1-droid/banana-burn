@@ -153,6 +153,9 @@ export function forEquipment(id: ExerciseId, eq: Equipment = "gym", level: Level
 }
 
 /** Ejercicios para entrenos exprés (sin equipo, en cualquier lugar). */
+/** Ejercicios a una pierna o un brazo: la meta es por lado (8 reps = 8 de cada lado). */
+export const PER_SIDE = new Set<string>(["bulgarian", "dbrow", "slrdl", "suitcase"]);
+
 export const EXPRESS_POOL: { id: ExerciseId; kind: "piernas" | "empuje" | "core" | "cardio" | "tiron" }[] = [
   { id: "bwsquat", kind: "piernas" }, { id: "pushup", kind: "empuje" }, { id: "mountain", kind: "core" }, { id: "lunge", kind: "piernas" },
   { id: "plank", kind: "core" }, { id: "burpee", kind: "cardio" }, { id: "glutebridge", kind: "piernas" }, { id: "pikepush", kind: "empuje" },
