@@ -691,7 +691,7 @@ export function pagosReferidoresEquipo(d: { period: string; count: number; total
 
 // ───────────── Condominios afiliados (0053): fin del mes gratis del residente ─────────────
 
-/** El mes gratis que regaló el condominio termina pronto y el condominio todavía no eligió plan. Transaccional. */
+/** El mes gratis que regaló el condominio termina pronto: el residente decide si sigue con un plan individual. Transaccional. */
 export function condominioMesTermina(d: { name: string; condo: string; until: string }): Email {
   const n = firstName(d.name);
   const day = longDate(d.until);
@@ -699,8 +699,8 @@ export function condominioMesTermina(d: { name: string; condo: string; until: st
   const lead = `${n}, el mes gratis que te regaló ${d.condo} termina el ${day}.`;
   const hero: Hero = { eyebrow: "Banana Burn para condominios", title: esc(subject), lead: esc(lead) };
   const lines = [
-    "Si el condominio elige un plan para sus residentes, tu acceso sigue solo y no tienes que hacer nada.",
-    "Si no, puedes seguir con un plan individual desde Mi plan o dejar de usar la app. No te cobramos nada automáticamente.",
+    "Si quieres seguir, elige tu plan individual desde Mi plan. Si no, puedes dejar de usar la app.",
+    "No te cobramos nada automáticamente.",
     "Tu historial, tus récords y tu plan se quedan guardados.",
   ];
   const body = list(lines.map((l) => `${dot()}${esc(l)}`)) + button("Ver mi plan", "/app/suscripcion");
@@ -746,12 +746,12 @@ export function condominioRecibido(d: { name: string; org: string }): Email {
     ["Te enviamos el enlace", "Te confirmamos el día y la hora y te enviamos el enlace de la videollamada."],
     ["Reunión virtual de 30 minutos", "Te mostramos el sistema por dentro, cómo se implementa en el condominio y resolvemos las dudas."],
     ["Primer mes gratis para todos", "Si deciden sumarse, te damos el enlace y el afiche con QR del condominio, y cada residente tiene el primer mes gratis con todo incluido."],
-    ["El condominio elige el plan", "Al terminar el mes, el condominio elige el plan que quiere pagar para sus residentes."],
+    ["Cada residente decide", "Al terminar el mes, cada residente decide si sigue con su plan individual. La administración y el condominio no pagan nada."],
   ]) + small(`¿Necesitas algo antes? Escríbenos a ${SUPPORT}.`);
   const reason = "Recibes este correo porque pediste una reunión desde la página de Banana Burn para condominios.";
   return {
     subject, preheader: lead,
     html: layout({ preheader: lead, hero, body, reason }),
-    text: textLayout([subject, "", lead, "", "Qué pasa ahora:", "1. Te confirmamos el día y la hora y te enviamos el enlace de la videollamada.", "2. Reunión virtual de 30 minutos: te mostramos el sistema y cómo se implementa.", "3. Si deciden sumarse, el primer mes es gratis para todos los residentes.", "4. Al terminar el mes, el condominio elige el plan que quiere pagar para sus residentes.", "", `¿Necesitas algo antes? ${SUPPORT}`], undefined, reason),
+    text: textLayout([subject, "", lead, "", "Qué pasa ahora:", "1. Te confirmamos el día y la hora y te enviamos el enlace de la videollamada.", "2. Reunión virtual de 30 minutos: te mostramos el sistema y cómo se implementa.", "3. Si deciden sumarse, el primer mes es gratis para todos los residentes.", "4. Al terminar el mes, cada residente decide si sigue con su plan individual. La administración y el condominio no pagan nada.", "", `¿Necesitas algo antes? ${SUPPORT}`], undefined, reason),
   };
 }

@@ -124,7 +124,7 @@ export async function syncCondoMembers(db: SupabaseClient, c: CondoRow, now = ne
         const { data: claimed } = await db.from("condo_members").update({ ending_notified_at: now.toISOString() }).eq("id", m.id).is("ending_notified_at", null).select("id");
         if (!claimed?.length) continue;
         const { sendCondoEndingEmail, notifyInApp } = await import("@/lib/email");
-        await notifyInApp(m.user_id, { kind: "condominio", title: "Tu mes gratis del condominio termina pronto", body: "Si el condominio no continúa, puedes seguir con un plan individual.", url: "/app/suscripcion" }).catch(() => false);
+        await notifyInApp(m.user_id, { kind: "condominio", title: "Tu mes gratis del condominio termina pronto", body: "Si quieres seguir, elige tu plan individual.", url: "/app/suscripcion" }).catch(() => false);
         await sendCondoEndingEmail({ userId: m.user_id, condo: c.name, until: g.expires_at, key: `${g.id}/${g.expires_at.slice(0, 10)}` }).catch(() => null);
         out.notices++;
       }

@@ -1,8 +1,8 @@
 // Banana Burn para condominios: página oculta para administraciones y juntas directivas (se envía por correo).
 // noindex y fuera del sitemap y de la navegación. ?c=<nombre> personaliza el saludo (texto plano, 60 caracteres).
 // Reglas de texto (libro de marca): tú, sin emojis, sin rayas largas ni cadenas con "·", sin hablar de inteligencia
-// artificial, cifras es-419 y nada que no sea verdad hoy. Paga el condominio, no el residente: los precios públicos
-// solo aparecen como precio individual de referencia.
+// artificial, cifras es-419 y nada que no sea verdad hoy. Después del mes gratis cada residente decide si sigue y
+// paga su propio plan; la administración y el condominio nunca pagan.
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -60,7 +60,7 @@ const STEPS: [string, string][] = [
   ["Reunión virtual de 30 minutos", "Por videollamada te mostramos la app por dentro, te explicamos cómo se implementa y resolvemos las dudas de la administración o la junta directiva."],
   ["Activamos el condominio", "Creamos el acceso del condominio y te damos su enlace, un afiche con código QR para el gimnasio y un mensaje listo para el grupo de WhatsApp."],
   ["Los residentes se registran", "Cada uno entra con el enlace del condominio desde su celular y tiene el primer mes gratis con todo incluido. Toma 2 minutos y no necesita tarjeta."],
-  ["El condominio elige su plan", "Al terminar el mes, el condominio elige el plan que quiere pagar para sus residentes. Los residentes no pagan nada por su cuenta."],
+  ["Cada residente decide", "Al terminar el mes, cada residente decide si sigue y con qué plan, por su cuenta. La administración y el condominio no pagan nada."],
 ];
 
 const ADMIN_BENEFITS: [PhosphorIcon, string, string][] = [
@@ -72,10 +72,10 @@ const ADMIN_BENEFITS: [PhosphorIcon, string, string][] = [
 
 const FAQ: [string, string][] = [
   ["¿Tiene costo el primer mes?", "No. Durante el primer mes, todos los residentes que se registran con el enlace del condominio usan Banana Burn completo, con entreno y nutrición. No paga la administración ni pagan los residentes, y nadie necesita tarjeta."],
-  ["¿Quién paga después?", "El condominio. Al terminar el mes gratis, la administración elige el plan para sus residentes y lo paga directamente con nosotros. Los residentes no pagan de forma individual."],
+  ["¿Quién paga después?", "Nadie de la administración. Al terminar el mes gratis, cada residente decide si sigue con un plan individual y lo paga por su cuenta. La administración y el condominio nunca pagan."],
   ["¿Qué necesitan los residentes?", "Solo su celular. Banana Burn es una LinkApp: se abre desde el navegador y se instala en la pantalla de inicio en segundos, sin tiendas de apps."],
   ["¿Sirve en el gimnasio del condominio y en casa?", "Sí. Al registrarse, cada residente indica con qué equipo cuenta y el plan se arma con eso: máquinas y pesas del gimnasio, mancuernas o bandas en casa, o sin equipo."],
-  ["¿Qué pasa después del mes gratis?", `El condominio decide. Puede elegir ${ENTRENO.name} o ${COMPLETO.name} para todos sus residentes, con un precio por residente según el volumen que definimos en la reunión. Si el condominio no continúa, cada residente puede seguir con un plan individual o dejar de usar la app, sin ningún cobro automático.`],
+  ["¿Qué pasa después del mes gratis?", `Cada residente decide. Puede seguir con ${ENTRENO.name} o ${COMPLETO.name}, o dejar de usar la app. No hay ningún cobro automático: nadie deja tarjeta durante el mes gratis.`],
   ["¿Hay contrato de permanencia?", "No pedimos permanencia, igual que en los planes normales. Los detalles del acuerdo con el condominio los dejamos por escrito en la reunión."],
   ["¿Qué pasa con los datos de los residentes?", "Los datos de cada residente son privados: su peso, sus entrenos y su comida solo los ve esa persona. La administración solo recibe cuántos residentes se registraron y cuántos entrenaron en la semana, nunca información personal."],
   ["¿Para qué edades sirve?", "Para personas adultas de cualquier nivel, desde quien nunca ha entrenado hasta quien ya va al gimnasio. Cada plan se ajusta a su nivel."],
@@ -123,7 +123,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
                 <a href="#como-funciona" className="tap inline-flex h-12 items-center justify-center gap-1 px-2 font-bold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">Ver cómo funciona</a>
               </div>
               <ul className="mt-7 grid gap-2.5 text-[15px] font-semibold text-ink sm:grid-cols-2">
-                {["Primer mes gratis para todos los residentes", "Después, el condominio elige el plan y lo paga", "Los residentes no pagan ni usan tarjeta", "En el gimnasio del condominio o en casa"].map((t) => (
+                {["Primer mes gratis para todos los residentes", "Después, cada residente decide si sigue", "Sin costo para la administración ni el condominio", "En el gimnasio del condominio o en casa"].map((t) => (
                   <li key={t} className="flex items-start gap-2"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3" /></span>{t}</li>
                 ))}
               </ul>
@@ -230,7 +230,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
           <div className="rounded-[2rem] bg-cream p-6 ring-1 ring-line sm:p-10">
             <div className="max-w-3xl">
               <Eyebrow>Inversión</Eyebrow>
-              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">El primer mes es gratis para todos. Después, paga el condominio.</h2>
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">El primer mes es gratis para todos. Después, cada residente decide.</h2>
             </div>
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="rounded-[1.5rem] bg-banana p-6">
@@ -240,14 +240,14 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
               </div>
               {[ENTRENO, COMPLETO].map((p) => (
                 <div key={p.id} className="rounded-[1.5rem] bg-white p-6 ring-1 ring-line">
-                  <p className="text-sm font-bold text-muted">Opción para el condominio</p>
+                  <p className="text-sm font-bold text-muted">Plan individual del residente</p>
                   <p className="mt-1 text-xl font-extrabold text-ink">{p.name}</p>
                   <p className="mt-2 font-semibold text-ink">{p.id === "completo" ? "Plan de entreno y plan de comidas para cada residente." : "Plan de entreno, técnica y Coach Banana para cada residente."}</p>
-                  <p className="mt-3 text-sm text-muted">Precio por residente según el volumen. Precio individual de referencia: {money(p.price.mes)} al mes.</p>
+                  <p className="mt-3 text-sm text-muted">{money(p.price.mes)} al mes, solo si el residente decide seguir.</p>
                 </div>
               ))}
             </div>
-            <p className="mt-6 flex items-start gap-2 text-[15px] text-ink"><UsersThree weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" />El condominio elige el plan y lo paga para sus residentes. El precio por residente según el volumen lo definimos juntos en la reunión virtual.</p>
+            <p className="mt-6 flex items-start gap-2 text-[15px] text-ink"><UsersThree weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" />La administración y el condominio no pagan nada, ni durante el mes gratis ni después. Cada residente decide por su cuenta si sigue.</p>
           </div>
         </section>
 

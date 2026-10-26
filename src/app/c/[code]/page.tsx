@@ -131,7 +131,7 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
                 {[
                   "Creas tu cuenta en 2 minutos desde el celular. No necesitas tarjeta.",
                   offer?.free ? "Tienes 30 días con todo incluido desde que lo activas." : "Tu acceso dura mientras el condominio mantenga su plan.",
-                  "Al terminar, tu condominio decide si continúa. Si no, puedes seguir con un plan individual o dejar de usar la app. No te cobramos nada automáticamente.",
+                  "Al terminar, tú decides si sigues con un plan individual o dejas de usar la app. No te cobramos nada automáticamente.",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2.5"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3" /></span>{t}</li>
                 ))}
