@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
-import { getRun } from "@/lib/runs-server";
+import { getRun, listRuns } from "@/lib/runs-server";
+import { getRunningSeason } from "@/lib/running-server";
+import { newBests } from "@/lib/run-fitness";
+import { ShareRunToCommunity } from "@/components/correr/run-social";
 import { fmtDuration, fmtKm, fmtPace } from "@/lib/runs";
 import { longDate } from "@/lib/seasons";
 import { RunMap } from "@/components/correr/run-map";
@@ -35,10 +38,16 @@ export default async function Carrera({ params }: { params: Promise<{ id: string
   if (!v) redirect(`/entrar?next=/app/correr/${id}`);
   const r = await getRun(v, id);
   if (!r) notFound();
+  // Marcas nuevas de esta carrera (Temporada Running): contra las carreras anteriores.
+  const [rs, all] = await Promise.all([getRunningSeason(v), listRuns(v, 400)]);
+  const before = all.filter((x) => x.id !== r.id && (x.startedAt < r.startedAt));
+  const prs = rs.owned ? newBests(before, r) : [];
+  const PR_LABEL = { km1: "Mejor 1 km", km5: "Mejores 5 km", km10: "Mejores 10 km", km21: "Mejores 21 km", longest: "Tu carrera más larga" } as const;
   return (
     <div className="space-y-5 animate-rise">
       <Link href="/app/correr" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Correr</Link>
       <header><h1 className="text-3xl font-extrabold tracking-tight text-ink">{fmtKm(r.distanceM)} km</h1><p className="text-muted">{longDate(r.day)}</p></header>
+      {prs.length > 0 && <section className="card border-2 border-[var(--run)] p-4" aria-label="Marcas nuevas"><p className="font-extrabold text-ink">Nueva marca personal</p><ul className="mt-2 flex flex-wrap gap-2">{prs.map((k) => <li key={k} className="chip h-8 bg-[var(--run)] text-sm font-bold text-white">{PR_LABEL[k]}</li>)}</ul></section>}
       <section className="card grid grid-cols-3 gap-3 p-5 text-center">
         <div><p className="text-xs font-bold uppercase tracking-[.12em] text-muted">Tiempo</p><p className="text-2xl font-extrabold tabular-nums text-ink">{fmtDuration(r.movingS)}</p></div>
         <div><p className="text-xs font-bold uppercase tracking-[.12em] text-muted">Ritmo</p><p className="text-2xl font-extrabold tabular-nums text-ink">{fmtPace(r.paceSKm)}</p></div>
@@ -53,6 +62,7 @@ export default async function Carrera({ params }: { params: Promise<{ id: string
       )}
       <PaceChart splits={r.splits} />
       <RunShare km={fmtKm(r.distanceM)} time={fmtDuration(r.movingS)} pace={fmtPace(r.paceSKm)} day={longDate(r.day)} splits={r.splits.filter((s) => Number.isInteger(s.km)).map((s) => s.seconds)} />
+      <ShareRunToCommunity km={fmtKm(r.distanceM)} time={fmtDuration(r.movingS)} pace={fmtPace(r.paceSKm)} />
       <RunDelete id={r.id} />
     </div>
   );

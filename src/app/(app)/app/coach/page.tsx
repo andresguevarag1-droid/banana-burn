@@ -53,6 +53,8 @@ export default async function Coach({ searchParams }: { searchParams: Promise<{ 
     "Siento que me estanqué, ¿qué ajusto?",
     home ? "Me molesta la espalda baja en los abdominales" : "Me duele el hombro en press banca",
   ];
+  // Temporada Running: preguntas de corredor.
+  if (d.program?.season?.sport === "running") suggest.splice(0, 3, "¿A qué ritmo hago mi carrera larga?", "¿Qué como la noche antes de mi carrera?", "Me molesta la pantorrilla al correr, ¿qué ajusto?");
   // Programa activo con su propia coach (Coach Platanita): ella responde, con su retrato y su saludo.
   const coach = d.program ? coachOf(d.program.meta.experience) : null;
   const persona = coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null;

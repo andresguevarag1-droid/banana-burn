@@ -38,6 +38,7 @@ import { toView } from "@/lib/challenge-view";
 import { TesterCard } from "@/components/testers/tester-card";
 import { getMyTester } from "@/lib/testers-server";
 import { SeasonHoy } from "@/components/temporadas/season-hoy";
+import { RunHoy } from "@/components/correr/run-hoy";
 import { COACHES } from "@/lib/coaches";
 import { getLearnState } from "@/lib/primeros-pasos-server";
 import { FirstSteps } from "@/components/primeros-pasos/first-steps";
@@ -139,6 +140,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         <InstallCard />
         {/* Temporada deportiva: cuenta regresiva, activar, su semana y la opinión de la última sesión. */}
         <SeasonHoy v={v} />
+        <RunHoy v={v} />
       </PromptQueue>
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño.

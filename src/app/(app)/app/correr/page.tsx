@@ -4,7 +4,9 @@ import { ArrowRight } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { getSex } from "@/lib/athlete";
 import { COACHES, seasonCoachId } from "@/lib/coaches";
-import { getRunningView } from "@/lib/running-server";
+import { getRunSocial, getRunningView } from "@/lib/running-server";
+import { monthChallenge, runBadges } from "@/lib/run-badges";
+import { BoardCard, ShoeCard } from "@/components/correr/run-social";
 import { fmtDuration, fmtKm, fmtPace } from "@/lib/runs";
 import { longDate } from "@/lib/seasons";
 import { mondayOf, type MatchedRun } from "@/lib/run-plan";
@@ -12,7 +14,7 @@ import { trainingPaces } from "@/lib/run-fitness";
 import { RunTracker } from "@/components/correr/run-tracker";
 import { paceBand, raceGuide, toGuide, type Guide } from "@/lib/run-guide";
 import { WeeklyKm } from "@/components/correr/weekly-km";
-import { RunTools, BestsCard, IntakeNeeded, Locked, NextRunCard, OwnPlanCard, PlanWeekList, RaceCard, RunWeek } from "@/components/correr/run-hub";
+import { BadgesCard, MonthChallengeCard, RunTools, BestsCard, IntakeNeeded, Locked, NextRunCard, OwnPlanCard, PlanWeekList, RaceCard, RunWeek } from "@/components/correr/run-hub";
 
 export const metadata = { title: "Banana Run" };
 
@@ -24,12 +26,13 @@ const SAMPLE_RUNS: MatchedRun[] = [
   { id: "c", date: "2026-11-14", dow: 5, kind: "larga", title: "Carrera larga", detail: "12 km a ritmo fácil", distM: 12000, steps: [{ kind: "continuo", distM: 12000, zone: "facil", label: "Carrera larga" }], strides: false, key: true, status: "pendiente" },
 ];
 
-export default async function Correr({ searchParams }: { searchParams: Promise<{ modo?: string }> }) {
-  const modo = (await searchParams).modo;
+export default async function Correr({ searchParams }: { searchParams: Promise<{ modo?: string; sesion?: string }> }) {
+  const { modo, sesion } = await searchParams;
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/app/correr");
   const [sex, r] = await Promise.all([getSex(v), getRunningView(v)]);
   const coach = COACHES[seasonCoachId("running", sex)];
+  const social = await getRunSocial(v, r.runs);
   const seasonHref = r.season ? `/app/temporadas/${r.season.slug}` : "/app/temporadas";
   const thisMon = mondayOf(r.today);
   const runsThisWeek = r.runs.filter((x) => x.day >= thisMon).length;
@@ -39,7 +42,7 @@ export default async function Correr({ searchParams }: { searchParams: Promise<{
   if (r.owned && r.goal && r.check && (modo === "carrera" || r.goal.raceDate === r.today)) {
     const goalS = r.goal.goalS && r.check.status !== "muy_ambiciosa" ? r.goal.goalS : r.check.withPlan;
     guide = raceGuide(r.goal.name ?? "Tu carrera", paceBand(r.goal.distanceM, goalS, "pareja"), goalS);
-  } else if (r.owned && r.plan && r.next?.status === "hoy" && r.next.kind !== "carrera") guide = toGuide(r.next.title, r.next.steps, r.plan.paces);
+  } else if (r.owned && r.plan && r.next && (r.next.status === "hoy" || sesion === "proxima") && r.next.kind !== "carrera") guide = toGuide(r.next.title, r.next.steps, r.plan.paces);
   return (
     <div className="space-y-6 animate-rise">
       <RunTracker coachSrc={coach.hello} coachName={coach.name} guide={guide} />
@@ -70,6 +73,10 @@ export default async function Correr({ searchParams }: { searchParams: Promise<{
           </dl>
         </Locked>
       )}
+
+      <MonthChallengeCard c={monthChallenge(r.runs, r.today)} />
+      <BadgesCard badges={runBadges(r.runs, r.today)} />
+      <div className="grid gap-6 md:grid-cols-2"><ShoeCard shoe={social.shoe} /><BoardCard joined={social.joined} board={social.board} /></div>
 
       {r.runs.length > 0 && (
         <>

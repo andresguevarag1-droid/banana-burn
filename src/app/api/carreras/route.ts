@@ -5,6 +5,7 @@ import { isSameOrigin } from "@/lib/security";
 import { hitLimit } from "@/lib/security/limits";
 import { privacyTrim, processUpload } from "@/lib/runs";
 import { todayIn } from "@/lib/today";
+import { runXp } from "@/lib/run-badges";
 
 export const runtime = "nodejs";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -37,6 +38,8 @@ export async function POST(req: Request) {
     if (had) return Response.json({ id: had.id, repeated: true });
   }
   if (error) return Response.json({ error: error.code === "42501" ? "Necesitas tu plan o la prueba gratis para guardar carreras." : "No pudimos guardar tu carrera. Queda en tu teléfono; intenta de nuevo." }, { status: error.code === "42501" ? 403 : 500 });
+  // XP por correr (0055): lo respalda la carrera recién guardada; sin la migración, la base lo rechaza y no pasa nada.
+  await sb.from("xp_events").insert({ user_id: v.id, kind: "run", xp: runXp(run.stats.distanceM) }).then(() => undefined, () => undefined);
   return Response.json({ id: data.id });
 }
 

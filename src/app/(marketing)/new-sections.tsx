@@ -127,18 +127,24 @@ export function SeasonsSection() {
   );
 }
 
-/** GPS para correr. Requiere correr.webp. */
+/** Banana Run: GPS, plan de carrera y modo carrera. Requiere running-hub.webp (o correr.webp). */
 export function RunSection() {
-  const src = shot("correr");
+  const src = shot("running-hub") ?? shot("correr");
+  const second = shot("running-guiada");
   if (!src) return null;
   return (
     <section aria-labelledby="correr-t" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
       <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
-        <div className="order-2 lg:order-1 mx-auto w-full max-w-[280px]"><Phone src={src} alt="Carrera registrada con GPS en Banana Burn" sizes="260px" /></div>
+        <div className="order-2 lg:order-1 mx-auto flex w-full max-w-[480px] items-end justify-center gap-4">
+          <Phone src={src} alt="Banana Run: empieza tu carrera con GPS" sizes="250px" className="w-[220px] sm:w-[240px]" />
+          {second && <Phone src={second} alt="Modo carrera: tu ritmo contra el objetivo, km por km" sizes="200px" className="mb-10 hidden w-[190px] sm:block" />}
+        </div>
         <div className="order-1 lg:order-2">
-          <p className="inline-flex items-center gap-2 rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink"><PersonSimpleRun weight="duotone" aria-hidden className="size-4" />Para correr</p>
-          <h2 id="correr-t" className={`${H2} mt-5`}>Registra tus carreras con GPS.</h2>
-          <p className={LEAD}>Distancia, tiempo, ritmo por kilómetro y tus kilómetros de cada semana. Tus carreras son privadas y, con la Temporada de Running, acomodan tu plan de fuerza. Funciona con la app abierta y la pantalla encendida.</p>
+          <p className="inline-flex items-center gap-2 rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink"><PersonSimpleRun weight="duotone" aria-hidden className="size-4" />Banana Run</p>
+          <h2 id="correr-t" className={`${H2} mt-5`}>Corre más rápido y sin lesiones.</h2>
+          <p className={LEAD}>Registra tus carreras con el GPS de tu teléfono. Con la Temporada Running: tu plan de carrera semana a semana, tus ritmos, sesiones guiadas con voz y tu tabla de ritmos para el día de la carrera.</p>
+          <ul className="mt-6 space-y-2 text-ink">{["Para 5K, 10K, 21K, 42K o trail", "Se acomoda a tu club o tu entrenador", "Fuerza en casa o en el gimnasio que no choca con tus carreras"].map((x) => <li key={x} className="flex gap-2"><Check weight="bold" className="mt-1 size-4 shrink-0" />{x}</li>)}</ul>
+          <Link href="/running" data-cta="running" className="tap mt-6 inline-flex items-center gap-2 font-bold text-ink underline decoration-line decoration-2 underline-offset-4 hover:decoration-ink">Conoce Banana Run <ArrowRight weight="bold" className="size-4" /></Link>
         </div>
       </div>
     </section>
