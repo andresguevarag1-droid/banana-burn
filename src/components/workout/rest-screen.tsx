@@ -33,6 +33,8 @@ export type RestInfo = {
   hints?: Partial<Record<Effort, string>>;
   /** Dato motivador con números reales (rota en cada descanso) */
   fact?: string | null;
+  /** Línea corta y útil para el descanso ("Respira hondo..."). */
+  cheer?: string | null;
 };
 
 /**
@@ -94,6 +96,23 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </div>
           </div>
 
+          {/* Lo que sigue: justo debajo del reloj, para saber qué viene sin buscarlo. */}
+          {info.next && (
+            <div className="mt-4 flex items-center gap-3 rounded-[1.5rem] bg-white/[.09] p-3 ring-1 ring-white/10">
+              {info.next.isNew && info.next.anim ? (
+                <span className="relative block size-16 shrink-0 overflow-hidden rounded-2xl bg-banana"><ExerciseMotion anim={info.next.anim} label={false} className="absolute inset-1" /></span>
+              ) : (
+                <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-white/10 text-2xl font-extrabold tabular-nums">{info.next.title.match(/\d+/)?.[0] ?? <FlagCheckered weight="fill" className="size-7 text-banana" />}</span>
+              )}
+              <div className="min-w-0">
+                <p className="text-[13px] font-extrabold uppercase tracking-[.1em] text-banana">{info.next.isNew ? "Siguiente ejercicio" : "Siguiente"}</p>
+                <p className="text-lg font-extrabold leading-tight">{info.next.title}</p>
+                <p className="text-[15px] font-bold text-white/80 tabular-nums">{info.next.detail}</p>
+              </div>
+            </div>
+          )}
+          {info.cheer && <p className="mt-2 text-center text-[14px] font-semibold text-white/75">{info.cheer}</p>}
+
           {/* Recompensa */}
           <div className="mt-3 flex min-h-10 flex-wrap items-center justify-center gap-2">
             {info.xp > 0 && (
@@ -136,21 +155,6 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </div>
           )}
 
-          {/* Lo que sigue */}
-          {info.next && (
-            <div className="mt-4 flex items-center gap-3 rounded-[1.5rem] bg-white/[.07] p-3">
-              {info.next.isNew && info.next.anim ? (
-                <span className="relative block size-16 shrink-0 overflow-hidden rounded-2xl bg-banana"><ExerciseMotion anim={info.next.anim} label={false} className="absolute inset-1" /></span>
-              ) : (
-                <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-white/10 text-2xl font-extrabold tabular-nums">{info.next.title.match(/\d+/)?.[0] ?? ""}</span>
-              )}
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-banana">{info.next.last ? "Última serie" : info.next.isNew ? "Siguiente ejercicio" : "Sigue"}</p>
-                <p className="font-extrabold leading-tight truncate">{info.next.title}</p>
-                <p className="text-sm font-semibold text-white/70 tabular-nums truncate">{info.next.detail}</p>
-              </div>
-            </div>
-          )}
           {/* Esfuerzo: una pregunta, un toque */}
           {info.setNo != null && (
             <fieldset className="mt-4">

@@ -2,7 +2,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
 import { getDaily, prefetchDaily } from "@/lib/daily";
-import { ALTS, BARBELL, EX, HOME, SLOTS, e1rm, expressDay, forEquipment, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
+import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
 import { plannedFromSession } from "@/lib/programs";
@@ -77,14 +77,14 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     const h = hist[id] ?? [];
     const best = Math.max(0, ...h.flat().map((x) => (x.kg ? e1rm(x.kg, x.reps) : 0)));
     const rx = mode(withProgramNote(voiced(prescribe(id, cfg, h, { deload: d.deload }), cfg, EX[id].inc), s));
-    return { id, name: EX[id].n, muscle: EX[id].m, cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), load: loadKindOf(id, { inc: EX[id].inc }), rx, best, lastSets: h.at(-1) ?? null };
+    return { id, name: EX[id].n, muscle: EX[id].m, cfg: PER_SIDE.has(id) && cfg.perSide == null ? { ...cfg, perSide: true } : cfg, tech: TECH[id] ?? null, bw: EX[id].inc === 0, barbell: BARBELL.has(id), load: loadKindOf(id, { inc: EX[id].inc }), rx, best, lastSets: h.at(-1) ?? null, ...(s.tempo ? { tempo: s.tempo } : {}) };
   };
   // Ejercicio de la biblioteca: solo su propia animación (nunca la del ejercicio del plan: una variante es otro movimiento).
   const buildLib = (x: LibEx, s: (typeof slots)[number]): PlayerExercise => {
     const id = `ds:${x.id}`, h = hist[id] ?? [], inc = incFor(x.eq);
     const best = Math.max(0, ...h.flat().map((r) => (r.kg ? e1rm(r.kg, r.reps) : 0)));
     return { id, name: x.n, muscle: s.muscle || cap(esLib(MUSCLE, x.t)), cfg: s.cfg, bw: inc === 0, barbell: x.eq === "barbell" || x.eq === "olympic barbell", load: loadKindOf(id, { inc, eq: x.eq }),
-      rx: mode(withProgramNote(voiced(prescribe(id, s.cfg, h, { deload: d.deload, inc }), s.cfg, inc), s)), best, lastSets: h.at(-1) ?? null,
+      rx: mode(withProgramNote(voiced(prescribe(id, s.cfg, h, { deload: d.deload, inc }), s.cfg, inc), s)), best, lastSets: h.at(-1) ?? null, ...(s.tempo ? { tempo: s.tempo } : {}),
       tech: { anim: animFor(x) ?? "", mus: cap([x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(", ")), how: x.s, cues: [], err: [], mono: "" } };
   };
   const options = slots.map((s, i) => {

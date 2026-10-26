@@ -39,19 +39,20 @@ function Points({ items, dark = false, dot = "bg-banana text-ink" }: { items: st
 export function LearnSection() {
   const src = shot("aprende");
   if (!src) return null;
-  const second = shot("primeros-pasos");
+  const plan = shot("plan-ejercicio");
+  const second = plan ?? shot("primeros-pasos");
   return (
     <section aria-labelledby="aprende-t" className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
       <div className="grid items-center gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full bg-banana px-3.5 py-1.5 text-sm font-extrabold text-ink"><GraduationCap weight="duotone" aria-hidden className="size-4" />Aunque nunca hayas entrenado</p>
           <h2 id="aprende-t" className={`${H2} mt-5`}>Te enseñamos a entrenar desde cero.</h2>
-          <p className={LEAD}>Al entrar, Tus primeros pasos te lleva a cada pantalla con un toque, y tu primer entreno es guiado: qué hacer, cómo anotar tu serie y para qué es el descanso. En Aprende a entrenar tienes 10 lecciones de 30 segundos, sin palabras raras.</p>
-          <Points items={["Qué es una serie y una repetición", "Cuánto peso usar y cuánto descansar", "Cómo ver la técnica de cada ejercicio", "Cómo te hace progresar la app"]} />
+          <p className={LEAD}>Al entrar, Tus primeros pasos te lleva a cada pantalla con un toque, y tu primer entreno es guiado. Antes de cada ejercicio ves tu plan: cuántas series, cuántas repeticiones, dónde lo vas a sentir y cómo hacerlo en 3 pasos. En Aprende a entrenar tienes 10 lecciones de 30 segundos, sin palabras raras.</p>
+          <Points items={["Tu plan de cada ejercicio antes de empezar", "Cuánto peso usar y cuánto descansar", "Cómo ver la técnica de cada ejercicio", "Cómo te hace progresar la app"]} />
         </div>
         <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
           <Phone src={src} alt="Pantalla de Aprende a entrenar en Banana Burn" sizes="240px" className="w-[210px] sm:w-[250px]" />
-          {second && <Phone src={second} alt="Tus primeros pasos en Banana Burn: una lista que te lleva a cada pantalla" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
+          {second && <Phone src={second} alt={plan ? "Tu plan en este ejercicio: 3 series, 8 a 10 repeticiones por lado, dónde se siente y cómo hacerlo en 3 pasos" : "Tus primeros pasos en Banana Burn: una lista que te lleva a cada pantalla"} sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
         </div>
       </div>
     </section>
@@ -82,7 +83,7 @@ export function PlatanitaSection() {
             </div>
           </div>
           <div className="relative mx-auto flex w-full max-w-[460px] justify-center gap-4">
-            <Phone src={a} alt="Pantalla Hoy en rosado con Coach Platanita en Banana Burn" sizes="240px" className="w-[200px] sm:w-[250px]" />
+            <Phone src={a} alt="Entreno en rosado con Coach Platanita: serie 1 de 3, 10 a 12 repeticiones con 15 kg" sizes="240px" className="w-[200px] sm:w-[250px]" />
             {b && <Phone src={b} alt="Chat con Coach Platanita en Banana Burn" sizes="200px" className="mt-14 hidden w-[200px] sm:block" />}
           </div>
         </div>

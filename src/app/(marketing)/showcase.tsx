@@ -53,12 +53,17 @@ function bigCards(): Big[] {
       visual: <Screen src={coach} alt="Chat con Coach Banana dentro de la app" />,
     },
   ];
+  const plan = shot("plan-ejercicio");
   const aprende = shot("aprende");
-  if (aprende) {
+  if (plan || aprende) {
     cards.push({
       n: "04", tag: "Desde cero", t: "Te enseñamos a entrenar, paso a paso.",
-      d: "Tu primer entreno es guiado y en Aprende a entrenar tienes 10 lecciones de 30 segundos: series, peso, descanso y técnica.",
-      visual: <Screen src={aprende} alt="Pantalla de Aprende a entrenar en Banana Burn" />,
+      d: plan
+        ? "Antes de cada ejercicio ves tu plan: cuántas series y repeticiones, dónde lo vas a sentir y cómo hacerlo en 3 pasos. Además, 10 lecciones de 30 segundos en Aprende a entrenar."
+        : "Tu primer entreno es guiado y en Aprende a entrenar tienes 10 lecciones de 30 segundos: series, peso, descanso y técnica.",
+      visual: plan
+        ? <Screen src={plan} alt="Tu plan en este ejercicio: 3 series, 8 a 10 repeticiones por lado, dónde se siente y cómo hacerlo" />
+        : <Screen src={aprende!} alt="Pantalla de Aprende a entrenar en Banana Burn" />,
     });
   }
   if (seasons) {
