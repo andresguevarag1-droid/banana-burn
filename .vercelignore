@@ -1,0 +1,4 @@
+# Proyectos nativos (Capacitor): no forman parte de la web que publica Vercel.
+/android
+/ios
+/native

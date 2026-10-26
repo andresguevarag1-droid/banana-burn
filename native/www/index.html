@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="es-419">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banana Burn</title>
+<!-- Capacitor exige un index.html local, pero la app carga la web (server.url en capacitor.config.ts). Si por algo se
+     abre este archivo, manda a la web; sin red, la app muestra offline.html. -->
+<script src="server.js"></script>
+<style>html, body { margin: 0; height: 100%; background: #FFF8E3; }</style>
+</head>
+<body>
+<script>window.location.replace((window.BB_SERVER_URL || "https://www.bananaburn.app").replace(/\/$/, "") + "/app");</script>
+</body>
+</html>
