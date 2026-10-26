@@ -56,6 +56,8 @@ export const RULES = {
   "admin": { windows: [{ sec: 10 * MIN, max: 300 }], db: true, msg: "Demasiadas acciones seguidas en el panel. Espera unos minutos." },
   "admin:masivo": { windows: [{ sec: HOUR, max: 20 }], db: true, msg: "Demasiadas acciones masivas seguidas. Espera una hora." },
   "admin:borrar-cuenta": { windows: [{ sec: HOUR, max: 20 }], db: true, msg: "Demasiados borrados seguidos. Espera una hora." },
+  // Correos de acceso, cambios de correo, bloqueos y ajustes de cuentas (0056): una cuenta comprometida no hace daño en masa.
+  "admin:cuentas": { windows: [{ sec: 10 * MIN, max: 30 }, { sec: HOUR, max: 80 }], db: true, msg: "Demasiados cambios de cuentas seguidos. Espera unos minutos." },
 } satisfies Record<string, Rule>;
 
 export type RuleName = keyof typeof RULES;

@@ -12,9 +12,12 @@ import { confirmAndCheck, signUpConfirmed } from "./actions";
 import { signupError } from "./validate";
 
 type Step = "email" | "code" | "reset";
+/** Cuenta bloqueada desde el panel (0056): Supabase responde "User is banned". */
+const BLOCKED_MSG = "Tu cuenta está pausada. Escríbenos a hola@bananaburn.app y te ayudamos.";
 type Method = "password" | "code";
 
 const authError = (m: string) =>
+  /banned/i.test(m) ? BLOCKED_MSG :
   /invalid login credentials/i.test(m) ? "Correo o contraseña incorrectos." :
   /email not confirmed/i.test(m) ? "Tu correo aún no está confirmado. Busca el correo de confirmación (revisa Correo no deseado) o pide ayuda a soporte." :
   /already registered|already been registered|user already exists/i.test(m) ? "Ya existe una cuenta con ese correo. Entra con tu contraseña." :

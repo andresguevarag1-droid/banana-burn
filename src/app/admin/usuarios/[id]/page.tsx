@@ -23,6 +23,8 @@ import { setTester, revokeTester, setFeedbackStatus } from "../../testers-action
 import { getTesterAdmin } from "@/lib/testers-server";
 import { getCoachUsage } from "@/lib/admin-coach";
 import { daysLeftLabel, FEEDBACK_KIND_LABEL, FEEDBACK_STATUS_LABEL, TESTER_DAYS, testerState, type FeedbackKind } from "@/lib/testers";
+import { getManageData } from "@/lib/admin-manage-server";
+import { ManageAccount } from "./manage";
 
 export const metadata = { title: "Ficha de usuario" };
 
@@ -51,7 +53,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const v = await requireSection("usuarios");
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const [d, refs, tester, coach] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id), getTesterAdmin(v, id).catch(() => ({ grants: [], feedback: [], unavailable: true })), getCoachUsage(v, id).catch(() => null)]);
+  const [d, refs, tester, coach, manage] = await Promise.all([getUserDetail(v, id), getReferralOverview(v, id), getTesterAdmin(v, id).catch(() => ({ grants: [], feedback: [], unavailable: true })), getCoachUsage(v, id).catch(() => null), getManageData(v, id).catch(() => "missing" as const)]);
   if (!d) notFound();
   const a = d.account;
   const today = crToday().iso;
@@ -86,6 +88,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <Badge tone={status === "activo" ? "good" : status === "pendiente" ? "warn" : "muted"}>{ACTIVITY_LABEL[status]}</Badge>
           {isSelf && <Badge tone="info">Eres tú</Badge>}
           {a.suspended_at && <Badge tone="bad">Suspendido</Badge>}
+          {manage && manage !== "missing" && (manage.blockedAt || manage.auth?.bannedUntil) && <Badge tone="bad">Bloqueada</Badge>}
           {isTester && <Badge tone="warn"><Flask weight="duotone" className="size-3.5" aria-hidden />Tester hasta {fmtDate(ts.until)}</Badge>}
         </>} />
       {v.demo && <DemoNotice what="los datos de esta ficha" />}
@@ -105,6 +108,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <Row k="Comunidad">{a.suspended_at ? <span className="text-[#A3261A]">Suspendido desde {fmtDate(a.suspended_at)}{a.suspended_reason && <span className="block text-xs font-normal text-muted">{a.suspended_reason}</span>}</span> : "Activo"}</Row>
             </dl>
           </Section>
+
+          {manage === "missing" && <Notice tone="warn" title="Administrar cuenta">Falta aplicar la migración 0056_admin_cuentas.sql en Supabase.</Notice>}
+          {manage && manage !== "missing" && <ManageAccount id={a.id} name={a.full_name ?? ""} country={a.country ?? null} email={a.email ?? null} isSelf={isSelf} m={manage} />}
 
           <Section title="Objetivo y peso" id="s-salud">
             {health ? (
@@ -348,7 +354,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                 ) : !isSelf && !can(v.role, "users.tester") ? <p className="text-sm text-muted">Solo admin y superadmin asignan testers.</p> : null}
               </div>
 
-              <div className="space-y-2 border-t border-line pt-4">
+              {!(manage && manage !== "missing") && <div className="space-y-2 border-t border-line pt-4">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><Gift className="size-4" aria-hidden />Plan de cortesía</h3>
                 {can(v.role, "users.comp") ? (
                   <ConfirmAction action={grantComp} trigger={activeComp ? "Reemplazar cortesía" : "Regalar plan"} title="Regalar plan de cortesía" hidden={{ target: a.id }} confirmLabel="Otorgar"
@@ -361,7 +367,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                       <input id="cg-reason" name="reason" required minLength={4} maxLength={300} placeholder="p. ej. influencer, compensación por falla" className={inputSm} /></div>
                   </ConfirmAction>
                 ) : <p className="text-sm text-muted">Solo soporte y admin otorgan cortesías.</p>}
-              </div>
+              </div>}
 
               <div className="space-y-2 border-t border-line pt-4">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-ink"><Gift className="size-4" aria-hidden />Regalar meses</h3>

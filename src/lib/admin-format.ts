@@ -76,8 +76,25 @@ export const ACTION_LABEL: Record<string, string> = {
   "identity.approve": "Identidad aprobada",
   "identity.reject": "Identidad rechazada",
   "identity.withdraw": "Verificación retirada por la persona",
+  "user.profile_update": "Nombre o país editado",
+  "user.email_change": "Correo cambiado",
+  "user.email_change_requested": "Cambio de correo enviado a confirmar",
+  "user.access_email": "Correo de acceso enviado",
+  "user.sign_out_all": "Sesiones cerradas",
+  "user.block": "Cuenta bloqueada",
+  "user.unblock": "Cuenta desbloqueada",
+  "user.auth_ban": "Inicio de sesión bloqueado",
+  "user.auth_unban": "Inicio de sesión desbloqueado",
+  "user.ban_failed": "Bloqueo del inicio de sesión fallido",
+  "user.renewal_cancel": "Renovación cancelada",
+  "user.charge_cancel": "Cobro programado cancelado",
+  "challenge.revoke": "Acceso a reto o temporada quitado",
+  "challenge.reset": "Progreso de reto reiniciado",
+  "season.intake_reset": "Cuestionario de temporada reiniciado",
+  "badge.set": "Insignia cambiada a mano",
+  "xp.adjust": "XP ajustado",
 };
-const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación", identity: "Verificación" };
+const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación", identity: "Verificación", season: "Temporadas", badge: "Insignias", xp: "XP" };
 export const actionLabel = (a: string) => ACTION_LABEL[a] ?? a.replace(/[._]/g, " ");
 export const actionGroupLabel = (prefix: string) => GROUP_LABEL[prefix] ?? prefix;
 
@@ -88,6 +105,9 @@ const META_LABEL: Record<string, string> = {
   audience: "Audiencia", name: "Nombre", nombre: "Nombre", enabled: "Habilitado", habilitado: "Habilitado", verified: "Verificado", verificado: "Verificado",
   months: "Meses", starts_at: "Empieza", message: "Con mensaje", reward: "Recompensa", group: "Grupo", referral: "Referido", flag: "Señal",
   target_type: "Tipo", tipo: "Tipo", target_id: "Contenido", id: "Contenido", note: "Nota", count: "Cantidad", role: "Rol", step: "Paso", cues: "Claves", doc_type: "Documento", country: "País", status: "Estado",
+  before: "Antes", after: "Después", full_name: "Nombre", email: "Correo", pending_email: "Correo por confirmar", delta: "XP", xp: "XP", badge: "Insignia",
+  override: "A mano", challenge: "Reto", season: "Temporada", source: "Origen", mode: "Modo", kind: "Tipo", sessions: "Sesiones", sessions_closed: "Sesiones cerradas",
+  blocked: "Bloqueada", blocked_at: "Bloqueada desde", renews: "Se renueva", access_until: "Acceso hasta", charge: "Cobro", access: "Acceso", sent: "Correo enviado",
 };
 const VALUE_LABEL: Record<string, string> = {
   free: "Usuario", pro: "Usuario con plan", coach: "Coach", support: "Soporte", admin: "Admin", superadmin: "Superadmin",
@@ -103,6 +123,8 @@ export function metaValue(v: unknown): string {
   if (typeof v === "number") return fmtNum(v);
   if (typeof v === "string") return VALUE_LABEL[v] ?? (ISO_TS.test(v) ? fmtDate(v) : v);
   if (Array.isArray(v)) return v.map(metaValue).join(", ");
+  // Antes y después (0056): "Nombre Ana, País CR".
+  if (typeof v === "object") return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${metaKey(k)} ${metaValue(x)}`).join(", ") || EMPTY;
   return JSON.stringify(v);
 }
 export const metaKey = (k: string) => META_LABEL[k] ?? k.replace(/_/g, " ");

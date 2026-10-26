@@ -11,9 +11,9 @@ describe("matriz de permisos", () => {
       expect(can(null, cap)).toBe(false);
     }
   });
-  it("admin y superadmin lo ven todo (salvo referidores: solo el dueño)", () => {
+  it("admin y superadmin lo ven todo (salvo referidores y administrar cuentas: solo el dueño)", () => {
     for (const cap of Object.keys(MATRIX) as Capability[]) {
-      expect(can("admin", cap)).toBe(cap !== "affiliates.manage");
+      expect(can("admin", cap)).toBe(cap !== "affiliates.manage" && cap !== "users.manage");
       expect(can("superadmin", cap)).toBe(true);
     }
   });

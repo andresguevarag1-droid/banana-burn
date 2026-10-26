@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
-import { ACTIVITY_LABEL, BILLING_LABEL, listUsers, PAGE_SIZE, PLAN_LABEL, statusOf, USER_STATUS } from "@/lib/admin";
+import { ACTIVITY_LABEL, BILLING_LABEL, listUsers, PAGE_SIZE, PLAN_LABEL, seasonOptions, statusOf, USER_STATUS } from "@/lib/admin";
+import { EXTRA_USER_STATUS } from "@/lib/admin-manage";
 import { can, ROLE_LABEL, ROLES } from "@/lib/admin-perms";
 import { getReferralCounts } from "@/lib/admin-referrals";
 import { giftMonthsBulk } from "../regalos-actions";
@@ -13,7 +14,9 @@ import { Badge, DemoNotice, Empty, Field, FilterBar, MetaList, Nil, Notice, Page
 
 export const metadata = { title: "Usuarios" };
 
-type SP = { q?: string; plan?: string; role?: string; status?: string; from?: string; to?: string; page?: string };
+type SP = { q?: string; plan?: string; role?: string; status?: string; from?: string; to?: string; page?: string; pais?: string; temporada?: string };
+const COUNTRY_OPTS = [["CR", "Costa Rica"], ["GT", "Guatemala"], ["CO", "Colombia"], ["PA", "Panamá"], ["NI", "Nicaragua"], ["SV", "El Salvador"], ["HN", "Honduras"], ["MX", "México"], ["US", "Estados Unidos"]] as const;
+const ALL_STATUS = [...USER_STATUS, ...EXTRA_USER_STATUS];
 const PLAN_OPTS = (["free", "entreno", "completo", "pro"] as const).map((k) => [k, PLAN_LABEL[k]] as const);
 const STATUS_TONE = { activo: "good", inactivo: "muted", pendiente: "warn" } as const;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -28,15 +31,17 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const f = {
     q: sp.q?.slice(0, 80), plan: sp.plan, role: ROLES.includes(sp.role as never) ? sp.role : undefined,
-    status: USER_STATUS.some(([k]) => k === sp.status) ? sp.status : undefined,
+    status: ALL_STATUS.some(([k]) => k === sp.status) ? sp.status : undefined,
+    country: COUNTRY_OPTS.some(([k]) => k === sp.pais) ? sp.pais : undefined,
+    season: sp.temporada && /^temporada-[a-z]+-\d{1,3}$/.test(sp.temporada) ? sp.temporada : undefined,
     from: sp.from && ISO.test(sp.from) ? sp.from : undefined, to: sp.to && ISO.test(sp.to) ? sp.to : undefined,
     page: Math.max(1, Number(sp.page) || 1),
   };
-  const { rows, total, limited } = await listUsers(v, f);
+  const [{ rows, total, limited }, seasons] = await Promise.all([listUsers(v, f), seasonOptions(v).catch(() => [])]);
   const refCounts = await getReferralCounts(v, rows.map((u) => u.id));
   const showRefs = can(v.role, "referrals.view");
   const today = crToday().iso;
-  const filtered = !!(f.q || f.plan || f.role || f.status || f.from || f.to);
+  const filtered = !!(f.q || f.plan || f.role || f.status || f.from || f.to || f.country || f.season);
 
   return (
     <div className="space-y-5">
@@ -76,8 +81,16 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
           <select id="f-role" name="role" defaultValue={f.role ?? ""} className={inputSm}><option value="">Todos</option>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select>
         </Field>
         <Field label="Estado" htmlFor="f-status" className={fw.select}>
-          <select id="f-status" name="status" defaultValue={f.status ?? ""} className={inputSm}><option value="">Todos</option>{USER_STATUS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+          <select id="f-status" name="status" defaultValue={f.status ?? ""} className={inputSm}><option value="">Todos</option>{ALL_STATUS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         </Field>
+        <Field label="País" htmlFor="f-pais" className={fw.select}>
+          <select id="f-pais" name="pais" defaultValue={f.country ?? ""} className={inputSm}><option value="">Todos</option>{COUNTRY_OPTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+        </Field>
+        {seasons.length > 0 && (
+          <Field label="Temporada" htmlFor="f-temp" className={fw.select}>
+            <select id="f-temp" name="temporada" defaultValue={f.season ?? ""} className={inputSm}><option value="">Todas</option>{seasons.map((x) => <option key={x.slug} value={x.slug}>{x.title}</option>)}</select>
+          </Field>
+        )}
         <Field label="Alta desde" htmlFor="f-from" className={fw.date}><input id="f-from" name="from" type="date" defaultValue={f.from} className={inputSm} /></Field>
         <Field label="Alta hasta" htmlFor="f-to" className={fw.date}><input id="f-to" name="to" type="date" defaultValue={f.to} className={inputSm} /></Field>
       </FilterBar>
@@ -91,7 +104,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
             <li key={u.id}>
               <Link href={`/admin/usuarios/${u.id}`} className="flex items-center gap-3 px-4 py-3 outline-none transition-colors duration-150 hover:bg-paper/50 focus-visible:bg-paper focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-banana/50">
                 <div className="min-w-0 flex-1">
-                  <p className="flex min-w-0 items-center gap-2 font-semibold text-ink"><span className="truncate">{u.full_name || "Sin nombre"}</span>{u.tester_until && <TesterChip until={u.tester_until} />}</p>
+                  <p className="flex min-w-0 items-center gap-2 font-semibold text-ink"><span className="truncate">{u.full_name || "Sin nombre"}</span>{u.tester_until && <TesterChip until={u.tester_until} />}{u.blocked && <Badge tone="bad">Bloqueada</Badge>}</p>
                   {u.email && <p className="truncate text-xs text-muted">{u.email}</p>}
                   <MetaList className="mt-1.5" items={[<Badge key="a" tone={STATUS_TONE[st]}>{ACTIVITY_LABEL[st]}</Badge>, PLAN_LABEL[u.plan] ?? u.plan, limited ? null : ago(u.last_active, today), refCounts.get(u.id) ? `${fmtNum(refCounts.get(u.id)!.total)} referidos` : null]} />
                 </div>
@@ -114,7 +127,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                   <Link href={`/admin/usuarios/${u.id}`} className="block truncate font-semibold text-ink underline-offset-2 hover:underline rounded outline-none focus-visible:ring-4 focus-visible:ring-banana/50">{u.full_name || "Sin nombre"}</Link>
                   {u.email && <p className="truncate text-xs text-muted">{u.email}</p>}
                 </Td>
-                <Td><span className="flex flex-wrap items-center gap-1"><RoleBadge role={u.role} />{u.tester_until && <TesterChip until={u.tester_until} />}</span></Td>
+                <Td><span className="flex flex-wrap items-center gap-1"><RoleBadge role={u.role} />{u.tester_until && <TesterChip until={u.tester_until} />}{u.blocked && <Badge tone="bad">Bloqueada</Badge>}</span></Td>
                 <Td>
                   <span className="block min-w-20 text-ink">{PLAN_LABEL[u.plan] ?? u.plan}</span>
                   {u.plan !== "free" && u.billing && !u.comp_until && <p className="text-xs text-muted">{BILLING_LABEL[u.billing] ?? u.billing}</p>}
@@ -134,7 +147,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
       {!rows.length && (filtered
         ? <Empty title="Sin resultados" action={<Link href="/admin/usuarios" className={btnGhost}>Limpiar filtros</Link>}>Ningún usuario coincide con estos filtros.</Empty>
         : <Empty title="Todavía no hay usuarios">Las cuentas nuevas aparecen aquí apenas se registran.</Empty>)}
-      <Pagination page={f.page} total={total} pageSize={PAGE_SIZE} basePath="/admin/usuarios" params={{ q: f.q, plan: f.plan, role: f.role, status: f.status, from: f.from, to: f.to }} />
+      <Pagination page={f.page} total={total} pageSize={PAGE_SIZE} basePath="/admin/usuarios" params={{ q: f.q, plan: f.plan, role: f.role, status: f.status, from: f.from, to: f.to, pais: f.country, temporada: f.season }} />
     </div>
   );
 }

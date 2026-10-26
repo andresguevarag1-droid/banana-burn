@@ -11,7 +11,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f-]{36}$/i;
 
 function Meta({ meta }: { meta: Record<string, unknown> | null }) {
-  const entries = Object.entries(meta ?? {}).slice(0, 6);
+  const entries = Object.entries(meta ?? {}).slice(0, 8);
   if (!entries.length) return <Nil />;
   return (
     <dl className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
