@@ -2340,6 +2340,14 @@ select bbtest.fails('0057: anon no lee tokens', 'select * from public.native_pus
 reset role;
 select bbtest.ok('0057: los tokens de B siguen intactos', (select count(*) = 1 from public.native_push_tokens where user_id = bbtest.u('B')));
 
+-- ───────────── 0058: energía activa desde Salud ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0058: A guarda su energía activa del día', bbtest.affected($q$ insert into public.daily_logs (user_id, day, steps, active_kcal) values (bbtest.u('A'), current_date - 40, 8200, 410) on conflict (user_id, day) do update set active_kcal = excluded.active_kcal $q$) = 1);
+select bbtest.fails('0058: energía activa fuera de rango no', $q$ update public.daily_logs set active_kcal = 20000 where user_id = bbtest.u('A') and day = current_date - 40 $q$, '23514');
+select bbtest.zero('0058: A no escribe la energía activa de B', $q$ update public.daily_logs set active_kcal = 1 where user_id = bbtest.u('B') $q$);
+delete from public.daily_logs where user_id = bbtest.u('A') and day = current_date - 40;
+reset role;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

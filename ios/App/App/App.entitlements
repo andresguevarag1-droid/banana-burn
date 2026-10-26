@@ -11,7 +11,7 @@
 	<!-- Push (APNs). Xcode lo pasa a "production" al exportar para el App Store. -->
 	<key>aps-environment</key>
 	<string>development</string>
-	<!-- Salud: solo lectura de pasos, peso y energía activa (src/lib/native/health.ts). -->
+	<!-- Salud: solo lectura de pasos, peso y energía activa (src/lib/native/salud.ts). -->
 	<key>com.apple.developer.healthkit</key>
 	<true/>
 	<key>com.apple.developer.healthkit.access</key>

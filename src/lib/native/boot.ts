@@ -50,9 +50,17 @@ export async function bootNative(navigate: Navigate) {
   void import("./push").then((m) => m.bootPush(go)).catch(() => {});
   watchSignOut();
 
+  // Salud (si la persona la conectó en Conexiones): pasos, energía activa y pesajes al abrir y al volver a la app, como
+  // mucho cada 30 min. Sin conectar no carga nada.
+  const salud = () => { if (localStorageHas("bb.salud.owner")) void import("./salud").then((m) => m.syncSalud()).catch(() => {}); };
+  salud();
+  await App.addListener("appStateChange", ({ isActive }) => { if (isActive) salud(); });
+
   // La web ya pintó: fuera el splash (si la red tarda, se va solo a los 3 s; capacitor.config.ts).
   requestAnimationFrame(() => { void SplashScreen.hide({ fadeOutDuration: 200 }); });
 }
+
+const localStorageHas = (k: string) => { try { return localStorage.getItem(k) !== null; } catch { return false; } };
 
 /**
  * La app nunca hace zoom (el diseño ya es grande y táctil) y usa toda la pantalla: el CSS respeta el notch y la barra
