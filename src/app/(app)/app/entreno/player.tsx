@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning, WifiSlash } from "@/components/icons";
+import { ArrowLeft, ArrowsLeftRight, ArrowUp, ArrowCounterClockwise, BananaCoin, CaretDown, DotsThree, Eye, BananaFlame, BananaTrophy, Barbell, Books, BrandIcon, CalendarCheck, CaretRight, Check, FlagCheckered, LevelIcon, Monkey, PersonArmsSpread, PersonSimpleWalk, Play, Plus, Repeat, Smiley, SmileyMeh, SmileySad, SpeakerHigh, SpeakerSlash, Target, Timer, TreePalm, X, Banana, MonkeyBanana, Lightning, WifiSlash } from "@/components/icons";
 import { platesPerSide, prescribe, type Prescription, type SetLog, type SlotCfg } from "@/lib/engine";
 import { nextTimeLine } from "@/lib/primeros-pasos";
 import { learn } from "@/components/primeros-pasos/learn-store";
@@ -24,7 +24,7 @@ import { DoneRow, FocusSet } from "@/components/workout/focus-set";
 import { ListSets } from "@/components/workout/list-sets";
 import { RestPill, RestScreen, type RestInfo } from "@/components/workout/rest-screen";
 import { IntervalScreen } from "@/components/workout/interval-screen";
-import { SIDE_LABEL, advanceTimed, pauseTimed, resumeTimed, segCue, skipTimed, startTimed as startTimed0, timedSegments, timedView, type TimedRun } from "@/components/workout/sides";
+import { SIDE_LABEL, advanceTimed, segLabel, pauseTimed, resumeTimed, segCue, skipTimed, startTimed as startTimed0, timedSegments, timedView, type TimedRun } from "@/components/workout/sides";
 import { TimedBar } from "@/components/workout/timed-bar";
 import { Recap } from "@/components/workout/recap";
 import { CoachArtFill, CoachPic } from "@/components/coach-pic";
@@ -103,6 +103,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const [bestCombo, setBestCombo] = useState(0);
   const [lastAt, setLastAt] = useState<number | undefined>();
   const [warmDone, setWarmDone] = useState(false);
+  /** "Más opciones": lo secundario (nota técnica, XP, vista Lista, nivel) queda a un toque, no a la vista. */
+  const [more, setMore] = useState(false);
   const [toast, setToast] = useState<{ t: string; kind: "pr" | "swap" | "done" | "level" | "express"; idx?: number } | null>(null);
   /** Hitos ya mostrados en esta sesión: deshacer y volver a marcar no los repite. */
   const [seen, setSeen] = useState<string[]>([]);
@@ -739,6 +741,8 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const sideWord = perSide ? " por lado" : "";
   const startTimed = () => {
     unlockAudio(); const n = num(here[activeSet].reps) || ex.cfg.hi;
+    // La cuenta regresiva se pinta sobre el movimiento: se sube a la vista aunque la persona haya bajado.
+    document.querySelector<HTMLElement>('[data-tour="tech"]')?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     setWork({ run: startTimed0(timedSegments(n, perSide, PREP_SECONDS), Date.now()), si: activeSet, ex: idx }); buzz(20);
     speak(perSide ? `${n} segundos por lado. Prepárate: empiezas con el ${SIDE_LABEL[1].toLowerCase()}.` : `${n} segundos. Prepárate.`, true);
     if (perSide) announce(`${n} segundos por lado. Empiezas con el ${SIDE_LABEL[1].toLowerCase()}`);
@@ -754,108 +758,68 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
   const chips = activeSet >= 0 && needsLoad(ex) && loads && (ex.rx.type === "cal" || missingKg) ? loads.chips : null;
   // Primer entreno: cada parte se explica en el momento, en frases cortas (lo que ve, qué tocar y qué pasa después).
   const tourSteps: TourStep[] = [
-    { target: "tech", title: "Mira cómo se hace", body: "Toca el dibujo para ver el movimiento y los pasos. Míralo antes de tu primera serie." },
+    { target: "tech", title: "Mira cómo se hace", body: "Aquí ves el movimiento en grande. Tócalo para verlo paso a paso antes de tu primera serie." },
     { target: "sets", title: "Tu meta en esta serie", body: needsLoad(ex) ? "Aquí ves el peso y cuántas repeticiones hacer. La primera vez, elige un peso con el que te queden 2 repeticiones de sobra." : "Aquí ves cuántas repeticiones o segundos hacer. Hazlas con buena técnica, sin apurarte." },
     timed
       ? { target: "done", title: "Empieza la serie", body: perSide ? "Toca Iniciar: cuenta 3 segundos para que te acomodes, el tiempo del lado derecho, 5 segundos para cambiar de lado y el del izquierdo. Al terminar se marca sola." : "Toca Iniciar: cuenta 3 segundos para que te acomodes y luego el tiempo de trabajo. Al terminar se marca sola." }
-      : { target: "done", title: "Marca la serie", body: t(voice, { basico: "Haz las repeticiones y toca Hecho. Si usaste otro peso, cámbialo antes con los botones grandes.", intermedio: "Haz las reps y toca Hecho. Si levantaste otro peso, cámbialo antes con los botones grandes.", tecnico: "Completa la serie y toca Hecho. Ajusta antes la carga real si cambió." }) },
+      : { target: "done", title: "Marca la serie", body: t(voice, { basico: "Haz las repeticiones y toca Terminé la serie. Si usaste otro peso, cámbialo antes con los botones + y −.", intermedio: "Haz las reps y toca Terminé la serie. Si levantaste otro peso, cámbialo antes con + y −.", tecnico: "Completa la serie y toca Terminé la serie. Ajusta antes la carga real si cambió." }) },
     { target: "rest", title: "Descansa", body: "Al marcar arranca el descanso con cuenta regresiva. Te avisamos con sonido y vibración cuando toca seguir." },
-    { target: "swap", title: "¿Máquina ocupada?", body: "Toca Cambiar y elige otro ejercicio del mismo patrón. Tus series se ajustan solas." },
+    { target: "swap", title: "¿Máquina ocupada?", body: "Toca Cambiar y elige otro ejercicio que trabaja lo mismo. Tus series se ajustan solas." },
     { target: "trail", title: "Tus ejercicios de hoy", body: "Aquí ves todos. Al terminar el último, te mostramos tu resumen y lo que cambia la próxima vez." },
   ];
 
   return (
     <Shell>
       <div className="contents" inert={!!rest && restOpen}>
-      <header data-tour-anchor className="px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-2 bg-paper/95 backdrop-blur border-b border-line/60">
+      {/* Encabezado delgado: salir, qué entreno es, el tiempo total (secundario), sonido y avance. */}
+      <header data-tour-anchor className="px-4 pt-[max(.5rem,env(safe-area-inset-top))] pb-1.5 bg-paper/95 backdrop-blur border-b border-line/60">
         <div className="mx-auto flex max-w-xl items-center gap-2">
-          <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-11 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label="Salir del entreno"><X weight="bold" className="size-5" /></button>
+          <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label="Salir del entreno"><X weight="bold" className="size-5" /></button>
           <div className="flex-1 min-w-0 text-center">
-            <p className="flex items-center justify-center gap-1.5 text-[15px] leading-tight font-extrabold text-ink min-w-0 sm:text-base"><BrandIcon name={icon} className="size-5 shrink-0 text-banana-ink" /><span className="line-clamp-2 text-balance break-words">{title}</span></p>
-            <p className="flex items-center justify-center gap-3 text-xs font-semibold text-muted tabular-nums">
-              <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-3.5" aria-hidden /><span className="sr-only">Tiempo </span>{clock(elapsed)}</span>
-              {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-3.5" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1"><BananaCoin className="size-3.5 text-banana-ink" />{xpNow.xp} XP</span>}
+            <p className="flex items-center justify-center gap-1.5 text-[15px] leading-tight font-extrabold text-ink min-w-0"><BrandIcon name={icon} className="size-5 shrink-0 text-banana-ink" /><span className="truncate">{title}</span></p>
+            <p className="flex items-center justify-center gap-3 text-sm font-semibold text-muted tabular-nums">
+              <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-4" aria-hidden /><span className="sr-only">Tiempo total </span>{clock(elapsed)}</span>
               {sessMode === "suave" && <span className="text-sky">Modo suave</span>}
-              {!online && <span role="status" className="inline-flex items-center gap-1 whitespace-nowrap text-ink"><WifiSlash weight="bold" className="size-3.5" aria-hidden />Sin señal<span className="sr-only">: puedes seguir, guardamos todo en este teléfono</span></span>}
-              {combo >= 2 && <span className="inline-flex items-center gap-1 text-ember-ink"><Lightning weight="fill" className="size-3.5" aria-hidden />Combo x{combo}</span>}
+              {!online && <span role="status" className="inline-flex items-center gap-1 whitespace-nowrap text-ink"><WifiSlash weight="bold" className="size-4" aria-hidden />Sin señal<span className="sr-only">: puedes seguir, guardamos todo en este teléfono</span></span>}
             </p>
           </div>
-          <button onClick={() => setSheet("sound")} className="tap pressable grid place-items-center size-11 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label={`Sonido y voz: ${prefs.voice ? "coach de voz encendido" : prefs.sound ? "pitidos encendidos" : "silencio"}`}>
+          <button onClick={() => setSheet("sound")} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label={`Sonido y voz: ${prefs.voice ? "coach de voz encendido" : prefs.sound ? "pitidos encendidos" : "silencio"}`}>
             {prefs.sound || prefs.voice ? <SpeakerHigh weight={prefs.voice ? "fill" : "bold"} className="size-5" /> : <SpeakerSlash weight="bold" className="size-5" />}
           </button>
           <SessionRing value={doneSets / Math.max(1, totalSets)} />
         </div>
-        <div className="mx-auto mt-2 max-w-xl">
+        <div className="mx-auto mt-1.5 max-w-xl land:hidden">
           <div data-tour="trail"><BananaTrail items={exercises.map((e, i) => ({ name: e.name, done: rows[i].filter((s) => s.done).length, total: rows[i].length }))} current={idx} fresh={fresh} onPick={(i) => { setIdx(i); setWork(null); }} /></div>
-          {goal && <LevelMeter idx={goal.level.idx} progress={goal.level.progress} text={levelGoalText(goal, setWord)} className="mt-2 px-1" />}
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden" role="region" aria-label="Series del ejercicio">
-        <div className={`mx-auto max-w-xl px-4 pt-4 ${rest && !restOpen ? "pb-28" : "pb-6"}`}>
-          {/* Ejercicio: el mosaico abre la técnica; el único botón al lado es Cambiar */}
-          <section key={ex.id} className="flex gap-3 items-stretch animate-enter">
-            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative shrink-0 w-[88px] min-h-[104px] rounded-3xl overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver técnica de ${ex.name}`}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden" role="region" aria-label="Ejercicio y series">
+        <div className={`mx-auto max-w-xl land:max-w-4xl px-4 pt-3 ${rest && !restOpen ? "pb-28" : "pb-6"}`}>
+          {/* Lo primero que se ve: el movimiento en grande y el nombre del ejercicio. En horizontal, lado a lado. */}
+          <div className="land:grid land:grid-cols-2 land:items-start land:gap-4">
+          <section key={ex.id} className="animate-enter">
+            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative block w-full h-[clamp(190px,36dvh,440px)] [@media(min-height:800px)]:h-[clamp(200px,42dvh,480px)] land:h-[54dvh]! rounded-[2rem] overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver cómo se hace ${ex.name}`}>
               {(() => {
-                const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-1 top-1 bottom-5" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-11 text-ink/80" />;
-                return ex.art ? <CoachArtFill src={ex.art} sizes="88px" className="object-contain pb-4" fallback={still} /> : still;
+                const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-4 top-4 bottom-14" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-24 text-ink/80" />;
+                return ex.art ? <CoachArtFill src={ex.art} sizes="(min-width: 640px) 576px, 100vw" className="object-contain pb-12" fallback={still} /> : still;
               })()}
-              <span className="absolute bottom-1.5 inset-x-0 text-[10px] font-bold text-ink/75">Ver técnica</span>
-            </button>
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-muted min-w-0"><span className="min-w-0">Ejercicio {idx + 1} de {exercises.length}, {ex.muscle.toLowerCase()}</span><span className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 h-5 text-[11px] font-bold ring-1 ring-line ${badgeCls}`}><BadgeIcon weight="bold" className="size-3" />{badge}</span></p>
-              <h1 className="mt-0.5 text-[22px] leading-tight font-extrabold tracking-tight text-ink line-clamp-2">{ex.name}</h1>
-              {alts > 0 && (
-                <div className="mt-1.5">
-                  <button data-tour="swap" onClick={() => { setSwapAsk(null); setSheet("swap"); }} className="chip h-11 px-4 bg-white border border-line text-ink"><ArrowsLeftRight weight="bold" className="size-4" />Cambiar ejercicio</button>
-                </div>
+              <span className="absolute top-3 left-3 inline-flex items-center h-8 px-3 rounded-full bg-white/90 text-sm font-bold text-ink tabular-nums">Ejercicio {idx + 1} de {exercises.length}</span>
+              {!(timerOn && tp) && <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold"><Eye weight="bold" className="size-4" aria-hidden />Ver cómo se hace</span>}
+              {/* Serie por tiempo en marcha: la cuenta regresiva es lo más grande de la pantalla (encima del movimiento). */}
+              {timerOn && tp && (
+                <span aria-hidden className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 pt-16 text-left ${tp.seg.kind === "switch" ? "bg-ink/85" : "bg-gradient-to-t from-ink/85 via-ink/55 to-transparent"} text-white`}>
+                  <span className="text-[96px] leading-[.85] font-extrabold tracking-tight tabular-nums">{Math.ceil(tp.left)}</span>
+                  <span className="pb-2 text-lg font-extrabold leading-tight">{tp.paused ? "En pausa" : segLabel(tp.seg)}</span>
+                </span>
               )}
-            </div>
+            </button>
           </section>
-          <p className="mt-3 text-[13px] leading-snug text-muted">{ex.rx.note}</p>
 
-          {/* Coach Banana presenta el entreno antes de la primera serie */}
-          {doneSets === 0 && intro && (
-            <div className="mt-3 flex items-center gap-3 rounded-[1.25rem] bg-ink p-3 pr-4 text-white">
-              {coach ? <CoachPic src={coach.avatar} size={44} className="size-11 shrink-0 rounded-xl object-cover" />
-                : <span aria-hidden className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-banana">
-                  <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="object-cover origin-[52%_4%] scale-[2.5]" />
-                </span>}
-              <p className="min-w-0"><span className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">{coach?.name ?? "Coach Banana"}</span><span className="block text-sm font-bold leading-snug text-pretty">{intro}</span></p>
-            </div>
-          )}
+          <div className="land:pt-1">
+            <h1 className="mt-3 land:mt-0 text-[clamp(28px,8.4vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink line-clamp-2 text-balance">{ex.name}</h1>
+            {ex.tech?.cues[0] && <p className="mt-1 text-[17px] leading-snug font-semibold text-body text-pretty">{cap(ex.tech.cues[0])}</p>}
 
-          {doneSets === 0 && !noXp && (() => {
-            const fin = finishValue(xpState(0, 0));
-            return (
-              <p className="mt-3 flex items-start gap-2.5 rounded-[1.25rem] bg-white border border-line/70 p-3 text-sm text-body">
-                <BananaFlame weight="duotone" className="size-5 shrink-0 text-ember-ink" />
-                <span>Completo, este entreno vale <span className="font-extrabold text-ink tabular-nums">+{fin.xp} XP</span> (bono de +{fin.bonus} por terminarlo) y {gam.todayDone ? `tu racha de ${streakNext} ${streakNext === 1 ? "día" : "días"} ya está a salvo hoy` : `lleva tu racha a ${streakNext} ${streakNext === 1 ? "día" : "días"}`}.</span>
-              </p>
-            );
-          })()}
-
-          {warm && (
-            <div className="mt-3 flex items-start gap-3 rounded-[1.5rem] bg-banana-soft/70 p-3.5">
-              <Monkey className="size-7 shrink-0 text-banana-ink" />
-              <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-ink">Calienta primero</p>
-                <p className="text-sm text-body">{warmupText(warm, ex.barbell)} No se anotan.</p>
-              </div>
-              <button onClick={() => setWarmDone(true)} className="tap pressable shrink-0 h-11 px-4 rounded-full bg-ink text-white text-sm font-bold">Ya calenté</button>
-            </div>
-          )}
-
-          <div className="mt-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-muted tabular-nums">{here.filter((r) => r.done).length} de {here.length} series</h2>
-            <div role="radiogroup" aria-label="Vista" className="inline-flex rounded-full bg-white border border-line p-0.5">
-              {(["focus", "list"] as const).map((v) => (
-                <button key={v} role="radio" aria-checked={prefs.view === v} onClick={() => setPrefs({ view: v })} className={`tap pressable h-11 px-4 rounded-full text-sm font-bold ${prefs.view === v ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>{v === "focus" ? "Foco" : "Lista"}</button>
-              ))}
-            </div>
-          </div>
-
-          <div data-tour="sets" className="mt-2.5">
+            <div data-tour="sets" className="mt-4">
             {focus && activeSet >= 0 ? (
               <FocusSet rows={here} active={activeSet} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} perSide={perSide} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
                 chips={chips} onPickKg={pickKg} onStep={step} onChange={change} onCopy={copy} onUndo={undo} />
@@ -878,6 +842,67 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
             )}
           </div>
 
+          {/* Calentamiento: debajo de la meta de la serie, para que lo primero siga siendo qué hacer. */}
+          {warm && (
+            <div className="mt-3 flex items-center gap-3 rounded-[1.5rem] bg-banana-soft/70 p-3">
+              <Monkey className="size-7 shrink-0 text-banana-ink" />
+              <div className="flex-1 min-w-0">
+                <p className="font-extrabold text-ink">Calienta primero</p>
+                <p className="text-sm text-body">{warmupText(warm, ex.barbell)} No se anotan.</p>
+              </div>
+              <button onClick={() => setWarmDone(true)} className="tap pressable shrink-0 h-12 px-4 rounded-full bg-ink text-white text-sm font-bold">Ya calenté</button>
+            </div>
+          )}
+
+          {/* Lo secundario a un toque: cambiar el ejercicio o ver más opciones. */}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {alts > 0 && <button data-tour="swap" onClick={() => { setSwapAsk(null); setSheet("swap"); }} className="chip justify-center h-12 px-3 bg-white border border-line text-ink text-[15px]"><ArrowsLeftRight weight="bold" className="size-5" />Cambiar<span className="sr-only"> ejercicio</span></button>}
+            <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-controls="mas-opciones" className={`chip justify-center h-12 px-3 bg-white border border-line text-ink text-[15px] ${alts > 0 ? "" : "col-span-2"}`}>
+              <DotsThree weight="bold" className="size-5" />Más opciones<CaretDown weight="bold" className={`size-4 transition-transform duration-(--dur-base) ease-out ${more ? "rotate-180" : ""}`} />
+            </button>
+          </div>
+
+          {more && (
+            <div id="mas-opciones" className="mt-3 space-y-3 rounded-[1.5rem] bg-white border border-line/70 p-4 animate-enter">
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-muted">
+                <span>{cap(ex.muscle.toLowerCase())}</span>
+                <span className={`inline-flex items-center gap-1 rounded-full bg-cream px-2.5 h-7 text-[13px] font-bold ${badgeCls}`}><BadgeIcon weight="bold" className="size-3.5" />{badge}</span>
+                {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-4" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1 tabular-nums"><BananaCoin className="size-4 text-banana-ink" />{xpNow.xp} XP hoy</span>}
+                {combo >= 2 && <span className="inline-flex items-center gap-1 text-ember-ink"><Lightning weight="fill" className="size-4" aria-hidden />Combo x{combo}</span>}
+              </p>
+              <p className="text-[15px] leading-snug text-body">{ex.rx.note}</p>
+              {doneSets === 0 && intro && (
+                <div className="flex items-center gap-3 rounded-[1.25rem] bg-ink p-3 pr-4 text-white">
+                  {coach ? <CoachPic src={coach.avatar} size={44} className="size-11 shrink-0 rounded-xl object-cover" />
+                    : <span aria-hidden className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-banana">
+                      <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="object-cover origin-[52%_4%] scale-[2.5]" />
+                    </span>}
+                  <p className="min-w-0"><span className="block text-[11px] font-extrabold uppercase tracking-[.12em] text-banana">{coach?.name ?? "Coach Banana"}</span><span className="block text-sm font-bold leading-snug text-pretty">{intro}</span></p>
+                </div>
+              )}
+              {doneSets === 0 && !noXp && (() => {
+                const fin = finishValue(xpState(0, 0));
+                return (
+                  <p className="flex items-start gap-2.5 text-sm text-body">
+                    <BananaFlame weight="duotone" className="size-5 shrink-0 text-ember-ink" />
+                    <span>Completo, este entreno vale <span className="font-extrabold text-ink tabular-nums">+{fin.xp} XP</span> (bono de +{fin.bonus} por terminarlo) y {gam.todayDone ? `tu racha de ${streakNext} ${streakNext === 1 ? "día" : "días"} ya está a salvo hoy` : `lleva tu racha a ${streakNext} ${streakNext === 1 ? "día" : "días"}`}.</span>
+                  </p>
+                );
+              })()}
+              {goal && <LevelMeter idx={goal.level.idx} progress={goal.level.progress} text={levelGoalText(goal, setWord)} className="px-1" />}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-bold text-muted">Cómo ver las series</span>
+                <div role="radiogroup" aria-label="Vista" className="inline-flex rounded-full bg-cream border border-line p-0.5">
+                  {(["focus", "list"] as const).map((v) => (
+                    <button key={v} role="radio" aria-checked={prefs.view === v} onClick={() => setPrefs({ view: v })} className={`tap pressable h-11 px-4 whitespace-nowrap rounded-full text-sm font-bold ${prefs.view === v ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>{v === "focus" ? "Una a la vez" : "Todas"}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          </div>
+          </div>
           {!focus && <p className="mt-3 text-center text-xs text-muted">{strengthCue(voice, { rest: ex.cfg.rest, unit: ex.cfg.unit })}</p>}
           {focus && !ex.cfg.unit && <p className="mt-3 text-center text-xs text-muted">{strengthCue(voice)}</p>}
           {nextEx === null && cardio && <p className="mt-3 card p-4 flex items-center gap-2.5 text-sm font-semibold text-ink"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 text-banana-ink" />Al final: {cardio}</p>}
@@ -891,12 +916,12 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
               timerOn && tp ? (
                 <TimedBar view={tp} {...timerCtl} />
               ) : (
-                <button data-tour="done" onClick={startTimed} disabled={missingKg} className="pressable w-full h-[72px] inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] disabled:bg-line disabled:text-muted disabled:shadow-none"><Play weight="fill" className="size-6" />{missingKg ? "Elige un peso" : `Iniciar ${num(here[activeSet]?.reps) || ex.cfg.hi} s${sideWord}`}</button>
+                <button data-tour="done" onClick={startTimed} disabled={missingKg} className="pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] disabled:bg-line disabled:text-muted disabled:shadow-none"><Play weight="fill" className="size-6" />{missingKg ? "Elige un peso" : `Iniciar ${num(here[activeSet]?.reps) || ex.cfg.hi} s${sideWord}`}</button>
               )
             ) : (
-              <button data-tour="done" onClick={() => complete(activeSet)} disabled={missingKg} className="relative pressable w-full h-[72px] inline-flex items-center justify-center gap-2.5 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] hover:brightness-95 disabled:bg-line disabled:text-muted disabled:shadow-none disabled:hover:brightness-100" aria-describedby="serie-actual">
+              <button data-tour="done" onClick={() => complete(activeSet)} disabled={missingKg} className="relative pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2.5 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] hover:brightness-95 disabled:bg-line disabled:text-muted disabled:shadow-none disabled:hover:brightness-100" aria-describedby="serie-actual">
                 {pop && pop.ex === idx && <XpPop k={pop.k} xp={pop.xp} />}
-                {missingKg ? "Elige un peso para marcar" : <><Check weight="bold" className="size-7" />Hecho</>}
+                {missingKg ? "Elige un peso para marcar" : <><Check weight="bold" className="size-7" />Terminé la serie</>}
               </button>
             )
           ) : nextEx && (allDoneHere || !focus) ? (

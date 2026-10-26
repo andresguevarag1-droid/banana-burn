@@ -1,6 +1,6 @@
 "use client";
 import { ArrowCounterClockwise, Barbell, Check, Minus, Plus, Timer } from "@/components/icons";
-import { EFFORTS, effortOf, kgFmt, num, restLabel, targetText, type Row } from "./logic";
+import { EFFORTS, effortOf, kgFmt, num, plainTarget, restLabel, targetText, type Row } from "./logic";
 import css from "./workout.module.css";
 
 type Props = {
@@ -55,6 +55,8 @@ export function DoneRow({ si, row, unit, bw, perSide, onUndo }: { si: number; ro
   );
 }
 
+const showKgFor = (bw: boolean, timed: boolean, noBallast: boolean) => !(bw && (timed || noBallast));
+
 export function FocusSet({ rows, active, bw, noBallast = false, unit, perSide = false, restSec, plates, prev, chips, onPickKg, onStep, onChange, onCopy, onUndo }: Props) {
   const r = rows[active];
   const n = rows.length;
@@ -63,7 +65,7 @@ export function FocusSet({ rows, active, bw, noBallast = false, unit, perSide = 
   const fromPrev = prev && (String(prev.kg ?? "") !== r.kg || String(prev.reps) !== r.reps) && !same;
   const timed = unit === "s";
   const ul = unit === "s" ? (perSide ? "segundos por lado" : "segundos") : unit === "m" ? "metros" : "reps";
-  const showKg = !(bw && (timed || noBallast));
+  const showKg = showKgFor(bw, timed, noBallast);
   const last = rows.filter((x) => !x.done).length === 1;
 
   return (
@@ -75,14 +77,16 @@ export function FocusSet({ rows, active, bw, noBallast = false, unit, perSide = 
 
       {/* Serie actual */}
       <section key={active} aria-labelledby="serie-actual" className={`${css.next} rounded-[2rem] bg-white border-2 border-ink p-4 pb-5 shadow-lift`}>
+        {/* Qué serie es y qué hacer, en grande y en palabras simples: "Serie 2 de 4" y "10 repeticiones con 60 kg". */}
         <div className="flex items-center justify-between gap-3">
-          <h2 id="serie-actual" className="text-lg font-extrabold text-ink tabular-nums">
+          <h2 id="serie-actual" className="text-[28px] leading-tight font-extrabold tracking-tight text-ink tabular-nums">
             {last && n > 1 ? "Última serie" : `Serie ${active + 1}`} <span className="font-bold text-muted">de {n}</span>
           </h2>
-          <div aria-hidden className="flex gap-1.5">
-            {rows.map((x, si) => <span key={si} className={`h-2 rounded-full transition-[width,background-color] duration-(--dur-base) ease-out ${si === active ? "w-6 bg-ink" : x.done ? "w-2 bg-peel" : "w-2 bg-line"}`} />)}
+          <div aria-hidden className="flex shrink-0 gap-1.5">
+            {rows.map((x, si) => <span key={si} className={`h-2.5 rounded-full transition-[width,background-color] duration-(--dur-base) ease-out ${si === active ? "w-7 bg-ink" : x.done ? "w-2.5 bg-peel" : "w-2.5 bg-line"}`} />)}
           </div>
         </div>
+        <p className="mt-0.5 text-lg font-bold leading-snug text-body tabular-nums">{plainTarget(r, { unit, bw, perSide })}</p>
 
         {chips && chips.length > 0 && (
           <div className="mt-3">

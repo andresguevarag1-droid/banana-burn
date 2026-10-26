@@ -52,6 +52,9 @@
 }
 
 /* El hover solo existe con puntero fino: en táctil el "hover" pegado tras un toque se ve roto. */
+/* Teléfono acostado (horizontal y bajo): el reproductor pone el movimiento y los controles lado a lado. */
+@custom-variant land (@media (orientation: landscape) and (max-height: 540px));
+
 @custom-variant hover {
   @media (hover: hover) and (pointer: fine) {
     &:hover { @slot; }

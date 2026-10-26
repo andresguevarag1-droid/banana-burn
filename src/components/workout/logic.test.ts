@@ -261,3 +261,14 @@ describe("sesión: el modo va dentro", () => {
     expect(s.repeat).toBe(true);
   });
 });
+
+describe("plainTarget", () => {
+  it("dice la meta en una frase simple", async () => {
+    const { plainTarget } = await import("./logic");
+    expect(plainTarget({ kg: "20", reps: "10" }, { bw: false })).toBe("10 repeticiones con 20 kg");
+    expect(plainTarget({ kg: "", reps: "12" }, { bw: true })).toBe("12 repeticiones");
+    expect(plainTarget({ kg: "5", reps: "8" }, { bw: true })).toBe("8 repeticiones con 5 kg extra");
+    expect(plainTarget({ kg: "", reps: "30" }, { unit: "s", bw: true, perSide: true })).toBe("30 segundos por lado");
+    expect(plainTarget({ kg: "12,5", reps: "1" }, { bw: false })).toBe(`1 repetición con ${(12.5).toLocaleString("es-419")} kg`);
+  });
+});
