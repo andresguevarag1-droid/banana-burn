@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "emails:auth": "npx --yes tsx scripts/build-auth-emails.ts"
+    "emails:auth": "npx --yes tsx scripts/build-auth-emails.ts",
+    "a11y": "node scripts/a11y-scan.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
@@ -32,6 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
+    "axe-core": "^4.14.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "tailwindcss": "^4",

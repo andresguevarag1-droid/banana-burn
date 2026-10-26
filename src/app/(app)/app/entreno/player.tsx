@@ -798,13 +798,14 @@ export function Player({ template, title, icon, cardio, options, dateKey, mode =
           {/* Lo primero que se ve: el movimiento en grande y el nombre del ejercicio. En horizontal, lado a lado. */}
           <div className="land:grid land:grid-cols-2 land:items-start land:gap-4">
           <section key={ex.id} className="animate-enter">
-            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative block w-full h-[clamp(190px,36dvh,440px)] [@media(min-height:800px)]:h-[clamp(200px,42dvh,480px)] land:h-[54dvh]! rounded-[2rem] overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`} aria-label={`Ver cómo se hace ${ex.name}`}>
-              {(() => {
+            <button data-tour="tech" onClick={() => setSheet("tech")} className={`pressable relative block w-full h-[clamp(190px,36dvh,440px)] [@media(min-height:800px)]:h-[clamp(200px,42dvh,480px)] land:h-[54dvh]! rounded-[2rem] overflow-hidden ${ex.art ? "bg-[#F3E8FF]" : "bg-banana"}`}>
+              <span aria-hidden className="contents">{(() => {
                 const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-4 top-4 bottom-14" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-24 text-ink/80" />;
                 return ex.art ? <CoachArtFill src={ex.art} sizes="(min-width: 640px) 576px, 100vw" className="object-contain pb-12" fallback={still} /> : still;
-              })()}
-              <span className="absolute top-3 left-3 inline-flex items-center h-8 px-3 rounded-full bg-white/90 text-sm font-bold text-ink tabular-nums">Ejercicio {idx + 1} de {exercises.length}</span>
-              {!(timerOn && tp) && <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold"><Eye weight="bold" className="size-4" aria-hidden />Ver cómo se hace</span>}
+              })()}</span>
+              <span aria-hidden className="absolute top-3 left-3 inline-flex items-center h-8 px-3 rounded-full bg-white/90 text-sm font-bold text-ink tabular-nums">Ejercicio {idx + 1} de {exercises.length}</span>
+              {!(timerOn && tp) && <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold"><Eye weight="bold" className="size-4" aria-hidden />Ver cómo se hace<span className="sr-only"> {ex.name}</span></span>}
+              {timerOn && tp && <span className="sr-only">Ver cómo se hace {ex.name}</span>}
               {/* Serie por tiempo en marcha: la cuenta regresiva es lo más grande de la pantalla (encima del movimiento). */}
               {timerOn && tp && (
                 <span aria-hidden className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 pt-16 text-left ${tp.seg.kind === "switch" ? "bg-ink/85" : "bg-gradient-to-t from-ink/85 via-ink/55 to-transparent"} text-white`}>

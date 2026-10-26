@@ -38,7 +38,7 @@ export function WeekCard({ s, week, sched, todayIso, training, weighed, streak, 
       <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-2xl bg-banana p-2.5"><dt className="text-[11px] font-bold text-ink/75">Entrenos</dt><dd className="text-xl font-extrabold tabular-nums text-ink">{done}<span className="text-sm text-ink/70">/{planned}</span></dd></div>
         <div className="rounded-2xl bg-banana-soft p-2.5"><dt className="text-[11px] font-bold text-ink/75">Racha</dt><dd className="inline-flex items-center gap-1 text-xl font-extrabold tabular-nums text-ink"><BananaFlame weight="fill" className="size-4 text-banana-ink" />{streak}<span className="text-sm text-ink/70"> {streak === 1 ? "día" : "días"}</span></dd></div>
-        <div className="rounded-2xl bg-cream p-2.5"><dt className="text-[11px] font-bold text-ink/75">XP semana</dt><dd className="text-xl font-extrabold tabular-nums text-ink">{n(s.week.xp)}</dd></div>
+        <div className="rounded-2xl bg-cream p-2.5"><dt className="text-[11px] font-bold text-ink/75">Puntos XP</dt><dd className="text-xl font-extrabold tabular-nums text-ink">{n(s.week.xp)}</dd></div>
       </dl>
 
       <ol className="mt-3 grid grid-cols-7 gap-1" aria-label="Entrenos de esta semana">

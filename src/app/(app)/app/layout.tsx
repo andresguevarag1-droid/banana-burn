@@ -99,7 +99,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
       <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
       <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
-      <main id="contenido" tabIndex={-1} className="block mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
+      <main id="contenido" tabIndex={-1} className="block text-[17px] leading-relaxed mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.today === "terminado" ? "tu certificado te espera" : live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: liveCoach && liveCoach.id !== "banana" ? liveCoach.avatar : null }} />}
         {banner === "beta-add" ? <AddCardBanner />
           : banner === "beta-scheduled" && charge ? <ScheduledBanner charge={charge} tz={v.tz} />

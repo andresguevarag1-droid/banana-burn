@@ -1,10 +1,10 @@
 // "Cómo te hablo": el registro con el que Banana Burn y Coach Banana explican el entreno.
-// Básico (palabras simples, todo explicado), Intermedio (por defecto: términos ligeros explicados una vez) y
+// Básico (por defecto: palabras simples, todo explicado), Intermedio (términos ligeros explicados una vez) y
 // Técnico (RIR, tempo, doble progresión, volumen). Solo cambia la explicación: los números son siempre los mismos.
 // Sin dependencias de React ni del servidor: lo usan páginas, componentes de cliente, correos y notificaciones.
 
 export type Voice = "basico" | "intermedio" | "tecnico";
-export const DEFAULT_VOICE: Voice = "intermedio";
+export const DEFAULT_VOICE: Voice = "basico";
 
 export const VOICES: { id: Voice; label: string; d: string; sample: string }[] = [
   { id: "basico", label: "Básico", d: "Palabras simples y todo explicado. Ideal si estás empezando.", sample: "Baja lento contando 3 y detente cuando aún puedas hacer 2 más." },

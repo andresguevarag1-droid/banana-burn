@@ -273,3 +273,8 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
   .bb-ring { opacity: 0; }
   .bb-check-draw path, .bb-check-draw polyline { animation: none !important; stroke-dashoffset: 0; }
 }
+
+/* Hoy: una sola tarjeta de aviso a la vez (components/hoy/prompt-queue.tsx). Se ve el primer aviso con contenido;
+   los siguientes se ocultan y, si ninguno tiene nada, el contenedor tampoco ocupa lugar. */
+.prompt-queue > .pq-item:not(:empty) ~ .pq-item { display: none; }
+.prompt-queue:not(:has(> .pq-item:not(:empty))) { display: none; }

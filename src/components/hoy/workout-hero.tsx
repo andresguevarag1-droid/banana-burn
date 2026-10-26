@@ -70,6 +70,13 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
             ))}
           </ul>
 
+          {/* Lo más importante, arriba: empezar (o que ya está hecho). */}
+          {trainedToday ? (
+            <p className="relative mt-4 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." })}</p>
+          ) : (
+            <div className="relative mt-4"><Readiness voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
+          )}
+
           {/* Coach Banana: el gancho y lo que hiciste la última vez */}
           {!trainedToday && (hook || lastTime) && (
             <div className="relative mt-4 flex items-start gap-3 rounded-2xl bg-ink p-3 pr-4 text-white shadow-lift">
@@ -96,11 +103,6 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
         </div>
       </div>
 
-      {trainedToday ? (
-        <p className="relative mt-5 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." })}</p>
-      ) : (
-        <div className="relative mt-5"><Readiness voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
-      )}
 
       {/* Ayer y mañana, en palabras */}
       <div className="relative mt-4 grid gap-2 sm:grid-cols-2">

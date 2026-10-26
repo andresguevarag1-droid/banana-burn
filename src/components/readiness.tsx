@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BananaFlame, Banana, Bed, Syringe } from "@/components/icons";
+import { BananaFlame, Play, Banana, Bed, Syringe } from "@/components/icons";
 import { useDailySave } from "@/components/use-daily-save";
 import { DEFAULT_VOICE, readinessEffects, readinessTips, t, type Voice } from "@/lib/voice";
 
@@ -32,7 +32,13 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
   return (
     <div className="relative">
       {daily.toast}
-      <p className="text-sm font-bold text-ink/80">¿Cómo te sientes hoy?</p>
+      {/* Lo primero: el botón grande para empezar. Cómo te sientes es opcional y ajusta el entreno. */}
+      <Link href={`/app/entreno${sel?.q ?? ""}`} className="btn-primary flex w-full min-h-16 h-auto py-3 px-5 text-lg leading-tight font-extrabold text-center shadow-lift">
+        <Play weight="fill" className="size-6 shrink-0" aria-hidden />
+        <span className="min-w-0 text-balance">{sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
+        <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>
+      </Link>
+      <p className="mt-4 text-sm font-bold text-ink/80">¿Cómo te sientes hoy? <span className="font-semibold text-ink/70">Opcional</span></p>
       <p className="text-xs font-semibold text-ink/75">{t(voice, { basico: `Elige y ${coachName} ajusta tu entreno a cómo llegas hoy.`, intermedio: "Ajusto el entreno a tu energía de hoy.", tecnico: "Autorregulación del día." })}</p>
       {suggestSoft && !v && <p className="mt-1 flex gap-1.5 text-xs font-semibold text-ink/75"><Syringe weight="duotone" className="size-4 shrink-0" />Cerca de tu inyección: si hay náusea o poca energía, elige “{she ? "Cansada" : "Cansado"}” para el modo suave.</p>}
       <div className="mt-2 grid grid-cols-3 gap-2">
@@ -45,9 +51,6 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
         ))}
       </div>
       {sel && <p className="mt-2.5 text-[13px] font-semibold text-ink/80 animate-enter">{tips[sel.v - 1] ?? sel.tip}</p>}
-      <Link href={`/app/entreno${sel?.q ?? ""}`} className="mt-4 btn-primary w-full sm:w-auto h-14 px-5 sm:px-8 text-[15px] min-[380px]:text-[17px] font-extrabold shadow-lift whitespace-nowrap">
-        {sel?.v === 1 ? "Empezar modo suave" : "Empezar entreno"} <span className="font-medium text-white/70 tabular-nums">{sel?.v === 1 ? Math.round(mins * 0.75) : mins} min</span> <ArrowRight weight="bold" className="size-5" />
-      </Link>
     </div>
   );
 }
