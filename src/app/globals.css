@@ -283,3 +283,19 @@ body { background: var(--color-paper); color: var(--color-body); font-family: va
    los siguientes se ocultan y, si ninguno tiene nada, el contenedor tampoco ocupa lugar. */
 .prompt-queue > .pq-item:not(:empty) ~ .pq-item { display: none; }
 .prompt-queue:not(:has(> .pq-item:not(:empty))) { display: none; }
+
+/* ---------- App nativa (Capacitor) ----------
+   html[data-native] lo pone src/lib/native/boot.ts solo dentro de la app de iPhone o Android. En la web nada de esto
+   aplica. La app ocupa toda la pantalla (viewport-fit=cover): sin rebote, sin selección accidental y sin el menú de
+   mantener presionado; los campos de texto se siguen pudiendo seleccionar. */
+html[data-native] { overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+html[data-native] :is(input, textarea, select, [contenteditable="true"], .select-text) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+/* La barra de estado (hora, batería) queda sobre la página: el contenido baja lo que mide y una franja del color del
+   fondo tapa lo que pasa por debajo al hacer scroll. La franja queda debajo de las pantallas completas (reproductor,
+   descanso, hojas), que ya se corren solas por el notch. */
+html[data-native] body { overscroll-behavior: none; padding-top: env(safe-area-inset-top); }
+html[data-native] body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top); background: var(--color-paper); z-index: 45; pointer-events: none; }
+html[data-native] .min-h-dvh { min-height: calc(100dvh - env(safe-area-inset-top)); }
+html[data-native] header.sticky.top-0 { top: env(safe-area-inset-top); }
+/* Pantallas que ya dejan su propio espacio arriba (data-own-safe-top): sin margen doble. */
+html[data-native] body:has([data-own-safe-top]) { padding-top: 0; }

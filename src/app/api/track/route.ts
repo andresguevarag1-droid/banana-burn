@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { cleanEvent } from "./event";
 import { sendCapi } from "@/lib/meta-capi";
 import { SITE_URL } from "@/lib/env";
+import { nativeAgentFrom } from "@/lib/platform-ua";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
   const ip = clientIp(req);
   const ua = req.headers.get("user-agent") ?? "";
   const cookies = req.headers.get("cookie");
-  after(() => sendCapi(evt, { ip: ip === "local" ? "" : ip, ua, cookies, origin: SITE_URL }));
+  // Desde la app nativa no va nada a Meta: rastrear entre apps obliga a pedir permiso de rastreo (ATT) en iPhone.
+  if (!nativeAgentFrom(ua)) after(() => sendCapi(evt, { ip: ip === "local" ? "" : ip, ua, cookies, origin: SITE_URL }));
   return new Response(null, { status: 204 });
 }
