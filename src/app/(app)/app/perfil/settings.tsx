@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ArrowsLeftRight, Banana, BananaFlame, Barbell, BrandIcon, CheckCircle, DownloadSimple, Gorilla, House, PersonSimpleRun, Scales, SignOut, Trash, WarningCircle } from "@/components/icons";
 import { updateTraining } from "./actions";
 import { safeAction } from "@/lib/action-client";
+import { useIsNativeApp } from "@/components/platform-provider";
 
 type Eq = "gym" | "casa" | "mixto" | "ninguno";
 type Lv = "principiante" | "intermedio" | "avanzado";
@@ -43,9 +44,30 @@ export function DataControls() {
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // App nativa: el WebView no descarga archivos; se guarda en el teléfono y se abre Compartir (src/lib/native/files.ts).
+  const native = useIsNativeApp();
+  const [exporting, setExporting] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+  const exportNative = async () => {
+    setExporting(true); setExportErr(null);
+    try {
+      const res = await fetch("/api/cuenta/exportar", { credentials: "same-origin" });
+      if (!res.ok) throw new Error("exportar");
+      const { shareTextFile } = await import("@/lib/native/files");
+      await shareTextFile(`banana-burn-mis-datos-${new Date().toISOString().slice(0, 10)}.json`, await res.text(), "Mis datos de Banana Burn");
+    } catch (e) {
+      // Cerrar la hoja de Compartir no es un error.
+      if (!/cancel/i.test(String((e as Error)?.message ?? e))) setExportErr("No pudimos preparar tus datos. Intenta de nuevo.");
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <div className="space-y-3">
-      <a href="/api/cuenta/exportar" className="btn-ghost w-full h-12 justify-start px-4"><DownloadSimple weight="bold" className="size-5" />Descargar mis datos (JSON)</a>
+      {native
+        ? <button type="button" onClick={exportNative} disabled={exporting} className="btn-ghost w-full h-12 justify-start px-4"><DownloadSimple weight="bold" className="size-5" />{exporting ? "Preparando tus datos" : "Descargar mis datos (JSON)"}</button>
+        : <a href="/api/cuenta/exportar" className="btn-ghost w-full h-12 justify-start px-4"><DownloadSimple weight="bold" className="size-5" />Descargar mis datos (JSON)</a>}
+      {exportErr && <p role="alert" className="text-sm font-semibold text-bad">{exportErr}</p>}
       <form action="/auth/salir" method="post"><button className="btn-ghost w-full h-12 justify-start px-4"><SignOut weight="bold" className="size-5" />Cerrar sesión</button></form>
       {!open ? (
         <button onClick={() => setOpen(true)} className="btn w-full h-12 justify-start px-4 text-bad hover:bg-bad/5"><Trash weight="bold" className="size-5" />Borrar mi cuenta</button>
@@ -64,7 +86,8 @@ export function DataControls() {
             <button onClick={() => { setOpen(false); setText(""); }} className="btn-ghost h-11 flex-1">Cancelar</button>
             <button disabled={text.trim() !== "BORRAR" || pending} onClick={() => start(async () => {
               const r = await fetch("/api/cuenta/borrar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: text.trim() }) }).then((x) => x.json()).catch(() => ({ ok: false }));
-              if (r.ok) { window.location.href = r.demo ? "/app" : "/?cuenta=borrada"; } else setErr(r.error ?? "No pudimos borrar tu cuenta. Intenta de nuevo.");
+              // En la app nativa la cuenta borrada vuelve al login (la landing es de la web).
+              if (r.ok) { window.location.href = r.demo ? "/app" : native ? "/entrar" : "/?cuenta=borrada"; } else setErr(r.error ?? "No pudimos borrar tu cuenta. Intenta de nuevo.");
             })} className="btn h-11 flex-1 bg-bad text-white disabled:opacity-40">{pending ? "Borrando…" : "Borrar mi cuenta"}</button>
           </div>
         </div>

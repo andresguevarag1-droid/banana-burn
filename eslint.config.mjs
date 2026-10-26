@@ -18,6 +18,10 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // App nativa: proyectos de Xcode y Android Studio (y la web que Capacitor copia adentro).
+      "android/**",
+      "ios/**",
+      "native/www/**",
     ],
   },
 ];

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es-419">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#FFF8E3">
+<title>Sin conexión | Banana Burn</title>
+<!-- Pantalla empaquetada en la app nativa (server.errorPath): se ve cuando la web no carga. Sin red no hay nada externo:
+     la fuente, el logo y la URL del servidor los copia scripts/native-prepare.mjs junto a este archivo. -->
+<script src="server.js"></script>
+<style>
+  @font-face { font-family: "Plus Jakarta Sans"; src: url("jakarta.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100dvh; display: grid; place-items: center; text-align: center;
+    padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+    background: #FFF8E3; color: #2E2818; font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { width: 100%; max-width: 380px; }
+  .logo { display: block; width: 88px; height: 88px; margin: 0 auto; }
+  h1 { margin: 20px 0 0; font-size: 28px; line-height: 1.15; font-weight: 800; color: #1B1505; }
+  p { margin: 8px 0 0; color: #6A604B; line-height: 1.5; font-size: 16px; }
+  .note { margin-top: 20px; padding: 14px 16px; border-radius: 24px; background: #FFFBF0; border: 1px solid #EDE3C6; color: #1B1505; font-size: 15px; font-weight: 600; text-align: left; }
+  button { margin-top: 24px; width: 100%; height: 48px; border: 0; border-radius: 999px; background: #1B1505; color: #fff; font: inherit; font-size: 16px; font-weight: 800; }
+  button:active { transform: scale(0.98); }
+  button:focus-visible { outline: 2px solid #1B1505; outline-offset: 3px; }
+  button[disabled] { opacity: .6; }
+</style>
+</head>
+<body>
+<main role="alert">
+  <img class="logo" src="logo.svg" width="88" height="88" alt="" onerror="this.style.display='none'">
+  <h1>Estás sin conexión</h1>
+  <p>Banana Burn necesita internet para abrir. Revisa el wifi o los datos y vuelve a intentar.</p>
+  <p class="note">Si estabas entrenando, tu entreno quedó guardado en este teléfono y se sube solo cuando vuelva la señal.</p>
+  <button type="button" id="retry">Intentar de nuevo</button>
+</main>
+<script>
+  (function () {
+    var server = (window.BB_SERVER_URL || "https://www.bananaburn.app").replace(/\/$/, "");
+    var btn = document.getElementById("retry");
+    var going = false;
+    function retry() {
+      if (going) return;
+      going = true;
+      btn.disabled = true;
+      btn.textContent = "Conectando";
+      window.location.replace(server + "/app");
+      setTimeout(function () { going = false; btn.disabled = false; btn.textContent = "Intentar de nuevo"; }, 8000);
+    }
+    btn.addEventListener("click", retry);
+    window.addEventListener("online", retry);
+  })();
+</script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { META_PIXEL_ID, PIXEL_SKIP } from "@/lib/meta-pixel";
+import { isNativeApp } from "@/lib/platform";
 
 type Fbq = ((...args: unknown[]) => void) & { loaded?: boolean };
 declare global { interface Window { fbq?: Fbq } }
@@ -35,10 +36,11 @@ export function loadMetaPixel(id: string, w: Window & typeof globalThis = window
 /**
  * Meta Pixel en todas las páginas públicas y de la app (no en /admin). Carga después de hidratar (y cuando el navegador
  * queda libre) para no afectar la velocidad, y registra PageView en cada cambio de ruta del App Router.
+ * Nunca dentro de la app nativa: rastrear entre apps obliga a pedir permiso de rastreo (ATT) en iPhone.
  */
 export function MetaPixel() {
   const path = usePathname() || "/";
-  const off = !META_PIXEL_ID || PIXEL_SKIP.test(path);
+  const off = !META_PIXEL_ID || PIXEL_SKIP.test(path) || isNativeApp();
   // Si la primera página es /admin, el píxel no se carga en toda la visita.
   const [offAtLoad] = useState(off);
   useEffect(() => {

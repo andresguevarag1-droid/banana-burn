@@ -253,7 +253,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   }
 
   return (
-    <main className="min-h-dvh bg-paper flex flex-col">
+    <main data-own-safe-top className="min-h-dvh bg-paper flex flex-col">
       <header className="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto max-w-md flex items-center justify-between h-12">
           {step > 0 ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-11 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}

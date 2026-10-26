@@ -9,10 +9,21 @@
     "lint": "eslint",
     "test": "vitest run",
     "emails:auth": "npx --yes tsx scripts/build-auth-emails.ts",
-    "a11y": "node scripts/a11y-scan.cjs"
+    "a11y": "node scripts/a11y-scan.cjs",
+    "native:sync": "node scripts/native-prepare.mjs && cap sync",
+    "native:android": "npm run native:sync && cap open android",
+    "native:ios": "npm run native:sync && cap open ios",
+    "native:icons": "node scripts/native-icons.mjs && npx --yes @capacitor/assets@3.0.5 generate --ios --android --iconBackgroundColor '#1B1505' --iconBackgroundColorDark '#1B1505' --splashBackgroundColor '#1B1505' --splashBackgroundColorDark '#1B1505'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capgo/capacitor-social-login": "^8.7.5",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/ssr": "^0.12.7",
@@ -27,6 +38,9 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

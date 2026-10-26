@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import { REF_COOKIE, normalizeCode } from "@/lib/referrals";
 import { LoginForm } from "./login-form";
 import { offer } from "@/lib/offer";
+import { requestPlatform } from "@/lib/platform-server";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
@@ -62,7 +63,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
             ) : (
               <>
                 {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />Llegaste con una invitación. Crea tu cuenta y entrena gratis {TRIAL_DAYS} días.</p>}
-                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} /></Suspense>
+                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} /></Suspense>
               </>
             )}
           </div>

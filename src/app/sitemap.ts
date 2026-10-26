@@ -10,6 +10,7 @@ const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: "weekly" 
   { path: "/running", priority: 0.8, changeFrequency: "weekly" },
   { path: "/terminos", priority: 0.3, changeFrequency: "yearly" },
   { path: "/privacidad", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/eliminar-cuenta", priority: 0.2, changeFrequency: "yearly" },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

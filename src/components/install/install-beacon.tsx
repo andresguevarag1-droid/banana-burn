@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import { markAppInstalled } from "@/app/actions/install";
 import { track } from "@/components/analytics";
+import { nativePlatform } from "@/lib/platform";
 import { isStandaloneNow } from "./use-install";
 
 export const OPENS_KEY = "bb.opens";
@@ -25,7 +26,7 @@ export function InstallBeacon() {
       }
       if (isStandaloneNow() && !localStorage.getItem(REPORTED_KEY)) {
         localStorage.setItem(REPORTED_KEY, String(Date.now()));
-        track("app_installed", { where: "standalone" });
+        track("app_installed", { where: nativePlatform() ?? "standalone" });
         void markAppInstalled().catch(() => {});
       }
     } catch { /* sin almacenamiento local: no pasa nada */ }

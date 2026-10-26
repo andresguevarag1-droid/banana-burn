@@ -43,3 +43,9 @@ next-env.d.ts
 
 # capturas locales
 /*.png
+
+# app nativa: lo copia scripts/native-prepare.mjs antes de cap sync
+/native/www/server.js
+/native/www/logo.svg
+/native/www/jakarta.woff2
+/.android-user

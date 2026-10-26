@@ -124,6 +124,8 @@ describe("inventario: cada entrada que se puede abusar tiene su freno", async ()
     "auth/callback/route.ts": "verifyOtp: Supabase Auth limita los enlaces; un token sirve una vez",
     "auth/salir/route.ts": "cierra la sesión propia",
     "llms.txt/route.ts": "estático (ISR)",
+    ".well-known/apple-app-site-association/route.ts": "JSON público desde variables de entorno, sin base; una hora en la CDN",
+    ".well-known/assetlinks.json/route.ts": "JSON público desde variables de entorno, sin base; una hora en la CDN",
     "og/route.tsx": "imagen en la CDN una semana; el middleware frena ráfagas",
     "r/[code]/route.ts": "solo pone una cookie y redirige, sin base",
     "api/pagos/webhook/route.ts": "firma de ONVO en tiempo constante antes de leer el cuerpo",
