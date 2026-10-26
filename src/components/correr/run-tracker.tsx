@@ -202,13 +202,14 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
           </section>
         )}
         <section className="card overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-          <div className="relative aspect-[4/3] md:aspect-auto md:min-h-72 bg-[#FFEDD5]"><SafeImage src={coachSrc} alt={`${coachName} con ropa de correr`} fill priority sizes="(min-width: 768px) 40vw, 100vw" className="object-contain object-bottom p-3 mix-blend-multiply" /></div>
+          <div className="relative aspect-[4/3] md:aspect-auto md:min-h-72 bg-[var(--run-soft)]"><SafeImage src={coachSrc} alt={`${coachName} con ropa de correr`} fill priority sizes="(min-width: 768px) 40vw, 100vw" className="object-contain object-bottom p-3 mix-blend-multiply" /></div>
           <div className="space-y-4 p-5 sm:p-7">
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Registra tu carrera</h1>
-            <p className="text-body text-pretty">Usamos el GPS de tu teléfono para medir distancia, tiempo y ritmo por kilómetro. Tu recorrido es privado: solo tú lo ves, y el mapa guardado no muestra los primeros ni los últimos 200 m.</p>
+            <p className="text-xs font-extrabold uppercase tracking-[.16em] text-[var(--run)]">Banana Run</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">Sal a correr. Nosotros medimos.</h1>
+            <p className="text-body text-pretty">Distancia, tiempo y ritmo por kilómetro con el GPS de tu teléfono. Tu recorrido es privado: solo tú lo ves.</p>
             <ul className="space-y-2 text-sm text-body">
-              <li className="flex gap-2"><MapPin weight="duotone" className="mt-0.5 size-5 shrink-0 text-[#C2410C]" />Te vamos a pedir tu ubicación. Elige permitirla mientras usas la app.</li>
-              <li className="flex gap-2"><ShieldCheck weight="duotone" className="mt-0.5 size-5 shrink-0 text-[#C2410C]" />Deja la app abierta con la pantalla encendida: el navegador no puede medir con el teléfono bloqueado.</li>
+              <li className="flex gap-2"><MapPin weight="duotone" className="mt-0.5 size-5 shrink-0 text-[var(--run)]" />Al empezar te pedimos tu ubicación. Elige permitirla mientras usas la app.</li>
+              <li className="flex gap-2"><ShieldCheck weight="duotone" className="mt-0.5 size-5 shrink-0 text-[var(--run)]" />Deja la app abierta con la pantalla encendida: el navegador no mide con el teléfono bloqueado. El mapa guardado no muestra los primeros ni los últimos 200 m.</li>
             </ul>
             {phase === "denied" && (
               <div role="alert" className="space-y-2 rounded-2xl bg-ember/10 p-4 text-sm text-ember-ink">
@@ -218,7 +219,7 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
               </div>
             )}
             {phase === "unsupported" && <p role="alert" className="rounded-2xl bg-ember/10 p-4 text-sm font-semibold text-ember-ink">Este navegador no tiene GPS. Abre Banana Burn en el navegador de tu teléfono.</p>}
-            <button type="button" onClick={() => begin()} className="btn-banana w-full h-14 text-base">{phase === "denied" ? "Intentar de nuevo" : "Permitir ubicación y empezar"}<ArrowRight className="size-5" /></button>
+            <button type="button" onClick={() => begin()} className="btn-banana w-full h-16 text-lg">{phase === "denied" ? "Intentar de nuevo" : "Empezar carrera"}<ArrowRight className="size-5" /></button>
           </div>
         </section>
       </div>
@@ -260,7 +261,7 @@ export function RunTracker({ coachSrc, coachName }: { coachSrc: string; coachNam
           <button type="button" onPointerDown={holdStart} onPointerUp={holdEnd} onPointerLeave={holdEnd} onPointerCancel={holdEnd} onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => { if (e.detail === 0) setConfirmEnd(true); }} aria-describedby="hold-hint"
             className="relative h-16 overflow-hidden rounded-2xl bg-ink text-base font-extrabold text-white select-none touch-none">
-            <span aria-hidden className="absolute inset-y-0 left-0 bg-[#C2410C]" style={{ width: `${hold * 100}%` }} />
+            <span aria-hidden className="absolute inset-y-0 left-0 bg-[var(--run)]" style={{ width: `${hold * 100}%` }} />
             <span className="relative inline-flex items-center gap-2"><Stop weight="fill" className="size-5" />Terminar</span>
           </button>
           <p id="hold-hint" className="col-span-2 text-center text-xs text-muted">Mantén presionado Terminar para guardar tu carrera.</p>

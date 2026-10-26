@@ -2181,6 +2181,30 @@ select bbtest.zero('0053: soporte no cambia condominios por la API (lo hace el s
 reset role;
 delete from public.condo_members; delete from public.condos; delete from public.comp_grants where source = 'condominio';
 
+-- ───────────── 0054 Carrera objetivo ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0054: guarda su carrera objetivo', bbtest.affected($q$ insert into public.race_goals (name, race_date, kind, distance_m, goal_s, recent_distance_m, recent_s) values ('Medio de prueba', current_date + 60, '21k', 21097, 6600, 10000, 3000) $q$) = 1);
+select bbtest.ok('0054: edita su carrera objetivo', bbtest.affected($q$ update public.race_goals set goal_s = 6900, hard_days = '{1,3}' $q$) = 1);
+select bbtest.fails('0054: una sola carrera objetivo por persona', $q$ insert into public.race_goals (race_date, kind, distance_m) values (current_date + 30, '10k', 10000) $q$, '23505');
+select bbtest.fails('0054: no acepta días inválidos', $q$ update public.race_goals set hard_days = '{8}' $q$, '23514');
+select bbtest.fails('0054: no acepta una carrera de hace meses', $q$ update public.race_goals set race_date = current_date - 90 $q$, '23514');
+select bbtest.fails('0054: no guarda la carrera de otra persona', $q$ insert into public.race_goals (user_id, race_date, kind, distance_m) values (bbtest.u('B'), current_date + 30, '10k', 10000) $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('B');
+select bbtest.ok('0054: B no ve la carrera de A', bbtest.num($q$ select 1 from public.race_goals $q$) = 0);
+select bbtest.zero('0054: B no edita la carrera de A', $q$ update public.race_goals set goal_s = 7000 $q$);
+select bbtest.zero('0054: B no borra la carrera de A', $q$ delete from public.race_goals $q$);
+reset role;
+set role authenticated; select bbtest.login('E');
+select bbtest.fails('0054: sin plan ni prueba no guarda carrera objetivo', $q$ insert into public.race_goals (race_date, kind, distance_m) values (current_date + 30, '10k', 10000) $q$, '42501') where not (select public.has_app_access());
+reset role;
+set role anon; select bbtest.login(null);
+select bbtest.fails('0054: anon no lee carreras objetivo', $q$ select 1 from public.race_goals $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0054: borra su carrera objetivo', bbtest.affected($q$ delete from public.race_goals $q$) = 1);
+reset role;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$
