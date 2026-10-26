@@ -3,4 +3,5 @@
     <!-- Marca Banana Burn -->
     <color name="bb_ink">#1B1505</color>
     <color name="bb_paper">#FFF8E3</color>
+    <color name="bb_ember">#F2A100</color>
 </resources>

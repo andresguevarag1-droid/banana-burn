@@ -26,6 +26,16 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Banana Burn lee tus pasos, tu peso y tu energía activa de Salud para mostrar tu progreso y ajustar tu plan. No escribe nada en Salud ni comparte estos datos con anunciantes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Banana Burn usa tu ubicación solo mientras registras una carrera, para medir la distancia, el tiempo y el ritmo.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Para que tu carrera se siga midiendo con la pantalla apagada, Banana Burn usa tu ubicación mientras la carrera está en curso. Nunca la usa fuera de una carrera.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

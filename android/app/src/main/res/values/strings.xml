@@ -4,4 +4,9 @@
     <string name="title_activity_main">Banana Burn</string>
     <string name="package_name">app.bananaburn</string>
     <string name="custom_url_scheme">app.bananaburn</string>
+    <!-- GPS de carreras con la pantalla apagada (background-geolocation) -->
+    <string name="capacitor_background_geolocation_notification_channel_name">Carreras</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_bananaburn</string>
+    <!-- Health Connect: "Política de privacidad" en la pantalla de permisos -->
+    <string name="health_connect_privacy_policy_url">https://www.bananaburn.app/privacidad#salud-conectada</string>
 </resources>
