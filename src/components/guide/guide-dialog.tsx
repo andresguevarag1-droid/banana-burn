@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle, X } from "@/components/icons";
 import { Portal } from "@/components/portal";
 import { usePresence } from "@/components/use-presence";
+import { useBlockBackground } from "@/components/use-block-background";
 import type { GuideInput, GuideStep } from "@/lib/guide";
 import { GuideVisual } from "./guide-visuals";
 
@@ -26,6 +27,9 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
   const scroller = useRef<HTMLDivElement>(null);
   const primary = useRef<HTMLButtonElement>(null);
   const close = useRef(onClose);
+  const [backdrop, setBackdrop] = useState<HTMLDivElement | null>(null);
+  // Con la guía abierta, la app de atrás no responde (el scroll del cuerpo ya lo bloquea este diálogo).
+  useBlockBackground(backdrop, { lockScroll: false, allowScroll: scroller });
   const titleId = useId();
   const bodyId = useId();
   useEffect(() => { close.current = onClose; }, [onClose]);
@@ -91,8 +95,8 @@ function Panel({ steps, input, onClose, closing }: { steps: GuideStep[]; input: 
   const isLast = idx === last;
   return (
     <Portal>
-      <div data-closing={closing || undefined} className="sheet-backdrop fixed inset-0 z-[90] flex items-stretch justify-center bg-ink/45 backdrop-blur-sm sm:items-center sm:p-6"
-        onClick={(e) => { if (!closing && e.target === e.currentTarget) onClose(); }}>
+      {/* Un toque fuera no cierra la guía: se sale solo con Saltar, la X o Terminar. */}
+      <div ref={setBackdrop} data-closing={closing || undefined} className="sheet-backdrop fixed inset-0 z-[90] flex items-stretch justify-center bg-ink/45 backdrop-blur-sm sm:items-center sm:p-6">
         <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId} tabIndex={-1} data-closing={closing || undefined}
           className="sheet-panel relative flex h-[100dvh] w-full flex-col bg-paper outline-none sm:h-[min(760px,calc(100dvh-3rem))] sm:max-w-4xl sm:rounded-[2rem] sm:shadow-lift">
           {/* Encabezado: capítulo, avance y Saltar */}

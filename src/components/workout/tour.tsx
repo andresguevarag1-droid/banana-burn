@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Portal } from "@/components/portal";
 import { Monkey } from "@/components/icons";
+import { useBlockBackground } from "@/components/use-block-background";
 import css from "./workout.module.css";
 
 export type TourStep = { target: string; title: string; body: string };
@@ -25,7 +26,10 @@ export function Tour({ steps: all, onDone, extra, finalLabel = "A entrenar" }: {
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [headerBottom, setHeaderBottom] = useState(0);
   const next = useRef<HTMLButtonElement>(null);
+  const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const step = steps?.[i];
+  // Durante el recorrido solo responden Siguiente y Saltar: la pantalla de atrás no se toca ni se desplaza.
+  useBlockBackground(root, { active: !!step });
 
   const ids = all.map((s) => s.target).join(",");
   const allRef = useRef(all);
@@ -96,7 +100,7 @@ export function Tour({ steps: all, onDone, extra, finalLabel = "A entrenar" }: {
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[95]" role="dialog" aria-modal="true" aria-labelledby="tour-t" aria-describedby="tour-b">
+      <div ref={setRoot} className="fixed inset-0 z-[95] touch-none overscroll-none" role="dialog" aria-modal="true" aria-labelledby="tour-t" aria-describedby="tour-b">
         {box ? (
           <div aria-hidden className={`${css.spot} absolute rounded-[1.75rem] ring-4 ring-white`} style={{ ...box, boxShadow: "0 0 0 9999px rgb(27 21 5 / .62)" }} />
         ) : (
