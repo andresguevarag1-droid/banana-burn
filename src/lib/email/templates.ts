@@ -534,7 +534,8 @@ export function soporteAviso(d: { name: string; kind: SupportMailKind; number: s
 
 // ───────────── Ciclo de vida (llevan enlace de baja) ─────────────
 
-export function recordatorio(d: { name: string; routine: string; mins?: number; exercises?: string[]; streak: number; goal?: Goal | null; unsubscribe: string; /** Línea de Coach Banana del entreno ("Hoy armas una espalda ancha..."). */ hook?: string; /** Dato real de la última sesión, ya en el registro de la persona. */ fact?: string | null }): Email {
+export function recordatorio(d: { name: string; routine: string; mins?: number; exercises?: string[]; streak: number; goal?: Goal | null; unsubscribe: string; /** Línea de Coach Banana del entreno ("Hoy armas una espalda ancha..."). */ hook?: string; /** Dato real de la última sesión, ya en el registro de la persona. */ fact?: string | null; /** Aún no hace su primer entreno. */ first?: boolean }): Email {
+  if (d.first) return primerEntreno(d);
   const n = firstName(d.name);
   const subject = `${n}, hoy te toca ${d.routine.replace(/:.*$/, "")}: tus cargas ya están listas`;
   const gl = goalLine(d.goal);
@@ -553,6 +554,27 @@ export function recordatorio(d: { name: string; routine: string; mins?: number; 
     subject, preheader,
     html: layout({ preheader, hero, body, unsubscribe: d.unsubscribe, reason, coach }),
     text: textLayout([`${n}, hoy te toca ${d.routine}.`, d.mins ? `Unos ${d.mins} minutos. Tus cargas ya están calculadas.` : "Tus cargas ya están calculadas.", ...ex.map((e) => `• ${e}`), d.streak >= 2 ? `Racha: ${d.streak} días` : "", gl, "", `Empezar: ${abs("/app/entreno")}`], d.unsubscribe, reason, coach),
+  };
+}
+
+/** Recordatorio de la primera semana para quien aún no entrena: su primer entreno, sin cargas ni rachas. */
+function primerEntreno(d: { name: string; routine: string; mins?: number; exercises?: string[]; goal?: Goal | null; unsubscribe: string }): Email {
+  const n = firstName(d.name);
+  const subject = `${n}, tu primer entreno está listo${d.mins ? ` (${d.mins} min)` : ""}`;
+  const preheader = "Te guío paso a paso. ¿Poco tiempo? Hay uno de 10 minutos, sin equipo.";
+  const ex = (d.exercises ?? []).slice(0, 5);
+  const coach = "Lo difícil es empezar. De lo demás me encargo yo.";
+  const hero: Hero = { eyebrow: "Tu primer entreno", title: `${esc(n)}, tu primer entreno está listo`, lead: `${esc(d.routine)}${d.mins ? `, unos ${d.mins} minutos` : ""}. Te digo qué hacer, cuántas veces y cuándo descansar. Tú solo toca Empezar.` };
+  const body =
+    (ex.length ? eyebrow("Lo que vas a hacer").replace("margin:22px", "margin:0") + list(ex.map((e) => `${dot()}${esc(e)}`)) : "") +
+    goalCard(d.goal ?? null) +
+    button("Empezar mi primer entreno", "/app/entreno", "banana") +
+    p("¿Poco tiempo hoy? En la app hay uno de 10 minutos, sin equipo. Cuenta igual.");
+  const reason = "Recibes este recordatorio porque lo activaste en Banana Burn.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, unsubscribe: d.unsubscribe, reason, coach }),
+    text: textLayout([`${n}, tu primer entreno está listo: ${d.routine}${d.mins ? `, unos ${d.mins} minutos` : ""}.`, ...ex.map((e) => `• ${e}`), "", `Empezar: ${abs("/app/entreno")}`, "¿Poco tiempo? Hay uno de 10 minutos, sin equipo."], d.unsubscribe, reason, coach),
   };
 }
 

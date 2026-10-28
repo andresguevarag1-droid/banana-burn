@@ -4,7 +4,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { errCode, logError } from "@/lib/log";
-import { EX, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
+import { EX, nextTrainingDow, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { parseVoice, type Voice } from "@/lib/voice";
 import { streakOf } from "@/lib/gamify";
 import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHour, liftFact, liftLine, localClock, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
@@ -18,7 +18,7 @@ const PAGE = 200;
 const CHUNK = 100;
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-type Profile = { id: string; full_name: string | null; sex?: string | null; train_days: number | null; equipment: string | null; timezone: string | null; /** "Cómo te hablo" (0035); sin la columna, intermedio. */ lenguaje?: string | null };
+type Profile = { id: string; created_at?: string | null; full_name: string | null; sex?: string | null; train_days: number | null; equipment: string | null; timezone: string | null; /** "Cómo te hablo" (0035); sin la columna, intermedio. */ lenguaje?: string | null };
 export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"; scanned: number; candidates: number; sent: Record<string, number>; push: number; email: number; errors: number; /** Se cortó por tiempo: la próxima corrida sigue (los envíos ya hechos no se repiten). */ partial?: boolean };
 
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
@@ -80,7 +80,7 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   return stats;
 }
 
-const PROFILE_COLS = "id,full_name,sex,train_days,equipment,timezone";
+const PROFILE_COLS = "id,created_at,full_name,sex,train_days,equipment,timezone";
 /** Una página de perfiles con su registro de lenguaje. Si 0035 no corrió (columna inexistente), se lee sin él. */
 async function profilePage(admin: SupabaseClient, from: number) {
   const q = (cols: string) => admin.from("profiles").select(cols).eq("onboarded", true).order("id").range(from, from + PAGE - 1);
@@ -201,14 +201,20 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const todayLogs = (logBy.get(u.id) ?? []).filter((l) => l.local_day === c.iso);
     const sched = scheduleFor(Number(u.train_days ?? 6));
     const eq = (u.equipment as Equipment) ?? "gym";
-    const plan = planDay(c.dow, 0, sched, { equipment: eq, sex: u.sex });
+    // Primera semana sin entrenar: cada día se le recuerda su primer entreno (en un día de descanso, la próxima sesión,
+    // la misma que adelanta /app/entreno). Las cuentas nuevas no tienen entrenos más viejos que la ventana de 61 días.
+    const firstWeek = workouts.length === 0 && !!u.created_at && daysBetween(u.created_at.slice(0, 10), c.iso) <= 7;
+    const today = planDay(c.dow, 0, sched, { equipment: eq, sex: u.sex });
+    const nd = firstWeek && today.tpl === null ? nextTrainingDow(sched, c.dow) : null;
+    const plan = nd == null ? today : planDay(nd, 0, sched, { equipment: eq, sex: u.sex });
     const streak = streakOf(active, c.iso).days;
     const userSubs = subBy.get(u.id) ?? [];
     const userPhones = (phoneBy.get(u.id) ?? []).map((t) => ({ token: t.token, platform: t.platform }));
 
     const decisions = decide({
       now, prefs, mode,
-      trainingDay: plan.tpl !== null,
+      trainingDay: today.tpl !== null,
+      firstWeek,
       trainedToday: workouts.includes(c.iso),
       activeToday: active.has(c.iso),
       streak,
@@ -239,14 +245,14 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
 
       const weekly = d.kind === "semanal" ? await weeklyData(admin, u, c.iso, workouts, wsBy.get(u.id) ?? [], streak, sched, eq) : null;
       const lift = d.kind === "recordatorio" ? await lastLiftFact(admin, u.id, plan.exercises.map((e) => e.id)) : null;
-      const copy = copyFor(d.kind, { name, routine: plan.name, mins: plan.mins, streak, trainingDay: plan.tpl !== null, voice, hook: plan.hook, lift, workouts: weekly?.workouts, kgDelta: weekly && weekly.kgStart != null && weekly.kgEnd != null ? weekly.kgEnd - weekly.kgStart : null, day: c.iso });
+      const copy = copyFor(d.kind, { name, routine: plan.name, mins: plan.mins, streak, trainingDay: plan.tpl !== null, firstWorkout: firstWeek, voice, hook: plan.hook, lift, workouts: weekly?.workouts, kgDelta: weekly && weekly.kgStart != null && weekly.kgEnd != null ? weekly.kgEnd - weekly.kgStart : null, day: c.iso });
 
       if (d.inapp) await admin.from("notifications").insert({ user_id: u.id, kind: d.kind, title: copy.title, body: copy.body, url: copy.url });
       if (d.push) stats.push += await sendPush(admin, { web: userSubs, native: userPhones }, { ...copy, tag: d.kind });
       if (d.email) {
         const to = await getEmail();
         if (to) {
-          const msg = emailFor(d.kind, { u, name, plan, streak, weekly, goal, fact: lift ? liftLine(voice, lift) : null });
+          const msg = emailFor(d.kind, { u, name, plan, streak, weekly, goal, fact: lift ? liftLine(voice, lift) : null, first: firstWeek });
           const r = await sendEmail(to, msg.email, { idempotencyKey: `${d.kind}/${u.id}/${c.iso}`, unsubscribe: msg.unsubscribe, tags: { kind: d.kind } });
           if (r.ok) stats.email++;
         }
@@ -277,13 +283,13 @@ async function weeklyData(admin: SupabaseClient, u: Profile, today: string, work
   };
 }
 
-function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<typeof planDay>; streak: number; weekly: WeeklyCtx | null; goal: T.Goal | null; fact?: string | null }) {
+function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<typeof planDay>; streak: number; weekly: WeeklyCtx | null; goal: T.Goal | null; fact?: string | null; first?: boolean }) {
   switch (kind) {
     case "semanal": { const unsubscribe = unsubscribeUrl(x.u.id, "semanal"); return { unsubscribe, email: T.resumenSemanal({ name: x.name, ...x.weekly!, goal: x.goal, unsubscribe }) }; }
     case "racha": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.rachaEnPeligro({ name: x.name, streak: x.streak, unsubscribe }) }; }
     case "reactivacion_3":
     case "reactivacion_7": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.reactivacion({ name: x.name, days: kind === "reactivacion_3" ? 3 : 7, routine: x.plan.name, trainingDay: x.plan.tpl !== null, goal: x.goal, unsubscribe }) }; }
     case "recordatorio":
-    default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ name: x.name, routine: x.plan.name, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, goal: x.goal, unsubscribe, hook: x.plan.hook, fact: x.fact }) }; }
+    default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ first: x.first, name: x.name, routine: x.plan.name, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, goal: x.goal, unsubscribe, hook: x.plan.hook, fact: x.fact }) }; }
   }
 }

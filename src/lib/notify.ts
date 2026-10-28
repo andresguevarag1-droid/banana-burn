@@ -97,6 +97,8 @@ export type DecideInput = {
   streak: number;
   /** Días desde la última actividad (null = nunca ha registrado nada). */
   daysInactive: number | null;
+  /** Cuenta de menos de 8 días que aún no entrena: el recordatorio de su primer entreno sale cada día, no solo los de entreno. */
+  firstWeek?: boolean;
   /** Tipos ya enviados hoy (día local) según notification_log. */
   sentToday: string[];
   pushesToday: number;
@@ -119,6 +121,7 @@ export function isRelevantHour(now: Date, prefs: Prefs, mode: "hourly" | "daily"
  * - Lunes 07:00 local -> resumen semanal (correo + in-app) si weekly_summary.
  * - Hora del recordatorio, 3 o 7 días sin actividad -> reactivación (reemplaza al recordatorio ese día).
  * - Hora del recordatorio, día de entreno y sin entreno hoy -> "Hoy te toca {rutina}".
+ *   La primera semana sin ningún entreno, también los días de descanso: "Tu primer entreno está listo".
  * - 20:00 local, sin actividad hoy y racha ≥ 2 -> racha en peligro.
  * Push solo si push_reminders, hay suscripción, fuera de horas de silencio y bajo el tope diario.
  * Correo solo si email_reminders (o weekly_summary para el resumen). In-app siempre.
@@ -153,7 +156,7 @@ export function decide(i: DecideInput): Decision[] {
     if (!sent.has(kind)) { add(kind, p.push_reminders, p.email_reminders && !weeklyEmailNow); reactivated = true; }
   }
 
-  if (!reactivated && atReminder && i.trainingDay && !i.trainedToday) {
+  if (!reactivated && atReminder && (i.trainingDay || i.firstWeek) && !i.trainedToday) {
     // Si el resumen semanal ya va por correo en esta misma corrida, no mandamos un segundo correo.
     add("recordatorio", p.push_reminders, p.email_reminders && !weeklyEmailNow);
   }
@@ -176,6 +179,8 @@ export type CopyCtx = {
   hook?: string;
   /** Dato real de la última sesión del ejercicio principal de hoy (ver `liftFact`). */
   lift?: LiftFact | null;
+  /** Aún no hace su primer entreno: el recordatorio lo invita a ese primero, sin cargas ni rachas. */
+  firstWorkout?: boolean;
 };
 
 /** Lo último que hizo la persona en el ejercicio principal de hoy: subió de peso o lo repitió. */
@@ -221,6 +226,14 @@ export function copyFor(kind: Kind, x: CopyCtx): Copy {
   const first = x.name.split(" ")[0] || "crack";
   switch (kind) {
     case "recordatorio": {
+      if (x.firstWorkout) {
+        const mins = x.mins ? ` Son ${x.mins} minutos.` : "";
+        return {
+          title: x.name.trim() ? `${first}, tu primer entreno está listo` : "Tu primer entreno está listo",
+          body: `Te guío paso a paso: qué hacer, cuántas veces y cuándo descansar.${mins} ¿Poco tiempo? Hay uno de 10 minutos.`,
+          url: "/app/entreno",
+        };
+      }
       // Coach Banana habla: el nombre del entreno de hoy, sus minutos y, si hay, un dato real de la última vez.
       const v = x.voice ?? "intermedio";
       const who = x.name.trim() ? `, ${first}` : "";
