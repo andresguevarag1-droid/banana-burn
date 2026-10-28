@@ -15,7 +15,7 @@ describe("próxima sesión para adelantar en un día de descanso", () => {
   });
   it("el plan adelantado trae ejercicios; del sábado al lunes rota a la semana siguiente", () => {
     const engineSched = scheduleFor(3);
-    const opts = { equipment: "gym" as const, level: "intermedio" as const, sex: "m" as const };
+    const opts = { equipment: "gym" as const, level: "intermedio" as const, minutes: undefined, sex: "m" as const };
     const sat = nextSessionPlan({ engineSched, today: { dow: 6 } as never, week: 2, opts })!;
     expect(sat.dow).toBe(1);
     expect(sat.exercises.length).toBeGreaterThan(0);
