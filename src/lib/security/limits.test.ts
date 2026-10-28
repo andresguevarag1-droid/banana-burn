@@ -131,6 +131,7 @@ describe("inventario: cada entrada que se puede abusar tiene su freno", async ()
     "api/pagos/webhook/route.ts": "firma de ONVO en tiempo constante antes de leer el cuerpo",
     "api/cron/recordatorios/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
     "api/cron/cobros/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
+    "api/cron/avisos/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
   };
   const FRENO = /hitLimit\(|memoryRateLimit\(|dbRateLimit(All)?\(|tooFast\(/;
   for (const f of files.filter((x) => /\/route\.tsx?$/.test(x))) {

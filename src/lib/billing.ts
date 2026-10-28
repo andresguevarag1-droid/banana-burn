@@ -283,6 +283,13 @@ async function notifyPaid(db: SupabaseClient, provider: "onvo" | "tilopay", row:
   await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd, promoFull }).catch(() => {});
   const { affiliateOnPaid } = await import("@/lib/affiliates-server");
   await affiliateOnPaid(db, { userId: row.user_id, provider, reference, amountMinor, currency, plan: row.plan, billing: row.billing }).catch(() => "error");
+  // Aviso al dueño (0059): idempotente por referencia; nunca bloquea el cobro.
+  try {
+    const { enqueueAdminEvent, kickAdminDispatch } = await import("@/lib/admin-avisos-server");
+    const { paymentKey } = await import("@/lib/admin-avisos");
+    await enqueueAdminEvent(db, { key: paymentKey(provider, reference), kind: "pago", userId: row.user_id, amountMinor: amountMinor ?? Math.round(amount * 100), currency: currency ?? "USD", data: { plan: row.plan, billing: row.billing, provider } });
+    await kickAdminDispatch();
+  } catch { /* sin aviso */ }
 }
 
 /**
