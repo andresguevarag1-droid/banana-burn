@@ -10,6 +10,7 @@ import { streakOf } from "@/lib/gamify";
 import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHour, liftFact, liftLine, localClock, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
 import { sendPush, type NativeToken, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
+import { withLoginLinks } from "@/lib/email/login-link";
 import * as T from "@/lib/email/templates";
 import { forEachLimit } from "@/lib/concurrency";
 
@@ -253,7 +254,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
         const to = await getEmail();
         if (to) {
           const msg = emailFor(d.kind, { u, name, plan, streak, weekly, goal, fact: lift ? liftLine(voice, lift) : null, first: firstWeek });
-          const r = await sendEmail(to, msg.email, { idempotencyKey: `${d.kind}/${u.id}/${c.iso}`, unsubscribe: msg.unsubscribe, tags: { kind: d.kind } });
+          const r = await sendEmail(to, withLoginLinks(msg.email, u.id), { idempotencyKey: `${d.kind}/${u.id}/${c.iso}`, unsubscribe: msg.unsubscribe, tags: { kind: d.kind } });
           if (r.ok) stats.email++;
         }
       }

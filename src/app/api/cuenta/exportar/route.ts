@@ -59,6 +59,7 @@ export async function GET() {
     out.referral_signals = "Para evitar abusos guardamos una firma (HMAC) del prefijo de tu red al abrir Invita y gana. No guardamos tu IP.";
     out.card_fingerprints = "Si guardaste una tarjeta, guardamos una huella de ella (un resumen sha256 que no se puede revertir) para que la promoción del primer mes sea una por tarjeta. No es el número de tu tarjeta.";
     out.admin_events = "Cuando te registras o haces un pago, el equipo recibe un aviso interno con tu nombre de pila, tu país y el monto. Los datos de ese aviso son los mismos de tu perfil y tus pagos, que ya van en este archivo.";
+    out.email_login_uses = "Cuando entras con el botón de un correo, anotamos que ese enlace ya se usó (un código al azar y la fecha) para que no sirva dos veces.";
     out.coach_quota_tickets = "Por cada pregunta a Coach Banana guardamos un comprobante interno (fecha, sin el texto) por 2 días, para devolverte la pregunta si la respuesta falla. Tus conteos están en coach_usage.";
     const photos = (out.progress_photos as { path?: string }[] | undefined) ?? [];
     const paths = Array.isArray(photos) ? photos.map((p) => p.path).filter((p): p is string => typeof p === "string") : [];

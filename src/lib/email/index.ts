@@ -4,6 +4,7 @@ import "server-only";
 import { adminClient } from "@/lib/supabase/admin";
 import { ONCE_DAY } from "@/lib/notify";
 import { sendEmail, type SendResult } from "./send";
+import { withLoginLinks } from "./login-link";
 import * as T from "./templates";
 
 export { sendEmail, unsubscribeUrl, isEmailConfigured } from "./send";
@@ -51,7 +52,7 @@ export async function sendWelcomeEmail(r: Recipient): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
   if (!(await claimOnce(to.userId, "bienvenida"))) return skip("ya enviado");
-  return sendEmail(to.to, T.bienvenida({ name: to.name }), { idempotencyKey: `bienvenida/${to.userId ?? to.to}`, tags: { kind: "bienvenida" } });
+  return sendEmail(to.to, withLoginLinks(T.bienvenida({ name: to.name }), to.userId), { idempotencyKey: `bienvenida/${to.userId ?? to.to}`, tags: { kind: "bienvenida" } });
 }
 
 /** Al terminar el onboarding (/bienvenida). Una sola vez por usuario. */
@@ -61,7 +62,7 @@ export async function sendPlanReadyEmail(r: Recipient & Omit<Parameters<typeof T
   if (!(await claimOnce(to.userId, "plan_listo"))) return skip("ya enviado");
   const { userId: _u, to: _t, name: _n, ...plan } = r;
   void _u; void _t; void _n;
-  return sendEmail(to.to, T.planListo({ name: to.name, ...plan }), { idempotencyKey: `plan_listo/${to.userId ?? to.to}`, tags: { kind: "plan_listo" } });
+  return sendEmail(to.to, withLoginLinks(T.planListo({ name: to.name, ...plan }), to.userId), { idempotencyKey: `plan_listo/${to.userId ?? to.to}`, tags: { kind: "plan_listo" } });
 }
 
 type Pay = Omit<T.PaymentData, "name">;
