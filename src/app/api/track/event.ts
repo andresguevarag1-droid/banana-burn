@@ -15,6 +15,13 @@ export const FUNNEL_EVENTS = [
   "install_click",
   "app_installed",
   "push_enabled",
+  // Entreno (0061): saber dónde se van, porque la fila de workouts solo existe al guardar.
+  "hoy_view",
+  "workout_open",
+  "workout_first_set",
+  "workout_summary",
+  "workout_saved",
+  "workout_leave",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 

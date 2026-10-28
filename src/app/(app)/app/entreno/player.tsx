@@ -36,6 +36,7 @@ import type { SaveResult } from "./actions";
 import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/components/offline/outbox";
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
+import { track } from "@/components/analytics";
 import { hookLine } from "@/lib/engine";
 import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice } from "@/lib/voice";
 
@@ -243,8 +244,10 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, ex?.id, phase, prefs.voice, interval, gate]);
 
+  const trackRef = useRef<(n: "workout_summary") => void>(() => {});
   const toSummary = useCallback((ask: { ex: number; si: number } | null = null) => {
     setEndedAt(Date.now()); setAskLast(ask); setRest(null); setRestInfo(null); setWork(null); setSheet(null); setPhase("summary");
+    trackRef.current("workout_summary");
   }, []);
   /** Al terminar a mano: se pregunta por la última serie con reps solo si quedó sin responder. */
   const finishNow = () => {
@@ -549,6 +552,7 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
     setSaved(res);
     setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
     setPhase("saved");
+    if (!res.already) track("workout_saved", { template: template.slice(0, 40), done: doneSets, total: planTotal });
     learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
     buzz([60, 40, 60, 40, 200]);
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
@@ -584,6 +588,35 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
     window.addEventListener(OUTBOX_EVENT, h);
     return () => window.removeEventListener(OUTBOX_EVENT, h);
   }); // sin dependencias a propósito: se vuelve a suscribir en cada render con el estado más reciente
+
+  // Embudo del entreno (0061): abrir, primera serie, resumen, guardado y salida. La fila de workouts solo existe al guardar,
+  // así que sin esto no se sabía cuántos empiezan y dónde se van.
+  const flow = useRef({ phase, doneSets, planTotal, save, saved: false });
+  useEffect(() => { flow.current = { phase, doneSets, planTotal, save, saved: savedOnce.current }; });
+  const tpl = template.slice(0, 40);
+  useEffect(() => { trackRef.current = (n) => track(n, { template: tpl, done: flow.current.doneSets, total: flow.current.planTotal }); }, [tpl]);
+  useEffect(() => {
+    track("workout_open", { template: tpl, resumed: flow.current.doneSets > 0, repeat: doneToday });
+    const leave = () => {
+      const l = flow.current;
+      if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal });
+    };
+    // En el resumen sin tocar Guardar: si la persona cierra o cambia de app, el entreno se guarda solo (va primero a la
+    // bandeja del teléfono y sube cuando haya señal). Antes se perdía todo lo hecho.
+    const onHide = () => {
+      if (document.visibilityState !== "hidden") return;
+      const l = flow.current;
+      if (l.phase === "summary" && !savedOnce.current && !sending.current && l.doneSets > 0) l.save();
+    };
+    window.addEventListener("pagehide", leave);
+    document.addEventListener("visibilitychange", onHide);
+    return () => { window.removeEventListener("pagehide", leave); document.removeEventListener("visibilitychange", onHide); leave(); };
+  }, [tpl]); // eslint-disable-line react-hooks/exhaustive-deps -- una vez por entreno
+  const prevDone = useRef(doneSets);
+  useEffect(() => {
+    if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { template: tpl, total: planTotal });
+    prevDone.current = doneSets;
+  }, [doneSets, phase, tpl, planTotal]);
 
   /* ---------- Pantallas especiales ---------- */
   if (!exercises.length) {

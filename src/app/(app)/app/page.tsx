@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FunnelTracker } from "@/components/analytics";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete, nextSessionPlan } from "@/lib/athlete";
@@ -99,6 +100,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
   return (
     <div className="space-y-5 animate-enter">
+      <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
       {/* Encabezado + motivación */}
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
