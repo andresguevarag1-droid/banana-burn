@@ -12,8 +12,10 @@ import { dayTag, sessionBenefit, setsLegend, t, type Voice } from "@/lib/voice";
 
 type Mini = Pick<PlannedDay, "name" | "icon" | "tpl" | "key">;
 
-export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness }: {
+export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false }: {
   plan: PlannedDay; voice: Voice; mins: number; trainedToday: boolean; deload: boolean; dayName: string; yesterday: Mini; tomorrow: Mini;
+  /** Nunca ha entrenado: el entreno se presenta como "Tu primer entreno" (en un día de descanso, la próxima sesión adelantada). */
+  first?: boolean;
   /** "La última vez hiciste..." con números reales del historial, o null. */
   lastTime: string | null;
   readiness: { initial: number; dateKey: string; demo: boolean; suggestSoft: boolean; she?: boolean };
@@ -45,7 +47,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
           {/* Encabezado: Coach Banana posa según el día */}
           <div className="relative pr-28 sm:pr-36">
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-bold text-ink/80">
-              <span className="first-letter:uppercase">Hoy {dayName}, {dayTag(voice, plan.tag)}</span>
+              <span className="first-letter:uppercase">{first && !trainedToday ? `Tu primer entreno, ${dayTag(voice, plan.tag)}` : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
               {deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />{t(voice, { basico: "Semana suave", intermedio: "Semana de descarga", tecnico: "Descarga" })}</span>}
             </p>
             <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{plan.name}</h2>
@@ -74,7 +76,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
           {trainedToday ? (
             <p className="relative mt-4 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." })}</p>
           ) : (
-            <div className="relative mt-4"><Readiness voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
+            <div className="relative mt-4"><Readiness first={first} voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
           )}
 
           {/* Coach Banana: el gancho y lo que hiciste la última vez */}

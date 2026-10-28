@@ -62,9 +62,9 @@ export const showLoMejor = (keys: readonly string[]) => (keys.includes(PP_HIDDEN
 export function firstSteps(s: StepSignals, coach = "Coach Banana"): FirstStep[] {
   const has = (id: StepId) => s.keys.includes(STEP_KEY[id]);
   const steps: FirstStep[] = [
+    { id: "entreno", title: "Haz tu primer entrenamiento", why: "La app te lleva paso a paso: qué hacer, cuántas veces y cuándo descansar.", href: "/app/entreno", cta: "Empezar", done: has("entreno") || s.workouts > 0 },
     { id: "semana", title: "Mira tu plan de la semana", why: "Ahí ves qué día toca entrenar y qué ejercicios hay.", href: "/app/entrenar", cta: "Ver mi semana", done: has("semana") },
     { id: "tecnica", title: "Aprende a ver un ejercicio", why: "Cada ejercicio trae un dibujo que se mueve y los pasos para hacerlo bien.", href: "/app/entrenar#ejercicios", cta: "Ver un ejercicio", done: has("tecnica") },
-    { id: "entreno", title: "Haz tu primer entrenamiento", why: "La app te lleva paso a paso: qué hacer, cuántas veces y cuándo descansar.", href: "/app/entreno", cta: "Empezar", done: has("entreno") || s.workouts > 0 },
     { id: "peso", title: "Registra tu peso", why: "Con tu peso de cada semana, la app ajusta tu plan.", href: "/app#peso", cta: "Registrar peso", done: has("peso") || s.weights > 1 },
     { id: "coach", title: `Pregúntale algo a ${coach}`, why: "Es tu entrenador 24/7: te responde dudas de tu entreno cuando quieras.", href: "/app/coach", cta: "Preguntar", done: has("coach") || s.coachMessages > 0 },
   ];

@@ -9,7 +9,7 @@ describe("primeros pasos", () => {
     expect(st.total).toBe(6);
     expect(st.done).toBe(0);
     expect(st.visible).toBe(true);
-    expect(nextStep(st.steps)?.id).toBe("semana");
+    expect(nextStep(st.steps)?.id).toBe("entreno");
   });
   it("el pesaje de la bienvenida no cuenta: el paso del peso pide uno nuevo", () => {
     expect(firstSteps({ ...base, weights: 1 }).find((s) => s.id === "peso")?.done).toBe(false);

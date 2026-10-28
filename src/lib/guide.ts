@@ -78,7 +78,7 @@ export type GuideVisual =
   | { kind: "coach" }
   | { kind: "final" };
 
-export type GuideStepId = "inicio" | "hoy" | "plan" | "reproductor" | "progresion" | "tecnica" | "programa" | "programas" | "retos" | "nutricion" | "recetas" | "shield" | "coach" | "comunidad" | "progreso" | "final";
+export type GuideStepId = "inicio" | "hoy" | "plan" | "reproductor" | "progresion" | "tecnica" | "programa" | "programas" | "retos" | "nutricion" | "recetas" | "shield" | "coach" | "comunidad" | "progreso" | "prueba" | "final";
 
 export type GuideStep = {
   id: GuideStepId;
@@ -393,10 +393,15 @@ export function shortSteps(i: GuideInput, d: GuideDates): GuideStep[] {
   ];
   if (guideVariant(i) === "prueba") {
     const after = afterTrialLines(i, d);
-    steps.push({ id: "final", chapter: "Tu prueba", title: "Qué pasa cuando termina tu prueba", body: after.body, bullets: after.bullets, cta: null, visual: { kind: "final" } });
-  } else {
-    steps.push({ id: "final", chapter: "Listo", title: "Empieza por tus primeros pasos", body: "Están arriba en Hoy. El primero toma menos de un minuto.", bullets: ["La constancia le gana a la perfección."], cta: null, visual: { kind: "final" } });
+    steps.push({ id: "prueba", chapter: "Tu prueba", title: "Qué pasa cuando termina tu prueba", body: after.body, bullets: after.bullets, cta: null, visual: { kind: "final" } });
   }
+  // Lo último que lee, lo primero que hace: su primer entreno (lo que más predice que vuelva).
+  steps.push({
+    id: "final", chapter: "Listo", title: "Ahora, tu primer entreno",
+    body: "Ya está listo en Hoy. Toca Empezar y yo te guío: qué hacer, cuántas veces y cuándo descansar.",
+    bullets: ["¿Poco tiempo? Hay uno de 10 minutos, sin equipo.", "La constancia le gana a la perfección."],
+    cta: { href: "/app/entreno", label: "Empezar mi primer entreno" }, visual: { kind: "final" },
+  });
   return steps;
 }
 

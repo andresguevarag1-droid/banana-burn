@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { ageOn, goalPace, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
+import { ageOn, goalPace, nextTrainingDow, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
 import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
@@ -105,4 +105,15 @@ export function dashboard(a: Athlete) {
     program: pr, mode: pn?.mode ?? a.mode,
     progress: Math.min(1, Math.max(0, (a.startWeight - a.currentWeight) / total)),
   };
+}
+
+/**
+ * La próxima sesión de la rutina (sin programa) para hacerla hoy: en un día de descanso, la del siguiente día con entreno.
+ * La semana del plan empieza el lunes: si la próxima sesión cae en la semana siguiente, sus ejercicios rotan como tal.
+ */
+export function nextSessionPlan(d: Pick<ReturnType<typeof dashboard>, "engineSched" | "today" | "week" | "opts">) {
+  const nd = nextTrainingDow(d.engineSched, d.today.dow);
+  if (nd == null) return null;
+  const mon = (x: number) => (x + 6) % 7;
+  return planDay(nd, mon(nd) > mon(d.today.dow) ? d.week : d.week + 1, d.engineSched, d.opts);
 }
