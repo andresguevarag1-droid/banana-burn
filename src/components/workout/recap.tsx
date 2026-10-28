@@ -12,6 +12,7 @@ import { DEFAULT_VOICE, t, type Voice } from "@/lib/voice";
 import { drawStory, downloadBlob, shareStory } from "./story-card";
 import { useReducedMotion } from "./device";
 import { GoldBanana } from "./ui";
+import { RecapNext } from "./recap-next";
 
 /** Número que sube hasta su valor (momento raro: el cierre del entreno). */
 function useCountUp(to: number, ms = 800) {
@@ -27,11 +28,13 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+export function Recap({ upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
   sex?: string | null;
   voice?: Voice;
   /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
   next?: { name: string; line: string }[];
+  /** Próximo entreno de la rutina ("mañana", "el jueves") con su nombre. */
+  upcoming?: { when: string; name: string } | null;
   /** Coach del programa (Coach Platanita) que firma el feedback; sin ella, Coach Banana. */
   coach?: { name: string; avatar: string } | null;
   title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
@@ -156,6 +159,7 @@ export function Recap({ next = [], sex = null, title, icon, xpBefore, xp, rushed
             </div>
           )}
           {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
+          {!repeat && <RecapNext upcoming={upcoming} />}
 
           <div className="mt-3 card p-4 text-left" aria-live="polite">
             <p className="flex items-center gap-1.5 text-sm font-bold text-ink">{coach ? <CoachPic src={coach.avatar} size={24} className="size-6 rounded-lg object-cover" iconClassName="size-4" /> : <Monkey className="size-5 text-banana-ink" />}{coach?.name ?? "Coach Banana"}</p>

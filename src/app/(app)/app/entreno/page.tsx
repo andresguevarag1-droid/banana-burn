@@ -2,7 +2,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
 import { getDaily, prefetchDaily } from "@/lib/daily";
-import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
+import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, nextTrainingDow, planDay, prescribe, DAY_NAMES, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
 import { plannedFromSession } from "@/lib/programs";
@@ -119,6 +119,17 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const template = plan.key ?? plan.tpl ?? (expres ? `expres${expres}` : "descanso");
   const title = plan.name;
   const doneToday = options.length > 0 && doneTemplates.includes(template);
-  return <Player voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  // Cierre del entreno: el próximo de la rutina (sin programa: el programa ya muestra su semana en Hoy).
+  let upcoming: { when: string; name: string } | null = null;
+  if (!prog && !expres && plan.tpl) {
+    const from = plan.dow ?? d.today.dow;
+    const nd = nextTrainingDow(d.engineSched, from);
+    if (nd != null) {
+      const ahead = ((nd - d.today.dow + 7) % 7) || 7;
+      const np = planDay(nd, d.week, d.engineSched, d.opts);
+      upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
+    }
+  }
+  return <Player upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }
