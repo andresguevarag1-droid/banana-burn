@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
-import { dashboard, getAthlete } from "@/lib/athlete";
+import { dashboard, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
@@ -51,11 +51,12 @@ export const metadata = { title: "Hoy" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string }> }) {
+export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string; primera?: string }> }) {
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
+  const sp = await searchParams;
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
-  const demoTester = v.demo ? (await searchParams).tester ?? null : null;
+  const demoTester = v.demo ? sp.tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
   const [a, meals, ent, xs, tester, voice, learnState] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v)]);
   const d = dashboard(a);
@@ -77,8 +78,13 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Comida de hoy: lo que comió por tiempo de comida y la recomendación para el siguiente (solo con nutrición).
   const meal = ent.nutrition ? hoyFood({ meals: meals.today, hour: localHour(new Date(), v.tz), todayIso: d.today.iso, eaten: { kcal: eaten.kcal + g.log.kcal, protein: eaten.protein + g.log.protein }, target: { kcal: t.kcal, protein: t.protein } }) : null;
   const training = isTrainingDay(plan);
+  // Primera vez (nunca ha entrenado): Hoy lo lleva directo a su primer entreno, también en un día de descanso (se adelanta
+  // la próxima sesión). Antes, quien se registraba un domingo veía "Descanso" y no tenía nada que empezar.
+  // Demo: ?primera=1 muestra este estado.
+  const first = !d.program && (v.demo ? sp.primera === "1" : learnState.workouts === 0) && !g.trainedToday;
+  const firstPlan = first && !training ? nextSessionPlan(d) : null;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
-  const mins = plan.mins ?? (training ? 55 : 0);
+  const mins = (firstPlan ?? plan).mins ?? (training || firstPlan ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;
   // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
   const lastTime = training && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
@@ -86,10 +92,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const guideCoach = coach.id !== "banana" ? coach : a.sex === "f" ? COACHES.platanita : null;
   const recap = await weekRecapFor(v, d.today, a.trainDays, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[]).catch(() => null);
   const tourSteps = [
-    { target: "hoy-pasos", title: "Empieza por aquí", body: "Esta lista te enseña a usar la app, un paso a la vez. Toca el primero." },
-    { target: "hoy-entreno", title: "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
-    { target: "hoy-numeros", title: ent.nutrition ? "Aquí van tus calorías y proteína" : "Aquí registras tu día", body: ent.nutrition ? "Ves cuánto comiste y cuánto te falta. También registras agua, pasos y sueño con un toque." : "Agua, pasos y sueño, con un toque. Así sabes si vas bien." },
-    { target: "hoy-semana", title: "Aquí ves tu semana", body: "Los días que entrenas se marcan. Tu racha sube cada día que entrenas o registras algo." },
+    { target: "hoy-entreno", title: first ? "Empieza aquí: tu primer entreno" : "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
+    { target: "hoy-pasos", title: "Tus primeros pasos", body: "Esta lista te enseña el resto de la app, un paso a la vez." },
     { target: "hoy-coach", title: `${guideCoach?.name ?? "Coach Banana"}, tu entrenador 24/7`, body: "Pregúntale lo que quieras de tu entreno. Te responde con tu plan en mente." },
   ];
 
@@ -116,7 +120,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       {/* 1. Lo que toca hoy, con el botón grande para empezar. Con un programa activo, su sesión. */}
       {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
-        : <div data-tour="hoy-entreno"><WorkoutHero plan={plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+        : <div data-tour="hoy-entreno"><WorkoutHero first={first} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
           readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>}
 
       {/* 2. Cómo vas, en una línea. */}

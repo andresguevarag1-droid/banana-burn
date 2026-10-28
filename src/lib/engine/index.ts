@@ -176,6 +176,15 @@ export function planDay(dow: number, week: number, schedule = DEFAULT_WEEK, opts
   return { dow, tpl: tplId, name: her && t.nf ? t.nf : t.n, hook: her && t.hookF ? t.hookF : t.hook, tag: t.tag, icon: t.icon, exercises, cardio: t.cardio, mins };
 }
 
+/**
+ * Próximo día con entreno después de `dow` (mañana en adelante, dando la vuelta a la semana). Sirve para adelantar la
+ * sesión en un día de descanso: la primera vez nadie debería quedarse sin entrenar porque se registró un domingo.
+ */
+export function nextTrainingDow(schedule: Record<number, TemplateId | null>, dow: number): number | null {
+  for (let k = 1; k <= 7; k++) { const d = (dow + k) % 7; if (schedule[d]) return d; }
+  return null;
+}
+
 /** Entreno exprés de 10/20/30 min sin equipo: series por tiempo, descansos cortos, cuerpo completo. */
 export function expressDay(minutes: number, seed = 0): PlannedDay {
   const m = [10, 20, 30].includes(minutes) ? minutes : 20;

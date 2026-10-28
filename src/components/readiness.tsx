@@ -15,7 +15,7 @@ const OPTS = [
  * Check-in de energía (estilo "readiness") que ajusta el entreno de hoy. `she`: "Cansada" para ella; `coachName`: la
  * coach del programa (Coach Platanita); `program`: el tempo lo marca cada ejercicio del programa, no el 3-1-1 del método.
  */
-export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, voice = DEFAULT_VOICE, she = false, coachName = "Coach Banana", program = false }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean; voice?: Voice; she?: boolean; coachName?: string; program?: boolean }) {
+export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, voice = DEFAULT_VOICE, she = false, coachName = "Coach Banana", program = false, first = false }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean; voice?: Voice; she?: boolean; coachName?: string; program?: boolean; first?: boolean }) {
   const key = `bb.ready.${dateKey}`;
   const [v, setV] = useState(initial);
   const daily = useDailySave();
@@ -35,9 +35,10 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
       {/* Lo primero: el botón grande para empezar. Cómo te sientes es opcional y ajusta el entreno. */}
       <Link href={`/app/entreno${sel?.q ?? ""}`} className="btn-primary flex w-full min-h-16 h-auto py-3 px-5 text-lg leading-tight font-extrabold text-center shadow-lift">
         <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-        <span className="min-w-0 text-balance">{sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
-        <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>
+        <span className="min-w-0 text-balance">{first ? `Empieza tu primer entreno (${sel?.v === 1 ? Math.round(mins * 0.75) : mins} min)` : sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
+        {!first && <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>}
       </Link>
+      {first && <Link href="/app/entreno?expres=10" className="tap mt-2 inline-flex min-h-11 items-center text-sm font-bold text-ink underline decoration-ink/40 underline-offset-4">¿Poco tiempo? Empieza con uno de 10 minutos, sin equipo</Link>}
       <p className="mt-4 text-sm font-bold text-ink/80">¿Cómo te sientes hoy? <span className="font-semibold text-ink/70">Opcional</span></p>
       <p className="text-xs font-semibold text-ink/75">{t(voice, { basico: `Elige y ${coachName} ajusta tu entreno a cómo llegas hoy.`, intermedio: "Ajusto el entreno a tu energía de hoy.", tecnico: "Autorregulación del día." })}</p>
       {suggestSoft && !v && <p className="mt-1 flex gap-1.5 text-xs font-semibold text-ink/75"><Syringe weight="duotone" className="size-4 shrink-0" />Cerca de tu inyección: si hay náusea o poca energía, elige “{she ? "Cansada" : "Cansado"}” para el modo suave.</p>}

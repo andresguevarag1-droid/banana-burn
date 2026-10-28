@@ -1,8 +1,8 @@
 import { getViewer } from "@/lib/supabase/server";
-import { dashboard, getAthlete } from "@/lib/athlete";
+import { dashboard, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
 import { getDaily, prefetchDaily } from "@/lib/daily";
-import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
+import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
 import { plannedFromSession } from "@/lib/programs";
@@ -40,6 +40,10 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       : prog.plan.key ? prog.plan
       : next ? plannedFromSession(prog, prog.icon, next.session, next.week, d.today.dow, d.equipment, exInfo)
       : prog.plan;
+  } else if (!isTrainingDay(d.plan)) {
+    // Día de descanso sin programa: quien toca Empezar (el primer entreno, un recordatorio) adelanta la próxima sesión
+    // en vez de llegar a una pantalla vacía.
+    plan = nextSessionPlan(d) ?? d.plan;
   } else plan = d.plan;
 
   // Ejercicios del día con su configuración, tempo y nota (los de un programa pueden ser de la biblioteca).
