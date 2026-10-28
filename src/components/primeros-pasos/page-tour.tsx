@@ -19,7 +19,7 @@ export function PageTour({ tour, steps, serverKeys, finalLabel = "Entendido" }: 
   // Primera vez: espera a que la guía decida (y se cierre) y a que la pantalla pinte.
   useEffect(() => {
     if (!ready || auto || open) return;
-    const blocked = !guide || !guide.settled || guide.guideOpen;
+    const blocked = !guide || !guide.settled || guide.guideOpen || guide.deferIntro;
     if (!shouldAutoTour({ keys, tour, blocked })) return;
     const t = setTimeout(() => { setAuto(true); setOpen(true); }, 700);
     return () => clearTimeout(t);
@@ -31,7 +31,12 @@ export function PageTour({ tour, steps, serverKeys, finalLabel = "Entendido" }: 
     return () => window.removeEventListener(REPLAY, h);
   }, [tour]);
 
-  const done = useCallback(() => { setOpen(false); mark(TOUR_KEYS[tour]); }, [mark, tour]);
+  // Al cerrar, la pantalla vuelve arriba: el recorrido la deja desplazada donde estaba su último paso y el botón principal
+  // quedaba fuera de la vista.
+  const done = useCallback(() => {
+    setOpen(false); mark(TOUR_KEYS[tour]);
+    try { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); } catch { /* */ }
+  }, [mark, tour]);
   return open ? <Tour steps={steps} onDone={done} finalLabel={finalLabel} /> : null;
 }
 

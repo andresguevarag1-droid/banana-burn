@@ -54,11 +54,11 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
             <span aria-hidden className="pointer-events-none absolute -right-3 -top-4 block size-32 select-none sm:size-40">
               <SafeImage src={poseForTag(plan.tag)} alt="" fill sizes="160px" priority className="object-contain drop-shadow-[0_8px_14px_rgb(27_21_5/.25)]" fallbackClassName="object-contain" />
             </span>
-            {benefit && !trainedToday && <p className="relative mt-3 -mr-28 sm:mr-0 max-w-[52ch] text-[15px] font-semibold leading-snug text-ink text-pretty">{benefit}</p>}
+            {benefit && !trainedToday && !first && <p className="relative mt-3 -mr-28 sm:mr-0 max-w-[52ch] text-[15px] font-semibold leading-snug text-ink text-pretty">{benefit}</p>}
           </div>
 
-          {/* Números reales del día */}
-          <ul className="relative mt-4 grid grid-cols-3 gap-2" aria-label="Resumen del entreno">
+          {/* Números reales del día (el primer entreno va directo al botón, que ya dice los minutos: que se vea sin desplazar) */}
+          {!first && <ul className="relative mt-4 grid grid-cols-3 gap-2" aria-label="Resumen del entreno">
             {[
               { I: Timer, big: `${mins}`, small: t(voice, { basico: "minutos", intermedio: "min", tecnico: "min aprox." }) },
               { I: Barbell, big: `${plan.exercises.length}`, small: "ejercicios" },
@@ -70,7 +70,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
                 <span className="mt-0.5 text-xs font-semibold text-ink/75">{small}</span>
               </li>
             ))}
-          </ul>
+          </ul>}
 
           {/* Lo más importante, arriba: empezar (o que ya está hecho). */}
           {trainedToday ? (
