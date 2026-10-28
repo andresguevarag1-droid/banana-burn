@@ -1,7 +1,7 @@
 -- 0061: Eventos del embudo guardados en la base (antes solo iban al log del servidor).
 -- Sin esto no se podía saber cuántas personas abren el entreno, hacen su primera serie o se van a la mitad:
 -- la fila de workouts solo existe cuando se guarda el entreno terminado.
--- Solo el servidor escribe (service_role desde /api/track). El staff con permiso de métricas lee totales.
+-- Solo el servidor (service_role) escribe y lee: /api/track escribe; los totales se consultan desde el servidor.
 
 create table if not exists public.funnel_events (
   id bigint generated always as identity primary key,
