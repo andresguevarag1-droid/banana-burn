@@ -8,7 +8,7 @@ export const EXPORT_BY_USER = [
   "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
   "user_challenges", "challenge_checkins", "challenge_milestones", "challenge_purchases", "challenge_entitlements", "user_programs",
   "device_interest", "posts", "comments", "kudos", "referral_codes", "tester_grants", "feedback_reports", "support_tickets", "profile_flair", "identity_verifications",
-  "season_intake", "season_feedback", "season_redemptions", "runs", "condo_members", "race_goals", "run_shoes", "run_board", "badge_overrides",
+  "season_intake", "season_feedback", "season_redemptions", "runs", "condo_members", "race_goals", "run_shoes", "run_board", "badge_overrides", "admin_notify_prefs",
 ] as const;
 
 /**
@@ -23,5 +23,8 @@ export const EXPORT_BY_USER = [
  * Referidores (0051): affiliates, affiliate_payout_methods (y sus comisiones y pagos) van en `referidor`; affiliate_referrals
  * va descrita en `referidor_atribucion` (de quién viene la cuenta; el referidor solo ve nombre e inicial).
  * native_push_tokens (0057) va sin el token: plataforma, versión de la app y fechas.
+ * admin_events (0059) va descrita: avisos internos al dueño (registro, pagos) armados con datos que ya van completos en el
+ * perfil y los pagos; nadie más que el superadmin los lee. admin_notify_prefs (0059) son las preferencias de avisos del
+ * superadmin: solo existen para el dueño y van completas.
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals", "admin_events"] as const;

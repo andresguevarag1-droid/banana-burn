@@ -2348,6 +2348,46 @@ select bbtest.zero('0058: A no escribe la energía activa de B', $q$ update publ
 delete from public.daily_logs where user_id = bbtest.u('A') and day = current_date - 40;
 reset role;
 
+-- ───────────── 0059: avisos al dueño ─────────────
+-- Los disparadores dejan el aviso en la bandeja una sola vez; solo el superadmin (Z) lee la bandeja y guarda sus
+-- preferencias; nadie más encola ni lee avisos por la API.
+reset role;
+delete from public.admin_events;
+update public.profiles set onboarded = false where id = bbtest.u('B');
+update public.profiles set onboarded = true where id = bbtest.u('B');
+update public.profiles set onboarded = true where id = bbtest.u('B');
+select bbtest.ok('0059: terminar la bienvenida deja un aviso de registro', (select count(*) = 1 from public.admin_events where event_key = 'registro:' || bbtest.u('B') and kind = 'registro'));
+update public.profiles set onboarded = false where id = bbtest.u('B');
+update public.profiles set onboarded = true where id = bbtest.u('B');
+select bbtest.ok('0059: el registro avisa una sola vez aunque se repita', (select count(*) = 1 from public.admin_events where kind = 'registro' and user_id = bbtest.u('B')));
+select public.admin_event_enqueue('pago:onvo:ref1', 'pago', bbtest.u('B'), 1499, 'usd', '{"plan":"completo"}');
+select public.admin_event_enqueue('pago:onvo:ref1', 'pago', bbtest.u('B'), 1499, 'usd', '{"plan":"completo"}');
+select bbtest.ok('0059: el mismo pago avisa una sola vez', (select count(*) = 1 from public.admin_events where event_key = 'pago:onvo:ref1' and currency = 'USD'));
+select public.admin_event_enqueue('malo', 'no_existe', null);
+select bbtest.ok('0059: un aviso inválido no rompe nada', (select count(*) = 0 from public.admin_events where event_key = 'malo'));
+insert into public.b2b_leads (name, role, org_name, email) values ('Laura', 'administrador', 'Condominio Prueba', 'laura@prueba.test');
+select bbtest.ok('0059: un condominio interesado deja aviso', (select count(*) = 1 from public.admin_events where kind = 'condominio' and data->>'org' = 'Condominio Prueba'));
+select bbtest.ok('0059: el aviso del condominio no guarda el correo', (select count(*) = 0 from public.admin_events where data::text like '%@%'));
+
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0059: una persona no ve avisos', bbtest.num('select 1 from public.admin_events') = 0);
+select bbtest.fails('0059: una persona no encola avisos', $q$ select public.admin_event_enqueue('x:1', 'pago', auth.uid(), 1, 'USD', '{}') $q$, '42501');
+select bbtest.fails('0059: una persona no escribe en la bandeja', $q$ insert into public.admin_events (event_key, kind) values ('x:2', 'pago') $q$, '42501');
+select bbtest.zero('0059: una persona no guarda preferencias de avisos', $q$ insert into public.admin_notify_prefs (user_id) values (auth.uid()) on conflict do nothing $q$);
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.ok('0059: un admin que no es dueño no ve avisos', bbtest.num('select 1 from public.admin_events') = 0);
+reset role;
+set role authenticated; select bbtest.login_super();
+select bbtest.ok('0059: el dueño ve la bandeja', bbtest.num('select 1 from public.admin_events') >= 3);
+select bbtest.ok('0059: el dueño guarda sus preferencias', bbtest.affected($q$ insert into public.admin_notify_prefs (user_id, email, email_mode) values (auth.uid(), true, 'instante') on conflict (user_id) do update set email = excluded.email $q$) = 1);
+select bbtest.fails('0059: tipos de aviso fuera de la lista no', $q$ update public.admin_notify_prefs set kinds = array['hackeo'] where user_id = auth.uid() $q$, '23514');
+select bbtest.zero('0059: el dueño no edita la bandeja', $q$ update public.admin_events set kind = 'pago' $q$);
+reset role;
+select bbtest.ok('0059: los disparadores de avisos están instalados', (select count(*) = 6 from pg_trigger where tgname ~ '^admin_ev_(profiles|trial|purchase|subs|lead)$' and not tgisinternal));
+delete from public.admin_events;
+delete from public.admin_notify_prefs;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

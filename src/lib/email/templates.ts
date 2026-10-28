@@ -500,6 +500,17 @@ export function reporteEquipo(d: { name: string; email?: string | null; kind: st
   return { subject, preheader, html: layout({ preheader, hero, body, reason }), text: textLayout([subject, "", `De: ${d.name}${d.email ? ` (${d.email})` : ""}`, "", d.body, "", ...r.map(([k, v]) => `${k}: ${v}`), "", `Ver en el panel: ${abs(d.adminUrl)}`], undefined, reason) };
 }
 
+/** Aviso interno al dueño (0059): alguien nuevo o dinero nuevo, o el resumen del día. Solo para el equipo. */
+export function avisoAdmin(d: { title: string; body: string; url: string; eyebrow?: string; lines?: string[] }): Email {
+  const subject = `${d.title}${d.body ? `: ${d.body}` : ""}`.slice(0, 140);
+  const preheader = d.body.slice(0, 90);
+  const hero: Hero = { eyebrow: d.eyebrow ?? "Aviso del panel", title: esc(d.title), lead: esc(d.body) };
+  const list = (d.lines ?? []).length ? `<ul style="margin:0 0 16px;padding-left:20px;font-size:16px;line-height:26px;color:${C.ink};">${d.lines!.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : "";
+  const body = list + button("Abrir en el panel", d.url);
+  const reason = "Aviso interno del panel de Banana Burn. Lo cambias en Admin, Avisos.";
+  return { subject, preheader, html: layout({ preheader, hero, body, reason }), text: textLayout([d.title, d.body, ...(d.lines ?? []).map((l) => `- ${l}`), "", `Abrir en el panel: ${abs(d.url)}`], undefined, reason) };
+}
+
 export type SupportMailKind = "recibido" | "en_proceso" | "respuesta" | "necesita_info" | "resuelto" | "cerrado";
 
 /**
