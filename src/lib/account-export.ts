@@ -26,5 +26,7 @@ export const EXPORT_BY_USER = [
  * admin_events (0059) va descrita: avisos internos al dueño (registro, pagos) armados con datos que ya van completos en el
  * perfil y los pagos; nadie más que el superadmin los lee. admin_notify_prefs (0059) son las preferencias de avisos del
  * superadmin: solo existen para el dueño y van completas.
+ * email_login_uses (0060) va descrita: marca qué enlaces de un toque de los correos ya se usaron (un número al azar y la
+ * fecha); nadie la lee por la API.
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals", "admin_events"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals", "admin_events", "email_login_uses"] as const;

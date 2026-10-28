@@ -2388,6 +2388,19 @@ select bbtest.ok('0059: los disparadores de avisos están instalados', (select c
 delete from public.admin_events;
 delete from public.admin_notify_prefs;
 
+-- ───────────── 0060: enlaces de un toque en los correos ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0060: una persona no ve los enlaces usados', not has_table_privilege('authenticated', 'public.email_login_uses', 'select'));
+select bbtest.ok('0060: una persona no puede marcar enlaces como usados', not has_table_privilege('authenticated', 'public.email_login_uses', 'insert'));
+reset role;
+insert into public.email_login_uses (nonce, user_id) values ('nonce-de-prueba-0001', bbtest.u('A'));
+select bbtest.ok('0060: un enlace sirve una sola vez', (select count(*) = 1 from public.email_login_uses where nonce = 'nonce-de-prueba-0001'));
+do $$ begin
+  begin insert into public.email_login_uses (nonce, user_id) values ('nonce-de-prueba-0001', bbtest.u('A')); perform bbtest.ok('0060: el segundo uso se rechaza', false);
+  exception when unique_violation then perform bbtest.ok('0060: el segundo uso se rechaza', true); end;
+end $$;
+delete from public.email_login_uses;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$
