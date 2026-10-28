@@ -31,6 +31,7 @@ import { demoCardState } from "@/lib/trial-demo";
 import { runDueForUser } from "@/lib/trial-billing";
 import { GuideProvider } from "@/components/guide/guide-provider";
 import { getGuideState } from "@/lib/guide-server";
+import { getLearnState } from "@/lib/primeros-pasos-server";
 import type { GuideInput } from "@/lib/guide";
 import { NewsLauncher } from "@/components/novedades/news-dialog";
 import { getNewsState } from "@/lib/novedades-server";
@@ -73,7 +74,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const liveCoach = live ? coachOf(px) : null;
   // Con Coach Platanita de coach (sus programas o una temporada con ella) la app entera se vuelve rosada.
   const theme = appThemeFor(px?.coach ?? null);
+  // ¿Ya terminó algún entreno? Antes del primero no se abre nada solo (guía, recorridos): Hoy queda libre para empezar.
+  const learn = v.demo ? null : await getLearnState(v).catch(() => null);
+  const firstRun = learn !== null && learn.workouts === 0;
   const guideInput: GuideInput = {
+    trained: !firstRun,
     name: v.name, plan: ent.plan, nutrition: ent.nutrition, cardStep,
     trial: trial ? { beta: Boolean(trial.beta), endsAt: trial.endsAt, daysLeft: trial.daysLeft } : null,
     charge: charge ? { kind: charge.kind, phase: charge.phase, plan: charge.plan, amount: charge.amount, chargeAt: charge.chargeAt } : null,
@@ -81,7 +86,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
   // Novedades (0036): lo que cambió desde la última visita, según el plan. Espera su turno detrás de la guía y las celebraciones.
   const news = newsView({ nutrition: ent.nutrition, plan: ent.plan, program: Boolean(live), staff: NEWS_STAFF_ROLES.includes(v.role) }, newsState);
-  const banner = bannerFor({ betaLive: betaLive(), fromSubscription: ent.fromSubscription, cardStep, charge, trial: Boolean(trial) });
+  const banner0 = bannerFor({ betaLive: betaLive(), fromSubscription: ent.fromSubscription, cardStep, charge, trial: Boolean(trial) });
+  // Antes del primer entreno, ningún aviso de tarjeta o prueba arriba de Hoy: lo primero que ve es su entreno, no un cobro.
+  // (Los avisos de cobro en curso, rechazado o programado sí se muestran: hay algo que atender.)
+  const banner = firstRun && (banner0 === "beta-add" || banner0 === "beta" || banner0 === "trial") ? null : banner0;
   return (
     <div data-theme={theme ?? undefined} className={theme ? "lg:pl-64 min-h-dvh bg-paper bg-[radial-gradient(110%_420px_at_50%_0%,var(--color-plat-soft),transparent)] bg-no-repeat" : "lg:pl-64"} style={live && !theme ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
       <ThemeRoot theme={theme} />
@@ -97,7 +105,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {xp !== null && <LevelWatcher uid={v.id} idx={levelOf(xp).idx} sex={await getSex(v).catch(() => null)} />}
       <GiftCelebration gifts={unseen.gifts} demo={v.demo} />
       <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
-      <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz}>
+      <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz} firstRun={firstRun}>
       <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
       <main id="contenido" tabIndex={-1} className="block text-[17px] leading-relaxed mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.today === "terminado" ? "tu certificado te espera" : live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: liveCoach && liveCoach.id !== "banana" ? liveCoach.avatar : null }} />}

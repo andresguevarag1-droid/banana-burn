@@ -209,4 +209,12 @@ describe("guía corta de la primera vez (v2)", () => {
     expect(s[1].bullets).toHaveLength(4);
     expect(s.some((x) => x.cta?.href === "/app/aprende")).toBe(true);
   });
+  it("cierra con el primer entreno si aún no entrena, y con el próximo si ya entrenó", async () => {
+    const { guideSteps } = await import("./guide");
+    expect(guideSteps(i, d, { short: true }).at(-1)?.title).toBe("Ahora, tu primer entreno");
+    const later = guideSteps({ ...i, trained: true }, d, { short: true });
+    expect(later).toHaveLength(4);
+    expect(later.at(-1)?.title).toBe("Tu próximo entreno ya está en Hoy");
+    expect(later.at(-1)?.cta?.href).toBe("/app/entreno");
+  });
 });

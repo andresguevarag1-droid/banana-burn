@@ -27,12 +27,15 @@ function readLocal(): { version: number | null; tips: TipKey[] } {
 }
 function writeLocal(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* modo privado o almacenamiento bloqueado */ } }
 
-type Ctx = { open: () => void; guideOpen: boolean; settled: boolean; tipSeen: (k: TipKey) => boolean; dismissTip: (k: TipKey) => void };
+/** `deferIntro`: persona que todavía no entrena. Nada se abre solo (ni la guía ni los recorridos): primero, su primer entreno. */
+type Ctx = { open: () => void; guideOpen: boolean; settled: boolean; deferIntro: boolean; tipSeen: (k: TipKey) => boolean; dismissTip: (k: TipKey) => void };
 const GuideCtx = createContext<Ctx | null>(null);
 export const useGuide = () => useContext(GuideCtx);
 
-export function GuideProvider({ input, seenVersion, tips, persisted, locked, busy, demo, tz, children }: {
+export function GuideProvider({ input, seenVersion, tips, persisted, locked, busy, demo, tz, firstRun = false, children }: {
   input: GuideInput;
+  /** Todavía no termina ningún entreno: la guía espera (no se marca como vista) y Hoy queda libre para empezar. */
+  firstRun?: boolean;
   seenVersion: number | null;
   tips: TipKey[];
   persisted: boolean;
@@ -55,6 +58,7 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
   const autoDone = useRef(false);
   // Ya se decidió si la guía se abre sola: los recorridos de cada pantalla esperan a esto para no encimarse.
   const [settled, setSettled] = useState(false);
+  const [deferIntro, setDeferIntro] = useState(false);
 
   useEffect(() => { setLocal(readLocal()); }, []);
 
@@ -73,6 +77,10 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
       const o = demoGuideInput(input, v);
       if (o) { autoDone.current = true; setOverride(o); setOpen(true); setSettled(true); return; }
     }
+    // Antes del primer entreno no se abre nada solo: siete pantallas de explicación antes de poder tocar la app
+    // eran la principal razón para no empezar. La guía queda pendiente y sale después del primer entreno.
+    const demoFirst = demo && new URLSearchParams(window.location.search).get("primera") === "1";
+    if (firstRun || demoFirst) { setDeferIntro(true); setSettled(true); return; }
     if (shouldAutoOpen({ seenVersion, localVersion: local.version, locked, busy, path })) {
       autoDone.current = true;
       setShort(true);
@@ -80,7 +88,7 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
       remember();
     }
     setSettled(true);
-  }, [local, demo, input, seenVersion, locked, busy, path, remember]);
+  }, [local, demo, input, seenVersion, locked, busy, path, remember, firstRun]);
 
   useEffect(() => {
     const h = () => { setOverride(null); setShort(false); setOpen(true); };
@@ -106,7 +114,7 @@ export function GuideProvider({ input, seenVersion, tips, persisted, locked, bus
     return guideSteps(override ?? input, { lastFree, firstPaid, day }, { short });
   }, [override, input, tz, short]);
 
-  const ctx = useMemo<Ctx>(() => ({ open: () => { setOverride(null); setShort(false); setOpen(true); }, guideOpen: open, settled, tipSeen, dismissTip }), [open, settled, tipSeen, dismissTip]);
+  const ctx = useMemo<Ctx>(() => ({ open: () => { setOverride(null); setShort(false); setOpen(true); }, guideOpen: open, settled, deferIntro, tipSeen, dismissTip }), [open, settled, deferIntro, tipSeen, dismissTip]);
 
   return (
     <GuideCtx.Provider value={ctx}>

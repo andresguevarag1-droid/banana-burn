@@ -42,6 +42,8 @@ export type GuideProgram = {
 
 /** Lo que la guía necesita saber de la persona. Datos planos: viajan del layout al cliente. */
 export type GuideInput = {
+  /** Ya terminó al menos un entreno (la guía corta cierra distinto). Sin dato, se asume que no. */
+  trained?: boolean;
   /** Primer nombre para el saludo (puede venir vacío). */
   name: string;
   plan: PlanId | "free";
@@ -396,6 +398,15 @@ export function shortSteps(i: GuideInput, d: GuideDates): GuideStep[] {
     steps.push({ id: "prueba", chapter: "Tu prueba", title: "Qué pasa cuando termina tu prueba", body: after.body, bullets: after.bullets, cta: null, visual: { kind: "final" } });
   }
   // Lo último que lee, lo primero que hace: su primer entreno (lo que más predice que vuelva).
+  if (i.trained) {
+    steps.push({
+      id: "final", chapter: "Listo", title: "Tu próximo entreno ya está en Hoy",
+      body: "Tócalo y yo te guío como la primera vez: qué hacer, cuántas veces y cuándo descansar.",
+      bullets: ["¿Poco tiempo? Hay uno de 10 minutos, sin equipo.", "La constancia le gana a la perfección."],
+      cta: { href: "/app/entreno", label: "Ir a mi entreno" }, visual: { kind: "final" },
+    });
+    return steps;
+  }
   steps.push({
     id: "final", chapter: "Listo", title: "Ahora, tu primer entreno",
     body: "Ya está listo en Hoy. Toca Empezar y yo te guío: qué hacer, cuántas veces y cuándo descansar.",
