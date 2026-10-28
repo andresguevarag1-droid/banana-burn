@@ -207,3 +207,19 @@ describe("zona horaria y modo del cron", () => {
     expect(cronModeFrom("cada hora")).toBe("daily");
   });
 });
+
+describe("primera semana sin entrenar", () => {
+  it("el recordatorio del primer entreno sale también en un día de descanso", () => {
+    expect(kinds(base({ trainingDay: false, firstWeek: true }))).toContain("recordatorio");
+    expect(kinds(base({ trainingDay: false, firstWeek: false }))).not.toContain("recordatorio");
+  });
+  it("si ya entrenó hoy no sale", () => {
+    expect(kinds(base({ trainingDay: false, firstWeek: true, trainedToday: true }))).not.toContain("recordatorio");
+  });
+  it("el texto invita al primer entreno, sin cargas ni rachas", () => {
+    const c = copyFor("recordatorio", { name: "Ana Pérez", routine: "Pecho y hombros", mins: 40, streak: 0, day: WED, firstWorkout: true });
+    expect(c.title).toBe("Ana, tu primer entreno está listo");
+    expect(c.body).toContain("40 minutos");
+    expect(c.url).toBe("/app/entreno");
+  });
+});

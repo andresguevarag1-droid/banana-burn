@@ -97,6 +97,7 @@ describe("marca y personalización", () => {
       T.pagoFallido({ name: "Ana", plan: "Entreno", amount: 9.99 }),
       T.suscripcionCancelada({ name: "Ana", plan: "Entreno" }),
       T.recordatorio({ name: "Ana", routine: "Pierna", streak: 3, unsubscribe }),
+      T.recordatorio({ name: "Ana", routine: "Pierna", mins: 35, exercises: ["Sentadilla", "Puente"], streak: 0, unsubscribe, first: true }),
       T.rachaEnPeligro({ name: "Ana", streak: 4, unsubscribe }),
       T.resumenSemanal({ name: "Ana", workouts: 3, planned: 4, streak: 5, prs: [], nextWeek: [], unsubscribe }),
       T.reactivacion({ name: "Ana", days: 3, routine: "Pierna", trainingDay: true, unsubscribe }),
