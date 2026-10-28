@@ -28,5 +28,7 @@ export const EXPORT_BY_USER = [
  * superadmin: solo existen para el dueño y van completas.
  * email_login_uses (0060) va descrita: marca qué enlaces de un toque de los correos ya se usaron (un número al azar y la
  * fecha); nadie la lee por la API.
+ * funnel_events (0061) va descrita: eventos de uso (abrir el entreno, primera serie, guardar, salir) para medir dónde
+ * se traba la app; sin texto escrito por la persona.
  */
-export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals", "admin_events", "email_login_uses"] as const;
+export const EXPORT_SPECIAL = ["push_subscriptions", "native_push_tokens", "referral_signals", "payment_methods", "coach_quota_tickets", "card_fingerprints", "affiliates", "affiliate_payout_methods", "affiliate_referrals", "admin_events", "email_login_uses", "funnel_events"] as const;

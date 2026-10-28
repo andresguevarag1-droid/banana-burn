@@ -2401,6 +2401,15 @@ do $$ begin
 end $$;
 delete from public.email_login_uses;
 
+-- ───────────── 0061: eventos del embudo ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0061: una persona no lee eventos del embudo', not has_table_privilege('authenticated', 'public.funnel_events', 'select'));
+select bbtest.ok('0061: una persona no escribe eventos directo (solo el servidor)', not has_table_privilege('authenticated', 'public.funnel_events', 'insert'));
+reset role;
+insert into public.funnel_events (user_id, name, path) values (bbtest.u('A'), 'workout_open', '/app/entreno');
+select bbtest.ok('0061: el servidor guarda eventos', (select count(*) = 1 from public.funnel_events where name = 'workout_open'));
+delete from public.funnel_events;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$
