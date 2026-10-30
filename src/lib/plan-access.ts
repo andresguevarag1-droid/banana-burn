@@ -53,3 +53,18 @@ export function hoyTip(x: { dow: number; training: boolean; proteinLeft: number;
   if (dow === 5) return "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el fin de semana hay salida, máximo 2 tragos.";
   return "Tempo 3-1-1 en cada rep. Bajar lento es donde se construye el músculo.";
 }
+
+/** Invitaciones de mejora: solo Entreno pagado, fuera de beta, prueba y cortesía. */
+export function canUpsellNutrition(ent: { plan: string; app: boolean; nutrition: boolean; access: string; trial: unknown; status: string; compEndsAt?: string }, beta: boolean): boolean {
+  return !beta && ent.plan === "entreno" && ent.app && !ent.nutrition && !ent.trial &&
+    ent.access === "subscription" && ["active", "canceling", "past_due"].includes(ent.status) && !ent.compEndsAt;
+}
+
+export const NUTRITION_UPSELL_INTERVAL = 7 * 864e5;
+export function nutritionUpsellDue(last: string | null, now: number): boolean {
+  if (last === null) return true;
+  const time = Number(last);
+  return Number.isFinite(time) && now - time >= NUTRITION_UPSELL_INTERVAL;
+}
+
+export type NutritionUpsellGoal = "protein" | "strength";

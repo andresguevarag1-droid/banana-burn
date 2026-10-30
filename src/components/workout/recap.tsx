@@ -12,6 +12,8 @@ import { DEFAULT_VOICE, t, type Voice } from "@/lib/voice";
 import { drawStory, downloadBlob, shareStory } from "./story-card";
 import { useReducedMotion } from "./device";
 import { GoldBanana } from "./ui";
+import { WeeklyNutritionUpsell } from "@/components/nutrition-upsell-weekly";
+import type { NutritionUpsellGoal } from "@/lib/plan-access";
 import { RecapNext } from "./recap-next";
 
 /** Número que sube hasta su valor (momento raro: el cierre del entreno). */
@@ -28,7 +30,8 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+export function Recap({ nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+  nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
   sex?: string | null;
   voice?: Voice;
   /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
@@ -159,6 +162,7 @@ export function Recap({ upcoming = null, next = [], sex = null, title, icon, xpB
             </div>
           )}
           {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
+          {full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
           {!repeat && <RecapNext upcoming={upcoming} />}
 
           <div className="mt-3 card p-4 text-left" aria-live="polite">

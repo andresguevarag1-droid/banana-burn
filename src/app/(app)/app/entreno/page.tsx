@@ -1,3 +1,6 @@
+import { getEntitlements } from "@/lib/entitlements";
+import { betaLive } from "@/lib/plans";
+import { canUpsellNutrition } from "@/lib/plan-access";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, firstSessionPlan, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
@@ -24,6 +27,8 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
   const [a, voice, saved] = await Promise.all([getAthlete(v), getVoice(v), expres || dia != null ? Promise.resolve(true) : v.demo && primera === "1" ? Promise.resolve(false) : hasSavedWorkout(v)]);
+  const ent = await getEntitlements(v);
+  const nutritionUpsell = canUpsellNutrition(ent, betaLive()) ? { account: v.id, goal: a.glp1.on || a.goalWeight < a.currentWeight ? "protein" as const : "strength" as const } : undefined;
   const d = dashboard(a);
   const n = Number(dia);
   const prog = d.program;
@@ -133,6 +138,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
     }
   }
-  return <Player upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }
