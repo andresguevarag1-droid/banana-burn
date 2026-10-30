@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { PLANS } from "./plans";
+import { MAX_ATTEMPTS, discountedMinor } from "./trial";
 
 // Correos de recuperación (marketing/estrategia/correos/recuperacion, issue #26). Solo documentos para Resend:
 // estas pruebas cuidan las reglas del pedido (un solo CTA con UTM, evento real, cruce con la app, sin descuentos nuevos).
@@ -73,5 +75,25 @@ describe("correos de recuperación", () => {
     for (const f of pieces) expect(rows.some((r) => r.includes(`](${f})`)), f).toBe(true);
     for (const r of rows) expect(r).toMatch(/\d{1,2}:\d{2} [ap]\. m\./);
     for (const name of ["primerEntreno", "cobroCancelado", "pagoFallido"]) expect(readme).toContain(`\`${name}\``);
+  });
+  it("las cifras y reglas que citan los documentos coinciden con el código (QA)", () => {
+    const src = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+    // R3: el tope de intentos que cita es MAX_ATTEMPTS, y con status failed y menos intentos Mi plan ofrece charge_now.
+    expect(read("03-pago-fallido.md")).toContain(`MAX_ATTEMPTS (${MAX_ATTEMPTS})`);
+    expect(src("src/lib/trial.ts")).toMatch(/case "failed": return row\.attempts >= MAX_ATTEMPTS \? \{ do: "card_only" \} : \{ do: "charge_now" \}/);
+    // R2: los montos con el 50 % que nombra salen de discountedMinor sobre los precios mensuales.
+    const half = [PLANS[0], PLANS[1]].map((p) => `$${(discountedMinor(Math.round(p.price.mes * 100)) / 100).toFixed(2)}`);
+    expect(read("02-cancelo-la-prueba.md")).toContain(`(${half[0]} o ${half[1]})`);
+    // R1: el cron de recordatorios solo lee perfiles con onboarded = true, como dice el cruce.
+    expect(src("src/lib/notify-run.ts")).toMatch(/\.eq\("onboarded", true\)/);
+    // Cada HTML lleva el enlace de baja y el correo de ayuda; el texto plano también.
+    for (const f of pieces) {
+      expect(read(htmlOf(f)), f).toContain("{{baja_url}}");
+      expect(read(htmlOf(f)), f).toContain("mailto:hola@bananaburn.app");
+      expect(textOf(f), f).toContain("{{baja_url}}");
+    }
+    // El ancla #tarjeta del CTA de R3 existe en Mi plan, después de los UTM.
+    expect(src("src/app/(app)/app/suscripcion/past-due-card.tsx")).toContain(`id="tarjeta"`);
+    expect(new URL(field("03-pago-fallido.md", "CTA único").split(": ").slice(1).join(": ")).hash).toBe("#tarjeta");
   });
 });
