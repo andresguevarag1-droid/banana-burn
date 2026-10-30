@@ -21,6 +21,7 @@ export function TrialBanner({ daysLeft, charge }: { daysLeft: number; charge?: {
   const Icon = n.tone === "start" ? Gift : Clock;
   return (
     <aside aria-label="Prueba gratis" className={`mb-5 grid grid-cols-[auto_1fr_auto] items-center gap-x-3 rounded-2xl border px-3 py-1 text-sm ${t.box}`}>
+      <span className="sr-only">{daysLeft === 1 ? "Último día de prueba." : `Quedan ${daysLeft} días de prueba.`}</span>
       <FunnelTracker view="trial_banner_view" props={{ day: n.day, tone: n.tone }} />
       <Icon weight="duotone" className={`size-5 shrink-0 ${t.icon}`} aria-hidden />
       <p className="min-w-0 py-1 text-pretty">
@@ -30,7 +31,8 @@ export function TrialBanner({ daysLeft, charge }: { daysLeft: number; charge?: {
       <Link href="/app/suscripcion" data-cta={`trial-banner-d${n.day}`} className="tap pressable inline-flex shrink-0 items-center gap-1 rounded-full px-2 sm:px-3 h-11 font-bold text-banana-ink hover:text-ink">
         {n.cta}<ArrowRight weight="bold" className="size-4" />
       </Link>
-      {n.tone !== "calm" && <p className="col-start-2 col-span-2 -mt-1 pb-2 text-muted text-pretty sm:hidden">{n.body}</p>}
+      <p className="col-start-2 col-span-2 -mt-1 pb-2 text-muted text-pretty sm:hidden">{n.body}</p>
+      <p className="col-span-3 pb-2 text-xs text-muted">Al terminar, sin un plan activo se pausa el acceso a tu plan y al seguimiento de tu progreso. Sigue entrenando para mantener tu racha. Tus datos quedan guardados.</p>
     </aside>
   );
 }

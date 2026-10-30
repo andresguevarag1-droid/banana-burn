@@ -3,7 +3,7 @@ import { PROMO_PCT } from "@/lib/trial";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowCounterClockwise, Check, CircleNotch, Gift, Lock, MonkeyCrown, Scroll, X } from "@/components/icons";
-import { ANNUAL_SEASON_NOTE, PLANS, PREMIUM_RETOS_NOTE, annualSavingPct, type Billing, type PlanId } from "@/lib/plans";
+import { ANNUAL_SEASON_NOTE, PLANS, PREMIUM_RETOS_NOTE, annualSaving, annualSavingPct, type Billing, type PlanId } from "@/lib/plans";
 import { isSupabaseConfigured } from "@/lib/env";
 import { intentPath } from "@/lib/checkout-intent";
 import { TRIAL_DAYS, money, noBreakGlp1 } from "@/lib/copy";
@@ -63,14 +63,14 @@ const guarantees = (trial: readonly [string, string]) => [
  * Planes con el anual anclado. `recommended` decide qué plan va destacado (por defecto el completo;
  * el muro de planes lo elige según el uso de la prueba). `loggedIn` evita leer la sesión cuando ya se sabe.
  */
-export function Pricing({ recommended = "completo", loggedIn: known, reason, trialGuarantee, trialLabel }: { trialLabel?: string; recommended?: PlanId; loggedIn?: boolean; reason?: string; trialGuarantee?: readonly [string, string] } = {}) {
+export function Pricing({ recommended = "completo", loggedIn: known, reason, trialGuarantee, trialLabel, compact = false }: { compact?: boolean; trialLabel?: string; recommended?: PlanId; loggedIn?: boolean; reason?: string; trialGuarantee?: readonly [string, string] } = {}) {
   const [b, setB] = useState<Billing>("anual");
   const loggedIn = useLoggedIn(known);
   const checkout = useCheckout();
   const save = Math.max(...PLANS.map(annualSavingPct));
   return (
     <div>
-      <div className="flex justify-center mb-10">
+      <div className={`flex justify-center ${compact ? "mb-5" : "mb-10"}`}>
         <div className="inline-flex rounded-full bg-white border border-line p-1 shadow-soft" role="tablist" aria-label="Periodo de pago">
           {(["anual", "mes"] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={b === k} onClick={() => setB(k)} className={`pressable h-11 px-5 rounded-full text-sm font-bold transition-[background-color,color,transform] duration-150 ${b === k ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
@@ -87,13 +87,13 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
         {PLANS.map((p) => {
           const hot = p.id === recommended;
           const annual = b === "anual";
-          const saved = Math.round((p.price.mes * 12 - p.price.anual) * 100) / 100;
+          const saved = annualSaving(p);
           return (
-            <div key={p.id} className={`relative flex flex-col rounded-[1.75rem] p-7 sm:p-8 ${hot ? "bg-ink text-white shadow-lift max-md:order-first" : "card"}`}>
+            <div key={p.id} className={`relative flex flex-col rounded-[1.75rem] ${compact ? "p-4 sm:p-6" : "p-7 sm:p-8"} ${hot ? "bg-ink text-white shadow-lift max-md:order-first" : "card"}`}>
               {hot && <span className="chip absolute -top-3 left-7 gap-1.5 bg-banana text-ink"><MonkeyCrown className="size-4" />{reason ? "Recomendado para ti" : "Recomendado"}</span>}
               <h3 className={`text-lg font-extrabold ${hot ? "text-banana" : "text-ink"}`}>{p.name}</h3>
               <p className={`text-sm ${hot ? "text-white/75" : "text-muted"}`}>{hot && reason ? reason : p.tagline}</p>
-              <p className="mt-5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <p className={`${compact ? "mt-2" : "mt-5"} flex flex-wrap items-baseline gap-x-2 gap-y-1`}>
                 <span className={`text-5xl font-extrabold tracking-tight tabular-nums ${hot ? "" : "text-ink"}`}>{money(annual ? p.price.anual : p.price.mes)}</span>
                 <span className={hot ? "text-white/75" : "text-muted"}>{annual ? "al año" : "al mes"}</span>
               </p>
@@ -101,10 +101,11 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
                 {annual ? `Un solo pago al año. Ahorras ${money(saved)} frente a ${money(p.price.mes)} al mes. ${ANNUAL_SEASON_NOTE}.` : "Sin permanencia. Cancela cuando quieras."}
               </p>
               <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} trialLabel={trialLabel} />
-              <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] ${hot ? "border-white/15" : "border-line"}`}>
+              {compact && <details className="mt-3 text-sm"><summary className="min-h-11 cursor-pointer py-3 font-semibold">Ver qué incluye</summary><PlanFeatures p={p} hot={hot} /></details>}
+              {!compact && <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] ${hot ? "border-white/15" : "border-line"}`}>
                 {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{noBreakGlp1(f)}</li>)}
                 {p.excluded.map((f) => <li key={f} className={`flex gap-2.5 ${hot ? "text-white/60" : "text-faint"}`}><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span><s>{noBreakGlp1(f)}</s></span></li>)}
-              </ul>
+              </ul>}
             </div>
           );
         })}
@@ -135,4 +136,13 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
       </div>
     </div>
   );
+}
+
+/** Detalle secundario: el precio y la acción quedan visibles antes de la lista. */
+function PlanFeatures({ p, hot }: { p: (typeof PLANS)[number]; hot: boolean }) {
+  return <ul className="space-y-2 pb-2">
+    {p.feats.map(f => <li key={f} className="flex gap-2"><Check aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} /><span>{noBreakGlp1(f)}</span></li>)}
+    {p.excluded.map(f => <li key={f}><span className="sr-only">No incluye: </span><s>{noBreakGlp1(f)}</s></li>)}
+    {p.nutrition && <li>No sustituye la indicación de tu médico.</li>}
+  </ul>;
 }

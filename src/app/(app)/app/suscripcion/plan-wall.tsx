@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, Barbell, CircleNotch, CreditCard, Lock, Scales, WarningCircle } from "@/components/icons";
 import type { CardStep, ChargePhase } from "@/lib/trial";
-import { MonkeyBanana } from "@/components/icons/brand";
 import { Pricing } from "@/components/pricing";
 import { FunnelTracker } from "@/components/analytics";
 import { createClient } from "@/lib/supabase/client";
@@ -59,17 +58,16 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
   const reason = usage ? (usage.glp1 ? "Incluye Banana Shield, que usaste en tu prueba" : usage.meals > 0 ? "Incluye la nutrición que usaste en tu prueba" : "Lo que usaste en tu prueba: entreno y coach") : undefined;
 
   return (
-    <div className="animate-enter space-y-8">
+    <div className="animate-enter space-y-4">
       <FunnelTracker view="plan_wall_view" />
       <header className="mx-auto max-w-2xl text-center">
-        <span className="mx-auto grid place-items-center size-20 rounded-[1.75rem] bg-banana-soft text-banana-ink" aria-hidden><MonkeyBanana className="size-12" /></span>
-        <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{line ? `${line}. No pares ahora.` : "Tu prueba gratis terminó"}</h1>
-        <p className="mt-2 text-muted text-pretty">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink text-balance">{line ? "Sigue con tu plan" : "Tu prueba gratis terminó"}</h1>
+        <p className="mt-2 text-sm text-muted text-pretty">
           {line ? `Tu prueba gratis terminó${trialEndedOn ? ` el ${trialEndedOn}` : ""}. ` : trialEndedOn ? `Terminó el ${trialEndedOn}. ` : ""}
-          Tu plan, tus entrenos y tu progreso siguen guardados. Elige un plan y sigues mañana donde lo dejaste.
+          Activa un plan para seguir entrenando, registrar tu progreso y mantener tu racha.
         </p>
         {usage && (usage.workouts > 0 || (usage.firstKg != null && usage.lastKg != null)) && (
-          <ul className="mt-5 inline-flex flex-wrap justify-center gap-2 text-sm font-semibold text-ink">
+          <ul className="mt-2 inline-flex flex-wrap justify-center gap-2 text-sm font-semibold text-ink">
             {usage.workouts > 0 && <li className="chip bg-white border border-line"><Barbell weight="duotone" aria-hidden className="size-4 text-banana-ink" />{usage.workouts} {usage.workouts === 1 ? "entreno terminado" : "entrenos terminados"}</li>}
             {usage.firstKg != null && usage.lastKg != null && <li className="chip bg-white border border-line"><Scales weight="duotone" aria-hidden className="size-4 text-banana-ink" />De {usage.firstKg.toLocaleString("es-419")} a {usage.lastKg.toLocaleString("es-419")} kg</li>}
           </ul>
@@ -84,7 +82,7 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
           <p className="mt-3 text-xs text-muted">O paga con otra tarjeta eligiendo un plan aquí abajo.</p>
         </div>
       )}
-      <Pricing recommended={rec} loggedIn reason={reason} />
+      <Pricing compact recommended={rec} loggedIn reason={reason} />
       <div className="flex flex-col items-center gap-1">
         <Link href="/app/suscripcion" data-cta="wall-mi-plan" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ver mi plan y pagos</Link>
         <Link href="/app/perfil" data-cta="wall-perfil" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ir a mi perfil</Link>
