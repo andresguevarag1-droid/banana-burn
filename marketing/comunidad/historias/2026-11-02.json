@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-02",
+  "title": "Tu primer entreno",
+  "lines": [
+    "Abre tu entreno.",
+    "Empieza por ahí."
+  ],
+  "sub": "Sigue la técnica y registra tu sesión.",
+  "question": "¿Qué te frena hoy?",
+  "options": [
+    "No sé qué hacer",
+    "Me falta tiempo"
+  ],
+  "cta": "Ver mi entreno",
+  "url": "https://bananaburn.app/app"
+}
