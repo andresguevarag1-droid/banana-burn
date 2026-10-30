@@ -1,0 +1,14 @@
+{
+  "name": "banana-burn-instagram",
+  "private": true,
+  "description": "Generadores de las piezas de Instagram (carruseles 1080x1350). Se instala aparte de la app.",
+  "type": "module",
+  "scripts": {
+    "k13": "node K13/generar.mjs"
+  },
+  "dependencies": {
+    "@expo-google-fonts/plus-jakarta-sans": "0.4.2",
+    "@resvg/resvg-js": "2.6.2",
+    "opentype.js": "2.0.0"
+  }
+}
