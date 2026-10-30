@@ -7,12 +7,14 @@ import { errCode, logError } from "@/lib/log";
 import { EX, nextTrainingDow, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { parseVoice, type Voice } from "@/lib/voice";
 import { streakOf } from "@/lib/gamify";
-import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, inQuietHours, isRelevantHour, liftFact, liftLine, localClock, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
+import { DEFAULT_PREFS, ONCE_DAY, copyFor, cronModeFrom, daysBetween, decide, inQuietHours, isHHMM, isRelevantHour, liftFact, liftLine, localClock, toMinutes, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
 import { sendPush, type NativeToken, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import { withLoginLinks } from "@/lib/email/login-link";
 import * as T from "@/lib/email/templates";
 import { forEachLimit } from "@/lib/concurrency";
+import { STAFF } from "@/lib/supabase/server";
+import { stepDay, trialSequenceStep, trialStepAt, type TrialSequenceCharge, type TrialStep } from "@/lib/trial-sequence";
 import { BETA_ENDS_AT } from "@/lib/plans";
 import { entitlementsFrom, type CompRow, type SubscriptionRow } from "@/lib/entitlements";
 import { kindFor, promoFor } from "@/lib/trial";
@@ -166,12 +168,13 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const phoneBy = group((phones.error ? [] : phones.data) as (NativeToken & { user_id: string })[]);
   const goalBy = new Map<string, GoalRow>();
   for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
+  const stepBy = await trialSequenceFor(admin, users, prefsOf, now);
 
   // Varias personas a la vez (cada una espera push, correo y la base): con miles de cuentas, de una en una no alcanzaba
   // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
   await forEachLimit(users, USER_CONCURRENCY, async (u) => {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
-    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy }); }
+    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
   });
 }
@@ -179,12 +182,50 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
 /** Personas procesadas a la vez en cada lote (push y correo en paralelo, sin saturar la base ni Resend). */
 const USER_CONCURRENCY = 8;
 
+/**
+ * Secuencia de la prueba (trial-sequence.ts): qué pieza le toca hoy a cada cuenta del lote. Solo consulta pagos, cortesías,
+ * testers y cobros de las cuentas con una ventana abierta (registradas hace 1, 3 o 5 días). Si alguna lectura falla, nadie
+ * del lote la recibe: sin esos datos podría llegarle a quien ya pagó. Exportada para pruebas.
+ */
+export async function trialSequenceFor(admin: SupabaseClient, users: Pick<Profile, "id" | "created_at">[], prefsOf: Map<string, Prefs>, now: Date): Promise<Map<string, TrialStep>> {
+  const out = new Map<string, TrialStep>();
+  const ids = users.filter((u) => trialStepAt(u.created_at, now) && prefsOf.get(u.id)?.email_reminders).map((u) => u.id);
+  if (!ids.length) return out;
+  const [prof, subs, comps, testers, charges] = await Promise.all([
+    admin.from("profiles").select("id,plan,role").in("id", ids),
+    admin.from("subscriptions").select("user_id,status").in("user_id", ids),
+    admin.from("comp_grants").select("user_id,revoked_at").in("user_id", ids),
+    admin.from("tester_grants").select("user_id,revoked_at").in("user_id", ids),
+    admin.from("trial_charges").select("user_id,status,kind,charge_at,reminder_sent_at").in("user_id", ids),
+  ]);
+  const failed = [prof, subs, comps, testers, charges].find((r) => r.error);
+  if (failed) { logError("cron:recordatorios", "trial_sequence_query_failed", { code: failed.error?.code }); return out; }
+  const has = (rows: unknown[] | null, ok: (r: Record<string, unknown>) => boolean) => new Set((rows as Record<string, unknown>[] | null ?? []).filter(ok).map((r) => r.user_id as string));
+  const paid = has(subs.data, (r) => r.status !== "incomplete");
+  const comp = has(comps.data, (r) => !r.revoked_at);
+  const tester = has(testers.data, (r) => !r.revoked_at);
+  const profBy = new Map((prof.data as { id: string; plan: string | null; role: string | null }[] | null ?? []).map((r) => [r.id, r]));
+  const chargeBy = new Map((charges.data as (TrialSequenceCharge & { user_id: string })[] | null ?? []).map((r) => [r.user_id, r]));
+  for (const u of users) {
+    if (!ids.includes(u.id)) continue;
+    const pr = profBy.get(u.id);
+    const step = trialSequenceStep({
+      createdAt: u.created_at, now, emailReminders: true, profilePlan: pr?.plan, staff: STAFF.includes(pr?.role as (typeof STAFF)[number]),
+      paid: paid.has(u.id), comp: comp.has(u.id), tester: tester.has(u.id), charge: chargeBy.get(u.id) ?? null,
+    });
+    if (step) out.set(u.id, step);
+  }
+  return out;
+}
+
 
 type Grouped = {
   wkBy: Map<string, { user_id: string; day: string }[]>; dlBy: Map<string, { user_id: string; day: string }[]>; wsBy: Map<string, { user_id: string; day: string; kg: number }[]>;
   logBy: Map<string, { user_id: string; kind: string; local_day: string; pushes: number }[]>; subBy: Map<string, (PushSub & { user_id: string })[]>;
   phoneBy: Map<string, (NativeToken & { user_id: string })[]>;
   goalBy: Map<string, GoalRow>;
+  /** Pieza de la secuencia de la prueba que le toca hoy (trialSequenceFor). */
+  stepBy: Map<string, TrialStep>;
 };
 type GoalRow = { user_id: string; start_weight: number | string; goal_weight: number | string; goal_date: string | null };
 
@@ -198,7 +239,7 @@ export function goalFor(g: GoalRow | undefined, weights: { day: string; kg: numb
   return { start, current: Number.isFinite(current) ? current : start, goal, date: g.goal_date };
 }
 
-async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy }: Grouped) {
+async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy }: Grouped) {
   {
     const prefs = prefsOf.get(u.id)!;
     const c = localClock(now, prefs.timezone);
@@ -232,7 +273,10 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       hasPushSubscription: userSubs.length + userPhones.length > 0,
       hasEmail: true,
     });
-    if (!decisions.length) return;
+    // Secuencia de la prueba: a la hora del recordatorio, una vez por pieza y por cuenta (ONCE_DAY).
+    const remindHour = isHHMM(prefs.reminder_time) ? Math.floor(toMinutes(prefs.reminder_time) / 60) : 7;
+    const step = mode === "daily" || c.hour === remindHour ? stepBy.get(u.id) ?? null : null;
+    if (!decisions.length && !step) return;
 
     let email: string | null | undefined;
     const getEmail = async () => {
@@ -242,6 +286,11 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const name = u.full_name || "";
     const voice: Voice = parseVoice(u.lenguaje);
     const goal = goalFor(goalBy.get(u.id), wsBy.get(u.id) ?? []);
+
+    // La pieza reemplaza el correo del recordatorio (o la reactivación) de ese día; push y campanita siguen igual.
+    if (step && await sendTrialStep(admin, u.id, step, getEmail, stats)) {
+      for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
+    }
 
     for (const d of decisions) {
       // Reclamar el envío: si otra corrida ya lo hizo hoy, no se repite.
@@ -268,6 +317,26 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       stats.sent[d.kind] = (stats.sent[d.kind] ?? 0) + 1;
     }
   }
+}
+
+/** Correos del día que la pieza de la prueba reemplaza (el resumen semanal no: es otro aviso que la persona eligió). */
+const REPLACED_BY_STEP = new Set<Kind>(["recordatorio", "reactivacion_3", "reactivacion_7", "racha"]);
+
+/** Reclama y envía una pieza de la secuencia. true si se reclamó en esta corrida (aunque el correo fallara). */
+async function sendTrialStep(admin: SupabaseClient, userId: string, step: TrialStep, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const { data: claimed, error } = await admin.from("notification_log")
+    .upsert({ user_id: userId, kind: step, local_day: ONCE_DAY, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+    .select("id");
+  if (error) { stats.errors++; return false; }
+  if (!claimed?.length) return false;
+  const to = await getEmail();
+  if (to) {
+    const unsubscribe = unsubscribeUrl(userId, "recordatorios");
+    const r = await sendEmail(to, withLoginLinks(T.secuenciaPrueba({ day: stepDay(step), unsubscribe }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
+    if (r.ok) stats.email++;
+  }
+  stats.sent[step] = (stats.sent[step] ?? 0) + 1;
+  return true;
 }
 
 const channels = (d: Decision) => [d.inapp && "inapp", d.push && "push", d.email && "email"].filter(Boolean) as string[];
