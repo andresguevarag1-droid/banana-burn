@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { Crown, Info, Wallet } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { getAffiliatePage } from "@/lib/affiliate-page";
+import { usd2 } from "@/lib/num";
 import { AffShare } from "./share";
 import { MethodForm } from "./method-form";
 
 export const metadata = { title: "Mis referidos", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-const usd = (minor: number) => `$${(minor / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const usd = (minor: number) => usd2(minor / 100);
 const n = (x: number) => x.toLocaleString("es-419");
 const STATUS: Record<string, [string, string]> = {
   pagando: ["Pagando", "bg-peel/10 text-peel"], pago_fallido: ["Pago fallido", "bg-ember/15 text-ember-ink"],

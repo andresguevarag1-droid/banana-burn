@@ -128,9 +128,9 @@ describe("marca y personalización", () => {
     const r = T.recordatorio({ name: "Andrés Guevara", routine: "Empuje", streak: 0, goal, unsubscribe });
     expect(r.subject).toBe("Andrés, hoy te toca Empuje: tus cargas ya están listas");
     expect(r.html).toContain("Tu meta");
-    expect(r.text).toContain("Te faltan 5,2 kg");
+    expect(r.text).toContain("Te faltan 5.2 kg");
     const w = T.resumenSemanal({ name: "Andrés", workouts: 4, planned: 4, streak: 9, prs: [], nextWeek: [], goal, unsubscribe });
-    expect(w.html).toContain("3,8 kg menos");
+    expect(w.html).toContain("3.8 kg menos");
   });
   it("las plantillas de Supabase conservan sus variables", async () => {
     const { authTemplates } = await import("./templates");
@@ -143,8 +143,23 @@ describe("marca y personalización", () => {
   });
   it("cifras con el formato de la marca", async () => {
     const { money, reciboPago } = await import("./templates");
-    expect(money(9.99)).toBe("$9,99");
-    expect(money(1200)).toBe("$1.200,00");
-    expect(reciboPago({ name: "Ana", plan: "Entreno", amount: 9.99 }).subject).toBe("Recibo de pago: Entreno, $9,99");
+    expect(money(9.99)).toBe("$9.99");
+    expect(money(14.99)).toBe("$14.99");
+    expect(money(4.99)).toBe("$4.99");
+    expect(money(1040)).toBe("$1,040.00");
+    expect(money(1200)).toBe("$1,200.00");
+    expect(reciboPago({ name: "Ana", plan: "Entreno", amount: 9.99 }).subject).toBe("Recibo de pago: Entreno, $9.99");
+  });
+  it("bienvenida, prueba iniciada y recordatorio de cobro con punto decimal", async () => {
+    const { pruebaIniciada, recordatorioCobro } = await import("./templates");
+    const comma = /\$\d[\d.]*,\d{2}\b|\d,\d kg/;
+    const charge = { name: "Ana", plan: "Entreno + Nutrición", amount: 14.99, chargeAt: "2026-11-08", kind: "prueba" as const };
+    const mails = [bienvenida({ name: "Ana" }), pruebaIniciada(charge), pruebaIniciada({ ...charge, amount: 4.99, promo: true }), recordatorioCobro(charge), recordatorioCobro({ ...charge, amount: 1040 })];
+    for (const m of mails) for (const t of [m.subject, m.preheader, m.html, m.text]) expect(t).not.toMatch(comma);
+    expect(pruebaIniciada(charge).text).toContain("$14.99");
+    expect(pruebaIniciada(charge).text).toContain("Hoy: $0.00");
+    expect(pruebaIniciada({ ...charge, amount: 4.99, promo: true }).html).toContain("$4.99");
+    expect(recordatorioCobro(charge).subject).toBe("En 2 días se cobra tu plan de $14.99");
+    expect(recordatorioCobro({ ...charge, amount: 1040 }).html).toContain("$1,040.00");
   });
 });

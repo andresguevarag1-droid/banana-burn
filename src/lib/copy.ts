@@ -1,7 +1,9 @@
 // Textos de oferta compartidos: precios para mostrar, prueba gratis y tipografía de marcas.
 // Precios: siempre en USD con punto decimal y dos decimales ($5.00, $7.50, $59.99),
 // para que no convivan "$5" y "$59.99" en la misma pantalla. Los montos salen de plans.ts.
-export const money = (n: number) => `$${(Math.round(n * 100) / 100).toFixed(2)}`;
+import { usd2 } from "./num";
+
+export const money = usd2;
 
 /** Días de prueba gratis con todo incluido. Desde el fin de la beta, contados desde que se guarda la tarjeta (trial.ts). */
 export const TRIAL_DAYS = 7;
