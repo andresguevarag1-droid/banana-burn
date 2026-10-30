@@ -8,7 +8,7 @@ Andrés fijó la meta número 1 de la oficina: **100 usuarios de pago**. Este do
 
 **Usuario de pago:** una cuenta con al menos un cobro exitoso, sin testers ni cortesías. En la base: cobro automático con `status = 'succeeded'` en `trial_charges` o suscripción vigente en `subscriptions` (pago a mano en el muro de planes). Los registros y los seguidores no cuentan.
 
-**Conteo actual: [PENDIENTE].** Sale del tablero diario (`docs/metas/tablero-diario.sql`), que **aún no está en main** (es la tarea de esta semana de Martín). Hasta que Andrés lo corra, nadie pone un número en un PR.
+**Conteo actual: [PENDIENTE].** Sale del tablero diario (`docs/metas/tablero-diario.sql`), con instrucciones en [tablero-diario.md](tablero-diario.md). Hasta que Andrés lo corra, nadie pone un número en un PR.
 
 ### Cuenta hacia atrás
 
@@ -49,7 +49,7 @@ Semana del viernes 30 de octubre al domingo 8 de noviembre. La columna "En main 
 
 | Agente | Paso del embudo | Meta | Métrica | Tareas de la semana | En main hoy |
 | --- | --- | --- | --- | --- | --- |
-| Martín (Marketing y Ads) | Registros y primer pago | Costo por cliente que paga de $14.98 o menos, y 285 registros | Gasto de Meta ÷ clientes que pagan; registros completos | Tablero diario `docs/metas/tablero-diario.sql` (consultas de solo lectura del embudo y conteo de usuarios de pago) | `marketing/estrategia/embudo-noviembre.md`, `meta-ads-noviembre.md`, `variantes-ab-noviembre.md`. El tablero aún no existe. |
+| Martín (Marketing y Ads) | Registros y primer pago | Costo por cliente que paga de $14.98 o menos, y 285 registros | Gasto de Meta ÷ clientes que pagan; registros completos | Tablero diario `docs/metas/tablero-diario.sql` (consultas de solo lectura del embudo y conteo de usuarios de pago) | `marketing/estrategia/embudo-noviembre.md`, `meta-ads-noviembre.md`, `variantes-ab-noviembre.md`. Tablero disponible con instrucciones en docs/metas/tablero-diario.md; falta ejecutarlo en Supabase. |
 | Adrian (Coder) | Primer pago y registros | Pagos y referidos medibles | Cobros automáticos que llegan a Meta; registros por referido con su UTM | `Subscribe` desde el servidor en el cobro automático (`src/lib/trial-billing.ts`) y conservar los UTM en `/r/<código>` (`src/app/r/[code]/route.ts`) | Simulacro de cobros (`docs/simulacro-cobros.md`). Hoy el cobro automático no manda evento y `/r/<código>` descarta los UTM. |
 | Lucía (Diseño App) | Tarjeta | Tarjeta guardada en 40 % de los registros | Tarjetas en `trial_charges` ÷ registros | Aviso de los días 5 a 7 de la prueba, sin presión, con "Continuar sin tarjeta" siempre visible | El aviso de la beta (`src/components/card-banner.tsx`). El de los días 5 a 7 aún no existe. |
 | Mateo (Diseño Landing y Marca) | Visitas y primer pago | Inscripciones a la Temporada 1 antes del 22 de noviembre | Compras de temporada | Mejorar `/temporadas` | `src/app/(marketing)/temporadas/page.tsx` |
