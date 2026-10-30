@@ -1,0 +1,14 @@
+{
+  "name": "r02-musculo-glp1",
+  "private": true,
+  "type": "module",
+  "description": "Reel R02 de Banana Burn hecho en código",
+  "scripts": {
+    "render": "node render.mjs",
+    "verificar": "node verificar.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@napi-rs/canvas": "^0.1.80"
+  }
+}
