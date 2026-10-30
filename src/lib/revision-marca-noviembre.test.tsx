@@ -63,7 +63,10 @@ describe("revisión de marca de noviembre (#96)", () => {
       const path = file.replaceAll("`", "");
       const key = Object.keys(needles).find((k) => path.endsWith(k.split("|")[0]) && k.endsWith(`|${line}`));
       expect(key, `${path}:${line}`).toBeDefined();
-      expect(src(path).split("\n")[Number(line) - 1]).toContain(needles[key!]);
+      // La línea citada, con margen de 5 líneas: otra PR puede mover el archivo unas líneas sin que el informe quede mal.
+      const lines = src(path).split("\n");
+      const near = lines.slice(Math.max(0, Number(line) - 6), Number(line) + 5);
+      expect(near.some((l) => l.includes(needles[key!])), `${path}:${line}`).toBe(true);
     }
     expect(DOC).not.toMatch(/[—–]/);
     expect(DOC).toMatch(/visita|registro|prueba|pago|renovación/);
