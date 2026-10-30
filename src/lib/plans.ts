@@ -1,5 +1,6 @@
 // Planes y precios de Banana Burn (USD). Fuente única para landing, app y pagos.
 import { coachPlanFeat } from "@/lib/coach-quota";
+import { nfmt } from "@/lib/num";
 export type PlanId = "entreno" | "completo";
 export type Billing = "mes" | "anual";
 
@@ -45,7 +46,7 @@ export const PLANS: { id: PlanId; name: string; tagline: string; nutrition: bool
 export const ANNUAL_SEASON_NOTE = "Incluye 1 temporada deportiva gratis";
 export const PREMIUM_RETOS_NOTE = "Los retos Premium se compran aparte con un pago único, en cualquier plan. Subir de nivel te da descuento en ellos.";
 
-export const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+export const usd = (n: number) => `$${nfmt(n, 2, n % 1 ? 2 : 0)}`;
 /** Ahorro del plan anual vs. pagar 12 meses. */
 export const annualSavingPct = (p: (typeof PLANS)[number]) => Math.round((1 - p.price.anual / (p.price.mes * 12)) * 100);
 export const perMonthAnnual = (p: (typeof PLANS)[number]) => Math.round((p.price.anual / 12) * 100) / 100;

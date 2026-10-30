@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { clamp01, es419Deep, es419Text, frac, nfmt } from "./num";
+import { clamp01, es419Deep, es419Text, frac, nfmt, usd2 } from "./num";
 
 describe("frac y clamp01", () => {
   it("no deja pasar NaN ni Infinity", () => {
@@ -33,9 +33,15 @@ describe("cifras en es-419", () => {
     expect(r).toEqual({ id: "pasos-1.000", title: "10,000 pasos", plan: [{ t: "0.5 kg", type: "habito" }], task, n: 3 });
   });
   it("nadie formatea números de la app fuera de es-419", () => {
-    // es-CO (1.276 y 93,1) solo en los correos, que tienen su propio formato.
-    const co = execSync("grep -rln --include=*.ts --include=*.tsx 'es-CO' src || true", { encoding: "utf8" }).split("\n").filter(Boolean);
-    expect(co.filter((f) => !["src/lib/email/templates.ts", "src/lib/num.test.ts"].includes(f))).toEqual([]);
+    // Ni es-CO (1.276 y 93,1) ni en-US: todo pasa por nfmt o usd2, también los correos.
+    const co = execSync("grep -rlnE --include=*.ts --include=*.tsx 'es-CO|toLocaleString\\(\"en-US' src || true", { encoding: "utf8" }).split("\n").filter(Boolean);
+    expect(co.filter((f) => f !== "src/lib/num.test.ts")).toEqual([]);
+  });
+  it("montos en USD con punto decimal", () => {
+    expect(usd2(9.99)).toBe("$9.99");
+    expect(usd2(14.99)).toBe("$14.99");
+    expect(usd2(4.99)).toBe("$4.99");
+    expect(usd2(1040)).toBe("$1,040.00");
   });
   it("sin miles con punto ni decimales con coma escritos a mano en la interfaz", () => {
     // Siembras ya aplicadas en migraciones (deben coincidir byte a byte): las corrige es419Deep al mostrarlas.

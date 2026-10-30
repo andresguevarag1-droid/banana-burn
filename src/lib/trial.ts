@@ -16,6 +16,7 @@
 //     cobra ese día, con el 50 % del primer mes si aplica; nunca antes. Si la guardan después, se cobra en ese momento.
 //   - Aviso 2 días antes del cobro (día 5), por correo, push y en la app.
 import { BETA_ENDS_AT, BETA_GRACE_UNTIL, PLANS, TRIAL_DAYS, betaGraceFor, type Billing, type PlanId } from "./plans";
+import { usd2 } from "./num";
 
 export const DAY_MS = 864e5;
 /** Aviso antes del cobro: "En 2 días se cobra tu plan". */
@@ -331,8 +332,6 @@ export function bannerFor(i: { betaLive: boolean; fromSubscription: boolean; car
 }
 
 // ───────────── Textos (honestos y con la fecha exacta) ─────────────
-
-const usd2 = (n: number) => `$${(Math.round(n * 100) / 100).toFixed(2)}`;
 
 /** La frase de la prueba desde el fin de la beta (0043): sin tarjeta. */
 export const TRIAL_LINE = `${TRIAL_DAYS} días gratis con todo incluido, sin tarjeta.`;
