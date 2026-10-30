@@ -8,6 +8,9 @@ import { faqJsonLd, ldScript, social } from "../seo";
 import { COMPLETO, FaqCta, GLP1, SIGNUP_GLP1, TRIAL_CTA } from "../content";
 import { offer } from "@/lib/offer";
 
+// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
+export const revalidate = 3600;
+
 const TITLE = "Banana Shield, el programa para personas en GLP-1";
 const DESCRIPTION = "¿Usas Ozempic, Wegovy o Mounjaro? Entreno de fuerza, proteína y hábitos para que lo que bajes sea grasa, no músculo. En español, para Latinoamérica.";
 /* Todas las llamadas a la acción llevan al plan que incluye Banana Shield (plan=completo en la intención de compra). */

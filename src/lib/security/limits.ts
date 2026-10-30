@@ -20,6 +20,23 @@ const SLOW = "Vas muy rápido. Espera unos minutos e intenta de nuevo.";
 
 /** Reglas por nombre. Holgadas: una persona normal no las toca; un script o un doble clic sostenido sí. */
 export const RULES = {
+  // ── Acceso sin sesión: por red (ip:<ip>) y por correo, los dos cuentan. Holgados por red: en datos móviles de
+  // Latinoamérica muchas personas comparten IP (CGNAT). El registro crea cuentas confirmadas sin los límites de Supabase Auth.
+  "auth:entrar:ip": { windows: [{ sec: 10 * MIN, max: 10 }, { sec: HOUR, max: 20 }, { sec: DAY, max: 100 }], db: true, msg: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
+  "auth:entrar:correo": { windows: [{ sec: 10 * MIN, max: 5 }, { sec: HOUR, max: 10 }], db: true, msg: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
+  "auth:registro:ip": { windows: [{ sec: 10 * MIN, max: 10 }, { sec: HOUR, max: 20 }, { sec: DAY, max: 100 }], db: true, msg: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
+  "auth:registro:correo": { windows: [{ sec: 10 * MIN, max: 5 }, { sec: HOUR, max: 10 }], db: true, msg: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
+  // Enlace de un toque de los correos (/auth/correo): ver el botón es barato; gastarlo inicia una sesión.
+  "auth:correo:ver": { windows: [{ sec: 10 * MIN, max: 60 }], db: false, msg: SLOW },
+  "auth:correo:entrar": { windows: [{ sec: 10 * MIN, max: 20 }], db: true, msg: SLOW },
+  // ── Embudo (/api/track): un evento por clic; solo en memoria (una escritura en la base por evento costaría más).
+  "track": { windows: [{ sec: MIN, max: 120 }], db: false, msg: SLOW },
+  // ── Webhook de ONVO, por IP del procesador. Muy por encima de cualquier ráfaga real (cobros del día, reintentos):
+  // ONVO reintenta con espera cualquier respuesta que no sea 2xx, así que un 429 solo atrasa la entrega, no la pierde.
+  // Solo en memoria: el camino de los pagos no depende de una consulta extra.
+  "pagos:webhook": { windows: [{ sec: MIN, max: 600 }], db: false, msg: SLOW },
+  // ── Despachador de avisos al dueño (lo llama la base con pg_net): un solo contador para todas las instancias.
+  "avisos:despachar": { windows: [{ sec: MIN, max: 30 }], db: true, msg: SLOW },
   // ── Coach IA (además del cupo por plan de 0032 y del tope diario global de 0040)
   "coach:chat": { windows: [{ sec: MIN, max: 6 }, { sec: HOUR, max: 60 }], db: true, msg: "Estás mandando mensajes muy seguido. Espera un momento y vuelve a preguntar." },
   "coach:feedback": { windows: [{ sec: HOUR, max: 30 }], db: true, msg: SLOW },

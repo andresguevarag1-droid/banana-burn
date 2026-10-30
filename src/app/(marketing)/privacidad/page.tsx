@@ -1,6 +1,9 @@
 import { LegalPage, type LegalSection } from "../legal";
 import { social } from "../seo";
 
+// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
+export const revalidate = 3600;
+
 const DESCRIPTION = "Cómo Banana Burn trata tus datos personales y de salud: qué recopilamos, para qué, con quién los compartimos y cómo ejercer tus derechos.";
 export const metadata = { title: "Política de privacidad", description: DESCRIPTION, ...social({ title: "Política de privacidad de Banana Burn", description: DESCRIPTION, path: "/privacidad" }) };
 

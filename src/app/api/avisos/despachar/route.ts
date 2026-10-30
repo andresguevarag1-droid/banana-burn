@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { memoryRateLimit } from "@/lib/security";
+import { hitLimit, tooMany } from "@/lib/security/limits";
 import { dispatchAdminEvents } from "@/lib/admin-avisos-server";
 
 export const runtime = "nodejs";
@@ -12,7 +12,8 @@ export const maxDuration = 30;
  * ni duplica avisos (cada uno se reclama una vez). Igual tiene un tope para que nadie la use de martillo.
  */
 async function handle() {
-  if (!memoryRateLimit("avisos:despachar", 30, 60_000)) return NextResponse.json({ ok: false }, { status: 429 });
+  const lim = await hitLimit("avisos:despachar", "global");
+  if (!lim.ok) return tooMany(lim);
   const r = await dispatchAdminEvents();
   return NextResponse.json({ ok: true, avisos: r.events });
 }

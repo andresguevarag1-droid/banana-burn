@@ -1,6 +1,9 @@
 import { LegalPage, type LegalSection } from "../legal";
 import { social } from "../seo";
 
+// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
+export const revalidate = 3600;
+
 // Página pública para pedir el borrado de la cuenta sin instalar la app (requisito de Google Play: la ficha de la tienda
 // enlaza aquí). El borrado en sí vive en Perfil (DataControls → /api/cuenta/borrar → deleteAccountData).
 const DESCRIPTION = "Cómo eliminar tu cuenta de Banana Burn y tus datos, desde la app, la web o por correo, y qué pasa con tus suscripciones.";

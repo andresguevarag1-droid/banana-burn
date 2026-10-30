@@ -128,7 +128,6 @@ describe("inventario: cada entrada que se puede abusar tiene su freno", async ()
     ".well-known/assetlinks.json/route.ts": "JSON público desde variables de entorno, sin base; una hora en la CDN",
     "og/route.tsx": "imagen en la CDN una semana; el middleware frena ráfagas",
     "r/[code]/route.ts": "solo pone una cookie y redirige, sin base",
-    "api/pagos/webhook/route.ts": "firma de ONVO en tiempo constante antes de leer el cuerpo",
     "api/cron/recordatorios/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
     "api/cron/cobros/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
     "api/cron/avisos/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
