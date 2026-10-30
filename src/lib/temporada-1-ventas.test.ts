@@ -41,6 +41,20 @@ describe("Temporada 1: ventas orgánicas", () => {
     }
   });
 
+  it("solo usa importes US$ que salen de plans.ts o seasons.ts", () => {
+    const cents = (n: number) => Math.round(n * 100);
+    const known = new Set<number>([0]);
+    for (const season of SEASONS_T1) known.add(cents(season.priceMinor / 100));
+    for (const plan of PLANS) {
+      known.add(cents(plan.price.mes));
+      known.add(cents(plan.price.anual));
+      for (const season of SEASONS_T1) known.add(cents(plan.price.mes * 12 + season.priceMinor / 100));
+    }
+    const amounts = [...doc.matchAll(/US\$(\d+(?:\.\d+)?)/g)].map((m) => cents(Number(m[1])));
+    expect(amounts.length).toBeGreaterThan(0);
+    for (const amount of amounts) expect(known.has(amount), `importe no conocido: ${amount / 100}`).toBe(true);
+  });
+
   it("respeta las reglas de marca en todo el documento", () => {
     expect(doc).not.toMatch(/\p{Extended_Pictographic}|\p{Regional_Indicator}|\u20E3/u);
     expect(doc).not.toMatch(/[\u2013\u2014]/u);
