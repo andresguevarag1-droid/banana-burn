@@ -78,6 +78,7 @@ describe("la oferta y lo que no se promete", () => {
   });
   it("sin precios por volumen, descuentos ni resultados prometidos", () => {
     expect(guion).not.toMatch(/descuento del|\d+ ?% de descuento|precio especial|garantiza/i);
+    expect(guion).not.toMatch(/se usa más|se va a usar más/i);
     expect(guion).toMatch(/Precios por volumen: no hay precio para la administración/);
     expect(guion).toMatch(/No te prometo un número/);
   });

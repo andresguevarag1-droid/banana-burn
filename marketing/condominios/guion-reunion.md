@@ -118,7 +118,7 @@ Versiones habladas de las respuestas de `respuestas-harvey.txt` (número de bloq
 | La junta tiene que aprobarlo (3) | Tiene todo el sentido. Te dejo una presentación corta para la junta, y si te sirve, la explico por videollamada en la sesión. Como el condominio no paga nada y la administración no recibe datos personales, suele ser una decisión sencilla. ¿Cuándo es la próxima sesión de la junta? |
 | No permitimos publicidad a residentes (4) | Lo entiendo y lo respeto. Banana Burn no les escribe a los residentes ni tiene sus contactos. La administración decide si comparte el beneficio, cuándo y por dónde. Quien no se registra no recibe nada. |
 | Ya tenemos entrenador en el gimnasio (5) | Mejor todavía. Banana Burn no lo reemplaza: le da a cada residente su plan de la semana, con cuánto peso y cuántas repeticiones, y la técnica de cada ejercicio para los días y horas en que el entrenador no está. |
-| Ya tenemos gimnasio | Mejor todavía. Banana Burn le arma a cada residente una rutina con el equipo que ya tienen, así el gimnasio se usa más. |
+| Ya tenemos gimnasio | Mejor todavía. Banana Burn le arma a cada residente una rutina con el equipo que ya tienen. |
 | No tengo tiempo para implementarlo | Nosotros lo hacemos: activamos el condominio y te damos su enlace, el afiche con QR y el mensaje para el grupo de residentes. Tu parte es compartirlo. |
 | No es prioridad ahora (6) | Entendido, gracias por decírmelo. ¿Te parece si te escribo el próximo mes para ver si lo quieren sumar como beneficio de inicio de año? |
 | ¿Se conecta con nuestra app o con relojes? | Hoy no lo tiene. Banana Burn funciona con el enlace del condominio y la app en el celular de cada residente. |
