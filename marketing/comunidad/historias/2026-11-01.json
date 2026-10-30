@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-01",
+  "title": "Reconstruye tu cuerpo",
+  "lines": [
+    "Bajaste de peso.",
+    "Ahora gana fuerza."
+  ],
+  "sub": "Empieza a tu ritmo.",
+  "question": "¿Ya tienes un plan?",
+  "options": [
+    "Quiero empezar",
+    "Ya entreno"
+  ],
+  "cta": "Abrir registro",
+  "url": "https://bananaburn.app/entrar?modo=registro"
+}

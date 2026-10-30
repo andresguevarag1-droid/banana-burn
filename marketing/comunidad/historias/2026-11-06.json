@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-06",
+  "title": "Revisa tu acceso",
+  "lines": [
+    "Mira tu fecha",
+    "en Mi plan."
+  ],
+  "sub": "Cada cuenta tiene su fecha de cobro.",
+  "question": "¿Tienes clara tu fecha?",
+  "options": [
+    "Sí",
+    "Voy a revisarla"
+  ],
+  "cta": "Ver Mi plan",
+  "url": "https://bananaburn.app/app/suscripcion"
+}

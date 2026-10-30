@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-04",
+  "title": "Entrenar con compañía",
+  "lines": [
+    "Invita a 3 amigos.",
+    "Ayúdales a empezar."
+  ],
+  "sub": "3 amigos activos = 1 mes gratis.",
+  "question": "¿Ya viste tu enlace?",
+  "options": [
+    "Voy a verlo",
+    "Tengo una duda"
+  ],
+  "cta": "Ver Invita y gana",
+  "url": "https://bananaburn.app/app/referidos"
+}
