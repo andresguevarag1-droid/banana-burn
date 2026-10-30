@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#FFD60A"/>
+  <circle cx="540" cy="960" r="430" fill="none" stroke="#FFF8E3" stroke-width="12"/>
+  <g transform="translate(270 690) scale(5.4)">
+    <g fill="#1B1505">
+      <rect x="20" y="28" width="13" height="44" rx="5"/><rect x="67" y="28" width="13" height="44" rx="5"/>
+      <rect x="9" y="37" width="9" height="26" rx="4"/><rect x="82" y="37" width="9" height="26" rx="4"/>
+    </g>
+    <path d="M33 50 H67" stroke="#1B1505" stroke-width="8" stroke-linecap="round"/></g>
+  <text x="540" y="330" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="40" letter-spacing="6" fill="#1B1505">BANANA BURN</text>
+  <text x="540" y="1620" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="120" letter-spacing="-2.4" fill="#1B1505">GLP-1</text>
+  <text x="540" y="1700" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="38" fill="#1B1505">No sustituye la indicación de tu médico.</text>
+</svg>

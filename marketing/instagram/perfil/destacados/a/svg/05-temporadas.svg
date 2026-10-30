@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#FFD60A"/>
+  <circle cx="540" cy="960" r="430" fill="none" stroke="#FFF8E3" stroke-width="12"/>
+  <g transform="translate(270 690) scale(5.4)">
+    <g fill="none" stroke="#1B1505" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="14" y="22" width="72" height="64" rx="10"/>
+      <path d="M14 40 H86"/><path d="M34 13 V29"/><path d="M66 13 V29"/>
+    </g>
+    <g fill="#1B1505">
+      <circle cx="32" cy="55" r="5"/><circle cx="50" cy="55" r="5"/><circle cx="68" cy="55" r="5"/>
+      <circle cx="32" cy="71" r="5"/><circle cx="50" cy="71" r="5"/>
+    </g></g>
+  <text x="540" y="330" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="40" letter-spacing="6" fill="#1B1505">BANANA BURN</text>
+  <text x="540" y="1620" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="120" letter-spacing="-2.4" fill="#1B1505">Temporadas</text>
+  
+</svg>

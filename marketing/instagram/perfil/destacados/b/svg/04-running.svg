@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <rect width="1080" height="1920" fill="#1B1505"/>
+  <circle cx="540" cy="960" r="430" fill="none" stroke="#FFD60A" stroke-width="12"/>
+  <g transform="translate(270 690) scale(5.4)">
+    <path d="M22 84 C 22 64 52 72 52 58 S 74 54 76 48" fill="none" stroke="#FFD60A" stroke-width="7" stroke-linecap="round" stroke-dasharray="9 11"/>
+    <circle cx="22" cy="84" r="7" fill="#FFD60A"/>
+    <path d="M76 46 C 66 34 61 29 61 22 A15 15 0 0 1 91 22 C 91 29 86 34 76 46 Z" fill="#FFD60A"/>
+    <circle cx="76" cy="22" r="6" fill="#1B1505"/></g>
+  <text x="540" y="330" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="40" letter-spacing="6" fill="#FFD60A">BANANA BURN</text>
+  <text x="540" y="1620" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="120" letter-spacing="-2.4" fill="#FFD60A">Running</text>
+  
+</svg>
