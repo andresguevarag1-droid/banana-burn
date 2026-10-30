@@ -10,7 +10,7 @@ Cómo medimos el camino desde el clic en un anuncio hasta el primer pago del 8 d
 
 | # | Etapa | Evento o fuente | Partida (25 al 31 oct) | Meta respecto de la etapa anterior | Costo máximo por etapa |
 | --- | --- | --- | --- | --- | ---: |
-| 1 | Clic en el anuncio | Meta Ads (no hay evento del píxel) | [PENDIENTE] Ads Manager | CTR del enlace de 1.0 % o más (sobre impresiones) | $0.71 por clic |
+| 1 | Clic en el anuncio | Meta Ads (no hay evento del píxel) | [PENDIENTE] Ads Manager | CTR del enlace de 1.0 % o más (sobre impresiones) | $0.70 por clic |
 | 2 | Llegada a la web | Píxel `PageView` y vistas de la página de destino de Meta; `page_view` en `funnel_events` | [PENDIENTE] Ads Manager y Supabase | 75 % de los clics | $0.94 por llegada |
 | 3 | "Crear mi plan gratis" | Píxel `Lead` (`cta_click`) | [PENDIENTE] Events Manager y Supabase | 30 % de las llegadas | $3.16 por clic en el botón |
 | 4 | Registro | Píxel y API de Conversiones `CompleteRegistration` (`onboarding_done`); Supabase `profiles` | Costo real: **$0.64** (Reel "Cuánto peso") y **unos $1.01** de promedio el 28 oct. Cantidad: [PENDIENTE] | 60 % de los clics en el botón | **$5.27 por registro** |
@@ -55,7 +55,7 @@ El costo máximo de cada etapa es el techo multiplicado por las metas de las eta
 | 4. Registro | $13.18 × 40 % | $5.27 |
 | 3. Clic en "Crear mi plan gratis" | $5.27 × 60 % | $3.16 |
 | 2. Llegada | $3.16 × 30 % | $0.94 |
-| 1. Clic en el anuncio | $0.94 × 75 % | $0.71 |
+| 1. Clic en el anuncio | $0.94 × 75 % | $0.70 |
 
 ### Lo que dice el costo por registro real
 
@@ -97,8 +97,8 @@ Todas las consultas de Supabase van en el SQL Editor del proyecto (rol de servic
 - **Fuente:** Meta Ads. No hay evento del píxel.
 - **Partida:** [PENDIENTE]. Ads Manager > Campañas > campaña activa > fechas del 25 al 31 de octubre > desglose por anuncio. Columnas: Importe gastado, Impresiones, Clics en el enlace, CTR (porcentaje de clics en el enlace), CPC (costo por clic en el enlace), Reproducciones de video de 3 segundos.
 - **Meta:** CTR del enlace de **1.0 %** o más.
-- **Costo máximo:** **$0.71** por clic en el enlace.
-- **Si queda por debajo** (CTR menor a 1.0 % o clic sobre $0.71): el problema es el gancho, no la página. Primero mirar el hook rate (3 s ÷ impresiones, meta 30 %); si está bajo 20 %, cambiar los primeros 2 segundos del Reel. Si el hook rate está bien y el CTR no, cambiar el cierre del Reel y el título del anuncio para que digan qué pasa al tocar ("Empieza 7 días gratis"). Mueve el **CTR** y el **costo por clic**. Se propone pausar el anuncio, no se pausa sin Andrés.
+- **Costo máximo:** **$0.70** por clic en el enlace.
+- **Si queda por debajo** (CTR menor a 1.0 % o clic sobre $0.70): el problema es el gancho, no la página. Primero mirar el hook rate (3 s ÷ impresiones, meta 30 %); si está bajo 20 %, cambiar los primeros 2 segundos del Reel. Si el hook rate está bien y el CTR no, cambiar el cierre del Reel y el título del anuncio para que digan qué pasa al tocar ("Empieza 7 días gratis"). Mueve el **CTR** y el **costo por clic**. Se propone pausar el anuncio, no se pausa sin Andrés.
 
 ### 2. Llegada a la web
 
