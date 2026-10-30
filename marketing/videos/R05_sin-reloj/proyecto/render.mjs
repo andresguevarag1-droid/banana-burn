@@ -101,7 +101,7 @@ if (modo === 'check') {
       ctx.globalAlpha = k; ctx.translate(0, (1-k)*32);
       if (e.tipo === 'telefono') {
         texto(ctx, e.texto, 300, 900, 76, C.ink, 190);
-        texto(ctx, e.etiqueta, 505, 900, 38, C.ink, 45);
+        texto(ctx, e.etiqueta, 505, 900, 38, C.ink, 46);
         box(ctx, 300, 550, 480, 1000, 42, C.ink);
         contain(ctx, captura, 316, 566, 448, 968);
       } else {
