@@ -153,14 +153,15 @@ describe("eventos que se disparan de verdad", () => {
     expect(e?.params.value).toBe(9.99);
   });
 
-  it("el cobro automático no manda evento: purchase_success solo sale de /pago/exito", () => {
+  it("purchase_success solo sale de /pago/exito; el cobro automático manda su Subscribe por la API de Conversiones (#68)", () => {
     const files = (dir: string): string[] =>
       readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? files(join(dir, d.name)) : /\.tsx?$/.test(d.name) ? [join(dir, d.name)] : []));
     const emitters = files("src").filter((f) => !f.endsWith(".test.ts") && !f.includes(`${join("api", "track")}`) && !f.endsWith(join("lib", "meta-pixel.ts")))
       .filter((f) => /["']purchase_success["']/.test(readFileSync(f, "utf8")));
     expect(emitters).toEqual([join("src", "app", "pago", "exito", "page.tsx")]);
     const billing = readFileSync("src/lib/trial-billing.ts", "utf8");
-    expect(billing).not.toMatch(/purchase_success|Subscribe|meta-capi|sendCapi/);
+    expect(billing).not.toMatch(/purchase_success|sendCapi/);
+    expect(billing.match(/auto: true/g)).toHaveLength(2);
   });
 });
 

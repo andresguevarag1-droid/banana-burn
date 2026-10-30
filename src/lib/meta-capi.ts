@@ -3,7 +3,8 @@ import "server-only";
 // Sirve cuando el navegador bloquea el píxel (bloqueadores, Safari). Meta deduplica por event_id.
 // Solo corre si existe META_CAPI_TOKEN (Events Manager > Banana Burn > Configuración > Generar token de acceso).
 // Datos enviados: IP y navegador (los pide Meta para atribuir), cookies _fbp/_fbc de Meta y la URL sin parámetros.
-// Nunca correo, teléfono, id de usuario ni datos de salud.
+// Nunca correo, teléfono, id de usuario ni datos de salud. El cobro automático (sin navegador) solo manda el id con hash SHA-256.
+import { createHash } from "node:crypto";
 import { clean } from "@/lib/env";
 import { META_PIXEL_ID, toMetaEvent } from "@/lib/meta-pixel";
 import type { CleanEvent } from "@/app/api/track/event";
@@ -45,10 +46,38 @@ export function capiPayload(evt: CleanEvent, ctx: { ip: string; ua: string; cook
 
 /** Envía el evento. Nunca lanza: si Meta falla, solo queda en el log. */
 export async function sendCapi(evt: CleanEvent, ctx: Parameters<typeof capiPayload>[1]) {
+  const body = capiPayload(evt, ctx);
+  if (body) await post(body);
+}
+
+/**
+ * Subscribe del cobro automático (fin de la prueba, primer mes con 50 % y renovaciones): no hay navegador, así que va como
+ * "system_generated" con el monto real cobrado en USD. event_id único por cobro: si el cobro se reprocesa, Meta lo deduplica.
+ * Solo el id de la persona con hash SHA-256 (external_id); nunca correo ni datos en claro.
+ */
+export function chargePayload(c: { userId: string; amountMinor: number; eventId: string; now?: number }) {
+  if (!c.eventId || !c.userId || !(c.amountMinor > 0)) return null;
+  return {
+    data: [{
+      event_name: "Subscribe",
+      event_time: Math.floor((c.now ?? Date.now()) / 1000),
+      event_id: c.eventId,
+      action_source: "system_generated",
+      user_data: { external_id: createHash("sha256").update(c.userId).digest("hex") },
+      custom_data: { value: c.amountMinor / 100, currency: "USD" },
+    }],
+  };
+}
+
+/** Envía el Subscribe de un cobro automático aprobado. Nunca lanza. */
+export async function sendChargeSubscribe(c: Parameters<typeof chargePayload>[0]) {
+  const body = chargePayload(c);
+  if (body) await post(body);
+}
+
+async function post(body: { data: { event_name: string }[] }) {
   const token = capiToken();
   if (!token || !META_PIXEL_ID) return;
-  const body = capiPayload(evt, ctx);
-  if (!body) return;
   try {
     const testCode = clean(process.env.META_CAPI_TEST_CODE);
     const res = await fetch(`${GRAPH}/${META_PIXEL_ID}/events?access_token=${encodeURIComponent(token)}`, {
