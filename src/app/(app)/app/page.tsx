@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FunnelTracker } from "@/components/analytics";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
-import { dashboard, getAthlete, nextSessionPlan } from "@/lib/athlete";
+import { dashboard, firstSessionPlan, getAthlete } from "@/lib/athlete";
 import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
@@ -81,9 +81,10 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const training = isTrainingDay(plan);
   // Primera vez (nunca ha entrenado): Hoy lo lleva directo a su primer entreno, también en un día de descanso (se adelanta
   // la próxima sesión). Antes, quien se registraba un domingo veía "Descanso" y no tenía nada que empezar.
+  // El primer entreno es corto (10 a 15 min, 3 o 4 ejercicios básicos): el mismo que arma /app/entreno.
   // Demo: ?primera=1 muestra este estado.
   const first = !d.program && (v.demo ? sp.primera === "1" : learnState.workouts === 0) && !g.trainedToday;
-  const firstPlan = first && !training ? nextSessionPlan(d) : null;
+  const firstPlan = first ? firstSessionPlan(d, 0) : null;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = (firstPlan ?? plan).mins ?? (training || firstPlan ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;

@@ -1,5 +1,5 @@
 import { getViewer } from "@/lib/supabase/server";
-import { dashboard, getAthlete, nextSessionPlan } from "@/lib/athlete";
+import { dashboard, firstSessionPlan, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
 import { getDaily, prefetchDaily } from "@/lib/daily";
 import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, nextTrainingDow, planDay, prescribe, DAY_NAMES, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
@@ -10,7 +10,7 @@ import { coachArt, coachOf } from "@/lib/coaches";
 import { exInfo } from "@/lib/programs-server";
 import { cap, loadKindOf } from "@/components/workout/logic";
 import { Player, type PlayerExercise } from "./player";
-import { templatesDoneToday } from "./done-today";
+import { hasSavedWorkout, templatesDoneToday } from "./done-today";
 import { getVoice } from "@/lib/voice-server";
 import { modeNote, programTempoNote, rxNote } from "@/lib/voice";
 
@@ -22,7 +22,8 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const { dia, modo, expres, repetir, cambiar, por, sesion } = await searchParams;
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
-  const [a, voice] = await Promise.all([getAthlete(v), getVoice(v)]);
+  // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
+  const [a, voice, saved] = await Promise.all([getAthlete(v), getVoice(v), expres || dia != null ? Promise.resolve(true) : hasSavedWorkout(v)]);
   const d = dashboard(a);
   const n = Number(dia);
   const prog = d.program;
@@ -30,8 +31,10 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   // Con un programa activo, el entreno sale del programa: la sesión de hoy, otra de esta semana (?sesion=2) o, en un
   // día de descanso, la próxima (adelantarla). El exprés y ?dia= (rutina normal) siguen disponibles.
   let plan: PlannedDay;
+  const firstPlan = firstSessionPlan(d, saved ? 1 : 0);
   if (expres) plan = expressDay(Number(expres), d.week + d.today.dow);
   else if (dia != null && n >= 0 && n <= 6) plan = planDay(n, d.week, d.engineSched, d.opts);
+  else if (firstPlan) plan = firstPlan;
   else if (prog) {
     const k = Number(sesion);
     const pick = sesion ? prog.run.weekSessions.find((w) => w.day === k) : null;
