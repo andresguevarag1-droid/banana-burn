@@ -1,0 +1,13 @@
+{
+  "name": "r03-condominio-ganchos",
+  "private": true,
+  "type": "module",
+  "description": "Reel R03 del condominio con 3 ganchos alternos (R03a, R03b, R03c) en motion graphics hechos en código (1080x1920, 30 fps).",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "1.1.0",
+    "@napi-rs/canvas": "1.0.13"
+  }
+}
