@@ -55,7 +55,7 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
   const failed = chargePhase === "reintento" || chargePhase === "fallido";
   const line = usage ? progressLine(usage) : null;
   const rec = usage ? recommendPlan(usage) : "completo";
-  const reason = usage ? (usage.glp1 ? "Incluye Banana Shield, que usaste en tu prueba" : usage.meals > 0 ? "Incluye la nutrición que usaste en tu prueba" : "Lo que usaste en tu prueba: entreno y coach") : undefined;
+  const reason = usage ? (usage.glp1 ? "Incluye Banana Shield para acompañar tu entrenamiento" : usage.meals > 0 ? "Incluye la nutrición que usaste en tu prueba" : "Lo que usaste en tu prueba: entreno y coach") : undefined;
 
   return (
     <div className="animate-enter space-y-4">
@@ -77,12 +77,13 @@ export function PlanGate({ locked, trialEndedOn, cardStep = "none", chargePhase 
       {(failed || cardStep === "pay") && (
         <div className="mx-auto max-w-md rounded-[1.5rem] border-2 border-ink bg-white p-5 text-center">
           <p className="flex items-center justify-center gap-2 font-extrabold text-ink">{failed ? <WarningCircle weight="duotone" className="size-5 text-bad" /> : <CreditCard weight="duotone" className="size-5 text-banana-ink" />}{failed ? "No pudimos cobrar tu plan" : "Guarda tu tarjeta para seguir"}</p>
-          <p className="mt-1 text-sm text-muted text-pretty">{failed ? "Cambia tu tarjeta en Mi plan y sigues hoy, sin perder nada." : "Tu acceso gratis terminó. Guardas tu tarjeta, eliges tu plan y se cobra hoy."}</p>
+          <p className="mt-1 text-sm text-muted text-pretty">{failed ? "Revisa tu tarjeta y el estado del pago en Mi plan. Tu progreso queda guardado." : "Tu acceso gratis terminó. Guardas tu tarjeta, eliges tu plan y se cobra hoy."}</p>
           <Link href="/app/suscripcion#tarjeta" data-cta={failed ? "wall-cambiar-tarjeta" : "wall-guardar-tarjeta"} className="btn-banana mt-4 h-12 w-full">{failed ? "Cambiar tarjeta" : "Guardar tarjeta"}<ArrowRight weight="bold" className="size-4" /></Link>
           <p className="mt-3 text-xs text-muted">O paga con otra tarjeta eligiendo un plan aquí abajo.</p>
         </div>
       )}
       <Pricing compact recommended={rec} loggedIn reason={reason} />
+      <p className="text-center text-sm text-muted">Banana Shield para GLP-1: No sustituye la indicación de tu médico.</p>
       <div className="flex flex-col items-center gap-1">
         <Link href="/app/suscripcion" data-cta="wall-mi-plan" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ver mi plan y pagos</Link>
         <Link href="/app/perfil" data-cta="wall-perfil" className="tap inline-flex items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ir a mi perfil</Link>
