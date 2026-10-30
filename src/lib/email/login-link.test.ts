@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOGIN_LINK_TTL_MS, signLoginToken, verifyLoginToken, withLoginLinks } from "./login-link";
+import { HANDOFF_TTL_MS, LOGIN_LINK_TTL_MS, signLoginToken, verifyLoginToken, withLoginLinks } from "./login-link";
 
 const S = "secreto-de-prueba";
 const U = "11111111-1111-4111-8111-111111111111";
@@ -9,7 +9,7 @@ const SITE = "https://www.bananaburn.app";
 describe("enlace de un toque en los correos", () => {
   it("firma y verifica: usuario, nonce y fecha", () => {
     const t = signLoginToken(U, S, NOW, "nonce-de-prueba-123456");
-    expect(verifyLoginToken(t, S, NOW + 1000)).toEqual({ userId: U, nonce: "nonce-de-prueba-123456", issuedAt: Math.floor(NOW / 1000) * 1000 });
+    expect(verifyLoginToken(t, S, NOW + 1000)).toEqual({ userId: U, nonce: "nonce-de-prueba-123456", issuedAt: Math.floor(NOW / 1000) * 1000, handoff: false });
   });
   it("vence a las 72 horas", () => {
     const t = signLoginToken(U, S, NOW);
@@ -49,5 +49,15 @@ describe("enlace de un toque en los correos", () => {
     const msg = { subject: "a", html: `<a href="${SITE}/app">x</a>`, text: `${SITE}/app` };
     expect(withLoginLinks(msg, U, { secret: null, site: SITE })).toEqual(msg);
     expect(withLoginLinks(msg, null, { secret: S, site: SITE })).toEqual(msg);
+  });
+
+  it("pase de navegador: un solo formato, vence en 30 minutos y no se puede convertir en enlace de 72 h", () => {
+    const t = signLoginToken(U, S, NOW, "nonce-de-prueba-pase-1", true);
+    expect(verifyLoginToken(t, S, NOW + HANDOFF_TTL_MS - 1000)).toMatchObject({ userId: U, handoff: true });
+    expect(verifyLoginToken(t, S, NOW + HANDOFF_TTL_MS + 1000)).toBeNull();
+    // Quitar la marca del pase rompe la firma.
+    const [p, sig] = t.split(".");
+    const plain = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(p, "base64url").toString()), k: undefined })).toString("base64url");
+    expect(verifyLoginToken(`${plain}.${sig}`, S, NOW)).toBeNull();
   });
 });

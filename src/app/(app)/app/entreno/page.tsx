@@ -18,12 +18,12 @@ export const metadata = { title: "Entreno" };
 
 const isEngine = (id: string): id is ExerciseId => Object.hasOwn(EX, id);
 
-export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string }> }) {
-  const { dia, modo, expres, repetir, cambiar, por, sesion } = await searchParams;
+export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string; primera?: string }> }) {
+  const { dia, modo, expres, repetir, cambiar, por, sesion, primera } = await searchParams;
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
-  const [a, voice, saved] = await Promise.all([getAthlete(v), getVoice(v), expres || dia != null ? Promise.resolve(true) : hasSavedWorkout(v)]);
+  const [a, voice, saved] = await Promise.all([getAthlete(v), getVoice(v), expres || dia != null ? Promise.resolve(true) : v.demo && primera === "1" ? Promise.resolve(false) : hasSavedWorkout(v)]);
   const d = dashboard(a);
   const n = Number(dia);
   const prog = d.program;
