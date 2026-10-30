@@ -16,8 +16,8 @@ Ya están las 6 tomas en `proyecto/tomas/T1.png` a `T6.png` y el render final:
 
 | Archivo | Qué es |
 | --- | --- |
-| E03_todos-te-miran.mp4 | Reel de 23 s, 1080 x 1920, 30 fps, sin audio (el audio en tendencia se pone al publicar) |
-| E03_todos-te-miran_15s.mp4 | Versión de 15 s para anuncios |
+| E03_todos-te-miran.mp4 | Reel final de 24.6 s, 1080 x 1920, 30 fps, con narrador y sonidos de los monos (-14 LUFS) |
+| E03_todos-te-miran_15s.mp4 | Versión de 15.6 s para anuncios, con narrador |
 | E03_todos-te-miran_portada.png | Portada 1080 x 1920 con el gancho |
 | E03_todos-te-miran_storyboard.png | Storyboard con las tomas reales |
 
@@ -27,7 +27,11 @@ Cambios sobre el borrador:
 - Cierre: pose "señala" oficial en `assets/coach-banana-senala.png` y botón más grande en dos líneas ("Empieza 7 días gratis" en banana, "en bananaburn.app" en blanco).
 - Se quitaron los animatics: ya los reemplaza el render final.
 
-Pendiente de Andrés: aprobación de marca, audio en tendencia al publicar y la publicación. No se fusiona sin su aprobación.
+Versión final con video (30 oct): las 6 tomas se animaron en Higgsfield (Kling 3.0, imagen a video, 720p) a partir de T1 a T6, y Andrés grabó la narración (ElevenLabs v4, voz Julian). Cada escena dura lo que dura su frase; los subtítulos son los de la narración y el gancho POV está completo desde el cuadro 0. El render en código de `proyecto/` queda como respaldo sin video.
+
+Narración: "¿Sientes que todo el gym te está mirando? Spoiler: el único que te mira eres tú. Respira. Nadie te está juzgando. Cada quien viene a lo suyo... y tú también. Tu plan te dice qué hacer, con cuánto peso y cuántas repeticiones. Primera serie. Nadie miró. Todos empezamos así. Siete días gratis en bananaburn punto app."
+
+Pendiente de Andrés: aprobación de marca y la publicación. No se fusiona sin su aprobación.
 
 ## Cómo volver a hacer el render
 
