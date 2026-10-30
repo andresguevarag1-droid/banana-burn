@@ -14,6 +14,7 @@ import { errInfo } from "@/lib/security/log";
 import { chargeBusy } from "@/lib/trial";
 import { markCardsPaid } from "@/lib/card-fingerprint";
 import { recordServerError } from "@/lib/monitor/server";
+import { sendChargeSubscribe } from "@/lib/meta-capi";
 import {
   OnvoError, actionForEvent, cancelSubscription, createCustomer, createSubscription, estimatePeriodEnd, eventKey,
   expectedAmountMinor, fetchSubscriptionState, priceIdFor, profilePlanFor, type OnvoEvent,
@@ -241,13 +242,36 @@ export function checkPaidAmount(row: { plan: PlanId | null; billing: Billing | n
 }
 
 const planName = (p: PlanId | null) => PLANS.find((x) => x.id === p)?.name ?? "Banana Burn";
+const paidMinor = (row: SubscriptionRow) => (row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) : 0);
+
+/**
+ * ¿La suscripción de ONVO la creó el cobro automático? Sí si la creó el fin de la prueba (trial_charges) o el paso después del
+ * primer mes con 50 % (marca "enviado:<id>" en la fila del primer mes, onvo-intro.ts). Las de /pago/checkout no: ese
+ * Subscribe ya sale del píxel en /pago/exito.
+ */
+async function isAutoOnvoSub(db: SupabaseClient, subId: string): Promise<boolean> {
+  const { data: trial } = await db.from("trial_charges").select("id").eq("provider_subscription_id", subId).limit(1);
+  if (trial?.length) return true;
+  const { data: intro } = await db.from("subscriptions").select("id").eq("last_renewal_error", `enviado:${subId}`).limit(1);
+  return !!intro?.length;
+}
+
+/**
+ * Primer cobro de una suscripción automática de ONVO: Subscribe a Meta. Se decide ANTES de activar (activar cierra la fila del
+ * primer mes y su marca); event_id por suscripción, igual en los dos eventos de ONVO que pueden traer el mismo cobro.
+ */
+async function autoSubscribe(db: SupabaseClient, row: SubscriptionRow, amountMinor: number | null): Promise<() => Promise<void>> {
+  const subId = row.provider_subscription_id;
+  if (row.status !== "incomplete" || !subId || !(await isAutoOnvoSub(db, subId).catch(() => false))) return async () => {};
+  return () => sendChargeSubscribe({ userId: row.user_id, amountMinor: amountMinor ?? paidMinor(row), eventId: `onvo.first:${subId}` });
+}
 
 /**
  * Activa (o renueva) una suscripción con un cobro YA verificado servidor a servidor (Tilopay: respuesta del cobro con la
  * tarjeta guardada o consulta de la orden). Valida el monto contra plans.ts, deja el evento en payment_events (idempotente
  * por `reference`), cancela los otros planes, cierra el cobro de la prueba, recalcula el plan y manda el recibo.
  */
-export async function activateVerified(db: SupabaseClient, row: SubscriptionRow, a: { periodStart: string; periodEnd: string; amountMinor: number | null; currency: string | null; reference: string; provider: "tilopay" | "onvo"; expectedMinor?: number | null }): Promise<{ ok: boolean; plan?: string; note?: string }> {
+export async function activateVerified(db: SupabaseClient, row: SubscriptionRow, a: { periodStart: string; periodEnd: string; amountMinor: number | null; currency: string | null; reference: string; provider: "tilopay" | "onvo"; expectedMinor?: number | null; auto?: boolean }): Promise<{ ok: boolean; plan?: string; note?: string }> {
   const check = checkPaidAmount(row, a.amountMinor, a.currency, a.expectedMinor);
   const key = `${a.provider}.charge.approved:${a.reference}`;
   const ins = await db.from("payment_events").insert({
@@ -269,6 +293,8 @@ export async function activateVerified(db: SupabaseClient, row: SubscriptionRow,
   const plan = await activate(db, row, { periodStart: a.periodStart, periodEnd: a.periodEnd, customerId: null });
   await notifyPaid(db, a.provider, row, a.amountMinor, a.currency, a.periodEnd, a.reference, a.expectedMinor != null && row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : null);
   await done("processed", check.note ? `${check.note}, plan=${plan}` : `plan=${plan}`);
+  // Cobro automático (prueba, primer mes, renovación): Subscribe a Meta una vez por cobro (un duplicado ya salió arriba).
+  if (a.auto) await sendChargeSubscribe({ userId: row.user_id, amountMinor: a.amountMinor ?? a.expectedMinor ?? paidMinor(row), eventId: key });
   log("cobro verificado activado", { provider: a.provider, userId: row.user_id, subscriptionId: row.provider_subscription_id, plan });
   return { ok: true, plan };
 }
@@ -355,8 +381,10 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
         return finish("ignored", `NO ACTIVADA: ${check.note}`, row.user_id);
       }
       const note = check.note;
+      const subscribe = await autoSubscribe(db, row, action.amountMinor);
       const plan = await activate(db, row, action);
       await notifyPaid(db, "onvo", row, action.amountMinor, action.currency, action.periodEnd, action.paymentIntentId ?? key);
+      await subscribe();
       return finish("processed", note ? `${note}, plan=${plan}` : `plan=${plan}`, row.user_id);
     }
 
@@ -390,8 +418,10 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       // Fuente de verdad: preguntamos a ONVO por la suscripción (servidor a servidor con la llave secreta).
       const st = await fetchSubscriptionState(row.provider_subscription_id);
       if (st.active) {
+        const subscribe = await autoSubscribe(db, row, action.amountMinor);
         const plan = await activate(db, row, { periodStart: st.periodStart, periodEnd: st.periodEnd, customerId: action.customerId });
         await notifyPaid(db, "onvo", row, null, null, st.periodEnd, piId ?? key);
+        await subscribe();
         return finish("processed", `activada vía payment intent (ONVO status=${st.status}), plan=${plan}`, row.user_id);
       }
     }

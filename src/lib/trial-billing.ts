@@ -708,7 +708,7 @@ async function settleIntro(db: SupabaseClient, r: TrialChargeRow, piId: string, 
     const sub = data as SubscriptionRow | null;
     if (!sub) { alert("primer mes con 50 % cobrado sin suscripción registrada", { chargeId: r.id, subId }); return "enviado"; }
     const amt = typeof pi.amount === "number" ? pi.amount : null;
-    const res = await activateVerified(db, sub, { periodStart: now.toISOString(), periodEnd: estimatePeriodEnd(now, "mes").toISOString(), amountMinor: amt, currency: typeof pi.currency === "string" ? pi.currency : null, reference: piId, provider: "onvo", expectedMinor: expected });
+    const res = await activateVerified(db, sub, { periodStart: now.toISOString(), periodEnd: estimatePeriodEnd(now, "mes").toISOString(), amountMinor: amt, currency: typeof pi.currency === "string" ? pi.currency : null, reference: piId, provider: "onvo", expectedMinor: expected, auto: true });
     log("primer mes con 50 % cobrado", { userId: r.user_id, chargeId: r.id, ok: res.ok });
     return "enviado";
   }
@@ -750,7 +750,7 @@ async function activateTilopay(db: SupabaseClient, subId: string, amountMinor: n
   const sub = data as SubscriptionRow | null;
   if (!sub) { alert("cobro Tilopay aprobado sin suscripción registrada", { subscriptionId: subId }); return; }
   const start = now.toISOString();
-  await activateVerified(db, sub, { periodStart: start, periodEnd: estimatePeriodEnd(now, sub.billing ?? "mes").toISOString(), amountMinor, currency: "USD", reference: order, provider: "tilopay", expectedMinor });
+  await activateVerified(db, sub, { periodStart: start, periodEnd: estimatePeriodEnd(now, sub.billing ?? "mes").toISOString(), amountMinor, currency: "USD", reference: order, provider: "tilopay", expectedMinor, auto: true });
 }
 
 /** Intento de Tilopay "por confirmar": se consulta la orden. Nunca se reintenta a ciegas. */

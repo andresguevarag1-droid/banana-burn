@@ -348,7 +348,7 @@ async function renewOne(db: SupabaseClient, r: RenewalRow, now: Date, canCharge:
     const start = r.current_period_end;
     const end = estimatePeriodEnd(new Date(start), r.billing).toISOString();
     // activateVerified es idempotente por la orden (payment_events): si se cae aquí, la consulta lo vuelve a activar sin cobrar.
-    await activateVerified(db, r, { periodStart: start, periodEnd: end, amountMinor: amount, currency: "USD", reference: order, provider: "tilopay" });
+    await activateVerified(db, r, { periodStart: start, periodEnd: end, amountMinor: amount, currency: "USD", reference: order, provider: "tilopay", auto: true });
     await db.from("subscriptions").update({ renewal_attempts: 0, next_renewal_attempt_at: null, last_renewal_error: null, updated_at: nowIso() }).eq("id", r.id);
     log("renovación cobrada", { userId: r.user_id, subId: r.id });
     return "renewed";
