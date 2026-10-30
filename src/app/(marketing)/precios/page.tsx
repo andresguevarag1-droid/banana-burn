@@ -35,7 +35,7 @@ export function generateMetadata(): Metadata {
 export default function Precios() {
   const o = offer();
   const PRICING_FAQ = [
-    ...pricingFaq().map(([q, a]) => [q, q === "Uso Ozempic o Mounjaro. ¿Es para mí?" ? `${a} No sustituye la indicación de tu médico.` : a] as const),
+    ...pricingFaq().map(([q, a]) => [q, q === "Uso Ozempic o Mounjaro. ¿Es para mí?" ? "Banana Shield, incluido en Entreno + Nutrición y en tu prueba gratis, combina entrenamiento de fuerza y seguimiento de proteína. Permite ajustar la intensidad en tu día de inyección. No sustituye la indicación de tu médico." : a] as const),
     ["¿Puedo cambiar de plan?", "Sí, desde Mi plan. Si ya tienes una suscripción, el nuevo plan empieza cuando se confirma su pago y reemplaza al actual, sin prorrateo. Si cambias desde un anual, el tiempo restante no se reembolsa ni se descuenta; puedes cancelar la renovación y esperar a que termine tu año."],
     ...faq().filter(([q]) => q === "¿Cómo pago?"),
   ] as const;

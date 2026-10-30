@@ -21,16 +21,22 @@ export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ ti
 
 const SHOWN: { sport: SportId; sex: string }[] = [{ sport: "running", sex: "m" }, { sport: "raquetas", sex: "f" }, { sport: "cross", sex: "m" }];
 const WHAT: Record<SportId, string[]> = {
-  running: ["Fuerza de piernas y cadera para correr con menos lesiones", "Potencia y rigidez del tobillo para una zancada más eficiente", "Tus carreras largas y clave quedan libres de piernas pesadas"],
-  raquetas: ["Desplazamientos laterales y frenadas más rápidos", "Hombro, codo y muñeca más fuertes para tu brazo dominante", "Rotación del tronco para golpear con más potencia"],
+  running: ["Trabajo de fuerza de piernas y cadera para complementar tus carreras", "Ejercicios de potencia y trabajo de tobillo para tu carrera", "Fuerza organizada alrededor de tus carreras largas y clave"],
+  raquetas: ["Trabajo de desplazamientos laterales y frenadas", "Ejercicios de hombro, codo y muñeca para tu brazo dominante", "Trabajo de rotación del tronco para tus golpes"],
   cross: ["Fuerza base y técnica de levantamientos con escalas", "Acondicionamiento sin repetir lo que ya haces en el box", "Evitas los movimientos que no quieres hacer"],
+};
+
+const SPORT_COPY: Record<SportId, string> = {
+  running: "Fuerza y técnica para complementar tu entrenamiento de carrera.",
+  raquetas: "Tenis y pádel: fuerza, rotación y desplazamientos para complementar tus partidos.",
+  cross: "Fuerza, técnica y acondicionamiento, con escalas para cada nivel.",
 };
 
 const STEPS = [
   [List, "Responde el cuestionario", "Tu nivel, tus días de deporte, cuánto tiempo tienes, tu equipo, tus molestias y si tienes una competencia."],
   [CalendarCheck, "Recibe tu semana", "De 2 a 4 sesiones de 30, 45 o 60 minutos. Nada pesado de piernas el día antes de tus días clave, y recuperación el día después."],
   [TrendUp, "Entrena 8 semanas", "Base, descarga en la semana 4, potencia y una semana final para afinar. Si tienes una competencia, bajamos la carga los días antes."],
-  [ShieldCheck, "Tu app cambia contigo", "Tu coach con ropa de tu deporte, consejos y comida pensados para tu temporada, y tu opinión arma la siguiente."],
+  [ShieldCheck, "Tu app cambia contigo", "Tu coach con ropa de tu deporte, consejos y comida pensados para tu temporada, y puedes compartir tu opinión al terminar."],
 ] as const;
 
 const faq = () => {
@@ -41,7 +47,7 @@ const faq = () => {
     ["¿Reemplaza mis entrenos de deporte?", "No. Tus carreras, partidos o clases siguen igual. La temporada agrega la fuerza y la potencia que te faltan, en los días que te quedan libres."],
     ["¿Puedo tener dos temporadas a la vez?", "No. Solo una temporada activa por persona, para que tu semana no se sobrecargue."],
     ["¿Y si tengo una molestia o lesión?", "Marcas la zona en el cuestionario y cambiamos los ejercicios que la cargan. Eso no es un diagnóstico: si hay dolor, consulta a un profesional antes de empezar."],
-    ["¿Qué pasa cuando termina?", "Te quedas con tu progreso. La siguiente temporada llega con ejercicios nuevos, armados con lo que más gustó y lo que la gente cambió."],
+    ["¿Qué pasa cuando termina?", "Te quedas con tu progreso. Puedes revisar tus entrenos y los cambios de carga que registraste durante la temporada."],
   ] as const;
 };
 
@@ -90,7 +96,7 @@ export default function TemporadasLanding() {
               <div className="flex flex-1 flex-col gap-3 p-5">
                 <span className="chip h-7 w-fit text-white" style={{ backgroundColor: info.accent }}>{info.mode}</span>
                 <h2 className="text-2xl font-extrabold tracking-tight text-ink">{info.name}</h2>
-                <p className="text-body text-pretty">{info.tagline}</p>
+                <p className="text-body text-pretty">{SPORT_COPY[sport]}</p>
                 <ul className="space-y-2 text-sm text-body">{WHAT[sport].map((w) => <li key={w} className="flex gap-2"><CheckCircle weight="duotone" className="mt-0.5 size-5 shrink-0" style={{ color: info.accent }} />{w}</li>)}</ul>
                 <div className="mt-auto border-t border-line pt-3">
                   <p className="text-3xl font-extrabold tabular-nums text-ink">{usd(s.priceMinor)} <span className="text-sm font-semibold text-muted">pago único</span></p>
@@ -105,7 +111,7 @@ export default function TemporadasLanding() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16" aria-labelledby="run-plus">
-        <div className="grid items-center gap-8 rounded-[2.25rem] bg-[#FFEDD5] p-7 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
+        <div className="grid items-center gap-8 rounded-[2.25rem] bg-banana-soft p-7 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
           <div>
             <h2 id="run-plus" className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">La Temporada Running trae Banana Run completo</h2>
             <p className="mt-4 text-body text-pretty">Además de la fuerza: tu plan de carrera hasta tu 5K, 10K, 21K, 42K o trail, tus ritmos, sesiones guiadas con voz, tabla de ritmos y técnica de carrera.</p>

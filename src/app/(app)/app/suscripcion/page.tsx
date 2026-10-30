@@ -128,7 +128,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
           {ent.renewsAt && <Item k="Próxima renovación" v={fmtDate(ent.renewsAt)} />}
           {ent.endsAt && <Item k={ent.status === "past_due" ? "Acceso hasta (aprox.)" : ent.status === "canceling" ? "Acceso hasta" : "Terminó"} v={fmtDate(ent.endsAt)} />}
-          <Item k="Nutrición y Banana Shield" v={ent.nutrition ? (ent.trial ? "Incluidas en la prueba" : "Incluidas") : "No incluidas"} />
+          <Item k="Nutrición y Banana Shield" v={ent.nutrition ? (ent.trial ? "Incluidas en la prueba" : "Incluidas") : <s>No incluidas</s>} />
           <Item k="Retos Premium" v="Aparte, con pago único" />
           {ent.fromSubscription && ent.billing && <Item k="Periodo" v={ent.billing === "anual" ? "Anual" : "Mensual"} />}
         </dl>
@@ -194,6 +194,6 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
 const GIFT_TONE: Record<GiftStatus, string> = { activo: "bg-peel/10 text-peel", programado: "bg-banana-soft text-banana-ink", terminado: "bg-line text-muted", revocado: "bg-line text-muted" };
 
-function Item({ k, v }: { k: string; v: string }) {
+function Item({ k, v }: { k: string; v: React.ReactNode }) {
   return <div className="rounded-2xl bg-paper p-3"><dt className="text-xs font-semibold text-muted">{k}</dt><dd className="font-bold text-ink">{v}</dd></div>;
 }

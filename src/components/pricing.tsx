@@ -118,8 +118,8 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
       {/* Título arriba y las cuatro garantías en dos columnas: en escritorio la columna del título quedaba casi vacía. */}
       <div className="mt-14 max-w-4xl mx-auto rounded-[1.75rem] border border-line bg-cream p-6 sm:p-8">
         <div className="max-w-2xl">
-          <h3 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Sin riesgo y sin letra pequeña</h3>
-          <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">términos</Link>, escritos para leerse en cinco minutos.</p>
+          <h3 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Conoce las condiciones de tu plan</h3>
+          <p className="mt-2 text-muted text-pretty">Todo esto está en nuestros <Link href="/terminos#planes" className="tap font-semibold text-ink underline underline-offset-2">términos</Link>, para consultar antes de elegir tu plan.</p>
         </div>
         <ul className="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-2">
           {guarantees(trialGuarantee ?? offer().guarantee).slice(loggedIn ? 1 : 0).map(([I, t, d]) => (
