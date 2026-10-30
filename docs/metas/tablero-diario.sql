@@ -27,7 +27,9 @@ cuentas as (
     exists (select 1 from public.trial_charges t
       where t.user_id = p.id and t.status = 'succeeded') as cobro,
     exists (select 1 from public.subscriptions s
-      where s.user_id = p.id and s.status = 'active'
+      where s.user_id = p.id
+        and (s.status = 'active'
+          or (s.status = 'canceled' and s.cancel_at_period_end))
         and s.current_period_end > q.observado_en
         and s.provider in ('onvo', 'tilopay')) as suscripcion,
     exists (select 1 from public.comp_grants g
