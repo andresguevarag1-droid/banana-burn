@@ -1,0 +1,13 @@
+{
+  "name": "banana-burn-condominios-pdf",
+  "private": true,
+  "type": "module",
+  "description": "Genera el one-pager y la presentación para la junta directiva.",
+  "scripts": {
+    "generar": "node generar.mjs"
+  },
+  "dependencies": {
+    "@fontsource/plus-jakarta-sans": "^5.2.5",
+    "pdfkit": "^0.17.1"
+  }
+}
