@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cleanUtm } from "@/lib/affiliates";
 import { REF_COOKIE, REF_COOKIE_MAX_AGE, normalizeCode } from "@/lib/referrals";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +8,14 @@ export const dynamic = "force-dynamic";
  * Enlace de invitación /r/<código>: guarda el código en una cookie (solo servidor, 30 días) y abre el registro.
  * No consulta la base: un código inexistente no revela nada (la atribución lo valida al crear la cuenta).
  * Primer enlace gana: si ya había un código válido guardado, no se reemplaza.
+ * Conserva solo los UTM permitidos (cleanUtm: utm_source, utm_medium, utm_campaign, utm_content, utm_term); el resto se descarta.
  */
 export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const code = normalizeCode((await params).code);
   const url = new URL("/entrar", req.url);
   url.searchParams.set("modo", "registro");
+  const utm = cleanUtm(Object.fromEntries(new URL(req.url).searchParams));
+  for (const [k, v] of Object.entries(utm)) url.searchParams.set(k, v);
   const res = NextResponse.redirect(url, 303);
   const had = normalizeCode(req.headers.get("cookie")?.match(new RegExp(`(?:^|; )${REF_COOKIE}=([^;]+)`))?.[1]);
   if (code && !had) {

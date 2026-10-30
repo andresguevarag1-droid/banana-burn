@@ -139,10 +139,11 @@ describe("traspasos reales", () => {
     expect(doc).toContain("Hasta que Andrés lo corra, nadie pone un número en un PR");
   });
 
-  it("/r/<código> descarta los UTM hoy, como dice el acta", () => {
+  it("/r/<código> conserva los UTM al abrir el registro, como dice el acta", () => {
     const route = readFileSync("src/app/r/[code]/route.ts", "utf8");
     expect(route).toMatch(/new URL\("\/entrar", req\.url\)/);
-    expect(route).not.toMatch(/searchParams\.get|utm_/);
+    expect(route).toContain("cleanUtm(");
+    expect(doc).toContain("`/r/<código>` conserva los UTM al abrir el registro");
     expect(readFileSync("marketing/estrategia/referidos/compartir.md", "utf8")).toContain("/r/{codigo}?utm_source=referido");
   });
 
