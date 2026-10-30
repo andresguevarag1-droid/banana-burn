@@ -1,0 +1,1 @@
+Falta coach-banana-senala.png oficial, transparente, ya existente. Andrés debe aportar el archivo; no redibujar ni sustituir por la pose de pie. El render bloquea la producción si falta. No generar imágenes ni videos con costo. Los clips UGC se montan externamente; no son necesarios para motion graphics.
