@@ -4,7 +4,7 @@ Borrador operativo para Andrés, para Instagram @bananaburnapp. Las piezas aprob
 
 ## Objetivo y medición
 
-Meta del encargo: 100,000 seguidores en 12 meses; es una aspiración, no un pronóstico ni un resultado observado. No hay línea base verificada. Priorizar conversaciones que lleven a bananaburn.app, registro y primer entreno; contrastar después con tarjeta guardada y pagos reales. Los seguidores son una señal secundaria frente a usuarios de pago activos. No atribuir pagos a Instagram sin evidencia.
+No hay línea base verificada. Priorizar conversaciones que lleven a bananaburn.app, registro y primer entreno; contrastar después con tarjeta guardada y pagos reales. Los seguidores son una señal secundaria frente a usuarios de pago activos. No atribuir pagos a Instagram sin evidencia.
 
 Todas las cantidades de actividad siguientes son propuestas operativas, no cifras históricas ni garantías de crecimiento. Si no hay candidatos aptos, registrar el faltante; nunca completar cuotas con cuentas irrelevantes.
 
