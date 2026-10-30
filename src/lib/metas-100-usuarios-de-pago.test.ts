@@ -131,15 +131,12 @@ describe("el equipo", () => {
 describe("traspasos reales", () => {
   // Rutas del repo citadas entre comillas invertidas (los patrones con <código> son rutas web, no archivos).
   const paths = [...doc.matchAll(/`((?:src|docs|marketing|scripts|supabase)\/[^`<]+?)`/g)].map((m) => m[1]);
-  const missing = ["docs/metas/tablero-diario.sql"];
-
-  it("todo archivo citado existe en el repo, salvo los que el acta marca como pendientes", () => {
+  it("todo archivo citado existe en el repo y el tablero tiene instrucciones", () => {
     expect(paths.length).toBeGreaterThan(15);
-    for (const p of paths) if (!missing.includes(p)) expect(existsSync(p), p).toBe(true);
-    for (const p of missing) {
-      expect(existsSync(p), `${p} ya está en main: actualiza el acta`).toBe(false);
-      expect(doc).toMatch(new RegExp(`\`${p.replace(/\./g, "\\.")}\`\\), que \\*\\*aún no está en main\\*\\*`));
-    }
+    for (const p of paths) expect(existsSync(p), p).toBe(true);
+    expect(existsSync("docs/metas/tablero-diario.md")).toBe(true);
+    expect(doc).not.toContain("El tablero aún no existe");
+    expect(doc).toContain("Hasta que Andrés lo corra, nadie pone un número en un PR");
   });
 
   it("/r/<código> descarta los UTM hoy, como dice el acta", () => {
