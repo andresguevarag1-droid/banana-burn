@@ -7,12 +7,16 @@ import { errCode, logError } from "@/lib/log";
 import { EX, nextTrainingDow, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { parseVoice, type Voice } from "@/lib/voice";
 import { streakOf } from "@/lib/gamify";
-import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, isRelevantHour, liftFact, liftLine, localClock, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
+import { DEFAULT_PREFS, copyFor, cronModeFrom, daysBetween, decide, inQuietHours, isRelevantHour, liftFact, liftLine, localClock, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
 import { sendPush, type NativeToken, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import { withLoginLinks } from "@/lib/email/login-link";
 import * as T from "@/lib/email/templates";
 import { forEachLimit } from "@/lib/concurrency";
+import { BETA_ENDS_AT } from "@/lib/plans";
+import { entitlementsFrom, type CompRow, type SubscriptionRow } from "@/lib/entitlements";
+import { kindFor, promoFor } from "@/lib/trial";
+import { betaEndDay, betaEndEligible, betaEndIdemKey, betaEndKind, betaEndStep } from "@/lib/beta-fin";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
 const PAGE = 200;
@@ -53,6 +57,9 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   if (!admin) return { ...stats, skipped: "Supabase service_role no configurado (modo demo)" };
 
   const late = () => opts.deadline != null && Date.now() > opts.deadline;
+  // Fin de la beta (1 al 7 nov): primero, porque es una sola semana y son los primeros clientes posibles.
+  try { await sendBetaEndEmails(admin, now, mode, stats, late); }
+  catch (e) { stats.errors++; logError("cron:fin-beta", "run_failed", { kind: errCode(e) }); }
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
     const { data: profiles, error } = await profilePage(admin, from);
@@ -292,5 +299,83 @@ function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<ty
     case "reactivacion_7": { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.reactivacion({ name: x.name, days: kind === "reactivacion_3" ? 3 : 7, routine: x.plan.name, trainingDay: x.plan.tpl !== null, goal: x.goal, unsubscribe }) }; }
     case "recordatorio":
     default: { const unsubscribe = unsubscribeUrl(x.u.id, "recordatorios"); return { unsubscribe, email: T.recordatorio({ first: x.first, name: x.name, routine: x.plan.name, mins: x.plan.mins, exercises: x.plan.exercises.map((e) => e.name), streak: x.streak, goal: x.goal, unsubscribe, hook: x.plan.hook, fact: x.fact }) }; }
+  }
+}
+
+// ───────────── Fin de la beta (#109) ─────────────
+
+type BetaProfile = { id: string; created_at: string | null; full_name: string | null; plan: string | null; role: string | null; timezone: string | null };
+const SUB_READ = "id,user_id,provider_customer_id,provider_subscription_id,status,price_id,plan,billing,cancel_at_period_end,canceled_at,current_period_start,current_period_end,created_at";
+
+/**
+ * Correos del fin de la beta (beta-fin.ts) para las cuentas de la beta sin tarjeta, sin cobro programado y sin plan.
+ * No toca cobros: solo lee subscriptions, comp_grants, trial_charges y payment_methods. Cada correo se reclama en
+ * notification_log (kind beta_fin_N, local_day = día del correo) antes de enviarse, y Resend recibe una llave por cuenta y
+ * correo: nunca sale dos veces. Si falla una lectura, la página se salta (mejor no escribirle a quien quizá ya tiene tarjeta).
+ * Exportada para pruebas.
+ */
+export async function sendBetaEndEmails(admin: SupabaseClient, now: Date, mode: "hourly" | "daily", stats: RunStats, late: () => boolean = () => false) {
+  const step = betaEndStep(now);
+  if (!step) return;
+  const kind = betaEndKind(step), day = betaEndDay(step);
+  for (let from = 0; ; from += PAGE) {
+    if (late()) { stats.partial = true; break; }
+    const { data, error } = await admin.from("profiles").select("id,created_at,full_name,plan,role,timezone")
+      .eq("onboarded", true).lt("created_at", BETA_ENDS_AT).order("id").range(from, from + PAGE - 1);
+    if (error) { stats.ok = false; stats.errors++; logError("cron:fin-beta", "profiles_query_failed", { code: error.code, from }); break; }
+    const profiles = (data ?? []) as BetaProfile[];
+    if (!profiles.length) break;
+    const ids = profiles.map((p) => p.id);
+    const [prefs, subs, comps, charges, cards] = await Promise.all([
+      allPages((a, b) => admin.from("notification_prefs").select("user_id,email_reminders,timezone,quiet_start,quiet_end").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("subscriptions").select(SUB_READ).in("user_id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("comp_grants").select("user_id,plan,previous_plan,starts_at,expires_at,revoked_at,created_at").in("user_id", ids).order("user_id").order("created_at").range(a, b)),
+      allPages((a, b) => admin.from("trial_charges").select("user_id").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("payment_methods").select("user_id").in("user_id", ids).order("user_id").range(a, b)),
+    ]);
+    const failed = [prefs, subs, comps, charges, cards].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:fin-beta", "query_failed", { code: failed.error?.code }); if (profiles.length < PAGE) break; continue; }
+    const prefBy = new Map((prefs.data as { user_id: string; email_reminders: boolean | null; timezone: string | null; quiet_start: string | null; quiet_end: string | null }[]).map((r) => [r.user_id, r]));
+    const subsBy = new Map<string, SubscriptionRow[]>(), compsBy = new Map<string, CompRow[]>();
+    for (const r of subs.data as SubscriptionRow[]) subsBy.set(r.user_id, [...(subsBy.get(r.user_id) ?? []), r]);
+    for (const r of comps.data as (CompRow & { user_id: string })[]) compsBy.set(r.user_id, [...(compsBy.get(r.user_id) ?? []), r]);
+    const charged = new Set((charges.data as { user_id: string }[]).map((r) => r.user_id));
+    const carded = new Set((cards.data as { user_id: string }[]).map((r) => r.user_id));
+
+    const due = profiles.filter((p) => {
+      const pref = prefBy.get(p.id);
+      const userSubs = subsBy.get(p.id) ?? [];
+      const ent = entitlementsFrom({ profilePlan: p.plan, role: p.role, createdAt: p.created_at, subs: userSubs, comps: compsBy.get(p.id) ?? [], now });
+      if (!betaEndEligible({ createdAt: p.created_at, emailReminders: pref?.email_reminders !== false, hasCard: carded.has(p.id), hasCharge: charged.has(p.id), paidAccess: ent.plan !== "free" })) return false;
+      // Cada hora (Pro): no se escribe en horas de silencio; la próxima corrida lo toma. Diario: sale en la corrida.
+      if (mode === "hourly") {
+        const pr = { ...DEFAULT_PREFS, ...(pref ? stripNulls(pref) : {}), timezone: pref?.timezone || p.timezone || DEFAULT_PREFS.timezone } as Prefs;
+        if (inQuietHours(localClock(now, pr.timezone), pr.quiet_start, pr.quiet_end)) return false;
+      }
+      return true;
+    });
+
+    await forEachLimit(due, USER_CONCURRENCY, async (p) => {
+      if (late()) { stats.partial = true; return; }
+      try {
+        const { data: claimed, error: claimErr } = await admin.from("notification_log")
+          .upsert({ user_id: p.id, kind, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .select("id");
+        if (claimErr) { stats.errors++; return; }
+        if (!claimed?.length) return;
+        const { data: u } = await admin.auth.admin.getUserById(p.id);
+        const to = u.user?.email;
+        if (!to) return;
+        // El 50 % del primer mes, solo si el servidor se lo daría al guardar la tarjeta hoy (trial-billing.ts: promoFor).
+        const paidBefore = (subsBy.get(p.id) ?? []).some((s) => Boolean(s.current_period_start));
+        const promo = promoFor(kindFor({ createdAt: p.created_at, now }), paidBefore) !== null;
+        const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
+        const msg = T.finBeta({ name: p.full_name || "", step, promo, unsubscribe });
+        const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: betaEndIdemKey(step, p.id), unsubscribe, tags: { kind } });
+        if (r.ok) stats.email++;
+        stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:fin-beta", "user_failed", { kind: errCode(e) }); }
+    });
+    if (stats.partial || profiles.length < PAGE) break;
   }
 }
