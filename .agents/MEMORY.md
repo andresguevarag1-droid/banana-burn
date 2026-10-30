@@ -13,10 +13,12 @@ What AI Office's Agents have learned about this repository, one entry per line. 
 - Every new table with user_id must be added to src/lib/account-export.ts (EXPORT_BY_USER if readable through RLS, otherwise EXPORT_SPECIAL plus its description in /api/cuenta/exportar) or account-export.test.ts fails.
 - Marketing docs (e.g. marketing/estrategia/) get a vitest file src/lib/<doc-name>.test.ts that reads the Markdown with readFileSync and checks figures, tables and brand rules against the code; model it on meta-ads-noviembre.test.ts or embudo-noviembre.test.ts.
 - src/lib/correos-prueba.test.ts exige exactamente 9 piezas `NN-*.md` en marketing/estrategia/correos/, así que los correos nuevos van en una subcarpeta con su propio test.
-- The text in src/lib/trial.ts (PROMO_TERMS, reminderLine) uses a non-breaking space (U+00A0) before "%", so normalize it before comparing that copy with Markdown documents.
+- The text in src/lib/trial.ts (PROMO_TERMS, reminderLine) and src/components/card-banner.tsx uses a non-breaking space (U+00A0) before "%", so normalize it before comparing that copy with Markdown documents or emails.
 - The app's menu labels are in src/components/app-nav.tsx (for example, /app/nutricion is shown as "Comida" and /app/suscripcion as "Mi plan"), so check copy that names a tab against that file.
 - `next dev` runs in demo mode without Supabase, so /admin/condominios and /c/<code> load with sample data; reach localhost with `curl --noproxy '*'` because the sandbox proxy answers 403 otherwise.
 - `npx next build` works without Supabase env and its route table marks ISR pages ○ with a revalidate column (e.g. "1h"); `npx next start -p <port>` then shows `x-nextjs-cache: HIT` and the real Cache-Control, and `curl --noproxy '*' -H 'x-real-ip: …'` drives rate-limited routes past their limit.
+- `next build` takes about 1.5 min here; with source maps on it runs out of memory, because the sandbox cgroup caps memory at 4 GB (`/sys/fs/cgroup/memory.max`).
+- In @sentry/nextjs 11 import `withSentryConfig` from `@sentry/nextjs/config`, not `@sentry/nextjs`; `npm install @vercel/analytics` fails with ERESOLVE, so the app loads `/_vercel/insights/script.js` directly from src/components/web-analytics.tsx.
 - The sandbox has no browser, pip or system ffmpeg, and blocks Chromium downloads, GitHub releases and the Higgsfield CDN (d8j0ntlcm91z4.cloudfront.net), but npm installs work.
 - For PDFs use pdfkit with @fontsource/plus-jakarta-sans, and pdf-to-img to review them as images.
 - Instagram generators live in marketing/instagram/ with their own package.json (resvg + opentype; `npm install && npm run k13`); for ad-hoc scripts install @resvg/resvg-js with `npm i --no-save --prefix /tmp/resvg` and never add it to the root package.json.
@@ -30,13 +32,13 @@ What AI Office's Agents have learned about this repository, one entry per line. 
 - The /condominios landing reads ?c= through condoName in src/lib/condominios.ts (letters, numbers and . , ' & ( ) - only, 60 characters); an unencoded & in the name breaks the query.
 - The residents' link is /c/<code> (src/app/c/[code]); the ?c=Name page at /condominios is only for administraciones before the meeting, so don't mix them up.
 - `/admin/condominios` is Banana Burn's internal panel: condominium administrations have no access to the app and only get counts that the team shares with them.
+- The condominium states shown in /admin/condominios ("Mes gratis", "Activo", "Terminado") are CONDO_STATUSES in src/lib/condos.ts, and the lead states are STATUSES in src/lib/condominios.ts, so check metrics that name a state against the right list.
 - A condo's free month runs 30 days from each resident's activation, not from the condo's free_ends_at, and the cron (sweepCondos) already notifies residents 3 days before their own end.
 - La oferta de condominios "primer mes gratis para todos los residentes" hoy solo existe en Costa Rica (Harvey) y se activa con /c/<código>; los anuncios a residentes deben condicionarla a que el condominio se sume y no prometerla en otros países.
-- UTMs are saved in Supabase only when the visit has ?ref= (src/components/ref-capture.tsx); funnel_events (0061) exists since 28 Oct 2026 and stores the path without UTMs.
+- UTMs are saved in Supabase only when the visit has ?ref= (src/components/ref-capture.tsx), and src/app/r/[code]/route.ts drops query params when redirecting, so UTMs on /r/<code> links are lost; funnel_events (0061) exists since 28 Oct 2026 and stores the path without UTMs.
 - The 0061 workout funnel events are workout_open, workout_first_set, workout_saved and workout_leave (src/app/api/track/event.ts), even when issues call them set1_start or workout_done.
-- `src/app/r/[code]/route.ts` descarta los parámetros al redirigir, así que cualquier UTM en un enlace /r/<código> se pierde hasta que eso cambie.
 - Meta Subscribe fires only from /pago/exito, not from the trial-end auto-charge (trial-billing.ts, cobros cron), so count real payments in trial_charges with status 'succeeded'.
 - A failed trial_charges row with attempts < MAX_ATTEMPTS (6) still shows charge_now in Mi plan (src/lib/trial.ts); at 6 it becomes card_only, so failed-payment copy must respect that condition.
 - LEAD_CTA en src/lib/meta-pixel.ts incluye registro-* y no incluye lo-mejor, pasos ni oferta; CompleteRegistration sale al terminar /bienvenida, no al crear la cuenta.
 - The app already sends lifecycle emails through Resend from src/lib/email/templates.ts (bienvenida, pruebaIniciada, recordatorioCobro, daily reminders); any new marketing sequence has to say which of those it replaces.
-- Format money with `usd2` and numbers with `nfmt` from src/lib/num.ts, emails included; num.test.ts fails on any `es-CO` or `toLocaleString("en-US")` in src.
+- Format money with `usd2` and numbers with `nfmt` from src/lib/num.ts, emails and tests included; num.test.ts fails on any `es-CO` or `toLocaleString("en-US")` in src.
