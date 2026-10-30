@@ -695,10 +695,10 @@ export const TRIAL_SEQUENCE: Record<TrialStepDay, { subject: string; preheader: 
     cta: "Ver qué incluye mi plan", path: "/app/incluye", kind: "primary",
   },
   6: {
-    subject: "Elige hoy cómo quieres seguir",
+    subject: "Elige cómo quieres seguir",
     preheader: "Compara el ahorro anual y las opciones mensuales en Mi plan.",
     paragraphs: [
-      "Decide hoy qué opción se adapta a ti.",
+      "Revisa qué opción se adapta a ti.",
       `Anual: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.anual)} al año; ahorras ${usd2(annualSaving(ENTRENO))} frente a 12 mensualidades. ${COMPLETO.name} cuesta ${usd2(COMPLETO.price.anual)} al año; ahorras ${usd2(annualSaving(COMPLETO))}. Cada año pagado ${seasonLine}.`,
       `Mensual: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.mes)} al mes y ${COMPLETO.name}, ${usd2(COMPLETO.price.mes)} al mes. Nutrición está incluida solo en ${COMPLETO.name}.`,
       "Estos son precios regulares en USD, con IVA incluido. El ahorro anual compara 12 meses a precio regular, sin promociones.",
