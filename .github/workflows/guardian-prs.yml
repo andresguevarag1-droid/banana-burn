@@ -1,0 +1,138 @@
+# Guardián de PRs: vigila las PRs de la oficina (AI Office) y, si una se rompe, la devuelve a la cola para que la arreglen.
+#
+# - Cuando el CI de una PR termina en rojo, o cada 2 horas encuentra una PR en conflicto con main, busca el issue que la
+#   PR cierra ("Closes #N"), comenta qué falló y le pone `needs-work` para que la oficina la retome en la misma rama.
+# - Si la PR toca código (.ts, .tsx, .js, .mjs, .sql), el arreglo va a Adrian (role:coder). Si solo toca textos, vuelve
+#   al mismo rol que la hizo.
+# - Máximo 3 intentos por PR. Al cuarto, el issue pasa a `needs-human` para que Andrés decida.
+# - Ignora los issues sin la etiqueta `ai-office` (por ejemplo los pausados: #50, #51 y #53).
+# No usa secretos: solo el GITHUB_TOKEN del propio workflow, con permiso para comentar y etiquetar issues.
+name: Guardián de PRs
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: guardian-prs
+  cancel-in-progress: false
+
+jobs:
+  guardian:
+    name: Revisar PRs rotas
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const MAX_INTENTOS = 3;
+            const CODIGO = /\.(ts|tsx|js|mjs|cjs|sql)$/;
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+            // Las PRs a revisar: la del CI que falló, o todas las abiertas en la revisión cada 2 horas.
+            let prs = [];
+            if (context.eventName === "workflow_run") {
+              const run = context.payload.workflow_run;
+              const nums = (run.pull_requests || []).map((p) => p.number);
+              if (nums.length === 0) {
+                const abiertas = await github.paginate(github.rest.pulls.list, { owner, repo, state: "open", per_page: 100 });
+                nums.push(...abiertas.filter((p) => p.head.sha === run.head_sha).map((p) => p.number));
+              }
+              for (const n of nums) prs.push((await github.rest.pulls.get({ owner, repo, pull_number: n })).data);
+            } else {
+              const abiertas = await github.paginate(github.rest.pulls.list, { owner, repo, state: "open", per_page: 100 });
+              for (const p of abiertas) prs.push((await github.rest.pulls.get({ owner, repo, pull_number: p.number })).data);
+            }
+
+            for (let pr of prs) {
+              // GitHub calcula si hay conflicto en segundo plano: se le da un momento.
+              if (pr.mergeable === null) {
+                await sleep(3000);
+                pr = (await github.rest.pulls.get({ owner, repo, pull_number: pr.number })).data;
+              }
+              const cierra = /(?:closes|fixes|resolves)\s+#(\d+)/i.exec(pr.body || "") || /^ai-office\/(\d+)-/.exec(pr.head.ref);
+              if (!cierra) continue;
+              const issueNumber = Number(cierra[1]);
+              const issue = (await github.rest.issues.get({ owner, repo, issue_number: issueNumber })).data;
+              const etiquetas = issue.labels.map((l) => (typeof l === "string" ? l : l.name));
+              if (issue.state !== "open" || !etiquetas.includes("ai-office")) continue;
+              // Ya está en la cola o trabajándose: no se toca.
+              if (etiquetas.includes("needs-work")) continue;
+
+              // ¿Qué está roto en la última versión de la PR?
+              const problemas = [];
+              const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
+              const rojos = checks.filter((c) => ["failure", "timed_out", "cancelled"].includes(c.conclusion) && c.name !== "Revisar PRs rotas");
+              for (const c of rojos) {
+                let pasos = "";
+                try {
+                  const job = (await github.rest.actions.getJobForWorkflowRun({ owner, repo, job_id: c.id })).data;
+                  pasos = (job.steps || []).filter((s) => s.conclusion === "failure").map((s) => s.name).join(", ");
+                } catch (e) {}
+                problemas.push(`- CI en rojo: **${c.name}**${pasos ? ` (paso: ${pasos})` : ""}. Detalle: ${c.html_url}`);
+              }
+              if (pr.mergeable === false || pr.mergeable_state === "dirty") {
+                problemas.push(`- La rama \`${pr.head.ref}\` tiene conflictos con \`${pr.base.ref}\`: hay que traer \`${pr.base.ref}\` y resolverlos.`);
+              }
+              if (problemas.length === 0) continue;
+
+              // Una sola vez por versión de la PR, y un máximo de intentos.
+              const comentarios = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: issueNumber, per_page: 100 });
+              const previos = comentarios.filter((c) => (c.body || "").includes("<!-- guardian-prs"));
+              if (previos.some((c) => c.body.includes(`<!-- guardian-prs:${pr.head.sha} -->`))) continue;
+
+              if (previos.length >= MAX_INTENTOS) {
+                if (!etiquetas.includes("needs-human")) {
+                  await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["needs-human"] });
+                  await github.rest.issues.createComment({
+                    owner, repo, issue_number: issueNumber,
+                    body: `<!-- guardian-prs:${pr.head.sha} -->\n### Guardián de PRs: necesita a Andrés\n\nLa PR #${pr.number} sigue rota después de ${MAX_INTENTOS} intentos de arreglo. Se pasa a \`needs-human\`.\n\n${problemas.join("\n")}`,
+                  });
+                }
+                continue;
+              }
+
+              // ¿A quién le toca? Si la PR toca código, a Adrian (role:coder).
+              const archivos = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: pr.number, per_page: 100 });
+              const tocaCodigo = archivos.some((f) => CODIGO.test(f.filename));
+              const rolActual = etiquetas.find((l) => l.startsWith("role:"));
+              if (tocaCodigo && rolActual !== "role:coder") {
+                if (rolActual) {
+                  await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name: rolActual }).catch(() => {});
+                }
+                await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["role:coder"] });
+              }
+
+              for (const quitar of ["needs-human", "needs-review", "needs-qa", "needs-docs"]) {
+                if (etiquetas.includes(quitar)) {
+                  await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name: quitar }).catch(() => {});
+                }
+              }
+              await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["needs-work"] });
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNumber,
+                body: [
+                  `<!-- guardian-prs:${pr.head.sha} -->`,
+                  `### Guardián de PRs: la PR #${pr.number} se rompió (intento ${previos.length + 1} de ${MAX_INTENTOS})`,
+                  "",
+                  ...problemas,
+                  "",
+                  `Arreglar en la misma rama \`${pr.head.ref}\`, solo lo que falla, sin cambiar el alcance del issue. Antes de entregar, en verde: \`npx tsc --noEmit -p .\`, \`npx eslint src scripts --quiet\`, \`npx vitest run\` y \`npx next build\`.`,
+                ].join("\n"),
+              });
+              core.info(`#${issueNumber} (PR #${pr.number}) devuelto a needs-work.`);
+            }
