@@ -102,4 +102,30 @@ describe("QA: daily SQL executes in a read-only PostgreSQL transaction", () => {
     const rows = await query(account(1) + onboarding(1) + subscription(1, "canceled", "2026-12-01", "onvo", true));
     expect(day(rows)).toMatchObject({ usuarios_pago: 1, pagos_suscripcion_sin_duplicar: 1 });
   });
+
+  it("excludes immediate cancellations, the exact period-end boundary and unrecognized providers", async () => {
+    const rows = await query(account(1) + account(2) + account(3) + account(4) +
+      subscription(1, "canceled", "2026-12-01", "onvo", false) +
+      subscription(2, "canceled", "2026-11-15 12:00+00", "onvo", true) +
+      subscription(3, "active", "2026-11-15 12:00+00") +
+      subscription(4, "active", "2026-12-01", "demo"));
+    expect(day(rows)).toMatchObject({ usuarios_pago: 0, pagos_suscripcion_sin_duplicar: 0 });
+  });
+
+  it("keeps real payers whose courtesy has not started or ends exactly at observation", async () => {
+    const rows = await query(account(1) + charge(1) + account(2) + charge(2) + `
+      insert into comp_grants values
+        ('${id(1)}', '2026-11-16', '2026-12-01', null),
+        ('${id(2)}', '2026-10-01', '2026-11-15 12:00+00', null);`);
+    expect(day(rows)).toMatchObject({ usuarios_pago: 2, cobros_exitosos: 2 });
+  });
+
+  it("ignores onboarding before account creation and activation after observation", async () => {
+    const rows = await query(account(1) + account(2) + `
+      insert into funnel_events values
+        ('${id(1)}', 'onboarding_done', '2026-10-27'),
+        ('${id(2)}', 'onboarding_done', '2026-11-16');
+      insert into workouts values ('${id(1)}', '2026-11-16');`);
+    expect(day(rows)).toMatchObject({ cuentas_creadas: 2, registros_completos: 0, primer_entreno: 0 });
+  });
 });
