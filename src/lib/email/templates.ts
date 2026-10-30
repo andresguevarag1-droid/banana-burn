@@ -12,7 +12,8 @@
 // Los correos no transaccionales llevan enlace de baja; los transaccionales (bienvenida, plan, pagos) no lo necesitan.
 import { SITE_URL } from "../env";
 import { nfmt, usd2 } from "../num";
-import { ANNUAL_SEASON_NOTE, PLANS, annualSaving } from "../plans";
+import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving } from "../plans";
+import { PROMO_PCT, promoPrice } from "../trial";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
@@ -719,6 +720,70 @@ export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string }): 
     subject: c.subject, preheader: c.preheader,
     html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, coach }),
     text: textLayout([c.subject, "", ...body.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, coach),
+  };
+}
+
+// ───────────── Fin de la beta (#109): cuentas de la beta sin tarjeta ni plan ─────────────
+
+/** Día corto en Costa Rica (la hora de las fechas de la beta): "7 de noviembre". */
+const dayCR = (t: number) => new Date(t).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
+
+/**
+ * 1: fin de la beta (1 nov). 2: lo que conservas (5 nov). 3: último día (7 nov). `promo`: el 50 % del primer mes solo
+ * cuando el servidor se lo daría a esta persona (promoFor en trial.ts: cobro "beta" y nunca pagó un plan).
+ */
+export type BetaEndMailData = { name: string; step: 1 | 2 | 3; promo: boolean; unsubscribe: string; graceUntil?: string };
+
+export function finBeta(d: BetaEndMailData): Email {
+  const n = firstName(d.name);
+  const end = Date.parse(d.graceUntil ?? BETA_GRACE_UNTIL);
+  // El acceso gratis llega hasta la medianoche que abre BETA_GRACE_UNTIL: el último día es el anterior.
+  const last = dayCR(end - 1), chargeDay = dayCR(end);
+  const pct = `${PROMO_PCT}\u00a0%`;
+
+  const annual: [string, string][] = PLANS.map((pl) => [pl.name, `${money(pl.price.anual)} al año`]);
+  const monthly: [string, string][] = PLANS.map((pl) => [pl.name, d.promo ? `${money(pl.price.mes)} al mes; primer mes ${money(promoPrice(pl.id))}` : `${money(pl.price.mes)} al mes`]);
+  const saving = `Ahorras ${PLANS.map((pl) => money(annualSaving(pl))).join(" o ")} al año frente a pagar mes a mes. ${ANNUAL_SEASON_NOTE}.`;
+  const promoLine = d.promo ? `Si eliges el mensual y dejas tu tarjeta lista antes del final del ${last}, tu primer mes cuesta ${pct} menos. Aplica una vez por cuenta; desde el segundo mes, precio normal.` : "";
+  const noCharge = `Hoy no se cobra nada. Si dejas tu tarjeta lista, el primer cobro es el ${chargeDay} y cancelas sin costo antes desde Mi plan.`;
+
+  const copy = {
+    1: {
+      subject: `Terminó la beta: sigues con todo incluido hasta el ${last}`,
+      hero: { eyebrow: "Fin de la beta", title: `${esc(n)}, gracias por estar en la beta`, lead: `La beta terminó. Tu cuenta sigue con todo incluido y sin costo hasta el final del <b>${esc(last)}</b>.` },
+      lines: [`Desde el ${chargeDay}, para seguir con tu plan eliges uno en Mi plan.`, "No tienes tarjeta guardada, así que no te cobramos nada de forma automática."],
+      coach: "Gracias por entrenar conmigo en la beta. Sigo aquí para lo que viene.",
+    },
+    2: {
+      subject: `${n}, lo que conservas si eliges tu plan`,
+      hero: { eyebrow: "Tu plan", title: "Lo que conservas si eliges tu plan", lead: `Sigues con todo incluido hasta el final del <b>${esc(last)}</b>. Si eliges un plan, sigues sin cortes.` },
+      lines: ["Tu progreso: entrenos, récords, pesajes y medidas, con tus gráficas al día.", "Tu plan: la rutina hecha a tu nivel, tiempo y equipo, con la progresión de cargas.", "Tu racha: si no cortas, sigue contando.", `Si no eliges plan, tus datos quedan guardados, pero desde el ${chargeDay} la app te pide un plan para seguir.`],
+      coach: "Lo que ya construiste no se pierde. La idea es no cortar el ritmo.",
+    },
+    3: {
+      subject: "Hoy es tu último día con todo incluido",
+      hero: { eyebrow: "Último día", title: `${esc(n)}, hoy es el último día`, lead: `Tu acceso con todo incluido termina hoy, <b>${esc(last)}</b>, a la medianoche (hora de Costa Rica).` },
+      lines: ["Desde mañana la app te pide elegir un plan para seguir.", "Tu progreso queda guardado, elijas o no."],
+      coach: "Hoy entrenamos igual. Mañana seguimos juntos si eliges tu plan.",
+    },
+  }[d.step];
+
+  const preheader = d.step === 3 ? `Tu acceso con todo incluido termina hoy, ${last}.` : d.step === 2 ? `Tu progreso, tu plan y tu racha siguen si eliges un plan antes del final del ${last}.` : `Sigues con todo incluido hasta el final del ${last}. No te cobramos nada.`;
+  const body =
+    (d.step === 2 ? list(copy.lines.slice(0, 3).map((l) => `${dot()}${esc(l)}`)) + p(esc(copy.lines[3])) : copy.lines.map((l) => p(esc(l))).join("")) +
+    eyebrow("Plan anual") + rows(annual) + small(esc(saving)) +
+    eyebrow("Plan mensual") + rows(monthly) + (promoLine ? small(esc(promoLine)) : "") +
+    small(esc(noCharge)) + button("Elegir mi plan", "/app/suscripcion");
+  const reason = "Recibes este correo porque tu cuenta es de la beta de Banana Burn y todavía no tiene un plan.";
+  return {
+    subject: copy.subject, preheader,
+    html: layout({ preheader, hero: copy.hero, body, reason, coach: copy.coach, unsubscribe: d.unsubscribe }),
+    text: textLayout([
+      copy.subject, "", copy.hero.lead.replace(/<[^>]+>/g, ""), "", ...copy.lines, "",
+      "Plan anual:", ...annual.map(([k, v]) => `- ${k}: ${v}`), saving, "",
+      "Plan mensual:", ...monthly.map(([k, v]) => `- ${k}: ${v}`), ...(promoLine ? [promoLine] : []), "",
+      noCharge, "", `Elegir mi plan: ${abs("/app/suscripcion")}`,
+    ], d.unsubscribe, reason, copy.coach),
   };
 }
 
