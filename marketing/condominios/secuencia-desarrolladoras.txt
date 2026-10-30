@@ -1,0 +1,52 @@
+SECUENCIA DE HARVEY PARA CONSTRUCTORAS Y DESARROLLADORAS
+
+Para que Andrés la revise y la pegue en harvey-config. Son 3 correos en texto plano: se copia tal cual desde "Asunto" hasta la firma. No se envía nada sin su aprobación.
+Ángulo: una amenidad que ayuda a vender y entregar torres nuevas, con un mes gratis para los primeros residentes. La desarrolladora y la administración nunca pagan; después del mes, cada residente decide su plan.
+Cambia [Empresa] por el nombre de la constructora o desarrolladora y [Proyecto] por el nombre de la torre o del condominio nuevo. [mes] es el mes de entrega publicado del proyecto.
+Enlace (solo en los correos 2 y 3): https://www.bananaburn.app/condominios?c= más el nombre del proyecto, con cada espacio como %20 y cada & como %26. Ejemplo: Torre Alameda queda https://www.bananaburn.app/condominios?c=Torre%20Alameda. Antes de enviar, abre el enlace y revisa que salude con el nombre del proyecto.
+Si responden que no o piden no recibir más correos, no se escribe más.
+
+
+CORREO 1 (sin enlace)
+
+Asunto: amenidad para torres nuevas
+
+Hola, equipo de [Empresa].
+
+[Proyecto] entrega en [mes] con gimnasio, y los primeros residentes suelen llegar sin saber cómo aprovecharlo. Podemos darles un mes gratis de entrenador personal en el celular, con rutina para ese gimnasio y nutrición. La desarrolladora y la administración nunca pagan; después del mes, cada residente decide su plan.
+
+¿Te sirve como amenidad para vender y entregar el proyecto?
+
+Andrés Guevara, Fundador
+Banana Burn
+bananaburn.app
+
+
+CORREO 2 (con enlace)
+
+Asunto: un beneficio para la entrega
+
+Hola, equipo de [Empresa].
+
+Retomo la idea para [Proyecto]: Banana Burn le da a cada residente un mes gratis de entreno y nutrición, sin tarjeta. Suma algo concreto a la sala de ventas y a la entrega de llaves. Lo activamos y hacemos el afiche con QR. La desarrolladora y la administración nunca pagan; después del mes, cada residente decide su plan.
+
+Aquí ves cómo funciona y agendas 30 minutos:
+https://www.bananaburn.app/condominios?c=Nombre%20del%20Proyecto
+
+Andrés Guevara, Fundador
+Banana Burn
+bananaburn.app
+
+
+CORREO 3 (con enlace)
+
+Asunto: cierro por aquí
+
+Hola, equipo de [Empresa].
+
+Último correo sobre esto. Si quieres sumar el mes gratis para los primeros residentes de [Proyecto], sin costo para la desarrolladora, agenda aquí:
+https://www.bananaburn.app/condominios?c=Nombre%20del%20Proyecto
+
+Andrés Guevara, Fundador
+Banana Burn
+bananaburn.app
