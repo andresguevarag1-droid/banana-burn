@@ -150,7 +150,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         <AnnouncementBanner />
         <LoMejor serverKeys={learnState.keys} />
         <PushWhenReady trained={g.trainedToday || g.streak.days > 0 || !!lastTime} />
-        <InstallCard />
+        {/* Antes del primer entreno, nada que lo saque de la app: instalar obliga a abrirla en otro navegador. */}
+        {(learnState.workouts > 0 || g.trainedToday) && <InstallCard />}
         {/* Temporada deportiva: cuenta regresiva, activar, su semana y la opinión de la última sesión. */}
         <SeasonHoy v={v} />
         <RunHoy v={v} />

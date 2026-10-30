@@ -33,7 +33,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
     <div className="relative">
       {daily.toast}
       {/* Lo primero: el botón grande para empezar. Cómo te sientes es opcional y ajusta el entreno. */}
-      <Link href={`/app/entreno${sel?.q ?? ""}`} className="btn-primary flex w-full min-h-16 h-auto py-3 px-5 text-lg leading-tight font-extrabold text-center shadow-lift">
+      <Link href={`/app/entreno${sel?.q ?? ""}${demo && first ? `${sel?.q ? "&" : "?"}primera=1` : ""}`} className="btn-primary flex w-full min-h-16 h-auto py-3 px-5 text-lg leading-tight font-extrabold text-center shadow-lift">
         <Play weight="fill" className="size-6 shrink-0" aria-hidden />
         <span className="min-w-0 text-balance">{first ? `Empieza tu primer entreno (${sel?.v === 1 ? Math.round(mins * 0.75) : mins} min)` : sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
         {!first && <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>}

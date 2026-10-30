@@ -1,3 +1,4 @@
+import { HANDOFF_PARAM, looksLikeHandoff, withoutHandoff } from "@/lib/handoff";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env";
@@ -87,6 +88,27 @@ export async function middleware(req: NextRequest) {
   const user = claims?.claims?.sub ? claims.claims : null;
   const path = req.nextUrl.pathname;
   const isPrivate = path.startsWith("/app") || path.startsWith("/admin") || path.startsWith("/bienvenida");
+  // Pase de navegador (lib/handoff.ts): sin sesión, a /auth/correo (un toque y entra); con sesión, se limpia la dirección.
+  const pase = path.startsWith("/app") ? req.nextUrl.searchParams.get(HANDOFF_PARAM) : null;
+  if (pase !== null) {
+    const clean = withoutHandoff(path, req.nextUrl.search);
+    const url = req.nextUrl.clone();
+    url.search = "";
+    if (!user && looksLikeHandoff(pase)) {
+      url.pathname = "/auth/correo";
+      url.searchParams.set("t", pase);
+      url.searchParams.set("next", safeNext(clean, "/app"));
+    } else if (user) {
+      const [p, q] = clean.split("?");
+      url.pathname = p;
+      if (q) url.search = `?${q}`;
+    }
+    if (user || looksLikeHandoff(pase)) {
+      const r = NextResponse.redirect(url);
+      r.headers.set("Referrer-Policy", "no-referrer");
+      return noStore(r);
+    }
+  }
   if (isPrivate && !user) {
     const url = req.nextUrl.clone();
     url.pathname = "/entrar";

@@ -29,6 +29,7 @@ export const RULES = {
   // Enlace de un toque de los correos (/auth/correo): ver el botón es barato; gastarlo inicia una sesión.
   "auth:correo:ver": { windows: [{ sec: 10 * MIN, max: 60 }], db: false, msg: SLOW },
   "auth:correo:entrar": { windows: [{ sec: 10 * MIN, max: 20 }], db: true, msg: SLOW },
+  "auth:pase": { windows: [{ sec: 10 * MIN, max: 10 }], db: true, msg: SLOW },
   // ── Embudo (/api/track): un evento por clic; solo en memoria (una escritura en la base por evento costaría más).
   "track": { windows: [{ sec: MIN, max: 120 }], db: false, msg: SLOW },
   // ── Webhook de ONVO, por IP del procesador. Muy por encima de cualquier ráfaga real (cobros del día, reintentos):

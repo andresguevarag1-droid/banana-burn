@@ -13,6 +13,11 @@ import type { EmailMessage } from "./send";
  */
 
 export const LOGIN_LINK_TTL_MS = 72 * 3600 * 1000;
+/**
+ * Pase de navegador: quien se registró dentro de Instagram o Facebook y abre la app en Safari o Chrome (para instalarla)
+ * llega sin sesión. El enlace que se abre lleva este pase: mismo formato y un solo uso, pero vence en 30 minutos.
+ */
+export const HANDOFF_TTL_MS = 30 * 60 * 1000;
 const PREFIX = "login-link:v1:";
 
 const b64url = (b: Buffer | string) => Buffer.from(b).toString("base64url");
@@ -23,10 +28,11 @@ export function loginLinkSecret(): string | null {
   return process.env.EMAIL_UNSUB_SECRET || null;
 }
 
-export type LoginToken = { userId: string; nonce: string; issuedAt: number };
+export type LoginToken = { userId: string; nonce: string; issuedAt: number; handoff: boolean };
 
-export function signLoginToken(userId: string, secret: string, now = Date.now(), nonce = b64url(randomBytes(16))): string {
-  const payload = b64url(JSON.stringify({ u: userId, n: nonce, t: Math.floor(now / 1000) }));
+/** `handoff`: pase de navegador (30 min) en vez de enlace de correo (72 h). */
+export function signLoginToken(userId: string, secret: string, now = Date.now(), nonce = b64url(randomBytes(16)), handoff = false): string {
+  const payload = b64url(JSON.stringify({ u: userId, n: nonce, t: Math.floor(now / 1000), ...(handoff ? { k: "h" } : {}) }));
   return `${payload}.${b64url(mac(payload, secret))}`;
 }
 
@@ -43,11 +49,13 @@ export function verifyLoginToken(token: string | null | undefined, secret: strin
   try { given = Buffer.from(sig, "base64url"); } catch { return null; }
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
   try {
-    const o = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { u?: unknown; n?: unknown; t?: unknown };
+    const o = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { u?: unknown; n?: unknown; t?: unknown; k?: unknown };
     if (typeof o.u !== "string" || !UUID.test(o.u) || typeof o.n !== "string" || o.n.length < 16 || o.n.length > 64 || typeof o.t !== "number") return null;
     const issuedAt = o.t * 1000;
-    if (issuedAt > now + 5 * 60_000 || now - issuedAt > LOGIN_LINK_TTL_MS) return null;
-    return { userId: o.u, nonce: o.n, issuedAt };
+    if (o.k !== undefined && o.k !== "h") return null;
+    const handoff = o.k === "h";
+    if (issuedAt > now + 5 * 60_000 || now - issuedAt > (handoff ? HANDOFF_TTL_MS : LOGIN_LINK_TTL_MS)) return null;
+    return { userId: o.u, nonce: o.n, issuedAt, handoff };
   } catch { return null; }
 }
 

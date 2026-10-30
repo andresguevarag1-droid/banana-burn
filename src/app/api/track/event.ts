@@ -22,6 +22,12 @@ export const FUNNEL_EVENTS = [
   "workout_summary",
   "workout_saved",
   "workout_leave",
+  // Dentro del entreno (sin datos personales): empezar el ejercicio, cada serie, saltar descanso, cambiar, ver cómo se hace.
+  "brief_start",
+  "set_done",
+  "rest_skip",
+  "exercise_swap",
+  "help_open",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 

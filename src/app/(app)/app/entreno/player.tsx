@@ -37,6 +37,7 @@ import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/comp
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
 import { track } from "@/components/analytics";
+import { shouldAutoSave } from "./leave";
 import { hookLine } from "@/lib/engine";
 import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice } from "@/lib/voice";
 
@@ -326,7 +327,7 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
   const pickKg = (si: number, kg: number) => { setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j >= si && !s.done ? { ...s, kg: String(kg) } : s))))); buzz(10); };
   const copy = (si: number, kg: string, reps: string) => { setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j === si ? { ...s, kg, reps } : j > si && !s.done ? { ...s, kg } : s))))); buzz(10); };
   const setEffort = (ei: number, si: number, e: Effort) => { setRowsAt(ei, si, effortPatch(e)); setRestInfo((r) => (r && restTarget.current?.ex === ei && restTarget.current.si === si ? { ...r, effort: e } : r)); buzz(12); };
-  const cancelRest = () => { setRest(null); setRestInfo(null); restTarget.current = null; hush(); };
+  const cancelRest = () => { if (rest) track("rest_skip", { template: template.slice(0, 40), done: doneSets }); setRest(null); setRestInfo(null); restTarget.current = null; hush(); };
 
   /** Deshace una serie: el récord, el combo y el descanso que venían de ella se van con ella. */
   function undo(si: number) {
@@ -443,6 +444,7 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
   function swap(to: number, confirmed = false) {
     if (to === choice[idx]) { setSheet(null); setSwapAsk(null); return; }
     if (!confirmed && here.some((r) => r.done)) { setSwapAsk(to); return; }
+    track("exercise_swap", { template: template.slice(0, 40), ex: idx + 1 });
     const nextRows = rows.map((r, i) => (i === idx ? rowsFor(options[idx][to]) : r));
     setChoice((c) => c.map((v, i) => (i === idx ? to : v)));
     setRows(nextRows);
@@ -597,17 +599,23 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
   useEffect(() => { trackRef.current = (n) => track(n, { template: tpl, done: flow.current.doneSets, total: flow.current.planTotal }); }, [tpl]);
   useEffect(() => {
     track("workout_open", { template: tpl, resumed: flow.current.doneSets > 0, repeat: doneToday });
+    const opened = Date.now();
+    let left = false;
+    // En el resumen sin tocar Guardar, el entreno se guarda solo (va primero a la bandeja del teléfono y sube cuando haya
+    // señal): al cerrar o cambiar de app, y también al salir por un enlace o con Atrás dentro de la app. Antes, salir del
+    // resumen sin tocar Guardar perdía todo lo hecho.
+    const keep = () => {
+      const l = flow.current;
+      if (shouldAutoSave({ phase: l.phase, doneSets: l.doneSets, saved: savedOnce.current, sending: sending.current })) l.save();
+    };
     const leave = () => {
+      keep();
+      if (left) return;
+      left = true;
       const l = flow.current;
-      if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal });
+      if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal, seconds_on_screen: Math.round((Date.now() - opened) / 1000) });
     };
-    // En el resumen sin tocar Guardar: si la persona cierra o cambia de app, el entreno se guarda solo (va primero a la
-    // bandeja del teléfono y sube cuando haya señal). Antes se perdía todo lo hecho.
-    const onHide = () => {
-      if (document.visibilityState !== "hidden") return;
-      const l = flow.current;
-      if (l.phase === "summary" && !savedOnce.current && !sending.current && l.doneSets > 0) l.save();
-    };
+    const onHide = () => { if (document.visibilityState === "hidden") keep(); };
     window.addEventListener("pagehide", leave);
     document.addEventListener("visibilitychange", onHide);
     return () => { window.removeEventListener("pagehide", leave); document.removeEventListener("visibilitychange", onHide); leave(); };
@@ -615,8 +623,12 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
   const prevDone = useRef(doneSets);
   useEffect(() => {
     if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { template: tpl, total: planTotal });
+    // Cada serie marcada (solo al subir: deshacer una serie no cuenta): dónde se cortan los que empiezan.
+    if (doneSets > prevDone.current && phase === "play") track("set_done", { template: tpl, n: doneSets, total: planTotal });
     prevDone.current = doneSets;
   }, [doneSets, phase, tpl, planTotal]);
+  // Abrió cómo se hace: si muchos lo abren y luego se van, la explicación no alcanza.
+  useEffect(() => { if (sheet === "tech") track("help_open", { template: tpl, ex: idx + 1 }); }, [sheet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------- Pantallas especiales ---------- */
   if (!exercises.length) {
@@ -815,6 +827,7 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
   const exKey = `${idx}:${ex.id}`;
   const showBrief = focus && activeSet === 0 && !here.some((r) => r.done) && !briefDone.includes(exKey) && !timerOn;
   const startEx = () => {
+    track("brief_start", { template: template.slice(0, 40), ex: idx + 1, first: firstTime });
     setBriefDone((d) => (d.includes(exKey) ? d : [...d, exKey]));
     if (firstTime) { store.set(TOUR_KEY, 1); setFirstTime(false); }
     unlockAudio();
@@ -897,11 +910,17 @@ export function Player({ upcoming = null, template, title, icon, cardio, options
             {showBrief ? (
               <ExerciseBrief chips={planChips({ sets: here.length, lo: ex.cfg.lo, hi: ex.cfg.hi, unit: ex.cfg.unit, reps: num(here[0]?.reps), kg: num(here[0]?.kg), bw: ex.bw, perSide: !!ex.cfg.perSide, rest: ex.cfg.rest, calibration: isCal })}
                 muscles={plainMuscles(ex.tech?.mus, ex.muscle)} steps={briefSteps(ex.tech?.how)} mistake={ex.tech?.err[0] ?? null} tempo={tempoCue} firstTime={firstTime} onHow={() => setSheet("tech")}
-                extra={firstTime && canSpeak() ? (
-                  <button type="button" onClick={() => setPrefs({ voice: !prefs.voice })} aria-pressed={prefs.voice} className={`mt-2 w-full chip h-11 justify-center text-sm ${prefs.voice ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>
-                    {prefs.voice ? <Check weight="bold" className="size-4" /> : <SpeakerHigh weight="bold" className="size-4" />}{prefs.voice ? "Coach de voz activado" : "Activar coach de voz"}
-                  </button>
-                ) : undefined} />
+                extra={<>
+                  {/* Primera vez con este ejercicio y con peso: el número es una sugerencia, no una orden. */}
+                  {!ex.bw && !ex.cfg.unit && !ex.lastSets?.length && num(here[0]?.kg) > 0 && (
+                    <p className="mt-2 rounded-2xl bg-banana-soft/70 p-3 text-[14px] leading-snug text-ink"><span className="font-extrabold">¿No sabes qué peso usar?</span> El peso es una sugerencia. Usa uno con el que puedas hacer {ex.cfg.hi} con buena técnica; si no tienes ese, usa el más cercano y ajústalo en la serie.</p>
+                  )}
+                  {firstTime && canSpeak() && (
+                    <button type="button" onClick={() => setPrefs({ voice: !prefs.voice })} aria-pressed={prefs.voice} className={`mt-2 w-full chip h-11 justify-center text-sm ${prefs.voice ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>
+                      {prefs.voice ? <Check weight="bold" className="size-4" /> : <SpeakerHigh weight="bold" className="size-4" />}{prefs.voice ? "Coach de voz activado" : "Activar coach de voz"}
+                    </button>
+                  )}
+                </>} />
             ) : focus && activeSet >= 0 ? (
               <FocusSet rows={here} active={activeSet} task={task} tempo={tempoCue} bw={ex.bw} noBallast={!ballast} unit={ex.cfg.unit} perSide={!!ex.cfg.perSide} restSec={ex.cfg.rest} plates={plates} prev={ex.lastSets?.[activeSet]}
                 chips={chips} onPickKg={pickKg} onStep={step} onChange={change} onCopy={copy} onUndo={undo} />
