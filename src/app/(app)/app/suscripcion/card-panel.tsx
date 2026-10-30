@@ -118,7 +118,7 @@ function Processing({ refresh }: { refresh: boolean }) {
   return (
     <section id="tarjeta" aria-live="polite" className="scroll-mt-24 rounded-[1.5rem] border-2 border-line bg-white p-5 sm:p-6">
       <p className="flex items-center gap-2 text-lg font-extrabold text-ink"><CircleNotch weight="bold" className="size-6 animate-spin text-banana-ink motion-reduce:animate-none" />Estamos confirmando el cobro de tu plan</p>
-      <p className="mt-1 text-sm text-muted text-pretty">Tu banco lo está procesando. Suele tardar unos segundos y esta página se actualiza sola. No intentes pagar de nuevo: nunca cobramos dos veces.</p>
+      <p className="mt-1 text-sm text-muted text-pretty">Tu banco lo está procesando. Suele tardar unos segundos y esta página se actualiza sola. No intentes pagar de nuevo mientras lo confirmamos.</p>
     </section>
   );
 }
@@ -172,7 +172,7 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
   return (
     <section id="tarjeta" aria-labelledby="cobro-titulo" className="scroll-mt-24 rounded-[1.5rem] border-2 border-ink bg-white p-5 sm:p-6 space-y-4">
       <div>
-        <p className="text-sm font-semibold text-muted">{charge.testerHold ? "Mes de tester" : charge.moved ? "Cobro programado" : beta ? "Versión de prueba" : "Prueba gratis"}</p>
+        <p className="text-sm font-semibold text-muted">{charge.testerHold ? "Mes de tester" : charge.moved ? "Cobro programado" : beta ? "Acceso anticipado" : "Prueba gratis"}</p>
         <h2 id="cobro-titulo" ref={head} tabIndex={-1} className="mt-0.5 text-xl font-extrabold text-ink outline-none text-balance">{charge.testerHold ? `Sin cobros hasta el ${day(charge.chargeAt)}` : charge.moved ? `Se cobra el ${day(charge.chargeAt)}` : beta ? `Todo gratis hasta el ${day(new Date(Date.parse(charge.chargeAt) - 1).toISOString())}` : `Todo incluido hasta el ${day(charge.trialEndsAt)}`}</h2>
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm">
