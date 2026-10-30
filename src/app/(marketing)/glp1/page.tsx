@@ -1,129 +1,102 @@
 import Link from "next/link";
-import { ArrowRight, Barbell, Drop, Egg, Monkey, ShieldCheck, Sun, Syringe } from "@/components/icons";
+import Image from "next/image";
+import { ArrowRight, Barbell, Egg, ShieldCheck, Drop } from "@/components/icons";
 import { Phone } from "@/components/phone";
+import { Pricing } from "@/components/pricing";
+import { ANNUAL_SEASON_NOTE, PLANS } from "@/lib/plans";
 import { TRIAL_DAYS, money } from "@/lib/copy";
-import { Faq, Marker } from "../parts";
+import { offer } from "@/lib/offer";
+import { Faq } from "../parts";
 import { StickyCta } from "../sticky-cta";
 import { faqJsonLd, ldScript, social } from "../seo";
-import { COMPLETO, FaqCta, GLP1, SIGNUP_GLP1, TRIAL_CTA } from "../content";
-import { offer } from "@/lib/offer";
+import { SIGNUP_GLP1 } from "../content";
 
-// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
 export const revalidate = 3600;
-
-const TITLE = "Banana Shield, el programa para personas en GLP-1";
-const DESCRIPTION = "¿Usas Ozempic, Wegovy o Mounjaro? Entreno de fuerza, proteína y hábitos para que lo que bajes sea grasa, no músculo. En español, para Latinoamérica.";
-/* Todas las llamadas a la acción llevan al plan que incluye Banana Shield (plan=completo en la intención de compra). */
-const SIGNUP = SIGNUP_GLP1;
-
-export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ title: `${TITLE} | Banana Burn`, description: DESCRIPTION, path: "/glp1", og: { t: "Banana Shield para GLP-1", s: "Si usas Ozempic, Wegovy o Mounjaro: baja grasa y cuida tu músculo.", v: "edad" } }) };
+const TITLE = "Banana Shield: fuerza para quienes bajan con GLP-1";
+const DESCRIPTION = "Fuerza, proteína y hábitos para ayudar a conservar músculo durante la pérdida de peso. Prueba Banana Shield 7 días gratis, sin tarjeta. No sustituye la indicación de tu médico.";
+const CTA = `Empieza ${TRIAL_DAYS} días gratis`;
+const MEDICAL = "No sustituye la indicación de tu médico.";
+const COMPLETO = PLANS.find((p) => p.id === "completo")!;
+export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ title: TITLE, description: DESCRIPTION, path: "/glp1", og: { t: "Fuerza para cuidar el músculo", s: "Para quienes bajan con GLP-1. 7 días gratis, sin tarjeta. No sustituye la indicación de tu médico.", v: "edad" } }) };
 
 const PILLARS = [
-  [Barbell, "Fuerza que protege", "Rutinas de fuerza de 3 a 6 días por semana, de 15 a 60 minutos, adaptadas a tu nivel. Si hoy hay náusea, modo suave: lo importante es no soltar el músculo."],
-  [Egg, "Proteína primero", "Tu meta diaria y por comida, en porciones pequeñas que sí te entran. Recetas latinas suaves para días difíciles."],
-  [Syringe, "Sabe tu día de inyección", "El día de la inyección y el siguiente bajamos la intensidad y te recordamos agua, fibra y comidas pequeñas."],
-  [ShieldCheck, "Músculo protegido", "Con tus medidas y tu fuerza calculamos cuánto de lo que bajas es grasa. Meta: al menos 3 de cada 4 kg."],
+  [Barbell, "Fuerza con una guía", "Rutinas según nivel, tiempo y equipo, animaciones de técnica y registro de cargas. La progresión usa los entrenos registrados para orientar la siguiente sesión."],
+  [Egg, "Proteína repartida en el día", "Metas diarias y por comida, registro de alimentos latinos y recetas. Banana Shield muestra también una referencia de calorías mínimas."],
+  [Drop, "Hábitos en Hoy", "Referencias de agua y fibra, registro de náuseas y orientación para los días de inyección y el día siguiente, según lo configurado en el perfil."],
+  [ShieldCheck, "Seguimiento con contexto", "La guía combina peso, medidas y fuerza. La primera calificación requiere al menos dos mediciones y cuatro semanas de datos; es una estimación, no una medición clínica de músculo."],
 ] as const;
 
-/** Preguntas de la página. La del costo cambia sola con el fin de la beta (offer.ts). */
-const faq = () => [
-  ["¿Reemplaza a mi médico?", "No. Banana Shield es entreno, nutrición y hábitos que acompañan el tratamiento que te indicó tu médico. Nunca damos indicaciones de dosis ni de cambios en tu medicamento."],
-  ["¿Qué medicamentos aplica?", `${GLP1} recetados como semaglutida (Ozempic, Wegovy), tirzepatida (Mounjaro, Zepbound) o liraglutida (Saxenda). No trabajamos con péptidos sin aprobación ni compuestos de mercado gris.`],
-  ["¿Por qué importa el músculo?", "Al bajar de peso rápido una parte puede ser músculo. Perder músculo baja tu metabolismo y tu fuerza y facilita el rebote. La fuerza y la proteína son las herramientas con más evidencia para protegerlo."],
-  ["¿Y si dejo el medicamento?", "Los hábitos que construyes (fuerza, proteína, pesarte cada semana) son tu seguro. La app ajusta tus calorías con tu peso real para una transición gradual, siempre con tu médico."],
-  ["¿Cuánto cuesta?", `${offer().card ? `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido y sin tarjeta.` : `Los primeros ${TRIAL_DAYS} días son gratis, con Banana Shield incluido.`} Después, Banana Shield viene en ${COMPLETO.name}: ${money(COMPLETO.price.mes)} al mes o ${money(COMPLETO.price.anual)} al año.`],
-] as const;
+function Start({ location }: { location: "hero" | "final" }) {
+  return <div><Link href={SIGNUP_GLP1} data-cta={`glp1-${location}`} className="btn-primary min-h-12 w-full sm:w-auto">{CTA}<ArrowRight aria-hidden className="size-5" /></Link><Link href={SIGNUP_GLP1} data-cta={`glp1-${location}`} className="tap mt-1 flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div>;
+}
 
 export default function Glp1Landing() {
-  const from = money(COMPLETO.price.mes);
   const o = offer();
-  const FAQ = faq();
-  return (
-    <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
-      <section id="hero" className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 sm:pt-16 lg:pt-0 pb-16 lg:pb-0 grid lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-10 items-center lg:min-h-[min(calc(100dvh-4rem),760px)]">
-        <div className="animate-rise lg:py-10">
-          <h1 className="text-[2.6rem] leading-[1.03] sm:text-6xl lg:text-[3.4rem] font-extrabold tracking-[-0.035em] text-ink text-balance">¿Usas Ozempic o Mounjaro?<br /> <Marker>Baja grasa, no músculo.</Marker></h1>
-          <p className="mt-6 text-lg sm:text-xl text-muted leading-relaxed max-w-[34rem] text-pretty">El medicamento te quita el hambre. <b className="text-ink">Banana Shield</b> se encarga de que lo que pierdas sea grasa: fuerza a tu medida, proteína que sí te entra y un plan que sabe cuál es tu día de inyección.</p>
-          <div data-sticky-anchor className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <Link href={SIGNUP} data-cta="glp1-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
-            <a href="#como" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 transition-[text-decoration-color] duration-150 hover:decoration-ink">Cómo funciona</a>
-          </div>
-          <p className="mt-5 text-sm font-semibold text-ink text-pretty">{o.note} Después, incluido en {COMPLETO.name} por {from} al mes.</p>
+  const FAQ = [
+    ["¿Qué es Banana Shield?", `Es el programa de fuerza, nutrición y hábitos de Banana Burn para quienes bajan con GLP-1. Se activa desde el perfil y está incluido en la prueba y en ${COMPLETO.name}. ${MEDICAL}`],
+    ["¿La proteína y el entreno garantizan conservar músculo?", `No hay un resultado garantizado. La fuerza y una ingesta adecuada de proteína ayudan a cuidar la masa muscular; las necesidades y los resultados varían. ${MEDICAL}`],
+    ["¿Sirve para empezar a entrenar?", "La rutina se adapta al nivel, al equipo y al tiempo disponible e incluye animaciones de técnica. La frecuencia y la intensidad deben ajustarse a las indicaciones del equipo médico."],
+    ["¿Cuánto cuesta después de la prueba?", `Banana Shield está incluido en ${COMPLETO.name}: ${money(COMPLETO.price.anual)} al año o ${money(COMPLETO.price.mes)} al mes, en USD. El plan Entreno no incluye Banana Shield ni nutrición.`],
+    ["¿Hace falta guardar tarjeta?", `No. Puedes continuar sin tarjeta durante los ${TRIAL_DAYS} días gratis. Al terminar, eliges y pagas un plan para seguir; tu progreso queda guardado. Si guardas tarjeta, el cobro es automático salvo que canceles antes desde Mi plan.`],
+    ["¿Reemplaza la atención médica?", `No damos indicaciones de dosis ni cambios en el tratamiento. Banana Shield ofrece entrenamiento y seguimiento de hábitos. ${MEDICAL}`],
+  ] as const;
+  return <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(FAQ))} />
+    <section id="hero" className="bg-banana">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-6 sm:px-6 sm:py-12 md:grid-cols-[1fr_240px]">
+        <div>
+          <p className="text-sm font-bold text-ink">Para quienes bajan con GLP-1</p>
+          <h1 className="mt-3 max-w-2xl text-[2rem] leading-[1.1] font-extrabold tracking-tight text-ink text-balance sm:text-5xl">Fuerza para cuidar el músculo mientras baja el peso</h1>
+          <p className="mt-3 max-w-xl text-body text-pretty">Banana Shield reúne rutina, proteína y hábitos para ayudar a conservar músculo, con una guía cada día.</p>
+          <p className="mt-4 font-bold text-ink">{TRIAL_DAYS} días gratis, sin tarjeta</p>
+          <div data-sticky-anchor className="mt-3"><Start location="hero" /></div>
+          <p className="text-sm text-ink">Cancelas cuando quieras desde Mi plan.</p>
+          <p className="mt-2 text-sm font-semibold text-ink">{MEDICAL}</p>
         </div>
-        <div className="relative isolate grid place-items-center py-10 sm:py-12 lg:py-0 lg:h-[min(calc(100dvh-8rem),680px)]">
-          <div aria-hidden className="absolute inset-0 sm:inset-x-8 lg:inset-x-0 lg:inset-y-6 -z-10 rounded-[2rem] bg-ink" />
-          {/* Marca de agua solo donde cabe entera junto al teléfono: detrás de él se veía como una mancha cortada. */}
-          <ShieldCheck aria-hidden weight="fill" className="absolute right-4 bottom-10 -z-10 hidden size-24 text-banana opacity-[.12] xl:block" />
-          <Phone src="/landing/hoy2.png" alt="Pantalla Hoy de Banana Burn" className="relative w-[240px] sm:w-[260px] lg:w-[clamp(220px,calc((100dvh-12rem)*0.44),280px)]" priority />
+        <Image src="/brand/mascota-sola.webp" alt="Coach Banana, guía de entrenamiento" width={240} height={300} sizes="240px" className="hidden h-[300px] w-[240px] object-contain md:block" />
+      </div>
+    </section>
+
+    <section id="como" aria-labelledby="shield-title" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 scroll-mt-20">
+      <h2 id="shield-title" className="text-3xl font-extrabold tracking-tight text-ink">Qué hace Banana Shield hoy</h2>
+      <p className="mt-3 max-w-2xl text-body">Incluido en la prueba y en {COMPLETO.name}. Activa el programa desde tu perfil para ver sus metas y orientación.</p>
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_240px]">
+        <ul className="grid gap-4 sm:grid-cols-2">{PILLARS.map(([Icon, title, detail]) => <li key={title} className="card p-5"><Icon aria-hidden className="size-7 text-banana-ink" /><h3 className="mt-3 text-lg font-extrabold text-ink">{title}</h3><p className="mt-2 text-body text-pretty">{detail}</p></li>)}</ul>
+        <figure><Phone src="/landing/entreno-top.webp" alt="Pantalla real de Entreno con los ejercicios del día" sizes="220px" className="mx-auto w-[220px]" /><figcaption className="mt-3 text-center text-xs text-muted">Entreno en la app. Datos de ejemplo; no muestra el modo Banana Shield.</figcaption></figure>
+      </div>
+      <p className="mt-5 text-sm font-semibold text-ink">{MEDICAL}</p>
+    </section>
+
+    <section aria-labelledby="habitos-title" className="bg-ink text-white">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <h2 id="habitos-title" className="text-3xl font-extrabold tracking-tight">Dos hábitos para cuidar la fuerza</h2>
+        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div><h3 className="text-2xl font-extrabold text-banana tabular-nums">1.2 a 1.6 g de proteína por kg al día</h3><p className="mt-3 text-white/85">Referencia durante la pérdida de peso, repartida en comidas. El equipo médico debe individualizar la meta, especialmente si hay restricciones de proteína.</p></div>
+          <div><h3 className="text-2xl font-extrabold text-banana tabular-nums">Fuerza 3 veces por semana</h3><p className="mt-3 text-white/85">Una referencia para organizar la semana, ajustando la rutina al nivel, la recuperación y las indicaciones médicas.</p></div>
         </div>
-      </section>
+        <p className="mt-6 font-semibold">{MEDICAL}</p>
+        <p className="mt-3 text-xs text-white/75">Referencia: Mozaffarian D et al. Nutritional priorities to support GLP-1 therapy for obesity. Obesity, 2025. ACLM, ASN, OMA y The Obesity Society.</p>
+      </div>
+    </section>
 
-      {/* DATOS: alineados a la izquierda, con su fuente */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-16 lg:pt-20">
-        <dl className="grid gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x divide-line border-y border-line py-8">
-          {([["~1 de 4", `kg perdidos con ${GLP1} puede ser masa magra si no se protege.`, "¹"], ["1.2 a 1.6 g/kg", "de proteína al día recomiendan los expertos durante la pérdida de peso.", "²"], ["2 días", `de fuerza a la semana como mínimo recomienda la OMS para adultos. Con ${GLP1}, la proteína sola no basta.`, "³"]] as const).map(([v, l, ref], i) => (
-            <div key={i} className="sm:px-8 sm:first:pl-0 sm:last:pr-0">
-              <dt className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink tabular-nums">{v}</dt>
-              <dd className="mt-2 text-muted text-pretty">{l}<sup className="ml-0.5">{ref}</sup></dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+    <section id="planes" aria-labelledby="planes-title" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <h2 id="planes-title" className="text-3xl font-extrabold tracking-tight text-ink">Prueba primero. Elige después.</h2>
+      <p className="mt-3 text-body">Banana Shield está en {COMPLETO.name}. {o.pricingTrial}</p>
+      <p className="mt-4 mb-8 rounded-2xl bg-banana-soft p-4 font-bold text-ink">Anual: {ANNUAL_SEASON_NOTE.toLowerCase()} por cada año pagado.</p>
+      <Pricing recommended="completo" trialGuarantee={o.guarantee} trialLabel={CTA} />
+      <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="tap mt-3 flex min-h-11 items-center justify-center font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
+      <p className="mt-3 text-sm font-semibold text-ink">{MEDICAL}</p>
+    </section>
 
-      <section id="como" className="mx-auto max-w-6xl px-4 sm:px-6 pt-20 scroll-mt-20 grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
-        <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-ink text-balance">Tu medicamento hace su parte. Banana Shield hace la otra.</h2>
-        <ol className="space-y-3">
-          {PILLARS.map(([I, t, d]) => (
-            <li key={t} className="flex gap-5 rounded-3xl bg-white border border-line p-5 sm:p-6">
-              <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-banana-soft text-banana-ink"><I weight="duotone" className="size-6" /></span>
-              <div><h3 className="text-lg font-extrabold text-ink">{t}</h3><p className="mt-1 text-muted leading-relaxed text-pretty">{d}</p></div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-20">
-        <div className="rounded-[2rem] bg-banana p-8 sm:p-12 grid gap-8 lg:grid-cols-2 items-center">
-          <div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Un día con Banana Shield</h2>
-            <ul className="mt-6 space-y-3 text-[17px] text-ink">
-              {([
-                [Sun, <><b>Desayuno pequeño con 30 g de proteína</b> (huevos en taza, 3 minutos)</>],
-                [Barbell, <><b>Fuerza de 30 a 45 min</b>, o modo suave si es día de inyección</>],
-                [Egg, <><b>Proteína primero</b> en cada comida, en porciones que sí te entran</>],
-                [Drop, <><b>Agua y fibra</b> marcadas en tus anillos de Hoy</>],
-                [ShieldCheck, <><b>Tu escudo de músculo</b> se actualiza con tus medidas</>],
-              ] as const).map(([I, txt], i) => (
-                <li key={i} className="flex items-start gap-3"><I weight="duotone" className="size-6 shrink-0 mt-0.5" /><span className="text-pretty">{txt}</span></li>
-              ))}
-            </ul>
-          </div>
-          <figure className="rounded-3xl bg-white p-6">
-            <figcaption className="flex items-center gap-2 text-sm font-bold text-muted"><Monkey className="size-5 text-banana-ink" />Coach Banana</figcaption>
-            <blockquote className="mt-2 text-lg text-ink text-pretty">“Hoy es tu día de inyección. Entrena en modo suave (25 min) y prioriza 30 g de proteína en el almuerzo. Si no puedes retener líquidos, llama a tu médico.”</blockquote>
-          </figure>
-        </div>
-      </section>
-
-      <Faq id="preguntas" items={FAQ} aside={<FaqCta href={SIGNUP} cta="glp1-faq" />} />
-
-      <section data-sticky-hide className="mx-auto max-w-6xl px-4 sm:px-6 pt-20">
-        <div className="rounded-[2rem] bg-ink text-white px-6 py-14 sm:p-16 text-center">
-          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-balance">Que cada kilo que bajes valga la pena.</h2>
-          <Link href={SIGNUP} data-cta="glp1-final" className="mt-8 btn-banana shadow-none h-14 px-8 text-base">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
-          <p className="mt-4 text-sm text-white/75 text-pretty">{o.note} Después, incluido en {COMPLETO.name} por {from} al mes.</p>
-        </div>
-      </section>
-
-      <aside aria-label="Fuentes" className="mx-auto max-w-6xl px-4 sm:px-6 pt-12 text-xs text-muted space-y-1 [&>p]:max-w-[80ch]">
-        <p>¹ Noronha JC et al. <i>Optimizing GLP-1 therapies for obesity and diabetes management.</i> Obesity Pillars, 2025 (meta-análisis citado: ~25 % del peso perdido fue masa magra).</p>
-        <p>² Mozaffarian D et al. <i>Nutritional priorities to support GLP-1 therapy for obesity.</i> Obesity, 2025. ACLM, ASN, OMA y The Obesity Society.</p>
-        <p>³ Organización Mundial de la Salud. <i>Directrices de la OMS sobre actividad física y hábitos sedentarios.</i> Ginebra, 2020: actividades de fortalecimiento muscular 2 o más días a la semana.</p>
-        <p>Las capturas de la app muestran datos de ejemplo.</p>
-        <p>Banana Burn no vende ni receta medicamentos y no reemplaza la atención médica. Ozempic®, Wegovy®, Mounjaro®, Zepbound® y Saxenda® son marcas de sus respectivos dueños; Banana Burn no está afiliado a ellos.</p>
-      </aside>
-      <StickyCta note={o.card ? `Banana Shield gratis ${TRIAL_DAYS} días, sin tarjeta.` : `Banana Shield gratis ${TRIAL_DAYS} días con todo incluido.`}><Link href={SIGNUP} data-cta="glp1-sticky" className="btn-primary h-12 px-5 shrink-0">Empezar gratis <ArrowRight className="size-4" /></Link></StickyCta>
-    </>
-  );
+    <Faq id="preguntas" items={FAQ} />
+    <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-12 sm:px-6">
+      <div className="rounded-[2rem] bg-banana p-6 sm:p-12">
+        <h2 className="text-3xl font-extrabold tracking-tight text-ink">Empieza con tu próxima sesión de fuerza</h2>
+        <p className="mt-3 mb-5 text-body">Prueba la rutina, el registro de comidas y Banana Shield antes de elegir un plan.</p>
+        <Start location="final" />
+        <p className="mt-3 text-sm font-semibold text-ink">{MEDICAL}</p>
+      </div>
+    </section>
+    <StickyCta note="7 días gratis"><div className="flex flex-col items-center"><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div></StickyCta>
+  </>;
 }
