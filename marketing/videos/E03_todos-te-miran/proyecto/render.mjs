@@ -292,9 +292,10 @@ function cierre(ctx, e, t) {
     ctx.translate(W / 2, 1125); ctx.scale(s, s); ctx.translate(-W / 2, -1125);
     ctx.save();
     ctx.shadowColor = "rgba(27,21,5,0.35)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
-    rrect(ctx, 60, 1060, 960, 130, 999); ctx.fillStyle = C.ink; ctx.fill();
+    rrect(ctx, 80, 1020, 920, 230, 115); ctx.fillStyle = C.ink; ctx.fill();
     ctx.restore();
-    linea1(ctx, dice(e, "Empieza 7 días gratis en bananaburn.app"), W / 2, 1141, { peso: 600, px: 46, color: C.white, align: "center", max: 880 });
+    linea1(ctx, dice(e, "Empieza 7 días gratis"), W / 2, 1118, { px: 70, color: C.banana, align: "center", max: 820 });
+    linea1(ctx, dice(e, "en bananaburn.app"), W / 2, 1200, { peso: 600, px: 54, color: C.white, align: "center", max: 820 });
     ctx.restore();
   });
   entra(ctx, t, 0.9, () => {
@@ -302,9 +303,9 @@ function cierre(ctx, e, t) {
     ctx.font = font(800, 84);
     const wb = ctx.measureText("Banana").width, wt = wb + ctx.measureText("Burn").width;
     const x0 = (W - (icono + 28 + wt)) / 2;
-    ctx.drawImage(A.logo, x0, 1300, icono, icono);
-    linea1(ctx, marca.slice(0, 6), x0 + icono + 28, 1390, { px: 84, color: C.ink });
-    linea1(ctx, marca.slice(6), x0 + icono + 28 + wb, 1390, { px: 84, color: C.emberInk });
+    ctx.drawImage(A.logo, x0, 1320, icono, icono);
+    linea1(ctx, marca.slice(0, 6), x0 + icono + 28, 1410, { px: 84, color: C.ink });
+    linea1(ctx, marca.slice(6), x0 + icono + 28 + wb, 1410, { px: 84, color: C.emberInk });
   });
 }
 

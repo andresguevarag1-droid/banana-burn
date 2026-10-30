@@ -8,21 +8,26 @@ Capítulo 3 de la serie El Nuevo, en el formato de V02 (monos que hablan con glo
 | prompts-higgsfield.md | Seis prompts de imágenes fijas (T1 a T6), uno por toma, para copiar y pegar |
 | animacion.md | Plan de animación en código de cada toma |
 | storyboard.md y E03_todos-te-miran_storyboard.png | Storyboard: un cuadro por escena con zona segura y recorte de portada |
-| E03_todos-te-miran_animatic.mp4 | Animatic de 23 s con los cuadros de referencia: tiempos, cámaras y textos reales. No se publica |
-| E03_todos-te-miran_15s_animatic.mp4 | Lo mismo, versión de 15 s para anuncios |
 | proyecto/ | Editable: `escenas.mjs` (guion, tomas, cámaras y textos) y `render.mjs` (dibujo y render) |
 
-## Lo que falta para el video final
+## Estado de producción (30 oct 2026)
 
-1. **Las seis imágenes de Higgsfield** (T1 a T6) con los prompts de `prompts-higgsfield.md`, en `proyecto/tomas/T1.png` a `T6.png`. Desde aquí no se puede llegar a Higgsfield.
-2. **Referencias que no están en el repositorio:**
-   - El Reel **V02** "POV: tu primer día en el gym (versión monos)", o al menos un cuadro de El Nuevo de cuerpo entero y uno del gym. El kit de noviembre ya pedía las poses de El Nuevo en PNG con fondo transparente, y siguen faltando.
-   - La imagen oficial de **Coach Platanita** de cuerpo entero.
-   - El **gym de referencia**. Si no hay uno de V02, sirve la imagen del gym del condominio de la landing (`IMG.hero` en `src/app/condominios/page.tsx`).
-   - La **pose "señala"** de Coach Banana en PNG (`COACH_POSE.senala`), en `assets/coach-banana-senala.png`. El CDN de Higgsfield no se pudo abrir desde aquí. Mientras falte, el cierre usa `public/brand/mascota-sola.webp`, igual que R04.
-3. Los capítulos 1 y 2 tampoco están en el repositorio. Si E03 tiene que retomar algo de ellos (un chiste o una frase), hay que decirlo.
+Ya están las 6 tomas en `proyecto/tomas/T1.png` a `T6.png` y el render final:
 
-Con las imágenes en su lugar, `npm run render` saca `E03_todos-te-miran.mp4`, `E03_todos-te-miran_15s.mp4`, la portada (`E03_todos-te-miran_portada.png`) y el storyboard con las tomas reales. Antes hay que revisar las posiciones de las cabezas en `TOMAS` (`proyecto/escenas.mjs`) para que las colas de los globos apunten bien.
+| Archivo | Qué es |
+| --- | --- |
+| E03_todos-te-miran.mp4 | Reel de 23 s, 1080 x 1920, 30 fps, sin audio (el audio en tendencia se pone al publicar) |
+| E03_todos-te-miran_15s.mp4 | Versión de 15 s para anuncios |
+| E03_todos-te-miran_portada.png | Portada 1080 x 1920 con el gancho |
+| E03_todos-te-miran_storyboard.png | Storyboard con las tomas reales |
+
+Cambios sobre el borrador:
+- Las tomas siguen el estilo real de la serie (V02 y el Reel del condominio): **foto realista del gym del condominio con los monos como stickers de borde blanco**, no dibujo plano. Se generaron con GPT Image 2.5 en Higgsfield usando como referencia el gym del condominio, El Nuevo oficial, Coach Banana oficial y Coach Platanita oficial. T5 reutiliza la toma de sentadilla del Reel del condominio.
+- Posiciones de las cabezas en `TOMAS` y cámaras de `cara`, `spoiler` y `platanita` ajustadas a las imágenes reales.
+- Cierre: pose "señala" oficial en `assets/coach-banana-senala.png` y botón más grande en dos líneas ("Empieza 7 días gratis" en banana, "en bananaburn.app" en blanco).
+- Se quitaron los animatics: ya los reemplaza el render final.
+
+Pendiente de Andrés: aprobación de marca, audio en tendencia al publicar y la publicación. No se fusiona sin su aprobación.
 
 ## Cómo volver a hacer el render
 

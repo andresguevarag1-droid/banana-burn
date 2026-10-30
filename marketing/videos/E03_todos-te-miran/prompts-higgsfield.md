@@ -1,5 +1,7 @@
 # E03: prompts de Higgsfield (solo imágenes fijas)
 
+> Nota de producción (30 oct): las tomas finales se hicieron en el estilo real de la serie (foto del gym del condominio con los monos como stickers de borde blanco), no en dibujo plano. Los prompts de abajo quedan como guía de encuadre; los usados están en el README.
+
 Una imagen fija por toma, nunca video: la animación se hace en código (`proyecto/`). Cada bloque se copia y se pega tal cual.
 
 ## Antes de generar

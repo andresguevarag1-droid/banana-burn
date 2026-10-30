@@ -14,27 +14,27 @@ export const FPS = 30;
 export const TOMAS = {
   T1: {
     titulo: "El Nuevo en la puerta del gym",
-    personajes: { nuevo: [0.5, 0.5] },
+    personajes: { nuevo: [0.49, 0.41] },
   },
   T2: {
     titulo: "Pared de espejos: solo él, repetido",
-    personajes: { nuevo: [0.3, 0.52] },
+    personajes: { nuevo: [0.18, 0.36] },
   },
   T3: {
     titulo: "Coach Banana le pone la mano en el hombro",
-    personajes: { nuevo: [0.34, 0.54], coach: [0.66, 0.46] },
+    personajes: { nuevo: [0.33, 0.43], coach: [0.66, 0.31] },
   },
   T4: {
     titulo: "Gym abierto: Coach Platanita al fondo, en lo suyo",
-    personajes: { nuevo: [0.68, 0.6], coach: [0.86, 0.52], platanita: [0.27, 0.48] },
+    personajes: { nuevo: [0.53, 0.53], coach: [0.84, 0.39], platanita: [0.33, 0.27] },
   },
   T5: {
     titulo: "El Nuevo hace su primera serie",
-    personajes: { nuevo: [0.5, 0.5], coach: [0.8, 0.44] },
+    personajes: { nuevo: [0.39, 0.45], coach: [0.66, 0.26] },
   },
   T6: {
     titulo: "Choque de puños con Coach Banana",
-    personajes: { nuevo: [0.32, 0.52], coach: [0.68, 0.46] },
+    personajes: { nuevo: [0.27, 0.41], coach: [0.74, 0.38] },
   },
 };
 
@@ -51,7 +51,7 @@ const ESCENA = {
     textos: [{ tipo: "pov", texto: "POV: sientes que todos te miran" }],
   },
   cara: {
-    toma: "T1", camara: { de: [0.5, 0.5, 1.04], a: [0.5, 0.52, 1.7], golpe: true },
+    toma: "T1", camara: { de: [0.5, 0.5, 1.04], a: [0.49, 0.45, 1.6], golpe: true },
     textos: [{ tipo: "globo", quien: "nuevo", texto: "¿Me están mirando todos?" }],
   },
   espejos: {
@@ -59,7 +59,7 @@ const ESCENA = {
     textos: [{ tipo: "globo", quien: "nuevo", texto: "Y encima, espejos por todos lados" }],
   },
   spoiler: {
-    toma: "T2", camara: { de: [0.36, 0.52, 1.35], a: [0.64, 0.52, 1.35] },
+    toma: "T2", camara: { de: [0.36, 0.42, 1.35], a: [0.64, 0.42, 1.35] },
     textos: [{ tipo: "rotulo", texto: "Spoiler: el único que te mira eres tú" }],
   },
   coach: {
@@ -71,7 +71,7 @@ const ESCENA = {
     textos: [{ tipo: "globo", quien: "coach", texto: "Cada quien viene a lo suyo." }],
   },
   platanita: {
-    toma: "T4", camara: { de: [0.52, 0.5, 1.05], a: [0.3, 0.5, 1.7], golpe: true },
+    toma: "T4", camara: { de: [0.52, 0.5, 1.05], a: [0.34, 0.33, 1.6], golpe: true },
     textos: [{ tipo: "rotulo", texto: "Ella está en su serie, no en ti" }],
   },
   telefono: {
