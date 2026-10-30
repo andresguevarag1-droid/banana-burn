@@ -118,7 +118,7 @@ function Processing({ refresh }: { refresh: boolean }) {
   return (
     <section id="tarjeta" aria-live="polite" className="scroll-mt-24 rounded-[1.5rem] border-2 border-line bg-white p-5 sm:p-6">
       <p className="flex items-center gap-2 text-lg font-extrabold text-ink"><CircleNotch weight="bold" className="size-6 animate-spin text-banana-ink motion-reduce:animate-none" />Estamos confirmando el cobro de tu plan</p>
-      <p className="mt-1 text-sm text-muted text-pretty">Tu banco lo está procesando. Suele tardar unos segundos y esta página se actualiza sola. Espera la confirmación antes de intentar pagar de nuevo.</p>
+      <p className="mt-1 text-sm text-muted text-pretty">Tu banco lo está procesando. Suele tardar unos segundos y esta página se actualiza sola. No intentes pagar de nuevo mientras lo confirmamos.</p>
     </section>
   );
 }
