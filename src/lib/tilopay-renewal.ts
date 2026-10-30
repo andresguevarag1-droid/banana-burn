@@ -41,3 +41,9 @@ export function renewalNext(attempt: number, outcome: "approved" | "declined" | 
   if (attempt >= RENEWAL_MAX_ATTEMPTS) return { do: "cancel" };
   return { do: "retry", status: "past_due", nextAt: new Date(now.getTime() + 864e5).toISOString() };
 }
+
+/**
+ * Llave única del cobro (0062) después de un intento: se libera solo si se sabe que no se cobró (rechazo o sin tarjeta, que
+ * llevan a reintento o cancelación). Aprobado o sin respuesta: queda reservada (cobrado o por confirmar: nunca otro cobro).
+ */
+export const releaseKeyAfter = (step: RenewalStep) => step.do === "retry" || step.do === "cancel";

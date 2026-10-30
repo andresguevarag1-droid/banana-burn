@@ -61,6 +61,7 @@ export async function GET() {
     out.admin_events = "Cuando te registras o haces un pago, el equipo recibe un aviso interno con tu nombre de pila, tu país y el monto. Los datos de ese aviso son los mismos de tu perfil y tus pagos, que ya van en este archivo.";
     out.email_login_uses = "Cuando entras con el botón de un correo, anotamos que ese enlace ya se usó (un código al azar y la fecha) para que no sirva dos veces.";
     out.funnel_events = "Para saber dónde se traba la app guardamos eventos de uso: cuándo abres un entreno, haces tu primera serie, ves el resumen, lo guardas o sales. No guardamos nada que escribas.";
+    out.charge_keys = "Antes de cada cobro guardamos una llave interna (tu cuenta, el periodo y el procesador) para no cobrarte dos veces el mismo periodo. Tus cobros van completos en suscripciones y pagos.";
     out.coach_quota_tickets = "Por cada pregunta a Coach Banana guardamos un comprobante interno (fecha, sin el texto) por 2 días, para devolverte la pregunta si la respuesta falla. Tus conteos están en coach_usage.";
     const photos = (out.progress_photos as { path?: string }[] | undefined) ?? [];
     const paths = Array.isArray(photos) ? photos.map((p) => p.path).filter((p): p is string => typeof p === "string") : [];
