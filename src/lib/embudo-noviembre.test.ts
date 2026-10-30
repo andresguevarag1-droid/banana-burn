@@ -1,6 +1,7 @@
 // El embudo de registro a pago (marketing/estrategia/embudo-noviembre.md) fija metas y techos con precios de plans.ts y
 // trial.ts, y afirma qué eventos de Meta salen de verdad: estas pruebas vigilan que las cifras cuadren con el código.
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { toMetaEvent } from "@/lib/meta-pixel";
 import { BETA_GRACE_UNTIL, PLANS } from "@/lib/plans";
@@ -150,6 +151,16 @@ describe("eventos que se disparan de verdad", () => {
     const e = toMetaEvent("purchase_success", { plan: "Entreno", billing: "mes" });
     expect(e?.name).toBe("Subscribe");
     expect(e?.params.value).toBe(9.99);
+  });
+
+  it("el cobro automático no manda evento: purchase_success solo sale de /pago/exito", () => {
+    const files = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? files(join(dir, d.name)) : /\.tsx?$/.test(d.name) ? [join(dir, d.name)] : []));
+    const emitters = files("src").filter((f) => !f.endsWith(".test.ts") && !f.includes(`${join("api", "track")}`) && !f.endsWith(join("lib", "meta-pixel.ts")))
+      .filter((f) => /["']purchase_success["']/.test(readFileSync(f, "utf8")));
+    expect(emitters).toEqual([join("src", "app", "pago", "exito", "page.tsx")]);
+    const billing = readFileSync("src/lib/trial-billing.ts", "utf8");
+    expect(billing).not.toMatch(/purchase_success|Subscribe|meta-capi|sendCapi/);
   });
 });
 
