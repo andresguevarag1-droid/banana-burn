@@ -31,7 +31,8 @@ export const CONFIG = {
       "id": "t5",
       "texto": "Revisa tu proteína del día",
       "visual": "Acercamiento al dato original, sin modificarlo.",
-      "tipo": "texto"
+      "tipo": "telefono",
+      "etiqueta": "Ejemplo"
     },
     {
       "id": "t6",

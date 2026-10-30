@@ -31,7 +31,8 @@ export const CONFIG = {
       "id": "t5",
       "texto": "Revisa tu registro con perspectiva",
       "visual": "Acercamiento al registro original sin alterar datos.",
-      "tipo": "texto"
+      "tipo": "telefono",
+      "etiqueta": "Ejemplo"
     },
     {
       "id": "t6",

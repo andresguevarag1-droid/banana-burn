@@ -31,4 +31,6 @@ Andrés debe aprobar por escrito el material final y cualquier publicación, env
 
 ## Revisión técnica sin producir medios
 
+CI ejecuta `src/lib/reels-r05-r08.test.ts` con Vitest: comprueba las nueve escenas, tiempos de ambas versiones, palabras con etiquetas, advertencia médica y concordancia de texto y etiqueta “Ejemplo” entre guion y proyecto. No genera medios ni consume créditos.
+
 Desde la raíz, ejecutar los cuatro comandos `node marketing/videos/<carpeta>/proyecto/render.mjs check`. Validan ambas duraciones, cada intervalo, palabras añadidas, advertencia médica de R06/R08 y existencia de captura. No reemplazan la revisión visual del futuro render. Cada carpeta explica cómo producir después los MP4, portada y hoja. El motor actual dibuja motion graphics y capturas; no compone automáticamente clips UGC. Para usar los videos base, Andrés monta los cortes en su editor siguiendo la tabla de cada guion.
