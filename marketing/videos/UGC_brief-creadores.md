@@ -23,7 +23,7 @@
 | 15.5 a 17.5 | Otro ejercicio, plano lateral | Sin pensar qué sigue |
 | 17.5 a 19.5 | Descanso: celular en la banca, junto a la mancuerna | Descanso y otra vez |
 | 19.5 a 22.0 | Pantalla del resumen "Lo lograste"; tocas Guardar entreno | Primer entreno: hecho |
-| 22.0 a 25.0 | Cierre adjunto (Coach Banana señalando y el botón) | Empieza 7 días gratis en bananaburn.app |
+| 22.0 a 25.0 | Cierre: pantalla Hoy de la app, fija | Empieza 7 días gratis en bananaburn.app |
 
 Una toma nueva cada 1.5 a 2.5 s y máximo 8 palabras por pantalla. Voz opcional: si hablas, di lo mismo que el texto.
 
@@ -44,7 +44,7 @@ Graba la pantalla de tu celular en tu entreno real: **Hoy** (entreno del día), 
 
 ## 5. Cierre y publicación
 
-- Los últimos 3 s son el clip de cierre adjunto (Coach Banana señalando y el botón "Empieza 7 días gratis en bananaburn.app"). Pégalo tal cual.
+- Los últimos 3 s los haces tú: una toma fija de la pantalla Hoy de la app con el texto "Empieza 7 días gratis en bananaburn.app" en amarillo #FFD60A sobre fondo #1B1505, letra Plus Jakarta Sans.
 - En pantalla solo va bananaburn.app; tu enlace de referidos va en tu bio y en la descripción.
 - Marca la publicación como colaboración pagada: ganas comisión cuando alguien paga con tu enlace.
 - Graba solo a ti. Si sale otra persona, pídele permiso antes.
@@ -57,6 +57,6 @@ Graba la pantalla de tu celular en tu entreno real: **Hoy** (entreno del día), 
 - [ ] Textos fuera de los 250 px de arriba y los 350 px de abajo.
 - [ ] Capturas reales de su app, sin números cambiados ni datos personales.
 - [ ] Ninguna frase prohibida, ni en voz ni en texto ni en la descripción.
-- [ ] Cierre de 3 s exacto: Coach Banana, botón y bananaburn.app.
+- [ ] Cierre de 3 s exacto: pantalla Hoy y "Empieza 7 días gratis en bananaburn.app" en #FFD60A sobre #1B1505, Plus Jakarta Sans.
 - [ ] Solo sale el creador o hay permiso de quien aparece.
 - [ ] Descripción con colaboración pagada, su enlace, #BananaBurn #GymEnCasa #Condominio #PrimerEntreno #EntrenadorPersonal.
