@@ -48,15 +48,15 @@ Coach Banana
 
 Referencias para revisión, sin agregar botones al correo: Progreso `/app/progreso`, Comida `/app/nutricion`, Banana Run en Correr `/app/correr`, Temporadas `/app/temporadas`. No se presenta el plan guiado de Running como parte de cualquier suscripción ni se promete que los retos Premium estén incluidos.
 
-## Día 6: decide hoy cómo seguir
+## Día 6: elige cómo seguir
 
-**Asunto:** Elige hoy cómo quieres seguir
+**Asunto:** Elige cómo quieres seguir
 
 **Vista previa:** Compara el ahorro anual y las opciones mensuales en Mi plan.
 
 **Cuerpo:**
 
-Decide hoy qué opción se adapta a ti.
+Revisa qué opción se adapta a ti.
 
 Anual: Entreno cuesta $59.99 al año; ahorras $59.89 frente a 12 mensualidades. Entreno + Nutrición cuesta $89.99 al año; ahorras $89.89. Cada año pagado incluye una temporada deportiva gratis.
 
@@ -90,7 +90,7 @@ Maquetación futura: paper #FFF8E3, banana #FFD60A, ink #1B1505 y Plus Jakarta S
 
 ## Variante A/B propuesta
 
-Para el día 6, A usa el asunto principal «Elige hoy cómo quieres seguir»; B usa «Tu año de entreno, con ahorro». Apostaría primero por A: invita a revisar una decisión sin asumir que el anual es adecuado para todas las personas. Mantener vista previa, cuerpo y botón idénticos. Si Andrés aprueba probarlas, asignar una variante por usuario y elegir por conversión a pago en cohortes maduras, con clics como señal secundaria; no declarar una ganadora por unas pocas aperturas.
+Para el día 6, A usa el asunto principal «Elige cómo quieres seguir»; B usa «Tu año de entreno, con ahorro». Apostaría primero por A: invita a revisar una decisión sin asumir que el anual es adecuado para todas las personas. Mantener vista previa, cuerpo y botón idénticos. Si Andrés aprueba probarlas, asignar una variante por usuario y elegir por conversión a pago en cohortes maduras, con clics como señal secundaria; no declarar una ganadora por unas pocas aperturas.
 
 ## Medición y rentabilidad
 

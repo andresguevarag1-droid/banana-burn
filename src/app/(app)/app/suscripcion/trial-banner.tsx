@@ -7,7 +7,7 @@ const TONE = {
   start: { box: "border-peel/25 bg-peel/5", icon: "text-peel" },
   calm: { box: "border-line bg-white", icon: "text-banana-ink" },
   warn: { box: "border-banana/60 bg-banana-soft", icon: "text-banana-ink" },
-  last: { box: "border-ember/30 bg-ember/5", icon: "text-ember-ink" },
+  last: { box: "border-banana/60 bg-banana-soft", icon: "text-banana-ink" },
 } as const;
 
 /**
