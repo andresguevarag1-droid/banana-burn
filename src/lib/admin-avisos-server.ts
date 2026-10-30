@@ -12,7 +12,7 @@ import { alertText, channelsFor, firstName, normalizePrefs, summarize, summaryTe
 type Admin = { id: string; prefs: Prefs };
 
 /** Deja un hecho en la bandeja (idempotente por clave). Para el servidor; las tablas usan sus disparadores. */
-export async function enqueueAdminEvent(db: SupabaseClient | null, e: { key: string; kind: AlertKind; userId: string | null; amountMinor?: number | null; currency?: string | null; data?: Record<string, unknown> }): Promise<void> {
+export async function enqueueAdminEvent(db: SupabaseClient | null, e: { key: string; kind: AlertKind | "sistema"; userId: string | null; amountMinor?: number | null; currency?: string | null; data?: Record<string, unknown> }): Promise<void> {
   const sb = db ?? adminClient();
   if (!sb) return;
   try {

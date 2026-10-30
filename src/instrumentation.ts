@@ -1,11 +1,15 @@
 // Ganchos de Next al iniciar el servidor y ante errores no atrapados (route handlers, server actions, páginas).
-// Sin terceros: una línea JSON en el log de Vercel y, si hay service_role, una fila en app_errors (0041).
-// Nunca el mensaje del error ni datos de la petición (headers, cookies, cuerpo): solo código, ruta y digest.
+// Una línea JSON en el log de Vercel y, si hay service_role, una fila en app_errors (0041): nunca el mensaje del error
+// ni datos de la petición (headers, cookies, cuerpo), solo código, ruta y digest. Y, si hay SENTRY_DSN, el evento en
+// Sentry con su stack, ya limpio de datos personales (lib/monitor/sentry.ts).
 // Este archivo también se compila para el runtime edge (middleware): lo de Node se importa SOLO dentro de
 // `if (process.env.NEXT_RUNTIME === "nodejs")`, que Next reemplaza al compilar y elimina del bundle edge.
+import * as Sentry from "@sentry/nextjs";
 import type { Instrumentation } from "next";
+import { sentryOptions } from "./lib/monitor/sentry";
 
 export async function register() {
+  Sentry.init(sentryOptions(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN, process.env.VERCEL_ENV));
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { installServerMonitor } = await import("./lib/monitor/node");
     installServerMonitor();
@@ -23,6 +27,7 @@ export async function register() {
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (err, request, context) => {
+  Sentry.captureRequestError(err, request, context);
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { reportRequestError } = await import("./lib/monitor/node");
     reportRequestError(err, request, context);

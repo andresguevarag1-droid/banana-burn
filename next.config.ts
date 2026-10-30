@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { publicEnvProblems } from "./src/lib/security/public-env";
 import { cleanUrl } from "./src/lib/env";
 
@@ -27,6 +28,9 @@ const ONVO = "https://*.onvopay.com";
 const META_JS = "https://connect.facebook.net";
 const META_TR = "https://www.facebook.com";
 
+// Sentry (errores con stack): el navegador manda los eventos al host de ingesta del DSN. Sin DSN no se agrega nada.
+const SENTRY = origin(process.env.NEXT_PUBLIC_SENTRY_DSN);
+
 // Mapas de las carreras con GPS (/app/correr): teselas de OpenStreetMap.
 const OSM_TILES = "https://tile.openstreetmap.org";
 
@@ -39,7 +43,7 @@ const CSP = [
   `img-src ${src("'self'", "data:", "blob:", supabase, media, ONVO, META_TR, OSM_TILES, isPreview && "https://vercel.live https://vercel.com")}`,
   `media-src ${src("'self'", "blob:", media)}`,
   `font-src ${src("'self'", "data:", isPreview && "https://vercel.live")}`,
-  `connect-src ${src("'self'", supabase, supabaseWs, ONVO, META_TR, META_JS, isDev && "ws:", isPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
+  `connect-src ${src("'self'", supabase, supabaseWs, ONVO, META_TR, META_JS, SENTRY, isDev && "ws:", isPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
   `frame-src ${src(ONVO, isPreview && "https://vercel.live")}`,
   `worker-src 'self' blob:`,
   `manifest-src 'self'`,
@@ -72,7 +76,8 @@ const BUILD_ENV = {
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Producción: JavaScript minificado y SIN mapas de fuente públicos (es el valor por defecto; explícito para que nadie
-  // lo active sin querer). scripts/check-client-bundle.mjs lo verifica en CI.
+  // lo active sin querer). Con Sentry, los mapas se generan ocultos (sin comentario sourceMappingURL), se suben y se
+  // borran antes de publicar (ver withSentryConfig abajo). scripts/check-client-bundle.mjs lo verifica en CI.
   productionBrowserSourceMaps: false,
   env: BUILD_ENV,
   // La imagen para compartir (/og) lee fuentes y marca del disco en el servidor.
@@ -95,4 +100,17 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry: mapas de fuente al proveedor durante el build y nunca al público. Solo se generan si hay SENTRY_AUTH_TOKEN
+// (sin token no hay a dónde subirlos) y se borran de .next apenas se suben. DSN, org, proyecto y token son variables
+// de entorno de Vercel: ninguna va en el código.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  telemetry: false,
+  widenClientFileUpload: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN?.trim(), deleteSourcemapsAfterUpload: true },
+  // Solo errores: sin trazas ni Session Replay en el bundle del navegador.
+  bundleSizeOptimizations: { excludeDebugStatements: true, excludeTracing: true, excludeReplayIframe: true, excludeReplayShadowDom: true, excludeReplayWorker: true },
+});

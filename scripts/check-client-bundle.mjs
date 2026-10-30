@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// Revisión del JavaScript que llega al navegador (.next/static) después de `next build`. Falla (código 1) si:
-//   1. hay mapas de fuente (.map) o comentarios sourceMappingURL: dejarían leer el código original;
+// Revisión del JavaScript que llega al navegador (.next/static y public/) después de `next build`. Falla (código 1) si:
+//   1. hay mapas de fuente (.js.map, .css.map…) en lo que se publica o comentarios sourceMappingURL: dejarían leer el
+//      código original. Con Sentry los mapas se suben en el build y se borran antes de publicar: aquí se comprueba;
 //   2. aparece el VALOR de una variable secreta del entorno actual (en CI se construye con valores "canario");
 //   3. aparece el NOMBRE de una variable solo de servidor: señal de que un módulo de servidor terminó en el cliente;
 //   4. aparece el prefijo de una llave secreta real (ONVO, Anthropic, Supabase, Resend);
 //   5. un archivo .js grande no está minificado.
-// Uso: node scripts/check-client-bundle.mjs [carpeta .next]   (por defecto ./.next)
+// Uso: node scripts/check-client-bundle.mjs [carpeta .next] [carpeta public]   (por defecto ./.next y ./public)
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -69,7 +70,10 @@ function main() {
   if (!existsSync(staticDir)) { console.error(`No existe ${staticDir}: corre "next build" primero.`); process.exit(2); }
   const paths = walk(staticDir);
   const files = paths.map((p) => ({ path: relative(root, p), text: /\.(js|mjs|css|html|json|txt)$/.test(p) ? readFileSync(p, "utf8") : "" }));
-  const problems = scan(files, process.env);
+  // public/ se sirve tal cual: ahí solo se buscan mapas de fuente (sus .js son de terceros o del service worker).
+  const publicDir = process.argv[3] || "public";
+  const publicMaps = existsSync(publicDir) ? walk(publicDir).filter((p) => p.endsWith(".map")).map((p) => ({ path: p, text: "" })) : [];
+  const problems = scan([...files, ...publicMaps], process.env);
   const js = files.filter((f) => f.path.endsWith(".js"));
   const bytes = js.reduce((a, f) => a + Buffer.byteLength(f.text), 0);
   if (problems.length) {
@@ -77,7 +81,7 @@ function main() {
     for (const p of problems.slice(0, 50)) console.error(`- ${p}`);
     process.exit(1);
   }
-  console.log(`Bundle del cliente OK: ${js.length} archivos JS (${Math.round(bytes / 1024)} KB), sin mapas de fuente ni secretos.`);
+  console.log(`Bundle del cliente OK: ${js.length} archivos JS (${Math.round(bytes / 1024)} KB), sin mapas de fuente (.js.map) ni secretos.`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main();

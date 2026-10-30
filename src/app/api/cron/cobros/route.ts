@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { plannedOf, runCobros } from "@/lib/cobros-cron";
 import { summarize } from "@/lib/cobros-simulacro";
 import { bearerOk } from "@/lib/security";
-import { beat } from "@/lib/monitor/server";
+import { beat, checkErrorRate } from "@/lib/monitor/server";
+import { cronFailed } from "@/lib/monitor/alerts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export const maxDuration = 60;
  *
  * Simulacro: ?dryRun=1 (con el mismo CRON_SECRET) calcula a quién se cobraría, cuánto y con qué procesador, sin llamar a
  * ONVO ni a Tilopay y sin escribir nada (ni el latido del monitor). &at=<ISO> simula otra fecha (solo con dryRun).
+ * Si la corrida real falla, deja un aviso de sistema en Admin > Avisos (y en Sentry); también revisa la tasa de errores.
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });
@@ -34,5 +36,7 @@ export async function GET(req: Request) {
   const { cobros, primerMes, renovaciones } = await runCobros(new Date(), { t0 });
   const ok = cobros !== null;
   await beat("cron:cobros", ok, Date.now() - t0, { intentados: cobros?.attempted ?? 0, enviados: cobros?.sent ?? 0, errores: cobros?.errors ?? 0 }).catch(() => {});
+  if (!ok) await cronFailed("cobros", { renovaciones: renovaciones !== null, primerMes: primerMes !== null });
+  await checkErrorRate().catch(() => {});
   return NextResponse.json({ ok, cobros, primerMes, renovaciones }, { status: ok ? 200 : 500 });
 }

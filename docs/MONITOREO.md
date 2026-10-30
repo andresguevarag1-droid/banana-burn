@@ -1,6 +1,7 @@
 # Monitoreo de Banana Burn
 
-Funciona sin cuentas de terceros. Todo lo que guarda está libre de datos personales.
+Lo básico funciona sin cuentas de terceros; Sentry y Vercel Web Analytics se suman con variables de entorno. Todo lo
+que se guarda o se manda está libre de datos personales.
 
 ## Qué hay
 
@@ -13,7 +14,10 @@ Funciona sin cuentas de terceros. Todo lo que guarda está libre de datos person
 | Última corrida del cron | `ops_heartbeats` | El cron registra si terminó bien y cuánto tardó. |
 | Panel | `/admin/salud` (admin y superadmin) | Versión y hora del build, base de datos, errores 24 h / 7 d por ruta, detalle, cron, webhooks de ONVO con error e integraciones configuradas. |
 | Aviso diario | cron → `runMonitorMaintenance` | Si en 24 h hay ≥ `OPS_ALERT_THRESHOLD` errores (50 por defecto), manda un correo a `OPS_ALERT_EMAIL` (o `FEEDBACK_EMAIL`, o hola@bananaburn.app). Máximo uno por día. Requiere Resend. |
-| Salud pública | `GET /api/salud` | 200/503 para monitores externos. |
+| Salud | `GET /api/salud` | Base de datos, Resend, ONVO y Tilopay. 503 si la base o una integración configurada no responde o rechaza la llave (las que no están configuradas no cuentan). Público: solo `{ ok }`, guardado 60 s. Staff o `Bearer CRON_SECRET`: estado de cada una (`up`/`down`/`off`), tiempo y un código corto. |
+| Sentry | `src/instrumentation*.ts`, `src/lib/monitor/sentry*.ts` | Errores con stack legible del navegador, el servidor, el edge y los crons. Mapas de fuente subidos en el build y borrados antes de publicar. En el navegador el SDK se descarga después de cargar la página (+4 kB al inicio, no +34). Botón de prueba en `/admin/salud`. |
+| Avisos de sistema | `src/lib/monitor/alerts.ts`, 0063 | Admin > Avisos (push, campanita y correo si está encendido): un cron de cobros, avisos o recordatorios que falla o se corta, y errores en 24 h por encima de `OPS_ALERT_THRESHOLD` (lo revisan los tres crons). Uno por motivo y día. Llegan siempre, aunque se apaguen los otros tipos. |
+| Vercel Web Analytics | `src/components/web-analytics.tsx` | Visitas por página, sin query ni ids en la URL. Solo en builds de Vercel. |
 
 El `digest` que ve la persona en la pantalla de error ("Código de referencia") es el mismo del log de Vercel y de
 `app_errors`: búscalo en Vercel → Logs para ver el detalle del servidor.
@@ -26,14 +30,13 @@ cifras, ids, JWT y tokens largos, en el navegador, en el servidor y otra vez en 
 
 ## Opcionales (acción del dueño, no instalados)
 
-- **Vercel Web Analytics y Speed Insights**: Vercel → proyecto → **Analytics** → Enable, y **Speed Insights** → Enable.
-  Para que midan hay que agregar los paquetes `@vercel/analytics` y `@vercel/speed-insights` y sus componentes en el
-  layout raíz (un PR chico). Sirven su script desde el mismo dominio (`/_vercel/...`), así que la CSP actual alcanza.
-  No se agregaron ahora para no cambiar dependencias justo antes del lanzamiento.
-- **Sentry** (stack traces y alertas avanzadas): no se instaló (no se puede dejar como no-op sin sumar el SDK y el
-  envoltorio del build). Si se quiere: `npx @sentry/wizard@latest -i nextjs`, `SENTRY_DSN` y `SENTRY_AUTH_TOKEN` en
-  Vercel, `beforeSend` que quite `request`, `user` y `extra`, `sendDefaultPii: false`, y agregar `*.ingest.sentry.io`
-  al `connect-src` de la CSP. Lo de hoy (digest + `app_errors` + logs) alcanza para el lanzamiento.
+- **Vercel Web Analytics**: el código ya está; falta Vercel → proyecto → **Analytics** → Enable. Sin eso el script
+  responde 404 y no mide nada (no rompe la página). Speed Insights no está instalado.
+- **Sentry**: variables `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` y `SENTRY_AUTH_TOKEN` en Vercel
+  (ver `.env.example`). La CSP agrega sola el host de ingesta del DSN. En Sentry → Project Settings → Security &
+  Privacy deja encendidos "Data Scrubber" y "Use Default Scrubbers", y activa "Prevent Storing of IP Addresses".
+  Si un build falla por memoria al generar los mapas, quita `SENTRY_AUTH_TOKEN` (el build vuelve a ser el de antes)
+  o sube la memoria del build.
 - **Monitor externo de disponibilidad**: UptimeRobot o Better Stack (gratis) a `https://www.bananaburn.app/api/salud`
   cada 5 min, con aviso por correo o WhatsApp.
 - **Log Drain** (Vercel Pro): Vercel → Settings → Log Drains, para guardar los logs más tiempo (Vercel los guarda por poco tiempo; por eso los errores también quedan en `app_errors`).

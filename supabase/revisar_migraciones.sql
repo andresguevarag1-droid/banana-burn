@@ -52,6 +52,7 @@ from (values
   (47,'0058_salud.sql',               exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'daily_logs' and column_name = 'active_kcal') and exists (select 1 from pg_constraint where conname = 'daily_logs_active_kcal_range')),
   (48,'0059_avisos_admin.sql',        to_regclass('public.admin_events') is not null and to_regclass('public.admin_notify_prefs') is not null and to_regprocedure('public.admin_event_enqueue(text,text,uuid,bigint,text,jsonb)') is not null and (select count(*) from pg_trigger where tgname ~ '^admin_ev_(profiles|trial|purchase|subs|lead)$' and not tgisinternal) = 6),
   (49,'0060_enlace_correo.sql',       to_regclass('public.email_login_uses') is not null and (select relrowsecurity from pg_class where oid = 'public.email_login_uses'::regclass) and not has_table_privilege('authenticated', 'public.email_login_uses', 'select')),
-  (50,'0061_eventos_embudo.sql',      to_regclass('public.funnel_events') is not null and (select relrowsecurity from pg_class where oid = 'public.funnel_events'::regclass) and not has_table_privilege('authenticated', 'public.funnel_events', 'select'))
+  (50,'0061_eventos_embudo.sql',      to_regclass('public.funnel_events') is not null and (select relrowsecurity from pg_class where oid = 'public.funnel_events'::regclass) and not has_table_privilege('authenticated', 'public.funnel_events', 'select')),
+  (51,'0063_avisos_sistema.sql',      exists (select 1 from pg_constraint where conname = 'admin_events_kind_check' and pg_get_constraintdef(oid) like '%sistema%'))
 ) as m(orden, archivo, aplicada)
 order by m.orden;

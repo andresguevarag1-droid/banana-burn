@@ -6,8 +6,14 @@ import { parseSeasonSlug, SPORTS } from "@/lib/seasons";
 
 export const ALERT_KINDS = ["registro", "pago", "tarjeta", "cobro_fallido", "cancelacion", "temporada", "reto", "condominio", "referidor"] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
-/** "prueba" es el botón de Probar notificación: siempre sale, sin importar los tipos elegidos. */
-export type EventKind = AlertKind | "prueba";
+/**
+ * "prueba" es el botón de Probar notificación y "sistema" un cron que falló o errores por encima del umbral (0063):
+ * los dos salen siempre, sin importar los tipos elegidos.
+ */
+export type EventKind = AlertKind | "prueba" | "sistema";
+
+/** Crons que avisan si fallan (vercel.json). */
+export const CRON_LABEL: Record<string, string> = { cobros: "cobros", avisos: "avisos al dueño", recordatorios: "recordatorios" };
 
 export const KIND_LABEL: Record<AlertKind, string> = {
   registro: "Usuarios nuevos",
@@ -62,7 +68,8 @@ export function normalizePrefs(row: Partial<Prefs> | null | undefined): Prefs {
 
 /** Por dónde sale este aviso para este superadmin. El correo inmediato solo si lo eligió (cuida el límite diario). */
 export function channelsFor(kind: EventKind, p: Prefs): { push: boolean; inApp: boolean; email: boolean } {
-  if (kind === "prueba") return { push: p.push, inApp: p.in_app, email: p.email };
+  // Sistema: también por correo aunque el modo sea "resumen" (un cobro que no corrió no espera al resumen).
+  if (kind === "prueba" || kind === "sistema") return { push: p.push, inApp: p.in_app, email: p.email };
   const on = p.kinds.includes(kind);
   return { push: on && p.push, inApp: on && p.in_app, email: on && p.email && p.email_mode === "instante" };
 }
@@ -135,6 +142,19 @@ export function alertText(e: AdminEvent, person: Person | null): AlertText {
       return { title: "Condominio interesado", body: join(str(d.org) ?? "Sin nombre", str(d.units) ? `${str(d.units)} unidades` : null, str(d.location)), url };
     case "referidor":
       return { title: "Llegó alguien por un referidor", body: who(person), url };
+    case "sistema": {
+      if (d.motivo === "errores") {
+        const total = Number(d.total), umbral = Number(d.umbral);
+        return { title: `Errores en la app: ${Number.isFinite(total) ? total.toLocaleString("es-419") : "muchos"} en 24 h`, body: join(Number.isFinite(umbral) ? `el aviso sale desde ${umbral.toLocaleString("es-419")}` : null, "revisa Salud y Sentry"), url: "/admin/salud" };
+      }
+      const cron = str(d.cron);
+      const errores = Number(d.errores);
+      return {
+        title: `Falló el cron de ${(cron && CRON_LABEL[cron]) || cron || "la app"}`,
+        body: join(d.excepcion === true ? "se cortó con un error" : null, Number.isFinite(errores) && errores > 0 ? `${errores} ${errores === 1 ? "error" : "errores"}` : null, "revisa Salud y Sentry"),
+        url: "/admin/salud",
+      };
+    }
     case "prueba":
     default:
       return { title: "Prueba de avisos", body: "Así te llegan los avisos de Banana Burn.", url: "/admin/notificaciones" };

@@ -14,8 +14,8 @@ export const dynamic = "force-dynamic";
 
 type Row = AdminEvent & { dispatched_at: string | null; push_sent: number; email_sent: boolean };
 
-const TONE: Record<string, "good" | "warn" | "info" | "muted"> = { pago: "good", temporada: "good", reto: "good", tarjeta: "info", registro: "info", referidor: "info", condominio: "info", cobro_fallido: "warn", cancelacion: "warn", prueba: "muted" };
-const KIND_SHORT: Record<string, string> = { registro: "Registro", pago: "Pago", tarjeta: "Tarjeta", cobro_fallido: "Rechazo", cancelacion: "Cancelación", temporada: "Temporada", reto: "Reto", condominio: "Condominio", referidor: "Referidor", prueba: "Prueba" };
+const TONE: Record<string, "good" | "warn" | "info" | "muted"> = { pago: "good", temporada: "good", reto: "good", tarjeta: "info", registro: "info", referidor: "info", condominio: "info", cobro_fallido: "warn", cancelacion: "warn", sistema: "warn", prueba: "muted" };
+const KIND_SHORT: Record<string, string> = { registro: "Registro", pago: "Pago", tarjeta: "Tarjeta", cobro_fallido: "Rechazo", cancelacion: "Cancelación", temporada: "Temporada", reto: "Reto", condominio: "Condominio", referidor: "Referidor", sistema: "Sistema", prueba: "Prueba" };
 
 const DEMO_ROWS: Row[] = [
   { id: 3, event_key: "pago:onvo:demo", kind: "pago", user_id: null, amount_minor: 749, currency: "USD", data: { plan: "completo", billing: "mes", provider: "onvo" }, created_at: new Date(Date.now() - 20 * 60_000).toISOString(), dispatched_at: new Date().toISOString(), push_sent: 1, email_sent: false },
@@ -73,6 +73,7 @@ export default async function Avisos() {
                 <label key={k} className={option}><input type="checkbox" name="kinds" value={k} defaultChecked={prefs.kinds.includes(k)} className={check} />{KIND_LABEL[k]}</label>
               ))}
             </div>
+            <p className="mt-1 px-2 text-xs text-muted">Los avisos de sistema (un cron que falla o demasiados errores en la app) llegan siempre.</p>
           </fieldset>
           <fieldset>
             <legend className="mb-1 text-xs font-bold text-ink">Por dónde</legend>

@@ -56,6 +56,20 @@ describe("canales", () => {
   it("la prueba sale siempre por los canales encendidos", () => {
     expect(channelsFor("prueba", normalizePrefs({ kinds: [] })).push).toBe(true);
   });
+  it("los avisos de sistema salen siempre, y por correo aunque el modo sea resumen", () => {
+    const p = normalizePrefs({ ...DEFAULT_PREFS, email: true, email_mode: "resumen", kinds: [] });
+    expect(channelsFor("sistema", p)).toEqual({ push: true, inApp: true, email: true });
+    expect(channelsFor("sistema", normalizePrefs({ ...DEFAULT_PREFS, push: false, kinds: [] })).push).toBe(false);
+  });
+  it("sistema: cron fallido y errores sobre el umbral, sin datos de personas y con enlace a Salud", () => {
+    const cron = alertText(ev({ kind: "sistema", user_id: null, data: { motivo: "cron", cron: "cobros", errores: 3 } }), null);
+    expect(cron).toEqual({ title: "Falló el cron de cobros", body: "3 errores, revisa Salud y Sentry", url: "/admin/salud" });
+    const cut = alertText(ev({ kind: "sistema", user_id: null, data: { motivo: "cron", cron: "avisos", excepcion: true } }), null);
+    expect(cut.title).toBe("Falló el cron de avisos al dueño");
+    expect(cut.body).toBe("se cortó con un error, revisa Salud y Sentry");
+    const err = alertText(ev({ kind: "sistema", user_id: null, data: { motivo: "errores", total: 1200, umbral: 50 } }), null);
+    expect(err).toEqual({ title: "Errores en la app: 1,200 en 24 h", body: "el aviso sale desde 50, revisa Salud y Sentry", url: "/admin/salud" });
+  });
   it("ignora tipos desconocidos guardados en la base", () => {
     expect(normalizePrefs({ kinds: ["pago", "hackeo" as never] }).kinds).toEqual(["pago"]);
   });
