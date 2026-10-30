@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ANNUAL_SEASON_NOTE, PLANS } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
+import { EXPORT_BY_USER } from "@/lib/account-export";
 
 const doc = readFileSync("docs/emails/recuperacion-prueba.md", "utf8");
 const pieces = doc.split(/^## /m).slice(1, 4);
@@ -12,6 +13,37 @@ const monthly = [price("entreno").mes, price("completo").mes];
 const annual = [price("entreno").anual, price("completo").anual];
 
 describe("recuperación de prueba: copy respaldado por el producto", () => {
+  it("incluye asunto y vista previa y presenta el anual antes del mensual el día 14", () => {
+    for (const piece of pieces) {
+      expect(piece).toMatch(/\*\*Asunto(?: \/ título)?:\*\* \S/);
+      expect(piece).toMatch(/\*\*Vista previa(?: \/ apoyo)?:\*\* \S/);
+    }
+    expect(pieces[0]).toContain("Tu plan sigue guardado");
+    expect(bodies[1].indexOf(usd2(annual[0]))).toBeLessThan(bodies[1].indexOf(usd2(monthly[0])));
+  });
+
+  it("limita la continuidad al historial existente de la misma cuenta", () => {
+    for (const table of ["workouts", "workout_sets", "weights", "measurements", "progress_photos"] as const) {
+      expect(EXPORT_BY_USER).toContain(table);
+      expect(doc).toContain(`\`${table}\``);
+    }
+    for (const body of bodies) expect(body).toMatch(/registraste|guardaste/);
+    expect(doc).toContain("Usar siempre la misma cuenta");
+    expect(doc).toContain("no garantizar conservación perpetua");
+    expect(doc).toContain("no de una suscripción reservada o de acceso gratis");
+  });
+
+  it("distingue reactivación por inactividad y define pagos por enviados sin duplicarlos", () => {
+    expect(doc).toContain("3 o 7 días de inactividad");
+    expect(doc).toContain("vencimiento sin compra, aunque la persona siga entrando");
+    expect(doc).toContain("sustituir el correo `reactivacion` o recordatorio diario");
+    expect(doc).toContain("destinatarios únicos con primer pago confirmado dentro de los 7 días posteriores al envío / correos enviados");
+    expect(doc).toContain("incluir rebotes en enviados");
+    expect(doc).toContain("Un primer pago cuenta una sola vez");
+    expect(doc).toContain("trial_charges.status = 'succeeded'");
+    expect(doc).toContain("todavía no instrumentada");
+  });
+
   it("compara todos los precios de los correos con PLANS y usd2", () => {
     expect(amounts(bodies[0])).toEqual(monthly.map(usd2));
     expect(amounts(bodies[1])).toEqual([...annual, ...monthly].map(usd2));
