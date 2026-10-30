@@ -11,7 +11,8 @@
 // - Coach Banana firma cada correo; nunca se repite la misma pose de la mascota en un correo.
 // Los correos no transaccionales llevan enlace de baja; los transaccionales (bienvenida, plan, pagos) no lo necesitan.
 import { SITE_URL } from "../env";
-import { nfmt } from "../num";
+import { nfmt, usd2 } from "../num";
+import { ANNUAL_SEASON_NOTE, PLANS, annualSaving } from "../plans";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
@@ -657,6 +658,67 @@ export function reactivacion(d: { name: string; days: 3 | 7; routine: string; tr
     subject, preheader,
     html: layout({ preheader, hero, body, unsubscribe: d.unsubscribe, reason, coach }),
     text: textLayout([subject, "", three ? "La vida pasa, y está bien. Lo que importa es la siguiente sesión." : "Tus récords, tu historial y tu plan siguen aquí.", d.trainingDay ? `Hoy te toca ${d.routine}.` : "Hoy: caminata y 10 minutos de estiramiento.", gl, "", `Volver: ${abs(d.trainingDay ? "/app/entreno" : "/app")}`], d.unsubscribe, reason, coach),
+  };
+}
+
+// ───────────── Secuencia de la prueba de 7 días (docs/emails/secuencia-prueba.md) ─────────────
+// Días 2, 4 y 6 desde el registro. La envía runReminders (notify-run.ts) en lugar del recordatorio de ese día.
+
+export type TrialStepDay = 2 | 4 | 6;
+
+const [ENTRENO, COMPLETO] = PLANS;
+/** "Cada año pagado incluye una temporada deportiva gratis", dicho desde ANNUAL_SEASON_NOTE. */
+const seasonLine = ANNUAL_SEASON_NOTE.replace(/^Incluye 1 /, "incluye una ");
+
+/** Copy de cada pieza. El último párrafo lo firma Coach Banana. */
+export const TRIAL_SEQUENCE: Record<TrialStepDay, { subject: string; preheader: string; paragraphs: string[]; cta: string; path: string; kind: BtnKind }> = {
+  2: {
+    subject: "Tu primer resultado empieza por registrar",
+    preheader: "Mira lo que ya guardaste y abre el entreno de hoy.",
+    paragraphs: [
+      "Tu primer resultado puede ser una sesión registrada, no un cambio en la báscula. Si ya entrenaste, revisa en Progreso lo que guardaste: ese es tu punto de partida para comparar más adelante.",
+      "Si todavía no empezaste, hoy puedes dar ese primer paso. Abre tu rutina, sigue la técnica de cada ejercicio y registra el peso y las repeticiones que hagas.",
+      "Consulta lo que te toca hoy y respeta los días de descanso de tu plan. No necesitas demostrar nada en dos días: necesitas un comienzo que puedas repetir.",
+    ],
+    cta: "Ver mi entreno", path: "/app/entrenar", kind: "banana",
+  },
+  4: {
+    subject: "Más que completar el entreno de hoy",
+    preheader: "Progreso, comida y carrera: elige qué quieres sostener.",
+    paragraphs: [
+      "Seguir te permite comparar tu fuerza, peso, medidas y fotos en Progreso. No todo el avance se ve en la báscula.",
+      `Con ${COMPLETO.name} también puedes registrar tus comidas y consultar tus calorías y macros. La nutrición está incluida durante tu prueba; después depende del plan que elijas.`,
+      `¿También corres? Banana Run registra tus carreras con GPS. Para un plan de carrera guiado, explora la Temporada Running. Las temporadas se adquieren aparte; cada año pagado de un plan anual ${seasonLine}.`,
+      "Revisa qué quieres mantener en tu rutina y qué plan lo incluye.",
+    ],
+    cta: "Ver qué incluye mi plan", path: "/app/incluye", kind: "primary",
+  },
+  6: {
+    subject: "Elige hoy cómo quieres seguir",
+    preheader: "Compara el ahorro anual y las opciones mensuales en Mi plan.",
+    paragraphs: [
+      "Decide hoy qué opción se adapta a ti.",
+      `Anual: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.anual)} al año; ahorras ${usd2(annualSaving(ENTRENO))} frente a 12 mensualidades. ${COMPLETO.name} cuesta ${usd2(COMPLETO.price.anual)} al año; ahorras ${usd2(annualSaving(COMPLETO))}. Cada año pagado ${seasonLine}.`,
+      `Mensual: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.mes)} al mes y ${COMPLETO.name}, ${usd2(COMPLETO.price.mes)} al mes. Nutrición está incluida solo en ${COMPLETO.name}.`,
+      "Estos son precios regulares en USD, con IVA incluido. El ahorro anual compara 12 meses a precio regular, sin promociones.",
+      "En Mi plan puedes revisar tu elección y las condiciones que aplican a tu cuenta antes de confirmar cualquier cambio.",
+    ],
+    cta: "Revisar mi plan", path: "/app/suscripcion", kind: "primary",
+  },
+};
+
+/** Una pieza de la secuencia de la prueba. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string }): Email {
+  const c = TRIAL_SEQUENCE[d.day];
+  const body = c.paragraphs.slice(0, -1);
+  const coach = esc(c.paragraphs.at(-1));
+  const hero: Hero = { eyebrow: "Tu prueba de 7 días", title: esc(c.subject), lead: esc(c.preheader) };
+  const html = body.map((x) => p(esc(x))).join("") + button(c.cta, c.path, c.kind);
+  const reason = "Recibes este correo porque estás en tu prueba de 7 días y tienes activados los recordatorios de Banana Burn.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, coach }),
+    text: textLayout([c.subject, "", ...body.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, coach),
   };
 }
 
