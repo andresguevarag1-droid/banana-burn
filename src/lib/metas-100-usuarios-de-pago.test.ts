@@ -181,3 +181,40 @@ describe("reglas de comunicación y de marca", () => {
     expect(doc).not.toMatch(/banano/i);
   });
 });
+
+describe("QA: cifras y piezas citadas que la prueba anterior no cubre", () => {
+  const agentes = tableRows(section(doc, "## 3. Meta, métrica y tareas"));
+  const fechas = tableRows(section(doc, "## 2. Fechas que cobran pronto"));
+
+  it("el estado \"Mes gratis\" de la métrica de Camila existe en /admin/condominios", async () => {
+    const { CONDO_STATUSES } = await import("@/lib/condos");
+    const metrica = agentes.find((a) => a[0].startsWith("Camila"))![3];
+    const estado = metrica.match(/estado "([^"]+)"/)![1];
+    expect(CONDO_STATUSES.map(([, l]) => l as string)).toContain(estado);
+  });
+
+  it("el correo 08 sale el 5 de noviembre a las 6:00 p. m. y el aviso de 48 horas el 6", () => {
+    expect(readFileSync("marketing/estrategia/correos/08-oferta-50-tarjeta.md", "utf8")).toContain("5 de noviembre, 6:00 p. m.");
+    expect(fechas.find((f) => f[1].startsWith("Correo de la oferta"))![0]).toContain("5 nov");
+    expect(fechas.find((f) => f[1].startsWith("Correo de la oferta"))![1]).toContain("6:00 p. m.");
+    expect(readFileSync("marketing/estrategia/correos/09-aviso-48h-cobro.md", "utf8")).toContain("Cobro del 8 de noviembre: 6 de noviembre");
+  });
+
+  it("el R12 citado es el de la Temporada 1 del kit de Reels", () => {
+    expect(readFileSync("marketing/kit-reels-noviembre-2026.md", "utf8")).toMatch(/\| 12 \| Últimos días para la Temporada 1 \|/);
+    expect(agentes.find((a) => a[0].startsWith("Bruno"))![4]).toContain("Últimos días para la Temporada 1");
+  });
+
+  it("el 6.7 % de margen del costo real es el del embudo", () => {
+    expect(doc).toContain("solo 6.7 % de los registros");
+    expect(embudo).toMatch(/\| Promedio de la campaña el 28 oct \| unos \$1\.01 \| \$2\.87 por cliente que paga \| 6\.7 % \|/);
+    expect((costPerReg / ceiling) * 100).toBeCloseTo(6.7, 1);
+  });
+
+  it("los usuarios de pago se cuentan en tablas que existen", () => {
+    const init = readFileSync("supabase/migrations/0001_init.sql", "utf8");
+    expect(init).toContain("create table public.subscriptions");
+    expect(readFileSync("supabase/migrations/0026_tarjeta_prueba.sql", "utf8")).toMatch(/create table[^;]*trial_charges[\s\S]*'succeeded'/);
+    expect(doc).toContain("`status = 'succeeded'` en `trial_charges`");
+  });
+});
