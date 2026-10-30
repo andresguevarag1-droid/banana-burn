@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/env";
-import { clientIp, isSameOrigin, memoryRateLimit } from "@/lib/security";
+import { clientIp, isSameOrigin } from "@/lib/security";
+import { hitLimit, tooManyText } from "@/lib/security/limits";
 import { safeNext } from "@/lib/security/redirect";
 import { loginLinkSecret, verifyLoginToken } from "@/lib/email/login-link";
 import { logError } from "@/lib/log";
@@ -50,7 +51,8 @@ a{display:inline-block;margin-top:18px;color:#1B1505;font-weight:700;min-height:
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const next = appPath(searchParams.get("next"));
-  if (!memoryRateLimit(`correo-get:${clientIp(req)}`, 60, 10 * 60_000)) return toLogin(origin, next);
+  const lim = await hitLimit("auth:correo:ver", `ip:${clientIp(req)}`);
+  if (!lim.ok) return tooManyText(lim);
   if (!isSupabaseConfigured) return toLogin(origin, next);
   const token = searchParams.get("t") ?? "";
   const t = verifyLoginToken(token, loginLinkSecret());
@@ -68,7 +70,8 @@ export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) return NextResponse.redirect(`${origin}/entrar`, 303);
   const form = await req.formData().catch(() => null);
   const next = appPath(typeof form?.get("next") === "string" ? (form!.get("next") as string) : null);
-  if (!memoryRateLimit(`correo-post:${clientIp(req)}`, 20, 10 * 60_000)) return toLogin(origin, next);
+  const lim = await hitLimit("auth:correo:entrar", `ip:${clientIp(req)}`);
+  if (!lim.ok) return tooManyText(lim);
   const raw = form?.get("t");
   const t = verifyLoginToken(typeof raw === "string" ? raw : null, loginLinkSecret());
   const admin = adminClient();

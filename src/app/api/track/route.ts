@@ -1,4 +1,5 @@
-import { clientIp, isSameOrigin, memoryRateLimit } from "@/lib/security";
+import { clientIp, isSameOrigin } from "@/lib/security";
+import { hitLimit, tooMany } from "@/lib/security/limits";
 import { after } from "next/server";
 import { cleanEvent } from "./event";
 import { sendCapi } from "@/lib/meta-capi";
@@ -18,7 +19,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return new Response(null, { status: 403 });
   // Ruta pública que escribe en el log: tope por IP para que nadie lo llene (costo y ruido en los registros).
-  if (!memoryRateLimit(`track:${clientIp(req)}`, 120, 60_000)) return new Response(null, { status: 429, headers: { "Retry-After": "60" } });
+  const lim = await hitLimit("track", `ip:${clientIp(req)}`);
+  if (!lim.ok) return tooMany(lim);
   const text = await req.text().catch(() => "");
   if (!text || text.length > 2048) return new Response(null, { status: 400 });
   let raw: unknown;

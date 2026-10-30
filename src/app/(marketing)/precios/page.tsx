@@ -7,6 +7,9 @@ import { Compare, FaqCta, FROM, pricingFaq } from "../content";
 import { offer } from "@/lib/offer";
 import type { Metadata } from "next";
 
+// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
+export const revalidate = 3600;
+
 const TITLE = `Precios: tu entrenador personal en el celular desde ${FROM} al mes`;
 /** Según la fecha (offer.ts): la prueba no pide tarjeta; la beta es gratis hasta el 7 de noviembre. */
 const description = () => `${offer().card ? `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido, sin tarjeta.` : `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido.`} Después, Entreno desde ${FROM} al mes, o súmale nutrición con comida latina de verdad. Cancela cuando quieras.`;

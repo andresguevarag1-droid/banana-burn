@@ -5,6 +5,9 @@ import { BETA_ENDS_AT, BETA_GRACE_UNTIL, PLANS, betaLive } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { PROMO_PCT, PROMO_TERMS, promoPrice } from "@/lib/trial";
 
+// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
+export const revalidate = 3600;
+
 const ENTRENO = PLANS.find((p) => p.id === "entreno")!;
 
 const TZ = "America/Costa_Rica";
