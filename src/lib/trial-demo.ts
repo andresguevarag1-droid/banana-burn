@@ -3,7 +3,7 @@
 import { BETA_GRACE_UNTIL, betaLive } from "./plans";
 import { DAY_MS, amountMinorFor, cardStepFor, firstChargeMinor, chargeView, type CardStep, type ChargeView, type TrialChargeRow } from "./trial";
 
-export const DEMO_CARD_VARIANTS = ["beta", "prueba", "nueva", "fallo", "procesando", "cancelado", "vencida"] as const;
+export const DEMO_CARD_VARIANTS = ["dia5", "dia6", "dia7", "tarjeta-lista", "beta", "prueba", "nueva", "fallo", "procesando", "cancelado", "vencida"] as const;
 export type DemoCardVariant = (typeof DEMO_CARD_VARIANTS)[number];
 
 export type DemoCardState = {
@@ -38,6 +38,14 @@ export function demoCardState(v: string | null | undefined, now = new Date()): D
     case "beta": {
       const end = Date.parse(BETA_GRACE_UNTIL);
       return { variant, charge: null, card: null, cardStep: "beta", locked: false, trial: end > t ? { endsAt: BETA_GRACE_UNTIL, daysLeft: daysLeft(end), beta: true } : null };
+    }
+    case "dia5":
+    case "dia6":
+    case "dia7":
+    case "tarjeta-lista": {
+      const day = variant === "tarjeta-lista" ? 7 : Number(variant.slice(3));
+      const end = t + (7.5 - day) * DAY_MS;
+      return { variant, charge: null, card: variant === "tarjeta-lista" ? card : null, cardStep: variant === "tarjeta-lista" ? "none" : "trial", locked: false, trial: { endsAt: iso(end), daysLeft: daysLeft(end) } };
     }
     case "nueva": {
       // 0043: cuenta nueva en su prueba sin tarjeta: todo abierto y la oferta de dejar la tarjeta lista.

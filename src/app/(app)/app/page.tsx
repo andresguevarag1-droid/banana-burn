@@ -1,3 +1,5 @@
+import { demoCardState } from "@/lib/trial-demo";
+import { TrialCardNotice } from "@/components/trial-card-notice";
 import Link from "next/link";
 import { FunnelTracker } from "@/components/analytics";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
@@ -52,7 +54,7 @@ export const metadata = { title: "Hoy" };
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string; primera?: string }> }) {
+export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string; primera?: string; demo?: string }> }) {
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   const sp = await searchParams;
@@ -60,6 +62,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const demoTester = v.demo ? sp.tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
   const [a, meals, ent, xs, tester, voice, learnState] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v)]);
+  const noticeDemo = v.demo && sp.demo ? demoCardState(sp.demo) : null;
+  const noticeEnt = noticeDemo ? { ...ent, ...noticeDemo, access: "trial" as const } : ent;
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const eaten = sumMeals(meals.today);
@@ -130,6 +134,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <WeekLine week={g.week} sched={d.sched} todayIso={d.today.iso} streak={g.streak.days} todayDone={g.streak.todayDone} />
 
       {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
+      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" />
+      <div id="hoy-continuar" className="scroll-mt-24" />
       <PromptQueue>
         {paused && (
           <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">

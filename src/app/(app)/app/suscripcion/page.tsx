@@ -1,3 +1,4 @@
+import { TrialCardNotice } from "@/components/trial-card-notice";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowLeft, Gift, Info, Receipt } from "@/components/icons";
@@ -106,6 +107,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       {ent.trial?.beta && !charge && <p className="rounded-2xl bg-sky/10 p-4 text-sm text-ink"><b>Eres de los primeros en Banana Burn: todo incluido gratis hasta el {betaDates().lastFree}.</b> Todavía no guardaste una tarjeta, así que no hay ningún cobro programado. Desde el {betaDates().firstPaid} la app se paga; si dejas tu tarjeta lista antes, tu primer mes cuesta 50 % menos.</p>}
       {ent.locked && cardStep !== "trial" && charge?.phase !== "procesando" && charge?.phase !== "reintento" && charge?.phase !== "fallido" && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
+      <TrialCardNotice ent={ent} tz={v.tz} screen="suscripcion" />
       {tlp && (
         <p role="status" className={`rounded-2xl p-3 text-sm font-semibold text-pretty ${tlp.ok ? "bg-peel/10 text-ink" : "bg-bad/10 text-bad"}`}>{tlp.text}</p>
       )}
