@@ -41,4 +41,15 @@ describe("enlace de invitación /r/<código>", () => {
     expect(Object.fromEntries(loc.searchParams)).toEqual({ modo: "registro", utm_source: "x".repeat(80), utm_campaign: "nov" });
     expect(loc.origin).toBe("https://bananaburn.app");
   });
+  it("con un UTM repetido gana el último valor", async () => {
+    const res = await call("abcd2345", undefined, "?utm_source=a&utm_source=b");
+    const loc = new URL(res.headers.get("location") ?? "");
+    expect(loc.searchParams.getAll("utm_source")).toEqual(["b"]);
+  });
+  it("las claves distinguen mayúsculas y los valores con & o # salen codificados", async () => {
+    const res = await call("abcd2345", undefined, "?UTM_SOURCE=x&utm_campaign=a%26modo%3Dlogin%23y");
+    const loc = new URL(res.headers.get("location") ?? "");
+    expect(Object.fromEntries(loc.searchParams)).toEqual({ modo: "registro", utm_campaign: "a&modo=login#y" });
+    expect(loc.hash).toBe("");
+  });
 });
