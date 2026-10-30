@@ -6,7 +6,9 @@ import { getMeals, getNutritionExtras } from "@/lib/meals";
 import Link from "next/link";
 import { FoodLog } from "./food-log";
 import { getDaily } from "@/lib/daily";
-import { PLANS, usd } from "@/lib/plans";
+import { betaLive } from "@/lib/plans";
+import { canUpsellNutrition } from "@/lib/plan-access";
+import { NutritionUpsell } from "@/components/nutrition-upsell";
 import { FirstTip } from "@/components/guide/first-tip";
 import { ArrowRight, BananaBunch, BrandIcon, CaretDown, CheckCircle, Egg, ForkKnife, Grains, Leaf, Lightbulb, Wine } from "@/components/icons";
 
@@ -23,18 +25,11 @@ const IDEAS = [
 export default async function Nutricion() {
   const v = (await getViewer())!;
   // Sin nutrición no se leen comidas ni metas: solo la invitación a Entreno + Nutrición.
-  if (!(await getEntitlements(v)).nutrition) {
-    const p = PLANS.find((x) => x.nutrition)!;
-    return (
-      <div className="max-w-xl mx-auto text-center py-8 animate-enter">
-        <span className="mx-auto grid place-items-center size-20 rounded-3xl bg-banana-soft text-banana-ink"><BananaBunch className="size-11" /></span>
-        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink">Baja de peso más rápido con tu plan de nutrición</h1>
-        <p className="mt-3 text-muted">Tu entreno ya está listo. La nutrición es donde se pierde la grasa: calorías y macros para ti, registro con comida de toda Latinoamérica y ajuste cada semana según tu peso real.</p>
-        <ul className="mt-6 space-y-2 text-left card p-5">{p.feats.slice(1).map((f) => <li key={f} className="flex gap-2.5 text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 mt-0.5 text-peel" />{f}</li>)}</ul>
-        <Link href="/app/suscripcion" data-cta="nutricion-mejorar" className="btn-banana w-full h-14 mt-6 text-base">Mejorar a {p.name} por {usd(p.price.mes)}/mes</Link>
-        <p className="mt-2 text-xs text-faint">Cancela cuando quieras. Tus entrenos y tu progreso no cambian.</p>
-      </div>
-    );
+  const ent = await getEntitlements(v);
+  if (!ent.nutrition) {
+    if (!canUpsellNutrition(ent, betaLive())) return <div className="card p-6"><h1 className="text-2xl font-extrabold text-ink">Comida</h1><p className="mt-2 text-muted">Consulta el acceso de tu plan en Mi plan.</p><Link href="/app/suscripcion" className="btn-primary mt-4">Ver mi plan</Link></div>;
+    const a = await getAthlete(v);
+    return <div className="mx-auto max-w-xl py-4 animate-enter"><NutritionUpsell goal={a.glp1.on || a.goalWeight < a.currentWeight ? "protein" : "strength"} /></div>;
   }
   // Todo en paralelo con el atleta: comidas, registro del día y extras no dependen de él.
   const [d, meals, daily, extras] = await Promise.all([getAthlete(v).then(dashboard), getMeals(v), getDaily(v, 0, 0), getNutritionExtras(v)]);
