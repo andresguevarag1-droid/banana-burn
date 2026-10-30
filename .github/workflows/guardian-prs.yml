@@ -1,7 +1,8 @@
 # Guardián de PRs: vigila las PRs de la oficina (AI Office) y, si una se rompe, la devuelve a la cola para que la arreglen.
 #
 # - Cuando el CI de una PR termina en rojo, o cada 2 horas encuentra una PR en conflicto con main, busca el issue que la
-#   PR cierra ("Closes #N"), comenta qué falló y le pone `needs-work` para que la oficina la retome en la misma rama.
+#   PR cierra ("Closes #N"), comenta qué falló y le quita las etiquetas de etapa (needs-work, needs-review, etc.) para que
+#   la oficina lo vuelva a tomar: AI Office solo toma issues con `ai-office` y sin etapa, y los pone en needs-work.
 # - Si la PR toca código (.ts, .tsx, .js, .mjs, .sql), el arreglo va a Adrian (role:coder). Si solo toca textos, vuelve
 #   al mismo rol que la hizo.
 # - Máximo 3 intentos por PR. Al cuarto, el issue pasa a `needs-human` para que Andrés decida.
@@ -70,8 +71,8 @@ jobs:
               const issue = (await github.rest.issues.get({ owner, repo, issue_number: issueNumber })).data;
               const etiquetas = issue.labels.map((l) => (typeof l === "string" ? l : l.name));
               if (issue.state !== "open" || !etiquetas.includes("ai-office")) continue;
-              // Ya está en la cola o trabajándose: no se toca.
-              if (etiquetas.includes("needs-work")) continue;
+              // Ya está trabajándose: no se toca.
+              if (etiquetas.includes("in-progress")) continue;
 
               // ¿Qué está roto en la última versión de la PR?
               const problemas = [];
@@ -117,12 +118,12 @@ jobs:
                 await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["role:coder"] });
               }
 
-              for (const quitar of ["needs-human", "needs-review", "needs-qa", "needs-docs"]) {
+              // Sin etiqueta de etapa, la oficina lo vuelve a tomar en su próxima revisión (cada minuto) y lo pone en needs-work.
+              for (const quitar of ["needs-work", "needs-review", "needs-qa", "needs-docs", "ready-to-merge", "needs-human"]) {
                 if (etiquetas.includes(quitar)) {
                   await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name: quitar }).catch(() => {});
                 }
               }
-              await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["needs-work"] });
               await github.rest.issues.createComment({
                 owner, repo, issue_number: issueNumber,
                 body: [
@@ -134,5 +135,5 @@ jobs:
                   `Arreglar en la misma rama \`${pr.head.ref}\`, solo lo que falla, sin cambiar el alcance del issue. Antes de entregar, en verde: \`npx tsc --noEmit -p .\`, \`npx eslint src scripts --quiet\`, \`npx vitest run\` y \`npx next build\`.`,
                 ].join("\n"),
               });
-              core.info(`#${issueNumber} (PR #${pr.number}) devuelto a needs-work.`);
+              core.info(`#${issueNumber} (PR #${pr.number}) devuelto a la cola de la oficina.`);
             }
