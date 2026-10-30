@@ -2368,6 +2368,9 @@ select bbtest.ok('0059: un aviso inválido no rompe nada', (select count(*) = 0 
 insert into public.b2b_leads (name, role, org_name, email) values ('Laura', 'administrador', 'Condominio Prueba', 'laura@prueba.test');
 select bbtest.ok('0059: un condominio interesado deja aviso', (select count(*) = 1 from public.admin_events where kind = 'condominio' and data->>'org' = 'Condominio Prueba'));
 select bbtest.ok('0059: el aviso del condominio no guarda el correo', (select count(*) = 0 from public.admin_events where data::text like '%@%'));
+select public.admin_event_enqueue('sistema:cron:cobros:2026-11-08', 'sistema', null, null, null, '{"motivo":"cron","cron":"cobros"}');
+select public.admin_event_enqueue('sistema:cron:cobros:2026-11-08', 'sistema', null, null, null, '{"motivo":"cron","cron":"cobros"}');
+select bbtest.ok('0063: un cron fallido deja un aviso de sistema, una sola vez por día', (select count(*) = 1 from public.admin_events where kind = 'sistema' and data->>'cron' = 'cobros'));
 
 set role authenticated; select bbtest.login('A');
 select bbtest.ok('0059: una persona no ve avisos', bbtest.num('select 1 from public.admin_events') = 0);

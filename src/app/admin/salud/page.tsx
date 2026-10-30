@@ -1,7 +1,8 @@
 import { requireSection } from "@/lib/admin-auth";
 import { getOpsHealth, type Beat } from "@/lib/admin-health";
 import { beatState, byRoute, totals, type ErrorRow } from "@/lib/monitor/summary";
-import { Badge, DemoNotice, Empty, Kpi, Nil, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDateTime, fmtNum, panel, tr } from "@/components/admin/ui";
+import { Badge, DemoNotice, Empty, Kpi, Nil, Notice, PageHeader, SectionHeading, Table, Td, Th, btnGhost, fmtDateTime, fmtNum, panel, tr } from "@/components/admin/ui";
+import { SentryTest } from "@/components/admin/sentry-test";
 
 export const metadata = { title: "Salud" };
 export const dynamic = "force-dynamic";
@@ -138,6 +139,11 @@ export default async function SaludPage() {
           </ul>
           {h.missing.length > 0 && <p className="mt-3 text-xs text-muted text-pretty">Pendiente para producción: {h.missing.join("; ")}.</p>}
         </div>
+      </section>
+
+      <section aria-labelledby="sentry" className="space-y-2.5">
+        <SectionHeading id="sentry" title="Probar Sentry" desc="Manda un error de prueba. En Sentry debe aparecer en un minuto, con el archivo y la línea donde ocurrió y sin datos de la cuenta." />
+        <div className={`${panel} p-4`}><SentryTest className={btnGhost} /></div>
       </section>
     </div>
   );

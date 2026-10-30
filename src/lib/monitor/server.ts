@@ -60,23 +60,48 @@ export const alertThreshold = (env: Record<string, string | undefined> = process
   return Number.isFinite(n) && n >= 5 ? Math.round(n) : 50;
 };
 
+/** Errores de las últimas 24 h (con service_role; el resumen del panel exige sesión de admin). null si no se pudo leer. */
+async function errorsSince(db: Db, now: Date): Promise<ErrorRow[] | null> {
+  const since = new Date(now.getTime() - 24 * 3600_000).toISOString();
+  const { data, error } = await db.from("app_errors").select("source,kind,route,message,hits,last_at").gte("last_at", since).limit(2000);
+  return error ? null : ((data ?? []) as ErrorRow[]);
+}
+const hitsOf = (rows: ErrorRow[]) => rows.reduce((a, r) => a + Number(r.hits || 0), 0);
+
+/**
+ * ¿Los errores de 24 h pasan el umbral? Si pasan, deja un aviso de sistema en Admin > Avisos (uno por día). Lo corren
+ * los tres crons (02:00, 06:20 y 13:00 UTC), así el aviso llega en horas y no al día siguiente.
+ */
+export async function checkErrorRate(now = new Date(), db: Db | null = adminClient()): Promise<{ errors24h: number | null; over: boolean }> {
+  if (!db) return { errors24h: null, over: false };
+  const rows = await errorsSince(db, now);
+  if (!rows) return { errors24h: null, over: false };
+  const total = hitsOf(rows);
+  const over = total >= alertThreshold();
+  if (over) {
+    const { errorRateAlert } = await import("./alerts");
+    await errorRateAlert(total, alertThreshold(), { db, now });
+  }
+  return { errors24h: total, over };
+}
+
 /**
  * Mantenimiento diario (lo llama el cron): borra errores de más de 30 días y, si en 24 h hubo más errores que el
- * umbral, manda un correo al dueño (una vez por día, Idempotency-Key). Sin Resend o sin service_role: no hace nada.
+ * umbral, deja el aviso en Admin > Avisos y manda un correo al dueño (una vez por día, Idempotency-Key). Sin
+ * service_role: no hace nada; sin Resend: solo el aviso.
  */
 export async function runMonitorMaintenance(now = new Date(), db: Db | null = adminClient()) {
   if (!db) return { purged: 0, errors24h: null as number | null, alert: false };
   let purged = 0;
   const p = await db.rpc("app_errors_purge", { p_days: 30 });
   if (!p.error && typeof p.data === "number") purged = p.data;
-  // El resumen del panel exige sesión de admin; aquí se lee la tabla con service_role.
-  const since = new Date(now.getTime() - 24 * 3600_000).toISOString();
-  const { data, error } = await db.from("app_errors").select("source,kind,route,message,hits,last_at").gte("last_at", since).limit(2000);
-  if (error) return { purged, errors24h: null, alert: false };
-  const rows = (data ?? []) as ErrorRow[];
-  const total = rows.reduce((a, r) => a + Number(r.hits || 0), 0);
+  const rows = await errorsSince(db, now);
+  if (!rows) return { purged, errors24h: null, alert: false };
+  const total = hitsOf(rows);
   let alert = false;
   if (total >= alertThreshold()) {
+    const { errorRateAlert } = await import("./alerts");
+    await errorRateAlert(total, alertThreshold(), { db, now });
     const { sendEmail } = await import("@/lib/email/send");
     const { opsAlertEmail } = await import("./alert-email");
     const to = process.env.OPS_ALERT_EMAIL || process.env.FEEDBACK_EMAIL || "hola@bananaburn.app";

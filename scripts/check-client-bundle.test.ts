@@ -11,6 +11,10 @@ describe("revisión del bundle del cliente", () => {
     expect(scan([{ path: "static/chunks/a.js.map", text: "" }]).length).toBe(1);
     expect(scan([{ path: "static/chunks/a.js", text: `${min}\n//# sourceMappingURL=a.js.map` }])[0]).toMatch(/sourceMappingURL/);
   });
+  it("detecta un .js.map en lo que se publica (.next/static o public/)", () => {
+    expect(scan([{ path: "static/chunks/app/layout-1a2b.js.map", text: "" }])).toEqual(["static/chunks/app/layout-1a2b.js.map: mapa de fuente publicado"]);
+    expect(scan([{ path: "public/sw.js.map", text: "" }]).length).toBe(1);
+  });
   it("detecta el valor canario y el nombre de una variable secreta, sin imprimir el valor", () => {
     const p = scan([{ path: "static/chunks/a.js", text: `${min}"valor-canario-123456"` }], { CRON_SECRET: "valor-canario-123456" });
     expect(p.join()).toMatch(/valor de CRON_SECRET/);

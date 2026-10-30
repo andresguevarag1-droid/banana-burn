@@ -15,6 +15,7 @@ import { purgeHousekeeping } from "@/lib/housekeeping";
 import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 import { beat, runMonitorMaintenance } from "@/lib/monitor/server";
+import { cronFailed } from "@/lib/monitor/alerts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,8 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * También los avisos de testers de la beta (asignación, 3 días antes del final y agradecimiento).
  * También borra las fotos de verificaciones de identidad ya decididas o vencidas (máximo 30 días, 0030).
  * Y "Hay novedades en Banana Burn" (0036): push y campanita una vez por versión a quien no la vio en 3 días.
- * También el monitoreo (0041): purga de errores viejos, aviso si se dispararon y registro de esta corrida.
+ * También el monitoreo (0041): purga de errores viejos, aviso si se dispararon y registro de esta corrida. Si la corrida
+ * falla, aviso de sistema en Admin > Avisos (0063) y evento en Sentry.
  * Y la limpieza de tablas que crecen sin fin (0040).
  * Y las renovaciones con Tilopay (0042), que cobramos nosotros con la tarjeta guardada.
  * Y los condominios afiliados (0053): plan del condominio para sus residentes y aviso de fin del mes gratis.
@@ -78,5 +80,7 @@ export async function GET(req: Request) {
   const referidores = await sweepAffiliates(new Date(), { deadline: t0 + 59_000 }).catch((e) => { logError("cron:referidores", "run_failed", { kind: errCode(e) }); return null; });
   // Última corrida, para /admin/salud: solo conteos.
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
+  // Falla = las consultas de recordatorios fallaron o el cobro de pruebas se cortó con un error (cobros null).
+  if (!stats.ok || cobros === null) await cronFailed("recordatorios", { errores: stats.errors, cobros: cobros !== null });
   return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, referidores, condominios, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
 }

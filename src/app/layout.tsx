@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/env";
 import { ErrorReporter } from "@/components/error-reporter";
 import { MetaPixel } from "@/components/meta-pixel";
 import { NativeShell } from "@/components/native-shell";
+import { WebAnalytics } from "@/components/web-analytics";
 
 export const metadata: Metadata = {
   // Base de los enlaces absolutos (Open Graph, canonical) en TODAS las páginas, no solo las de marketing.
@@ -25,7 +26,7 @@ export const viewport: Viewport = { themeColor: "#FFF8E3", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es-419">
-      <body className="min-h-dvh">{children}<ErrorReporter release={(process.env.BB_RELEASE || "").slice(0, 12)} /><MetaPixel /><RefCapture /><NativeShell /></body>
+      <body className="min-h-dvh">{children}<ErrorReporter release={(process.env.BB_RELEASE || "").slice(0, 12)} /><MetaPixel /><RefCapture /><NativeShell />{process.env.VERCEL === "1" && <WebAnalytics />}</body>
     </html>
   );
 }

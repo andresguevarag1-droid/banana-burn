@@ -1,6 +1,7 @@
 // Envío de errores desde el navegador a /api/errores. Muestreado, con tope por página y sin repetir el mismo error.
 // No manda nada del usuario: tipo, mensaje limpio, ruta sin ids, digest y versión (ver report.ts).
 import { cleanRoute, fingerprint, isNoise, scrubMessage, type ReportSource } from "./report";
+import { captureBoundaryError } from "./sentry-client";
 
 export const ENDPOINT = "/api/errores";
 /** Máximo de reportes por carga de página (un bucle de errores no inunda al servidor). */
@@ -51,4 +52,5 @@ export function installReporter(release: string | null) {
 }
 export function reportBoundaryError(err: unknown) {
   try { (current ?? installReporter(null))("boundary", err); } catch { /* nunca rompe la pantalla de error */ }
+  captureBoundaryError(err);
 }
