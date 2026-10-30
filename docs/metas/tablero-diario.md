@@ -16,7 +16,7 @@ Cada fila es una **cohorte por fecha de creación de cuenta**, con avance observ
 | `primer_entreno` | Cuentas con al menos un `workouts.finished_at` no nulo. Cuenta una persona aunque guarde varios entrenos; abrir o iniciar una serie no basta. Es una medida adicional de activación: el embudo no fija una tasa para ella. |
 | `tarjeta_guardada` | Existencia de una fila en `trial_charges`, etapa 5; incluye canceladas, como la consulta de referencia. No es el evento `card_saved`, que incluye rechazos y demos, ni el número de tarjetas vigentes. |
 | `cobros_exitosos` | Personas con `trial_charges.status = 'succeeded'`, etapa 6. No usa `charge_at` como fecha real de pago. |
-| `pagos_suscripcion_sin_duplicar` | Personas con suscripción `active`, proveedor ONVO/Tilopay y `current_period_end > now()`, sin cobro succeeded. La vigencia hace más estricta la consulta 6b del embudo. |
+| `pagos_suscripcion_sin_duplicar` | Personas con suscripción `active` o `canceled` con `cancel_at_period_end = true`, proveedor ONVO/Tilopay y `current_period_end > now()`, sin cobro succeeded. Una cancelación al final del período sigue contando mientras dure el período pagado. La vigencia hace más estricta la consulta 6b del embudo. |
 | `usuarios_pago` | Unión de ambas fuentes, una persona una vez. Excluye cuentas con cortesía vigente en `comp_grants`, incluidos testers; la cortesía sola nunca acredita pago. |
 | `registros_que_pagan` | Usuarios de pago con bienvenida terminada; numerador compatible con registros completos. |
 | `prueba_a_pago_pct` | 100 × registros que pagan ÷ registros completos de esa cohorte. NULL sin denominador conocido o con cero registros. Las cohortes con pruebas sin terminar aún no tienen conversión final. |
