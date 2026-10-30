@@ -30,17 +30,17 @@ function useLoggedIn(known?: boolean) {
 /** Etiqueta del CTA de los planes para quien aún no tiene cuenta: primero la prueba gratis. */
 export const CTA_LABEL = `Empezar ${TRIAL_DAYS} días gratis`;
 
-function PlanCta({ plan, billing, name, hot, loggedIn, checkout }: { plan: PlanId; billing: Billing; name: string; hot: boolean; loggedIn: boolean; checkout: ReturnType<typeof useCheckout> }) {
+function PlanCta({ plan, billing, name, hot, loggedIn, checkout, trialLabel = CTA_LABEL }: { trialLabel?: string; plan: PlanId; billing: Billing; name: string; hot: boolean; loggedIn: boolean; checkout: ReturnType<typeof useCheckout> }) {
   const cls = `mt-5 h-14 w-full text-base ${hot ? "btn-banana shadow-none" : "btn-primary"}`;
   const intent = { plan, billing };
   const cta = `pricing-${plan}-${billing}`;
   // Demo: sin cuentas ni cobros, mostramos la pantalla de suscripción con el aviso de demo.
-  if (!isSupabaseConfigured) return <Link href={intentPath(intent)} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only"> con {name}</span></Link>;
+  if (!isSupabaseConfigured) return <Link href={intentPath(intent)} data-cta={cta} className={cls}>{trialLabel}<span className="sr-only"> con {name}</span></Link>;
   if (!loggedIn) {
     // Sin sesión: registro con la prueba gratis. /entrar guarda el plan elegido en una cookie de intención
     // (sobrevive al onboarding) y la bienvenida la usa para el plan de la prueba (con tarjeta desde el fin de la beta).
     const href = `/entrar?modo=registro&plan=${plan}&pago=${billing}`;
-    return <Link href={href} data-cta={cta} className={cls}>{CTA_LABEL}<span className="sr-only">, luego {name}</span></Link>;
+    return <Link href={href} data-cta={cta} className={cls}>{trialLabel}<span className="sr-only">, luego {name}</span></Link>;
   }
   // Con sesión ya tiene plan de entreno: aquí solo activa el pago.
   const busy = checkout.busy === `${plan}.${billing}`;
@@ -63,7 +63,7 @@ const guarantees = (trial: readonly [string, string]) => [
  * Planes con el anual anclado. `recommended` decide qué plan va destacado (por defecto el completo;
  * el muro de planes lo elige según el uso de la prueba). `loggedIn` evita leer la sesión cuando ya se sabe.
  */
-export function Pricing({ recommended = "completo", loggedIn: known, reason, trialGuarantee }: { recommended?: PlanId; loggedIn?: boolean; reason?: string; trialGuarantee?: readonly [string, string] } = {}) {
+export function Pricing({ recommended = "completo", loggedIn: known, reason, trialGuarantee, trialLabel }: { trialLabel?: string; recommended?: PlanId; loggedIn?: boolean; reason?: string; trialGuarantee?: readonly [string, string] } = {}) {
   const [b, setB] = useState<Billing>("anual");
   const loggedIn = useLoggedIn(known);
   const checkout = useCheckout();
@@ -100,10 +100,10 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
               <p className={`mt-2 min-h-10 text-sm font-semibold tabular-nums text-pretty ${annual ? (hot ? "text-banana" : "text-peel") : hot ? "text-white/75" : "text-muted"}`}>
                 {annual ? `Un solo pago al año. Ahorras ${money(saved)} frente a ${money(p.price.mes)} al mes. ${ANNUAL_SEASON_NOTE}.` : "Sin permanencia. Cancela cuando quieras."}
               </p>
-              <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} />
+              <PlanCta plan={p.id} billing={b} name={p.name} hot={hot} loggedIn={loggedIn} checkout={checkout} trialLabel={trialLabel} />
               <ul className={`mt-6 pt-6 border-t space-y-3 text-[15px] ${hot ? "border-white/15" : "border-line"}`}>
                 {p.feats.map((f) => <li key={f} className="flex gap-2.5"><Check weight="bold" aria-hidden className={`size-5 shrink-0 ${hot ? "text-banana" : "text-peel"}`} />{noBreakGlp1(f)}</li>)}
-                {p.excluded.map((f) => <li key={f} className={`flex gap-2.5 ${hot ? "text-white/60" : "text-faint"}`}><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span>{noBreakGlp1(f)}</span></li>)}
+                {p.excluded.map((f) => <li key={f} className={`flex gap-2.5 ${hot ? "text-white/60" : "text-faint"}`}><X weight="bold" aria-hidden className="size-5 shrink-0" /><span><span className="sr-only">No incluye: </span><s>{noBreakGlp1(f)}</s></span></li>)}
               </ul>
             </div>
           );
