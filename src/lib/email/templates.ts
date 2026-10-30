@@ -7,10 +7,11 @@
 // - Botón principal ink con texto blanco; botón banana con texto ink solo para la acción de entreno.
 // - Eyebrows de 12 px en mayúsculas con tracking .14em; chips activos ink con texto banana.
 // - Tarjeta destacada en ink con barra (pista blanca al 14 %, relleno banana); celdas de números en cream.
-// - Cifras es-419 de la marca ($9,99 · 2,5 kg · 1.200) con tabular-nums. Sin emojis, sin "·" en el texto, sin IA.
+// - Cifras es-419 de la marca ($9.99 · 2.5 kg · 1,200) con tabular-nums. Sin emojis, sin "·" en el texto, sin IA.
 // - Coach Banana firma cada correo; nunca se repite la misma pose de la mascota en un correo.
 // Los correos no transaccionales llevan enlace de baja; los transaccionales (bienvenida, plan, pagos) no lo necesitan.
 import { SITE_URL } from "../env";
+import { nfmt } from "../num";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
@@ -29,11 +30,11 @@ export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
 const abs = (path: string, site = SITE_URL) => (/^(https?:|mailto:|\{\{)/.test(path) ? path : `${site}${path}`);
 const firstName = (n: string) => (n || "").trim().split(/\s+/)[0] || "crack";
 
-/** Cifras como pide la marca: coma decimal y punto de miles (1.200 · 2,5). */
-const num = (n: number, max = 1, min = 0) => n.toLocaleString("es-CO", { minimumFractionDigits: min, maximumFractionDigits: max });
+/** Cifras como pide la marca (es-419): punto decimal y coma de miles (1,200 · 2.5). */
+const num = nfmt;
 const kg = (n: number, max = 1) => num(n, max);
 
-/** $9,99 para USD; otras monedas con su código delante. */
+/** $9.99 para USD; otras monedas con su código delante. */
 export const money = (amount: number, currency = "USD") => `${currency === "USD" ? "$" : `${currency} `}${num(amount, 2, 2)}`;
 export const longDate = (iso: string) => {
   const d = new Date(iso.length === 10 ? iso + "T12:00:00" : iso);
@@ -59,7 +60,7 @@ export function goalProgress(g: Goal | null | undefined) {
   return { pct, left, moved, reached, losing: total < 0 };
 }
 
-/** Una línea para texto plano y push: "Te faltan 6,2 kg para tus 85 kg". */
+/** Una línea para texto plano y push: "Te faltan 6.2 kg para tus 85 kg". */
 export function goalLine(g: Goal | null | undefined): string {
   const pr = goalProgress(g);
   if (!g || !pr) return "";

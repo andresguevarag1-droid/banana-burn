@@ -2410,6 +2410,35 @@ insert into public.funnel_events (user_id, name, path) values (bbtest.u('A'), 'w
 select bbtest.ok('0061: el servidor guarda eventos', (select count(*) = 1 from public.funnel_events where name = 'workout_open'));
 delete from public.funnel_events;
 
+-- ───────────── 0062: llave única de cobro (usuario, periodo, procesador) ─────────────
+set role authenticated; select bbtest.login('A');
+select bbtest.ok('0062: una persona no lee las llaves de cobro', not has_table_privilege('authenticated', 'public.charge_keys', 'select'));
+select bbtest.ok('0062: una persona no escribe llaves de cobro', not has_table_privilege('authenticated', 'public.charge_keys', 'insert') and not has_table_privilege('authenticated', 'public.charge_keys', 'update'));
+reset role;
+select bbtest.ok('0062: anónimo no lee las llaves de cobro', not has_table_privilege('anon', 'public.charge_keys', 'select'));
+insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'primer_cobro', 'onvo', 'primer_cobro', 'trial:a:1');
+select bbtest.fails('0062: el mismo cobro (usuario, periodo, procesador) no se reserva dos veces',
+  $q$insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'primer_cobro', 'onvo', 'primer_cobro', 'trial:a:2')$q$, '23505');
+insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'primer_cobro', 'tilopay', 'primer_cobro', 'bbt-a-1');
+select bbtest.ok('0062: otro procesador es otra llave', (select count(*) = 2 from public.charge_keys where user_id = bbtest.u('A') and estado = 'reservado'));
+insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('B'), 'primer_cobro', 'onvo', 'primer_cobro', 'trial:b:1');
+select bbtest.ok('0062: otra persona es otra llave', (select count(*) = 1 from public.charge_keys where user_id = bbtest.u('B')));
+insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), '2026-12-08T06:00:00.000Z', 'tilopay', 'renovacion', 'bbr-1-1');
+select bbtest.fails('0062: la misma renovación no se reserva dos veces',
+  $q$insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), '2026-12-08T06:00:00.000Z', 'tilopay', 'renovacion', 'bbr-1-2')$q$, '23505');
+update public.charge_keys set estado = 'liberado', released_at = now(), motivo = 'rechazado' where user_id = bbtest.u('A') and periodo = 'primer_cobro' and procesador = 'onvo';
+insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'primer_cobro', 'onvo', 'primer_cobro', 'trial:a:2');
+select bbtest.ok('0062: un cobro rechazado (liberado) permite el reintento del mismo periodo', (select count(*) = 2 from public.charge_keys where user_id = bbtest.u('A') and periodo = 'primer_cobro' and procesador = 'onvo'));
+select bbtest.fails('0062: el reintento tampoco se reserva dos veces',
+  $q$insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'primer_cobro', 'onvo', 'primer_cobro', 'trial:a:3')$q$, '23505');
+select bbtest.fails('0062: periodo con formato libre rechazado',
+  $q$insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'noviembre', 'onvo', 'renovacion', 'x')$q$, '23514');
+select bbtest.fails('0062: procesador desconocido rechazado',
+  $q$insert into public.charge_keys (user_id, periodo, procesador, origen, referencia) values (bbtest.u('A'), 'primer_cobro', 'stripe', 'primer_cobro', 'x')$q$, '23514');
+select bbtest.fails('0062: liberada sin fecha rechazada',
+  $q$update public.charge_keys set estado = 'liberado' where user_id = bbtest.u('B')$q$, '23514');
+delete from public.charge_keys;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

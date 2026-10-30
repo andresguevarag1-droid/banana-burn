@@ -16,7 +16,10 @@ const get = (r: Row, col: string): unknown => {
 const likeRe = (pat: string) => new RegExp(`^${pat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".")}$`);
 const cmp = (a: unknown, b: unknown) => (typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b)));
 
-export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, string[]> = {}) {
+/** Única: una columna, o varias con un filtro opcional (índice único parcial, p. ej. charge_keys de 0062). */
+type Unique = string | { cols: string[]; where?: (r: Row) => boolean };
+
+export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, Unique[]> = {}) {
   const tables: Record<string, Row[]> = Object.fromEntries(Object.entries(seed).map(([k, v]) => [k, v.map((r) => ({ ...r }))]));
   let nextId = 1000;
   const t = (name: string) => (tables[name] ??= []);
@@ -26,6 +29,7 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
     let op: { kind: "select" } | { kind: "update"; values: Row } | { kind: "insert"; rows: Row[] } | { kind: "upsert"; rows: Row[]; on: string } = { kind: "select" };
     let order: { col: string; asc: boolean } | null = null;
     let limit = Infinity;
+    let offset = 0;
     let returning = false;
 
     const run = (): { data: unknown; error: { message: string; code?: string } | null } => {
@@ -38,7 +42,11 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
             const ex = rows.find((x) => x[on] === r[on]);
             if (ex) { Object.assign(ex, r); out.push(ex); continue; }
           }
-          for (const u of unique[table] ?? []) if (rows.some((x) => x[u] === r[u])) return { data: null, error: { message: `duplicate key value violates unique constraint (${u})`, code: "23505" } };
+          for (const u of unique[table] ?? []) {
+            const { cols, where } = typeof u === "string" ? { cols: [u], where: undefined } : u;
+            const applies = (x: Row) => !where || where(x);
+            if (applies(r) && rows.some((x) => applies(x) && cols.every((c) => x[c] === r[c]))) return { data: null, error: { message: `duplicate key value violates unique constraint (${cols.join(",")})`, code: "23505" } };
+          }
           const row = { id: nextId++, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...r };
           rows.push(row);
           out.push(row);
@@ -51,7 +59,7 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
         return { data: returning ? hit.map((x) => ({ ...x })) : null, error: null };
       }
       if (order) { const o = order; hit = [...hit].sort((a, b) => (o.asc ? 1 : -1) * cmp(get(a, o.col), get(b, o.col))); }
-      return { data: hit.slice(0, limit).map((x) => ({ ...x })), error: null };
+      return { data: hit.slice(offset, offset + limit).map((x) => ({ ...x })), error: null };
     };
 
     const q = {
@@ -90,6 +98,7 @@ export function fakeDb(seed: Record<string, Row[]> = {}, unique: Record<string, 
       },
       order: (c: string, o?: { ascending?: boolean }) => { order = { col: c, asc: o?.ascending !== false }; return q; },
       limit: (n: number) => { limit = n; return q; },
+      range: (from: number, to: number) => { offset = from; limit = to - from + 1; return q; },
       maybeSingle: async () => { const r = run(); const d = r.data as Row[] | null; return { data: d?.[0] ?? null, error: r.error }; },
       single: async () => { const r = run(); const d = r.data as Row[] | null; return r.error ? { data: null, error: r.error } : d?.[0] ? { data: d[0], error: null } : { data: null, error: { message: "no rows" } }; },
       then: (ok: (v: ReturnType<typeof run>) => unknown, bad?: (e: unknown) => unknown) => Promise.resolve().then(run).then(ok, bad),

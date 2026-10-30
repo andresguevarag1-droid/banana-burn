@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Firebase de Android (push): lo escribe el CI desde un secreto; en local, cada quien con el suyo
 /android/app/google-services.json
+
+# simulacro de cobros (scripts/simular-cobros.ts): ids de cuentas de producción, nunca al repositorio
+/simulacro-cobros/

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <rect width="1080" height="1350" fill="#1B1505"/>
+  
+  <text x="88" y="150" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="28" letter-spacing="4" fill="#FFD60A">3. TU FUERZA</text>
+  <rect x="702" y="112" width="290" height="52" rx="26" fill="#FFD60A"/>
+  <text x="847" y="147" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="24" fill="#1B1505">Temporada Running</text>
+  <text x="88" y="250" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="84" letter-spacing="-2.1" fill="#FFFBF0"><tspan fill="#FFD60A">Fuerza </tspan><tspan>2 veces</tspan></text>
+  <text x="88" y="342" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="84" letter-spacing="-2.1" fill="#FFFBF0"><tspan>por semana</tspan></text>
+  <rect x="92" y="388" width="16" height="16" rx="5" fill="#FFD60A"/>
+  <text x="132" y="410" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="34" letter-spacing="0" fill="#FFFBF0"><tspan>Tú eliges: 2, 3 o 4 sesiones</tspan></text>
+  <text x="132" y="454.2" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="34" letter-spacing="0" fill="#FFFBF0"><tspan>de 30, 45 o 60 minutos.</tspan></text>
+  <rect x="92" y="496.20000000000005" width="16" height="16" rx="5" fill="#FFD60A"/>
+  <text x="132" y="518.2" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="34" letter-spacing="0" fill="#FFFBF0"><tspan>Nunca piernas pesadas el día de tus</tspan></text>
+  <text x="132" y="562.4000000000001" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="34" letter-spacing="0" fill="#FFFBF0"><tspan>series o tu larga, ni el día antes.</tspan></text>
+  <rect x="92" y="604.4000000000001" width="16" height="16" rx="5" fill="#FFD60A"/>
+  <text x="132" y="626.4000000000001" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="34" letter-spacing="0" fill="#FFFBF0"><tspan>En casa o en el gimnasio.</tspan></text>
+  <rect x="128" y="790" width="824" height="380" rx="42" fill="none" stroke="#FFD60A" stroke-width="4" stroke-dasharray="18 14"/>
+  <text text-anchor="middle" x="540" y="950" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="44" letter-spacing="-1.1" fill="#FFD60A"><tspan>[PENDIENTE]</tspan></text>
+  <text text-anchor="middle" x="540" y="1020" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="30" letter-spacing="0" fill="#FFFBF0"><tspan>Captura real de una sesión de fuerza</tspan></text>
+  <text text-anchor="middle" x="540" y="1062" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="30" letter-spacing="0" fill="#FFFBF0"><tspan>de la Temporada Running</tspan></text>
+  
+  <text x="88" y="1290" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans SemiBold'" font-weight="600" font-size="26" fill="#FFFBF0">@bananaburnapp</text>
+  <text x="992" y="1290" text-anchor="end" font-family="'Plus Jakarta Sans', 'Plus Jakarta Sans ExtraBold'" font-weight="800" font-size="26" fill="#FFFBF0">4/5</text>
+</svg>

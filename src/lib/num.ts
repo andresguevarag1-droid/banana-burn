@@ -8,11 +8,14 @@ export function frac(value: number, total: number): number {
 export const clamp01 = (x: number, lo = 0, hi = 1) => (Number.isFinite(x) ? Math.min(hi, Math.max(lo, x)) : lo);
 
 // Cifras de la app en formato es-419 (regla del dueño): punto decimal y coma de miles: 1,276 ejercicios, 93.1 kg,
-// 2.5 kg, 8,000 pasos. Precios: $6.99 (copy.ts money y challenges.ts usd). Los correos tienen su propio formato.
+// 2.5 kg, 8,000 pasos. Precios: $6.99 y $1,040.00 (usd2). Los correos usan el mismo formato.
 export const NUM_LOCALE = "es-419";
 
 /** Número con el formato de la app. `max` y `min` son los decimales. */
 export const nfmt = (n: number, max = 1, min = 0) => n.toLocaleString(NUM_LOCALE, { minimumFractionDigits: min, maximumFractionDigits: max });
+
+/** Monto en USD con dos decimales: $9.99, $1,040.00. */
+export const usd2 = (n: number) => `$${nfmt(n, 2, 2)}`;
 
 /**
  * Textos escritos a mano con el formato contrario (la siembra de retos y programas, guardada tal cual en las migraciones

@@ -8,6 +8,8 @@ import "server-only";
 //   3. sweepTilopayRenewals(): cron diario. Cobra con la tarjeta guardada al vencer el periodo; si se rechaza, past_due y
 //      reintento diario hasta 3 veces; después se cancela.
 // Regla de oro: solo la respuesta de Tilopay servidor a servidor (cobro o consulta) da acceso, vía activateVerified().
+// Llave única (0062, charge-keys.ts): antes de cobrar una renovación se reserva (usuario, inicio del periodo, "tilopay").
+// Simulacro (dryRun): previewRenewal() dice qué se cobraría, solo leyendo y sin llamar a Tilopay.
 import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
@@ -26,7 +28,10 @@ import {
 import { sendPaymentFailed, sendSubscriptionCanceled } from "@/lib/email";
 import { errInfo } from "@/lib/security/log";
 import { logInfo } from "@/lib/log";
-import { PENDING_PREFIX, RENEWAL_REVIEW_AFTER_MS, REVIEW_PREFIX, pendingRef, renewalNext, type RenewalStep } from "@/lib/tilopay-renewal";
+import { PENDING_PREFIX, RENEWAL_REVIEW_AFTER_MS, REVIEW_PREFIX, pendingRef, releaseKeyAfter, renewalNext, type RenewalStep } from "@/lib/tilopay-renewal";
+import { chargeKeyHeld, periodOf, releaseChargeKey, reserveChargeKey } from "@/lib/charge-keys";
+import { readOnly } from "@/lib/supabase/read-only";
+import { readAll, type PlannedCharge } from "@/lib/cobros-simulacro";
 export { RENEWAL_MAX_ATTEMPTS, renewalNext, type RenewalStep } from "@/lib/tilopay-renewal";
 
 const log = (msg: string, meta?: Record<string, unknown>) => console.info(JSON.stringify({ scope: "tilopay", msg, ...meta }));
@@ -202,15 +207,34 @@ async function confirmCheckout(db: SupabaseClient, order: string, browserToken: 
 type RenewalRow = SubscriptionRow & { renewal_attempts: number; next_renewal_attempt_at: string | null; last_renewal_error: string | null };
 const RENEW_COLS = `${SUB_COLS},renewal_attempts,next_renewal_attempt_at,last_renewal_error`;
 
-export type RenewalStats = { due: number; renewed: number; failed: number; canceled: number; pending: number; checkouts: number; errors: number };
+export type RenewalStats = { due: number; renewed: number; failed: number; canceled: number; pending: number; checkouts: number; errors: number; planned?: PlannedCharge[] };
 
-type SweepOpts = { deadline?: number; limit?: number; chargeBy?: number };
+type SweepOpts = { deadline?: number; limit?: number; chargeBy?: number; dryRun?: boolean };
 
+/** Cobros por confirmar (aunque la persona haya cancelado después): de ellos, los que tienen marca (pendingRef). */
+const pendingDue = (db: SupabaseClient, at: string) => db.from("subscriptions").select(RENEW_COLS).eq("provider", "tilopay").in("status", ["active", "past_due"])
+  .not("last_renewal_error", "is", null).lte("next_renewal_attempt_at", at);
+/** Renovaciones que vencieron (sin cancelar): de ellas, las que no tienen un cobro por confirmar. */
+const renewalsDue = (db: SupabaseClient, at: string) => db.from("subscriptions").select(RENEW_COLS).eq("provider", "tilopay").in("status", ["active", "past_due"]).eq("cancel_at_period_end", false)
+  .lte("current_period_end", at).or(`next_renewal_attempt_at.is.null,next_renewal_attempt_at.lte.${at}`);
+/** Llave única del cobro (0062): la persona, el inicio del periodo que se cobra y Tilopay. */
+const keyOf = (r: RenewalRow) => ({ userId: r.user_id, periodo: periodOf(r.current_period_end!), procesador: "tilopay" as const });
+
+/** Cron diario de renovaciones. dryRun: solo calcula y reporta (planned) con un cliente de solo lectura, sin llamar a Tilopay. */
 export async function sweepTilopayRenewals(now = new Date(), opts: SweepOpts = {}): Promise<RenewalStats | null> {
   const out: RenewalStats = { due: 0, renewed: 0, failed: 0, canceled: 0, pending: 0, checkouts: 0, errors: 0 };
-  if (!isTilopayConfigured()) return null;
+  if (!opts.dryRun && !isTilopayConfigured()) return null;
   const db = adminClient();
   if (!db) return null;
+  if (opts.dryRun) {
+    try {
+      out.planned = await planRenewals(readOnly(db), now);
+    } catch (e) {
+      out.errors++;
+      log("simulacro falló", { error: errInfo(e) });
+    }
+    return out;
+  }
   const time = () => !opts.deadline || Date.now() < opts.deadline;
   // Un cobro nuevo puede tardar hasta 20 s: no se empieza si no alcanza el tiempo de la función. Las consultas sí.
   const canCharge = () => time() && (!opts.chargeBy || Date.now() < opts.chargeBy);
@@ -224,8 +248,7 @@ export async function sweepTilopayRenewals(now = new Date(), opts: SweepOpts = {
   };
   try {
     // 1) Cobros por confirmar, aunque la persona haya cancelado después: se resuelven primero (solo consulta).
-    const { data: pend, error: e1 } = await db.from("subscriptions").select(RENEW_COLS).eq("provider", "tilopay").in("status", ["active", "past_due"])
-      .not("last_renewal_error", "is", null).lte("next_renewal_attempt_at", at).order("next_renewal_attempt_at").limit(limit);
+    const { data: pend, error: e1 } = await pendingDue(db, at).order("next_renewal_attempt_at").limit(limit);
     if (e1) throw new Error(e1.message);
     for (const r of ((pend as RenewalRow[] | null) ?? []).filter((x) => pendingRef(x.last_renewal_error))) {
       if (!time()) break;
@@ -233,8 +256,7 @@ export async function sweepTilopayRenewals(now = new Date(), opts: SweepOpts = {
       count(await renewOne(db, r, now, canCharge).catch((e) => { out.errors++; log("renovación falló", { subId: r.id, error: errInfo(e) }); return null; }));
     }
     // 2) Renovaciones que vencieron (sin cancelar).
-    const { data, error } = await db.from("subscriptions").select(RENEW_COLS).eq("provider", "tilopay").in("status", ["active", "past_due"]).eq("cancel_at_period_end", false)
-      .lte("current_period_end", at).or(`next_renewal_attempt_at.is.null,next_renewal_attempt_at.lte.${at}`).order("current_period_end").limit(limit);
+    const { data, error } = await renewalsDue(db, at).order("current_period_end").limit(limit);
     if (error) throw new Error(error.message);
     for (const r of ((data as RenewalRow[] | null) ?? []).filter((x) => !pendingRef(x.last_renewal_error))) {
       if (!canCharge()) break;
@@ -309,6 +331,11 @@ async function renewOne(db: SupabaseClient, r: RenewalRow, now: Date, canCharge:
       outcome = "sin_tarjeta";
       reason = "sin tarjeta de Tilopay guardada";
     } else {
+      // Llave única (0062) justo antes de cobrar: si ya hay un cobro de este periodo, no se cobra y el intento se devuelve.
+      if ((await reserveChargeKey(db, { ...keyOf(r), origen: "renovacion", referencia: order })) !== "reservada") {
+        await db.from("subscriptions").update({ renewal_attempts: r.renewal_attempts, last_renewal_error: r.last_renewal_error, next_renewal_attempt_at: new Date(now.getTime() + 3600_000).toISOString(), updated_at: nowIso() }).eq("id", r.id);
+        return "omitido";
+      }
       const c = await chargeSavedCard({ token: card.provider_payment_method_id as string, email, amountMinor: amount, orderNumber: order });
       outcome = c.state;
       reason = c.state === "declined" ? c.description : c.state === "unknown" ? c.error : "";
@@ -316,6 +343,7 @@ async function renewOne(db: SupabaseClient, r: RenewalRow, now: Date, canCharge:
   }
 
   const step = renewalNext(attempt, outcome, now);
+  if (releaseKeyAfter(step)) await releaseChargeKey(db, keyOf(r), outcome === "sin_tarjeta" ? "sin tarjeta" : "rechazado");
   if (step.do === "renewed") {
     const start = r.current_period_end;
     const end = estimatePeriodEnd(new Date(start), r.billing).toISOString();
@@ -349,4 +377,40 @@ async function renewOne(db: SupabaseClient, r: RenewalRow, now: Date, canCharge:
   await sendSubscriptionCanceled({ userId: r.user_id, plan: pn, accessUntil: r.current_period_end, subscriptionId: r.provider_subscription_id ?? undefined }).catch(() => null);
   log("renovación cancelada tras los reintentos", { userId: r.user_id, subId: r.id });
   return "cancel";
+}
+
+// ───────────────────────── Simulacro (dryRun) ─────────────────────────
+
+/** Todas las renovaciones que tocaría el barrido (sin el límite de una corrida), solo leyendo. */
+async function planRenewals(db: SupabaseClient, now: Date): Promise<PlannedCharge[]> {
+  const at = now.toISOString();
+  const out: PlannedCharge[] = [];
+  for (const r of (await readAll<RenewalRow>((a, b) => pendingDue(db, at).order("id").range(a, b))).filter((x) => pendingRef(x.last_renewal_error))) {
+    const p = await previewRenewal(db, r);
+    if (p) out.push(p);
+  }
+  for (const r of (await readAll<RenewalRow>((a, b) => renewalsDue(db, at).order("id").range(a, b))).filter((x) => !pendingRef(x.last_renewal_error))) {
+    const p = await previewRenewal(db, r);
+    if (p) out.push(p);
+  }
+  return out;
+}
+
+/** Lo que haría renewOne con esta fila, SOLO leyendo: sin reclamarla, sin leer el correo y sin llamar a Tilopay. */
+export async function previewRenewal(db: SupabaseClient, r: RenewalRow): Promise<PlannedCharge | null> {
+  if (!r.plan || !r.billing || !r.current_period_end) return null;
+  const waiting = pendingRef(r.last_renewal_error);
+  if (!waiting && r.cancel_at_period_end) return null;
+  const amount = expectedAmountMinor(r.plan, r.billing);
+  const p: PlannedCharge = {
+    userId: r.user_id, fila: r.id, origen: "renovacion", procesador: "tilopay", plan: r.plan, billing: r.billing, montoMinor: amount, montoEsperadoMinor: amount,
+    promo50: false, periodo: periodOf(r.current_period_end), accion: "cobrar", motivo: null, cortesia: false, temporadaIncluida: r.billing === "anual",
+  };
+  if (waiting) return { ...p, accion: "consultar", motivo: "por confirmar" };
+  const { data: card } = await db.from("payment_methods").select("provider,status").eq("user_id", r.user_id).maybeSingle();
+  if (!card || card.provider !== "tilopay" || card.status !== "active") return { ...p, accion: "omitir", motivo: "sin_tarjeta" };
+  const held = await chargeKeyHeld(db, keyOf(r));
+  if (held === null) return { ...p, accion: "omitir", motivo: "sin_llaves_0062" };
+  if (held) return { ...p, accion: "omitir", motivo: "llave_ocupada" };
+  return p;
 }

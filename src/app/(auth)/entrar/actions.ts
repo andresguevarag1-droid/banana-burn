@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { createClient as createSupabase } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
-import { clientIpFrom, memoryRateLimit } from "@/lib/security";
-import { dbRateLimitAll, keyPart } from "@/lib/security/db-rate-limit";
+import { clientIpFrom } from "@/lib/security";
+import { hitLimit } from "@/lib/security/limits";
 import { attributeNewAccount } from "@/lib/attribution-server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email";
@@ -16,18 +16,12 @@ import { loginOutcome, normEmail, requireEmailConfirm, signupError } from "./val
 
 export type AuthResult = { ok: true } | { ok: false; error: string; fallback?: boolean };
 
-async function limited(kind: string, email: string, admin: ReturnType<typeof adminClient>) {
+/** Freno por red y por correo (reglas auth:* en src/lib/security/limits.ts): basta que uno se pase. */
+/** Freno por red y por correo (reglas auth:* en src/lib/security/limits.ts): basta que uno se pase. */
+async function limited(kind: "entrar" | "registro", email: string) {
   const ip = clientIpFrom(await headers());
-  // Primer freno por instancia: 10 intentos por IP y 5 por correo cada 10 minutos.
-  if (!memoryRateLimit(`${kind}:ip:${ip}`, 10, 600_000) || !memoryRateLimit(`${kind}:mail:${email}`, 5, 600_000)) return true;
-  // Freno compartido entre instancias (0023): el registro crea cuentas confirmadas sin pasar por los límites de Supabase Auth.
-  // Holgado por IP: en datos móviles de Latinoamérica muchas personas comparten IP (CGNAT).
-  const ipKey = keyPart(ip), mailKey = keyPart(email);
-  return !(await dbRateLimitAll(admin, [
-    { key: `${kind}:ip:${ipKey}`, windowSec: 3600, max: 20 },
-    { key: `${kind}:ipd:${ipKey}`, windowSec: 86400, max: 100 },
-    { key: `${kind}:mail:${mailKey}`, windowSec: 3600, max: 10 },
-  ]));
+  const [byIp, byMail] = await Promise.all([hitLimit(`auth:${kind}:ip`, `ip:${ip}`), hitLimit(`auth:${kind}:correo`, email)]);
+  return !byIp.ok || !byMail.ok;
 }
 
 const TOO_MANY = "Demasiados intentos. Espera unos minutos e intenta de nuevo.";
@@ -71,7 +65,7 @@ export async function signUpConfirmed(email: string, password: string): Promise<
   const admin = adminClient();
   // Sin service_role, o con confirmación de correo obligatoria (AUTH_EMAIL_CONFIRM=1): registro normal con correo.
   if (!admin || requireEmailConfirm()) return { ok: false, error: "", fallback: true };
-  if (await limited("signup", mail, admin)) return { ok: false, error: TOO_MANY };
+  if (await limited("registro", mail)) return { ok: false, error: TOO_MANY };
   const { data, error } = await admin.auth.admin.createUser({ email: mail, password, email_confirm: true });
   if (!error) {
     // Invitación (/r/<código>): se atribuye aquí, en el servidor, al crear la cuenta. Nunca bloquea el registro.
@@ -92,7 +86,7 @@ export async function confirmAndCheck(email: string, password: string): Promise<
   const mail = normEmail(email);
   const admin = adminClient();
   if (!admin || requireEmailConfirm() || !mail || typeof password !== "string" || !password) return { ok: false, error: "", fallback: true };
-  if (await limited("confirm", mail, admin)) return { ok: false, error: TOO_MANY };
+  if (await limited("entrar", mail)) return { ok: false, error: TOO_MANY };
   const BAD = { ok: false as const, error: "Correo o contraseña incorrectos." };
   const first = await passwordCheck(mail, password);
   if (first === "ok") return { ok: true };

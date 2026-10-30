@@ -5,7 +5,7 @@ import { ALL_PROGRAM_SEED, PROGRAM_SEED_BY_SLUG, type ProgramSeed } from "./prog
 import { parseMeta, type ProgramMeta } from "./programs";
 import { RESTYLE } from "./catalog-0028";
 import { FREE_HIDE, FREE_REWORK } from "./catalog-0033";
-import { es419Deep, es419Text } from "./num";
+import { es419Deep, es419Text, usd2 } from "./num";
 import { SEASON_SEED } from "./season-content";
 
 /** Catálogo de respaldo con los nombres, colores y estados de 0028 (la base ya los tiene después de la migración). */
@@ -243,7 +243,7 @@ export function priceMinor(priceUsd: number, discountPct = 0) {
 }
 
 /** Precio de un reto en USD: $6.99, como el resto de los precios (copy.ts money). */
-export const usd = (minor: number) => `$${(minor / 100).toLocaleString("es-419", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const usd = (minor: number) => usd2(minor / 100);
 
 /** Días del plan que puede ver alguien: todos si es gratis o ya lo tiene; si no, los primeros PREVIEW_DAYS. */
 export function visibleDays(c: Pick<Challenge, "priceUsd" | "days">, owned: boolean) {

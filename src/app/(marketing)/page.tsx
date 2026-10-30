@@ -19,6 +19,9 @@ import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
 import { FaqCta, FROM, SIGNUP, homeFaq } from "./content";
 import { offer } from "@/lib/offer";
 
+// Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
+export const revalidate = 3600;
+
 const SAVE = Math.max(...PLANS.map(annualSavingPct));
 const CTA = "Crear mi plan gratis";
 

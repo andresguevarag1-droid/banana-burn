@@ -22,6 +22,10 @@ import "server-only";
 // renueva al precio normal. ONVO no tiene cupones para suscripciones (solo para sesiones de Checkout de links de un solo
 // uso), así que el primer mes es un cobro único (PaymentIntent confirmado por el servidor con la tarjeta guardada,
 // onvoIntroCharge) y al terminar ese mes onvo-intro.ts crea la suscripción normal a precio completo con la misma tarjeta.
+//
+// Llave única (0062, charge-keys.ts): justo antes de llamar al procesador se reserva (usuario, "primer_cobro", procesador).
+// Si ya está reservada no se cobra; se libera solo cuando se sabe que no se cobró (rechazo o intento devuelto).
+// Simulacro (dryRun): previewCharge() repite las revisiones de attemptCharge solo leyendo, sin procesador ni avisos.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import type { Viewer } from "@/lib/supabase/server";
@@ -35,7 +39,7 @@ import { recordServerError } from "@/lib/monitor/server";
 import { REPLACE_MARKER, renewalInFlight } from "@/lib/tilopay-renewal";
 import {
   OnvoError, cancelSubscription, checkPaymentMethod, confirmPaymentIntent, createChargedSubscription, createPaymentIntent, detachPaymentMethod, firstChargeFailed,
-  estimatePeriodEnd, getPaymentIntent, intentOutcome, getPaymentMethod, getSubscription, isOnvoConfigured, listCustomerSubscriptions, matchesAttempt, priceIdFor, profilePlanFor,
+  estimatePeriodEnd, expectedAmountMinor, getPaymentIntent, intentOutcome, getPaymentMethod, getSubscription, isOnvoConfigured, listCustomerSubscriptions, matchesAttempt, priceIdFor, profilePlanFor,
 } from "@/lib/onvo";
 import {
   REVIEW_AFTER_MS, REVIEW_PREFIX, STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, attemptKeyFor, canCancel, canChangePlan, chargeBusy, chargeMoved, chargeView,
@@ -44,6 +48,9 @@ import {
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
 import { pushToUser } from "@/lib/push";
 import { errInfo } from "@/lib/security/log";
+import { FIRST_CHARGE_PERIOD, chargeKeyHeld, releaseChargeKey, reserveChargeKey } from "@/lib/charge-keys";
+import { readOnly } from "@/lib/supabase/read-only";
+import { readAll, type PlannedCharge } from "@/lib/cobros-simulacro";
 
 export const CHARGE_COLS = "id,user_id,idem_key,kind,plan,billing,amount_minor,promo,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
 const CARD_COLS = "user_id,provider,provider_customer_id,provider_payment_method_id,brand,last4,exp_month,exp_year,status";
@@ -454,6 +461,17 @@ export async function removeCard(v: Viewer): Promise<void> {
 /** Vigencia de una página de pago (compra directa): mientras tanto no se cobra la tarjeta guardada (doble cobro). */
 const CHECKOUT_WINDOW_MS = 2 * 3600_000;
 
+const firstKey = (r: Pick<TrialChargeRow, "user_id">, procesador: PayProvider) => ({ userId: r.user_id, periodo: FIRST_CHARGE_PERIOD, procesador });
+/** Reserva la llave del primer cobro (0062) justo antes de llamar al procesador. false = no se cobra. */
+const reserveFirst = async (db: SupabaseClient, r: TrialChargeRow, procesador: PayProvider, referencia: string) =>
+  (await reserveChargeKey(db, { ...firstKey(r, procesador), origen: "primer_cobro", referencia })) === "reservada";
+
+/** La llave no se pudo reservar (ya hay un cobro de este periodo, o la base no respondió): no se cobra; el intento se devuelve. */
+async function keyBlocked(db: SupabaseClient, r: TrialChargeRow, before: Pick<TrialChargeRow, "status" | "attempts">, now: Date): Promise<"aplazado"> {
+  await db.from("trial_charges").update({ status: before.status, attempts: before.attempts, next_attempt_at: new Date(now.getTime() + 3600_000).toISOString(), last_error: "llave de cobro ocupada", updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
+  return "aplazado";
+}
+
 export type AttemptResult = "omitido" | "aplazado" | "enviado" | "rechazado" | "por_confirmar" | "reemplazado" | "sin_tarjeta" | "sin_config";
 
 /**
@@ -524,6 +542,7 @@ export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now
   if (providerOf(card) === "tilopay") return tilopayCharge(db, r, row, card, now);
   if (promoApplies(r.promo, r.billing)) return onvoIntroCharge(db, r, row, card, now);
 
+  if (!(await reserveFirst(db, r, "onvo", attemptKeyFor(r)))) return keyBlocked(db, r, prev, now);
   let subId: string | null = null;
   try {
     const sub = await createChargedSubscription({ customerId: card.provider_customer_id, paymentMethodId: card.provider_payment_method_id, plan: r.plan, billing: r.billing, userId: r.user_id, trialKey: r.idem_key, attempt: r.attempts });
@@ -550,6 +569,7 @@ export async function attemptCharge(db: SupabaseClient, row: TrialChargeRow, now
     }
     if (status === 401 || status === 403) {
       // Llave mal configurada: no es culpa de la persona. Se devuelve el intento y se avisa al equipo.
+      await releaseChargeKey(db, firstKey(r, "onvo"), `ONVO ${status}`);
       await db.from("trial_charges").update({ status: row.status, attempts: row.attempts, next_attempt_at: new Date(now.getTime() + 3600_000).toISOString(), last_error: `ONVO ${status}`, updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
       alert("ONVO rechazó la llave al cobrar", { chargeId: r.id, status });
       return "sin_config";
@@ -592,6 +612,7 @@ async function tilopayCharge(db: SupabaseClient, r: TrialChargeRow, before: Tria
     alert("cobro Tilopay sin correo de la persona", { chargeId: r.id });
     return "sin_config";
   }
+  if (!(await reserveFirst(db, r, "tilopay", order))) return keyBlocked(db, r, before, now);
   // La fila de la suscripción va primero (incomplete): si el proceso se cae después del cobro, la consulta la encuentra.
   await recordSubscription(db, r, card.provider_customer_id, subId, "tilopay");
   await db.from("trial_charges").update({ provider_subscription_id: subId, updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
@@ -638,6 +659,7 @@ async function onvoIntroCharge(db: SupabaseClient, r: TrialChargeRow, before: Tr
     alert("primer mes con 50 %: monto no coincide con el servidor", { chargeId: r.id });
     return "sin_config";
   }
+  if (!(await reserveFirst(db, r, "onvo", attemptKeyFor(r)))) return keyBlocked(db, r, before, now);
   let piId: string;
   try {
     const pi = await createPaymentIntent({ amountMinor: expected, customerId: card.provider_customer_id, description: `Banana Burn, ${planName(r.plan)}: primer mes con 50 % de descuento`, metadata: { userId: r.user_id, trialKey: r.idem_key, attempt: String(r.attempts), promo: "primer_mes_50" } });
@@ -646,6 +668,7 @@ async function onvoIntroCharge(db: SupabaseClient, r: TrialChargeRow, before: Tr
   } catch (e) {
     // Sin PaymentIntent no hay cobro posible: se devuelve el intento.
     const status = e instanceof OnvoError ? e.status : 0;
+    await releaseChargeKey(db, firstKey(r, "onvo"), "sin PaymentIntent");
     await db.from("trial_charges").update({ status: before.status, attempts: before.attempts, next_attempt_at: new Date(now.getTime() + 3600_000).toISOString(), last_error: `ONVO ${status || "red"} al crear el cobro`, updated_at: nowIso() }).eq("id", r.id).eq("status", "charging");
     alert("primer mes con 50 %: no se pudo crear el PaymentIntent", { chargeId: r.id, status });
     return status === 401 || status === 403 ? "sin_config" : "aplazado";
@@ -713,6 +736,7 @@ async function reconcileIntro(db: SupabaseClient, r: TrialChargeRow, now: Date):
     // El PaymentIntent existe pero nunca se confirmó: no hubo cobro. Se devuelve el intento para hacerlo de nuevo.
     await db.from("subscriptions").update({ status: "expired", updated_at: nowIso() }).eq("provider_subscription_id", r.provider_subscription_id!).eq("status", "incomplete");
     await db.from("trial_charges").update({ status: r.attempts <= 1 ? "scheduled" : "retry_scheduled", attempts: Math.max(0, r.attempts - 1), provider_subscription_id: null, next_attempt_at: nowIso(), updated_at: nowIso() }).eq("id", r.id).in("status", ["unknown", "pending"]);
+    await releaseChargeKey(db, firstKey(r, "onvo"), "PaymentIntent sin confirmar");
     return "reprogramado";
   }
   if (out === "not_confirmed" || out === "processing") { await reviewIfStuck(db, r, now, `ONVO ${piId}`); return "sigue"; }
@@ -755,6 +779,7 @@ async function decline(db: SupabaseClient, r: TrialChargeRow, reason: string, su
   const next = afterDecline(r, now);
   await db.from("trial_charges").update({ status: next.status, next_attempt_at: next.nextAttemptAt, last_error: reason.slice(0, 300), updated_at: nowIso() })
     .eq("id", r.id).in("status", ["charging", "pending", "unknown"]);
+  await releaseChargeKey(db, firstKey(r, provider), "rechazado");
   log("cobro rechazado", { userId: r.user_id, chargeId: r.id, attempt: r.attempts, next: next.status });
   await notifyDecline(db, { ...r, status: next.status }, next.nextAttemptAt);
   return "rechazado";
@@ -822,6 +847,7 @@ async function reconcileUnknown(db: SupabaseClient, r: TrialChargeRow, now = new
   if (old && metadataWorks) {
     // ONVO no tiene ninguna suscripción de este intento: no se creó. Se devuelve el intento para hacerlo de nuevo.
     await db.from("trial_charges").update({ status: r.attempts <= 1 ? "scheduled" : "retry_scheduled", attempts: Math.max(0, r.attempts - 1), next_attempt_at: nowIso(), updated_at: nowIso() }).eq("id", r.id).eq("status", "unknown");
+    await releaseChargeKey(db, firstKey(r, "onvo"), "no llegó a ONVO");
     log("intento por confirmar no llegó a ONVO: se reprograma", { chargeId: r.id });
     return "reprogramado";
   }
@@ -886,13 +912,25 @@ export async function runDueForUser(userId: string, now = new Date()): Promise<A
   return null;
 }
 
-export type SweepStats = { reminders: number; attempted: number; sent: number; declined: number; unknown: number; tidied: number; errors: number };
+export type SweepStats = { reminders: number; attempted: number; sent: number; declined: number; unknown: number; tidied: number; errors: number; planned?: PlannedCharge[] };
 
-/** Cron diario (/api/cron/recordatorios): avisos del día 5, cobros del día 7 y reintentos del día 8, y reconciliación. */
-export async function sweepTrialCharges(now = new Date(), opts: { deadline?: number; limit?: number; chargeBy?: number; concurrency?: number; skipReminders?: boolean } = {}): Promise<SweepStats> {
+/**
+ * Cron diario (/api/cron/recordatorios): avisos del día 5, cobros del día 7 y reintentos del día 8, y reconciliación.
+ * dryRun: solo calcula y reporta (planned) con un cliente de solo lectura: sin avisos, sin reclamar filas y sin procesador.
+ */
+export async function sweepTrialCharges(now = new Date(), opts: { deadline?: number; limit?: number; chargeBy?: number; concurrency?: number; skipReminders?: boolean; dryRun?: boolean } = {}): Promise<SweepStats> {
   const out: SweepStats = { reminders: 0, attempted: 0, sent: 0, declined: 0, unknown: 0, tidied: 0, errors: 0 };
   const db = adminClient();
   if (!db) return out;
+  if (opts.dryRun) {
+    try {
+      out.planned = await planTrialCharges(readOnly(db), now);
+    } catch (e) {
+      out.errors++;
+      log("simulacro falló", { error: errInfo(e) });
+    }
+    return out;
+  }
   const time = () => !opts.deadline || Date.now() < opts.deadline;
   const limit = Math.min(opts.limit ?? 100, 500);
   const at = now.toISOString();
@@ -927,6 +965,68 @@ export async function sweepTrialCharges(now = new Date(), opts: { deadline?: num
   }
   if (out.reminders || out.attempted || out.tidied) log("barrido", out);
   return out;
+}
+
+// ───────────────────────── Simulacro (dryRun) ─────────────────────────
+
+const OPEN_STATUSES = ["charging", "unknown", "pending"];
+
+/** Todos los cobros que vencen y los que están en vuelo, sin escribir (db de solo lectura) y sin límite de una corrida. */
+async function planTrialCharges(db: SupabaseClient, now: Date): Promise<PlannedCharge[]> {
+  const at = now.toISOString();
+  const planned: PlannedCharge[] = [];
+  // En vuelo: el cron solo consulta al procesador (nunca cobra de nuevo).
+  const open = await readAll<TrialChargeRow>((a, b) => db.from("trial_charges").select(CHARGE_COLS).in("status", OPEN_STATUSES).order("id").range(a, b));
+  for (const r of open) {
+    planned.push({
+      userId: r.user_id, fila: r.id, origen: r.kind === "beta" ? "fin_beta" : r.kind, procesador: r.provider_subscription_id?.startsWith("tlp:") ? "tilopay" : "onvo",
+      plan: r.plan, billing: r.billing, montoMinor: r.amount_minor, montoEsperadoMinor: firstChargeMinor(r.plan, r.billing, r.promo), promo50: promoApplies(r.promo, r.billing),
+      periodo: FIRST_CHARGE_PERIOD, accion: "consultar", motivo: `en vuelo (${r.status})`, cortesia: false, temporadaIncluida: r.billing === "anual",
+    });
+  }
+  const due = await readAll<TrialChargeRow>((a, b) => db.from("trial_charges").select(CHARGE_COLS).in("status", ["scheduled", "retry_scheduled"]).lte("next_attempt_at", at).order("id").range(a, b));
+  for (const r of due) {
+    const p = await previewCharge(db, r, now);
+    if (p) planned.push(p);
+  }
+  return planned;
+}
+
+/**
+ * Lo que haría attemptCharge con esta fila, SOLO leyendo: las mismas revisiones y en el mismo orden, sin reclamar la fila,
+ * sin llamar a ONVO ni a Tilopay y sin avisos. No lee el correo (dato personal) ni revisa la configuración del procesador:
+ * responde "qué se cobraría con los procesadores encendidos".
+ */
+export async function previewCharge(db: SupabaseClient, row: TrialChargeRow, now = new Date()): Promise<PlannedCharge | null> {
+  if (!isDue(row, now)) return null;
+  const at = now.toISOString();
+  const card = await loadCard(db, row.user_id);
+  const provider = card ? providerOf(card) : null;
+  const promo = promoApplies(row.promo, row.billing);
+  const expected = firstChargeMinor(row.plan, row.billing, row.promo);
+  // Lo que se mandaría: Tilopay cobra amount_minor de la fila, ONVO con 50 % el monto recalculado y ONVO normal el precio del plan.
+  const amount = provider === "tilopay" ? row.amount_minor : promo ? expected : expectedAmountMinor(row.plan, row.billing);
+  const { data: grants } = await db.from("comp_grants").select("source,starts_at").eq("user_id", row.user_id).is("revoked_at", null).gt("expires_at", at).limit(20);
+  const g = (grants as { source: string | null; starts_at: string }[] | null) ?? [];
+  const p: PlannedCharge = {
+    userId: row.user_id, fila: row.id, origen: row.status === "retry_scheduled" ? "reintento" : row.kind === "beta" ? "fin_beta" : row.kind, procesador: provider,
+    plan: row.plan, billing: row.billing, montoMinor: amount, montoEsperadoMinor: expected, promo50: promo, periodo: FIRST_CHARGE_PERIOD,
+    accion: "cobrar", motivo: null, cortesia: g.some((x) => x.source !== "condominio" && Date.parse(x.starts_at) <= now.getTime()), temporadaIncluida: row.billing === "anual",
+  };
+  const skip = (motivo: string): PlannedCharge => ({ ...p, accion: "omitir", motivo });
+  const { data: tester } = await db.from("tester_grants").select("id").eq("user_id", row.user_id).is("revoked_at", null).lte("starts_at", at).gt("expires_at", at).limit(1);
+  if (tester?.length) return skip("tester");
+  if (g.some((x) => x.source === "condominio")) return skip("condominio");
+  if (row.kind === "beta" && now.getTime() < Date.parse(BETA_GRACE_UNTIL)) return skip("beta_aun_no");
+  const { data: open } = await db.from("subscriptions").select("provider_subscription_id").eq("user_id", row.user_id).eq("status", "incomplete").gte("created_at", new Date(now.getTime() - CHECKOUT_WINDOW_MS).toISOString()).limit(10);
+  if (((open as { provider_subscription_id: string | null }[] | null) ?? []).some((s) => s.provider_subscription_id !== row.provider_subscription_id)) return skip("compra_en_curso");
+  if (await hasLivePaidSubscription(db, row.user_id)) return skip("ya_paga");
+  if (!card || card.status !== "active" || !provider) return skip("sin_tarjeta");
+  if (provider === "onvo" && promo && expectedFirst(row) === null) return skip("monto_no_coincide");
+  const held = await chargeKeyHeld(db, firstKey(row, provider));
+  if (held === null) return skip("sin_llaves_0062");
+  if (held) return skip("llave_ocupada");
+  return p;
 }
 
 // ───────────────────────── Ganchos del webhook (billing.ts) ─────────────────────────

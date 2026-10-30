@@ -202,6 +202,33 @@ export function expressDay(minutes: number, seed = 0): PlannedDay {
   return { dow: -1, tpl: null, name: `Exprés ${m} min`, hook: "Hoy sudas cuerpo completo en 2 × 2 m, sin equipo, y sumas a tu racha", tag: "Sin equipo", icon: "bolt", exercises, mins: m, cardio: undefined };
 }
 
+/** Ejercicios básicos del primer entreno por equipo: piernas, empuje, tirón (o glúteos) y core, en ese orden. */
+const FIRST_EX: Record<Equipment, ExerciseId[]> = {
+  gym: ["goblet", "incline", "lat", "plank"],
+  mixto: ["goblet", "incline", "lat", "plank"],
+  casa: ["goblet", "floorpress", "dbrow", "plank"],
+  ninguno: ["bwsquat", "pushup", "glutebridge", "plank"],
+};
+/** Tope del primer entreno, en minutos (con el calentamiento). */
+export const FIRST_MAX_MIN = 15;
+
+/**
+ * Primer entreno de quien nunca ha entrenado: 10 a 15 minutos, 3 o 4 ejercicios básicos de su equipo, 2 series con
+ * descanso corto y sin cardio. Conserva el día y la plantilla de `base` (así se guarda y la rutina sigue igual desde
+ * el segundo entreno). Quién es "primera vez" lo decide el servidor con los entrenos guardados, nunca el cliente.
+ */
+export function firstSessionDay(base: PlannedDay, opts: PlanOpts = {}): PlannedDay {
+  let exercises: PlannedExercise[] = FIRST_EX[opts.equipment ?? "gym"].map((id) => {
+    const cfg: SlotCfg = EX[id].m === "Core" ? { id, sets: 2, lo: 20, hi: 30, rest: 45, unit: "s" } : { id, sets: 2, lo: 8, hi: 12, rest: 60 };
+    return { id, name: EX[id].n, muscle: EX[id].m, cfg };
+  });
+  while (estimateMinutes(exercises) > FIRST_MAX_MIN && exercises.length > 3) exercises = exercises.slice(0, -1);
+  return {
+    ...base, name: "Cuerpo completo para empezar", tag: "Ligero", icon: "bolt", exercises, cardio: undefined, mins: estimateMinutes(exercises),
+    hook: "Hoy aprendes los movimientos básicos a tu ritmo, sin prisa", key: undefined, program: undefined,
+  };
+}
+
 /** "Hoy construyes la fuerza base de piernas, pecho y hombros: 52 minutos." */
 export function hookLine(hook: string | undefined, mins?: number | null): string | null {
   if (!hook) return null;
