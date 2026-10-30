@@ -30,6 +30,8 @@ Horas en hora de Costa Rica (UTC-6, sin horario de verano).
 
 La columna # es el orden de envío; los archivos van numerados por pieza. El 6 de noviembre, quien tiene tarjeta lista recibe el correo del día 6 a las 6:00 a. m. y el aviso de cobro a las 7:00 a. m.; se recomienda que Resend omita el del día 6 a esas personas ese día, para que el aviso de cobro no quede tapado.
 
+Los correos de recuperación (48 horas sin entrenar, prueba cancelada y pago fallido) están en [recuperacion/](recuperacion/README.md).
+
 ## Por qué son 9 y no 10
 
 El pedido lista bienvenida, 7 correos diarios, oferta y aviso (10), pero pide 9 piezas. La bienvenida y el día 1 se fusionaron en el correo 1: la prueba empieza al registrarse, así que el día 1 es el mismo momento de la bienvenida, y su acción (armar el plan y hacer el primer entreno) es la acción del día 1. Quedan bienvenida con día 1, días 2 a 7 (6 correos), oferta y aviso: 9.
