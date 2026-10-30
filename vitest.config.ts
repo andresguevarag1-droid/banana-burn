@@ -9,5 +9,7 @@ export default defineConfig({
       "server-only": fileURLToPath(new URL("./src/lib/security/server-only-noop.ts", import.meta.url)),
     },
   },
+  // JSX como en Next (runtime automático), para poder renderizar componentes a HTML en las pruebas.
+  esbuild: { jsx: "automatic" },
   test: { environment: "node" },
 });

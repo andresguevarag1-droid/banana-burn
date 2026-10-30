@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { ageOn, goalPace, nextTrainingDow, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
+import { ageOn, firstSessionDay, goalPace, isTrainingDay, nextTrainingDow, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
 import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
@@ -116,4 +116,14 @@ export function nextSessionPlan(d: Pick<ReturnType<typeof dashboard>, "engineSch
   if (nd == null) return null;
   const mon = (x: number) => (x + 6) % 7;
   return planDay(nd, mon(nd) > mon(d.today.dow) ? d.week : d.week + 1, d.engineSched, d.opts);
+}
+
+/**
+ * Primer entreno corto (10 a 15 min) de quien nunca ha entrenado, o null. `savedWorkouts` sale de los entrenos guardados
+ * en el servidor, nunca de un dato del cliente. Con un programa activo manda el programa. Desde el segundo entreno, null.
+ */
+export function firstSessionPlan(d: Pick<ReturnType<typeof dashboard>, "program" | "plan" | "engineSched" | "today" | "week" | "opts">, savedWorkouts: number) {
+  if (d.program || savedWorkouts > 0) return null;
+  const base = isTrainingDay(d.plan) ? d.plan : nextSessionPlan(d);
+  return base ? firstSessionDay(base, d.opts) : null;
 }
