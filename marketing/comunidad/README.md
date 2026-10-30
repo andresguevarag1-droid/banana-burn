@@ -40,3 +40,7 @@ Métrica final: usuarios únicos con trial_charges.status = 'succeeded' o suscri
 ## Texto preparado para la descripción del PR
 
 Mueve registro completo, primer entreno y retención en semana 1 mediante historias del 1 al 8, respuestas a dudas y un reto mensual de 12 entrenos ligado a 3 amigos activos = 1 mes gratis. Apoya tarjeta opcional y primer pago con aclaraciones de fechas. Medición: clics y votos por pieza en las redes; bienvenida terminada, primer entreno persistido, retorno en dos días distintos de la semana 1 y referidos calificados en datos agregados. Resultado final: usuarios únicos de pago hacia la meta de 100. Los UTM de referidos aún se pierden, por lo que no se atribuyen pagos a piezas. Incluye bases PNG de historias, guiones de carrusel y 20 respuestas. Pendiente de aprobación escrita de Andrés; nada publicado ni enviado.
+
+## Continuación: 9 al 15 de noviembre
+
+El [plan de prueba a pago](semana-2026-11-09.md) enlaza los siete días, sus tres carruseles, dos Reels, historias y respuestas. Para esa semana aplica la cadencia del playbook de crecimiento (07:00, 18:00 y 22:00), con bases SVG que incluyen capturas reales, pendientes de exportación y aprobación.
