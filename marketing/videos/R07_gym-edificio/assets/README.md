@@ -1,0 +1,1 @@
+Colocar aquí coach-banana-senala.png: pose oficial con fondo transparente, aportada por Andrés. No redibujar ni sustituir. Los videos base reales se editan externamente según guion.md; no son necesarios para la alternativa de motion graphics.
