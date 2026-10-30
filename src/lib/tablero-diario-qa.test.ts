@@ -128,4 +128,14 @@ describe("QA: daily SQL executes in a read-only PostgreSQL transaction", () => {
       insert into workouts values ('${id(1)}', '2026-11-16');`);
     expect(day(rows)).toMatchObject({ cuentas_creadas: 2, registros_completos: 0, primer_entreno: 0 });
   });
+  it("limits acquisition cohorts and uses only onboarded payers for conversion", async () => {
+    const rows = await query(account(1) + onboarding(1) + charge(1) +
+      account(2) + onboarding(2) + account(3) + charge(3) +
+      account(4, "2026-10-25 05:59:59+00") + charge(4) +
+      account(5, "2026-10-31 06:00+00") + charge(5));
+    expect(day(rows)).toMatchObject({ cuentas_creadas: 3, registros_completos: 2,
+      usuarios_pago: 2, registros_que_pagan: 1, prueba_a_pago_pct: "50.00",
+      total_usuarios_pago: "2", costo_cliente_pago_usd: null });
+  });
+
 });
