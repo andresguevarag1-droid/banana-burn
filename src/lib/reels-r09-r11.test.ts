@@ -4,12 +4,40 @@ import { nfmt, usd2 } from "./num";
 import { PLANS } from "./plans";
 import { SEASON_PRICE_MINOR } from "./seasons";
 import { firstChargeMinor, PROMO_ID, PROMO_PCT } from "./trial";
+import { entitlementsFrom } from "./entitlements";
 import * as r09 from "../../marketing/videos/R09_fuerza-running/proyecto/escenas.mjs";
 import * as r10 from "../../marketing/videos/R10_admin-gym-vacio/proyecto/escenas.mjs";
 import * as r11 from "../../marketing/videos/R11_dia-inyeccion/proyecto/escenas.mjs";
 
 const medicalLine = "No sustituye la indicación de tu médico.";
 const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+
+describe("R11: Banana Shield en la prueba y el plan publicado", () => {
+  const guion = readFileSync("marketing/videos/R11_dia-inyeccion/guion.md", "utf8");
+  const captura = guion.split("## Captura real\n")[1].split("\n## ")[0];
+  const post = guion.split("## Post propuesto\n")[1].split("\n## ")[0];
+
+  it("respalda la inclusión anunciada en pantalla, captura y post con los planes", () => {
+    const completo = PLANS.find((plan) => plan.id === "completo")!;
+    const entreno = PLANS.find((plan) => plan.id === "entreno")!;
+    expect(completo.feats.some((feat) => feat.includes("Banana Shield"))).toBe(true);
+    expect(entreno.excluded.some((feat) => feat.includes("Banana Shield"))).toBe(true);
+    expect(r11.CONFIG.escenas.some((scene) => scene.texto === `Incluido en ${completo.name}`)).toBe(true);
+    expect(captura).toContain(`Banana Shield pertenece a ${completo.name}`);
+    expect(post).toContain(`forma parte de ${completo.name}`);
+  });
+
+  it("respalda todo incluido durante los siete días sin tarjeta en la semana de publicación", () => {
+    const access = entitlementsFrom({
+      profilePlan: "free", role: "free", subs: [],
+      createdAt: "2026-11-16T12:00:00Z", now: new Date("2026-11-18T12:00:00Z"),
+      betaEndsAt: "2026-11-01T06:00:00Z",
+    });
+    expect(access).toMatchObject({ access: "trial", app: true, nutrition: true, locked: false, card: null });
+    expect(captura).toContain("está disponible durante la prueba con todo incluido");
+    expect(post).toContain("sin tarjeta");
+  });
+});
 
 describe("R09 a R11: importes publicados", () => {
   const medicion = readFileSync("marketing/videos/R09-R11_medicion.md", "utf8");
@@ -48,6 +76,18 @@ for (const { CONFIG, versiones, linea } of [r09, r10, r11]) {
     .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
 
   describe(CONFIG.slug, () => {
+    it("mantiene CTA, hashtags y marca en las escenas y el post público", () => {
+      const post = guion.split("## Post propuesto\n")[1].split("\n## ")[0];
+      const cta = "Empieza 7 días gratis en bananaburn.app";
+      expect(CONFIG.escenas.at(-1)?.texto).toBe(cta);
+      expect(post.toLowerCase()).toContain(cta.toLowerCase());
+      expect(post).toContain("#BananaBurn");
+      expect(post.match(/#\w+/g)).toHaveLength(5);
+      const publico = [...CONFIG.escenas.map((scene) => scene.texto), post].join("\n");
+      expect(publico).not.toMatch(/\p{Extended_Pictographic}/u);
+      expect(publico).not.toMatch(/\bIA\b|inteligencia artificial|banano|[—–!¡]/i);
+    });
+
     it("tiene nueve escenas y hasta ocho palabras añadidas, incluida la etiqueta", () => {
       expect(CONFIG.escenas).toHaveLength(9);
       expect(CONFIG.captura.startsWith("public/landing/")).toBe(true);
