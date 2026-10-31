@@ -9,6 +9,30 @@ const nav = readFileSync("src/components/app-nav.tsx", "utf8");
 const messages = [...doc.matchAll(/^```text\r?\n([\s\S]*?)^```\s*$/gm)].map((m) => m[1].trim());
 
 describe("mensajes semanales del mes gratis", () => {
+  it("cubre los cuatro pasos semanales y deja la continuidad a elección del residente", () => {
+    expect(messages[0]).toMatch(/crea tu cuenta/);
+    expect(messages[0]).toContain("sin tarjeta");
+    expect(messages[0]).toContain("30 días cuentan desde que lo activas");
+    expect(messages[1]).toContain("30 minutos en el gimnasio del edificio");
+    expect(messages[1]).toMatch(/5 para caminar[\s\S]*20 para seguir[\s\S]*5 para volver/);
+    expect(messages[1]).toContain("Guarda tu entreno");
+    for (const field of ["peso", "medidas", "fotos"]) expect(messages[2]).toContain(field);
+    expect(messages[3]).toContain("No hay cobro automático");
+    for (const message of messages) expect(message).toMatch(/cada residente decide/);
+    expect(doc).toContain("[fin-mes-gratis.md](fin-mes-gratis.md)");
+    expect(readFileSync("marketing/condominios/fin-mes-gratis.md", "utf8")).toContain("Fin del mes gratis");
+  });
+
+  it("explica la medición de prueba a pago sin confundir continuidad con ingresos cobrados", () => {
+    expect(doc).toContain("Mueve prueba a pago");
+    expect(doc).toContain("denominador");
+    expect(doc).toContain("numerador");
+    expect(doc).toContain("status = 'succeeded'");
+    expect(doc).toContain("no usar ese conteo como ingresos cobrados");
+    expect(doc).toContain("No es una previsión de conversiones");
+    expect(messages.join("\n")).not.toMatch(/\bIA\b|inteligencia artificial/i);
+  });
+
   it("incluye exactamente cuatro mensajes de menos de 80 palabras con enlace del condominio y sin costo para la administración", () => {
     expect(messages).toHaveLength(4);
     for (const message of messages) {
