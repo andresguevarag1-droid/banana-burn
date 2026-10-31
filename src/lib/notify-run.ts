@@ -169,7 +169,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const phoneBy = group((phones.error ? [] : phones.data) as (NativeToken & { user_id: string })[]);
   const goalBy = new Map<string, GoalRow>();
   for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
-  const [stepBy, recoveryBy] = await Promise.all([trialSequenceFor(admin, users, prefsOf, now), recoveryFor(admin, users, prefsOf, now)]);
+  const [stepBy, recoveryBy] = await Promise.all([trialSequenceFor(admin, users, prefsOf, now), recoveryFor(admin, users, prefsOf, now, mode)]);
 
   // Varias personas a la vez (cada una espera push, correo y la base): con miles de cuentas, de una en una no alcanzaba
   // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
@@ -221,12 +221,15 @@ export async function trialSequenceFor(admin: SupabaseClient, users: Pick<Profil
 
 /**
  * Recuperación al terminar la prueba sin plan (recuperacion.ts): qué correo (día 8 o 14) le toca hoy a cada cuenta del lote.
+ * En modo por hora, el día del correo es el día local cuya hora del recordatorio cae en la ventana de 24 horas (recoveryAt):
+ * así todo ese día local queda sin otros correos, también antes de que abra la ventana o después de que cierre.
  * Solo consulta las cuentas con una ventana abierta. Si alguna lectura falla, nadie del lote lo recibe: sin esos datos podría
  * llegarle a quien ya pagó o tiene un cobro en curso. Exportada para pruebas.
  */
-export async function recoveryFor(admin: SupabaseClient, users: Pick<Profile, "id" | "created_at">[], prefsOf: Map<string, Prefs>, now: Date): Promise<Map<string, RecoveryStep>> {
+export async function recoveryFor(admin: SupabaseClient, users: Pick<Profile, "id" | "created_at">[], prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily" = "daily"): Promise<Map<string, RecoveryStep>> {
   const out = new Map<string, RecoveryStep>();
-  const ids = users.filter((u) => recoveryStepAt(u.created_at, now) && prefsOf.get(u.id)?.email_reminders).map((u) => u.id);
+  const atBy = new Map(users.map((u) => [u.id, mode === "hourly" && prefsOf.get(u.id) ? recoveryAt(now, prefsOf.get(u.id)!) : now]));
+  const ids = users.filter((u) => recoveryStepAt(u.created_at, atBy.get(u.id)) && prefsOf.get(u.id)?.email_reminders).map((u) => u.id);
   if (!ids.length) return out;
   const [prof, subs, comps, testers, charges] = await Promise.all([
     admin.from("profiles").select("id,plan,role").in("id", ids),
@@ -247,12 +250,21 @@ export async function recoveryFor(admin: SupabaseClient, users: Pick<Profile, "i
     if (!ids.includes(u.id)) continue;
     const pr = profBy.get(u.id);
     const step = recoveryStep({
-      createdAt: u.created_at, now, emailReminders: true, profilePlan: pr?.plan, staff: STAFF.includes(pr?.role as (typeof STAFF)[number]),
+      createdAt: u.created_at, now: atBy.get(u.id), emailReminders: true, profilePlan: pr?.plan, staff: STAFF.includes(pr?.role as (typeof STAFF)[number]),
       paid: paid.has(u.id), comp: comp.has(u.id), tester: tester.has(u.id), hasCharge: charged.has(u.id),
     });
     if (step) out.set(u.id, step);
   }
   return out;
+}
+
+/** Hora local del recordatorio (HH de reminder_time; 7 si no es válida). */
+const reminderHour = (prefs: Prefs) => (isHHMM(prefs.reminder_time) ? Math.floor(toMinutes(prefs.reminder_time) / 60) : 7);
+
+/** Instante de hoy (día local) a la hora del recordatorio, en punto: con él se decide si hoy es el día del correo de recuperación. Exportada para pruebas. */
+export function recoveryAt(now: Date, prefs: Prefs): Date {
+  const c = localClock(now, prefs.timezone);
+  return new Date(Math.floor(now.getTime() / 60_000) * 60_000 - ((c.hour - reminderHour(prefs)) * 60 + c.minute) * 60_000);
 }
 
 type Grouped = {
@@ -262,7 +274,7 @@ type Grouped = {
   goalBy: Map<string, GoalRow>;
   /** Pieza de la secuencia de la prueba que le toca hoy (trialSequenceFor). */
   stepBy: Map<string, TrialStep>;
-  /** Correo de recuperación (día 8 o 14) cuya ventana está abierta hoy (recoveryFor). */
+  /** Correo de recuperación (día 8 o 14) que toca hoy, en el día local (recoveryFor). */
   recoveryBy: Map<string, RecoveryStep>;
 };
 type GoalRow = { user_id: string; start_weight: number | string; goal_weight: number | string; goal_date: string | null };
@@ -312,7 +324,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       hasEmail: true,
     });
     // Secuencia de la prueba: a la hora del recordatorio, una vez por pieza y por cuenta (ONCE_DAY).
-    const remindHour = isHHMM(prefs.reminder_time) ? Math.floor(toMinutes(prefs.reminder_time) / 60) : 7;
+    const remindHour = reminderHour(prefs);
     const step = mode === "daily" || c.hour === remindHour ? stepBy.get(u.id) ?? null : null;
     const recovery = recoveryBy.get(u.id) ?? null;
     const recoveryNow = recovery && (mode === "daily" || c.hour === remindHour) ? recovery : null;
@@ -331,7 +343,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     if (step && await sendTrialStep(admin, u.id, step, getEmail, stats)) {
       for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
     }
-    // Recuperación: en su ventana de 24 horas no sale ningún otro correo, ni el semanal, aunque la pieza vaya a otra hora.
+    // Recuperación: en su día local no sale ningún otro correo, ni el semanal, a ninguna hora (antes o después de la pieza).
     // Solo si reclamarla falló siguen los demás (ese día no salió). Push y campanita siguen igual.
     if (recovery && (!recoveryNow || await sendRecovery(admin, u.id, recoveryNow, getEmail, stats))) {
       for (const d of decisions) d.email = false;

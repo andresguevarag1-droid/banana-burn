@@ -138,10 +138,8 @@ describe("recuperación de la prueba en runReminders", () => {
     expect(kinds(1)).toEqual(["recuperacion_d8"]);
   });
 
-  // Bug conocido (QA, PR #140): la ventana de 24 horas se mide desde created_at, no desde el día local. Con recordatorio a las 05:00
-  // el correo del día 8 sale antes de que cierre la ventana (06:00 lunes) y el resumen semanal de las 07:00 del mismo lunes sí sale.
-  // Cambiar a `it` cuando se corrija.
-  it.fails("nunca dos correos el mismo día local aunque la ventana de 24 horas cierre antes de otro aviso", async () => {
+  // QA: con recordatorio a las 05:00 la ventana de 24 horas cierra a las 06:00 del lunes; el resumen semanal de las 07:00 no debe salir.
+  it("nunca dos correos el mismo día local aunque la ventana de 24 horas cierre antes de otro aviso", async () => {
     tables.profiles = [profile(1, { created_at: "2026-11-01T12:00:00.000Z" })];
     tables.notification_prefs = [{ user_id: uid(1), reminder_time: "05:00", email_reminders: true, weekly_summary: true }];
     // Lunes 05:00 en Costa Rica (11:00 UTC): sale el día 8.
@@ -149,6 +147,16 @@ describe("recuperación de la prueba en runReminders", () => {
     expect(kinds(1)).toEqual(["recuperacion_d8"]);
     // Lunes 07:00 en Costa Rica (13:00 UTC): el resumen semanal no debe salir por correo ese mismo día.
     await runReminders(new Date("2026-11-09T13:00:00.000Z"), "hourly");
+    expect(kinds(1)).toEqual(["recuperacion_d8"]);
+  });
+
+  it("tampoco sale otro correo antes de que abra la ventana, si la pieza va más tarde ese mismo día local", async () => {
+    // Registro a las 08:00 en Costa Rica: la ventana del día 8 abre el lunes a las 08:00 y la pieza sale a las 09:00.
+    tables.profiles = [profile(1, { created_at: "2026-11-02T14:00:00.000Z" })];
+    tables.notification_prefs = [{ user_id: uid(1), reminder_time: "09:00", email_reminders: true, weekly_summary: true }];
+    await runReminders(new Date("2026-11-09T13:00:00.000Z"), "hourly");
+    expect(kinds(1)).toEqual([]);
+    await runReminders(new Date("2026-11-09T15:00:00.000Z"), "hourly");
     expect(kinds(1)).toEqual(["recuperacion_d8"]);
   });
 });
