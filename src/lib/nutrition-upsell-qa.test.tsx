@@ -96,7 +96,7 @@ describe("QA #111: pantalla Comida bloqueada", () => {
     for (const ent of [{ ...ENTRENO, access: "comp" }, { ...ENTRENO, plan: "free", app: false, access: "none", status: "expired" }, { ...ENTRENO, status: "incomplete" }]) {
       mocks.ent = ent; mocks.athlete = athlete();
       const html = await comida();
-      expect(html).not.toContain("US$");
+      expect(html).not.toContain("/mes o ");
       expect(html).not.toContain("nutrition_upsell");
       expect(html).toContain('href="/app/suscripcion"');
       expect(mocks.mealsRead).toBe(0);
