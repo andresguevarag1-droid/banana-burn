@@ -202,3 +202,43 @@ describe("QA: el filtro de grupo corre en embudo-de-pago.sql", () => {
     expect(d6.n).toBe(1);
   });
 });
+
+
+describe("QA: ingresos por grupo en rentabilidad-semanal.sql", () => {
+  it("usa el alias documentado y separa pagos y cuentas creadas en el rango", async () => {
+    const db = new PGlite();
+    try {
+      await db.exec(`
+        create table profiles (id uuid, created_at timestamptz);
+        create table comp_grants (user_id uuid, revoked_at timestamptz, starts_at timestamptz, expires_at timestamptz);
+        create table trial_charges (user_id uuid, plan text, billing text, promo text,
+          amount_minor integer, last_attempt_at timestamptz, updated_at timestamptz, status text);
+        create table subscriptions (user_id uuid, plan text, billing text, provider text,
+          status text, current_period_end timestamptz, cancel_at_period_end boolean, created_at timestamptz);
+      `);
+      const ids = Array.from({ length: 12 }, (_, i) => `00000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}`);
+      for (const [i, uid] of ids.entries()) {
+        await db.query("insert into profiles values ($1, $2)", [uid, i < 10 ? "2026-11-01 12:00+00" : "2026-10-30 12:00+00"]);
+        await db.query(`insert into trial_charges values ($1, 'entreno', 'mes', 'primer_mes_50',
+          499, '2026-11-08 12:00+00', '2026-11-08 12:00+00', 'succeeded')`, [uid]);
+      }
+      const revenue = readFileSync("docs/metas/rentabilidad-semanal.sql", "utf8");
+      const filter = doc.match(/`(and get_byte\(decode\(md5\(x\.user_id[^`]+)`/)![1];
+      const anchor = "and x.user_id not in (select user_id from cortesia)";
+      expect(revenue).toContain(anchor);
+      for (const group of [0, 1]) {
+        const query = revenue.replace("now() as observado_en", "timestamptz '2026-11-10 12:00+00' as observado_en")
+          .replace(anchor, `${anchor}
+            ${filter.replace("= 0", `= ${group}`)}
+            and exists (select 1 from profiles p where p.id = x.user_id
+              and p.created_at >= timestamptz '2026-11-01 06:00+00'
+              and p.created_at < timestamptz '2026-11-02 06:00+00')`);
+        const rows = (await db.query<{ plan: string; pagos_nuevos: number; ingresos_brutos_usd: string }>(query)).rows;
+        const total = rows.find((r) => r.plan === "total")!;
+        const expected = ids.slice(0, 10).filter((uid) => createHash("md5").update(`${uid}:nov-anual`).digest()[0] % 2 === group).length;
+        expect(Number(total.pagos_nuevos)).toBe(expected);
+        expect(Number(total.ingresos_brutos_usd)).toBeCloseTo(expected * 4.99, 2);
+      }
+    } finally { await db.close(); }
+  }, 30000);
+});
