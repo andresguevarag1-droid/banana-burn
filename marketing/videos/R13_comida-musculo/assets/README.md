@@ -1,0 +1,1 @@
+Falta coach-banana-senala.png oficial transparente, ya existente. Incorporar el PNG autorizado; no redibujar ni sustituir la pose. Render bloqueado hasta disponer del archivo. Captura referenciada desde public/landing; sin duplicar ni alterar números. No usar servicios con costo.
