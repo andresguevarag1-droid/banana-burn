@@ -71,7 +71,7 @@ describe("recuperación de la prueba en runReminders", () => {
     tables.profiles = [profile(1)];
     const stats = await runReminders(DAY8, "daily");
     expect(kinds(1)).toEqual(["recuperacion_d8"]);
-    expect(sent[0]).toMatchObject({ subject: "Tu plan sigue guardado", key: `recuperacion_d8/${uid(1)}` });
+    expect(sent[0]).toMatchObject({ subject: "Tu historial sigue guardado", key: `recuperacion_d8/${uid(1)}` });
     expect(stats.sent).toMatchObject({ recuperacion_d8: 1, semanal: 1, recordatorio: 1 });
     // Los avisos del día siguen en la campanita, sin correo.
     expect(tables.notifications?.map((n) => n.kind).sort()).toEqual(["recordatorio", "semanal"]);

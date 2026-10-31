@@ -795,7 +795,7 @@ export type RecoveryDay = 8 | 14;
 /** Copy de cada pieza, con los precios de PLANS. Sin descuentos: después de la prueba el alta va a precio normal (promoFor). */
 export const RECOVERY_MAILS: Record<RecoveryDay, { subject: string; preheader: string; paragraphs: string[]; cta: string; path: string }> = {
   8: {
-    subject: "Tu plan sigue guardado",
+    subject: "Tu historial sigue guardado",
     preheader: "Conservas lo que registraste. Elige un plan para retomar.",
     paragraphs: [
       "Tu prueba terminó, pero no tienes que empezar desde cero.",
