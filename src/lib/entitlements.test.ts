@@ -224,3 +224,51 @@ describe("fin de la beta: el muro aplica en el servidor", () => {
     expect(entitlementsFrom({ ...beta, now, createdAt: "2026-09-01T00:00:00Z", comps: [comp({ source: "regalo", starts_at: "2026-11-01T06:00:00Z", expires_at: "2027-02-01T06:00:00Z" })] }).locked).toBe(false);
   });
 });
+
+describe("invitación al anual", () => {
+  const input = { ...base, createdAt: daysAgo(90), subs: [sub({ created_at: daysAgo(20) })] };
+  it("aparece desde el día 20 del mensual activo para ambos planes", () => {
+    for (const plan of ["entreno", "completo"] as const) {
+      expect(entitlementsFrom({ ...input, subs: [sub({ plan, created_at: daysAgo(20) })] }).annualUpsell).toBe(true);
+    }
+    expect(entitlementsFrom({ ...input, subs: [sub({ created_at: daysAgo(19.99) })] }).annualUpsell).toBe(false);
+  });
+  it("no suma los siete días de prueba a la antigüedad pagada", () => {
+    expect(entitlementsFrom({ ...input, createdAt: daysAgo(25), subs: [sub({ created_at: daysAgo(25) })] }).annualUpsell).toBe(false);
+  });
+  it("conserva la antigüedad cuando se renueva el mes", () => {
+    expect(entitlementsFrom({ ...input, subs: [sub({ created_at: daysAgo(60), current_period_start: daysAgo(1) })] }).annualUpsell).toBe(true);
+  });
+  it("omite beta, prueba, cortesía y pagos pendientes", () => {
+    expect(entitlementsFrom({ ...input, betaEndsAt: inDays(1) }).annualUpsell).toBe(false);
+    expect(entitlementsFrom({ ...input, createdAt: daysAgo(1) }).annualUpsell).toBe(false);
+    expect(entitlementsFrom({ ...input, comps: [comp({})] }).annualUpsell).toBe(false);
+    expect(entitlementsFrom({ ...input, trialCharge: trialCharge(25, { status: "pending" }) }).annualUpsell).toBe(false);
+    expect(entitlementsFrom({ ...input, subs: [...input.subs, sub({ id: 2, status: "incomplete" })] }).annualUpsell).toBe(false);
+  });
+  it.each([
+    { billing: "anual" as const }, { status: "trialing" }, { status: "past_due" },
+    { cancel_at_period_end: true }, { created_at: "invalid" },
+  ])("omite suscripciones no elegibles: %j", (change) => {
+    expect(entitlementsFrom({ ...input, subs: [sub({ created_at: daysAgo(20), ...change })] }).annualUpsell).toBe(false);
+  });
+});
+
+describe("QA: exclusiones adicionales del aviso anual", () => {
+  const input = { ...base, createdAt: daysAgo(90), subs: [sub({ created_at: daysAgo(40) })] };
+  it.each(["scheduled", "retry_scheduled", "failed", "pending"] as const)("omite el cobro %s aunque haya acceso pagado", (status) => {
+    expect(entitlementsFrom({ ...input, trialCharge: trialCharge(40, { status }) }).annualUpsell).toBe(false);
+  });
+  it("permite un cobro confirmado", () => {
+    expect(entitlementsFrom({ ...input, trialCharge: trialCharge(40, { status: "succeeded" }) }).annualUpsell).toBe(true);
+  });
+  it("omite una renovación fallida paralela al mensual activo", () => {
+    expect(entitlementsFrom({ ...input, subs: [...input.subs, sub({ id: 2, status: "past_due" })] }).annualUpsell).toBe(false);
+  });
+  it("una cortesía vencida no oculta la invitación de un mensual pagado", () => {
+    expect(entitlementsFrom({ ...input, comps: [comp({ starts_at: daysAgo(50), expires_at: daysAgo(1) })] }).annualUpsell).toBe(true);
+  });
+  it("sin suscripción no ofrece anual a un plan asignado", () => {
+    expect(entitlementsFrom({ ...input, subs: [], profilePlan: "entreno" }).annualUpsell).toBe(false);
+  });
+});

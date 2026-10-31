@@ -52,6 +52,8 @@ export type Entitlements = {
   compEndsAt?: string;
   /** ¿El plan viene de una suscripción de ONVO (vs. cortesía, staff o asignado a mano)? */
   fromSubscription: boolean;
+  /** Invitación anual: solo mensual pagado con al menos 20 días desde el inicio pagado. */
+  annualUpsell?: boolean;
   /** Primer cobro con la tarjeta guardada (prueba de 7 días, fin de la beta o inmediato). */
   charge?: ChargeView | null;
   /** Tarjeta guardada (solo marca, últimos 4 y vencimiento). */
@@ -173,7 +175,14 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const charge = chargeView(tc, now);
   const card = i.card ? { brand: i.card.brand, last4: i.card.last4, expMonth: i.card.exp_month, expYear: i.card.exp_year, active: i.card.status === "active" } : null;
   const cardStep = cardStepFor({ paidAccess: plan !== "free", createdAt: i.createdAt, row: tc, now, betaEndsAt });
-  const base = { status, billing, renewsAt, endsAt, compEndsAt: comp ? compChainEnd(comps, now) : undefined, trialEndsAt: endedAt?.toISOString(), fromSubscription: source === "subscription", charge, card, cardStep };
+  // La creación de la suscripción sobrevive a las renovaciones; el inicio del periodo no.
+  // Si nació durante la prueba de la cuenta, contamos desde el final de esa prueba.
+  const paidSince = cur ? Math.max(Date.parse(cur.created_at), ownEnd ? Date.parse(ownEnd) : 0) : NaN;
+  const annualUpsell = !beta && !live && !comp && source === "subscription" && status === "active" && billing === "mes"
+    && Number.isFinite(paidSince) && paidSince <= now.getTime() - 20 * DAY
+    && !i.subs.some((s) => s.status === "incomplete" || s.status === "past_due")
+    && (!charge || charge.phase === "cobrado" || charge.phase === "cancelado");
+  const base = { annualUpsell, status, billing, renewsAt, endsAt, compEndsAt: comp ? compChainEnd(comps, now) : undefined, trialEndsAt: endedAt?.toISOString(), fromSubscription: source === "subscription", charge, card, cardStep };
 
   if (plan !== "free") return { ...base, plan, access: source, app: true, nutrition: plan === "completo", locked: false, trial: null };
   if (live) {
