@@ -787,6 +787,50 @@ export function finBeta(d: BetaEndMailData): Email {
   };
 }
 
+// ───────────── Recuperación al terminar la prueba sin plan (docs/emails/recuperacion-prueba.md) ─────────────
+// Días 8 y 14 desde el registro. La envía runReminders (notify-run.ts) en lugar de los demás correos de ese día.
+
+export type RecoveryDay = 8 | 14;
+
+/** Copy de cada pieza, con los precios de PLANS. Sin descuentos: después de la prueba el alta va a precio normal (promoFor). */
+export const RECOVERY_MAILS: Record<RecoveryDay, { subject: string; preheader: string; paragraphs: string[]; cta: string; path: string }> = {
+  8: {
+    subject: "Tu plan sigue guardado",
+    preheader: "Conservas lo que registraste. Elige un plan para retomar.",
+    paragraphs: [
+      "Tu prueba terminó, pero no tienes que empezar desde cero.",
+      "En tu cuenta siguen los entrenos, pesos y repeticiones que registraste, junto con tus registros de peso, medidas y fotos de progreso. Vuelve con la misma cuenta para conservar ese historial.",
+      `Para retomar el entrenamiento, elige ${ENTRENO.name} por ${usd2(ENTRENO.price.mes)} al mes o ${COMPLETO.name} por ${usd2(COMPLETO.price.mes)} al mes. Solo el segundo incluye el registro de comidas y tus calorías y macros. También puedes comparar las opciones anuales en Mi plan.`,
+      "Revisa el plan y el total antes de confirmar el pago. Precios en USD, con IVA incluido.",
+    ],
+    cta: "Elegir mi plan", path: "/app/suscripcion",
+  },
+  14: {
+    subject: "Vuelve con un año de entreno",
+    preheader: "Compara el anual primero y retoma con tu historial guardado.",
+    paragraphs: [
+      "Tu historial sigue en tu cuenta: los entrenos, pesos, repeticiones, medidas y fotos que guardaste.",
+      `Si quieres volver, compara primero el anual: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.anual)} al año y ${COMPLETO.name}, ${usd2(COMPLETO.price.anual)} al año. Cada año pagado ${seasonLine}. Solo ${COMPLETO.name} incluye comidas, calorías y macros.`,
+      `¿Prefieres pagar mes a mes? ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.mes)} al mes y ${COMPLETO.name}, ${usd2(COMPLETO.price.mes)} al mes.`,
+      "Entra con la misma cuenta y elige cómo seguir. Precios en USD, con IVA incluido; el anual se paga completo, no en cuotas mensuales.",
+    ],
+    cta: "Comparar mi plan anual", path: "/app/suscripcion",
+  },
+};
+
+/** Un correo de recuperación. Lleva enlace de baja (scope "recordatorios": reemplaza a los avisos del día). */
+export function recuperacionPrueba(d: { day: RecoveryDay; unsubscribe: string }): Email {
+  const c = RECOVERY_MAILS[d.day];
+  const hero: Hero = { eyebrow: "Tu prueba terminó", title: esc(c.subject), lead: esc(c.preheader) };
+  const html = c.paragraphs.map((x) => p(esc(x))).join("") + small("<b>Coach Banana</b>") + button(c.cta, c.path);
+  const reason = "Recibes este correo porque tu prueba de 7 días terminó sin elegir un plan y tienes activados los recordatorios de Banana Burn.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+  };
+}
+
 // ───────────── Supabase Auth (se pegan en el panel de Supabase) ─────────────
 // Se generan con `npm run emails:auth` → supabase/templates/*.html. Usan las variables de Supabase
 // ({{ .SiteURL }}, {{ .Token }}, {{ .TokenHash }}, {{ .NewEmail }}), no datos de la app.

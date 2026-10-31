@@ -40,6 +40,8 @@ import { coachOf } from "@/lib/coaches";
 import { appThemeFor } from "@/lib/app-theme";
 import { ThemeRoot } from "@/components/theme/theme-root";
 import { getSex } from "@/lib/athlete";
+import { RecoveryNotice } from "@/components/recovery-notice";
+import { getRecoveryNotice } from "@/lib/recuperacion-server";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +92,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Antes del primer entreno, ningún aviso de tarjeta o prueba arriba de Hoy: lo primero que ve es su entreno, no un cobro.
   // (Los avisos de cobro en curso, rechazado o programado sí se muestran: hay algo que atender.)
   const banner = firstRun && (banner0 === "beta-add" || banner0 === "beta" || banner0 === "trial") ? null : banner0;
+  // Prueba terminada sin plan ni cobro (desde el día 8): aviso de recuperación, solo si no hay otro aviso arriba.
+  const recovery = (!banner || banner === "none") && !cs && (await getRecoveryNotice(v, ent));
   return (
     <div data-theme={theme ?? undefined} className={theme ? "lg:pl-64 min-h-dvh bg-paper bg-[radial-gradient(110%_420px_at_50%_0%,var(--color-plat-soft),transparent)] bg-no-repeat" : "lg:pl-64"} style={live && !theme ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
       <ThemeRoot theme={theme} />
@@ -115,6 +119,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           : banner === "processing" ? <ProcessingBanner />
           : banner === "beta" ? <BetaBanner />
           : banner === "trial" && trial ? <TrialBanner daysLeft={trial.daysLeft} charge={charge && (charge.phase === "programado" || charge.phase === "cancelado") ? { amount: charge.amount, canceled: charge.phase === "cancelado" } : null} />
+          : recovery ? <RecoveryNotice account={v.id} />
           : null}
         <PlanGate locked={locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null} cardStep={cardStep} chargePhase={charge?.phase ?? null}>{children}</PlanGate>
       </main>
