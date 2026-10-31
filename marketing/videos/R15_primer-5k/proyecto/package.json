@@ -1,0 +1,17 @@
+{
+  "name": "r15_primer-5k",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node render.mjs check",
+    "render": "node render.mjs",
+    "reel": "node render.mjs reel",
+    "anuncio": "node render.mjs anuncio",
+    "portada": "node render.mjs portada",
+    "hoja": "node render.mjs hoja"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "1.1.0",
+    "@napi-rs/canvas": "1.0.13"
+  }
+}
