@@ -1,3 +1,4 @@
+import { AnnualUpsell } from "@/components/hoy/annual-upsell";
 import { demoCardState } from "@/lib/trial-demo";
 import { TrialCardNotice } from "@/components/trial-card-notice";
 import Link from "next/link";
@@ -147,6 +148,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         {tester && tester.phase !== "ninguno" && <TesterCard phase={tester.phase} until={tester.until} daysLeft={tester.daysLeft} used={tester.used} tz={v.tz} />}
         <FirstSteps server={{ keys: learnState.keys, workouts: learnState.workouts, weights: learnState.weights, coachMessages: learnState.coachMessages, push: learnState.push }} coach={{ name: guideCoach?.name ?? "Coach Banana", avatar: guideCoach?.avatar ?? null }} />
         {recap && <WeekRecap r={recap} />}
+        {ent.annualUpsell && ent.plan !== "free" && <AnnualUpsell plan={ent.plan} userId={v.id} />}
         <AnnouncementBanner />
         <LoMejor serverKeys={learnState.keys} />
         <PushWhenReady trained={g.trainedToday || g.streak.days > 0 || !!lastTime} />
