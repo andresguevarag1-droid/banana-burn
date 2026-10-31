@@ -253,3 +253,22 @@ describe("invitación al anual", () => {
     expect(entitlementsFrom({ ...input, subs: [sub({ created_at: daysAgo(20), ...change })] }).annualUpsell).toBe(false);
   });
 });
+
+describe("QA: exclusiones adicionales del aviso anual", () => {
+  const input = { ...base, createdAt: daysAgo(90), subs: [sub({ created_at: daysAgo(40) })] };
+  it.each(["scheduled", "retry_scheduled", "failed", "pending"] as const)("omite el cobro %s aunque haya acceso pagado", (status) => {
+    expect(entitlementsFrom({ ...input, trialCharge: trialCharge(40, { status }) }).annualUpsell).toBe(false);
+  });
+  it("permite un cobro confirmado", () => {
+    expect(entitlementsFrom({ ...input, trialCharge: trialCharge(40, { status: "succeeded" }) }).annualUpsell).toBe(true);
+  });
+  it("omite una renovación fallida paralela al mensual activo", () => {
+    expect(entitlementsFrom({ ...input, subs: [...input.subs, sub({ id: 2, status: "past_due" })] }).annualUpsell).toBe(false);
+  });
+  it("una cortesía vencida no oculta la invitación de un mensual pagado", () => {
+    expect(entitlementsFrom({ ...input, comps: [comp({ starts_at: daysAgo(50), expires_at: daysAgo(1) })] }).annualUpsell).toBe(true);
+  });
+  it("sin suscripción no ofrece anual a un plan asignado", () => {
+    expect(entitlementsFrom({ ...input, subs: [], profilePlan: "entreno" }).annualUpsell).toBe(false);
+  });
+});
