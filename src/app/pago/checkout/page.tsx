@@ -51,7 +51,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         ) : (
           <Link href={`/app/suscripcion?plan=${plan.id}&pago=anual`} data-cta="checkout-cambiar-anual" className="inline-flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-2">Cambiar a anual: {money(plan.price.anual)}, ahorra {money(annualSaving(plan))}</Link>
         )}
-        <p className="text-xs text-body">Cancela cuando quieras desde Mi plan.</p>
+        <p className="text-xs text-body">Precios en USD, IVA incluido. Cancela cuando quieras desde Mi plan.</p>
       </section>
 
       <section className="card p-3 sm:p-5" aria-labelledby="pay-title">
@@ -95,7 +95,7 @@ function Notice({ title, body, demo }: { title: string; body: string; demo?: boo
       <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">{title}</h1>
       <p className="text-muted">{body}</p>
       <div className="flex flex-col sm:flex-row gap-2 justify-center">
-        <Link href="/app/suscripcion" className="btn-primary">Ver mi suscripción</Link>
+        <Link href="/app/suscripcion" className="btn-primary">Ver mi plan</Link>
         <Link href="/app" className="btn-ghost">Ir a Banana Burn</Link>
       </div>
     </div>
