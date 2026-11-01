@@ -59,7 +59,7 @@ export async function getReferralCounts(v: Viewer, ids: string[]): Promise<Map<s
   return out;
 }
 
-export const REFERRAL_STATUS_LABEL: Record<string, string> = { registrado: "Registrado", calificado: "Activo", sospechoso: "En revisión", descartado: "No cuenta" };
+export const REFERRAL_STATUS_LABEL: Record<string, string> = { registrado: "Registrado", calificado: "Cuenta", sospechoso: "En revisión", descartado: "No cuenta" };
 export const REFERRAL_FLAG_LABEL: Record<string, string> = {
   mismo_correo: "Mismo correo que quien invita",
   misma_red_y_dominio: "Misma red y mismo dominio de correo",
@@ -67,5 +67,7 @@ export const REFERRAL_FLAG_LABEL: Record<string, string> = {
   aprobado: "Aprobado por el equipo",
   aprobado_por_pago_anual: "Aprobado: compró plan anual",
   recompensa_revocada: "Recompensa revocada",
+  misma_tarjeta: "Pagó con la misma tarjeta que quien invita",
+  pago_reembolsado: "Pago reembolsado",
   descartado: "Descartado por el equipo",
 };

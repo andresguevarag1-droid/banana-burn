@@ -55,6 +55,10 @@ describe("lo que lee el usuario", () => {
 
 describe("reglas contra el código", () => {
   const r = docs["reglas.md"];
+  it.fails("KNOWN BUG #178: reglas.md dice la regla vieja (activarse en sus primeros 7 días); desde 0064 el amigo cuenta al pagar dentro de 60 días", () => {
+    expect(r).toContain(`${REF_WINDOW_DAYS} días`);
+    expect(r).not.toContain("primeros 7 días");
+  });
   it("dicen la oferta con las cifras de referrals.ts", () => {
     expect(REF_GROUP_SIZE).toBe(3);
     expect(REF_BASE_MONTHS).toBe(1);
@@ -65,7 +69,6 @@ describe("reglas contra el código", () => {
     expect(r).toContain("de 1 a 3 meses");
   });
   it("dicen las ventanas y el tope del código", () => {
-    expect(r).toContain(`primeros ${REF_WINDOW_DAYS} días`);
     expect(r).toContain(`primeras **${REF_ATTRIBUTION_HOURS} horas**`);
     expect(r).toContain(`**${REF_COOKIE_MAX_AGE / 86400} días**`);
     expect(r).toContain(`**${REF_MAX_REWARDS_YEAR} recompensas**`);

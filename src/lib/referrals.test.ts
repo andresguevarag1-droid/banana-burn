@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  annualPaid, ipPrefix, monthsEarned, normalizeCode, normEmail, referralLabel, referralLink, referralProgress, revokeReward, settle, shareMessage, simMonths,
-  REF_MAX_REWARDS_YEAR, type SimRef, type SimState,
+  annualPaid, countsAsPayment, ipPrefix, monthsEarned, normalizeCode, normEmail, paid, paidInWindow, referralLabel, referralLink, referralProgress, refund, revokeReward,
+  settle, shareMessage, simMonths, REF_MAX_REWARDS_YEAR, REF_WINDOW_DAYS, type RefCharge, type SimRef, type SimState,
 } from "./referrals";
 
 const NOW = Date.parse("2026-12-10T12:00:00Z");
@@ -111,10 +111,96 @@ describe("recompensas: plan anual = trimestre", () => {
     s = { ...a.state, refs: a.state.refs.map((r) => (r.id === 3 ? { ...r, status: "calificado" as const } : r)) };
     expect(settle(s, NOW).rewards[0].months).toBe(3);
   });
-  it("la compra anual saca a alguien de revisión (pero igual debe activarse)", () => {
+  it("la compra anual saca a alguien de revisión (pero igual debe pagar en plazo)", () => {
     const a = annualPaid(st([q(9, { status: "sospechoso" })]), 9, NOW);
     expect(a.state.refs[0].status).toBe("registrado");
     expect(a.state.rewards).toHaveLength(0);
+  });
+});
+
+describe("calificación: el amigo cuenta cuando paga su primer plan", () => {
+  const DAY = 864e5;
+  const reg = (id: number, o: Partial<SimRef> = {}): SimRef => ({ id, status: "registrado", qualifiedAt: null, annual: false, group: null, registeredAt: NOW - 10 * DAY, paidAt: null, ...o });
+  const pay = (s: SimState, id: number, at = NOW, annual = false) => paid(s, id, { kind: "plan", at, annual }).state;
+
+  it("la ventana es de 60 días desde que se registró con el enlace", () => {
+    expect(REF_WINDOW_DAYS).toBe(60);
+    expect(paidInWindow(NOW, NOW + 60 * DAY)).toBe(true);
+    expect(paidInWindow(NOW, NOW + 60 * DAY + 1)).toBe(false);
+  });
+  it("activarse (bienvenida, entreno, agua) no califica: sin pago queda registrado", () => {
+    const s = settle(st([reg(1), reg(2), reg(3)]), NOW);
+    expect(s.refs.every((r) => r.status === "registrado")).toBe(true);
+    expect(s.rewards).toHaveLength(0);
+  });
+  it("califica al primer pago de un plan", () => {
+    const r = paid(st([reg(1)]), 1, { kind: "plan", at: NOW });
+    expect(r.result).toBe("calificado");
+    expect(r.state.refs[0]).toMatchObject({ status: "calificado", paidAt: NOW, qualifiedAt: NOW });
+  });
+  it.each<RefCharge>(["prueba", "tarjeta", "cortesia", "beta", "condominio", "reto", "temporada"])("%s no es pago y no califica", (kind) => {
+    expect(countsAsPayment(kind)).toBe(false);
+    const r = paid(st([reg(1)]), 1, { kind, at: NOW });
+    expect(r.result).toBe("no_es_pago");
+    expect(r.state.refs[0].status).toBe("registrado");
+  });
+  it("pagar después de los 60 días no califica", () => {
+    const r = paid(st([reg(1, { registeredAt: NOW - 61 * DAY })]), 1, { kind: "plan", at: NOW });
+    expect(r.result).toBe("registrado");
+  });
+  it("3 pagos = 1 mes; las renovaciones no vuelven a contar", () => {
+    let s = st([reg(1), reg(2), reg(3)]);
+    s = pay(pay(s, 1), 2);
+    expect(s.rewards).toHaveLength(0);
+    s = pay(s, 3);
+    expect(s.rewards.map((w) => w.months)).toEqual([1]);
+    s = pay(pay(s, 1, NOW + 30 * DAY), 2, NOW + 30 * DAY);
+    expect(simMonths(s)).toBe(1);
+    expect(s.refs.find((r) => r.id === 1)!.paidAt).toBe(NOW);
+  });
+  it("si uno del grupo paga el anual, el grupo da 3 meses en total", () => {
+    let s = st([reg(1), reg(2), reg(3)]);
+    s = pay(pay(s, 1), 2, NOW, true);
+    s = pay(s, 3);
+    expect(s.rewards.map((w) => w.months)).toEqual([3]);
+    expect(simMonths(s)).toBe(3);
+  });
+  it("el anual después de cobrar el mes sube a 3 meses, no a 4", () => {
+    let s = pay(pay(pay(st([reg(1), reg(2), reg(3)]), 1), 2), 3);
+    const r = paid(s, 2, { kind: "plan", at: NOW + DAY, annual: true });
+    expect(r.result).toBe("trimestre");
+    s = r.state;
+    expect(simMonths(s)).toBe(3);
+  });
+  it("un pago reembolsado no cuenta: anula el mes y los otros dos esperan a un tercero", () => {
+    let s = pay(pay(pay(st([reg(1), reg(2), reg(3), reg(4)]), 1), 2), 3);
+    expect(simMonths(s)).toBe(1);
+    s = refund(s, 2, NOW);
+    expect(simMonths(s)).toBe(0);
+    expect(s.refs.find((r) => r.id === 2)!.status).toBe("descartado");
+    expect(s.refs.filter((r) => r.status === "calificado" && r.group == null)).toHaveLength(2);
+    s = pay(s, 4);
+    expect(s.rewards.filter((w) => !w.revoked).map((w) => w.months)).toEqual([1]);
+    expect(pay(s, 2).refs.find((r) => r.id === 2)!.status).toBe("descartado");
+  });
+  it("un reembolso antes de completar el grupo solo saca a esa persona", () => {
+    let s = pay(st([reg(1), reg(2)]), 1);
+    s = refund(s, 1, NOW);
+    expect(s.refs.map((r) => r.status)).toEqual(["descartado", "registrado"]);
+    expect(s.rewards).toHaveLength(0);
+  });
+  it("los calificados con la regla anterior se respetan y completan grupo con quienes pagan", () => {
+    let s = st([q(1, { qualifiedAt: NOW - 5 * DAY }), q(2, { qualifiedAt: NOW - 4 * DAY }), reg(3)]);
+    expect(settle(s, NOW).rewards).toHaveLength(0);
+    s = pay(s, 3);
+    expect(s.rewards.map((w) => w.months)).toEqual([1]);
+    expect(s.refs.filter((r) => r.group === 1)).toHaveLength(3);
+  });
+  it("tope de 12 recompensas al año también con pagos", () => {
+    let s = st(Array.from({ length: 3 * (REF_MAX_REWARDS_YEAR + 1) }, (_, i) => reg(i + 1)));
+    for (const r of s.refs) s = pay(s, r.id);
+    expect(s.rewards).toHaveLength(REF_MAX_REWARDS_YEAR);
+    expect(s.refs.filter((r) => r.status === "calificado" && r.group == null)).toHaveLength(3);
   });
 });
 
@@ -130,10 +216,10 @@ describe("revocación por fraude", () => {
 
 describe("lo que ve quien invita", () => {
   it("estados en español", () => {
-    expect(referralLabel({ status: "calificado", annual: false, expired: false }).label).toBe("Activo");
+    expect(referralLabel({ status: "calificado", annual: false, expired: false }).label).toBe("Cuenta");
     expect(referralLabel({ status: "calificado", annual: true, expired: false }).label).toBe("Compró anual");
     expect(referralLabel({ status: "registrado", annual: false, expired: false }).label).toBe("Registrado");
-    expect(referralLabel({ status: "registrado", annual: false, expired: true }).label).toBe("No se activó a tiempo");
+    expect(referralLabel({ status: "registrado", annual: false, expired: true }).label).toBe("No pagó a tiempo");
     expect(referralLabel({ status: "sospechoso", annual: false, expired: false }).label).toBe("En revisión");
     expect(referralLabel({ status: "descartado", annual: false, expired: false }).label).toBe("No cuenta");
   });

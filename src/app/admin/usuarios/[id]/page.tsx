@@ -13,7 +13,7 @@ import { ActivityStrip, Sparkline } from "@/components/admin/charts";
 import { ActionForm, ConfirmAction, Submit } from "@/components/admin/action-form";
 import { Badge, DemoNotice, MetaList, Nil, Notice, PageHeader, PlanText, RoleBadge, SubStatus, Table, Td, Th, ago, fmtDate, fmtDateTime, fmtNum, inputSm, link, money, panel, rowAction, rowActionDanger, textareaSm, tr } from "@/components/admin/ui";
 import { changeRole, deleteUserAccount, grantComp, resetOnboarding, revokeComp, setSuspended } from "../../actions";
-import { giftMonths, reviewReferral, revokeReferralReward } from "../../regalos-actions";
+import { giftMonths, refundReferral, reviewReferral, revokeReferralReward } from "../../regalos-actions";
 import { GiftFields, type GiftCover } from "@/components/admin/gift-fields";
 import { assignAffiliateById } from "../../referidores/actions";
 import { getReferralOverview, REFERRAL_FLAG_LABEL, REFERRAL_STATUS_LABEL } from "@/lib/admin-referrals";
@@ -287,6 +287,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                             <div><label htmlFor={`rd-${r.id}`} className="block text-xs font-bold text-ink mb-1">Motivo</label><input id={`rd-${r.id}`} name="reason" required minLength={4} maxLength={300} className={inputSm} /></div>
                           </ConfirmAction>
                         </div>
+                      )}
+                      {r.status !== "descartado" && can(v.role, "referrals.manage") && (
+                        <ConfirmAction action={refundReferral} danger triggerClassName={rowActionDanger} trigger="Reembolsado" title="Pago reembolsado" hidden={{ target: a.id, referral: r.id }} confirmLabel="Marcar reembolso"
+                          description="Un pago reembolsado no cuenta. Si su grupo ya dio meses, esa recompensa se anula y las otras personas del grupo esperan a otra que pague.">
+                          <div><label htmlFor={`rr-${r.id}`} className="block text-xs font-bold text-ink mb-1">Motivo</label><input id={`rr-${r.id}`} name="reason" required minLength={4} maxLength={300} className={inputSm} /></div>
+                        </ConfirmAction>
                       )}
                     </li>
                   ))}</ul>

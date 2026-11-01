@@ -29,21 +29,24 @@ const rango = (cobro: number) => {
 };
 
 describe("regla del programa frente al código", () => {
-  it("el correo nombra 3 amigos, 1 mes, 7 días, 12 premios y el plan anual de 3 meses", () => {
+  it("el correo nombra 3 amigos, 1 mes, 60 días, 12 premios y el plan anual de 3 meses", () => {
     expect(REF_GROUP_SIZE).toBe(3);
     expect(REF_BASE_MONTHS).toBe(1);
-    expect(REF_WINDOW_DAYS).toBe(7);
+    expect(REF_WINDOW_DAYS).toBe(60);
     expect(REF_MAX_REWARDS_YEAR).toBe(12);
     expect(REF_ANNUAL_MONTHS).toBe(3);
     expect(cuerpo).toContain(`Cada ${REF_GROUP_SIZE} amigos`);
-    expect(cuerpo).toContain(`en sus primeros ${REF_WINDOW_DAYS} días`);
+    expect(cuerpo).toContain(`dentro de los ${REF_WINDOW_DAYS} días`);
     expect(cuerpo).toContain(`Máximo ${REF_MAX_REWARDS_YEAR} premios por año`);
     expect(cuerpo).toContain(`ganas ${REF_ANNUAL_MONTHS} meses en total`);
     expect(doc).toContain(`${REF_ATTRIBUTION_HOURS} horas`);
   });
 
-  it("el correo no pide pago a los invitados como condición", () => {
-    expect(cuerpo).not.toMatch(/que paguen|que pagan|que compran/i);
+  it("el amigo cuenta cuando paga su primer plan, no al activarse (0064)", () => {
+    expect(cuerpo).toContain(`Cada ${REF_GROUP_SIZE} amigos que pagan`);
+    expect(cuerpo).toContain("pagan su primer plan");
+    expect(cuerpo).toContain("La prueba gratis no cuenta");
+    expect(doc).not.toMatch(/no necesitan pagar|primeros 7 días|amigos activos/i);
   });
 
   it("el botón lleva a la página de referidos que existe en la app", () => {
