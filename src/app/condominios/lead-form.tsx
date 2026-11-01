@@ -12,7 +12,7 @@ const opt = "text-[13px] font-semibold text-muted";
 function SendButton({ pending }: { pending: boolean }) {
   return (
     <button type="submit" disabled={pending} aria-disabled={pending} className="btn-primary h-14! w-full text-base! disabled:opacity-70">
-      {pending ? "Enviando…" : "Agendar una reunión virtual"}
+      {pending ? "Enviando…" : "Agendar reunión de 30 minutos"}
     </button>
   );
 }
