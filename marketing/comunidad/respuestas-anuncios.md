@@ -1,74 +1,99 @@
-# Respuestas para anuncios de Cuánto peso
+# Respuestas a anuncios «Cuánto peso»
 
-Borradores para comentarios y mensajes de Facebook e Instagram en Costa Rica y Colombia. Requieren aprobación de Andrés antes de publicar, responder o moderar. No se envió nada ni se tocaron campañas.
+Borradores para Facebook e Instagram, comentarios y mensajes directos. Costa Rica y Colombia. Andrés debe aprobarlos antes de publicar o responder. No se modifica ninguna campaña ni se autoriza gasto.
+
+Usar la respuesta correspondiente sin sumar varios bloques. Cada cita tiene menos de 40 palabras, incluido el enlace. Español de tú, sin modismos, emojis ni promesas de resultados. Para adaptar a arte: paper #FFF8E3, banana #FFD60A, ink #1B1505 y Plus Jakarta Sans.
 
 ## Banco para copiar
 
-Cada bloque citado es una respuesta completa de menos de 40 palabras. El mismo texto sirve para comentario o DM. Usar la variante del país cuando corresponda.
+### ¿Cuánto cuesta? (ambos países)
 
-### ¿Cuánto cuesta?
+> Entreno cuesta US$9.99 al mes; Entreno + Nutrición, US$14.99 al mes. También hay planes anuales. Empieza con 7 días gratis, sin tarjeta: https://bananaburn.app
 
-> Entreno cuesta US$9.99 al mes; Entreno + Nutrición, US$14.99. También hay planes anuales de US$59.99 y US$89.99, respectivamente. Empieza con 7 días gratis sin tarjeta en https://bananaburn.app.
+### ¿Y el anual? (ambos países)
 
-### ¿Es gratis?
+> Entreno cuesta US$59.99 al año; Entreno + Nutrición, US$89.99 al año. Se paga el año completo. Prueba 7 días gratis, sin tarjeta: https://bananaburn.app
 
-> Tienes 7 días gratis con todo incluido, sin tarjeta, desde que creas tu cuenta. Después necesitas un plan para seguir entrenando. Si no guardas tarjeta, no hay cobro automático. Empieza en https://bananaburn.app.
+### ¿Es gratis? (ambos países)
 
-### ¿Me cobran si cancelo? Durante la prueba
+> Tienes 7 días gratis con todo incluido, sin tarjeta, desde tu registro. Después necesitas un plan para seguir entrenando. Si guardas tarjeta, programas el cobro al terminar la prueba. Empieza aquí: https://bananaburn.app
 
-> Si guardaste tarjeta, cancela desde Mi plan antes del cobro programado: no se cobra y conservas el acceso hasta terminar la prueba. Puedes probar 7 días sin tarjeta en https://bananaburn.app.
+### ¿Me cobran si cancelo? (durante la prueba)
 
-### ¿Me cobran si cancelo? Plan ya pagado
+> Cancelar el cobro programado antes de que se procese no tiene costo. Hazlo desde Mi plan; conservas el acceso hasta terminar la prueba. Puedes empezar 7 días gratis sin tarjeta: https://bananaburn.app
 
-> Cancela desde Mi plan para detener la renovación; conservas el acceso hasta terminar el periodo pagado. Cancelar no implica un reembolso automático. Si necesitas revisar un cobro, escribe a hola@bananaburn.app sin enviar datos sensibles.
+### ¿Y si ya pagué?
 
-### ¿Sirve si nunca he ido al gym?
+> Cancela la renovación desde Mi plan. Conservas el acceso hasta terminar el periodo pagado. Si tienes dudas sobre un cobro, escribe a hola@bananaburn.app sin enviar datos de tarjeta, salud ni documentos.
 
-> Sí. La rutina se adapta a tu nivel, tiempo y equipo, y tienes animaciones de técnica para aprender los movimientos. Empieza a tu ritmo con 7 días gratis sin tarjeta en https://bananaburn.app.
+### ¿Sirve si nunca he ido al gym? (ambos países)
 
-### ¿Funciona en mi país? Costa Rica
+> Sí. La rutina se adapta a tu nivel, tiempo y equipo, con animaciones de técnica y progresión de cargas. Puedes empezar como principiante. Prueba 7 días gratis sin tarjeta: https://bananaburn.app
 
-> Sí, puedes usar Banana Burn en Costa Rica. Los precios están en dólares estadounidenses. Prueba 7 días gratis sin tarjeta en https://bananaburn.app.
+### ¿Funciona en Costa Rica?
 
-### ¿Funciona en mi país? Colombia
+> Sí, puedes usar Banana Burn en Costa Rica. Los precios están en dólares y el pago se realiza dentro de la app. Empieza con 7 días gratis, sin tarjeta: https://bananaburn.app
 
-> Sí, puedes usar Banana Burn en Colombia. Los precios están en dólares estadounidenses; tu banco puede aplicar conversión y comisiones al pagar. Prueba 7 días gratis sin tarjeta en https://bananaburn.app.
+### ¿Funciona en Colombia?
 
-### ¿Es una app o un entrenador real?
+> Puedes probar la app desde Colombia durante 7 días gratis, sin tarjeta. Para continuar con un plan, revisa las opciones de pago disponibles en Mi plan; no podemos garantizar la aceptación de tu tarjeta: https://bananaburn.app
 
-> Es una app con rutinas adaptadas a tu nivel y cargas sugeridas. No incluye sesiones con un entrenador humano. Puedes conocerla con 7 días gratis sin tarjeta en https://bananaburn.app.
+### ¿Es una app o un entrenador real? (ambos países)
 
-### Comentario negativo: «Otra app que promete resultados mágicos»
+> Es una app con rutinas adaptadas a tu nivel, animaciones de técnica y progresión de cargas. No es una sesión en vivo con un entrenador humano. Prueba 7 días gratis sin tarjeta: https://bananaburn.app
 
-> Entendemos la duda. No prometemos resultados de peso: la app te ayuda a organizar tus entrenamientos y registrar tu progreso. Puedes revisarla con 7 días gratis sin tarjeta en https://bananaburn.app.
+### Comentario negativo: «Eso no sirve»
+
+> Entiendo la duda. Puedes revisar cómo funciona antes de decidir, sin promesas de resultados. Si quieres probarla, tienes 7 días gratis sin tarjeta: https://bananaburn.app
 
 ### Spam
 
-Sin respuesta pública ni DM; sin enlace a la prueba. Propuesta para aprobación: ocultar spam evidente y reportar fraude o enlaces maliciosos con las herramientas de la plataforma. Una crítica legítima no es spam.
+No responder ni llevar a la prueba. Propuesta para aprobación de Andrés: ocultar o reportar publicidad ajena, enlaces fraudulentos y spam repetido. No abrir enlaces. Una crítica legítima no se trata como spam.
 
-## Criterio de atención y fuentes
+Si hace falta explicar la regla a alguien que pregunta, usar solo este texto:
 
-- Nunca pedir datos de tarjeta, salud ni documentos por mensaje o comentario. No solicitar capturas de pagos o de la cuenta que puedan contenerlos. La tarjeta solo se ingresa en el flujo de pagos dentro de la app, nunca en redes.
-- Si alguien comparte datos sensibles, no copiarlos al registro ni citarlos. Proponer a Andrés retirar el comentario y orientar a soporte sin repetir esos datos.
-- Un reclamo de cobro se deriva a hola@bananaburn.app, sin prometer devolución ni discutir el caso en público. Si el cobro ya está procesándose, no asegurar que se puede detener; pedir revisión por soporte sin datos sensibles.
-- No pedir antecedentes, diagnósticos, peso ni fotos para recomendar un plan. Ante una consulta médica, no evaluar por DM y orientar a su médico. Si la respuesta trata de GLP-1, incluir: «No sustituye la indicación de tu médico.»
-- Precios USD, funciones y prueba: `src/lib/plans.ts` (`PLANS`, `TRIAL_DAYS`); acceso: `src/lib/entitlements.ts`. Entreno no incluye nutrición. No prometer kilos perdidos ni acompañamiento humano.
-- Prueba desde el registro, tarjeta opcional, promoción y cancelación previa: `src/lib/trial.ts` (`trialEndFor`, `firstChargeMinor`, `promoFor`, `canCancel`) y `src/lib/trial-billing.ts` (`cancelTrial`). Las cuentas antiguas de beta tienen fechas especiales: consultar Mi plan, no prometerles una prueba nueva.
-- Renovación y acceso pagado: `src/lib/billing.ts` (`cancelAtPeriodEndFor`), `src/app/api/pagos/cancelar/route.ts`; reembolsos y conversión bancaria: `src/app/(marketing)/terminos/page.tsx`.
-- País y procesador: `src/lib/pay-provider.ts`. Costa Rica usa ONVO; fuera de Costa Rica se usa Tilopay solo cuando está configurado y habilitado, con ONVO como alternativa. No se verificó la configuración de producción ni se garantiza aceptación de cualquier tarjeta.
-- Voz: español neutro de tú, sin emojis ni menciones de tecnología interna. Si se convierte en arte: paper #FFF8E3, banana #FFD60A, ink #1B1505, Plus Jakarta Sans.
+> Este espacio es para dudas sobre Banana Burn. Evita publicidad ajena y enlaces repetidos. Gracias por cuidar la conversación.
 
-## Embudo y dinero neto
+## Reglas para quien ejecute
 
-Mueve comentario o DM con objeción > visita > registro y prueba de 7 días > primer pago. El objetivo es contribuir a 100 usuarios de pago activos, no acumular respuestas o clics. Sin gasto adicional propuesto.
+- Nunca pedir datos de tarjeta, salud ni documentos por comentarios, mensajes ni correo. No pedir capturas de pagos o pantallas que puedan contenerlos. La tarjeta se ingresa únicamente en el flujo de pago de la app.
+- Si alguien los comparte espontáneamente, no copiarlos al registro de seguimiento; señalar a Andrés el caso para proteger la información. No diagnosticar ni recomendar pesos a partir de una condición médica por mensaje.
+- Cobro en disputa, problema técnico o queja concreta: atender el problema antes de ofrecer la prueba. No confirmar cancelaciones ni reembolsos desde una conversación. Remitir a Mi plan o a hola@bananaburn.app sin solicitar información sensible.
+- Las respuestas sobre la prueba son para cuentas nuevas desde el lanzamiento. No ofrecer otra prueba a cuentas existentes: las cuentas de beta tienen la fecha propia que muestra Mi plan.
+- Colombia: antes de aprobar una respuesta que prometa pago internacional, Andrés debe verificar que Tilopay esté configurado y habilitado para clientes, no solo para personal. No prometer cobro en pesos ni aceptación universal de tarjetas. Costa Rica tampoco implica aprobación bancaria garantizada.
+- Ante consultas médicas, orientar a su médico sin evaluar el caso por mensaje. No pedir antecedentes, diagnósticos, peso ni fotos. Toda respuesta que trate de GLP-1 debe incluir: «No sustituye la indicación de tu médico.»
+- No ofrecer el descuento sin explicar sus condiciones. Si se necesita una respuesta específica, preparar otro borrador: 50 % solo el primer mes mensual, una vez por cuenta, nunca haber pagado y guardar tarjeta antes del primer cobro. Anual excluido; segundo mes a precio normal. No pedir la tarjeta por mensaje.
 
-Medición semanal por país y objeción, ejecutada por Andrés tras aprobación: contar consultas legítimas, respuestas enviadas y visitas/altas atribuibles cuando exista atribución verificable. Registrar solo agregados, sin nombres, mensajes privados ni datos sensibles. Medir prueba a primer pago como usuarios únicos con primer cobro confirmado dividido entre nuevas pruebas de la misma cohorte, dejando madurar el periodo y los reintentos. Medir también usuarios de pago vigentes y segundo cobro.
+## Fuentes del código
 
-Los enlaces del banco no identifican estas respuestas por separado: sin instrumentación aprobada, reportar consultas y pagos totales como contexto, sin atribuir causalidad. Las UTMs solas no garantizan atribución persistente; `ref-capture.tsx` guarda UTMs solo cuando hay `?ref=`. No inventar códigos de referido. Verificar pagos en `trial_charges` con estado `succeeded` y suscripciones vigentes; Meta Subscribe no captura el cobro automático de fin de prueba. No sumar dos veces un mismo pago.
+Revisión: 1 de noviembre de 2026. Volver a comprobar antes de aprobar si cambia el producto.
 
-Neto por cobro = cobro ÷ 1.13 − (cobro × comisión porcentual + US$0.35). ONVO: 3.9 %; Tilopay: 4.25 %. Supuestos de la tarea, no una auditoría de tarifas. Redondeo al centavo al final. Precios de `src/lib/plans.ts`; descuento de `src/lib/trial.ts`.
+| Hecho | Fuente |
+| --- | --- |
+| Precios en USD, dos planes, nivel/equipo, técnica, progresión, prueba de 7 días | `src/lib/plans.ts`: PLANS, TRIAL_DAYS |
+| Prueba desde el registro, tarjeta opcional, cobro al final, promoción y beta | `src/lib/trial.ts`: trialEndFor, scheduleFor, promoFor, PROMO_TERMS; `src/lib/trial-billing.ts` |
+| Cancelar cobro programado sin costo y conservar prueba | `src/lib/trial.ts`: canCancel; `src/lib/trial-billing.ts`: cancelTrial |
+| Detener renovación y conservar periodo pagado | `src/lib/billing.ts`: cancelAtPeriodEndFor |
+| País y disponibilidad condicional del pago internacional | `src/lib/pay-provider.ts`: providerFor; `src/lib/tilopay.ts`: tilopayOfferedTo; `src/app/api/pagos/tilopay/route.ts` |
+| Etiqueta Mi plan | `src/components/app-nav.tsx` |
 
-| Plan / cobro | Cobro USD | Neto ONVO USD | Neto Tilopay USD |
+## Paso del embudo y medición
+
+Estas respuestas buscan mover duda en comentario/DM → visita → registro y prueba → primer pago; explicar cobro y cancelación ayuda a decidir con información. No hay conversiones observadas ni ingreso incremental atribuible a este banco todavía.
+
+Después de aprobación, llevar un registro semanal agregado por país y tipo de pregunta: conversaciones atendidas, enlaces compartidos y visitas/registros/pagos que puedan atribuirse con evidencia. No guardar nombres, usuarios, texto privado ni información sensible en el repo. Una respuesta enviada no cuenta como registro ni pago.
+
+`CompleteRegistration` se dispara al terminar la bienvenida, no al crear la cuenta. Contar primeros cobros reales en `trial_charges` con status `succeeded`, deduplicados por usuario; para la meta de 100 usuarios de pago, comprobar también suscripción vigente. Revisar segundo mes por separado. No usar Meta `Subscribe` como total de pagos: no registra el autocobro de fin de prueba.
+
+Los enlaces del banco son directos. No hay atribución automática de esos pagos a comentarios/DMs. Un desglose semanal es observacional, no prueba de causalidad. Si se aprueban enlaces medibles, preparar antes la configuración: las UTMs solas no se guardan en Supabase; `ref-capture.tsx` requiere `?ref=` y `/api/ref` valida el código. No inventar códigos ni usar `/r/` para preservar UTMs. No cambiar enlaces de campañas sin aprobación.
+
+Métrica principal propuesta: primeros usuarios de pago atribuibles / registros atribuibles, separada por país y cohorte con tiempo suficiente para terminar la prueba. Sin atribución verificada, marcar «no disponible». Ingreso neto incremental: suma del neto de cobros atribuibles confirmados; costo por usuario de pago: gasto aprobado atribuible / primeros usuarios de pago atribuibles, solo si ambos existen. Este entregable no añade gasto.
+
+## Dinero que puede mover
+
+Escenarios por cobro aprobado, no pronóstico de ventas. USD. Fórmula solicitada: neto = cobro ÷ 1.13 − (cobro × tasa + US$0.35). ONVO: 3.9 %; Tilopay: 4.25 %. Son netos tras IVA y comisión bajo esta fórmula, antes de otros gastos, devoluciones y diferencias cambiarias. Tasas provistas en el issue, precios de `plans.ts`, promoción de `trial.ts`.
+
+| Plan y cobro | Cobro USD | Neto ONVO | Neto Tilopay |
 | --- | --- | --- | --- |
 | Entreno mensual | $9.99 | $8.10 | $8.07 |
 | Entreno + Nutrición mensual | $14.99 | $12.33 | $12.28 |
@@ -77,6 +102,4 @@ Neto por cobro = cobro ÷ 1.13 − (cobro × comisión porcentual + US$0.35). ON
 | Entreno primer mes con promoción | $4.99 | $3.87 | $3.85 |
 | Entreno + Nutrición primer mes con promoción | $7.49 | $5.99 | $5.96 |
 
-La promoción es opcional: 50 % menos solo el primer mes mensual, una vez por cuenta, si guarda tarjeta antes del primer cobro y nunca pagó un plan. Desde el segundo mes rige el precio normal; no aplica al anual. No ofrecerla como precio permanente.
-
-Cada pago adicional verificable mueve el neto de su fila; el potencial total es la suma de cobros adicionales por su neto real. Sin datos de conversión no se estima cuántos pagos generarán estas respuestas. Los anuales son un cobro por año, no ingreso mensual recurrente por ese importe. Estos netos no descuentan operación, reembolsos ni adquisición; para evaluar rentabilidad se comparan con esos gastos reales.
+Cada primer pago adicional confirmado puede aportar el neto de su fila. El anual es un cobro por un año completo, no ingreso mensual recurrente por ese monto. Para N pagos, sumar los netos sin redondear y redondear el total al centavo; no multiplicar netos ya redondeados. Sin saber mezcla de planes, procesador y conversiones reales no se puede estimar un total ni afirmar que cubra el gasto.
