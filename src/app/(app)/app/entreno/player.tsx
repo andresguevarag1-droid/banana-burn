@@ -831,7 +831,7 @@ export function Player({ firstSession = false, nutritionUpsell, upcoming = null,
   const exKey = `${idx}:${ex.id}`;
   const showBrief = focus && activeSet === 0 && !here.some((r) => r.done) && !briefDone.includes(exKey) && !timerOn;
   const startEx = () => {
-    track("brief_start", { template: template.slice(0, 40), ex: idx + 1, first: firstTime });
+    track("brief_start", { first_session: firstSession, template: template.slice(0, 40), ex: idx + 1, first: firstTime });
     setBriefDone((d) => (d.includes(exKey) ? d : [...d, exKey]));
     if (firstTime) { store.set(TOUR_KEY, 1); setFirstTime(false); }
     unlockAudio();

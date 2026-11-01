@@ -73,7 +73,7 @@ describe("primer entreno corto", () => {
 
 describe("embudo del entreno (0061) en el primer entreno", () => {
   // El issue los llama workout_open, set1_start y workout_done; en 0061 son workout_open, workout_first_set y workout_saved.
-  const EVENTS = ["workout_open", "workout_first_set", "workout_saved"] as const;
+  const EVENTS = ["workout_open", "brief_start", "workout_first_set", "workout_saved"] as const;
   it.each([true, false])("los eventos conservan first_session=%s y la plantilla", (firstSession) => {
     const tpl = firstSessionPlan(dash("gym", "m"), 0)!.tpl!;
     for (const name of EVENTS) {

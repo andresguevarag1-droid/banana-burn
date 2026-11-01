@@ -29,7 +29,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
   if (first) return (
     <Link href={`/app/entreno${demo ? "?primera=1" : ""}`} className="btn-primary flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center">
       <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-      <span>Empieza tu primer entreno ({mins} min)</span>
+      <span>Empieza tu primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>
     </Link>
   );
   const tips = readinessTips(voice, program);

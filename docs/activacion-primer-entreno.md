@@ -17,9 +17,10 @@ vacío, guardado, error y recuperación sin conexión.
 
 ## Medición
 
-Se reutiliza `funnel_events`: `workout_open` mide apertura; `workout_first_set`
-mide la primera serie completada (aproximación al inicio efectivo, no un clic);
-`workout_saved` confirma guardado correcto. Los tres llevan `first_session`
+Se reutiliza `funnel_events`: `workout_open` mide apertura; `brief_start`
+registra cuándo la persona pulsa Empezar en la guía de cada ejercicio;
+`workout_first_set` mide la primera serie completada;
+`workout_saved` confirma guardado correcto. Los cuatro llevan `first_session`
 calculado en servidor para la rutina inicial. No se crean tablas ni migraciones.
 Usar el primer evento por persona, no contar reintentos o reaperturas como usuarios.
 Para incluir exprés y programas en la activación global, contar también sus primeros
@@ -35,7 +36,7 @@ with cohort as (
 ), activation as (
   select c.id,
     exists (select 1 from funnel_events f where f.user_id = c.id
-      and f.name = 'workout_first_set' and f.created_at >= c.created_at
+      and f.name = 'brief_start' and f.created_at >= c.created_at
       and f.created_at <= c.created_at + interval '24 hours') as started,
     exists (select 1 from workouts w where w.user_id = c.id
       and w.finished_at >= c.created_at
@@ -50,10 +51,18 @@ select count(*) as registrations,
 from activation;
 ```
 
+El inicio es el primer `brief_start` por persona: `first` en ese evento describe
+la guía del reproductor, mientras que `first_session` identifica la rutina inicial.
+No confundir abrir la pantalla con empezar a entrenar. El porcentaje iniciado
+se calcula como `100.0 * started_24h / registrations`, evitando dividir entre cero.
+
 El final autoritativo es `workouts.finished_at`: permite medir una sesión terminada
 sin conexión aunque se sincronice después. Los eventos usan la hora de recepción;
 pueden faltar si el navegador bloquea analítica. Para medir desde bienvenida,
 usar el primer `onboarding_done` como origen y declarar ese denominador aparte.
+Para comparar inicios históricos anteriores a esta revisión, usar
+`workout_first_set` en ambas cohortes: la propiedad `first_session` de
+`brief_start` solo está disponible desde este cambio.
 Comparar cohortes antes/después y su primer cobro `trial_charges.status = 'succeeded'`;
 no atribuir una mejora de pago sin observarla. El guardado parcial cuenta como
 entreno registrado; para exigir toda la rutina, analizar `done = total` en el evento.
@@ -88,8 +97,8 @@ pendiente en un entorno con navegador; no se sustituyen por imágenes simuladas.
 
 ## Validación de código
 
-Tipos y ESLint pasan con los comandos del issue. Vitest: 216 archivos y 2,432
-pruebas en verde. La compilación de producción pasa usando
-`NODE_OPTIONS=--max-old-space-size=1536 npx next build`; el intento sin ese límite
-agotó los 4 GB del entorno durante las comprobaciones internas. No se desactivó
-ninguna comprobación de la compilación.
+En esta revisión pasan `npx tsc --noEmit -p .`,
+`npx eslint src scripts --quiet` y `npx vitest run` (216 archivos, 2,435 pruebas).
+La compilación de producción pasa con
+`NODE_OPTIONS=--max-old-space-size=1536 npx next build`, limitando la memoria
+para los 4 GB disponibles, sin desactivar comprobaciones.
