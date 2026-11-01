@@ -113,3 +113,18 @@ export async function reviewReferral(_: ActionState, fd: FormData): Promise<Acti
     return ok(approve ? "Aprobado: vuelve a contar para sus recompensas. Quedó en auditoría." : "Descartado: no cuenta para recompensas. Quedó en auditoría.");
   });
 }
+
+/** Pago reembolsado de un referido (0064): deja de contar; si su grupo ya cobró, se anula y los otros vuelven a esperar. */
+export async function refundReferral(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run("referrals.manage", fd, async ({ sb }) => {
+    const target = val.id(fd, "target", { uuid: true, label: "Usuario" });
+    const referral = val.int(fd, "referral", { required: true, min: 1, label: "Referido" })!;
+    const reason = val.text(fd, "reason", { label: "Motivo", required: true, min: 4, max: 300 });
+    confirmed(fd);
+    if (!sb) return ok(`Pago reembolsado anotado${DEMO_MSG}`);
+    const { data, error } = await sb.rpc("admin_referral_refund", { p_referral: referral, p_reason: reason });
+    if (error) return fail(pgMsg(error));
+    revalidatePath(`/admin/usuarios/${target}`);
+    return ok(data === "recompensa_anulada" ? "Ya no cuenta y la recompensa de su grupo quedó anulada. Quedó en auditoría." : "Ya no cuenta para recompensas. Quedó en auditoría.");
+  });
+}

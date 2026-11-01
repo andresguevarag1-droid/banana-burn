@@ -702,7 +702,7 @@ select bbtest.ok('registro con nombre largo no falla (80 máx.)', (select char_l
 
 -- ───────────── 7. Nutrición por plan (0022) ─────────────
 -- N: plan Entreno, registrado hace 30 días. C: Entreno + Nutrición. K: plan Entreno con cortesía vigente (vale como completo).
--- A y T: prueba de 7 días. S: admin. E: prueba vencida, sin plan. Hasta el 1 de noviembre de 2026 (beta) todos tienen nutrición.
+-- A y T: prueba de 7 días. S: admin. E: prueba vencida, sin plan. Hasta el 1 de noviembre de 2026 (beta) todos tienen nutrición, y las cuentas de la beta (E, N) hasta 7 días después (0045).
 reset role;
 select bbtest.login(null);
 insert into auth.users (id, email) values
@@ -924,6 +924,8 @@ select bbtest.ok('referidos: R lee su fila de código', bbtest.num($q$ select 1 
 select bbtest.fails('referidos: R no se atribuye referidos', $q$ insert into public.referrals (referrer, referred, code) values (auth.uid(), 'a1a1a1a1-0000-4000-8000-0000000000a1', 'abcdefgh') $q$, '42501');
 select bbtest.fails('referidos: R no llama la atribución del servidor', $q$ select public.referral_attribute('a1a1a1a1-0000-4000-8000-0000000000a1', 'abcdefgh') $q$, '42501');
 select bbtest.fails('referidos: R no se marca compra anual', $q$ select public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a1') $q$, '42501');
+select bbtest.fails('referidos: R no marca el pago de un referido', $q$ select public.referral_paid('9a000000-0000-4000-8000-0000000000a1', false) $q$, '42501');
+select bbtest.fails('referidos: R no marca reembolsos', $q$ select public.admin_referral_refund(1, 'no fue') $q$, '42501');
 select bbtest.fails('referidos: R no escribe recompensas', $q$ insert into public.referral_rewards (referrer, group_no, months, plan) values (auth.uid(), 99, 3, 'completo') $q$, '42501');
 select bbtest.fails('referidos: R no cambia su código', $q$ update public.referral_codes set code = 'zzzzzzzz' where user_id = auth.uid() $q$, '42501');
 select bbtest.fails('referidos: R no lee las señales de red', $q$ select * from public.referral_signals $q$, '42501');
@@ -963,63 +965,72 @@ select bbtest.fails('atribución: un JWT de usuario no la usa aunque el rol fuer
 reset role;
 select bbtest.ok('atribución: 8 filas para R (incluye descartado y en revisión)', (select count(*) = 8 from public.referrals where referrer = '9a000000-0000-4000-8000-0000000000a0'));
 
--- 9e. Calificación y recompensas: grupos de 3, 1 mes o 3 si alguien del grupo compró anual. Sin doble conteo.
+-- 9e. Calificación (0064): cuenta el primer pago verificado de un plan en 60 días, no la actividad. Grupos de 3, 1 mes o 3
+--     si alguien del grupo pagó anual. Sin doble conteo. referral_paid() lo llama activate() en billing.ts (service_role).
 select bbtest.login(null);
 update public.profiles set onboarded = true where id in ('9a000000-0000-4000-8000-0000000000a1', '9a000000-0000-4000-8000-0000000000a2', '9a000000-0000-4000-8000-0000000000a3',
   '9a000000-0000-4000-8000-0000000000a4', '9a000000-0000-4000-8000-0000000000a5', '9a000000-0000-4000-8000-0000000000a6', '9a000000-0000-4000-8000-0000000000a7');
-select bbtest.ok('calificación: terminar la bienvenida sola no califica', (select count(*) = 0 from public.referrals where status = 'calificado'));
--- El peso de la bienvenida tampoco cuenta como día activo (Q1 ya anotó peso en 9a).
-select bbtest.ok('calificación: anotar peso no califica', (select status = 'registrado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a1'));
+select bbtest.ok('calificación: terminar la bienvenida no califica', (select count(*) = 0 from public.referrals where status = 'calificado'));
 set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a1');
-select bbtest.ok('calificación: Q1 anota agua', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses) values (auth.uid(), current_date, 4) $q$) = 1);
+select bbtest.ok('calificación: Q1 anota agua en su prueba', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses) values (auth.uid(), current_date, 4) $q$) = 1);
 reset role;
 set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a2');
-select bbtest.ok('calificación: Q2 empieza un entreno', bbtest.affected($q$ insert into public.workouts (user_id, day, template, started_at) values (auth.uid(), current_date, 'pierna', now()) $q$) = 1);
+select bbtest.ok('calificación: Q2 termina un entreno en su prueba', bbtest.affected($q$ insert into public.workouts (user_id, day, template, started_at, finished_at) values (auth.uid(), current_date, 'pierna', now() - interval '1 hour', now()) $q$) = 1);
 reset role;
-select bbtest.ok('calificación: un entreno sin terminar no califica', (select status = 'registrado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a2'));
-set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a2');
-select bbtest.ok('calificación: Q2 termina el entreno', bbtest.affected($q$ update public.workouts set finished_at = now() where user_id = auth.uid() $q$) = 1);
+select bbtest.ok('calificación: activarse (agua o entreno) con prueba y tarjeta guardada no califica', (select count(*) = 0 from public.referrals where status = 'calificado'));
+set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a1');
+select bbtest.fails('calificación: Q1 no se marca un pago', $q$ select public.referral_paid(auth.uid(), false) $q$, '42501');
 reset role;
-select bbtest.ok('calificación: Q1 y Q2 calificados, sin recompensa todavía', (select count(*) = 2 from public.referrals where status = 'calificado') and not exists (select 1 from public.referral_rewards));
--- Q3 pasó sus 7 días sin actividad: ya no califica.
-update public.profiles set created_at = now() - interval '9 days' where id = '9a000000-0000-4000-8000-0000000000a3';
-set role authenticated; select bbtest.as_user('9a000000-0000-4000-8000-0000000000a3');
-select bbtest.ok('calificación: Q3 fuera de plazo no puede escribir', bbtest.affected($q$ insert into public.daily_logs (user_id, day, steps) values (auth.uid(), current_date, 9000) $q$) = -1);
+set role service_role; select bbtest.login(null);
+select bbtest.ok('calificación: Q1 paga su primer plan y cuenta', public.referral_paid('9a000000-0000-4000-8000-0000000000a1', false) = 'calificado');
+select bbtest.ok('calificación: Q2 paga su primer plan y cuenta', public.referral_paid('9a000000-0000-4000-8000-0000000000a2', false) = 'calificado');
+select bbtest.ok('calificación: un pago de alguien sin referido no hace nada', public.referral_paid('9a000000-0000-4000-8000-0000000000b0', false) = 'sin_referido');
 reset role;
-select bbtest.login(null);
-insert into public.daily_logs (user_id, day, steps) values ('9a000000-0000-4000-8000-0000000000a3', current_date, 9000);
-select bbtest.ok('calificación: actividad después de los 7 días no califica', (select status = 'registrado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a3'));
--- Q4 califica: grupo 1 completo (Q1, Q2, Q4) = 1 mes.
-insert into public.daily_logs (user_id, day, sleep_h) values ('9a000000-0000-4000-8000-0000000000a4', current_date, 7.5);
+select bbtest.ok('calificación: Q1 y Q2 calificados con su pago, sin recompensa todavía', (select count(*) = 2 and bool_and(paid_at is not null) from public.referrals where status = 'calificado') and not exists (select 1 from public.referral_rewards));
+-- Q3 se registró con el enlace hace 61 días: su primer pago llega tarde y ya no cuenta.
+update public.referrals set created_at = now() - interval '61 days' where referred = '9a000000-0000-4000-8000-0000000000a3';
+set role service_role; select bbtest.login(null);
+select bbtest.ok('calificación: un pago después de los 60 días no califica', public.referral_paid('9a000000-0000-4000-8000-0000000000a3', false) = 'registrado');
+-- Q4 paga: grupo 1 completo (Q1, Q2, Q4) = 1 mes.
+select bbtest.ok('calificación: Q4 paga y completa el grupo 1', public.referral_paid('9a000000-0000-4000-8000-0000000000a4', false) = 'calificado');
+reset role;
 select bbtest.ok('recompensa: el grupo 1 completo da 1 mes', (select count(*) = 1 and min(months) = 1 and min(group_no) = 1 from public.referral_rewards where referrer = '9a000000-0000-4000-8000-0000000000a0'));
 select bbtest.ok('recompensa: 1 regalo de referidos para R, de 1 mes', (select count(*) = 1 and min(months) = 1 from public.comp_grants where user_id = '9a000000-0000-4000-8000-0000000000a0' and source = 'referido'));
 select bbtest.ok('recompensa: los 3 del grupo quedan marcados', (select count(*) = 3 from public.referrals where referrer = '9a000000-0000-4000-8000-0000000000a0' and group_no = 1));
 select bbtest.ok('recompensa: volver a liquidar no paga de nuevo', public._referral_settle('9a000000-0000-4000-8000-0000000000a0') = 0 and (select count(*) = 1 from public.referral_rewards));
--- Q2 compra anual (webhook): el grupo 1 sube a trimestre, una sola vez.
+insert into bbtest.kv select 'paid_q4', paid_at::text from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a4';
 set role service_role; select bbtest.login(null);
-select bbtest.ok('anual: el grupo 1 sube a trimestre', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a2') = 'trimestre');
-select bbtest.ok('anual: la renovación del año no suma de nuevo', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a2') = 'sin_cambio');
-select bbtest.ok('anual: otra compra anual del mismo grupo no suma', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a1') = 'sin_cambio');
+select bbtest.ok('recompensa: la renovación de Q4 no vuelve a contar', public.referral_paid('9a000000-0000-4000-8000-0000000000a4', false) = 'calificado');
+reset role;
+select bbtest.ok('recompensa: el primer pago de Q4 queda igual y no hay mes extra', (select paid_at::text = (select v from bbtest.kv where k = 'paid_q4') from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a4')
+  and (select count(*) = 1 from public.referral_rewards));
+-- Q2 pasa al plan anual: el grupo 1 sube a trimestre, una sola vez.
+set role service_role; select bbtest.login(null);
+select bbtest.ok('anual: el grupo 1 sube a trimestre', public.referral_paid('9a000000-0000-4000-8000-0000000000a2', true) = 'trimestre');
+select bbtest.ok('anual: la renovación del año no suma de nuevo', public.referral_paid('9a000000-0000-4000-8000-0000000000a2', true) = 'calificado');
+select bbtest.ok('anual: otra compra anual del mismo grupo no suma', public.referral_paid('9a000000-0000-4000-8000-0000000000a1', true) = 'calificado');
 reset role;
 select bbtest.ok('anual: el grupo 1 vale 3 meses en total (1 + 2)', (select months = 3 and upgraded_at is not null and cardinality(grant_ids) = 2 from public.referral_rewards where group_no = 1)
   and (select sum(months) = 3 from public.comp_grants where user_id = '9a000000-0000-4000-8000-0000000000a0' and source = 'referido'));
--- Grupo 2 con compra anual ANTES de completarse: da 3 meses de una vez.
+-- Grupo 2 con un primer pago anual: da 3 meses de una vez.
 set role service_role; select bbtest.login(null);
-select bbtest.ok('anual: Q5 compra anual antes de calificar (queda anotado)', public.referral_annual_paid('9a000000-0000-4000-8000-0000000000a5') = 'anotado');
+select bbtest.ok('anual: Q5 paga el anual como primer pago y cuenta', public.referral_paid('9a000000-0000-4000-8000-0000000000a5', true) = 'calificado');
+select bbtest.ok('calificación: Q6 paga su primer plan', public.referral_paid('9a000000-0000-4000-8000-0000000000a6', false) = 'calificado');
 reset role;
-insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000a5', current_date, 2), ('9a000000-0000-4000-8000-0000000000a6', current_date, 2);
 select bbtest.ok('recompensa: con 2 de 3 el grupo 2 todavía no paga', (select count(*) = 1 from public.referral_rewards));
--- Q7 estaba en revisión: el admin lo aprueba y completa el grupo 2.
+-- Q7 estaba en revisión: paga, sigue en revisión, y el admin lo aprueba y completa el grupo 2.
 set role authenticated; select bbtest.login('P');
 select bbtest.fails('revisión: soporte no aprueba referidos', $q$ select public.admin_review_referral((select 1::bigint), true, 'ok') $q$, '42501');
 reset role;
-insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000a7', current_date, 2);
-select bbtest.ok('revisión: en revisión no califica aunque entrene', (select status = 'sospechoso' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a7'));
+set role service_role; select bbtest.login(null);
+select bbtest.ok('revisión: en revisión no califica aunque pague', public.referral_paid('9a000000-0000-4000-8000-0000000000a7', false) = 'sospechoso');
+reset role;
 insert into bbtest.kv select 'q7', id::text from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a7';
 set role authenticated; select bbtest.login('S');
 select bbtest.ok('revisión: el admin aprueba a Q7', public.admin_review_referral((select v::bigint from bbtest.kv where k = 'q7'), true, 'es su hermana, lo confirmó por correo') = 'registrado');
 select bbtest.fails('revisión: no se revisa dos veces', $q$ select public.admin_review_referral((select v::bigint from bbtest.kv where k = 'q7'), true, 'otra vez') $q$, 'P0001');
 reset role;
+select bbtest.ok('revisión: al aprobarlo cuenta con el pago que ya hizo', (select status = 'calificado' from public.referrals where referred = '9a000000-0000-4000-8000-0000000000a7'));
 select bbtest.ok('recompensa: el grupo 2 (con anual) da 3 meses de una vez', (select months = 3 and upgraded_at is null and cardinality(grant_ids) = 1 from public.referral_rewards where group_no = 2));
 select bbtest.ok('recompensa: los regalos de R se apilan uno tras otro', (select bool_and(ok) from (
   select starts_at >= lag(expires_at) over (order by starts_at) or lag(expires_at) over (order by starts_at) is null as ok
@@ -1066,8 +1077,67 @@ select bbtest.ok('borrado: la fila de referido queda sin dueño y sin red', (sel
 set role service_role; select bbtest.login(null);
 select bbtest.ok('borrado: recrear la cuenta con el mismo correo no se vuelve a atribuir', public.referral_attribute('9a000000-0000-4000-8000-0000000000a9', bbtest.code(), bbtest.h('mail-a6'), null) = 'correo_repetido');
 reset role;
--- Los triggers nunca bloquean el registro del usuario aunque fallen las recompensas.
-select bbtest.ok('triggers: actividad de alguien sin referido no hace nada', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000b0', current_date, 1) $q$) = 1);
+-- 0064: la actividad ya no toca referidos (sin triggers en entrenos, registro diario ni bienvenida).
+select bbtest.ok('actividad: registrar agua sigue funcionando sin tocar referidos', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses) values ('9a000000-0000-4000-8000-0000000000b0', current_date, 1) $q$) = 1);
+select bbtest.ok('actividad: sin triggers de referidos', not exists (select 1 from pg_trigger where tgname in ('referral_on_workout', 'referral_on_daily', 'referral_on_onboard')));
+
+-- 9i. Cuenta al pagar (0064): calificaciones viejas respetadas, misma tarjeta, reembolso y tope de 12 al año.
+--     R2 invita. Dos amigos calificaron con la regla vieja (sin pago); T1-T6 son cuentas nuevas con su enlace.
+insert into auth.users (id, email) values ('9b000000-0000-4000-8000-0000000000b0', 'rosa@prueba.test'),
+  ('9b000000-0000-4000-8000-0000000000b1', 'tito@prueba.test'), ('9b000000-0000-4000-8000-0000000000b2', 'tara@prueba.test'),
+  ('9b000000-0000-4000-8000-0000000000b3', 'teo@prueba.test'), ('9b000000-0000-4000-8000-0000000000b4', 'tina@prueba.test'),
+  ('9b000000-0000-4000-8000-0000000000b5', 'toni@prueba.test'), ('9b000000-0000-4000-8000-0000000000b6', 'tere@prueba.test');
+update public.profiles set created_at = now() - interval '90 days', onboarded = true, plan = 'entreno' where id = '9b000000-0000-4000-8000-0000000000b0';
+insert into public.referral_codes (user_id, code) values ('9b000000-0000-4000-8000-0000000000b0', 'rdzs2345');
+insert into public.referrals (referrer, referred, code, status, created_at, qualified_at)
+  select '9b000000-0000-4000-8000-0000000000b0', null, 'rdzs2345', 'calificado', now() - interval '20 days', now() - interval '15 days' + make_interval(secs => g) from generate_series(1, 2) g;
+set role service_role; select bbtest.login(null);
+select bbtest.ok('pago: T1 a T6 quedan registrados', (select bool_and(public.referral_attribute(('9b000000-0000-4000-8000-0000000000b' || k)::uuid, 'rdzs2345', bbtest.h('mail-t' || k), bbtest.h('red-t' || k)) = 'registrado') from unnest(array['1','2','3','4','5','6']) k));
+reset role;
+select bbtest.ok('viejas: las 2 calificaciones sin pago siguen contando', (select count(*) = 2 from public.referrals where referrer = '9b000000-0000-4000-8000-0000000000b0' and status = 'calificado' and paid_at is null));
+set role service_role; select bbtest.login(null);
+select bbtest.ok('viejas: T1 paga y completa el grupo con las 2 viejas', public.referral_paid('9b000000-0000-4000-8000-0000000000b1', false) = 'calificado');
+reset role;
+select bbtest.ok('viejas: el grupo 1 de R2 da 1 mes de Entreno', (select count(*) = 1 and min(months) = 1 and min(plan) = 'entreno' from public.referral_rewards where referrer = '9b000000-0000-4000-8000-0000000000b0'));
+-- Misma tarjeta: T2 paga con la tarjeta que también usó R2.
+insert into public.card_fingerprints (key, fingerprint, user_id, provider) values
+  ('onvo:r2-tarjeta', repeat('ab', 32), '9b000000-0000-4000-8000-0000000000b0', 'onvo'), ('onvo:t2-tarjeta', repeat('ab', 32), '9b000000-0000-4000-8000-0000000000b2', 'onvo');
+set role service_role; select bbtest.login(null);
+select bbtest.ok('tarjeta: pagar con la misma tarjeta que quien invita no cuenta', public.referral_paid('9b000000-0000-4000-8000-0000000000b2', false) = 'descartado');
+reset role;
+select bbtest.ok('tarjeta: queda anotado el motivo', (select flag = 'misma_tarjeta' from public.referrals where referred = '9b000000-0000-4000-8000-0000000000b2'));
+-- Reembolso: T3, T4 y T5 pagan (grupo 2 = 1 mes); el pago de T4 se reembolsa; T6 paga y forma el grupo nuevo.
+set role service_role; select bbtest.login(null);
+select bbtest.ok('reembolso: T3, T4 y T5 pagan', (select bool_and(public.referral_paid(('9b000000-0000-4000-8000-0000000000b' || k)::uuid, false) = 'calificado') from unnest(array['3','4','5']) k));
+reset role;
+select bbtest.ok('reembolso: el grupo 2 de R2 da 1 mes', (select months = 1 and revoked_at is null from public.referral_rewards where referrer = '9b000000-0000-4000-8000-0000000000b0' and group_no = 2));
+insert into bbtest.kv select 't4', id::text from public.referrals where referred = '9b000000-0000-4000-8000-0000000000b4';
+set role authenticated; select bbtest.login('P');
+select bbtest.fails('reembolso: soporte no lo marca (solo admin)', $q$ select public.admin_referral_refund((select v::bigint from bbtest.kv where k = 't4'), 'reembolso en ONVO') $q$, '42501');
+reset role;
+set role authenticated; select bbtest.login('S');
+select bbtest.fails('reembolso: pide motivo', $q$ select public.admin_referral_refund((select v::bigint from bbtest.kv where k = 't4'), '') $q$, 'P0001');
+select bbtest.ok('reembolso: el admin marca el pago de T4 como reembolsado', public.admin_referral_refund((select v::bigint from bbtest.kv where k = 't4'), 'reembolso en ONVO el 3 nov') = 'recompensa_anulada');
+select bbtest.fails('reembolso: no se marca dos veces', $q$ select public.admin_referral_refund((select v::bigint from bbtest.kv where k = 't4'), 'otra vez') $q$, 'P0001');
+reset role;
+select bbtest.ok('reembolso: T4 ya no cuenta', (select status = 'descartado' and flag = 'pago_reembolsado' from public.referrals where referred = '9b000000-0000-4000-8000-0000000000b4'));
+select bbtest.ok('reembolso: el mes del grupo 2 queda anulado', (select revoked_at is not null from public.referral_rewards where referrer = '9b000000-0000-4000-8000-0000000000b0' and group_no = 2)
+  and (select count(*) = 1 from public.comp_grants where user_id = '9b000000-0000-4000-8000-0000000000b0' and source = 'referido' and revoked_at is not null));
+select bbtest.ok('reembolso: T3 y T5 vuelven a esperar', (select count(*) = 2 from public.referrals where referrer = '9b000000-0000-4000-8000-0000000000b0' and status = 'calificado' and group_no is null));
+select bbtest.ok('reembolso: queda en auditoría', (select count(*) = 1 from public.audit_log where action = 'referral.refund' and actor = bbtest.u('S')));
+set role service_role; select bbtest.login(null);
+select bbtest.ok('reembolso: si T4 vuelve a pagar no cuenta', public.referral_paid('9b000000-0000-4000-8000-0000000000b4', false) = 'descartado');
+select bbtest.ok('reembolso: T6 paga y forma el grupo 3 con T3 y T5', public.referral_paid('9b000000-0000-4000-8000-0000000000b6', false) = 'calificado');
+reset role;
+select bbtest.ok('reembolso: R2 tiene 2 meses vigentes (grupos 1 y 3)', (select count(*) = 2 and sum(months) = 2 from public.referral_rewards where referrer = '9b000000-0000-4000-8000-0000000000b0' and revoked_at is null)
+  and (select count(*) = 3 from public.referrals where referrer = '9b000000-0000-4000-8000-0000000000b0' and group_no = 3));
+-- Tope: 12 recompensas vigentes en 365 días, aunque sobren amigos que pagan.
+insert into public.referrals (referrer, referred, code, status, created_at, paid_at, qualified_at)
+  select '9b000000-0000-4000-8000-0000000000b0', null, 'rdzs2345', 'calificado', now() - interval '10 days', now() - interval '5 days', now() - interval '5 days' + make_interval(secs => g)
+  from generate_series(1, 33) g;
+select bbtest.ok('tope: con 33 calificados más se entregan 10 recompensas', public._referral_settle('9b000000-0000-4000-8000-0000000000b0') = 10);
+select bbtest.ok('tope: R2 llega a 12 recompensas vigentes en 365 días', (select count(*) = 12 from public.referral_rewards where referrer = '9b000000-0000-4000-8000-0000000000b0' and revoked_at is null));
+select bbtest.ok('tope: los 3 que sobran esperan sin grupo', (select count(*) = 3 from public.referrals where referrer = '9b000000-0000-4000-8000-0000000000b0' and status = 'calificado' and group_no is null));
 
 -- ───────────── 10. Tarjeta guardada y prueba de 7 días con cobro el día 7 (0026) ─────────────
 -- Sigue con la beta terminada (sección 9). N* = cuentas nuevas después de la beta; O* = cuentas de la beta.

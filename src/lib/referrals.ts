@@ -1,19 +1,23 @@
 // Referidos: reglas puras (sin acceso a datos). La base de datos aplica las mismas reglas y es la fuente de verdad
-// (0025_regalos_referidos.sql: referral_attribute, _referral_try_qualify, _referral_settle, referral_annual_paid).
+// (0025_regalos_referidos.sql: referral_attribute, _referral_settle, referral_annual_paid; 0064_referidos_al_pagar.sql:
+// _referral_try_qualify, referral_paid, admin_referral_refund).
 //
-// Reglas (decididas con el dueño):
+// Reglas (decididas con el dueño; desde el 1 de noviembre de 2026 el amigo cuenta cuando paga, no al activarse):
 //   1. Cada persona tiene un enlace /r/<código> (8 caracteres sin 0, 1, i, l ni o). El enlace guarda una cookie y abre el registro.
 //   2. La cuenta nueva se atribuye en el servidor al crearse: una sola vez, nunca a sí misma, solo en sus primeras 72 horas
 //      y una sola vez por correo (aunque la cuenta se borre y se vuelva a crear).
-//   3. "Calificado" = terminó la bienvenida y, dentro de sus primeros 7 días, terminó un entreno (no descanso) o registró
-//      agua, pasos o sueño; y no parece la misma persona que invita:
+//   3. "Calificado" = hizo su primer pago verificado de un plan (Entreno o Entreno + Nutrición, mensual o anual, por ONVO o
+//      Tilopay) dentro de los 60 días desde que se registró con el enlace; y no parece la misma persona que invita:
 //        - mismo correo normalizado (sin +etiqueta; en Gmail sin puntos): no cuenta;
+//        - misma tarjeta que quien invita: no cuenta;
 //        - mismo prefijo de red que quien invita y mismo dominio de correo: en revisión (un admin aprueba o descarta);
 //        - 2 o más referidos previos desde el mismo prefijo de red en 30 días: en revisión.
-//      Una compra anual confirmada por el webhook saca a la persona de "en revisión".
+//      No es pago: la prueba de 7 días, la tarjeta guardada sin cobro, cortesías, regalos, beta, condominio, retos ni
+//      temporadas sueltas. Un pago reembolsado deja de contar (un admin lo marca).
+//      Una compra anual confirmada saca a la persona de "en revisión". Los calificados con la regla anterior se respetan.
 //   4. Recompensa: los calificados se ordenan por fecha de calificación y se agrupan de a 3. Cada grupo completo da 1 mes
-//      gratis; si al menos una persona del grupo compró un plan ANUAL (solo lo confirma el webhook de ONVO), ese grupo
-//      da 3 meses (un trimestre). Si la compra anual llega después, el grupo sube de 1 a 3 meses una sola vez.
+//      gratis; si al menos una persona del grupo pagó un plan ANUAL, ese grupo da 3 meses (un trimestre). Si la compra
+//      anual llega después, el grupo sube de 1 a 3 meses una sola vez.
 //      Un grupo nunca se recalcula ni se paga dos veces. Tope: 12 recompensas por persona en 365 días.
 //   5. Las recompensas son regalos (comp_grants source 'referido'): aviso, ventana de celebración y correo como cualquier regalo.
 
@@ -23,7 +27,8 @@ export const REF_CODE_RE = /^[a-hjkmnp-z2-9]{8}$/;
 export const REF_GROUP_SIZE = 3;
 export const REF_BASE_MONTHS = 1;
 export const REF_ANNUAL_MONTHS = 3;
-export const REF_WINDOW_DAYS = 7;
+/** Días desde que se registró con el enlace para hacer su primer pago (antes eran 7 para activarse). */
+export const REF_WINDOW_DAYS = 60;
 export const REF_ATTRIBUTION_HOURS = 72;
 export const REF_MAX_REWARDS_YEAR = 12;
 
@@ -79,8 +84,8 @@ export function referralLabel(r: Pick<MyReferral, "status" | "annual" | "expired
   if (r.status === "descartado") return { label: "No cuenta", tone: "muted" };
   if (r.status === "sospechoso") return { label: "En revisión", tone: "warn" };
   if (r.annual && r.status === "calificado") return { label: "Compró anual", tone: "banana" };
-  if (r.status === "calificado") return { label: "Activo", tone: "good" };
-  if (r.expired) return { label: "No se activó a tiempo", tone: "muted" };
+  if (r.status === "calificado") return { label: "Cuenta", tone: "good" };
+  if (r.expired) return { label: "No pagó a tiempo", tone: "muted" };
   return { label: r.annual ? "Compró anual" : "Registrado", tone: r.annual ? "banana" : "muted" };
 }
 
@@ -100,7 +105,7 @@ export const shareMessage = (link: string) => `Entreno con Banana Burn: rutina h
 
 // ─────────── Simulación de recompensas (misma lógica que la base, para definir y probar las reglas) ───────────
 
-export type SimRef = { id: number; status: RefStatus; qualifiedAt: number | null; annual: boolean; group: number | null };
+export type SimRef = { id: number; status: RefStatus; qualifiedAt: number | null; annual: boolean; group: number | null; registeredAt?: number; paidAt?: number | null };
 export type SimReward = { group: number; months: 1 | 3; grants: number[]; revoked: boolean; upgraded: boolean; at: number };
 export type SimState = { refs: SimRef[]; rewards: SimReward[] };
 
@@ -131,6 +136,44 @@ export function annualPaid(s: SimState, id: number, now: number): { state: SimSt
   if (!w || w.revoked || w.months !== 1) return { state: { refs, rewards: s.rewards }, result: "sin_cambio" };
   const rewards = s.rewards.map((x) => (x.group === me.group ? { ...x, months: 3 as const, upgraded: true, grants: [...x.grants, 2] } : x));
   return { state: { refs, rewards }, result: "trimestre" };
+}
+
+/** Cobros que puede tener una persona referida. Solo el de un plan pasa por activate() en billing.ts y cuenta. */
+export type RefCharge = "plan" | "prueba" | "tarjeta" | "cortesia" | "beta" | "condominio" | "reto" | "temporada";
+export const countsAsPayment = (kind: RefCharge) => kind === "plan";
+/** ¿El primer pago llegó dentro de los REF_WINDOW_DAYS desde que se registró con el enlace? */
+export const paidInWindow = (registeredAt: number, paidAt: number) => paidAt <= registeredAt + REF_WINDOW_DAYS * 864e5;
+
+/** Califica si ya pagó dentro de la ventana (como _referral_try_qualify) y liquida. */
+function tryQualify(s: SimState, id: number, now: number): SimState {
+  const ref = s.refs.find((r) => r.id === id);
+  if (!ref || ref.status !== "registrado" || ref.paidAt == null || !paidInWindow(ref.registeredAt ?? ref.paidAt, ref.paidAt)) return s;
+  return settle({ refs: s.refs.map((r) => (r.id === id ? { ...r, status: "calificado" as const, qualifiedAt: now } : r)), rewards: s.rewards }, now);
+}
+
+/** Cobro verificado de la persona referida (referral_paid): anota solo el primer pago de un plan y califica si toca. */
+export function paid(s: SimState, id: number, p: { kind: RefCharge; at: number; annual?: boolean }): { state: SimState; result: string } {
+  if (!countsAsPayment(p.kind)) return { state: s, result: "no_es_pago" };
+  if (!s.refs.some((r) => r.id === id)) return { state: s, result: "sin_referido" };
+  let state: SimState = { refs: s.refs.map((r) => (r.id === id && r.paidAt == null && r.status !== "descartado" ? { ...r, paidAt: p.at } : r)), rewards: s.rewards };
+  let upgraded = false;
+  if (p.annual) {
+    const a = annualPaid(state, id, p.at);
+    state = a.state;
+    upgraded = a.result === "trimestre";
+  }
+  state = tryQualify(state, id, p.at);
+  return { state, result: upgraded ? "trimestre" : state.refs.find((r) => r.id === id)!.status };
+}
+
+/** Pago reembolsado (admin_referral_refund): no cuenta; si su grupo ya cobró, se anula y los otros vuelven a esperar. */
+export function refund(s: SimState, id: number, now: number): SimState {
+  const ref = s.refs.find((r) => r.id === id);
+  if (!ref || ref.status === "descartado") return s;
+  const g = ref.group;
+  const refs = s.refs.map((r) => (r.id === id ? { ...r, status: "descartado" as const } : g != null && r.group === g && r.status === "calificado" ? { ...r, group: null } : r));
+  const rewards = s.rewards.map((w) => (g != null && w.group === g ? { ...w, revoked: true } : w));
+  return settle({ refs, rewards }, now);
 }
 
 /** Revocación por fraude: quita los meses del grupo y descarta a sus referidos (no se vuelven a agrupar). */

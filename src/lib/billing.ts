@@ -211,18 +211,19 @@ async function activate(db: SupabaseClient, row: SubscriptionRow, a: { periodSta
   const plan = await syncProfilePlan(db, row.user_id);
   // 0045: sus tarjetas quedan como "ya pagó" (la promoción del primer mes no vuelve con la misma tarjeta en otra cuenta).
   await markCardsPaid(db, row.user_id);
-  if (row.billing === "anual") await referralAnnualPaid(db, row.user_id);
+  await referralPaid(db, row.user_id, row.billing === "anual");
   return plan;
 }
 
 /**
- * Referidos: una compra ANUAL confirmada por este webhook (único camino) puede subir la recompensa de quien invitó de
- * 1 mes a un trimestre. Idempotente en la base (renovaciones y reintentos no suman). Nunca hace fallar el webhook.
+ * Referidos (0064): el primer cobro verificado de un plan (ONVO o Tilopay, mensual o anual) hace que la persona referida
+ * cuente para quien la invitó; si es anual, puede subir la recompensa de 1 mes a un trimestre. Va después de markCardsPaid
+ * para que la base compare tarjetas. Idempotente en la base (renovaciones y reintentos no suman). Nunca hace fallar el cobro.
  */
-async function referralAnnualPaid(db: SupabaseClient, userId: string) {
-  const { data, error } = await db.rpc("referral_annual_paid", { p_user: userId });
-  if (error && !["PGRST202", "42883"].includes(error.code ?? "")) log("referidos: no se pudo anotar la compra anual", { userId, code: error.code ?? null });
-  else if (data && data !== "sin_cambio") log("referidos: compra anual", { userId, result: String(data) });
+async function referralPaid(db: SupabaseClient, userId: string, annual: boolean) {
+  const { data, error } = await db.rpc("referral_paid", { p_user: userId, p_annual: annual });
+  if (error && !["PGRST202", "42883"].includes(error.code ?? "")) log("referidos: no se pudo anotar el pago", { userId, code: error.code ?? null });
+  else if (data && data !== "sin_referido") log("referidos: pago", { userId, annual, result: String(data) });
 }
 
 /**

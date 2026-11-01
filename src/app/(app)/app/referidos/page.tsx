@@ -5,6 +5,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { getReferralPage } from "@/lib/referrals-server";
 import { monthsEarned, referralLabel, referralProgress, REF_ANNUAL_MONTHS, REF_GROUP_SIZE, REF_MAX_REWARDS_YEAR, REF_WINDOW_DAYS, type RefTone } from "@/lib/referrals";
 import { monthsLabel, planLabel } from "@/lib/gifts";
+import { TRIAL_DAYS } from "@/lib/plans";
 import { ShareLink } from "./share";
 
 export const metadata = { title: "Invita y gana", robots: { index: false } };
@@ -18,10 +19,10 @@ const TONE: Record<RefTone, string> = {
 const fmt = (iso: string, tz: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: tz });
 
 const RULES: [string, string][] = [
-  ["Comparte tu enlace", `Tu amigo crea su cuenta con él y tiene ${REF_WINDOW_DAYS} días gratis con todo incluido.`],
-  ["Cuenta cuando se activa", `Termina su bienvenida y, en sus primeros ${REF_WINDOW_DAYS} días, completa un entreno o registra su agua, pasos o sueño.`],
-  [`Cada ${REF_GROUP_SIZE} amigos activos: 1 mes gratis`, "Se suma al final de tu acceso actual. No pagas nada y no pierdes ni un día."],
-  [`Si uno de esos ${REF_GROUP_SIZE} compra el plan anual`, `Ese mes se convierte en ${REF_ANNUAL_MONTHS} meses gratis.`],
+  ["Comparte tu enlace", `Tu amigo crea su cuenta con él y tiene ${TRIAL_DAYS} días gratis con todo incluido.`],
+  ["Cuenta cuando paga su primer plan", `Entreno o Entreno + Nutrición, mensual o anual, dentro de ${REF_WINDOW_DAYS} días desde que se registró con tu enlace. La prueba gratis no cuenta.`],
+  [`Cada ${REF_GROUP_SIZE} amigos que pagan: 1 mes gratis`, "Se suma al final de tu acceso actual. No pagas nada y no pierdes ni un día."],
+  [`Si uno de esos ${REF_GROUP_SIZE} paga el plan anual`, `Ese mes se convierte en ${REF_ANNUAL_MONTHS} meses gratis.`],
 ];
 
 export default async function Referidos() {
@@ -53,15 +54,15 @@ export default async function Referidos() {
       ) : (<>
         <section aria-labelledby="ref-progreso" className="rounded-[1.5rem] bg-banana p-5 text-ink sm:p-6">
           <h2 id="ref-progreso" className="text-lg font-extrabold">{prog.text}</h2>
-          <ol className="mt-4 grid grid-cols-3 gap-2" aria-label={`${prog.have} de ${prog.need} amigos activos para tu próximo mes gratis`}>
+          <ol className="mt-4 grid grid-cols-3 gap-2" aria-label={`${prog.have} de ${prog.need} amigos que pagan para tu próximo mes gratis`}>
             {Array.from({ length: prog.need }, (_, i) => (
               <li key={i} className={`grid h-14 place-items-center rounded-2xl text-sm font-extrabold transition-colors duration-200 ease-out ${i < prog.have ? "bg-ink text-banana" : "border-2 border-dashed border-ink/25 text-body"}`}>
-                {i < prog.have ? "Activo" : `Amigo ${i + 1}`}
+                {i < prog.have ? "Pagó" : `Amigo ${i + 1}`}
               </li>
             ))}
           </ol>
           <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Amigos activos</dt><dd className="text-2xl font-extrabold tabular-nums">{active.toLocaleString("es-419")}</dd></div>
+            <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Amigos que pagan</dt><dd className="text-2xl font-extrabold tabular-nums">{active.toLocaleString("es-419")}</dd></div>
             <div className="rounded-2xl bg-white/70 p-3"><dt className="font-semibold text-ink/70">Meses ganados</dt><dd className="text-2xl font-extrabold tabular-nums">{earned.toLocaleString("es-419")}</dd></div>
           </dl>
         </section>
@@ -84,7 +85,7 @@ export default async function Referidos() {
           </ol>
           <p className="mt-4 rounded-2xl bg-paper p-3 text-xs text-muted text-pretty">
             Cada persona cuenta una sola vez y solo con una cuenta nueva. No cuentan cuentas propias ni repetidas; si algo se ve raro, el equipo lo revisa antes de contarlo.
-            La compra anual cuenta cuando se confirma el pago. Máximo {REF_MAX_REWARDS_YEAR} premios por año.
+            Un pago reembolsado no cuenta. La compra anual cuenta cuando se confirma el pago. Máximo {REF_MAX_REWARDS_YEAR} premios por año.
           </p>
         </section>
 
@@ -126,7 +127,7 @@ export default async function Referidos() {
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-muted">Con tus primeros {REF_GROUP_SIZE} amigos activos ganas tu primer mes gratis.</p>
+            <p className="mt-2 text-sm text-muted">Con tus primeros {REF_GROUP_SIZE} amigos que pagan ganas tu primer mes gratis.</p>
           )}
           <Link href="/app/suscripcion" className="tap mt-3 inline-flex text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ver mis regalos en Mi plan</Link>
         </section>
