@@ -21,6 +21,8 @@ import { kindFor, promoFor } from "@/lib/trial";
 import { betaEndDay, betaEndEligible, betaEndIdemKey, betaEndKind, betaEndStep } from "@/lib/beta-fin";
 import { firstPaymentDay, firstPaymentStep, isFirstPaymentStep, type FirstPaymentStep, type FirstPaymentSub } from "@/lib/primer-pago";
 import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, type RecoveryStep } from "@/lib/recuperacion";
+import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
+import { todayIn } from "@/lib/today";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
 const PAGE = 200;
@@ -172,12 +174,13 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
   const [stepBy, recoveryBy] = await Promise.all([trialSequenceFor(admin, users, prefsOf, now), recoveryFor(admin, users, prefsOf, now, mode)]);
   const payBy = await firstPaymentFor(admin, users, prefsOf, now, mode);
+  const seasonBy = await seasonCloseFor(admin, users, prefsOf, now, mode);
 
   // Varias personas a la vez (cada una espera push, correo y la base): con miles de cuentas, de una en una no alcanzaba
   // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
   await forEachLimit(users, USER_CONCURRENCY, async (u) => {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
-    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy }); }
+    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy, seasonBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
   });
 }
@@ -283,6 +286,53 @@ export async function firstPaymentFor(admin: SupabaseClient, users: Pick<Profile
   return out;
 }
 
+/** Pieza del cierre de la Temporada 1 de hoy. `chargeToday`: hoy le llega el aviso o el correo de su cobro (tienen prioridad). */
+export type SeasonCloseDue = { step: SeasonCloseStep; chargeToday: boolean };
+
+/**
+ * Cierre de la Temporada 1 (temporada-cierre.ts): qué pieza le toca hoy a cada cuenta del lote. Solo el 16 y el 21 de
+ * noviembre en Costa Rica, a la hora del recordatorio y con permiso de novedades y promociones. Revalida acceso e
+ * inscripción en cada corrida. Si alguna lectura falla, nadie del lote la recibe: sin esos datos podría llegarle a quien ya
+ * se inscribió o no tiene acceso. Exportada para pruebas.
+ */
+export async function seasonCloseFor(admin: SupabaseClient, users: Pick<Profile, "id" | "created_at">[], prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily"): Promise<Map<string, SeasonCloseDue>> {
+  const out = new Map<string, SeasonCloseDue>();
+  if (!seasonCloseStepAt(now)) return out;
+  const ids = users.filter((u) => {
+    const prefs = prefsOf.get(u.id);
+    return prefs?.marketing && atReminderHour(now, prefs, mode);
+  }).map((u) => u.id);
+  if (!ids.length) return out;
+  const [prof, subs, comps, owned, charges] = await Promise.all([
+    allPages((a, b) => admin.from("profiles").select("id,plan,role").in("id", ids).order("id").range(a, b)),
+    allPages((a, b) => admin.from("subscriptions").select(SUB_READ).in("user_id", ids).order("id").range(a, b)),
+    allPages((a, b) => admin.from("comp_grants").select("user_id,plan,previous_plan,starts_at,expires_at,revoked_at,created_at").in("user_id", ids).order("user_id").order("created_at").range(a, b)),
+    allPages((a, b) => admin.from("challenge_entitlements").select("user_id,challenge_slug").in("user_id", ids).in("challenge_slug", T1_SLUGS).order("user_id").range(a, b)),
+    allPages((a, b) => admin.from("trial_charges").select("user_id,charge_at,reminder_sent_at").in("user_id", ids).order("user_id").range(a, b)),
+  ]);
+  const failed = [prof, subs, comps, owned, charges].find((r) => r.error);
+  if (failed) { logError("cron:recordatorios", "season_close_query_failed", { code: failed.error?.code }); return out; }
+  const profBy = new Map((prof.data as { id: string; plan: string | null; role: string | null }[]).map((r) => [r.id, r]));
+  const subsBy = new Map<string, SubscriptionRow[]>(), compsBy = new Map<string, CompRow[]>();
+  for (const r of subs.data as SubscriptionRow[]) subsBy.set(r.user_id, [...(subsBy.get(r.user_id) ?? []), r]);
+  for (const r of comps.data as (CompRow & { user_id: string })[]) compsBy.set(r.user_id, [...(compsBy.get(r.user_id) ?? []), r]);
+  const enrolled = new Set((owned.data as { user_id: string }[]).map((r) => r.user_id));
+  const chargesBy = new Map<string, { charge_at: string | null; reminder_sent_at: string | null }[]>();
+  for (const r of charges.data as { user_id: string; charge_at: string | null; reminder_sent_at: string | null }[]) chargesBy.set(r.user_id, [...(chargesBy.get(r.user_id) ?? []), r]);
+  for (const u of users) {
+    if (!ids.includes(u.id)) continue;
+    const pr = profBy.get(u.id);
+    const ent = entitlementsFrom({ profilePlan: pr?.plan, role: pr?.role, createdAt: u.created_at, subs: subsBy.get(u.id) ?? [], comps: compsBy.get(u.id) ?? [], now });
+    const step = seasonCloseStep({ now, marketing: true, access: ent.app, staff: STAFF.includes(pr?.role as (typeof STAFF)[number]), enrolled: enrolled.has(u.id) });
+    if (!step) continue;
+    const tz = prefsOf.get(u.id)!.timezone;
+    const today = localClock(now, tz).iso;
+    const onToday = (iso: string | null) => !!iso && Number.isFinite(Date.parse(iso)) && todayIn(tz, new Date(iso)).iso === today;
+    out.set(u.id, { step, chargeToday: (chargesBy.get(u.id) ?? []).some((c) => onToday(c.reminder_sent_at) || onToday(c.charge_at)) });
+  }
+  return out;
+}
+
 /** ¿Es la corrida del recordatorio de esta persona? (diario: siempre; cada hora: su hora del recordatorio). */
 function atReminderHour(now: Date, prefs: Prefs, mode: "hourly" | "daily") {
   return mode === "daily" || localClock(now, prefs.timezone).hour === reminderHour(prefs);
@@ -310,6 +360,8 @@ type Grouped = {
   payBy: Map<string, FirstPaymentStep>;
   /** Correo de recuperación (día 8 o 14) que toca hoy, en el día local (recoveryFor). */
   recoveryBy: Map<string, RecoveryStep>;
+  /** Pieza del cierre de la Temporada 1 que toca hoy (seasonCloseFor). */
+  seasonBy: Map<string, SeasonCloseDue>;
 };
 type GoalRow = { user_id: string; start_weight: number | string; goal_weight: number | string; goal_date: string | null };
 
@@ -323,7 +375,7 @@ export function goalFor(g: GoalRow | undefined, weights: { day: string; kg: numb
   return { start, current: Number.isFinite(current) ? current : start, goal, date: g.goal_date };
 }
 
-async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy }: Grouped) {
+async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy, seasonBy }: Grouped) {
   {
     const prefs = prefsOf.get(u.id)!;
     const c = localClock(now, prefs.timezone);
@@ -366,7 +418,9 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const payDue = pay && !userLogs.some((l) => l.kind === pay) ? pay : null;
     const recovery = recoveryBy.get(u.id) ?? null;
     const recoveryNow = recovery && (mode === "daily" || c.hour === remindHour) ? recovery : null;
-    if (!decisions.length && !step && !recoveryNow && !payDue) return;
+    const season = seasonBy.get(u.id) ?? null;
+    const seasonDue = season && !userLogs.some((l) => l.kind === season.step) ? season : null;
+    if (!decisions.length && !step && !recoveryNow && !payDue && !seasonDue) return;
 
     let email: string | null | undefined;
     const getEmail = async () => {
@@ -397,6 +451,17 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       paySent = await sendFirstPaymentStep(admin, u.id, payDue, c.iso, otherEmail, getEmail, stats);
     }
     if (paySent || paySentToday) for (const d of decisions) d.email = false;
+
+    // Cierre de la Temporada 1: cede ante el cobro, la prueba, la recuperación, el primer pago o un correo que ya salió hoy
+    // (se omite y queda anotada). Si sale, reemplaza los correos de rutina de esta corrida, también el resumen semanal: el
+    // 16 de noviembre es lunes y la pieza tiene fecha (el resumen vuelve el lunes siguiente). Push y campanita siguen igual.
+    const seasonSentToday = todayLogs.some((l) => isSeasonCloseStep(l.kind) && l.channels?.includes("email"));
+    let seasonSent = false;
+    if (seasonDue) {
+      const otherEmail = seasonDue.chargeToday || !!step || !!recovery || !!payDue || paySentToday || todayLogs.some((l) => l.channels?.includes("email"));
+      seasonSent = await sendSeasonClose(admin, u.id, seasonDue.step, c.iso, otherEmail, getEmail, stats);
+    }
+    if (seasonSent || seasonSentToday) for (const d of decisions) d.email = false;
 
     for (const d of decisions) {
       // Reclamar el envío: si otra corrida ya lo hizo hoy, no se repite.
@@ -461,6 +526,28 @@ async function sendFirstPaymentStep(admin: SupabaseClient, userId: string, step:
   if (to) {
     const unsubscribe = unsubscribeUrl(userId, "recordatorios");
     const r = await sendEmail(to, withLoginLinks(T.primerPago({ day: firstPaymentDay(step), unsubscribe }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
+    if (r.ok) stats.email++;
+  }
+  stats.sent[step] = (stats.sent[step] ?? 0) + 1;
+  return true;
+}
+
+/**
+ * Reclama y envía (u omite) una pieza del cierre de la Temporada 1, con el día local del envío (cuenta para la regla de un
+ * correo por día). `omit`: hoy ya va otro correo; se anota con channels vacío y no se envía. Baja de "marketing".
+ * true si se reclamó para enviarse en esta corrida (aunque el correo fallara).
+ */
+async function sendSeasonClose(admin: SupabaseClient, userId: string, step: SeasonCloseStep, localDay: string, omit: boolean, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const { data: claimed, error } = await admin.from("notification_log")
+    .upsert({ user_id: userId, kind: step, local_day: localDay, channels: omit ? [] : ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+    .select("id");
+  if (error) { stats.errors++; return false; }
+  if (!claimed?.length) return false;
+  if (omit) { stats.sent[`${step}_omitido`] = (stats.sent[`${step}_omitido`] ?? 0) + 1; return false; }
+  const to = await getEmail();
+  if (to) {
+    const unsubscribe = unsubscribeUrl(userId, "marketing");
+    const r = await sendEmail(to, withLoginLinks(T.temporadaCierre({ day: seasonCloseDay(step), unsubscribe }), userId), { idempotencyKey: seasonCloseIdemKey(step, userId), unsubscribe, tags: { kind: step } });
     if (r.ok) stats.email++;
   }
   stats.sent[step] = (stats.sent[step] ?? 0) + 1;

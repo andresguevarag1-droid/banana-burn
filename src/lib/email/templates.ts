@@ -770,6 +770,49 @@ export function primerPago(d: { day: FirstPaymentDay; unsubscribe: string }): Em
   };
 }
 
+// ───────────── Cierre de la Temporada 1 (docs/emails/temporada-1-cierre.md): 16 y 21 de noviembre ─────────────
+
+export type SeasonCloseDay = 16 | 21;
+
+/** Copy de cada pieza, igual al documento (lo compara templates.test.ts). Los precios los revisa contra seasons.ts y plans.ts. */
+export const SEASON_CLOSE: Record<SeasonCloseDay, { subject: string; preheader: string; paragraphs: string[]; cta: string; path: string }> = {
+  16: {
+    subject: "Elige tu Temporada 1",
+    preheader: "Running, Raquetas o Cross Training: puedes inscribirte hasta el 22 de noviembre.",
+    paragraphs: [
+      "Elige el deporte que quieres trabajar: Running ($14.99), Raquetas ($16.99) o Cross Training ($18.99), con un pago único por temporada.",
+      "La Temporada 1 va del 9 de noviembre de 2026 al 3 de enero de 2027. Todavía puedes sumarte hasta el 22 de noviembre; entras en la semana del calendario, sin reiniciar las ocho semanas.",
+      "¿Pagas mensual y quieres seguir todo el año? La mejor opción es el anual: Entreno por $59.99 o Entreno + Nutrición por $89.99. Se paga completo e incluye una temporada deportiva por año pagado. Si ya tienes un anual, revisa si te queda disponible ese canje.",
+      "Precios en USD.",
+    ],
+    cta: "Elegir mi temporada", path: "/app/temporadas",
+  },
+  21: {
+    subject: "La inscripción a Temporada 1 cierra mañana, 22 de noviembre",
+    preheader: "El 22 de noviembre es el último día para comprar o canjear tu temporada.",
+    paragraphs: [
+      "Mañana, 22 de noviembre de 2026, cierra la inscripción a Temporada 1. Elige Running por $14.99, Raquetas por $16.99 o Cross Training por $18.99: un pago único por temporada.",
+      "El calendario comenzó el 9 de noviembre y termina el 3 de enero. Te sumas a la semana actual; no son ocho semanas nuevas desde tu inscripción.",
+      "Si pagas mensual y quieres seguir todo el año, la mejor opción es el anual: Entreno por $59.99 o Entreno + Nutrición por $89.99, pagados completos. Cada año pagado incluye una temporada deportiva. Si tienes un canje anual disponible, úsalo antes del cierre.",
+      "Precios en USD.",
+    ],
+    cta: "Inscribirme en Temporada 1", path: "/app/temporadas",
+  },
+};
+
+/** Aviso comercial: lleva la baja de "marketing". Botón principal ink; abre Temporadas, no cobra ni cambia el plan. */
+export function temporadaCierre(d: { day: SeasonCloseDay; unsubscribe: string }): Email {
+  const c = SEASON_CLOSE[d.day];
+  const hero: Hero = { eyebrow: "Temporada 1", title: esc(c.subject), lead: esc(c.preheader) };
+  const html = c.paragraphs.map((x) => p(esc(x))).join("") + button(c.cta, c.path, "primary");
+  const reason = "Recibes este correo porque tienes activadas las novedades y promociones de Banana Burn.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+  };
+}
+
 // ───────────── Fin de la beta (#109): cuentas de la beta sin tarjeta ni plan ─────────────
 
 /** Día corto en Costa Rica (la hora de las fechas de la beta): "7 de noviembre". */
