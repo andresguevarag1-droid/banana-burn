@@ -23,7 +23,7 @@ describe("anuncios Cuánto peso para Costa Rica y Colombia", () => {
     expect(variants.map(([, id]) => id)).toEqual(["CR-A", "CR-B", "CR-C", "CO-A", "CO-B", "CO-C"]);
     for (const [, id, copy] of variants) {
       const prices = [...copy.matchAll(/US\$[\d,.]+/g)].map(([price]) => price);
-      expect(prices, id).toHaveLength(id.startsWith("CO") ? 2 : 1);
+      expect(prices, id).toHaveLength(2);
       expect(prices, id).toEqual(prices.map(() => usd(entreno.price.mes)));
     }
     const conditions = section("Condiciones y revisión de las piezas");
@@ -73,12 +73,10 @@ describe("anuncios Cuánto peso para Costa Rica y Colombia", () => {
       for (const field of ["Texto principal", "Título", "Descripción"]) {
         expect(copy, id).toContain(`**${field}:**`);
       }
-      if (id.startsWith("CO")) {
-        const main = copy.split("\n").find((line) => line.startsWith("- **Texto principal:**"))!;
-        expect(main, id).toContain("sin cobro durante la prueba");
-        expect(main, id).toContain("en dólares estadounidenses");
-        expect(copy, id).not.toMatch(/\btico\b/i);
-      }
+      const main = copy.split("\n").find((line) => line.startsWith("- **Texto principal:**"))!;
+      expect(main, id).toContain("sin cobro durante la prueba");
+      expect(main, id).toContain("en dólares estadounidenses");
+      expect(copy, id).not.toMatch(/\btico\b/i);
       if (id.endsWith("-A")) expect(copy, id).toContain("carga sugerida");
     }
   });

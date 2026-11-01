@@ -8,19 +8,19 @@ Tú, español neutro de uso natural en Costa Rica, sin modismos forzados.
 
 ### CR-A: rutina
 
-- **Texto principal:** Cuando no sabes cuánto peso usar, una rutina con guía ayuda a empezar. Abre tu rutina en Banana Burn y consulta la carga sugerida, las repeticiones y la técnica de cada ejercicio. Empieza tu prueba de 7 días gratis, sin tarjeta, en bananaburn.app.
+- **Texto principal:** Cuando no sabes cuánto peso usar, una rutina con guía ayuda a empezar. Abre tu rutina en Banana Burn y consulta la carga sugerida, las repeticiones y la técnica de cada ejercicio. Empieza tu prueba de 7 días gratis, sin tarjeta y sin cobro durante la prueba, en bananaburn.app. Después, Entreno cuesta US$9.99 al mes en dólares estadounidenses.
 - **Título:** Prueba tu rutina 7 días gratis
 - **Descripción:** Sin cobro durante la prueba. Luego, Entreno por US$9.99 al mes.
 
 ### CR-B: técnica
 
-- **Texto principal:** Cuando no sabes cuánto peso usar, empieza por conocer el movimiento. Revisa las animaciones de técnica de Banana Burn y sigue una rutina adaptada a tu nivel, tiempo y equipo. Prueba 7 días gratis, sin tarjeta, en bananaburn.app.
+- **Texto principal:** Cuando no sabes cuánto peso usar, empieza por conocer el movimiento. Revisa las animaciones de técnica de Banana Burn y sigue una rutina adaptada a tu nivel, tiempo y equipo. Prueba 7 días gratis, sin tarjeta y sin cobro durante la prueba, en bananaburn.app. Después, Entreno cuesta US$9.99 al mes en dólares estadounidenses.
 - **Título:** Conoce la técnica. Prueba 7 días
 - **Descripción:** Prueba sin cobro. Después, Entreno por US$9.99 al mes.
 
 ### CR-C: registro
 
-- **Texto principal:** Cuando no sabes cuánto peso usar, llevar un registro da una referencia para la próxima sesión. Registra tus series en Banana Burn y consulta tu progreso de fuerza. Empieza tu prueba de 7 días gratis, sin tarjeta, en bananaburn.app.
+- **Texto principal:** Cuando no sabes cuánto peso usar, llevar un registro da una referencia para la próxima sesión. Registra tus series en Banana Burn y consulta tu progreso de fuerza. Empieza tu prueba de 7 días gratis, sin tarjeta y sin cobro durante la prueba, en bananaburn.app. Después, Entreno cuesta US$9.99 al mes en dólares estadounidenses.
 - **Título:** Registra tus series. Prueba 7 días
 - **Descripción:** 7 días sin cobro. Luego, Entreno por US$9.99 al mes.
 
@@ -65,11 +65,13 @@ Mueve el paso **visita > cuenta con prueba iniciada**, con seguimiento hasta **p
 | Costa Rica | Gasto CR ÷ cuentas nuevas únicas atribuidas a CR con prueba iniciada | Gasto CR ÷ usuarios únicos atribuidos a CR con primer cobro confirmado |
 | Colombia | Gasto CO ÷ cuentas nuevas únicas atribuidas a CO con prueba iniciada | Gasto CO ÷ usuarios únicos atribuidos a CO con primer cobro confirmado |
 
-Separar A/B/C y cohortes de fecha de alta. La prueba inicia en `profiles.created_at`, no al guardar tarjeta ni al completar bienvenida. `CompleteRegistration` mide el final de bienvenida, una señal auxiliar, no el inicio exacto de prueba. Para pagos, verificar `trial_charges.status = 'succeeded'`, sin duplicar usuarios ni reintentos, y contrastar suscripciones vigentes para la meta de 100 usuarios de pago activos. `Subscribe` solo se dispara en `/pago/exito`: omite el cobro automático de fin de prueba y no basta para este informe.
+Separar A/B/C y cohortes de fecha de alta. La prueba inicia en `profiles.created_at`, no al guardar tarjeta ni al completar bienvenida. `CompleteRegistration` mide el final de bienvenida, una señal auxiliar, no el inicio exacto de prueba. Para pagos, verificar `trial_charges.status = 'succeeded'`, sin duplicar usuarios ni reintentos, y contrastar suscripciones vigentes para la meta de 100 usuarios de pago activos. `Subscribe` del navegador sale de `/pago/exito`; el código actual también contempla cobros automáticos y renovaciones por la API de Conversiones (`src/lib/meta-capi.ts`). Su envío depende de la configuración y puede fallar: reconciliar con los cobros confirmados, separar primer pago de renovación y no usar el total de eventos como usuarios nuevos de pago.
 
 Reportar gasto, pruebas, primeros pagadores, conversión prueba a pago, costo por prueba, costo por pagador, cobros netos y usuarios de pago activos por país y variante. Con denominador cero, informar «sin conversiones», no costo cero. Evaluar cohortes después de sus 7 días y del reintento automático del día siguiente; marcar cobros pendientes y comprobar renovaciones por separado. No declarar ganadora una variante por clics o por una cohorte aún en prueba.
 
-Atribución pendiente de verificar antes de activar: usar URL directa a la landing con `utm_source=meta`, `utm_medium=paid_social`, `utm_campaign=bb-nov26-cr-cuanto-peso` o `bb-nov26-co-cuanto-peso`, y `utm_content=cr-a`, `cr-b`, `cr-c`, `co-a`, `co-b` o `co-c`. Hoy `ref-capture.tsx` solo persiste UTMs si hay un `ref` válido; UTMs solos no garantizan atribución en base de datos. El equipo debe validar un código de referencia por variante y comprobar visita > alta > pago con `src/app/api/ref/route.ts` antes de publicar. No usar `/r/<code>`, que pierde los parámetros. Hasta validar esa unión, informar la atribución faltante; no deducir país de la moneda ni presentar costos por país como verificados.
+Para las altas del 9 de noviembre, el primer fin de prueba llega el 16 de noviembre y el reintento del día siguiente, el 17, según la hora de alta. Un informe anterior debe marcar esa cohorte como inmadura, sin proyectar pagos. La comparación semanal de caja y gasto no sustituye el seguimiento de cada cohorte.
+
+Atribución pendiente de verificar antes de activar: usar URL directa a la landing con `utm_source=meta`, `utm_medium=paid_social`, `utm_campaign=bb-nov26-cr-cuanto-peso` o `bb-nov26-co-cuanto-peso`, y `utm_content=cr-a`, `cr-b`, `cr-c`, `co-a`, `co-b` o `co-c`. Hoy `ref-capture.tsx` solo persiste UTMs si hay un `ref` válido; UTMs solos no garantizan atribución en base de datos. El equipo debe validar un código de referencia activo por variante, sin inventarlo ni reutilizar el de un afiliado con comisión sin revisar su efecto económico, y comprobar visita > alta > pago con `src/app/api/ref/route.ts` antes de publicar. No usar `/r/<code>`, que pierde los parámetros. Hasta validar esa unión, informar la atribución faltante; no deducir país de la moneda ni presentar costos por país como verificados.
 
 ## Dinero neto que puede mover
 
