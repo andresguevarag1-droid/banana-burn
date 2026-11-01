@@ -36,7 +36,7 @@ const faq = () => [
   ["¿Qué incluye la prueba de 7 días?", "Puedes probar tu plan de entrenamiento sin tarjeta. La compra de la Temporada Running no está incluida: se paga aparte. Al terminar, eliges tu plan desde Mi plan."],
   ["¿Sirve si ya tengo un plan de mi club o mi entrenador?", "Sí. Marcas \"Ya tengo plan de carrera\" y los días que haces series o tempo. Banana Burn solo arma tu fuerza, movilidad y técnica alrededor de esos días, sin chocar."],
   ["¿Necesito un reloj?", "No. Registras tus carreras con el GPS de tu teléfono, con la app abierta y la pantalla encendida. Tus recorridos son privados."],
-  ["¿Cuánto cuesta?", `La Temporada Running cuesta ${usd(RUN.priceMinor)}, pago único, y se suma a tu plan o a tu prueba gratis. El plan anual incluye 1 temporada gratis. El GPS, tu historial y tus km de la semana vienen en todos los planes.`],
+  ["¿Cuánto cuesta?", `La Temporada Running cuesta ${usd(RUN.priceMinor)}, pago único, y se suma a tu plan o a tu prueba gratis. El plan anual incluye 1 temporada deportiva por año pagado. El GPS, tu historial y tus km de la semana vienen en todos los planes.`],
   ["¿Cuándo empieza?", `La Temporada 1 va del ${longDate(RUN.startsOn)} al ${longDate(RUN.endsOn)}, con inscripciones hasta el ${longDate(RUN.enrollUntil)}. Tu plan de carrera arranca el día que eliges tu carrera.`],
   ["¿Para qué distancias?", "5K, 10K, medio maratón, maratón y trail. Desde tu primera carrera hasta bajar tu marca."],
   ["¿Y si me lesiono o me duele algo?", "Marcas tus molestias y cambiamos los ejercicios que cargan esa zona. Si algo duele de forma distinta a la fatiga normal, descansa y consulta a un profesional de salud."],
@@ -59,7 +59,7 @@ export default function RunningLanding() {
           </div>
           <p className="mt-2 text-sm text-ink">Sin tarjeta. Cancelas cuando quieras.</p>
           <Link href={SIGNUP} data-cta="running-sin-tarjeta" className="tap flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
-          <p className="mt-2 text-sm font-semibold text-ink">Temporada Running: {usd(RUN.priceMinor)} pago único. Incluida en el plan anual.</p>
+          <p className="mt-2 text-sm font-semibold text-ink">Temporada Running: {usd(RUN.priceMinor)} pago único. El anual incluye 1 temporada deportiva por año pagado.</p>
         </div>
         <div className="relative mx-auto flex w-full max-w-[480px] items-end justify-center gap-4">
           <Phone src="/landing/running-hub.webp" alt="Banana Run: empieza tu carrera con tu coach en ropa de correr" priority sizes="240px" className="w-[220px] sm:w-[250px]" />
@@ -99,17 +99,17 @@ export default function RunningLanding() {
           <div className="relative mx-auto aspect-square w-full max-w-[320px] rounded-[2rem] bg-banana-soft"><SafeImage src={coach.hello} alt={`${coach.name} con ropa de correr`} fill sizes="320px" className="object-contain object-bottom p-4 mix-blend-multiply" /></div>
           <div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-balance">Se suma a tu entrenamiento, no lo reemplaza</h2>
-            <ul className="mt-6 space-y-3 text-white/85">
+            <ul className="mt-6 space-y-3 text-paper">
               {["Corres con tu club o tu entrenador: armamos la fuerza alrededor de tus días.", "Corres solo: te damos el plan completo con tus ritmos.", "Entrenas en casa o en el gimnasio: la fuerza se adapta a tu equipo.", "Cada carrera con GPS ajusta tu plan: si faltó la larga o te pasaste de km, lo acomodamos."].map((x) => <li key={x} className="flex gap-3"><CheckCircle weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana" />{x}</li>)}
             </ul>
-            <p className="mt-6 text-sm font-semibold text-banana">Temporada Running {usd(RUN.priceMinor)}, pago único. Los planes anuales la incluyen gratis.</p>
+            <p className="mt-6 text-sm font-semibold text-banana">Temporada Running {usd(RUN.priceMinor)}, pago único. El anual incluye 1 temporada deportiva por año pagado.</p>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6" aria-labelledby="precio-running">
-        <h2 id="precio-running" className="text-3xl font-extrabold text-ink">Una temporada o un año de entrenamiento</h2>
-        <p className="mt-3 text-body">Precios en USD. Para entrenar la temporada necesitas un plan activo o tu prueba gratis.</p>
+        <h2 id="precio-running" className="text-3xl font-extrabold text-ink text-balance">Una temporada o un año de entrenamiento</h2>
+        <p className="mt-3 text-body">Precios en USD, IVA incluido. El anual se paga completo. Para entrenar la temporada necesitas un plan activo o tu prueba gratis.</p>
         <div className="mt-6 grid gap-5 md:grid-cols-2">
           <article className="card p-6">
             <h3 className="text-xl font-extrabold text-ink">Temporada Running</h3>
@@ -133,7 +133,7 @@ export default function RunningLanding() {
       <section data-sticky-hide className="mx-auto max-w-3xl px-4 pb-36 sm:px-6 md:pb-16">
         <Faq items={FAQ} id="faq-running" />
         <div className="mt-8 rounded-3xl bg-banana p-6">
-          <h2 className="text-2xl font-extrabold text-ink">Empieza con tu fuerza. Después elige tu temporada.</h2>
+          <h2 className="text-2xl font-extrabold text-ink text-balance">Empieza con tu fuerza. Después elige tu temporada.</h2>
           <Link href={SIGNUP} data-cta="running-final" className="btn-primary mt-5 min-h-12">{TRIAL_CTA}<ArrowRight aria-hidden className="size-5" /></Link>
           <p className="mt-3 text-sm text-ink">Sin tarjeta. La prueba no incluye la compra de la temporada.</p>
           <Link href={SIGNUP} className="tap flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>

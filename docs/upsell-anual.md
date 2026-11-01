@@ -19,6 +19,10 @@ Por cada 10 conversiones, el cobro anual suma $599.90 o $899.90 frente a $99.90 
 
 El compromiso de 12 meses busca retener mejor y reducir las decisiones mensuales de cancelación; no hay evidencia aquí para afirmar un aumento medido de retención. Medir conversiones confirmadas de mensual a anual por plan en suscripciones y pagos aprobados, caja neta, permanencia a 12 meses y renovación anual. Comparar con una cohorte mensual equivalente. Los clics no son pagos. Sin instrumentación de exposición nueva no puede atribuirse causalmente el cambio al aviso.
 
+## Texto y marca del aviso
+
+El importe visible aclara «en USD, IVA incluido, en un solo pago por 12 meses»; el ahorro compara 12 mensualidades regulares, no una promoción inicial. Conserva «Ver cambio a anual» y «Ahora no»: son acciones para una cuenta mensual existente, sin ofrecer otra prueba. Usa banana-soft, ink y body, título equilibrado y cifras tabulares.
+
 ## Revisión visual
 
 Revisar 390 y 1280 px: ambos planes, aviso visible, cierre y recarga antes/después de 30 días, almacenamiento bloqueado y fallo al guardar. Los estados de carga, error y éxito del pago siguen perteneciendo a Mi plan. Tokens existentes, controles de al menos 44 px y sin desplazamiento animado con movimiento reducido.
