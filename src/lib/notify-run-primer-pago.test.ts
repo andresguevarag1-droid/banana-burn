@@ -17,6 +17,7 @@ function query(name: string) {
     in: (col: string, vals: unknown[]) => { filters.push((r) => vals.includes(r[col])); return q; },
     eq: (col: string, v: unknown) => { filters.push((r) => r[col] === v); return q; },
     gte: (col: string, v: string) => { filters.push((r) => String(r[col]) >= v); return q; },
+    lt: (col: string, v: string) => { filters.push((r) => String(r[col]) < v); return q; },
     gt: (col: string, v: number) => { filters.push((r) => Number(r[col]) > v); return q; },
     is: (col: string, v: unknown) => { filters.push((r) => (r[col] ?? null) === v); return q; },
     range: (a: number, b: number) => { range = [a, b]; return q; },
@@ -200,5 +201,39 @@ describe("correos después del primer pago en runReminders", () => {
     await runReminders(new Date("2026-11-12T13:00:00.000Z"), "hourly");
     expect(kinds(1).at(-1)).toBe("primer_pago_d1");
     expect(kinds(1).filter((k) => k === "primer_pago_d1")).toHaveLength(1);
+  });
+
+  it("respeta una hora personalizada, aunque no sea la hora predeterminada", async () => {
+    tables.profiles = [profile(1)];
+    tables.subscriptions = [sub(1)];
+    tables.notification_prefs = [{ user_id: uid(1), reminder_time: "18:30" }];
+    await runReminders(new Date("2026-11-11T13:00:00.000Z"), "hourly");
+    expect(kinds(1)).not.toContain("primer_pago_d1");
+    await runReminders(new Date("2026-11-12T00:00:00.000Z"), "hourly");
+    expect(kinds(1)).toEqual(["primer_pago_d1"]);
+    expect(logOf(1, "primer_pago_d1")[0].local_day).toBe("2026-11-11");
+  });
+
+  it("durante la campaña de fin de beta una cuenta pagada recibe solo la pieza de primer pago", async () => {
+    tables.profiles = [profile(1, { created_at: "2026-10-20T12:00:00.000Z" })];
+    tables.subscriptions = [sub(1, {
+      created_at: "2026-11-02T14:58:00.000Z",
+      current_period_start: "2026-11-02T15:00:00.000Z",
+      current_period_end: "2026-12-02T15:00:00.000Z",
+    })];
+    const stats = await runReminders(new Date("2026-11-03T16:00:00.000Z"), "daily");
+    expect(stats.errors).toBe(0);
+    expect(kinds(1)).toEqual(["primer_pago_d1"]);
+    expect(tables.notification_log?.some((r) => String(r.kind).startsWith("beta_fin_"))).toBe(false);
+  });
+
+  it("un correo de hoy local bloquea la pieza aunque haya salido en otra fecha UTC", async () => {
+    tables.profiles = [profile(1)];
+    tables.subscriptions = [sub(1)];
+    tables.notification_log = [{ user_id: uid(1), kind: "recordatorio", local_day: "2026-11-11", channels: ["email"], pushes: 0 }];
+    // Es 12 de noviembre UTC y todavía 11 de noviembre en Costa Rica; sigue dentro de las 48 horas del pago.
+    await runReminders(new Date("2026-11-12T00:00:00.000Z"), "daily");
+    expect(sent).toHaveLength(0);
+    expect(logOf(1, "primer_pago_d1")).toEqual([expect.objectContaining({ local_day: "2026-11-11", channels: [] })]);
   });
 });
