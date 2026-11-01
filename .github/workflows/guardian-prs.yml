@@ -59,6 +59,12 @@ jobs:
               for (const p of abiertas) prs.push((await github.rest.pulls.get({ owner, repo, pull_number: p.number })).data);
             }
 
+            // Lo que ya está rojo en main no es culpa de las PRs: no se devuelven por eso (se arregla en main).
+            const base = (await github.rest.repos.get({ owner, repo })).data.default_branch;
+            const enMain = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: base, per_page: 100 });
+            const rojosEnMain = new Set(enMain.filter((c) => ["failure", "timed_out"].includes(c.conclusion)).map((c) => c.name));
+            if (rojosEnMain.size > 0) core.warning(`En ${base} ya fallan: ${[...rojosEnMain].join(", ")}. No se devuelven PRs por esos checks.`);
+
             for (let pr of prs) {
               // GitHub calcula si hay conflicto en segundo plano: se le da un momento.
               if (pr.mergeable === null) {
@@ -77,7 +83,7 @@ jobs:
               // ¿Qué está roto en la última versión de la PR?
               const problemas = [];
               const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
-              const rojos = checks.filter((c) => ["failure", "timed_out", "cancelled"].includes(c.conclusion) && c.name !== "Revisar PRs rotas");
+              const rojos = checks.filter((c) => ["failure", "timed_out", "cancelled"].includes(c.conclusion) && c.name !== "Revisar PRs rotas" && !rojosEnMain.has(c.name));
               for (const c of rojos) {
                 let pasos = "";
                 try {
