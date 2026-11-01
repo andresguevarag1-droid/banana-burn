@@ -138,6 +138,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
     }
   }
-  return <Player nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player firstSession={!!firstPlan && !expres && dia == null} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }

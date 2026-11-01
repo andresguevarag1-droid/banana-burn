@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { ageOn, firstSessionDay, goalPace, isTrainingDay, nextTrainingDow, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
+import { ageOn, firstSessionDay, goalPace, nextTrainingDow, planDay, planWeek, scheduleFor, targets, weekIndex, isDeloadWeek, type Mode, type Sex, type Equipment, type Level } from "@/lib/engine";
 import { mondayOf, todayFor } from "@/lib/today";
 import { DEMO_NOW_KG, DEMO_START_KG, demoStartDate } from "@/lib/demo-story";
 import { glp1Targets, injectionPhase, type Glp1, type Glp1Med } from "@/lib/glp1";
@@ -119,11 +119,13 @@ export function nextSessionPlan(d: Pick<ReturnType<typeof dashboard>, "engineSch
 }
 
 /**
- * Primer entreno corto (10 a 15 min) de quien nunca ha entrenado, o null. `savedWorkouts` sale de los entrenos guardados
+ * Primer entreno corto y estable (10 a 15 min) de quien nunca ha entrenado, o null. `savedWorkouts` sale de los entrenos guardados
  * en el servidor, nunca de un dato del cliente. Con un programa activo manda el programa. Desde el segundo entreno, null.
  */
 export function firstSessionPlan(d: Pick<ReturnType<typeof dashboard>, "program" | "plan" | "engineSched" | "today" | "week" | "opts">, savedWorkouts: number) {
   if (d.program || savedWorkouts > 0) return null;
-  const base = isTrainingDay(d.plan) ? d.plan : nextSessionPlan(d);
+  // Punto fijo: la primera sesión del calendario, sin rotar al cambiar de día o semana.
+  const dow = nextTrainingDow(d.engineSched, 0);
+  const base = dow == null ? null : planDay(dow, 0, d.engineSched, d.opts);
   return base ? firstSessionDay(base, d.opts) : null;
 }

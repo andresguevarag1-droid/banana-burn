@@ -7,10 +7,10 @@ import { FUNNEL_EVENTS, cleanEvent } from "@/app/api/track/event";
 import { Readiness } from "@/components/readiness";
 
 // Mismo recorte del dashboard que usan Hoy y /app/entreno.
-const dash = (equipment: Equipment, sex: "m" | "f", dow = 1, days = 6) => {
+const dash = (equipment: Equipment, sex: "m" | "f", dow = 1, days = 6, week = 0) => {
   const engineSched = scheduleFor(days);
   const opts = { equipment, level: "principiante" as const, minutes: undefined, sex };
-  return { program: null, plan: planDay(dow, 0, engineSched, opts), engineSched, today: { dow } as never, week: 0, opts };
+  return { program: null, plan: planDay(dow, week, engineSched, opts), engineSched, today: { dow } as never, week, opts };
 };
 
 const CASES: { equipment: Equipment; sex: "m" | "f"; who: string }[] = (["gym", "casa", "ninguno"] as const).flatMap((equipment) => [
@@ -53,10 +53,25 @@ describe("primer entreno corto", () => {
     expect(firstSessionPlan({ ...dash("casa", "f"), program: {} as never }, 0)).toBeNull();
   });
 
+  it.each([3, 4, 5, 6])("con %i días semanales conserva la rutina al regresar sin entrenar", (days) => {
+    for (const { equipment, sex } of CASES) {
+      const initial = firstSessionPlan(dash(equipment, sex, 1, days), 0)!;
+      for (const week of [0, 1, 4]) {
+        for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
+          const returning = dash(equipment, sex, dow, days, week);
+          expect(firstSessionPlan(returning, 0)).toEqual(initial);
+          expect(firstSessionPlan(returning, 1)).toBeNull();
+        }
+      }
+    }
+  });
+
   it("el botón de Hoy muestra la duración corta del primer entreno", () => {
     const first = firstSessionPlan(dash("ninguno", "m"), 0)!;
     const html = renderToStaticMarkup(<Readiness first initial={0} dateKey="2026-10-30" demo mins={first.mins!} />);
     expect(html).toContain(`Empieza tu primer entreno (${first.mins} min)`);
+    expect((html.match(/<a /g) ?? []).length).toBe(1);
+    expect(html).not.toContain("¿Cómo te sientes hoy?");
   });
 
   it("Hoy y Entreno deciden la primera vez en el servidor con los entrenos guardados", () => {
@@ -67,17 +82,34 @@ describe("primer entreno corto", () => {
     expect(entreno).toMatch(/hasSavedWorkout\(v\)/);
     expect(entreno).toMatch(/firstSessionPlan\(d, saved \? 1 : 0\)/);
   });
+
+  it.each([0, 1, 2, 3])("la energía %i no desvía ni acorta el primer entreno", (initial) => {
+    for (const demo of [true, false]) {
+      const html = renderToStaticMarkup(<Readiness first initial={initial} dateKey="2026-11-01" demo={demo} mins={13} suggestSoft />);
+      expect(html).toContain(`href="/app/entreno${demo ? "?primera=1" : ""}"`);
+      expect(html).toContain("Empieza tu primer entreno (13 min)");
+      expect(html).not.toContain("modo=suave");
+      expect(html).not.toContain("<button");
+    }
+  });
 });
 
 describe("embudo del entreno (0061) en el primer entreno", () => {
   // El issue los llama workout_open, set1_start y workout_done; en 0061 son workout_open, workout_first_set y workout_saved.
-  const EVENTS = ["workout_open", "workout_first_set", "workout_saved"] as const;
-  it("los eventos siguen permitidos y se aceptan con la plantilla del primer entreno", () => {
+  const EVENTS = ["workout_open", "brief_start", "workout_first_set", "workout_saved"] as const;
+  it.each([true, false])("los eventos conservan first_session=%s y la plantilla", (firstSession) => {
     const tpl = firstSessionPlan(dash("gym", "m"), 0)!.tpl!;
     for (const name of EVENTS) {
       expect(FUNNEL_EVENTS).toContain(name);
-      expect(cleanEvent({ name, props: { template: tpl, done: 0, total: 6 } })).toEqual({ name, props: { template: tpl, done: 0, total: 6 } });
+      expect(cleanEvent({ name, props: { template: tpl, done: 0, total: 6, first_session: firstSession } })).toEqual({ name, props: { template: tpl, done: 0, total: 6, first_session: firstSession } });
     }
+  });
+  it.each([true, false])("acepta onboarding_done con goal y trial=%s como origen de las 24 horas", (trial) => {
+    expect(FUNNEL_EVENTS).toContain("onboarding_done");
+    expect(cleanEvent({ name: "onboarding_done", props: { goal: "recomp", trial } })).toEqual({
+      name: "onboarding_done",
+      props: { goal: "recomp", trial },
+    });
   });
   it("el reproductor los sigue enviando", () => {
     const player = readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8");

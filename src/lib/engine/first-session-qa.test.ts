@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { estimateMinutes, FIRST_MAX_MIN, forEquipment, isTrainingDay, planDay, scheduleFor, type Equipment } from "@/lib/engine";
-import { firstSessionPlan, nextSessionPlan } from "@/lib/athlete";
+import { firstSessionPlan } from "@/lib/athlete";
 import { hasSavedWorkout } from "@/app/(app)/app/entreno/done-today";
 
 const viewer = (demo = false) => ({ id: "u1", demo }) as never;
@@ -65,8 +65,8 @@ describe("primer entreno corto en cualquier día, horario y nivel", () => {
                 for (const e of first.exercises) expect(forEquipment(e.id, equipment), at).toBe(e.id);
                 // Hoy usa firstSessionPlan(d, 0) y Entreno firstSessionPlan(d, saved ? 1 : 0): mismo plan, mismos minutos.
                 expect(firstSessionPlan(d, 0), at).toEqual(first);
-                // Se guarda con la plantilla de la sesión que tocaba: hoy, o la próxima en un día de descanso.
-                expect(first.tpl, at).toBe((isTrainingDay(d.plan) ? d.plan : nextSessionPlan(d)!).tpl);
+                // Volver otro día o semana conserva la primera sesión completa.
+                expect(first, at).toEqual(firstSessionPlan({ ...d, today: { dow: 1 } as never, week: 8 }, 0));
                 // Segundo entreno: el plan normal.
                 expect(firstSessionPlan(d, 1), at).toBeNull();
                 if (isTrainingDay(d.plan)) expect(d.plan.name, at).not.toBe(first.name);

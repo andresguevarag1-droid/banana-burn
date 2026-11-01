@@ -43,7 +43,7 @@ export function FirstSteps({ server, coach }: {
   // Si quedó instalada mientras la tarjeta estaba abierta (volvió desde la pantalla de inicio), se marca sola.
   useEffect(() => { if (dev?.standalone && !keys.includes(STEP_KEY.instalar)) mark(STEP_KEY.instalar); }, [dev, keys, mark]);
 
-  if (!ready || !dev) return null;
+  if (!ready || !dev || server.workouts === 0) return null;
   const st = checklistState({ ...server, keys, push: server.push || dev.pushOn, pushSupported: dev.pushSupported, mobile: dev.mobile, standalone: dev.standalone }, coach.name);
   if (!st.visible) return null;
   const next = nextStep(st.steps);
@@ -76,7 +76,7 @@ export function FirstSteps({ server, coach }: {
         )}
       </div>
 
-      <p className="mt-3 text-[15px] text-ink/85 text-pretty">{st.complete ? "Ya sabes usar lo más importante. Ahora toca ser constante: tu plan se ajusta solo con lo que anotas." : "Hazlos en orden. Cada uno toma menos de 2 minutos y te enseña a usar la app."}</p>
+      <p className="mt-3 text-[15px] text-ink/85 text-pretty">{st.complete ? "Ya sabes usar lo más importante. Ahora toca ser constante: tu plan se ajusta solo con lo que anotas." : "Hazlos en orden. Cada paso te enseña a usar la app."}</p>
       {st.complete ? (
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/app/aprende" className="btn-primary h-12 px-5"><BookOpen weight="bold" className="size-5" />Aprende a entrenar</Link>
