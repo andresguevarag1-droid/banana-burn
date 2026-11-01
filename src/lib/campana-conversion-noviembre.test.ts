@@ -48,6 +48,12 @@ describe("la condición", () => {
     expect(s).toContain("`RETRY_AFTER_DAYS` = 1");
     expect(s).toMatch(/no presta contra cobros futuros/);
   });
+
+  it("distingue reactivar desde cero de mantener un gasto existente", () => {
+    expect(s).toContain("Si la semana del 2 al 8 no tuvo gasto (G = 0), basta con que ese máximo sea mayor que cero");
+    expect(s).toContain('si hubo gasto y el máximo queda en G o por debajo, la regla dice "mantener", no "subir"');
+    expect(regla).toContain("el máximo de la semana siguiente es mayor que el gasto de esta semana");
+  });
 });
 
 describe("qué leer el 9 de noviembre", () => {
@@ -209,6 +215,15 @@ describe("presupuesto en 3 niveles", () => {
 });
 
 describe("medición y reglas de la oficina", () => {
+  it("explica la meta redondeada sin cambiar la tasa usada para calcular los techos", () => {
+    const acta = readFileSync("docs/metas/100-usuarios-de-pago.md", "utf8");
+    expect(acta).toContain("35.2 %");
+    const s = section("## 8. Qué paso");
+    expect(s).toContain("35 %, la meta redondeada de la oficina");
+    expect(s).toContain("35.2 % porque es la cifra exacta del acta (40 % deja la tarjeta × 88 % se cobra bien)");
+    expect(40 * 88 / 100).toBe(35.2);
+  });
+
   it("la cohorte del 9 al 15 se cierra el miércoles 25", () => {
     expect(weekday("2026-11-23")).toBe(1);
     expect(weekday("2026-11-25")).toBe(3);
