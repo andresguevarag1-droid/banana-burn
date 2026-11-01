@@ -265,12 +265,12 @@ reset role;
 
 -- Prueba vencida, sin plan: no publica, no comenta, no usa el coach ni se une a retos
 set role authenticated; select bbtest.login('E');
--- Período de prueba del servicio (0021): hasta el 1 de noviembre de 2026 todos tienen acceso; después, la regla normal.
-select bbtest.ok('beta: E con prueba vencida tiene acceso hasta noviembre', (select public.has_app_access())) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
-select bbtest.ok('has_app_access: E con prueba vencida = false', not (select public.has_app_access())) where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('E sin plan no publica', $q$ insert into public.posts (user_id, kind, body) values (auth.uid(), 'text', 'hola') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('E sin plan no usa el coach', $q$ select public.coach_consume('chat') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('E sin plan no se une a retos', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'banana-30') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+-- Período de prueba del servicio (0021): hasta el 1 de noviembre de 2026 todos tienen acceso y las cuentas de la beta (como E) 7 días más (0045); después, la regla normal.
+select bbtest.ok('beta: E con prueba vencida tiene acceso hasta noviembre', (select public.has_app_access())) where not (now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days');
+select bbtest.ok('has_app_access: E con prueba vencida = false', not (select public.has_app_access())) where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('E sin plan no publica', $q$ insert into public.posts (user_id, kind, body) values (auth.uid(), 'text', 'hola') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('E sin plan no usa el coach', $q$ select public.coach_consume('chat') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('E sin plan no se une a retos', $q$ insert into public.user_challenges (user_id, challenge_id) values (auth.uid(), 'banana-30') $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
 reset role;
 
 -- Anónimo (sin sesión): no lee nada personal ni llama RPC
@@ -692,8 +692,8 @@ select bbtest.zero('anon: no lee sesiones', $q$ select 1 from public.program_ses
 reset role;
 insert into public.challenge_entitlements (user_id, challenge_slug, source) values (bbtest.u('E'), 'abdomen-21', 'cortesia');
 set role authenticated; select bbtest.login('E');
-select bbtest.fails('empezar: sin plan ni prueba no empieza', $q$ select public.program_start('abdomen-21', current_date) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.ok('beta: E empieza durante la beta', public.program_start('abdomen-21', current_date) = 'empezado') where not (now() >= timestamptz '2026-11-01 06:00:00+00');
+select bbtest.fails('empezar: sin plan ni prueba no empieza', $q$ select public.program_start('abdomen-21', current_date) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.ok('beta: E empieza durante la beta', public.program_start('abdomen-21', current_date) = 'empezado') where not (now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days');
 reset role;
 
 -- ───────────── 6. Registro ─────────────
@@ -702,7 +702,7 @@ select bbtest.ok('registro con nombre largo no falla (80 máx.)', (select char_l
 
 -- ───────────── 7. Nutrición por plan (0022) ─────────────
 -- N: plan Entreno, registrado hace 30 días. C: Entreno + Nutrición. K: plan Entreno con cortesía vigente (vale como completo).
--- A y T: prueba de 7 días. S: admin. E: prueba vencida, sin plan. Hasta el 1 de noviembre de 2026 (beta) todos tienen nutrición.
+-- A y T: prueba de 7 días. S: admin. E: prueba vencida, sin plan. Hasta el 1 de noviembre de 2026 (beta) todos tienen nutrición, y las cuentas de la beta (E, N) hasta 7 días después (0045).
 reset role;
 select bbtest.login(null);
 insert into auth.users (id, email) values
@@ -747,21 +747,21 @@ reset role;
 
 set role authenticated; select bbtest.as_user('1a1a1a1a-0000-4000-8000-0000000000a1');
 select bbtest.ok('nutrición: N (Entreno) sí tiene la app', (select public.has_app_access()));
-select bbtest.ok('beta: N (Entreno) tiene nutrición hasta noviembre', (select public.has_nutrition_access())) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
-select bbtest.ok('beta: N registra una comida durante la beta', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Pinto', 350) $q$) = 1) where not (now() >= timestamptz '2026-11-01 06:00:00+00');
-select bbtest.ok('nutrición: N (Entreno) no tiene nutrición', not (select public.has_nutrition_access())) where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('nutrición: N no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Pinto', 350) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('nutrición: N no edita sus comidas viejas', $q$ update public.meals set kcal = 1 where user_id = auth.uid() $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('nutrición: N no guarda alimentos', $q$ insert into public.saved_foods (user_id, name, kcal) values (auth.uid(), 'Plato del día', 700) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('nutrición: N no crea recetas', $q$ insert into public.user_recipes (user_id, name, servings, ingredients, kcal, protein) values (auth.uid(), 'Bowl', 1, '[{"name":"Arroz","qty":1,"kcal":200}]', 200, 4) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.ok('beta: N (Entreno) tiene nutrición hasta noviembre', (select public.has_nutrition_access())) where not (now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days');
+select bbtest.ok('beta: N registra una comida durante la beta', bbtest.affected($q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Pinto', 350) $q$) = 1) where not (now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days');
+select bbtest.ok('nutrición: N (Entreno) no tiene nutrición', not (select public.has_nutrition_access())) where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('nutrición: N no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'Pinto', 350) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('nutrición: N no edita sus comidas viejas', $q$ update public.meals set kcal = 1 where user_id = auth.uid() $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('nutrición: N no guarda alimentos', $q$ insert into public.saved_foods (user_id, name, kcal) values (auth.uid(), 'Plato del día', 700) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('nutrición: N no crea recetas', $q$ insert into public.user_recipes (user_id, name, servings, ingredients, kcal, protein) values (auth.uid(), 'Bowl', 1, '[{"name":"Arroz","qty":1,"kcal":200}]', 200, 4) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
 select bbtest.ok('nutrición: N sigue viendo sus comidas guardadas', bbtest.num($q$ select 1 from public.meals where user_id = auth.uid() $q$) >= 1);
 select bbtest.ok('nutrición: N sí registra agua, pasos y sueño', bbtest.affected($q$ insert into public.daily_logs (user_id, day, water_glasses, steps, sleep_h) values (auth.uid(), current_date, 6, 8000, 7.5) $q$) = 1);
 select bbtest.ok('nutrición: N puede borrar sus comidas (no da nada de más)', bbtest.affected($q$ delete from public.meals where user_id = auth.uid() and name = 'Arroz con frijoles' $q$) = 1);
 reset role;
 
 set role authenticated; select bbtest.login('E');
-select bbtest.ok('nutrición: E sin plan y prueba vencida no tiene nutrición', not (select public.has_nutrition_access())) where now() >= timestamptz '2026-11-01 06:00:00+00';
-select bbtest.fails('nutrición: E no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'x', 1) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00';
+select bbtest.ok('nutrición: E sin plan y prueba vencida no tiene nutrición', not (select public.has_nutrition_access())) where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
+select bbtest.fails('nutrición: E no registra comidas', $q$ insert into public.meals (user_id, day, name, kcal) values (auth.uid(), current_date, 'x', 1) $q$, '42501') where now() >= timestamptz '2026-11-01 06:00:00+00' + interval '7 days';
 reset role;
 
 -- ───────────── 8. Segunda auditoría (0023) ─────────────
@@ -1625,7 +1625,7 @@ reset role;
 insert into public.coach_usage (user_id, day, kind, n) values (bbtest.cq('06'), date_trunc('month', public.cr_today())::date, 'chat', 150)
   on conflict (user_id, day, kind) do update set n = 150;
 set role authenticated; select set_config('request.jwt.claims', json_build_object('sub', bbtest.cq('06'), 'role', 'authenticated')::text, false);
-select bbtest.ok('cuota: con 150 en el mes ya no hay preguntas', (select (r ->> 'ok')::boolean = false and r ->> 'reason' = case when date_trunc('month', public.cr_today())::date = public.cr_today() then 'day' else 'month' end from public.coach_take_quota('chat') r));
+select bbtest.ok('cuota: con 150 en el mes ya no hay preguntas', (select (r ->> 'ok')::boolean = false and r ->> 'reason' = 'month' from public.coach_take_quota('chat') r));
 reset role;
 
 -- 12d. Beta encendida: la cuenta sin plan tiene 10 (prueba); los planes pagados conservan su tope.
