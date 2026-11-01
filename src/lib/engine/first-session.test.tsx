@@ -7,10 +7,10 @@ import { FUNNEL_EVENTS, cleanEvent } from "@/app/api/track/event";
 import { Readiness } from "@/components/readiness";
 
 // Mismo recorte del dashboard que usan Hoy y /app/entreno.
-const dash = (equipment: Equipment, sex: "m" | "f", dow = 1, days = 6) => {
+const dash = (equipment: Equipment, sex: "m" | "f", dow = 1, days = 6, week = 0) => {
   const engineSched = scheduleFor(days);
   const opts = { equipment, level: "principiante" as const, minutes: undefined, sex };
-  return { program: null, plan: planDay(dow, 0, engineSched, opts), engineSched, today: { dow } as never, week: 0, opts };
+  return { program: null, plan: planDay(dow, week, engineSched, opts), engineSched, today: { dow } as never, week, opts };
 };
 
 const CASES: { equipment: Equipment; sex: "m" | "f"; who: string }[] = (["gym", "casa", "ninguno"] as const).flatMap((equipment) => [
@@ -51,6 +51,19 @@ describe("primer entreno corto", () => {
 
   it("con un programa activo manda el programa", () => {
     expect(firstSessionPlan({ ...dash("casa", "f"), program: {} as never }, 0)).toBeNull();
+  });
+
+  it.each([3, 4, 5, 6])("con %i días semanales conserva la rutina al regresar sin entrenar", (days) => {
+    for (const { equipment, sex } of CASES) {
+      const initial = firstSessionPlan(dash(equipment, sex, 1, days), 0)!;
+      for (const week of [0, 1, 4]) {
+        for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
+          const returning = dash(equipment, sex, dow, days, week);
+          expect(firstSessionPlan(returning, 0)).toEqual(initial);
+          expect(firstSessionPlan(returning, 1)).toBeNull();
+        }
+      }
+    }
   });
 
   it("el botón de Hoy muestra la duración corta del primer entreno", () => {

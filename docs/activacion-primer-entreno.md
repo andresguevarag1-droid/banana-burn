@@ -60,6 +60,27 @@ El final autoritativo es `workouts.finished_at`: permite medir una sesión termi
 sin conexión aunque se sincronice después. Los eventos usan la hora de recepción;
 pueden faltar si el navegador bloquea analítica. Para medir desde bienvenida,
 usar el primer `onboarding_done` como origen y declarar ese denominador aparte.
+En ese caso, sustituir la CTE `cohort` de la consulta por esta (los parámetros
+del intervalo representan fechas de bienvenida, no de registro):
+
+```sql
+with first_welcome as (
+  select user_id as id, min(created_at) as created_at
+  from funnel_events
+  where name = 'onboarding_done' and user_id is not null
+  group by user_id
+), cohort as (
+  select id, created_at from first_welcome
+  where created_at >= :cohort_start and created_at < :cohort_end
+    and created_at <= now() - interval '24 hours'
+)
+```
+
+Continuar con `activation` y el resultado de la consulta anterior. El mínimo
+se calcula antes de filtrar fechas para que repetir la bienvenida no cambie
+la cohorte. Las bienvenidas sin evento no entran en este denominador;
+por eso la cohorte de registro sigue siendo el indicador global.
+
 Para comparar inicios históricos anteriores a esta revisión, usar
 `workout_first_set` en ambas cohortes: la propiedad `first_session` de
 `brief_start` solo está disponible desde este cambio.
@@ -97,8 +118,12 @@ pendiente en un entorno con navegador; no se sustituyen por imágenes simuladas.
 
 ## Validación de código
 
+La prueba de regreso recorre todos los días, semanas 0, 1 y 4, frecuencias de
+3 a 6 días, tres equipos y ambos perfiles: la rutina inicial debe ser idéntica
+hasta guardar un entreno; después deja de ofrecerse.
+
 En esta revisión pasan `npx tsc --noEmit -p .`,
-`npx eslint src scripts --quiet` y `npx vitest run` (216 archivos, 2,435 pruebas).
+`npx eslint src scripts --quiet` y `npx vitest run` (216 archivos, 2,439 pruebas).
 La compilación de producción pasa con
 `NODE_OPTIONS=--max-old-space-size=1536 npx next build`, limitando la memoria
 para los 4 GB disponibles, sin desactivar comprobaciones.
