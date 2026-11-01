@@ -85,7 +85,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const meal = ent.nutrition ? hoyFood({ meals: meals.today, hour: localHour(new Date(), v.tz), todayIso: d.today.iso, eaten: { kcal: eaten.kcal + g.log.kcal, protein: eaten.protein + g.log.protein }, target: { kcal: t.kcal, protein: t.protein } }) : null;
   const training = isTrainingDay(plan);
   // Primera vez (nunca ha entrenado): Hoy lo lleva directo a su primer entreno, también en un día de descanso (se adelanta
-  // la próxima sesión). Antes, quien se registraba un domingo veía "Descanso" y no tenía nada que empezar.
+  // la primera sesión del calendario). Antes, quien se registraba un domingo veía "Descanso" y no tenía nada que empezar.
   // El primer entreno es corto (10 a 15 min, 3 o 4 ejercicios básicos): el mismo que arma /app/entreno.
   // Demo: ?primera=1 muestra este estado.
   const first = !d.program && (v.demo ? sp.primera === "1" : learnState.workouts === 0) && !g.trainedToday;
@@ -112,7 +112,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         <div className="min-w-0">
           <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
           <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{greetingAt(v.tz)}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
-          <HowToButton tour="hoy" className="-ml-1" />
+          {!first && <HowToButton tour="hoy" className="-ml-1" />}
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <NotificationBell className="lg:hidden" />
@@ -124,7 +124,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         </div>
       </header>
 
-      <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />
+      {!first && <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />}
 
       {/* 1. Lo que toca hoy, con el botón grande para empezar. Con un programa activo, su sesión. */}
       {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
@@ -163,7 +163,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
           El exprés acompaña al lado en escritorio (fijo mientras bajas). */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <div data-tour="hoy-numeros"><TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} /></div>
-        {!g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} /></div>}
+        {!first && !g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} /></div>}
       </div>
       {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
 

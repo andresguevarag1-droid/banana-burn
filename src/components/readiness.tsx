@@ -26,6 +26,12 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
     if (demo) { try { localStorage.setItem(key, String(n)); } catch { /* */ } return; }
     daily.save("energy", n, () => setV((x) => (x === n ? prev : x)));
   };
+  if (first) return (
+    <Link href={`/app/entreno${demo ? "?primera=1" : ""}`} className="btn-primary flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center">
+      <Play weight="fill" className="size-6 shrink-0" aria-hidden />
+      <span>Empieza tu primer entreno ({mins} min)</span>
+    </Link>
+  );
   const tips = readinessTips(voice, program);
   const effects = readinessEffects(voice);
   const sel = OPTS.find((o) => o.v === v);
@@ -38,7 +44,6 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
         <span className="min-w-0 text-balance">{first ? `Empieza tu primer entreno (${sel?.v === 1 ? Math.round(mins * 0.75) : mins} min)` : sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
         {!first && <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>}
       </Link>
-      {first && <Link href="/app/entreno?expres=10" className="tap mt-2 inline-flex min-h-11 items-center text-sm font-bold text-ink underline decoration-ink/40 underline-offset-4">¿Poco tiempo? Empieza con uno de 10 minutos, sin equipo</Link>}
       <p className="mt-4 text-sm font-bold text-ink/80">¿Cómo te sientes hoy? <span className="font-semibold text-ink/70">Opcional</span></p>
       <p className="text-xs font-semibold text-ink/75">{t(voice, { basico: `Elige y ${coachName} ajusta tu entreno a cómo llegas hoy.`, intermedio: "Ajusto el entreno a tu energía de hoy.", tecnico: "Autorregulación del día." })}</p>
       {suggestSoft && !v && <p className="mt-1 flex gap-1.5 text-xs font-semibold text-ink/75"><Syringe weight="duotone" className="size-4 shrink-0" />Cerca de tu inyección: si hay náusea o poca energía, elige “{she ? "Cansada" : "Cansado"}” para el modo suave.</p>}

@@ -57,6 +57,8 @@ describe("primer entreno corto", () => {
     const first = firstSessionPlan(dash("ninguno", "m"), 0)!;
     const html = renderToStaticMarkup(<Readiness first initial={0} dateKey="2026-10-30" demo mins={first.mins!} />);
     expect(html).toContain(`Empieza tu primer entreno (${first.mins} min)`);
+    expect((html.match(/<a /g) ?? []).length).toBe(1);
+    expect(html).not.toContain("¿Cómo te sientes hoy?");
   });
 
   it("Hoy y Entreno deciden la primera vez en el servidor con los entrenos guardados", () => {

@@ -82,10 +82,11 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+export function Player({ firstSession = false, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
   /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
   intro?: string;
   /** Invitación autorizada en servidor, solo para el cierre guardado. */
+  firstSession?: boolean;
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
   /** Próximo entreno de la rutina para el cierre ("Tu próximo entreno es el jueves"). */
   upcoming?: { when: string; name: string } | null;
@@ -557,7 +558,7 @@ export function Player({ nutritionUpsell, upcoming = null, template, title, icon
     setSaved(res);
     setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
     setPhase("saved");
-    if (!res.already) track("workout_saved", { template: template.slice(0, 40), done: doneSets, total: planTotal });
+    if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal });
     learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
     buzz([60, 40, 60, 40, 200]);
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
@@ -601,7 +602,7 @@ export function Player({ nutritionUpsell, upcoming = null, template, title, icon
   const tpl = template.slice(0, 40);
   useEffect(() => { trackRef.current = (n) => track(n, { template: tpl, done: flow.current.doneSets, total: flow.current.planTotal }); }, [tpl]);
   useEffect(() => {
-    track("workout_open", { template: tpl, resumed: flow.current.doneSets > 0, repeat: doneToday });
+    track("workout_open", { first_session: firstSession, template: tpl, resumed: flow.current.doneSets > 0, repeat: doneToday });
     const opened = Date.now();
     let left = false;
     // En el resumen sin tocar Guardar, el entreno se guarda solo (va primero a la bandeja del teléfono y sube cuando haya
@@ -625,7 +626,7 @@ export function Player({ nutritionUpsell, upcoming = null, template, title, icon
   }, [tpl]); // eslint-disable-line react-hooks/exhaustive-deps -- una vez por entreno
   const prevDone = useRef(doneSets);
   useEffect(() => {
-    if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { template: tpl, total: planTotal });
+    if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { first_session: firstSession, template: tpl, total: planTotal });
     // Cada serie marcada (solo al subir: deshacer una serie no cuenta): dónde se cortan los que empiezan.
     if (doneSets > prevDone.current && phase === "play") track("set_done", { template: tpl, n: doneSets, total: planTotal });
     prevDone.current = doneSets;

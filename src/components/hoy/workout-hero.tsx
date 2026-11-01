@@ -47,7 +47,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
           {/* Encabezado: Coach Banana posa según el día */}
           <div className="relative pr-28 sm:pr-36">
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-bold text-ink/80">
-              <span className="first-letter:uppercase">{first && !trainedToday ? `Tu primer entreno, ${dayTag(voice, plan.tag)}` : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
+              <span className="first-letter:uppercase">{first && !trainedToday ? "Tu primer entreno de hoy" : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
               {deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />{t(voice, { basico: "Semana suave", intermedio: "Semana de descarga", tecnico: "Descarga" })}</span>}
             </p>
             <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{plan.name}</h2>
@@ -80,7 +80,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
           )}
 
           {/* Coach Banana: el gancho y lo que hiciste la última vez */}
-          {!trainedToday && (hook || lastTime) && (
+          {!first && !trainedToday && (hook || lastTime) && (
             <div className="relative mt-4 flex items-start gap-3 rounded-2xl bg-ink p-3 pr-4 text-white shadow-lift">
               <span aria-hidden className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-banana">
                 <Image src="/brand/mascota-sola.webp" alt="" fill sizes="128px" className="origin-[52%_4%] scale-[2.5] object-cover" />
@@ -107,7 +107,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
 
 
       {/* Ayer y mañana, en palabras */}
-      <div className="relative mt-4 grid gap-2 sm:grid-cols-2">
+      <div hidden={first} className="relative mt-4 grid gap-2 sm:grid-cols-2">
         <p className="flex items-center gap-2 rounded-2xl bg-white/55 px-3 py-2 text-sm text-ink"><BrandIcon name={yesterday.icon} className="size-5 shrink-0 text-ink/80" aria-hidden /><span className="min-w-0"><span className="block text-xs font-bold text-ink/70">{isTrainingDay(yesterday) ? "Ayer tocó" : "Ayer"}</span><span className="block truncate font-bold">{yesterday.name}</span></span></p>
         <p className="flex items-center gap-2 rounded-2xl bg-white/55 px-3 py-2 text-sm text-ink"><BrandIcon name={tomorrow.icon} className="size-5 shrink-0 text-ink/80" aria-hidden /><span className="min-w-0"><span className="block text-xs font-bold text-ink/70">{tomorrowTraining ? "Mañana te espera" : "Mañana descansas"}</span><span className="block truncate font-bold">{tomorrow.name}</span></span></p>
       </div>
