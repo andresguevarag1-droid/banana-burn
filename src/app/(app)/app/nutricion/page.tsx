@@ -49,7 +49,7 @@ export default async function Nutricion() {
             <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><BananaBunch className="size-7" /></span>
             <span className="flex-1 min-w-0">
               <span className="block font-extrabold text-ink">Plan de comidas y recetas</span>
-              <span className="block text-sm text-ink/70">Tu menú con lo que te falta hoy, con recetas latinas fáciles.</span>
+              <span className="block text-sm text-ink">Tu menú con lo que te falta hoy, con recetas latinas fáciles.</span>
             </span>
             <ArrowRight weight="bold" className="size-5 shrink-0 text-ink" />
           </Link>
@@ -67,7 +67,7 @@ export default async function Nutricion() {
             <p className="flex items-start gap-2"><Grains weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />Carbos alrededor del entreno.</p>
             <p className="flex items-start gap-2"><Leaf weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />Medio plato de vegetales en almuerzo y cena.</p>
             <p className="flex items-start gap-2"><Wine weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />Alcohol: máximo 2 al fin de semana.</p>
-            <p className="flex items-start gap-2"><ForkKnife weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />¿Comiste fuera o algo no tan fit? Regístralo igual: suma XP y tu semana se equilibra.</p>
+            <p className="flex items-start gap-2"><ForkKnife weight="duotone" className="size-4 shrink-0 mt-0.5 text-banana-ink" />¿Comiste fuera? Regístralo igual para revisar tus calorías y proteína sin culpa.</p>
           </div>
         </aside>
       </div>
