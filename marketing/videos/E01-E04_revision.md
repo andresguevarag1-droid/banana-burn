@@ -15,3 +15,13 @@ Producción local del 1 de noviembre de 2026. Cuatro Reels de 19 s y cuatro cort
 Ver ambos videos de cada paquete a tamaño móvil, confirmar legibilidad de las capturas y revalidar precios y condiciones para enero. UGC es un brief alternativo, no metraje entregado. La semana de E03 es organización adaptable, no siete sesiones obligatorias; el regalo de E02 no es una tarjeta transferible. No asignar resultados ni cifras de las capturas a quien mira el anuncio.
 
 E03_todos-te-miran permanece intacto; E03_primera-semana-del-ano es otro paquete. El cierre usa el PNG oficial compartido, sin redibujar personajes. Gasto de servicios y campañas de esta entrega: $0. Nada publicado, enviado ni activado. Requiere aprobación escrita de Andrés antes de publicar, enviar, gastar o tocar campañas.
+
+## Revalidación de la entrega existente
+
+La rama ya contenía los cuatro paquetes al iniciar esta revisión. Se conservaron los videos y sus fuentes: no hizo falta regenerar medios ni ejecutar prompts.
+
+Se volvieron a ejecutar los cuatro controles locales con `node proyecto/render.mjs check` desde cada paquete. Se decodificaron íntegramente los ocho MP4 con ffmpeg local: H.264, 1080 x 1920, 30 fps, 570 cuadros para 19 s y 450 para 15 s, sin errores. Se inspeccionaron las cuatro hojas de escenas, incluidos gancho, captura y cierre. TypeScript (`npx tsc --noEmit -p .`) y ESLint (`npx eslint src scripts --quiet`) pasaron.
+
+Para repetir la revisión de precios, netos y correspondencia entre guiones y código: `npx vitest run src/lib/reels-enero.test.ts`. Para comprobar el repositorio completo: `npx vitest run --maxWorkers=2` después de `npm ci --ignore-scripts`.
+
+Resultado de esta revalidación completa: 217 archivos y 2,437 pruebas aprobadas, incluidas las cinco de `reels-enero.test.ts`. Sin gasto en generación, publicación ni cambios de campañas.
