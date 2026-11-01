@@ -41,6 +41,8 @@ export function StoreCard({ c, owned, participants, discountPct, active, classNa
         </ul>
         <p className="mt-3 flex items-start gap-1.5 text-xs font-semibold text-ink/80"><BananaMedal className="size-4 shrink-0 text-banana-ink" /><span className="min-w-0 pt-px">+{c.xp.toLocaleString("es-419")} XP y medalla {c.badge}</span></p>
         {c.startMode === "fecha" && c.startDate && <p className="mt-1 text-xs font-semibold text-sky">Empieza el {fmtStart(c.startDate)}</p>}
+        {paid && !owned && <p className="mt-2 text-xs text-muted">Pago único, aparte de tu plan.{discountPct > 0 ? ` Ahorras ${discountPct} % por tu nivel.` : " IVA incluido."}</p>}
+        <p className="mt-2 text-sm font-bold text-ink">{active ? "Ver mi progreso" : owned ? "Empezar de nuevo" : "Ver qué incluye"}</p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
           {participants !== undefined && participants >= MIN_PARTICIPANTS_SHOWN ? (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted"><Users weight="duotone" className="size-4" />{participants.toLocaleString("es-419")} en el reto</span>

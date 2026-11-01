@@ -1,3 +1,4 @@
+import { PREMIUM_RETOS_NOTE } from "@/lib/plans";
 import Link from "next/link";
 import { getViewer } from "@/lib/supabase/server";
 import { getCatalog, getMyChallenges, getOwned, getParticipants, levelPerks } from "@/lib/challenges-server";
@@ -65,6 +66,13 @@ export default async function Retos() {
           <span className="min-w-0"><span className="block leading-tight">{perks.level.n}</span><span className="block text-[11px] font-semibold text-muted">{perks.discountPct > 0 ? `${perks.discountPct}% en Premium` : perks.extraGrace > 0 ? `+${perks.extraGrace} comodín por nivel` : "Sube de nivel para descuentos"}</span></span>
         </Link>
       </header>
+
+      <section className="rounded-3xl border border-line bg-banana-soft p-4" aria-label="Tu plan y las compras">
+        <p className="font-extrabold text-ink">Tu plan incluye entrenos, progreso y retos gratis</p>
+        <p className="mt-1 text-sm text-body">{PREMIUM_RETOS_NOTE}</p>
+        <p className="mt-1 text-sm text-body">Los programas guían tus sesiones. Los retos de hábitos acompañan tu rutina.</p>
+        {programs[0] && <Link href={`/app/retos/${programs[0].id}`} className="btn-primary mt-3 w-full sm:w-auto">Ver {programs[0].title}</Link>}
+      </section>
 
       {ap && (
         <section aria-labelledby="mi-programa" className="overflow-hidden rounded-[1.75rem] shadow-soft">
