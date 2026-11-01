@@ -1,0 +1,1 @@
+Falta `coach-banana-senala.png`: incorporar únicamente el PNG oficial existente, transparente, con derechos. No sustituir por pose de pie, redibujar ni generar otro personaje. Captura y logo se leen desde public/. No hay medios finales en este paquete.
