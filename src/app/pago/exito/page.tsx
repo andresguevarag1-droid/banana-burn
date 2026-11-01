@@ -3,9 +3,14 @@ import { redirect } from "next/navigation";
 import { ArrowRight, Barbell, Clock, MagnifyingGlass, MonkeyBanana } from "@/components/icons";
 import { createClient, getViewer } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/entitlements";
-import { PLANS } from "@/lib/plans";
+import { ANNUAL_SEASON_NOTE, annualSaving, PLANS } from "@/lib/plans";
 import { AutoRefresh } from "./auto-refresh";
 import { FunnelTracker } from "@/components/analytics";
+
+import { usd2 } from "@/lib/num";
+import { canEnroll, longDate, SEASONS_T1 } from "@/lib/seasons";
+import { todayFor } from "@/lib/today";
+import { REF_GROUP_SIZE, REF_BASE_MONTHS, REF_ANNUAL_MONTHS, REF_WINDOW_DAYS, REF_MAX_REWARDS_YEAR } from "@/lib/referrals";
 
 export const metadata = { title: "Pago recibido" };
 
@@ -24,6 +29,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
   let renews: string | null = null;
   if (!v.demo) {
     const ent = await getEntitlements(v);
+    billing = ent.billing ?? null;
     let target = ent.plan;
     if (s) {
       const { data: row } = await (await createClient()).from("subscriptions").select("status, plan, billing").eq("provider_subscription_id", s).eq("user_id", v.id).maybeSingle();
@@ -69,17 +75,40 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
     );
   }
 
-  const nutrition = PLANS.find((p) => p.name === planName)?.nutrition;
+  const plan = PLANS.find((p) => p.name === planName);
+  const nutrition = plan?.nutrition;
+  const season = SEASONS_T1[0];
+  const seasonOpen = canEnroll(season, todayFor(v).iso);
   return (
     <Card icon={<MonkeyBanana className="size-10" />} tone="ok" title={`${planName ?? "Tu plan"} ya está activo`} body="Todo lo que llevas sigue ahí. El siguiente paso es tu entreno de hoy.">
       <FunnelTracker view="purchase_success" props={{ plan: planName ?? "", ...(billing ? { billing } : {}) }} />
       <Link href="/app/entreno" data-cta="exito-entreno" className="btn-banana w-full h-14 text-base">Ir a mi entreno de hoy<ArrowRight weight="bold" className="size-5" /></Link>
       <ol className="text-left space-y-3 text-[15px] border-t border-line pt-5">
         <Step n={1}>Haz tu rutina de hoy: cada serie trae su peso.</Step>
-        {nutrition ? <Step n={2}>Registra tu próxima comida en <b>Nutrición</b>: ya tienes tus calorías y macros.</Step> : <Step n={2}>Pregúntale a <b>Coach Banana</b> cualquier duda de técnica.</Step>}
+        {nutrition ? <Step n={2}>Registra tu próxima comida en <b>Comida</b>: ya tienes tus calorías y macros.</Step> : <Step n={2}>Pregúntale a <b>Coach Banana</b> cualquier duda de técnica.</Step>}
         {nutrition ? <Step n={3}>Pésate mañana en ayunas para que tus calorías se ajusten a ti cada semana.</Step> : <Step n={3}>Pésate mañana en ayunas para ver tu progreso real.</Step>}
       </ol>
-      {nutrition === false && <p className="text-sm text-muted text-pretty">Tu plan incluye entreno, coach, progreso, agua, pasos y sueño, comunidad y retos gratis. La nutrición y Banana Shield están en Entreno + Nutrición; tus comidas guardadas no se borran.</p>}
+      {nutrition === false && <p className="text-sm text-muted text-pretty">Tu plan incluye entreno, coach, progreso, agua, pasos y sueño, comunidad y retos gratis. <span className="line-through">Nutrición</span> no incluida; tus comidas guardadas no se borran.</p>}
+      <div className="space-y-4 border-t border-line pt-5 text-left">
+        {billing === "mes" && plan && <section aria-labelledby="exito-anual" className="rounded-3xl bg-banana-soft p-4 space-y-2">
+          <h2 id="exito-anual" className="font-extrabold text-ink">Ahorra <span className="tabular-nums">{usd2(annualSaving(plan))}</span> con el anual</h2>
+          <p className="text-sm text-body">{usd2(plan.price.anual)} al año frente a {usd2(plan.price.mes * 12)} por 12 mensualidades a precio regular. Precios en USD con IVA incluido. {ANNUAL_SEASON_NOTE} por cada año pagado.</p>
+          <p className="text-xs text-body">El anual empieza al confirmar el pago y reemplaza tu plan actual, sin prorrateo.</p>
+          <Link href={`/app/suscripcion?plan=${plan.id}&pago=anual`} data-cta="exito-anual" className="tap inline-flex min-h-11 items-center font-bold text-sm text-ink underline underline-offset-4">Ver cambio a anual</Link>
+        </section>}
+        {seasonOpen && <section aria-labelledby="exito-temporada" className="rounded-3xl border border-line p-4 space-y-2">
+          <h2 id="exito-temporada" className="font-extrabold text-ink">Temporada 1: elige tu deporte</h2>
+          <p className="text-sm text-body">Running, Raquetas o Cross Training. Del {longDate(season.startsOn)} al {longDate(season.endsOn)}. Inscripciones hasta el {longDate(season.enrollUntil)}.</p>
+          <p className="text-sm text-muted">{billing === "anual" ? "Tu anual incluye 1 temporada por año pagado. Revisa si tienes el canje disponible." : "Se compra aparte o puedes usar la temporada incluida al cambiar a anual."}</p>
+          <Link href="/app/temporadas" data-cta="exito-temporadas" className="tap inline-flex min-h-11 items-center font-bold text-sm text-ink underline underline-offset-4">Ver Temporada 1</Link>
+        </section>}
+        <section aria-labelledby="exito-referidos" className="rounded-3xl border border-line p-4 space-y-2">
+          <h2 id="exito-referidos" className="font-extrabold text-ink">Invita y gana meses gratis</h2>
+          <p className="text-sm text-body">Cada {REF_GROUP_SIZE} amigos calificados te dan {REF_BASE_MONTHS} mes gratis. Si uno de ese grupo compra el anual y se confirma su pago, el premio pasa a {REF_ANNUAL_MONTHS} meses en total.</p>
+          <p className="text-xs text-muted">Deben crear una cuenta nueva con tu enlace, terminar la bienvenida y, en sus primeros {REF_WINDOW_DAYS} días, completar un entreno o registrar agua, pasos o sueño. No cuentan cuentas propias ni repetidas. Las cuentas en revisión requieren validación. Máximo {REF_MAX_REWARDS_YEAR} premios en 365 días.</p>
+          <Link href="/app/referidos" data-cta="exito-referidos" className="tap inline-flex min-h-11 items-center font-bold text-sm text-ink underline underline-offset-4">Ver mi enlace de referidos</Link>
+        </section>
+      </div>
       <p className="text-xs text-muted text-pretty">{renews ? `Se renueva el ${renews}. ` : ""}Cancelas cuando quieras desde <Link href="/app/suscripcion" className="font-semibold text-ink underline underline-offset-2">Mi plan</Link>, donde también quedan tus recibos.</p>
     </Card>
   );
