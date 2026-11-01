@@ -5,7 +5,7 @@
 - Resumen amarillo compacto: deporte, precio de la compra pendiente (no recalculado), 8 semanas, fechas del catálogo y adaptación del programa. Reduce dudas sobre qué se compra y cuánto se cobra. Temporada 1: del 9 de noviembre de 2026 al 3 de enero de 2027.
 - Pago único, IVA incluido y sin renovación automática junto al precio: reduce temor a cargos recurrentes.
 - Menos espacio vertical antes del formulario, título pequeño, regreso al final y tarjetas con 12 px de relleno móvil: acerca la acción de pago al primer vistazo.
-- Continuar sin tarjeta vuelve a la temporada sin cobrar ni cancelar la compra pendiente. Evita que una persona sin tarjeta abandone la app.
+- Se retira el enlace «Continuar sin tarjeta» debajo del botón de pago: la temporada requiere un cobro con tarjeta y ese texto podía confundirse con la prueba gratis. Reduce expectativas incorrectas y una salida inmediata antes de pagar. Se conserva «Volver a la temporada» al final.
 - Explicación de confirmación y cuestionario: reduce incertidumbre sobre la entrega y pagos repetidos mientras confirma el proveedor.
 - Medio disponible en esta ruta: tarjeta de crédito o débito por ONVO Pay en USD. No se promete Tilopay, transferencias ni otros medios que esta pantalla no ofrece.
 - Opción anual para suscripción mensual activa con plan reconocido, sin otra anual activa: precios de PLANS ($59.99 Entreno, $89.99 Entreno + Nutrición), ahorro ante 12 mensualidades y una temporada incluida por año pagado. Es el total anual, sin inventar descuentos por saldo mensual. Enlace a Mi plan para revisar antes de comprar por separado. Reduce compras duplicadas y facilita mayor ingreso anticipado.
@@ -17,7 +17,7 @@ No cambia OnvoPayForm, sus propiedades, importes, identificadores, proveedores, 
 
 Revisar con una compra pendiente real y el SDK de ONVO cargado, a 375 × 667 y 375 × 812, zoom 100 %: el botón del proveedor debe verse sin desplazar la pantalla. Comprobar los tres deportes y títulos largos, tarjeta rechazada, carga lenta y confirmación demorada. El ancho por sí solo no define la altura visible. No se fuerza altura ni se recorta el formulario externo para ocultar campos. La posición final del botón depende del contenido que inyecta ONVO; esta verificación requiere navegador y credenciales de pruebas y queda pendiente en este entorno. No se afirma una validación visual ni un LCP medido.
 
-Comprobar también mensual Entreno y Completo (precios respectivos), anual activo y ausencia de suscripción (sin oferta anual), y que los enlaces sin tarjeta y Mi plan lleguen a sus destinos. No se presenta una compra única como prueba gratis.
+Comprobar también mensual Entreno y Completo (precios respectivos), anual activo y ausencia de suscripción (sin oferta anual), y que los enlaces Volver a la temporada y Mi plan lleguen a sus destinos. No se presenta una compra única como prueba gratis.
 
 ## Embudo y dinero
 
@@ -40,5 +40,5 @@ Cada pago adicional recuperado aporta el neto correspondiente. Diez compras adic
 - `npx tsc --noEmit -p .`: correcto.
 - `npx eslint src scripts --quiet`: correcto.
 - `npx next build`: correcto; advertencias previas en meals.ts, admin/contenido/page.tsx y program-week.tsx.
-- `npx vitest run`: intentos con fallos de procesos o límites de tiempo en pruebas distintas. `npx vitest run --maxWorkers=2`: 210 archivos y 2,366 pruebas correctas. No se cambió la configuración ni los límites de tiempo de las pruebas.
+- `npx vitest run`: 210 archivos y 2,366 pruebas correctas al verificar la corrección de revisión.
 - `git diff --check`: correcto. Revisión visual del formulario externo pendiente según el apartado móvil.

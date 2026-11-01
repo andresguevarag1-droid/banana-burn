@@ -47,7 +47,6 @@ export default async function PagoTemporada({ searchParams }: { searchParams: Pr
           <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-peel"><Lock weight="duotone" aria-hidden className="size-4" />Pago seguro</span>
         </div>
         <OnvoPayForm publicKey={publicKey} paymentIntentId={pi} customerId={(row.provider_customer_id as string) ?? undefined} successHref={`/pago/temporada/exito?pi=${encodeURIComponent(pi)}`} />
-        <p className="mt-2 text-center"><Link href={`/app/temporadas/${slug}`} className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-2">Continuar sin tarjeta</Link></p>
         <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-body">
           <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Procesado por ONVO Pay. Banana Burn no ve ni guarda tu tarjeta. Cobro en dólares (USD).</span></li>
           <li className="flex gap-2.5"><CalendarCheck weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Te llevamos a la confirmación. Cuando ONVO confirme el pago, podrás completar el cuestionario para armar tu semana. Si tarda, espera allí y no vuelvas a pagar.</span></li>
