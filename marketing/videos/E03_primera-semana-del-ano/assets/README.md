@@ -1,0 +1,1 @@
+Captura: `public/landing/hoy2.png`. Pose oficial compartida: `marketing/videos/E03_todos-te-miran/assets/coach-banana-senala.png`. Referencias desde la raíz del repositorio; no duplicar ni alterar. Higgsfield no ejecutado.
