@@ -2,9 +2,9 @@
 
 Propuesta para aprobación de Andrés. Entrega de copy: no implementa avisos ni envíos, no publica, no toca campañas ni genera gasto. Mueve **prueba vencida → primer pago**, con el **anual** como primera opción el día 14. Objetivo: contribuir a 100 usuarios de pago activos con ingresos que cubran costos.
 
-## Correo día 8: tu plan sigue guardado
+## Correo día 8: tu historial sigue guardado
 
-**Asunto:** Tu plan sigue guardado
+**Asunto:** Tu historial sigue guardado
 
 **Vista previa:** Conservas lo que registraste. Elige un plan para retomar.
 
@@ -62,9 +62,9 @@ Tu prueba terminó. Los entrenos, pesos, repeticiones, medidas y fotos que regis
 
 Propuesta: un aviso descartable al primer acceso elegible desde el día 8; no repetir por cada visita. Retirarlo al pagar o al dejar de cumplir las condiciones. Título y apoyo son los equivalentes del asunto y vista previa; no son un correo adicional.
 
-## Qué conserva y qué significa «plan guardado»
+## Qué conserva y qué significa «historial guardado»
 
-El asunto del día 8 habla de continuidad de su entrenamiento e historial, no de una suscripción reservada o de acceso gratis. No afirmar que ya eligió un plan de pago. No prometer una rutina congelada, récords nuevos, rachas intactas ni datos que nunca registró. Usar siempre la misma cuenta; no garantizar conservación perpetua ni recuperación después de eliminarla.
+El asunto del día 8 habla de los registros que conserva en su cuenta, no de una suscripción reservada o de acceso gratis. No afirmar que ya eligió un plan de pago. No prometer una rutina congelada, récords nuevos, rachas intactas ni datos que nunca registró. Usar siempre la misma cuenta; no garantizar conservación perpetua ni recuperación después de eliminarla.
 
 Fuentes revisadas: `src/lib/account-export.ts` enumera `workouts`, `workout_sets`, `weights`, `measurements`, `progress_photos`, `meals` y `daily_logs`; `src/lib/entitlements.ts` calcula el acceso por prueba/suscripción y puede bajar el perfil a `free`, sin borrar ese historial. Conservar comidas guardadas no significa tener acceso a nutrición con Entreno: para usarla al volver se necesita Entreno + Nutrición. Las piezas solo prometen registros existentes, sin afirmar que toda persona ya tiene fotos o entrenos.
 
@@ -82,7 +82,7 @@ Maquetación futura: paper #FFF8E3, banana #FFD60A, ink #1B1505, Plus Jakarta Sa
 
 ## Variantes A/B propuestas
 
-Mantener cuerpo, vista previa y botón idénticos. Día 8: A «Tu plan sigue guardado»; B «Retoma con tu historial guardado». Apostaría por B por su precisión sobre lo que conserva. Día 14: A «Vuelve con un año de entreno»; B «Compara tu plan anual y vuelve». Apostaría por A por su invitación directa. Son alternativas a los dos correos, no envíos extra. Andrés debe aprobar cualquier prueba; asignar variante estable por usuario y decidir por pagos con ventana completa, no por aperturas.
+Mantener cuerpo, vista previa y botón idénticos. Día 8: A «Tu historial sigue guardado»; B «Retoma con tu historial guardado». Ambas variantes nombran el historial, sin sugerir una suscripción reservada. Día 14: A «Vuelve con un año de entreno»; B «Compara tu plan anual y vuelve». Apostaría por A por su invitación directa. Son alternativas a los dos correos, no envíos extra. Andrés debe aprobar cualquier prueba; asignar variante estable por usuario y decidir por pagos con ventana completa, no por aperturas.
 
 ## Medición: pagos por correo enviado
 

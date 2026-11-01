@@ -50,6 +50,18 @@ vi.mock("@/lib/email/send", () => ({
   },
 }));
 
+// Recuperación forzada para una cuenta: en la base real no coincide con el primer pago (exige no haber pagado nunca), pero
+// la regla de un correo por día no debe depender de eso.
+let forcedRecovery: string | null = null;
+vi.mock("@/lib/recuperacion", async (orig) => {
+  const real = await orig<typeof import("@/lib/recuperacion")>();
+  return {
+    ...real,
+    recoveryStepAt: (...a: Parameters<typeof real.recoveryStepAt>) => (forcedRecovery ? "recuperacion_d8" : real.recoveryStepAt(...a)),
+    recoveryStep: (a: Parameters<typeof real.recoveryStep>[0]) => (forcedRecovery ? "recuperacion_d8" : real.recoveryStep(a)),
+  };
+});
+
 const { runReminders } = await import("./notify-run");
 
 const SIGNUP = "2026-11-02T12:00:00.000Z";
@@ -69,6 +81,7 @@ beforeEach(() => {
   tables = {};
   failing = new Set();
   sent.length = 0;
+  forcedRecovery = null;
 });
 
 describe("correos después del primer pago en runReminders", () => {
@@ -156,6 +169,17 @@ describe("correos después del primer pago en runReminders", () => {
     // La cuenta 2 ya recibió la pieza hoy: el recordatorio va a la campanita, sin correo.
     expect(kinds(2)).toEqual([]);
     expect(tables.notifications?.filter((n) => n.user_id === uid(2)).map((n) => n.kind)).toEqual(["recordatorio"]);
+  });
+
+  it("si el mismo día local toca un correo de recuperación, sale solo uno: la pieza se omite y queda anotada", async () => {
+    tables.profiles = [profile(1)];
+    tables.subscriptions = [sub(1)];
+    forcedRecovery = uid(1);
+    const stats = await runReminders(DAY1, "daily");
+    expect(sent).toHaveLength(1);
+    expect(kinds(1)).toEqual(["recuperacion_d8"]);
+    expect(logOf(1, "primer_pago_d1")).toEqual([expect.objectContaining({ local_day: "2026-11-11", channels: [] })]);
+    expect(stats.sent).toMatchObject({ primer_pago_d1_omitido: 1 });
   });
 
   it("si no se pueden leer las suscripciones, no se manda a nadie del lote (y el recordatorio sale normal)", async () => {

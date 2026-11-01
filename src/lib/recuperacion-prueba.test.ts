@@ -18,7 +18,7 @@ describe("recuperación de prueba: copy respaldado por el producto", () => {
       expect(piece).toMatch(/\*\*Asunto(?: \/ título)?:\*\* \S/);
       expect(piece).toMatch(/\*\*Vista previa(?: \/ apoyo)?:\*\* \S/);
     }
-    expect(pieces[0]).toContain("Tu plan sigue guardado");
+    expect(pieces[0]).toContain("Tu historial sigue guardado");
     expect(bodies[1].indexOf(usd2(annual[0]))).toBeLessThan(bodies[1].indexOf(usd2(monthly[0])));
   });
 
