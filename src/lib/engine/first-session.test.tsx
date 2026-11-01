@@ -74,12 +74,19 @@ describe("primer entreno corto", () => {
 describe("embudo del entreno (0061) en el primer entreno", () => {
   // El issue los llama workout_open, set1_start y workout_done; en 0061 son workout_open, workout_first_set y workout_saved.
   const EVENTS = ["workout_open", "workout_first_set", "workout_saved"] as const;
-  it("los eventos siguen permitidos y se aceptan con la plantilla del primer entreno", () => {
+  it.each([true, false])("los eventos conservan first_session=%s y la plantilla", (firstSession) => {
     const tpl = firstSessionPlan(dash("gym", "m"), 0)!.tpl!;
     for (const name of EVENTS) {
       expect(FUNNEL_EVENTS).toContain(name);
-      expect(cleanEvent({ name, props: { template: tpl, done: 0, total: 6 } })).toEqual({ name, props: { template: tpl, done: 0, total: 6 } });
+      expect(cleanEvent({ name, props: { template: tpl, done: 0, total: 6, first_session: firstSession } })).toEqual({ name, props: { template: tpl, done: 0, total: 6, first_session: firstSession } });
     }
+  });
+  it.each([true, false])("acepta onboarding_done con goal y trial=%s como origen de las 24 horas", (trial) => {
+    expect(FUNNEL_EVENTS).toContain("onboarding_done");
+    expect(cleanEvent({ name: "onboarding_done", props: { goal: "recomp", trial } })).toEqual({
+      name: "onboarding_done",
+      props: { goal: "recomp", trial },
+    });
   });
   it("el reproductor los sigue enviando", () => {
     const player = readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8");
