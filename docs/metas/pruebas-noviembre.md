@@ -46,7 +46,7 @@ Si z es 1.96 o más, B paga más; si es −1.96 o menos, B paga menos; en medio,
 
 Se corre una vez por grupo, igual que siempre (rol administrativo, solo lectura) y se guardan los dos CSV con la fecha. Se suman las semanas de cada grupo: `cuentas_creadas` es `n` y `usuarios_pago_total` es `x`.
 
-**Dinero exacto.** Para el ingreso de cada grupo, `rentabilidad-semanal.sql` con el mismo filtro dentro de `pagos` (`and get_byte(decode(md5(x.user_id::text || ':nov-anual'), 'hex'), 0) % 2 = 0` y la cuenta creada en el rango de la prueba), corrida para cada lunes desde el 2 de noviembre hasta la semana del último cobro. Se suma `ingresos_brutos_usd` de la fila total. Comisiones del procesador: por confirmar con Andrés.
+**Dinero exacto.** Para el ingreso de cada grupo, `rentabilidad-semanal.sql` con el mismo filtro dentro de `pagos` (`and get_byte(decode(md5(x.user_id::text || ':nov-anual'), 'hex'), 0) % 2 = 0` y la cuenta creada en el rango de la prueba), corrida para cada lunes desde el 2 de noviembre hasta la semana del último cobro. Se suma `ingresos_brutos_usd` de la fila total; `ingresos_netos_usd` de la misma fila ya descuenta el IVA y la comisión de cada procesador, con la fórmula de [rentabilidad-semanal.md](rentabilidad-semanal.md).
 
 **Qué no se mezcla.** Las pruebas 1 y 2 no corren juntas: el 50 % solo existe en el mensual, así que marcar el anual cambia lo que vale la oferta y no se sabría cuál movió el pago. La prueba 3 sí puede correr junto a cualquiera, porque tiene su propio nombre de reparto.
 

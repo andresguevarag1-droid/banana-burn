@@ -20,26 +20,43 @@ function section(title: string): string {
 const tableRows = (text: string) => text.split("\n").filter((l) => l.startsWith("|") && !/^\|\s*-/.test(l)).slice(1).map(cells);
 const price = (id: string) => PLANS.find((p) => p.id === id)!.price;
 const round2 = (n: number) => Math.round(n * 100) / 100;
+/** Comisiones que confirmó Andrés el 31 oct 2026; el IVA de 13 % va incluido en el precio. */
+const ONVO = { c: 0.039, f: 0.35 };
+const TILOPAY = { c: 0.0425, f: 0.35 };
+const neto = (cobro: number, k: { c: number; f: number }) => cobro / 1.13 - (cobro * k.c + k.f);
 
 describe("punto de equilibrio por usuario de pago", () => {
   const rows = tableRows(section("## 1. Punto de equilibrio"));
+
+  const prices = [promoPrice("entreno"), promoPrice("completo"), price("entreno").mes, price("completo").mes, price("entreno").anual, price("completo").anual];
 
   it("el primer mes con 50 % usa el redondeo de trial.ts ($4.99 y $7.49, no $5.00 y $7.50)", () => {
     expect(promoPrice("entreno")).toBe(4.99);
     expect(promoPrice("completo")).toBe(7.49);
     expect(firstChargeMinor("entreno", "anual", PROMO_ID)).toBe(amountMinorFor("entreno", "anual"));
-    expect(rows[0].slice(1, 3)).toEqual([usd(promoPrice("entreno")), usd(promoPrice("completo"))]);
     expect(doc).toContain("no $5.00 y $7.50");
   });
 
-  it("los meses siguientes y el anual salen de plans.ts", () => {
-    expect(rows[1].slice(1, 3)).toEqual([usd(price("entreno").mes), usd(price("completo").mes)]);
-    expect(rows[2].slice(1, 3)).toEqual([usd(price("entreno").anual), usd(price("completo").anual)]);
+  it("los precios salen de plans.ts y trial.ts, y los netos de la fórmula con IVA y comisión", () => {
+    expect(rows.map((r) => r[1])).toEqual(prices.map(usd));
+    for (const [i, p] of prices.entries()) {
+      const [o, t] = [round2(neto(p, ONVO)), round2(neto(p, TILOPAY))];
+      expect(rows[i].slice(2), rows[i][0]).toEqual([usd(o), usd(t), usd(round2(o - t))]);
+    }
   });
 
-  it("cada neto muestra su fórmula y la comisión queda por confirmar con Andrés", () => {
-    for (const r of rows) expect(r[3]).toMatch(/precio × \(1 − c\) − f; c y f por confirmar con Andrés/);
-    expect(section("## 1. Punto de equilibrio")).toMatch(/`c` = comisión porcentual del procesador por cobro: \*\*por confirmar con Andrés\*\*/);
+  it("los netos con ONVO son los del plan de anuncios de noviembre", () => {
+    expect(rows.map((r) => r[2])).toEqual(["$3.87", "$5.99", "$8.10", "$12.33", "$50.40", "$75.78"]);
+  });
+
+  it("la fórmula y las comisiones están escritas y no queda nada por confirmar", () => {
+    const s = section("## 1. Punto de equilibrio");
+    expect(s).toContain("**Neto por cobro = cobro ÷ 1.13 − (cobro × c + f)**");
+    expect(s).toContain("**ONVO** (tarjetas de Costa Rica): c = 3.9 % y f = $0.35 por cobro.");
+    expect(s).toContain("**Tilopay** (tarjetas de fuera de Costa Rica): c = 4.25 % y f = $0.35 por cobro.");
+    expect(s).toContain("Lo paga Atlas Resources SRL");
+    expect(s).toContain(`4.99 ÷ 1.13 − (4.99 × 0.039 + 0.35) = 4.4159 − 0.5446 = **${usd(round2(neto(4.99, ONVO)))}**`);
+    expect(doc).not.toMatch(/por confirmar/);
   });
 });
 
@@ -58,13 +75,15 @@ describe("CAC máximo por plan", () => {
     expect(rows.map((r) => r[0])).toEqual(cases.map((c) => c[0]));
   });
 
-  it.each(cases)("%s: primer pago y 3 meses cuadran con el código y muestran su fórmula", (name, first, three) => {
+  it.each(cases)("%s: primer pago y 3 meses salen de la fórmula del neto y la muestran", (name, first, three) => {
     const r = rows.find((x) => x[0] === name)!;
-    expect(r[1]).toBe(usd(first));
-    expect(r[2]).toContain(String(first));
-    expect(r[3]).toBe(usd(round2(three.reduce((a, b) => a + b, 0))));
-    expect(r[4]).toMatch(/menos comisión de [13] cobros?/);
-    expect(r[5]).toMatch(/por medir|no depende de la renovación/);
+    const sum = (k: typeof ONVO) => round2(three.reduce((a, b) => a + neto(b, k), 0));
+    expect(r[1]).toBe(usd(round2(neto(first, ONVO))));
+    expect(r[2]).toContain(`neto(${first})`);
+    expect(r[3]).toBe(usd(sum(ONVO)));
+    expect(r[4]).toContain("neto(");
+    expect(r[5]).toBe(`${usd(round2(neto(first, TILOPAY)))} / ${usd(sum(TILOPAY))}`);
+    expect(r[6]).toMatch(/por medir|no depende de la renovación/);
   });
 
   it("la renovación no tiene dato y dice por medir", () => {
@@ -77,16 +96,28 @@ describe("CAC máximo por plan", () => {
 });
 
 describe("la regla y el reporte", () => {
-  it("el gasto de la semana siguiente no pasa de los ingresos nuevos netos ni del tope de Andrés", () => {
+  it("el gasto de la semana siguiente no pasa de los ingresos nuevos netos ni de los topes aprobados", () => {
     const rule = section("## 3. La regla");
-    expect(rule).toContain("**Gasto máximo de la semana N + 1 = mínimo(ingresos nuevos netos de la semana N, tope semanal)**");
-    expect(rule).toMatch(/\*\*Tope semanal:\*\* \*\*por confirmar con Andrés\*\*/);
+    expect(rule).toContain("**Gasto máximo de la semana N + 1 = mínimo(ingresos nuevos netos de la semana N, tope semanal, tope del mes − gasto del mes)**");
+    expect(rule).toContain("**Tope semanal:** **$70.00**");
+    expect(rule).toContain("**Tope del mes:** **$200.00** en noviembre");
+    expect(rule).toContain("I = B ÷ 1.13 − (0.039 × B de ONVO + 0.0425 × B de Tilopay) − 0.35 × N");
     expect(rule).toMatch(/nunca "subir"/);
   });
 
-  it("no propone gasto nuevo: el único monto de la regla es $0.00", () => {
+  it("no propone gasto nuevo: los únicos montos de la regla son los topes de Andrés y $0.00", () => {
     expect(doc).toMatch(/\*\*no propone gasto nuevo\*\*/);
-    expect(section("## 3. La regla").match(/\$\d[\d,]*(\.\d+)?/g)).toEqual(["$0.00"]);
+    expect([...new Set(section("## 3. La regla").match(/\$\d[\d,]*(\.\d+)?/g))]).toEqual(["$70.00", "$200.00", "$0.00"]);
+  });
+
+  it("Costa Rica y Colombia van en conjuntos separados, cada uno con su costo por usuario de pago", () => {
+    const s = section("## 3. La regla");
+    expect(s).toContain("**Costa Rica y Colombia, cada país en su propio conjunto de anuncios**");
+    const rows = tableRows(s.slice(s.indexOf("| Conjunto |")));
+    expect(rows.map((r) => r[0])).toEqual(["Costa Rica", "Colombia"]);
+    expect(rows[0][3]).toBe("G de Costa Rica ÷ N de ONVO");
+    expect(rows[1][3]).toBe("G de Colombia ÷ N de Tilopay");
+    expect(readFileSync("src/lib/pay-provider.ts", "utf8")).toMatch(/if \(!c \|\| c === "CR"\) return "onvo";\s+return "tilopay";/);
   });
 
   it("la plantilla trae gasto, pagos por plan, ingresos, CAC, margen y decisión, sin cifras inventadas", () => {
@@ -94,7 +125,9 @@ describe("la regla y el reporte", () => {
     for (const field of ["Gasto en Meta Ads", "Pagos nuevos por plan", "Ingresos de la semana", "CAC de la semana", "Margen de la semana", "Decisión propuesta: subir / mantener / pausar"])
       expect(tpl).toContain(field);
     for (const line of tpl.split("\n").filter((l) => /^\s+(Entreno|Total de pagos)/.test(l))) expect(line).toMatch(/por medir$/);
-    for (const formula of ["G ÷ N", "I − G", "B × (1 − c) − f × N", "mínimo(I, tope semanal)"]) expect(tpl).toContain(formula);
+    for (const formula of ["G ÷ N", "I − G", "B ÷ 1.13 − (0.039 × B de ONVO + 0.0425 × B de Tilopay) − 0.35 × N", "mínimo(I, tope semanal, tope del mes − gasto del mes)"])
+      expect(tpl).toContain(formula);
+    for (const line of tpl.split("\n").filter((l) => /^\s+Con (ONVO|Tilopay)/.test(l))) expect(line).toMatch(/por medir$/);
     expect(tpl).toContain("tablero-diario.sql");
   });
 
@@ -131,11 +164,13 @@ describe("rentabilidad-semanal.sql", () => {
       create table subscriptions (user_id uuid, status text, provider text, plan text, billing text,
         current_period_end timestamptz, cancel_at_period_end boolean default false, created_at timestamptz);
       create table comp_grants (user_id uuid, starts_at timestamptz, expires_at timestamptz, revoked_at timestamptz);
+      create table payment_methods (user_id uuid primary key, provider text);
     `);
   }, 30000);
   afterAll(async () => { await db.close(); });
 
   const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
+  const card = (n: number, provider: string) => `insert into payment_methods values ('${id(n)}', '${provider}');`;
   const charge = (n: number, plan: string, billing: string, promo: boolean, at: string, status = "succeeded") =>
     `insert into trial_charges values ('${id(n)}', '${status}', '${plan}', '${billing}',
       ${firstChargeMinor(plan as "entreno", billing as "mes", promo ? PROMO_ID : null)}, ${promo ? `'${PROMO_ID}'` : "null"}, '${at}', '${at}');`;
@@ -143,7 +178,7 @@ describe("rentabilidad-semanal.sql", () => {
     `insert into subscriptions values ('${id(n)}', '${status}', 'onvo', '${plan}', '${billing}', '${end}', false, '${created}');`;
 
   async function query(seed: string) {
-    await db.exec(`truncate trial_charges, subscriptions, comp_grants; ${seed}`);
+    await db.exec(`truncate trial_charges, subscriptions, comp_grants, payment_methods; ${seed}`);
     const report = sql.replace("now() as observado_en", "timestamptz '2026-11-16 12:00+00' as observado_en");
     await db.exec("begin read only");
     try { return (await db.query<Record<string, unknown>>(report)).rows; } finally { await db.exec("rollback"); }
@@ -166,12 +201,33 @@ describe("rentabilidad-semanal.sql", () => {
     expect(rows.find((r) => r.plan === "entreno" && r.billing === "mes")).toMatchObject({ primer_mes_50: "true", pagos_nuevos: 1 });
   });
 
+  it("separa ONVO y Tilopay y calcula el neto con el IVA y la comisión de cada uno", async () => {
+    const rows = await query(
+      charge(1, "entreno", "mes", true, "2026-11-08 12:00+00") +             // sin tarjeta guardada: ONVO
+      charge(2, "completo", "mes", true, "2026-11-08 12:00+00") + card(2, "tilopay") +
+      charge(3, "entreno", "anual", false, "2026-11-04 12:00+00") + card(3, "onvo") +
+      `insert into subscriptions values ('${id(4)}', 'active', 'tilopay', 'completo', 'mes', '2026-12-20', false, '2026-11-04 12:00+00');`);
+    const sub = (p: string) => rows.find((r) => r.procesador === p && r.plan === "subtotal")!;
+    const onvo = neto(promoPrice("entreno"), ONVO) + neto(price("entreno").anual, ONVO);
+    const tilo = neto(promoPrice("completo"), TILOPAY) + neto(price("completo").mes, TILOPAY);
+    expect(sub("onvo")).toMatchObject({ pagos_nuevos: 2, billing: "total", primer_mes_50: "total" });
+    expect(Number(sub("onvo").ingresos_netos_usd)).toBe(round2(onvo));
+    expect(sub("tilopay")).toMatchObject({ pagos_nuevos: 2 });
+    expect(Number(sub("tilopay").ingresos_netos_usd)).toBe(round2(tilo));
+    const total = rows.find((r) => r.plan === "total")!;
+    expect(total.procesador).toBe("total");
+    expect(Number(total.ingresos_netos_usd)).toBe(round2(onvo + tilo));
+    expect(Number(rows.find((r) => r.procesador === "onvo" && r.plan === "entreno" && r.billing === "mes")!.ingresos_netos_usd))
+      .toBe(round2(neto(promoPrice("entreno"), ONVO)));
+    expect(rows.at(-1)).toBe(total);
+  });
+
   it("no cuenta cortesías vigentes, renovaciones ni suscripciones vencidas, y una semana vacía da cero", async () => {
     const rows = await query(
       charge(1, "entreno", "mes", true, "2026-11-04 12:00+00") +
       `insert into comp_grants values ('${id(1)}', '2026-10-01', '2026-12-01', null);` +
       sub(2, "entreno", "mes", "2026-10-20 12:00+00") + sub(2, "entreno", "mes", "2026-11-04 12:00+00") +
       sub(3, "completo", "mes", "2026-11-04 12:00+00", "2026-11-10"));
-    expect(rows).toEqual([{ plan: "total", billing: "total", primer_mes_50: "total", pagos_nuevos: 0, ingresos_brutos_usd: "0" }]);
+    expect(rows).toEqual([{ procesador: "total", plan: "total", billing: "total", primer_mes_50: "total", pagos_nuevos: 0, ingresos_brutos_usd: "0", ingresos_netos_usd: "0" }]);
   });
 });

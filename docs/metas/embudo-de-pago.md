@@ -81,7 +81,7 @@ Lo que vale cada persona que se recupera en cada paso, con los precios de `src/l
 - **Renovación:** con el primer mes al 50 %, el segundo mes vale el doble que el primero ($9.99 contra $4.99), así que la renovación pesa tanto como el primer pago.
 - **Con 100 usuarios de pago**, los primeros cobros suman entre $499.00 (todos Entreno con 50 %) y $8,999.00 (todos Entreno + Nutrición anual), y cada mes de renovación entre $999.00 y $1,499.00 si los 100 son mensuales y renuevan. Son techos de precio, no proyecciones: la mezcla real de planes y la renovación salen de esta consulta y quedan por medir.
 
-Comisiones del procesador e impuestos: por confirmar con Andrés, como en [rentabilidad-semanal.md](rentabilidad-semanal.md).
+Son precios con IVA. Lo que queda de cada cobro sale de la fórmula de [rentabilidad-semanal.md](rentabilidad-semanal.md): neto = cobro ÷ 1.13 − (cobro × c + f), con ONVO a 3.9 % + $0.35 y Tilopay a 4.25 % + $0.35 por cobro (por ejemplo, $3.87 de $4.99 con ONVO).
 
 ## 5. Validación
 
