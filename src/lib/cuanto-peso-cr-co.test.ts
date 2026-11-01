@@ -68,6 +68,18 @@ describe("anuncios Cuánto peso para Costa Rica y Colombia", () => {
     for (const [, id, copy] of variants) {
       expect(copy, id).toContain("Cuando no sabes cuánto peso usar");
       expect(copy, id).toContain(`${nfmt(TRIAL_DAYS)} días`);
+      expect(copy, id).toContain("sin tarjeta");
+      expect(copy, id).toContain("bananaburn.app");
+      for (const field of ["Texto principal", "Título", "Descripción"]) {
+        expect(copy, id).toContain(`**${field}:**`);
+      }
+      if (id.startsWith("CO")) {
+        const main = copy.split("\n").find((line) => line.startsWith("- **Texto principal:**"))!;
+        expect(main, id).toContain("sin cobro durante la prueba");
+        expect(main, id).toContain("en dólares estadounidenses");
+        expect(copy, id).not.toMatch(/\btico\b/i);
+      }
+      if (id.endsWith("-A")) expect(copy, id).toContain("carga sugerida");
     }
   });
 });

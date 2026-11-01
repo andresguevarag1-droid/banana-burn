@@ -8,7 +8,7 @@ Tú, español neutro de uso natural en Costa Rica, sin modismos forzados.
 
 ### CR-A: rutina
 
-- **Texto principal:** Cuando no sabes cuánto peso usar, una rutina con guía ayuda a empezar. Con Banana Burn, consulta qué entrenar, las repeticiones y la técnica de cada ejercicio. Empieza tu prueba de 7 días gratis, sin tarjeta, en bananaburn.app.
+- **Texto principal:** Cuando no sabes cuánto peso usar, una rutina con guía ayuda a empezar. Abre tu rutina en Banana Burn y consulta la carga sugerida, las repeticiones y la técnica de cada ejercicio. Empieza tu prueba de 7 días gratis, sin tarjeta, en bananaburn.app.
 - **Título:** Prueba tu rutina 7 días gratis
 - **Descripción:** Sin cobro durante la prueba. Luego, Entreno por US$9.99 al mes.
 
@@ -30,7 +30,7 @@ Tú, español neutro. Todos los precios siguientes son dólares estadounidenses 
 
 ### CO-A: rutina
 
-- **Texto principal:** Cuando no sabes cuánto peso usar, una rutina con guía ayuda a empezar. Con Banana Burn, consulta qué entrenar, las repeticiones y la técnica de cada ejercicio. Prueba 7 días gratis, sin tarjeta y sin cobro durante la prueba. Después, el plan Entreno cuesta US$9.99 al mes, en dólares estadounidenses. Empieza en bananaburn.app.
+- **Texto principal:** Cuando no sabes cuánto peso usar, una rutina con guía ayuda a empezar. Abre tu rutina en Banana Burn y consulta la carga sugerida, las repeticiones y la técnica de cada ejercicio. Prueba 7 días gratis, sin tarjeta y sin cobro durante la prueba. Después, el plan Entreno cuesta US$9.99 al mes, en dólares estadounidenses. Empieza en bananaburn.app.
 - **Título:** Prueba tu rutina 7 días gratis
 - **Descripción:** Sin cobro en la prueba. Luego, US$9.99/mes en dólares.
 
@@ -56,7 +56,7 @@ El gancho habla de la carga de un ejercicio, no del peso corporal ni de una cond
 
 ## Apuesta y medición por país
 
-Apostaría por **A en ambos países**: conecta la duda sobre la carga con una rutina y un siguiente paso concreto. B prueba el interés por aprender técnica; C, por registrar sesiones. Es una hipótesis, no un resultado. Comparar dentro de cada país manteniendo creativo, público y destino equivalentes; estos textos no proponen presupuesto nuevo.
+Apostaría por **A en ambos países**: responde a la duda sobre la carga con la sugerencia que aparece en la rutina y un siguiente paso concreto. B prueba el interés por aprender técnica; C, por registrar sesiones. Es una hipótesis, no un resultado. Comparar dentro de cada país manteniendo creativo, público y destino equivalentes; estos textos no proponen presupuesto nuevo.
 
 Mueve el paso **visita > cuenta con prueba iniciada**, con seguimiento hasta **primer pago > renovación**. Una prueba barata solo sirve si produce pagos rentables.
 
