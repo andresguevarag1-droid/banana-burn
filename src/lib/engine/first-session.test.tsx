@@ -82,6 +82,16 @@ describe("primer entreno corto", () => {
     expect(entreno).toMatch(/hasSavedWorkout\(v\)/);
     expect(entreno).toMatch(/firstSessionPlan\(d, saved \? 1 : 0\)/);
   });
+
+  it.each([0, 1, 2, 3])("la energía %i no desvía ni acorta el primer entreno", (initial) => {
+    for (const demo of [true, false]) {
+      const html = renderToStaticMarkup(<Readiness first initial={initial} dateKey="2026-11-01" demo={demo} mins={13} suggestSoft />);
+      expect(html).toContain(`href="/app/entreno${demo ? "?primera=1" : ""}"`);
+      expect(html).toContain("Empieza tu primer entreno (13 min)");
+      expect(html).not.toContain("modo=suave");
+      expect(html).not.toContain("<button");
+    }
+  });
 });
 
 describe("embudo del entreno (0061) en el primer entreno", () => {
