@@ -222,6 +222,30 @@ describe("rentabilidad-semanal.sql", () => {
     expect(rows.at(-1)).toBe(total);
   });
 
+  it.each([
+    ["entreno", "mes", true], ["completo", "mes", true],
+    ["entreno", "mes", false], ["completo", "mes", false],
+    ["entreno", "anual", false], ["completo", "anual", false],
+  ] as const)("SQL: %s %s promo=%s calcula ambos procesadores sin redondear cada cobro", async (plan, billing, promo) => {
+    const amount = firstChargeMinor(plan, billing, promo ? PROMO_ID : null) / 100;
+    const seed = Array.from({ length: 6 }, (_, i) =>
+      charge(i + 1, plan, billing, promo, "2026-11-04 12:00+00") +
+      card(i + 1, i < 3 ? "onvo" : "tilopay")).join("");
+    const rows = await query(seed);
+    for (const [provider, fees] of [["onvo", ONVO], ["tilopay", TILOPAY]] as const) {
+      const detail = rows.find((r) => r.procesador === provider && r.plan === plan)!;
+      const subtotal = rows.find((r) => r.procesador === provider && r.plan === "subtotal")!;
+      for (const row of [detail, subtotal]) {
+        expect(row.pagos_nuevos).toBe(3);
+        expect(Number(row.ingresos_brutos_usd)).toBe(round2(3 * amount));
+        expect(Number(row.ingresos_netos_usd)).toBe(round2(3 * neto(amount, fees)));
+      }
+    }
+    const total = rows.find((r) => r.plan === "total")!;
+    expect(total.pagos_nuevos).toBe(6);
+    expect(Number(total.ingresos_netos_usd)).toBe(round2(3 * neto(amount, ONVO) + 3 * neto(amount, TILOPAY)));
+  });
+
   it("no cuenta cortesías vigentes, renovaciones ni suscripciones vencidas, y una semana vacía da cero", async () => {
     const rows = await query(
       charge(1, "entreno", "mes", true, "2026-11-04 12:00+00") +
