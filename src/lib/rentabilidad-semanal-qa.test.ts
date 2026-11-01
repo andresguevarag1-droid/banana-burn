@@ -9,23 +9,26 @@ import { promoPrice } from "@/lib/trial";
 const doc = readFileSync("docs/metas/rentabilidad-semanal.md", "utf8");
 const sql = readFileSync("docs/metas/rentabilidad-semanal.sql", "utf8");
 const price = (id: string) => PLANS.find((p) => p.id === id)!.price;
+const onvo = (cobro: number) => cobro / 1.13 - (cobro * 0.039 + 0.35);
 
 describe("tabla de CAC máximo", () => {
-  it("la recuperación en 3 meses suma los 3 cobros de cada plan", () => {
-    const rows = doc.split("\n").filter((l) => /^\| Entreno/.test(l)).map((l) => l.split("|").slice(1, -1).map((c) => c.trim()));
+  it("la recuperación en 3 meses suma el neto de los 3 cobros de cada plan", () => {
+    const cac = doc.slice(doc.indexOf("## 2. Costo máximo"), doc.indexOf("## 3. La regla"));
+    const rows = cac.split("\n").filter((l) => /^\| Entreno/.test(l)).map((l) => l.split("|").slice(1, -1).map((c) => c.trim()));
     const expected: Record<string, [number, number]> = {};
     for (const id of ["entreno", "completo"]) {
       const name = id === "entreno" ? "Entreno" : "Entreno + Nutrición";
       const p = price(id);
-      expected[`${name}, primer mes con 50 %`] = [promoPrice(id as "entreno"), promoPrice(id as "entreno") + 2 * p.mes];
-      expected[`${name}, mensual sin 50 %`] = [p.mes, 3 * p.mes];
-      expected[`${name}, anual`] = [p.anual, p.anual];
+      const promo = promoPrice(id as "entreno");
+      expected[`${name}, primer mes con 50 %`] = [onvo(promo), onvo(promo) + 2 * onvo(p.mes)];
+      expected[`${name}, mensual sin 50 %`] = [onvo(p.mes), 3 * onvo(p.mes)];
+      expected[`${name}, anual`] = [onvo(p.anual), onvo(p.anual)];
     }
-    const cac = rows.filter((r) => r[0] in expected);
-    expect(cac).toHaveLength(6);
-    for (const r of cac) {
+    const table = rows.filter((r) => r[0] in expected);
+    expect(table).toHaveLength(6);
+    for (const r of table) {
       const [first, three] = expected[r[0]];
-      expect(r[1], r[0]).toBe(usd(first));
+      expect(r[1], r[0]).toBe(usd(Math.round(first * 100) / 100));
       expect(r[3], r[0]).toBe(usd(Math.round(three * 100) / 100));
     }
   });
@@ -40,6 +43,7 @@ describe("rentabilidad-semanal.sql, casos límite", () => {
       create table subscriptions (user_id uuid, status text, provider text, plan text, billing text,
         current_period_end timestamptz, cancel_at_period_end boolean default false, created_at timestamptz);
       create table comp_grants (user_id uuid, starts_at timestamptz, expires_at timestamptz, revoked_at timestamptz);
+      create table payment_methods (user_id uuid primary key, provider text);
     `);
   }, 30000);
   afterAll(async () => { await db.close(); });

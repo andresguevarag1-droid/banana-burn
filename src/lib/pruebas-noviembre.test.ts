@@ -215,6 +215,7 @@ describe("QA: ingresos por grupo en rentabilidad-semanal.sql", () => {
           amount_minor integer, last_attempt_at timestamptz, updated_at timestamptz, status text);
         create table subscriptions (user_id uuid, plan text, billing text, provider text,
           status text, current_period_end timestamptz, cancel_at_period_end boolean, created_at timestamptz);
+        create table payment_methods (user_id uuid, provider text);
       `);
       const ids = Array.from({ length: 12 }, (_, i) => `00000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}`);
       for (const [i, uid] of ids.entries()) {

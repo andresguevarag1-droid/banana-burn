@@ -24,6 +24,11 @@ const cents = (n: number) => Math.round(n * 100);
 /** Techo × 35.2 %, hacia abajo al centavo, en enteros para no arrastrar errores de coma flotante. */
 const porPrueba = (n: number) => Math.floor((cents(n) * 352) / 1000) / 100;
 const weekday = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
+/** Neto por cobro de la regla: IVA de 13 % incluido y comisión confirmada el 31 oct 2026, al centavo. */
+const ONVO = { c: 0.039, f: 0.35 };
+const TILOPAY = { c: 0.0425, f: 0.35 };
+const neto = (cobro: number, k: { c: number; f: number }) => Math.round((cobro / 1.13 - (cobro * k.c + k.f)) * 100) / 100;
+const netoSum = (cobros: number[], k: { c: number; f: number }) => Math.round(cobros.reduce((a, p) => a + p / 1.13 - (p * k.c + k.f), 0) * 100) / 100;
 
 describe("la condición", () => {
   const s = section("## 1. La condición");
@@ -36,11 +41,18 @@ describe("la condición", () => {
     expect(readFileSync("docs/metas/rentabilidad-semanal.sql", "utf8")).toContain("date '2026-11-02' as lunes");
   });
 
-  it("reactivar cuenta como subir y exige pagos, margen, comisión, datos completos y máximo positivo", () => {
-    for (const t of ["**N > 0**", "**I − G ≥ 0**", "**mínimo(I, tope semanal) > G**", "conciliados con Tilopay y ONVO"]) expect(s).toContain(t);
+  it("reactivar cuenta como subir y exige pagos, margen, neto, datos completos y máximo positivo", () => {
+    for (const t of ["**N > 0**", "**I − G ≥ 0**", "**mínimo(I, tope semanal, tope del mes − gasto del mes) > G**", "conciliados con Tilopay y ONVO", "`ingresos_netos_usd`"])
+      expect(s).toContain(t);
     expect(s).toMatch(/cuenta como \*\*subir\*\*/);
+    expect(s).toContain("tope semanal de **$70.00** y el de noviembre de **$200.00**");
     expect(regla).toMatch(/la decisión puede ser "mantener" o "pausar", nunca "subir"/);
-    expect(regla).toContain("mínimo(ingresos nuevos netos de la semana N, tope semanal)");
+    expect(regla).toContain("mínimo(ingresos nuevos netos de la semana N, tope semanal, tope del mes − gasto del mes)");
+  });
+
+  it("propone Costa Rica y Colombia en conjuntos separados", () => {
+    expect(doc).toContain("**Costa Rica y Colombia, cada país en su propio conjunto de anuncios**");
+    expect(regla).toContain("**Costa Rica y Colombia, cada país en su propio conjunto de anuncios**");
   });
 
   it("el reintento del 9 no cuenta para la condición", () => {
@@ -76,6 +88,12 @@ describe("qué leer el 9 de noviembre", () => {
     for (const c of ["pagos_nuevos", "ingresos_brutos_usd"]) expect(semanal).toContain(c);
   });
 
+  it("las comisiones y los topes ya no están por confirmar", () => {
+    expect(doc).not.toMatch(/(comisión|tope)[^.\n|]*por confirmar|`c` y `f`/i);
+    expect(s).toContain("comisión de ONVO de 3.9 % + $0.35 y de Tilopay de 4.25 % + $0.35 por cobro, IVA de 13 % incluido en el precio");
+    expect(s).toContain('el Reel "El Nuevo" pausado desde el 31 de octubre');
+  });
+
   it("dice que el plan de octubre no existe y deja sus datos por medir", () => {
     expect(existsSync("marketing/plan-ads-octubre-2026.md")).toBe(false);
     expect(s).toContain("**`marketing/plan-ads-octubre-2026.md` no existe en el repositorio**");
@@ -85,31 +103,31 @@ describe("qué leer el 9 de noviembre", () => {
 
 describe("costo máximo por usuario de pago", () => {
   const rows = tableRows(section("## 3. Costo máximo"));
-  const cases: [string, number, number][] = [
-    ["Entreno, primer mes con 50 %", promoPrice("entreno"), promoPrice("entreno") + 2 * price("entreno").mes],
-    ["Entreno, mensual sin 50 %", price("entreno").mes, 3 * price("entreno").mes],
-    ["Entreno, anual", price("entreno").anual, price("entreno").anual],
-    ["Entreno + Nutrición, primer mes con 50 %", promoPrice("completo"), promoPrice("completo") + 2 * price("completo").mes],
-    ["Entreno + Nutrición, mensual sin 50 %", price("completo").mes, 3 * price("completo").mes],
-    ["Entreno + Nutrición, anual", price("completo").anual, price("completo").anual],
+  const cases: [string, number[]][] = [
+    ["Entreno, primer mes con 50 %", [promoPrice("entreno"), price("entreno").mes, price("entreno").mes]],
+    ["Entreno, mensual sin 50 %", [price("entreno").mes, price("entreno").mes, price("entreno").mes]],
+    ["Entreno, anual", [price("entreno").anual]],
+    ["Entreno + Nutrición, primer mes con 50 %", [promoPrice("completo"), price("completo").mes, price("completo").mes]],
+    ["Entreno + Nutrición, mensual sin 50 %", [price("completo").mes, price("completo").mes, price("completo").mes]],
+    ["Entreno + Nutrición, anual", [price("completo").anual]],
   ];
 
   it("tiene las 6 combinaciones de la regla", () => {
     expect(rows.map((r) => r[0])).toEqual(cases.map((c) => c[0]));
   });
 
-  it.each(cases)("%s: primer mes, 3 meses y por prueba iniciada cuadran con el código", (name, first, three) => {
+  it.each(cases)("%s: netos con ONVO y Tilopay y por prueba iniciada cuadran con la fórmula", (name, cobros) => {
     const r = rows.find((x) => x[0] === name)!;
-    expect(r[1]).toBe(usd(first));
-    expect(r[2]).toBe(usd(cents(three) / 100));
-    expect(r[3]).toBe(usd(porPrueba(first)));
-    expect(r[4]).toBe(usd(porPrueba(cents(three) / 100)));
-    expect(regla).toContain(`| ${name} | ${usd(first)} |`);
+    const [first, three] = [neto(cobros[0], ONVO), netoSum(cobros, ONVO)];
+    expect(r.slice(1)).toEqual([first, three, porPrueba(first), porPrueba(three), neto(cobros[0], TILOPAY), porPrueba(neto(cobros[0], TILOPAY))].map(usd));
+    expect(regla).toMatch(new RegExp(`\\| ${name.replace("+", "\\+")} \\| ${usd(first).replace("$", "\\$")} \\|`));
   });
 
-  it("el caso más exigente es Entreno con 50 % y la renovación queda por medir", () => {
+  it("el caso más exigente es Entreno con 50 %, por país, y la renovación queda por medir", () => {
     const s = section("## 3. Costo máximo");
-    expect(s).toContain(`**${usd(promoPrice("entreno"))} por usuario de pago y ${usd(porPrueba(promoPrice("entreno")))} por prueba iniciada**`);
+    const [cr, co] = [neto(promoPrice("entreno"), ONVO), neto(promoPrice("entreno"), TILOPAY)];
+    expect(s).toContain(`**${usd(cr)} por usuario de pago y ${usd(porPrueba(cr))} por prueba iniciada en Costa Rica, y ${usd(co)} por usuario de pago y ${usd(porPrueba(co))} por prueba iniciada en Colombia**`);
+    expect(s).toContain("**neto = cobro ÷ 1.13 − (cobro × c + f)**");
     expect(s).toMatch(/renovación de los meses 2 y 3 está por medir/);
     expect(s).toContain("35.2 %");
   });
@@ -118,8 +136,10 @@ describe("costo máximo por usuario de pago", () => {
 describe("la campaña si se cumple", () => {
   const s = section("## 4. Si la regla se cumple");
 
-  it("es solo Costa Rica, con prueba iniciada o Subscribe y sin nada activado", () => {
-    expect(s).toMatch(/\| País \| Solo Costa Rica \|/);
+  it("es Costa Rica y Colombia en conjuntos separados, con prueba iniciada o Subscribe y sin nada activado", () => {
+    expect(s).toMatch(/\| País \| Costa Rica y Colombia, cada país en su propio conjunto de anuncios/);
+    expect(s).toContain("`BB Conv Nov26 CR` y `BB Conv Nov26 CO`");
+    expect(s).toContain('El Reel **"El Nuevo"** quedó pausado el 31 de octubre y no entra en esta campaña.');
     expect(s).toMatch(/\*\*prueba iniciada\*\* \(`CompleteRegistration`\)/);
     expect(s).toContain("**Subscribe**");
     expect(s).toMatch(/se configura solo después del sí de Andrés/);
@@ -140,8 +160,8 @@ describe("la campaña si se cumple", () => {
   });
 
   it("las URLs llevan los UTM de su fila y van a la portada", () => {
-    const rows = tableRows(s.slice(s.indexOf("| Anuncio | utm_campaign")));
-    expect(rows).toHaveLength(2);
+    const rows = tableRows(s.slice(s.indexOf("| Conjunto y anuncio | utm_campaign")));
+    expect(rows.map((r) => r[2])).toEqual(["cr-conv-a-15s", "cr-conv-b-15s", "co-conv-a-15s", "co-conv-b-15s"]);
     for (const [, campaign, content, url] of rows) {
       const u = new URL(url);
       expect(u.origin + u.pathname).toBe("https://www.bananaburn.app/");
@@ -152,9 +172,10 @@ describe("la campaña si se cumple", () => {
     }
   });
 
-  it("pausar un anuncio es el doble del caso más exigente", () => {
-    const strict = porPrueba(promoPrice("entreno"));
-    expect(s).toContain(`pasa de ${usd(strict * 2)}, el doble del caso más exigente de la sección 3 (${usd(strict)})`);
+  it("pausar un conjunto es el doble del caso más exigente de su país", () => {
+    const cr = porPrueba(neto(promoPrice("entreno"), ONVO));
+    const co = porPrueba(neto(promoPrice("entreno"), TILOPAY));
+    expect(s).toContain(`en Costa Rica, si pasa de ${usd(cr * 2)} (el doble de ${usd(cr)}); en Colombia, si pasa de ${usd(co * 2)} (el doble de ${usd(co)})`);
   });
 
   it("GLP-1 lleva la leyenda médica", () => {
@@ -181,36 +202,51 @@ describe("presupuesto en 3 niveles", () => {
   const rows = tableRows(s);
   const money = (t: string) => Number(t.replace(/[$,]/g, ""));
   const prices = [promoPrice("entreno"), promoPrice("completo"), price("entreno").mes, price("completo").mes];
+  const need = (week: number, net: number) => Math.ceil(cents(week) / cents(net));
 
   it("es decisión de Andrés y está pendiente", () => {
     expect(s).toMatch(/^## 6\. Presupuesto en 3 niveles: decisión de Andrés/);
     expect(s).toMatch(/Aprobación de Andrés: \*\*pendiente\*\*/);
   });
 
-  it("cada nivel multiplica por 7 días, pide su máximo y calcula los pagos para recuperarse", () => {
+  it("cada nivel parte el día entre los dos países, multiplica por 7 y calcula los pagos netos para recuperarse", () => {
     expect(rows.map((r) => r[0])).toEqual(["1", "2", "3"]);
     for (const r of rows) {
+      expect(money(r[2]) + money(r[3])).toBe(money(r[1]));
+      expect(r[2]).toBe(r[3]);
       const week = money(r[1]) * 7;
-      expect(r[2]).toBe(usd(week));
-      expect(r[7]).toBe(`Máximo de la regla de ${usd(week)} o más`);
-      prices.forEach((p, i) => expect(Number(r[3 + i]), `${r[0]} a ${usd(p)}`).toBe(Math.ceil(cents(week) / cents(p))));
+      expect(r[4]).toBe(usd(week));
+      expect(r[9]).toBe(`Máximo de la regla de ${usd(week)} o más`);
+      prices.forEach((p, i) => {
+        expect(Number(r[5 + i]), `${r[0]} a ${usd(p)}`).toBe(need(week, neto(p, ONVO)));
+        expect(need(week, neto(p, TILOPAY)), "con Tilopay hacen falta los mismos").toBe(need(week, neto(p, ONVO)));
+      });
     }
-    expect(s).toContain(`(${usd(promoPrice("entreno"))})`);
+    expect(s).toContain(`(${usd(neto(promoPrice("entreno"), ONVO))})`);
+  });
+
+  it("ningún nivel pasa del tope semanal y el de noviembre se respeta", () => {
+    const weeks = rows.map((r) => money(r[4]));
+    expect(Math.max(...weeks)).toBe(70);
+    expect(s).toContain("ninguno pasa del tope semanal de $70.00");
+    expect(s).toContain(`el nivel 3 tres semanas seguidas suma ${usd(weeks[2] * 3)}, así que la tercera semana queda en lo que falte para $200.00`);
+    expect(weeks[2] * 3).toBeGreaterThan(200);
   });
 
   it("los pagos anuales por nivel cuadran", () => {
     const [e, c] = [price("entreno").anual, price("completo").anual];
-    const n = (week: number, p: number) => Math.ceil(cents(week) / cents(p));
-    const weeks = rows.map((r) => money(r[2]));
+    const weeks = rows.map((r) => money(r[4]));
+    const n = (w: number, p: number) => need(w, neto(p, ONVO));
     expect(n(weeks[0], e)).toBe(1);
     expect(n(weeks[0], c)).toBe(1);
-    expect(s).toContain(`nivel 2, ${n(weeks[1], e)} pagos de ${usd(e)} o ${n(weeks[1], c)} de ${usd(c)}`);
+    expect(n(weeks[1], e)).toBe(1);
+    expect(n(weeks[1], c)).toBe(1);
     expect(s).toContain(`nivel 3, ${n(weeks[2], e)} pagos de ${usd(e)} o ${n(weeks[2], c)} de ${usd(c)}`);
   });
 
-  it("el mínimo de la sección 8 son los pagos de $4.99 de cada nivel", () => {
-    const need = rows.map((r) => r[3]);
-    expect(section("## 8. Qué paso")).toContain(`${need[0]}, ${need[1]} o ${need[2]} pagos de ${usd(promoPrice("entreno"))}`);
+  it("el mínimo de la sección 8 son los pagos de Entreno con 50 % de cada nivel", () => {
+    const min = rows.map((r) => r[5]);
+    expect(section("## 8. Qué paso")).toContain(`${min[0]}, ${min[1]} o ${min[2]} pagos de Entreno con 50 % (${usd(neto(promoPrice("entreno"), ONVO))} netos)`);
   });
 });
 
@@ -234,8 +270,8 @@ describe("medición y reglas de la oficina", () => {
     const s = section("## 8. Qué paso");
     expect(s).toMatch(/\*\*Paso: prueba a pago\*\*/);
     expect(s).toMatch(/\*\*Cómo se mide:\*\*/);
-    expect(s).toContain(`entre ${usd(promoPrice("entreno"))} (Entreno con 50 %) y ${usd(price("completo").anual)} (Entreno + Nutrición anual)`);
-    expect(s).toContain(`${usd(price("entreno").mes)} o ${usd(price("completo").mes)}`);
+    expect(s).toContain(`entre ${usd(neto(promoPrice("entreno"), TILOPAY))} (Entreno con 50 %, Tilopay) y ${usd(neto(price("completo").anual, ONVO))} (Entreno + Nutrición anual, ONVO)`);
+    expect(s).toContain(`${usd(neto(price("entreno").mes, ONVO))} o ${usd(neto(price("completo").mes, ONVO))} con ONVO`);
   });
 
   it("nada se activa sin Andrés", () => {

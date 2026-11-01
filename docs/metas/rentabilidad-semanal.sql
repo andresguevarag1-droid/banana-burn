@@ -1,5 +1,6 @@
--- Solo lectura. Pagos nuevos de una semana (lunes a domingo, hora de Costa Rica), por plan.
+-- Solo lectura. Pagos nuevos de una semana (lunes a domingo, hora de Costa Rica), por procesador y plan.
 -- Mismas definiciones de pago que tablero-diario.sql. Uso: docs/metas/rentabilidad-semanal.md.
+-- Neto por cobro = cobro ÷ 1.13 − (cobro × c + f): IVA de 13 % incluido en el precio y comisión del procesador.
 with
 parametros as (
   select date '2026-11-02' as lunes,
@@ -16,20 +17,27 @@ precios(plan, billing, minor) as (
   values ('entreno', 'mes', 999), ('entreno', 'anual', 5999),
          ('completo', 'mes', 1499), ('completo', 'anual', 8999)
 ),
+-- Comisiones confirmadas por Andrés el 31 oct 2026: ONVO (Costa Rica) y Tilopay (tarjetas de fuera de Costa Rica).
+comisiones(procesador, c, f) as (
+  values ('onvo', 0.039, 0.35), ('tilopay', 0.0425, 0.35)
+),
 cortesia as (
   select distinct g.user_id from public.comp_grants g cross join semana q
   where g.revoked_at is null and g.starts_at <= q.observado_en and g.expires_at > q.observado_en
 ),
 -- Primer cobro automático de la prueba o la beta. amount_minor ya trae el 50 % si aplica.
+-- trial_charges no guarda el procesador: es el de la tarjeta guardada, ONVO si no hay (como providerOf en trial-billing.ts).
 cobros as (
-  select t.user_id, t.plan, t.billing, coalesce(t.promo = 'primer_mes_50', false) and t.billing = 'mes' as primer_mes_50,
+  select t.user_id, coalesce(m.provider, 'onvo') as procesador, t.plan, t.billing,
+    coalesce(t.promo = 'primer_mes_50', false) and t.billing = 'mes' as primer_mes_50,
     t.amount_minor, coalesce(t.last_attempt_at, t.updated_at) as pagado_en
   from public.trial_charges t
+  left join public.payment_methods m on m.user_id = t.user_id
   where t.status = 'succeeded'
 ),
 -- Pago en el muro de planes: suscripción vigente sin cobro succeeded, como en el tablero.
 manuales as (
-  select distinct on (s.user_id) s.user_id, s.plan, s.billing, false as primer_mes_50, p.minor as amount_minor,
+  select distinct on (s.user_id) s.user_id, s.provider as procesador, s.plan, s.billing, false as primer_mes_50, p.minor as amount_minor,
     (select min(s2.created_at) from public.subscriptions s2 where s2.user_id = s.user_id
       and s2.provider in ('onvo', 'tilopay')) as pagado_en
   from public.subscriptions s cross join semana q
@@ -41,14 +49,20 @@ manuales as (
   order by s.user_id, s.current_period_end desc
 ),
 pagos as (
-  select x.* from (select * from cobros union all select * from manuales) x cross join semana q
+  select x.*, x.amount_minor / 100.0 / 1.13 - (x.amount_minor / 100.0 * k.c + k.f) as neto_usd
+  from (select * from cobros union all select * from manuales) x cross join semana q
+  join comisiones k on k.procesador = x.procesador
   where x.pagado_en >= q.desde and x.pagado_en < q.hasta and x.pagado_en <= q.observado_en
     and x.user_id not in (select user_id from cortesia)
 )
-select coalesce(plan, 'total') as plan, coalesce(billing, 'total') as billing,
+-- Filas por procesador y plan, un subtotal por procesador (plan = 'subtotal') y la fila total.
+select coalesce(procesador, 'total') as procesador,
+  coalesce(plan, case when grouping(procesador) = 0 then 'subtotal' else 'total' end) as plan,
+  coalesce(billing, 'total') as billing,
   coalesce(primer_mes_50::text, 'total') as primer_mes_50,
   count(*) as pagos_nuevos,
-  coalesce(round(sum(amount_minor) / 100.0, 2), 0) as ingresos_brutos_usd
+  coalesce(round(sum(amount_minor) / 100.0, 2), 0) as ingresos_brutos_usd,
+  coalesce(round(sum(neto_usd), 2), 0) as ingresos_netos_usd
 from pagos
-group by grouping sets ((plan, billing, primer_mes_50), ())
-order by grouping(plan, billing, primer_mes_50), 1, 2, 3;
+group by grouping sets ((procesador, plan, billing, primer_mes_50), (procesador), ())
+order by grouping(procesador), 1, grouping(plan, billing, primer_mes_50), 2, 3, 4;
