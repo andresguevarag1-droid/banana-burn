@@ -83,7 +83,7 @@ Registrar ingresos efectivamente cobrados por grupo y usuario asignado, devoluci
 
 ## Dinero que puede mover
 
-Precios regulares en USD según `src/lib/plans.ts`:
+Precios regulares en USD, IVA incluido, según `src/lib/plans.ts`:
 
 | Plan | Renovación mensual | Anual, cobro por año |
 | --- | ---: | ---: |

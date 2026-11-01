@@ -5,7 +5,7 @@ import { MobileMenu } from "./mobile-menu";
 import { FunnelTracker } from "@/components/analytics";
 import { SITE_URL } from "@/lib/env";
 import { ogImage } from "./seo";
-import { GLP1, TRIAL_DAYS } from "@/lib/copy";
+import { GLP1 } from "@/lib/copy";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -39,7 +39,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           {/* "Entrar" siempre visible; bajo 400 px el logo queda solo en ícono para que todo quepa desde 320 px. */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link href="/entrar" data-cta="nav-entrar" className="btn inline-flex h-11 px-2.5 sm:px-4 text-sm sm:text-[15px] text-ink hover:bg-white/70">Entrar</Link>
-            <Link href="/entrar?modo=registro" data-cta="nav" className="btn-primary h-11 px-3.5 sm:px-4 text-sm whitespace-nowrap">Empezar gratis<span className="sr-only"> {TRIAL_DAYS} días</span></Link>
+            <Link href="/entrar?modo=registro" data-cta="nav" className="btn-primary h-11 px-3.5 sm:px-4 text-sm whitespace-nowrap max-[400px]:w-28 max-[400px]:whitespace-normal max-[400px]:px-2 max-[400px]:text-xs">Empieza 7 días gratis</Link>
             <MobileMenu items={NAV} />
           </div>
         </nav>

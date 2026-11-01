@@ -30,8 +30,8 @@ export function AnnualUpsell({ plan, userId }: { plan: PlanId; userId: string })
   return (
     <section className="card bg-banana-soft p-4 sm:p-6 motion-safe:animate-enter" aria-labelledby="annual-title">
       <p className="eyebrow">Tu mismo plan, por un año</p>
-      <h2 id="annual-title" className="mt-2 text-xl font-extrabold text-ink">Ahorra <span className="tabular-nums">{usd2(annualSaving(p))}</span> al año</h2>
-      <p className="mt-2 text-sm text-body">{p.name} por <b className="tabular-nums">{usd2(p.price.anual)}/año</b>, en un solo pago por 12 meses, frente a pagar mes a mes. {ANNUAL_SEASON_NOTE}.</p>
+      <h2 id="annual-title" className="mt-2 text-xl font-extrabold text-ink text-balance">Ahorra <span className="tabular-nums">{usd2(annualSaving(p))}</span> al año</h2>
+      <p className="mt-2 text-sm text-body">{p.name} por <b className="tabular-nums">{usd2(p.price.anual)}/año</b>, en USD, IVA incluido, en un solo pago por 12 meses, frente a pagar mes a mes. {ANNUAL_SEASON_NOTE}.</p>
       <p className="mt-2 text-sm text-body">El anual empieza al confirmar el pago y reemplaza tu plan actual, sin prorrateo.</p>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Link href={`/app/suscripcion?plan=${plan}&pago=anual`} className="btn-primary min-h-12">Ver cambio a anual</Link>
