@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { TRIAL_SEQUENCE, bienvenida, planListo, regalo, reporteEquipo, secuenciaPrueba, testerAsignado, testerTerminado } from "./templates";
+import { FIRST_PAYMENT, TRIAL_SEQUENCE, bienvenida, planListo, primerPago, regalo, reporteEquipo, secuenciaPrueba, testerAsignado, testerTerminado } from "./templates";
 
 const base = { name: "Ana López", trainDays: 4, todayRoutine: "Pierna", goalWeight: 68, goalDate: "2027-03-01" };
 
@@ -206,5 +206,46 @@ describe("secuencia de la prueba (docs/emails/secuencia-prueba.md)", () => {
     expect(TRIAL_SEQUENCE[2].kind).toBe("banana");
     expect(TRIAL_SEQUENCE[4].kind).toBe("primary");
     expect(TRIAL_SEQUENCE[6].kind).toBe("primary");
+  });
+});
+
+describe("después del primer pago (docs/emails/primer-pago.md)", () => {
+  const doc = readFileSync("docs/emails/primer-pago.md", "utf8");
+  const section = (day: number) => doc.match(new RegExp(`^## Día ${day} después del pago\\n([\\s\\S]*?)(?=^## )`, "m"))![1];
+  const field = (text: string, name: string) => text.match(new RegExp(`\\*\\*${name}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\n\\*\\*|$)`))![1].trim();
+  const unsubscribe = "https://bananaburn.app/api/email/baja?token=x";
+
+  for (const day of [1, 21] as const) {
+    it(`día ${day}: asunto, vista previa, cuerpo, botón y destino iguales al documento`, () => {
+      const s = section(day);
+      const c = FIRST_PAYMENT[day];
+      expect(c.subject).toBe(field(s, "Asunto"));
+      expect(c.preheader).toBe(field(s, "Vista previa"));
+      expect(c.cta).toBe(field(s, "Botón"));
+      expect(field(s, "Destino")).toBe(`https://bananaburn.app${c.path}`);
+      expect([...c.paragraphs, "Coach Banana"].join("\n\n")).toBe(field(s, "Cuerpo"));
+      const e = primerPago({ day, unsubscribe });
+      expect(e.subject).toBe(c.subject);
+      expect(e.html).toContain(`${c.path}"`);
+      expect(e.text).toContain(`${c.cta}: `);
+      for (const para of c.paragraphs) expect(e.text).toContain(para);
+    });
+  }
+
+  it("lleva enlace de baja, un solo botón y respeta la marca (paper, banana, ink, Plus Jakarta Sans, sin emojis ni IA)", () => {
+    for (const day of [1, 21] as const) {
+      const e = primerPago({ day, unsubscribe });
+      expect(e.html).toContain(unsubscribe.replace(/&/g, "&amp;"));
+      expect(e.text).toContain(`Dejar de recibir estos correos: ${unsubscribe}`);
+      expect(e.html.match(/border-radius:999px;background:/g)).toHaveLength(1);
+      expect(e.html).toMatch(/#FFF8E3/);
+      expect(e.html).toMatch(/#FFD60A/);
+      expect(e.html).toMatch(/#1B1505/);
+      expect(e.html).toContain("Plus Jakarta Sans");
+      expect(e.subject + e.text).not.toMatch(/\p{Extended_Pictographic}/u);
+      expect(e.subject + e.text).not.toMatch(/\bIA\b|inteligencia artificial/i);
+    }
+    expect(FIRST_PAYMENT[1].kind).toBe("banana");
+    expect(FIRST_PAYMENT[21].kind).toBe("primary");
   });
 });

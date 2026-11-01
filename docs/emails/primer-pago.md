@@ -1,6 +1,6 @@
 # Primer pago: acompañar hasta el segundo mes
 
-Borradores para aprobación de Andrés. Este documento no activa envíos, publicaciones, campañas ni gasto. Paso del embudo: **primer pago → renovación del segundo mes**. Busca contribuir a 100 usuarios de pago activos y a ingresos que cubran el gasto, sin prometer resultados físicos ni conversiones.
+Textos de los correos que envía `runReminders` (`src/lib/notify-run.ts`) con las reglas de `src/lib/primer-pago.ts`; la plantilla es `primerPago` en `src/lib/email/templates.ts`. Los envíos empiezan cuando Andrés aprueba y fusiona el cambio que los conecta; este documento no activa publicaciones, campañas ni gasto. Paso del embudo: **primer pago → renovación del segundo mes**. Busca contribuir a 100 usuarios de pago activos y a ingresos que cubran el gasto, sin prometer resultados físicos ni conversiones.
 
 ## Día 1 después del pago
 
@@ -50,13 +50,22 @@ Coach Banana
 
 ## Audiencia y convivencia con los correos actuales
 
-Propuesta de integración futura: personas con su primer pago confirmado de una suscripción **mensual**, Entreno o Entreno + Nutrición. Anclar los hitos a la fecha real de ese pago: +24 horas y +21 días completos, no al registro ni al inicio de la prueba. Excluir pagos anuales de esta prueba de renovación mensual, compras de retos/temporadas, cortesías y pagos no confirmados. Revalidar suscripción vigente, preferencias y baja antes de cada envío; detener ante cancelación, devolución o pérdida de acceso. Una pieza por usuario e hito, sin recuperar correos atrasados en bloque.
+Personas con su primer pago confirmado de una suscripción **mensual**, Entreno o Entreno + Nutrición. Anclar los hitos a la fecha real de ese pago: +24 horas y +21 días completos, no al registro ni al inicio de la prueba. Excluir pagos anuales de esta prueba de renovación mensual, compras de retos/temporadas, cortesías y pagos no confirmados. Revalidar suscripción vigente, preferencias y baja antes de cada envío; detener ante cancelación, devolución o pérdida de acceso. Una pieza por usuario e hito, sin recuperar correos atrasados en bloque.
 
-Complementa `reciboPago` de `src/lib/email/templates.ts`: el recibo conserva importe, comprobante, método y próximo cobro. Estas piezas hablan de uso y continuidad; no repiten la confirmación ni sustituyen avisos de cobro o cancelación. No reemplazan bienvenida, `pruebaIniciada` ni `recordatorioCobro`. Al integrar, sustituir el recordatorio diario o `reactivacion` que coincida para esa persona y día; si coincide `resumenSemanal`, priorizar ese resumen con datos reales y omitir esta pieza. Aplicar la misma regla en control y tratamiento y registrar la omisión. Los transaccionales tienen prioridad. Esta coordinación aún no está implementada.
+Complementa `reciboPago` de `src/lib/email/templates.ts`: el recibo conserva importe, comprobante, método y próximo cobro. Estas piezas hablan de uso y continuidad; no repiten la confirmación ni sustituyen avisos de cobro o cancelación. No reemplazan bienvenida, `pruebaIniciada` ni `recordatorioCobro`. Al integrar, sustituir el recordatorio diario o `reactivacion` que coincida para esa persona y día; si coincide `resumenSemanal`, priorizar ese resumen con datos reales y omitir esta pieza. Aplicar la misma regla en control y tratamiento y registrar la omisión. Los transaccionales tienen prioridad.
 
 Usar el pie existente con motivo del correo y enlace de baja firmado; conservar versión de texto plano. Maquetación: paper #FFF8E3, banana #FFD60A, ink #1B1505, Plus Jakarta Sans, un botón principal. Los cuerpos, incluida la firma, tienen menos de 120 palabras. No requieren personalización ni un resumen mensual nuevo: el día 21 invita a consultar registros existentes y contempla que no haya datos.
 
 Funciones verificadas en `src/lib/plans.ts`, `src/components/app-nav.tsx` y `src/app/(app)/app/progreso/page.tsx`: rutina, registro de sesiones, progresión de cargas y progreso de peso, medidas, fotos y fuerza. Todas están incluidas en ambos planes; no se promete nutrición al plan Entreno ni descuentos.
+
+## Cómo está conectado
+
+- **Primer pago:** la suscripción pagada más antigua de la cuenta en `subscriptions` (con periodo y fuera de `incomplete`), mientras siga en su primer periodo. Una renovación mueve `current_period_start` y ya no cuenta como primer pago; quien pagó antes y volvió no recibe la secuencia.
+- **Ventanas:** día 1 entre las 24 y las 48 horas del pago; día 21 entre los 21 y los 22 días completos. Sale en la corrida del recordatorio de la persona; si esa corrida falla, la pieza no se recupera.
+- **Quién no la recibe:** anuales, pagos sin confirmar, suscripciones canceladas, por cancelar o vencidas, cambio a anual, baja de recordatorios, cortesías, regalos, condominios con mes gratis y compras de retos o temporadas (no son suscripciones). Una cuenta de la beta sí la recibe si hace su primer pago mensual.
+- **Idempotencia:** cada pieza se reclama en `notification_log` (kind `primer_pago_d1` o `primer_pago_d21`, con el día local del envío) y Resend recibe la llave `primer_pago_dN/<cuenta>`. Si ya existe la fila de esa pieza, no se manda otra vez.
+- **Un correo por día local:** la pieza reemplaza el correo del recordatorio, la reactivación o la racha de ese día (la campanita y el push siguen). Si ese día va el resumen semanal (lunes con resumen activo) u otro correo ya salió, la pieza se omite y queda anotada en `notification_log` con `channels` vacío.
+- **Grupo de control:** aún no hay asignación 50 % y 50 %; todas las cuentas que cumplen las reglas la reciben. Activar el control requiere la decisión de Andrés.
 
 ## Variantes de asunto para aprobación
 
@@ -71,7 +80,7 @@ Apostaría por A en ambos: propone una acción concreta y no presupone resultado
 
 ## Cómo medir renovación incremental
 
-Diseño propuesto, aún sin instrumentar ni activar: asignación aleatoria estable por usuario al primer pago mensual confirmado, 50 % a secuencia y 50 % a control sin estas dos piezas. Ambos conservan los mismos transaccionales y reglas para otros correos. Estratificar por plan y promoción del primer pago; guardar asignación, fecha del primer pago, vencimiento del primer periodo, pieza, envío, omisión, entrega/rebote e identificador de Resend. No poner datos personales en enlaces.
+Diseño propuesto; el control aún no está instrumentado (ver «Cómo está conectado»): asignación aleatoria estable por usuario al primer pago mensual confirmado, 50 % a secuencia y 50 % a control sin estas dos piezas. Ambos conservan los mismos transaccionales y reglas para otros correos. Estratificar por plan y promoción del primer pago; guardar asignación, fecha del primer pago, vencimiento del primer periodo, pieza, envío, omisión, entrega/rebote e identificador de Resend. No poner datos personales en enlaces.
 
 **Métrica principal:** usuarios con cobro confirmado de renovación del segundo periodo mensual / usuarios asignados al grupo. Comparar tratamiento frente a control en puntos porcentuales y reportar numerador y denominador por grupo. Mantener en su grupo a quienes no recibieron una pieza por rebote, baja u omisión; comparar solo entregados introduciría sesgo. Reportar la recepción efectiva como dato secundario.
 

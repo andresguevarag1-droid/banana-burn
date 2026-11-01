@@ -723,6 +723,53 @@ export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string }): 
   };
 }
 
+// ───────────── Después del primer pago (docs/emails/primer-pago.md) ─────────────
+// Días 1 y 21 desde el primer pago de un plan mensual. Los envía runReminders (notify-run.ts) en lugar del recordatorio de ese día.
+
+export type FirstPaymentDay = 1 | 21;
+
+/** Copy de cada pieza. El último párrafo lo firma Coach Banana. */
+export const FIRST_PAYMENT: Record<FirstPaymentDay, { subject: string; preheader: string; paragraphs: string[]; cta: string; path: string; kind: BtnKind }> = {
+  1: {
+    subject: "Tu primera semana: entrena y registra",
+    preheader: "Sigue tu rutina y guarda un punto de partida para comparar.",
+    paragraphs: [
+      "Esta semana, dale espacio a tu entrenamiento en el calendario.",
+      "Abre Entrenar y sigue la rutina de tu plan. En cada sesión, registra el peso y las repeticiones que completes: así podrás comparar tu fuerza con el tiempo.",
+      "En Progreso, guarda tu peso y, si quieres, tus medidas o una foto. Ese será tu punto de partida, no una exigencia de cambiar en siete días.",
+      "Al terminar la semana, revisa lo que registraste. La primera meta es conocer tu rutina y volver a ella.",
+    ],
+    cta: "Abrir mi rutina", path: "/app/entrenar", kind: "banana",
+  },
+  21: {
+    subject: "Mira lo que llevas este mes",
+    preheader: "Revisa tus registros y prepara las próximas semanas de entreno.",
+    paragraphs: [
+      "Ya puedes hacer una pausa para revisar lo que llevas de este mes.",
+      "Abre Progreso y compara los registros que hayas guardado: peso, medidas, fotos y fuerza. No todo cambia al mismo ritmo, y la báscula no cuenta toda la historia.",
+      "Si aún no tienes registros, guarda hoy tu punto de partida. Todavía puedes construir el hábito.",
+      "¿Qué viene? Seguir tu rutina, registrar tus sesiones y observar cómo evolucionan tus cargas. Tu plan incluye progresión automática para acompañar ese trabajo durante las próximas semanas.",
+      "Elige desde ahora cuándo harás tu próxima sesión.",
+    ],
+    cta: "Revisar mi progreso", path: "/app/progreso", kind: "primary",
+  },
+};
+
+/** Una pieza después del primer pago. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function primerPago(d: { day: FirstPaymentDay; unsubscribe: string }): Email {
+  const c = FIRST_PAYMENT[d.day];
+  const body = c.paragraphs.slice(0, -1);
+  const coach = esc(c.paragraphs.at(-1));
+  const hero: Hero = { eyebrow: "Tu primer mes", title: esc(c.subject), lead: esc(c.preheader) };
+  const html = body.map((x) => p(esc(x))).join("") + button(c.cta, c.path, c.kind);
+  const reason = "Recibes este correo porque hiciste tu primer pago de un plan mensual y tienes activados los recordatorios de Banana Burn.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, coach }),
+    text: textLayout([c.subject, "", ...body.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, coach),
+  };
+}
+
 // ───────────── Fin de la beta (#109): cuentas de la beta sin tarjeta ni plan ─────────────
 
 /** Día corto en Costa Rica (la hora de las fechas de la beta): "7 de noviembre". */

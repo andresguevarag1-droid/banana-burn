@@ -19,6 +19,7 @@ import { BETA_ENDS_AT } from "@/lib/plans";
 import { entitlementsFrom, type CompRow, type SubscriptionRow } from "@/lib/entitlements";
 import { kindFor, promoFor } from "@/lib/trial";
 import { betaEndDay, betaEndEligible, betaEndIdemKey, betaEndKind, betaEndStep } from "@/lib/beta-fin";
+import { firstPaymentDay, firstPaymentStep, isFirstPaymentStep, type FirstPaymentStep, type FirstPaymentSub } from "@/lib/primer-pago";
 import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, type RecoveryStep } from "@/lib/recuperacion";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
@@ -145,7 +146,7 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
     allPages((a, b) => admin.from("workouts").select("user_id,day").in("user_id", ids).gte("day", since).order("id").range(a, b)),
     allPages((a, b) => admin.from("daily_logs").select("user_id,day").in("user_id", ids).gte("day", since).order("user_id").order("day").range(a, b)),
     allPages((a, b) => admin.from("weights").select("user_id,day,kg").in("user_id", ids).gte("day", isoMinus(utcToday, 21)).order("user_id").order("day").range(a, b)),
-    allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,pushes").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)).order("id").range(a, b)),
+    allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,pushes,channels").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)).order("id").range(a, b)),
     allPages((a, b) => admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids).order("endpoint").range(a, b)),
     // Meta activa: personaliza los correos ("te faltan X kg"). Si falla, los correos salen sin la tarjeta de meta.
     allPages((a, b) => admin.from("goals").select("user_id,start_weight,goal_weight,goal_date").in("user_id", ids).eq("active", true).order("id").range(a, b)),
@@ -164,18 +165,19 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const wkBy = group(wk.data as { user_id: string; day: string }[]);
   const dlBy = group(dl.data as { user_id: string; day: string }[]);
   const wsBy = group(ws.data as { user_id: string; day: string; kg: number }[]);
-  const logBy = group(logs.data as { user_id: string; kind: string; local_day: string; pushes: number }[]);
+  const logBy = group(logs.data as LogRow[]);
   const subBy = group(subs.data as (PushSub & { user_id: string })[]);
   const phoneBy = group((phones.error ? [] : phones.data) as (NativeToken & { user_id: string })[]);
   const goalBy = new Map<string, GoalRow>();
   for (const g of (gl.error ? [] : gl.data) as GoalRow[]) goalBy.set(g.user_id, g);
   const [stepBy, recoveryBy] = await Promise.all([trialSequenceFor(admin, users, prefsOf, now), recoveryFor(admin, users, prefsOf, now, mode)]);
+  const payBy = await firstPaymentFor(admin, users, prefsOf, now, mode);
 
   // Varias personas a la vez (cada una espera push, correo y la base): con miles de cuentas, de una en una no alcanzaba
   // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
   await forEachLimit(users, USER_CONCURRENCY, async (u) => {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
-    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy }); }
+    try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
   });
 }
@@ -258,6 +260,36 @@ export async function recoveryFor(admin: SupabaseClient, users: Pick<Profile, "i
   return out;
 }
 
+/**
+ * Correos después del primer pago (primer-pago.ts): qué pieza le toca hoy a cada cuenta del lote. Solo a la hora del
+ * recordatorio y con los recordatorios por correo activos. Si la lectura de suscripciones falla, nadie del lote la recibe:
+ * sin esos datos podría llegarle a quien canceló o pasó a anual. Exportada para pruebas.
+ */
+export async function firstPaymentFor(admin: SupabaseClient, users: Pick<Profile, "id">[], prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily"): Promise<Map<string, FirstPaymentStep>> {
+  const out = new Map<string, FirstPaymentStep>();
+  const ids = users.filter((u) => {
+    const prefs = prefsOf.get(u.id);
+    return prefs?.email_reminders && atReminderHour(now, prefs, mode);
+  }).map((u) => u.id);
+  if (!ids.length) return out;
+  const subs = await allPages((a, b) => admin.from("subscriptions").select("user_id,status,plan,billing,cancel_at_period_end,current_period_start,current_period_end,created_at").in("user_id", ids).order("id").range(a, b));
+  if (subs.error) { logError("cron:recordatorios", "first_payment_query_failed", { code: subs.error.code }); return out; }
+  const subsBy = new Map<string, FirstPaymentSub[]>();
+  for (const r of subs.data as (FirstPaymentSub & { user_id: string })[]) subsBy.set(r.user_id, [...(subsBy.get(r.user_id) ?? []), r]);
+  for (const id of ids) {
+    const step = firstPaymentStep({ subs: subsBy.get(id) ?? [], now, emailReminders: true });
+    if (step) out.set(id, step);
+  }
+  return out;
+}
+
+/** ¿Es la corrida del recordatorio de esta persona? (diario: siempre; cada hora: su hora del recordatorio). */
+function atReminderHour(now: Date, prefs: Prefs, mode: "hourly" | "daily") {
+  return mode === "daily" || localClock(now, prefs.timezone).hour === reminderHour(prefs);
+}
+
+type LogRow = { user_id: string; kind: string; local_day: string; pushes: number; channels?: string[] | null };
+
 /** Hora local del recordatorio (HH de reminder_time; 7 si no es válida). */
 const reminderHour = (prefs: Prefs) => (isHHMM(prefs.reminder_time) ? Math.floor(toMinutes(prefs.reminder_time) / 60) : 7);
 
@@ -269,11 +301,13 @@ export function recoveryAt(now: Date, prefs: Prefs): Date {
 
 type Grouped = {
   wkBy: Map<string, { user_id: string; day: string }[]>; dlBy: Map<string, { user_id: string; day: string }[]>; wsBy: Map<string, { user_id: string; day: string; kg: number }[]>;
-  logBy: Map<string, { user_id: string; kind: string; local_day: string; pushes: number }[]>; subBy: Map<string, (PushSub & { user_id: string })[]>;
+  logBy: Map<string, LogRow[]>; subBy: Map<string, (PushSub & { user_id: string })[]>;
   phoneBy: Map<string, (NativeToken & { user_id: string })[]>;
   goalBy: Map<string, GoalRow>;
   /** Pieza de la secuencia de la prueba que le toca hoy (trialSequenceFor). */
   stepBy: Map<string, TrialStep>;
+  /** Pieza después del primer pago que le toca hoy (firstPaymentFor). */
+  payBy: Map<string, FirstPaymentStep>;
   /** Correo de recuperación (día 8 o 14) que toca hoy, en el día local (recoveryFor). */
   recoveryBy: Map<string, RecoveryStep>;
 };
@@ -289,7 +323,7 @@ export function goalFor(g: GoalRow | undefined, weights: { day: string; kg: numb
   return { start, current: Number.isFinite(current) ? current : start, goal, date: g.goal_date };
 }
 
-async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy }: Grouped) {
+async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<string, Prefs>, now: Date, mode: "hourly" | "daily", stats: RunStats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy }: Grouped) {
   {
     const prefs = prefsOf.get(u.id)!;
     const c = localClock(now, prefs.timezone);
@@ -326,9 +360,13 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     // Secuencia de la prueba: a la hora del recordatorio, una vez por pieza y por cuenta (ONCE_DAY).
     const remindHour = reminderHour(prefs);
     const step = mode === "daily" || c.hour === remindHour ? stepBy.get(u.id) ?? null : null;
+    // Después del primer pago: una vez por cuenta y pieza (si ya se reclamó en su ventana, no se repite).
+    const userLogs = logBy.get(u.id) ?? [];
+    const pay = payBy.get(u.id) ?? null;
+    const payDue = pay && !userLogs.some((l) => l.kind === pay) ? pay : null;
     const recovery = recoveryBy.get(u.id) ?? null;
     const recoveryNow = recovery && (mode === "daily" || c.hour === remindHour) ? recovery : null;
-    if (!decisions.length && !step && !recoveryNow) return;
+    if (!decisions.length && !step && !recoveryNow && !payDue) return;
 
     let email: string | null | undefined;
     const getEmail = async () => {
@@ -340,14 +378,25 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const goal = goalFor(goalBy.get(u.id), wsBy.get(u.id) ?? []);
 
     // La pieza reemplaza el correo del recordatorio (o la reactivación) de ese día; push y campanita siguen igual.
-    if (step && await sendTrialStep(admin, u.id, step, getEmail, stats)) {
-      for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
-    }
+    const stepSent = !!step && await sendTrialStep(admin, u.id, step, getEmail, stats);
+    if (stepSent) for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
     // Recuperación: en su día local no sale ningún otro correo, ni el semanal, a ninguna hora (antes o después de la pieza).
     // Solo si reclamarla falló siguen los demás (ese día no salió). Push y campanita siguen igual.
     if (recovery && (!recoveryNow || await sendRecovery(admin, u.id, recoveryNow, getEmail, stats))) {
       for (const d of decisions) d.email = false;
     }
+
+    // Nunca dos correos el mismo día local. Si hoy ya salió (o sale) otro correo, incluido el resumen semanal del lunes, la
+    // pieza se omite y queda anotada; si sale la pieza, reemplaza el correo del recordatorio, la reactivación o la racha.
+    // La pieza de la prueba y la recuperación se anotan con ONCE_DAY (no salen en todayLogs): se revisan aparte, y el día
+    // local de la recuperación es todo suyo, haya salido ya o no.
+    const paySentToday = todayLogs.some((l) => isFirstPaymentStep(l.kind) && l.channels?.includes("email"));
+    let paySent = false;
+    if (payDue) {
+      const otherEmail = stepSent || !!recovery || todayLogs.some((l) => l.channels?.includes("email")) || decisions.some((d) => d.kind === "semanal" && d.email) || (c.dow === 1 && prefs.weekly_summary);
+      paySent = await sendFirstPaymentStep(admin, u.id, payDue, c.iso, otherEmail, getEmail, stats);
+    }
+    if (paySent || paySentToday) for (const d of decisions) d.email = false;
 
     for (const d of decisions) {
       // Reclamar el envío: si otra corrida ya lo hizo hoy, no se repite.
@@ -390,6 +439,28 @@ async function sendTrialStep(admin: SupabaseClient, userId: string, step: TrialS
   if (to) {
     const unsubscribe = unsubscribeUrl(userId, "recordatorios");
     const r = await sendEmail(to, withLoginLinks(T.secuenciaPrueba({ day: stepDay(step), unsubscribe }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
+    if (r.ok) stats.email++;
+  }
+  stats.sent[step] = (stats.sent[step] ?? 0) + 1;
+  return true;
+}
+
+/**
+ * Reclama y envía (u omite) una pieza después del primer pago. Se reclama con el día local del envío: así cuenta para la
+ * regla de un correo por día. `omit`: hoy ya va otro correo; se anota con channels vacío y no se envía.
+ * true si se reclamó para enviarse en esta corrida (aunque el correo fallara).
+ */
+async function sendFirstPaymentStep(admin: SupabaseClient, userId: string, step: FirstPaymentStep, localDay: string, omit: boolean, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const { data: claimed, error } = await admin.from("notification_log")
+    .upsert({ user_id: userId, kind: step, local_day: localDay, channels: omit ? [] : ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+    .select("id");
+  if (error) { stats.errors++; return false; }
+  if (!claimed?.length) return false;
+  if (omit) { stats.sent[`${step}_omitido`] = (stats.sent[`${step}_omitido`] ?? 0) + 1; return false; }
+  const to = await getEmail();
+  if (to) {
+    const unsubscribe = unsubscribeUrl(userId, "recordatorios");
+    const r = await sendEmail(to, withLoginLinks(T.primerPago({ day: firstPaymentDay(step), unsubscribe }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
     if (r.ok) stats.email++;
   }
   stats.sent[step] = (stats.sent[step] ?? 0) + 1;
