@@ -1,3 +1,4 @@
+import { PurchaseNote } from "@/components/retos/purchase-note";
 // Página de un programa en la tienda (servidor): vende la transformación con datos reales del programa.
 // Para quién es, el resultado, duración, días, minutos, equipo y nivel; la semana 1 completa; la técnica animada de un
 // ejercicio; qué cambia en tu app al empezarlo; fases; precio y botón. Sin testimonios ni cifras inventadas.
@@ -102,12 +103,14 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
         <p className="text-sm font-semibold text-muted">Pago único</p>
         {owned ? <p className="inline-flex items-center gap-1 text-lg font-extrabold text-peel"><CheckCircle weight="fill" className="size-5" />Ya es tuyo</p> : <p className="tabular-nums">{finalMinor < listMinor && <s className="mr-1.5 text-sm text-faint">{usd(listMinor)}</s>}<span className="text-2xl font-extrabold text-ink">{usd(finalMinor)}</span> <span className="text-xs font-semibold text-muted">USD</span></p>}
       </div>
-      <div className="mt-4">{cta}</div>
+      <div className="mt-3 hidden lg:block">{cta}</div>
+      <PurchaseNote nutrition={!!meta.nutrition} />
     </section>
   );
 
   return (
-    <div className="space-y-6 animate-enter">
+    <div className="space-y-6 pb-40 lg:pb-0 animate-enter">
+      <div className="fixed inset-x-4 bottom-24 z-40 rounded-3xl border border-line bg-paper p-3 shadow-lift lg:hidden" aria-label="Acción del reto">{cta}</div>
       <Link href="/app/retos" className="tap inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Programas y retos</Link>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
@@ -120,6 +123,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               </div>
             </ChallengeCover>
           </header>
+          <div className="lg:hidden">{priceCard}</div>
 
           <ul className="flex flex-wrap gap-2 text-xs font-bold text-ink/85">
             <li className="chip h-8 border border-line bg-white"><CalendarCheck weight="duotone" className="size-4" />{dur}</li>
@@ -141,7 +145,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
           </section>
 
           {coach.id !== "banana" && (
-            <section aria-labelledby="tu-coach" className="flex items-center gap-4 overflow-hidden rounded-[1.5rem] bg-[linear-gradient(135deg,#F3E8FF,#FFD6E7)] p-4 sm:p-5">
+            <section aria-labelledby="tu-coach" className="flex items-center gap-4 overflow-hidden rounded-[1.5rem] bg-plat-soft p-4 sm:p-5">
               <CoachPic src={coach.hello} alt={`${coach.name} saludando`} size={128} className="size-28 shrink-0 rounded-2xl object-contain sm:size-32 !bg-transparent" iconClassName="size-14" />
               <div className="min-w-0">
                 <p className="text-xs font-extrabold uppercase tracking-[.12em] text-ink/70">Tu coach en este programa</p>
@@ -150,8 +154,6 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               </div>
             </section>
           )}
-
-          <div className="lg:hidden">{priceCard}</div>
 
           {c.safetyNote && <p className="flex gap-2.5 rounded-2xl border border-sky/25 bg-sky/5 p-4 text-sm text-body"><WarningCircle weight="duotone" className="mt-0.5 size-5 shrink-0 text-sky" /><span><b className="text-ink">Antes de empezar.</b> {c.safetyNote}</span></p>}
 
@@ -177,7 +179,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               <p className="mt-1 text-sm text-muted">{allIds.filter((id) => coachArt(coach, id)).length} de los {allIds.length} ejercicios traen su ilustración, para que veas la postura antes de hacerla.</p>
               <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {allIds.filter((id) => coachArt(coach, id)).slice(0, 6).map((id) => (
-                  <li key={id} className="overflow-hidden rounded-2xl bg-[#F3E8FF]">
+                  <li key={id} className="overflow-hidden rounded-2xl bg-plat-soft">
                     <CoachPic src={coachArt(coach, id)!} size={240} sizes="(min-width: 640px) 200px, 45vw" className="aspect-square w-full object-contain" iconClassName="size-12" />
                     <p className="px-2.5 pb-2.5 pt-1 text-sm font-bold leading-tight text-ink">{exInfo(id)?.name ?? id}</p>
                   </li>

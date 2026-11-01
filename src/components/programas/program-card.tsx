@@ -30,11 +30,13 @@ export function ProgramCard({ c, owned, discountPct, status, days, big = false }
       </ChallengeCover>
       <div className="flex flex-1 flex-col p-4 sm:p-5">
         <p className={`text-sm text-body ${big ? "line-clamp-4" : "line-clamp-3"}`}>{c.program.who}</p>
+        <p className="mt-2 text-sm font-semibold text-ink">{c.program.result}</p>
         <ul className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold text-ink/80">
           <li className="chip h-7 bg-cream"><CalendarCheck weight="duotone" className="size-3.5" />{days}</li>
           <li className="chip h-7 bg-cream"><Clock weight="duotone" className="size-3.5" />{c.program.sessionMinutes} min</li>
           <li className="chip h-7 bg-cream"><Target weight="duotone" className="size-3.5" />{LEVEL_LABEL[c.program.level]}</li>
         </ul>
+        <p className="mt-3 text-xs text-muted">Pago único, aparte de tu plan.{!owned && discountPct > 0 ? ` Ahorras ${discountPct} % por tu nivel.` : " IVA incluido."}</p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-4">
           {status === "activo" ? <span className="text-sm font-extrabold text-peel">En curso</span> : <PriceTag c={c} owned={owned} discountPct={discountPct} />}
           <span className="inline-flex items-center gap-1 text-sm font-extrabold text-ink">{status === "activo" ? "Ver avance" : owned ? "Ver programa" : "Ver qué incluye"}<ArrowRight weight="bold" className="size-4 transition-transform duration-(--dur-fast) ease-out group-hover:translate-x-0.5" /></span>

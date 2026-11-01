@@ -1,3 +1,4 @@
+import { PurchaseNote } from "@/components/retos/purchase-note";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient, getViewer, STAFF } from "@/lib/supabase/server";
@@ -91,12 +92,14 @@ export default async function RetoDetalle({ params, searchParams }: P) {
               <p className="text-sm font-semibold text-muted">{paid ? "Pago único" : "Precio"}</p>
               {paid ? (isOwned ? <p className="inline-flex items-center gap-1 text-lg font-extrabold text-peel"><CheckCircle weight="fill" className="size-5" />Ya es tuyo</p> : <p className="tabular-nums">{finalMinor < listMinor && <s className="mr-1.5 text-sm text-faint">{usd(listMinor)}</s>}<span className="text-2xl font-extrabold text-ink">{usd(finalMinor)}</span> <span className="text-xs font-semibold text-muted">USD</span></p>) : <p className="text-2xl font-extrabold text-peel">Gratis</p>}
             </div>
-            <div className="mt-4">{cta}</div>
+            <div className="mt-3 hidden lg:block">{cta}</div>
+            {paid && <PurchaseNote nutrition={challengeNeedsNutrition(c)} />}
           </section>
   );
 
   return (
-    <div className="space-y-6 animate-enter">
+    <div className="space-y-6 pb-40 lg:pb-0 animate-enter">
+      <div className="fixed inset-x-4 bottom-24 z-40 rounded-3xl border border-line bg-paper p-3 shadow-lift lg:hidden" aria-label="Acción del reto">{cta}</div>
       <Link href="/app/retos" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Tienda de retos</Link>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
@@ -109,6 +112,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
               </div>
             </ChallengeCover>
           </header>
+          <div className="lg:hidden">{priceCard}</div>
 
           <ul className="flex flex-wrap gap-2 text-xs font-bold text-ink/85">
             <li className="chip h-8 bg-white border border-line"><CalendarCheck weight="duotone" className="size-4" />{c.days} días</li>
@@ -120,8 +124,6 @@ export default async function RetoDetalle({ params, searchParams }: P) {
 
           <p className="text-[17px] leading-relaxed text-body">{c.desc}</p>
 
-          {/* En móvil el precio y el botón van arriba, antes del plan; en escritorio quedan en la columna lateral. */}
-          <div className="lg:hidden">{priceCard}</div>
 
           {c.safetyNote && (
             <p className="flex gap-2.5 rounded-2xl border border-sky/25 bg-sky/5 p-4 text-sm text-body"><Info weight="duotone" className="mt-0.5 size-5 shrink-0 text-sky" /><span><b className="text-ink">Antes de empezar.</b> {c.safetyNote}</span></p>
