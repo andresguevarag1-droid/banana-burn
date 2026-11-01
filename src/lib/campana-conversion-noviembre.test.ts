@@ -37,7 +37,7 @@ describe("la condición", () => {
   });
 
   it("reactivar cuenta como subir y exige pagos, margen, comisión, datos completos y máximo positivo", () => {
-    for (const t of ["**N > 0**", "**I − G ≥ 0**", "**mínimo(I, tope semanal) > 0**", "conciliados con Tilopay y ONVO"]) expect(s).toContain(t);
+    for (const t of ["**N > 0**", "**I − G ≥ 0**", "**mínimo(I, tope semanal) > G**", "conciliados con Tilopay y ONVO"]) expect(s).toContain(t);
     expect(s).toMatch(/cuenta como \*\*subir\*\*/);
     expect(regla).toMatch(/la decisión puede ser "mantener" o "pausar", nunca "subir"/);
     expect(regla).toContain("mínimo(ingresos nuevos netos de la semana N, tope semanal)");

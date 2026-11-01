@@ -14,7 +14,7 @@ Reactivar anuncios es pasar de no gastar a gastar, así que en la tabla "Cómo s
 2. El margen de la semana es positivo o cero: **I − G ≥ 0**, con I = ingresos nuevos netos y G = gasto en Meta Ads de la semana.
 3. Andrés confirmó la comisión del procesador (`c` y `f`). Mientras esté por confirmar, la regla dice que la decisión nunca puede ser "subir".
 4. El gasto de los 7 días está completo en `gasto_manual` (los días sin gasto, con 0 confirmado) y los ingresos están conciliados con Tilopay y ONVO.
-5. El máximo de la semana siguiente es mayor que cero: **mínimo(I, tope semanal) > 0**, con el tope semanal que fije Andrés.
+5. El máximo de la semana siguiente es mayor que el gasto de esta semana: **mínimo(I, tope semanal) > G**, con el tope semanal que fije Andrés. Si la semana del 2 al 8 no tuvo gasto (G = 0), basta con que ese máximo sea mayor que cero; si hubo gasto y el máximo queda en G o por debajo, la regla dice "mantener", no "subir".
 
 Si se cumplen, el gasto de la semana del 9 al 15 de noviembre puede llegar como máximo a mínimo(I, tope semanal). **Ese máximo es para todo el gasto en Meta Ads de la semana**: si Andrés aprueba también otra campaña (como [meta-ads-noviembre.md](../../marketing/estrategia/meta-ads-noviembre.md)) o el [boost orgánico](../../marketing/ads/boost-organico.md), todo suma en G y comparte el mismo máximo. Si no cabe todo, primero va esta campaña, porque busca pagos.
 
@@ -182,7 +182,7 @@ Límites que hay que tener presentes:
 ## 8. Qué paso del embudo mueve y cuánto dinero puede mover
 
 - **Paso: prueba a pago** de cuentas nuevas de Costa Rica. La campaña trae pruebas iniciadas; el resultado que cuenta es el primer pago de esas pruebas, y después la renovación.
-- **Cómo se mide:** costo por usuario de pago de la cohorte (gasto ÷ usuarios de pago, `tablero-diario.sql`) y margen semanal (I − G, `rentabilidad-semanal.sql`). Meta de prueba a pago: 35 %.
+- **Cómo se mide:** costo por usuario de pago de la cohorte (gasto ÷ usuarios de pago, `tablero-diario.sql`) y margen semanal (I − G, `rentabilidad-semanal.sql`). Meta de prueba a pago: 35 %, la meta redondeada de la oficina; la sección 3 usa 35.2 % porque es la cifra exacta del acta (40 % deja la tarjeta × 88 % se cobra bien) y con ella se calculan los techos.
 - **Cuánto dinero puede mover**, con los precios de `src/lib/plans.ts` y `src/lib/trial.ts`, antes de comisión: cada usuario de pago deja en su primer cobro entre $4.99 (Entreno con 50 %) y $89.99 (Entreno + Nutrición anual), y cada renovación mensual $9.99 o $14.99. Cuántos usuarios de pago trae la campaña: por medir. Lo que sí se fija es el mínimo para no perder: 8, 15 o 29 pagos de $4.99 según el nivel.
 - **Riesgo de dinero:** como máximo el nivel aprobado por una semana, y nunca más que lo que cobramos la semana anterior.
 
