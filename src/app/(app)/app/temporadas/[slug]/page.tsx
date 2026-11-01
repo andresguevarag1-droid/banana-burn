@@ -59,7 +59,7 @@ export default async function Temporada({ params, searchParams }: P) {
       {sp.listo && <p className="flex items-center gap-2 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel"><CheckCircle weight="duotone" className="size-5 shrink-0" />Tu semana quedó lista. Tu temporada empieza el {longDate(s.startsOn)}.</p>}
 
       <section className="card overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="relative aspect-square md:aspect-auto md:min-h-80 bg-[var(--sport-soft)]">
+        <div className="relative hidden md:block md:min-h-80 bg-[var(--sport-soft)]">
           <SafeImage src={coach.hello} alt={`${coach.name} con ropa de ${info.name.toLowerCase()}`} fill priority sizes="(min-width: 768px) 45vw, 100vw" className="object-contain object-bottom p-4 mix-blend-multiply" />
         </div>
         <div className="space-y-4 p-5 sm:p-7">
@@ -67,6 +67,7 @@ export default async function Temporada({ params, searchParams }: P) {
           <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{s.title}</h1>
           <p className="text-body text-pretty">{info.tagline} {meta?.who}</p>
           <p className="flex items-center gap-2 text-sm font-semibold text-ink"><CalendarCheck weight="duotone" className="size-5 text-[var(--sport)]" />Del {longDate(s.startsOn)} al {longDate(s.endsOn)}</p>
+          <p className="text-sm font-semibold text-ink">Inscripciones hasta el {longDate(s.enrollUntil)}.</p>
           <p className="flex items-center gap-2 text-sm font-semibold text-ink"><Timer weight="duotone" className="size-5 text-[var(--sport)]" />{status === "preventa" ? `Empieza en ${daysToStart(s, view.today)} días` : status === "activa" ? `Semana ${seasonWeek(s, view.today)} de 8` : "Esta temporada terminó"}</p>
 
           {owned ? (
