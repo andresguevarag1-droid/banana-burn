@@ -39,7 +39,7 @@ Ritmo desde el 24 de octubre: posts a las 8:00 a. m. y 12:00 p. m. (piezas OX/NX
 | Dom 15 nov | | | | Mitad del reto (1 a 12) |
 | Lun 16 nov | | NX11 No fue magia (RETO) | | |
 | Mar 17 nov | | | | Carrusel K10 Instalar la app |
-| Mié 18 nov | | | | Referidos: 3 amigos = 1 mes |
+| Mié 18 nov | | | | Referidos: 3 amigos que pagan = 1 mes (revisar en Business Suite: el texto programado no está en el repo y debe decir que el amigo cuenta cuando paga su primer plan) |
 | Jue 19 nov | | | | Carrusel K11 Administradores de condominio |
 | Vie 20 nov | | NX07 Cuánto descansar (de 1 a 3 minutos) | | Carrusel K12 Cierre de inscripciones |
 | Sáb 21 nov | | | | Meme "el lunes empiezo" |
