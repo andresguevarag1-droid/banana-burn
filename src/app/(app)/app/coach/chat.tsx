@@ -91,7 +91,8 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
   useEffect(() => { setNow(new Date()); }, []);
   const out = !!quota && quota.left !== null && quota.left <= 0;
   const [msgs, setMsgs] = useState<Msg[]>(initial);
-  const [input, setInput] = useState("");
+  // Sin preguntas, la respuesta de la burbuja queda guardada desde el primer render (se ve aunque no haya campo).
+  const [input, setInput] = useState(() => (autoAsk({ ask, configured, out }) === "fill" ? ask! : ""));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<Failed | null>(null);
   const end = useRef<HTMLDivElement>(null);
@@ -166,11 +167,10 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
   useEffect(() => {
     if (asked.current) return;
     asked.current = true;
-    const act = autoAsk({ ask, configured, out });
-    if (!act) return;
+    // "fill" ya quedó en el campo; el parámetro se queda en la dirección para que recargar no la pierda.
+    if (autoAsk({ ask, configured, out }) !== "send") return;
     router.replace("/app/coach", { scroll: false });
-    if (act === "fill") setInput(ask!);
-    else setPending(ask);
+    setPending(ask);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- solo al abrir
   useEffect(() => {
     if (!pending) return;
@@ -239,6 +239,15 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
               <span className="flex-1 min-w-0 font-semibold">{failed.err.text}</span>
               {failed.err.retry && <button type="button" onClick={() => send(failed.q)} disabled={busy} className="tap pressable inline-flex items-center gap-1.5 rounded-full bg-white border border-bad/30 px-3 h-11 font-bold text-bad hover:bg-bad/5"><ArrowCounterClockwise weight="bold" className="size-4" />Reintentar</button>}
             </div>
+          </div>
+        )}
+        {configured && out && input.trim() && (
+          <div className="space-y-1 animate-enter" data-held>
+            <div className="flex items-end gap-2 justify-end">
+              <div className="max-w-[80%] rounded-3xl rounded-br-lg px-4 py-3 text-[15px] leading-relaxed bg-ink/70 text-white">{input}</div>
+              <UserAvatar name={name} />
+            </div>
+            <p className="pr-11 text-right text-xs font-semibold text-muted">Sin enviar: podrás enviarla cuando se renueven tus preguntas.</p>
           </div>
         )}
         {configured && out && quota && <LimitCard q={quota} now={now} coachName={coachName} />}
