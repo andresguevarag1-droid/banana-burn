@@ -82,11 +82,13 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ firstSession = false, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+export function Player({ firstSession = false, firstOffer, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
   /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
   intro?: string;
   /** Invitación autorizada en servidor, solo para el cierre guardado. */
   firstSession?: boolean;
+  /** Primer entreno de una cuenta en prueba sin tarjeta (#199): id de la cuenta para la oferta del resumen. */
+  firstOffer?: string;
   /** Variante del entreno para el embudo ("casa-primero": el primer entreno en casa de quien tiene gym). */
   variant?: string;
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
@@ -667,7 +669,8 @@ export function Player({ firstSession = false, variant, nutritionUpsell, upcomin
   }
 
   if (phase === "saved") {
-    return <Recap nutritionUpsell={saved?.ok && !saved.demo && !saved.already ? nutritionUpsell : undefined} upcoming={upcoming} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
+    const fresh = !!saved?.ok && !saved.demo && !saved.already;
+    return <Recap firstOffer={fresh && !saved?.repeat ? firstOffer : undefined} nutritionUpsell={fresh ? nutritionUpsell : undefined} upcoming={upcoming} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
       done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} />;
   }
 

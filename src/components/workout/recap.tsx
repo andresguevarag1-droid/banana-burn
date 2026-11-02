@@ -15,6 +15,7 @@ import { GoldBanana } from "./ui";
 import { WeeklyNutritionUpsell } from "@/components/nutrition-upsell-weekly";
 import type { NutritionUpsellGoal } from "@/lib/plan-access";
 import { RecapNext } from "./recap-next";
+import { FirstWorkoutOffer } from "./first-workout-offer";
 
 /** Número que sube hasta su valor (momento raro: el cierre del entreno). */
 function useCountUp(to: number, ms = 800) {
@@ -30,8 +31,10 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
+export function Recap({ firstOffer, nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null }: {
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
+  /** Id de la cuenta si este es su primer entreno guardado en la prueba sin tarjeta (#199): muestra la oferta del plan. */
+  firstOffer?: string;
   sex?: string | null;
   voice?: Voice;
   /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
@@ -162,7 +165,9 @@ export function Recap({ nutritionUpsell, upcoming = null, next = [], sex = null,
             </div>
           )}
           {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
-          {full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
+          {/* Una sola oferta a la vez: en el primer entreno, la del plan (debajo del logro). */}
+          {firstOffer && <FirstWorkoutOffer userId={firstOffer} />}
+          {!firstOffer && full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
           {!repeat && <RecapNext upcoming={upcoming} />}
 
           <div className="mt-3 card p-4 text-left" aria-live="polite">

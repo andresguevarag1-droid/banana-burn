@@ -9,6 +9,8 @@ import { dashboard, firstSessionPlan, getAthlete } from "@/lib/athlete";
 import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
+import { activateHref, canActivatePlan } from "@/lib/first-workout-offer";
+import { trialCardNotice } from "@/lib/trial-card-notice";
 import { hoyTip } from "@/lib/plan-access";
 import { DAY_NAMES, EX, homeFirstAt, isTrainingDay, offersHomeFirst, prescribe, type SlotCfg } from "@/lib/engine";
 import { getHistory } from "@/lib/history";
@@ -154,6 +156,13 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
       <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" />
+      {/* Desde el primer entreno (#199): activar el plan sin esperar al final de la prueba. Si sale el aviso de tarjeta, ese manda. */}
+      {canActivatePlan(noticeEnt) && !trialCardNotice(noticeEnt) && (
+        <Link href={activateHref()} data-cta="hoy-activar-plan" className="card flex items-center gap-3 p-4">
+          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">Activar mi plan</span><span className="block text-sm text-muted">Sigue sin cortes al terminar tu prueba. Cancela cuando quieras.</span></span>
+          <ArrowRight weight="bold" className="size-5 shrink-0 text-ink" />
+        </Link>
+      )}
       <div id="hoy-continuar" className="scroll-mt-24" />
       <PromptQueue>
         {paused && (
