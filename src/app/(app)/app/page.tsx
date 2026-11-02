@@ -51,6 +51,8 @@ import { WeekRecap } from "@/components/primeros-pasos/week-recap";
 import { LoMejor } from "@/components/primeros-pasos/lo-mejor";
 import { weekRecapFor } from "@/lib/week-recap-server";
 import { FIRST_DAY_CARD_MIN_DAY, isFirstDay } from "@/lib/hoy-first";
+import { CoachPrompt } from "@/components/coach-prompt";
+import { showHoyCoachPrompt } from "@/lib/coach-prompt";
 
 export const metadata = { title: "Hoy" };
 
@@ -132,6 +134,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Primeros pasos: lo acompaña Coach Platanita si el perfil es de mujer o el programa es suyo; si no, Coach Banana.
   const guideCoach = coach.id !== "banana" ? coach : a.sex === "f" ? COACHES.platanita : null;
   const recap = await weekRecapFor(v, d.today, a.trainDays, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[]).catch(() => null);
+  // Demo: ?primera=2 muestra la burbuja del coach del día siguiente.
+  const coachPrompt = v.demo ? sp.primera === "2" : showHoyCoachPrompt({ workouts: learnState.workouts, trainedToday: g.trainedToday, coachMessages: learnState.coachMessages, registeredAt: a.registeredAt, now: new Date(), demo: false });
   const tourSteps = [
     { target: "hoy-entreno", title: "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
     { target: "hoy-pasos", title: "Tus primeros pasos", body: "Esta lista te enseña el resto de la app, un paso a la vez." },
@@ -156,6 +160,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" />
       <div id="hoy-continuar" className="scroll-mt-24" />
       <PromptQueue>
+        {/* El coach se presenta (#198): el día después del primer entreno, si hoy no entrena, primero en la fila. */}
+        {coachPrompt && <CoachPrompt where="hoy" home={a.equipment === "casa" || a.equipment === "ninguno"} coach={coach.id === "banana" ? null : coach} />}
         {paused && (
           <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cream text-ink"><Pause weight="duotone" className="size-5" /></span>

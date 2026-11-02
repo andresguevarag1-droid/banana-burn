@@ -1,10 +1,12 @@
 "use client";
 import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowCounterClockwise, ArrowRight, ArrowUp, ChatCircle, Moon, Monkey, Plus, WarningCircle } from "@/components/icons";
 import { COACH_LIMITS, quotaFrom, quotaLine, resetLabel, type CoachLimitBody, type CoachQuota } from "@/lib/coach-quota";
 import { errorFor, isLocalOnly, splitCut, type ChatError } from "./errors";
+import { autoAsk } from "@/lib/coach-prompt";
 
 type Msg = { role: "user" | "assistant"; content: string; at?: string };
 /** Un envío que falló: el mensaje del usuario queda aparte (no entra al historial que se manda al modelo). */
@@ -79,7 +81,9 @@ function LimitCard({ q, now, coachName }: { q: CoachQuota; now: Date | null; coa
   );
 }
 
-export function Chat({ initial, opener, suggest, name, configured = true, quota: quota0 = null, demo = false, persona = null }: { initial: Msg[]; opener: string; suggest: string[]; name: string; configured?: boolean; quota?: CoachQuota | null; demo?: boolean; persona?: ChatPersona }) {
+export function Chat({ initial, opener, suggest, name, configured = true, quota: quota0 = null, demo = false, persona = null, ask = null }: { initial: Msg[]; opener: string; suggest: string[]; name: string; configured?: boolean; quota?: CoachQuota | null; demo?: boolean; persona?: ChatPersona;
+  /** Respuesta de un toque de la burbuja del coach (#198): se envía sola al abrir (o queda escrita si no quedan preguntas). */
+  ask?: string | null }) {
   const coachName = persona?.name ?? "Coach Banana";
   const [quota, setQuota] = useState<CoachQuota | null>(quota0);
   // La hora de renovación se muestra en la hora del navegador: solo después de montar (el servidor no la conoce).
@@ -153,6 +157,26 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
       setFailed({ q, err: e && typeof e === "object" && "text" in e ? (e as ChatError) : errorFor(null) });
     } finally { setBusy(false); }
   }
+
+  // Una sola vez y sin el parámetro en la dirección: recargar o volver atrás no la reenvía ni gasta otra pregunta.
+  // Se envía en el render siguiente, con el historial ya filtrado por "Nueva conversación".
+  const router = useRouter();
+  const asked = useRef(false);
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => {
+    if (asked.current) return;
+    asked.current = true;
+    const act = autoAsk({ ask, configured, out });
+    if (!act) return;
+    router.replace("/app/coach", { scroll: false });
+    if (act === "fill") setInput(ask!);
+    else setPending(ask);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- solo al abrir
+  useEffect(() => {
+    if (!pending) return;
+    setPending(null);
+    void send(pending);
+  }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps -- send cambia en cada render
 
   function newConversation() {
     try { localStorage.setItem(SINCE_KEY, new Date().toISOString()); } catch { /* sin almacenamiento */ }

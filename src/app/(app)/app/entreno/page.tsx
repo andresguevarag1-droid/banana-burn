@@ -16,6 +16,7 @@ import { Player, type PlayerExercise } from "./player";
 import { hasSavedWorkout, templatesDoneToday } from "./done-today";
 import { getVoice } from "@/lib/voice-server";
 import { modeNote, programTempoNote, rxNote } from "@/lib/voice";
+import { inCoachPromptWindow } from "@/lib/coach-prompt";
 
 export const metadata = { title: "Entreno" };
 
@@ -141,6 +142,9 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
     }
   }
-  return <Player firstSession={!!firstPlan && !expres && dia == null} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  const firstSession = !!firstPlan && !expres && dia == null;
+  // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
+  const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.registeredAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
+  return <Player firstSession={firstSession} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }
