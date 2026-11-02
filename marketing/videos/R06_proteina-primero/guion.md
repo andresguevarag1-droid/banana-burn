@@ -21,7 +21,7 @@ Textos añadidos de hasta 8 palabras por pantalla. Capturas originales conservan
 | 2 a 4 s | 1.5 a 3 s | Elige una fuente de proteína | 5 | Manos preparando huevo, sin prescribir cantidades. |
 | 4 a 6 s | 3 a 4.5 s | Huevo, pollo o yogur natural | 5 | Cortes de alimentos reales, sin números nutricionales añadidos. |
 | 6 a 8 s | 4.5 a 6 s | Registra lo que comes + etiqueta “Ejemplo” | 5 | Captura real de Comida, completa. |
-| 8 a 10 s | 6 a 7.5 s | Revisa tu proteína del día + etiqueta “Ejemplo” | 6 | Acercamiento al dato original, sin modificarlo. |
+| 8 a 10 s | 6 a 7.5 s | Tu meta de proteína, con tu médico | 7 | Tarjeta paper sin cifras; sin acercamiento a los gramos de la captura (#215). |
 | 10 a 12 s | 7.5 a 9 s | Ajusta las porciones con tu equipo médico | 7 | Plato real y cubiertos; sin plan alimentario individual. |
 | 12 a 14 s | 9 a 10.5 s | No sustituye la indicación de tu médico. | 7 | Tarjeta paper con la advertencia sola, grande. |
 | 14 a 16 s | 10.5 a 12 s | Entrena y registra a tu ritmo + etiqueta “Ejemplo” | 7 | Regreso a captura real de Comida. |
@@ -35,7 +35,7 @@ Grabar vertical 1080 x 1920, 30 fps, tomas limpias de 6 s, sin texto, voz ni mú
 
 ## Captura real
 
-Usar `public/landing/nutricion.png`. Marco ink de radio 42. Mostrar la etiqueta “Ejemplo” fuera de la captura; se cuenta dentro del máximo de 8 palabras añadidas. Solo escala uniforme y recorte; nunca cambiar cifras ni reconstruir la interfaz. En el montaje UGC, el primer plano de captura es completo y el siguiente permite acercamiento al dato indicado tras verificar su posición. El proyecto de motion muestra la captura completa en ambos planos para evitar recortar el dato incorrecto.
+Usar `public/landing/nutricion.png`. Marco ink de radio 42. Mostrar la etiqueta “Ejemplo” fuera de la captura; se cuenta dentro del máximo de 8 palabras añadidas. Solo escala uniforme y recorte; nunca cambiar cifras ni reconstruir la interfaz. La captura sale una sola vez, completa y pequeña dentro del teléfono. Desde #215 no hay acercamiento al dato de proteína ni a ninguna cifra en gramos, ni en el montaje UGC ni en el proyecto de motion.
 
 public/landing/nutricion.png corresponde al modo normal (2,500 kcal, 185 g), no a Banana Shield. Mostrar como ejemplo de registro, nunca como recomendación para GLP-1 ni como meta universal. No rotular la captura como Banana Shield. La advertencia médica también queda en el post y en ambas versiones.
 
@@ -47,7 +47,7 @@ Paper #FFF8E3, banana #FFD60A e ink #1B1505; solo Plus Jakarta Sans 600/800. Zon
 
 ## Post propuesto
 
-> ¿Poco apetito durante tu tratamiento con GLP-1? Considera una fuente de proteína y acuerda las porciones con tu equipo médico. Banana Burn permite registrar lo que comes y revisar tu proteína diaria con el plan Entreno + Nutrición. No sustituye la indicación de tu médico. Empieza 7 días gratis en bananaburn.app
+> ¿Poco apetito durante tu tratamiento con GLP-1? Considera una fuente de proteína y acuerda las porciones con tu equipo médico. Banana Shield viene en Entreno + Nutrición: registras lo que comes y revisas tu proteína del día. $14.99/mes después de la prueba. Precios en USD, IVA incluido. No sustituye la indicación de tu médico. Haz tu primer entreno hoy (12 min, también en casa). Empieza 7 días gratis en bananaburn.app
 >
 > #BananaBurn #GLP1 #Proteina #Nutricion #EntrenamientoDeFuerza
 

@@ -223,7 +223,7 @@ const SLIDES = [
   ${lines(M, 640, 38, 52, ["Prueba 7 días gratis. El GPS con tu ritmo", "por km viene en todos los planes."], { fill: INK, weight: 600, track: 0 })}
   <rect x="${M}" y="790" width="${W - M * 2}" height="120" rx="60" fill="${INK}" style="filter:none"/>
   <text x="${W / 2}" y="868" text-anchor="middle" font-family="${F800}" font-weight="800" font-size="46" fill="#FFFFFF">bananaburn.app/running</text>
-  ${lines(M, 1030, 30, 42, ["Plan de 5K, ritmos y fuerza: Temporada Running,", "$14.99 pago único. Incluida en el plan anual."], { fill: INK, weight: 600, track: 0 })}
+  ${lines(M, 1030, 30, 42, ["Plan de 5K, ritmos y fuerza: Temporada Running, $14.99", "pago único (USD, IVA incluido). Incluida en el anual."], { fill: INK, weight: 600, track: 0 })}
   ${foot(5)}`),
   },
 ];

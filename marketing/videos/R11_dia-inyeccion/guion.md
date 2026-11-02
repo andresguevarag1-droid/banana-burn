@@ -1,5 +1,7 @@
 # R11: Día de inyección: ¿entreno o descanso?
 
+> **ARCHIVADO (#215): no se produce ni se publica.** Habla del día de inyección, que es una indicación clínica, y no lleva al primer entreno. Decisión del dueño (2 nov 2026): nada de promesas ni indicaciones médicas sobre GLP-1. Se conserva solo como referencia.
+
 Paquete de producción para el 16 al 22 de noviembre de 2026, issue #116. Pendiente de producción y aprobación por escrito de Andrés. No se han generado MP4 ni PNG. Mantiene la estructura de R05 a R08: guion, proyecto editable y assets.
 
 | Salida prevista, no entregada | Especificación |

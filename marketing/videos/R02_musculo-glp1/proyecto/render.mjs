@@ -272,9 +272,9 @@ const DIBUJO = {
   fuerza(ctx, t) {
     fondo(ctx, C.ink);
     const [a, b, c] = ESCENAS.fuerza.texto;
-    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 104, color: C.cream }], 420));
-    conEntrada(ctx, entra(t, 0.15), () => lineas(ctx, [{ t: b, size: 520, color: C.banana }], 560));
-    conEntrada(ctx, entra(t, 0.3), () => lineas(ctx, [{ t: c, size: 104, color: C.cream }], 1180));
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 104, color: C.cream }], 520));
+    conEntrada(ctx, entra(t, 0.15), () => lineas(ctx, [{ t: b, size: 360, color: C.banana }], 660));
+    conEntrada(ctx, entra(t, 0.3), () => lineas(ctx, [{ t: c, size: 104, color: C.cream }], 1090));
   },
 
   entrena(ctx, t, dur) {

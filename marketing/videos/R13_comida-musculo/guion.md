@@ -49,7 +49,7 @@ Cierre exacto: Coach Banana señalando + botón ink “Empieza 7 días gratis en
 
 ## Post propuesto
 
-> Un menú ilustrativo para recordar que comida y fuerza van juntas. Adapta las porciones a tus necesidades; ningún menú garantiza conservar todo el músculo. Registra tus comidas con Entreno + Nutrición, $14.99/mes después de la prueba. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
+> Un menú ilustrativo para recordar que comida y fuerza van juntas. Adapta las porciones a tus necesidades; ningún menú garantiza conservar todo el músculo. Registra tus comidas con Entreno + Nutrición, $14.99/mes después de la prueba. Precios en USD, IVA incluido. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
 >
 > #BananaBurn #Proteina #ComidaReal #EntrenamientoDeFuerza #Nutricion
 

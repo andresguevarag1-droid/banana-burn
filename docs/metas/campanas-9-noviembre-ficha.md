@@ -1,5 +1,7 @@
 # Ficha de lanzamiento: campañas del 9 de noviembre (Costa Rica y Colombia)
 
+> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** Esta ficha no se usa en Ads Manager hasta que se cumpla la condición de activación y Andrés lo apruebe por escrito. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215).
+
 La configuración exacta para que, **si Andrés aprueba el lunes 9 de noviembre**, la campaña de [campana-conversion-noviembre.md](campana-conversion-noviembre.md) se cree en Ads Manager en pocos minutos y **quede en pausa** hasta que él la encienda. Es una ficha, no un gasto: **nada se crea ni se activa en Meta** con este documento, no se publica ni se envía nada y no cambia código.
 
 - La condición para usarla es la de la sección 1 de [campana-conversion-noviembre.md](campana-conversion-noviembre.md): la semana del 2 al 8 de noviembre cumple la regla de [rentabilidad-semanal.md](rentabilidad-semanal.md). Si no la cumple, el gasto de la semana del 9 al 15 es $0.00 y esta ficha no se usa.

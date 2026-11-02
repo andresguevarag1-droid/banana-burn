@@ -1,5 +1,7 @@
 # Campaña de conversión desde el 9 de noviembre (propuesta)
 
+> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** La campaña del 9 de noviembre no se crea aunque la semana del 2 al 8 cumpla la regla de rentabilidad. Antes de reactivarla, la condición pasa a ser la activación: % de registrados que terminan su primer entreno (`workout_saved`) en 72 h. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215).
+
 Propuesta de Martín para Andrés: reactivar anuncios de conversión en **Costa Rica y Colombia, cada país en su propio conjunto de anuncios**, **solo si** los cobros de la semana del 2 al 8 de noviembre cumplen la regla de [rentabilidad-semanal.md](rentabilidad-semanal.md).
 
 **Es una propuesta, no un gasto.** No crea, edita, pausa ni enciende nada en Meta Ads, no publica ni envía nada y no cambia código. **Nada se activa sin la aprobación de Andrés por escrito**, aunque la regla se cumpla. Las cifras salen de `src/lib/plans.ts`, `src/lib/trial.ts` y de la fórmula del neto de la regla (IVA y comisión de cada procesador), y las vigila `src/lib/campana-conversion-noviembre.test.ts`. Lo que no tiene dato dice "por medir"; lo que decide Andrés dice "decisión de Andrés" o "por confirmar con Andrés".

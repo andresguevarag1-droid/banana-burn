@@ -25,7 +25,7 @@ Tu acción de hoy
 2. Elige tu plan en Mi plan: Entreno o Entreno + Nutrición, mensual o anual.
 
 Entreno: $9.99 al mes o $59.99 al año.
-Entreno + Nutrición: $14.99 al mes o $89.99 al año.
+Entreno + Nutrición: $14.99 al mes o $89.99 al año. Precios en USD, IVA incluido.
 
 Si dejas tu tarjeta lista antes de que termine tu prueba, tu primer mes del plan mensual cuesta 50 % menos: $4.99 o $7.49. El plan anual incluye 1 temporada deportiva gratis.
 
