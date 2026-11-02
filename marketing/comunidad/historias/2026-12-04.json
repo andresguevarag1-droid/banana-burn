@@ -1,0 +1,17 @@
+{
+  "date": "2026-12-04",
+  "title": "Viernes, tu primer entreno",
+  "lines": [
+    "Viernes.",
+    "Tu primer entreno."
+  ],
+  "sub": "12 min, también en casa.",
+  "hour": "20:00",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Entrenas hoy?",
+  "options": [
+    "Sí",
+    "Hoy empiezo"
+  ]
+}
