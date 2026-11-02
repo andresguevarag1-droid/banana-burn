@@ -26,6 +26,11 @@ describe("lista para Business Suite", () => {
     for (const r of rows) expect(r[4]).toMatch(/^(Mover y cambiar texto|Cambiar texto|Borrar)$/);
   });
 
+  it.fails("la fila 10 remite a la fila 27, que es NX07 del 20 nov (bug conocido: dice fila 25)", () => {
+    expect(rows.find((r) => r[0] === "27")![2]).toContain("NX07");
+    expect(list).toContain("NX07 del 20 nov (fila 27)");
+  });
+
   it("resuelve cada choque de las 12:00 con la comunidad (2, 4, 6 y 10 a 14 nov)", () => {
     for (const d of [2, 4, 6, 10, 12, 13, 14]) {
       const noon = rows.find((r) => r[1].startsWith(`${["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"][(d + 5) % 7]} ${d} nov, 12:00`));
