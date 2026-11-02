@@ -80,7 +80,7 @@ describe("primer entreno corto", () => {
     expect(hoy).toMatch(/firstSessionPlan\(d, 0\)/);
     const entreno = readFileSync("src/app/(app)/app/entreno/page.tsx", "utf8");
     expect(entreno).toMatch(/hasSavedWorkout\(v\)/);
-    expect(entreno).toMatch(/firstSessionPlan\(d, saved \? 1 : 0\)/);
+    expect(entreno).toMatch(/firstSessionPlan\(d, saved \? 1 : 0[,)]/);
   });
 
   it.each([0, 1, 2, 3])("la energía %i no desvía ni acorta el primer entreno", (initial) => {

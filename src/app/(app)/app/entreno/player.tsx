@@ -82,11 +82,13 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ firstSession = false, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+export function Player({ firstSession = false, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
   /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
   intro?: string;
   /** Invitación autorizada en servidor, solo para el cierre guardado. */
   firstSession?: boolean;
+  /** Variante del entreno para el embudo ("casa-primero": el primer entreno en casa de quien tiene gym). */
+  variant?: string;
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
   /** Próximo entreno de la rutina para el cierre ("Tu próximo entreno es el jueves"). */
   upcoming?: { when: string; name: string } | null;
@@ -103,7 +105,8 @@ export function Player({ firstSession = false, nutritionUpsell, upcoming = null,
   preswap?: { slot: number; option: number } | null;
 }) {
   // Una sesión por día y plantilla; el modo (suave/fuerte) va dentro, así cambiar de modo no esconde lo que llevas.
-  const key = `bb.session.v2.${dateKey}.${template}`;
+  // La variante en casa tiene otros ejercicios: su avance va aparte del de la misma plantilla en el gym.
+  const key = `bb.session.v2.${dateKey}.${template}${variant ? `.${variant}` : ""}`;
   const router = useRouter();
   const [choice, setChoice] = useState<number[]>(() => options.map(() => 0));
   const exercises = useMemo(() => options.map((o, i) => o[choice[i]] ?? o[0]), [options, choice]);
@@ -558,7 +561,7 @@ export function Player({ firstSession = false, nutritionUpsell, upcoming = null,
     setSaved(res);
     setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
     setPhase("saved");
-    if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal });
+    if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal, ...(variant ? { variant } : {}) });
     learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
     buzz([60, 40, 60, 40, 200]);
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
@@ -602,7 +605,7 @@ export function Player({ firstSession = false, nutritionUpsell, upcoming = null,
   const tpl = template.slice(0, 40);
   useEffect(() => { trackRef.current = (n) => track(n, { template: tpl, done: flow.current.doneSets, total: flow.current.planTotal }); }, [tpl]);
   useEffect(() => {
-    track("workout_open", { first_session: firstSession, template: tpl, resumed: flow.current.doneSets > 0, repeat: doneToday });
+    track("workout_open", { first_session: firstSession, template: tpl, resumed: flow.current.doneSets > 0, repeat: doneToday, ...(variant ? { variant } : {}) });
     const opened = Date.now();
     let left = false;
     // En el resumen sin tocar Guardar, el entreno se guarda solo (va primero a la bandeja del teléfono y sube cuando haya

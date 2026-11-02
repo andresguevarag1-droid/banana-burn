@@ -10,7 +10,7 @@ import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
-import { DAY_NAMES, EX, isTrainingDay, prescribe, type SlotCfg } from "@/lib/engine";
+import { DAY_NAMES, EX, homeFirstAt, isTrainingDay, offersHomeFirst, prescribe, type SlotCfg } from "@/lib/engine";
 import { getHistory } from "@/lib/history";
 import { WorkoutHero } from "@/components/hoy/workout-hero";
 import type { Viewer } from "@/lib/supabase/server";
@@ -90,6 +90,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?primera=1 muestra este estado.
   const first = !d.program && (v.demo ? sp.primera === "1" : learnState.workouts === 0) && !g.trainedToday;
   const firstPlan = first ? firstSessionPlan(d, 0) : null;
+  // Con gym, el primer entreno también en casa y sin equipo; si el registro terminó de noche, esa opción va primero.
+  const homePlan = firstPlan && offersHomeFirst(a.equipment) ? firstSessionPlan(d, 0, true) : null;
+  const home = homePlan ? { mins: homePlan.mins ?? 12, first: homeFirstAt(a.registeredAt ? localHour(new Date(a.registeredAt), v.tz) : v.demo ? localHour(new Date(), v.tz) : null) } : undefined;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = (firstPlan ?? plan).mins ?? (training || firstPlan ? 55 : 0);
   const kgLost = a.startWeight - a.currentWeight;
@@ -128,7 +131,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       {/* 1. Lo que toca hoy, con el botón grande para empezar. Con un programa activo, su sesión. */}
       {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
-        : <div data-tour="hoy-entreno"><WorkoutHero first={first} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+        : <div data-tour="hoy-entreno"><WorkoutHero first={first} home={home} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
           readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>}
 
       {/* 2. Cómo vas, en una línea. */}

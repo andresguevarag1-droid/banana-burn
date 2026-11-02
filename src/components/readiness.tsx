@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BananaFlame, Play, Banana, Bed, Syringe } from "@/components/icons";
+import { BananaFlame, Play, Banana, Bed, House, Syringe } from "@/components/icons";
 import { useDailySave } from "@/components/use-daily-save";
 import { DEFAULT_VOICE, readinessEffects, readinessTips, t, type Voice } from "@/lib/voice";
 
@@ -14,8 +14,9 @@ const OPTS = [
 /**
  * Check-in de energía (estilo "readiness") que ajusta el entreno de hoy. `she`: "Cansada" para ella; `coachName`: la
  * coach del programa (Coach Platanita); `program`: el tempo lo marca cada ejercicio del programa, no el 3-1-1 del método.
+ * `home`: primer entreno con gym; agrega la opción en casa sin equipo (primero si el registro terminó de noche).
  */
-export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, voice = DEFAULT_VOICE, she = false, coachName = "Coach Banana", program = false, first = false }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean; voice?: Voice; she?: boolean; coachName?: string; program?: boolean; first?: boolean }) {
+export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, voice = DEFAULT_VOICE, she = false, coachName = "Coach Banana", program = false, first = false, home }: { initial: number; dateKey: string; demo: boolean; mins: number; suggestSoft?: boolean; voice?: Voice; she?: boolean; coachName?: string; program?: boolean; first?: boolean; home?: { mins: number; first: boolean } }) {
   const key = `bb.ready.${dateKey}`;
   const [v, setV] = useState(initial);
   const daily = useDailySave();
@@ -26,12 +27,23 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
     if (demo) { try { localStorage.setItem(key, String(n)); } catch { /* */ } return; }
     daily.save("energy", n, () => setV((x) => (x === n ? prev : x)));
   };
-  if (first) return (
-    <Link href={`/app/entreno${demo ? "?primera=1" : ""}`} className="btn-primary flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center">
-      <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-      <span>Empieza tu primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>
-    </Link>
-  );
+  if (first) {
+    const gym = (
+      <Link key="gym" href={`/app/entreno${demo ? "?primera=1" : ""}`} className={`${home?.first ? "btn-ghost" : "btn-primary"} flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center`}>
+        <Play weight="fill" className="size-6 shrink-0" aria-hidden />
+        <span>Empieza tu primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>
+      </Link>
+    );
+    if (!home) return gym;
+    // En casa: los mismos pasos sin equipo. Cuenta como el primer entreno y la rutina sigue en el gym desde el segundo.
+    const casa = (
+      <Link key="casa" href={`/app/entreno?casa=1${demo ? "&primera=1" : ""}`} className={`${home.first ? "btn-primary" : "btn-ghost"} flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center`}>
+        <House weight="fill" className="size-6 shrink-0" aria-hidden />
+        <span className="min-w-0 text-balance">¿No estás en el gym? Hazlo en casa ahora ({home.mins} min, sin equipo)</span>
+      </Link>
+    );
+    return <div className="flex flex-col gap-2.5">{home.first ? [casa, gym] : [gym, casa]}</div>;
+  }
   const tips = readinessTips(voice, program);
   const effects = readinessEffects(voice);
   const sel = OPTS.find((o) => o.v === v);
