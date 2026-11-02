@@ -28,7 +28,7 @@ describe("evento y píxel", () => {
   it("la prueba iniciada es CompleteRegistration con status trial, como en meta-pixel.ts", () => {
     expect(toMetaEvent("onboarding_done", { trial: true })).toEqual({ name: "CompleteRegistration", params: { status: "trial" } });
     expect(TRIAL_DAYS).toBe(7);
-    expect(readFileSync("src/app/bienvenida/wizard.tsx", "utf8")).toContain('view="onboarding_done"');
+    expect(readFileSync("src/app/bienvenida/wizard.tsx", "utf8")).toContain('trackOnce("onboarding_done"');
     expect(section("## 2. Objetivo y evento")).toContain("**`CompleteRegistration`** (prueba iniciada)");
   });
 

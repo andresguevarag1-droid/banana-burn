@@ -1,7 +1,7 @@
 import { clientIp, isSameOrigin } from "@/lib/security";
 import { hitLimit, tooMany } from "@/lib/security/limits";
 import { after } from "next/server";
-import { cleanEvent } from "./event";
+import { cleanEvent, ONCE_PER_ACCOUNT } from "./event";
 import { sendCapi } from "@/lib/meta-capi";
 import { SITE_URL } from "@/lib/env";
 import { nativeAgentFrom } from "@/lib/platform-ua";
@@ -27,15 +27,24 @@ export async function POST(req: Request) {
   try { raw = JSON.parse(text); } catch { return new Response(null, { status: 400 }); }
   const evt = cleanEvent(raw);
   if (!evt) return new Response(null, { status: 400 });
+  // La persona, si hay sesión (sin correo).
+  let uid: string | null = null;
+  if (isSupabaseConfigured) {
+    try { const { data } = await (await createClient()).auth.getClaims(); uid = typeof data?.claims?.sub === "string" ? data.claims.sub : null; } catch { /* sin sesión */ }
+  }
+  // Una sola vez por cuenta (registro terminado): un segundo envío no se guarda ni va a Meta, para no inflar CompleteRegistration.
+  if (uid && ONCE_PER_ACCOUNT.has(evt.name)) {
+    const db = adminClient();
+    const r = db ? await db.from("funnel_events").select("id").eq("user_id", uid).eq("name", evt.name).limit(1) : null;
+    if (r?.data?.length) return new Response(null, { status: 409 });
+  }
   console.info(JSON.stringify({ kind: "funnel", at: new Date().toISOString(), event: evt.name, ...evt.props }));
   const ip = clientIp(req);
   const ua = req.headers.get("user-agent") ?? "";
   const cookies = req.headers.get("cookie");
   // Desde la app nativa no va nada a Meta: rastrear entre apps obliga a pedir permiso de rastreo (ATT) en iPhone.
-  // Guardado en la base (0061) para medir el embudo sin depender del log. La persona, si hay sesión (sin correo).
+  // Guardado en la base (0061) para medir el embudo sin depender del log.
   if (isSupabaseConfigured) {
-    let uid: string | null = null;
-    try { const { data } = await (await createClient()).auth.getClaims(); uid = typeof data?.claims?.sub === "string" ? data.claims.sub : null; } catch { /* sin sesión */ }
     const { path, ...rest } = evt.props;
     after(async () => {
       const db = adminClient();

@@ -31,6 +31,9 @@ export const FUNNEL_EVENTS = [
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
+/** Eventos que cuentan una sola vez por cuenta: el navegador los guarda en sessionStorage y /api/track rechaza el segundo. */
+export const ONCE_PER_ACCOUNT: ReadonlySet<FunnelEvent> = new Set<FunnelEvent>(["onboarding_done"]);
+
 export type FunnelProps = Record<string, string | number | boolean>;
 export type CleanEvent = { name: FunnelEvent; props: FunnelProps };
 

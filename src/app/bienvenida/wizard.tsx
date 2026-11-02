@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { track, FunnelTracker } from "@/components/analytics";
+import { trackOnce, FunnelTracker } from "@/components/analytics";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning } from "@/components/icons";
@@ -208,7 +208,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
       const r = await safeAction(completeOnboarding(full));
       if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
       if (card) setSaved(card);
-      track("onboarding_done", { goal: full.goal, trial: Boolean(trialEnd) });
+      // Una sola vez por cuenta: aquí, al guardar el plan (la pantalla final no lo repite).
+      trackOnce("onboarding_done", { goal: full.goal, trial: Boolean(trialEnd) });
       router.replace(demo ? "/app?primera=1" : "/app");
       router.refresh();
     });
@@ -241,7 +242,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             ))}
           </div>
           {demo && <p className="mt-4 text-sm text-banana-ink">Modo demo: no se guardó nada.</p>}
-          <FunnelTracker view="onboarding_done" props={{ goal: full.goal, trial: Boolean(trialEnd) }} />
+          <FunnelTracker />
           <button data-cta="bienvenida-hoy" onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Ver mi primer entreno <ArrowRight className="size-5" /></button>
           {intent && intentPlan && !saved && (
             <button data-cta="bienvenida-activar" onClick={() => router.replace(intentPath(intent))} className="tap mt-4 w-full text-sm font-semibold text-muted underline underline-offset-4 transition-colors duration-150 hover:text-ink">

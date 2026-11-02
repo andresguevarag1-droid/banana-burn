@@ -23,6 +23,16 @@ export function track(name: FunnelEvent, props: FunnelProps = {}) {
 }
 
 /**
+ * Como track, pero una sola vez por pestaña para los eventos de ONCE_PER_ACCOUNT (registro terminado): recargar o volver a
+ * la pantalla no repite el evento ni el CompleteRegistration del píxel. El servidor rechaza además el segundo de la cuenta.
+ */
+export function trackOnce(name: FunnelEvent, props: FunnelProps = {}) {
+  const k = `bb_once_${name}`;
+  try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, "1"); } catch { /* sin almacenamiento: queda el freno del servidor */ }
+  track(name, props);
+}
+
+/**
  * Escucha los clics en cualquier elemento con `data-cta` (ya existen en la landing, precios, registro y pagos)
  * y, opcionalmente, registra una vista de la página. Un solo listener por página: no agrega JS por botón.
  */
