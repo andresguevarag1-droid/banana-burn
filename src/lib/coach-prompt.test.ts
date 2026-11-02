@@ -20,6 +20,14 @@ describe("el coach se presenta el primer día (#198)", () => {
     expect(inCoachPromptWindow({ registeredAt: null, now: at(1), demo: true })).toBe(true);
   });
 
+  it("los 3 días cuentan desde que se creó la cuenta: guardar el perfil (health_consent_at) no los reinicia", () => {
+    const athlete = readFileSync("src/lib/athlete.ts", "utf8");
+    expect(athlete).toMatch(/select\([^)]*created_at/);
+    expect(athlete).toContain("createdAt: p?.created_at ?? null");
+    expect(readFileSync("src/app/(app)/app/page.tsx", "utf8")).toMatch(/showHoyCoachPrompt\(\{[^}]*registeredAt: a\.createdAt/);
+    expect(readFileSync("src/app/(app)/app/entreno/page.tsx", "utf8")).toMatch(/inCoachPromptWindow\(\{ registeredAt: a\.createdAt/);
+  });
+
   it("en Hoy: después del primer entreno, solo si hoy no entrenó y aún no le escribe al coach", () => {
     const base = { workouts: 1, trainedToday: false, coachMessages: 0, registeredAt: reg, now: at(30), demo: false };
     expect(showHoyCoachPrompt(base)).toBe(true);

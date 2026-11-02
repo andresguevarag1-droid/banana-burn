@@ -135,7 +135,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   const guideCoach = coach.id !== "banana" ? coach : a.sex === "f" ? COACHES.platanita : null;
   const recap = await weekRecapFor(v, d.today, a.trainDays, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[]).catch(() => null);
   // Demo: ?primera=2 muestra la burbuja del coach del día siguiente.
-  const coachPrompt = v.demo ? sp.primera === "2" : showHoyCoachPrompt({ workouts: learnState.workouts, trainedToday: g.trainedToday, coachMessages: learnState.coachMessages, registeredAt: a.registeredAt, now: new Date(), demo: false });
+  const coachPrompt = v.demo ? sp.primera === "2" : showHoyCoachPrompt({ workouts: learnState.workouts, trainedToday: g.trainedToday, coachMessages: learnState.coachMessages, registeredAt: a.createdAt, now: new Date(), demo: false });
   const tourSteps = [
     { target: "hoy-entreno", title: "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
     { target: "hoy-pasos", title: "Tus primeros pasos", body: "Esta lista te enseña el resto de la app, un paso a la vez." },

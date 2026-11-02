@@ -2,7 +2,7 @@
 // al día siguiente, en Hoy si todavía no entrena. Tocar una respuesta abre /app/coach con esa pregunta ya enviada.
 // Puro (sin datos): lo usan la burbuja, Hoy, el entreno y la pantalla del coach.
 
-/** La burbuja deja de salir pasados estos días desde el registro (fin de la bienvenida). */
+/** La burbuja deja de salir pasados estos días desde que se creó la cuenta (profiles.created_at, que no se reinicia al editar el perfil). */
 export const COACH_PROMPT_DAYS = 3;
 
 export const COACH_PROMPT_QUESTION = "¿Cómo te fue en tu primer entreno?";
