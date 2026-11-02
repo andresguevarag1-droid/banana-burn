@@ -211,6 +211,8 @@ const FIRST_EX: Record<Equipment, ExerciseId[]> = {
 };
 /** Tope del primer entreno, en minutos (con el calentamiento). */
 export const FIRST_MAX_MIN = 15;
+/** Tope de la variante en casa sin equipo: el botón de Hoy promete 12 minutos. */
+export const FIRST_HOME_MIN = 12;
 
 /** Con equipo de gimnasio, el primer entreno también se ofrece en casa y sin equipo (quien llega desde el sillón). */
 export const offersHomeFirst = (equipment?: Equipment) => equipment === "gym" || equipment === "mixto";
@@ -225,10 +227,12 @@ export const homeFirstAt = (hour: number | null | undefined) => hour != null && 
  */
 export function firstSessionDay(base: PlannedDay, opts: PlanOpts = {}, home = false): PlannedDay {
   let exercises: PlannedExercise[] = FIRST_EX[home ? "ninguno" : opts.equipment ?? "gym"].map((id) => {
-    const cfg: SlotCfg = EX[id].m === "Core" ? { id, sets: 2, lo: 20, hi: 30, rest: 45, unit: "s" } : { id, sets: 2, lo: 8, hi: 12, rest: 60 };
+    // En casa, con el peso del cuerpo, basta un descanso corto: así cabe en los 12 minutos que promete Hoy.
+    const cfg: SlotCfg = EX[id].m === "Core" ? { id, sets: 2, lo: 20, hi: 30, rest: home ? 30 : 45, unit: "s" } : { id, sets: 2, lo: 8, hi: 12, rest: home ? 30 : 60 };
     return { id, name: EX[id].n, muscle: EX[id].m, cfg };
   });
-  while (estimateMinutes(exercises) > FIRST_MAX_MIN && exercises.length > 3) exercises = exercises.slice(0, -1);
+  const max = home ? FIRST_HOME_MIN : FIRST_MAX_MIN;
+  while (estimateMinutes(exercises) > max && exercises.length > 3) exercises = exercises.slice(0, -1);
   return {
     ...base, name: "Cuerpo completo para empezar", tag: "Ligero", icon: "bolt", exercises, cardio: undefined, mins: estimateMinutes(exercises),
     hook: home ? "Hoy aprendes los movimientos básicos en casa, sin equipo y a tu ritmo" : "Hoy aprendes los movimientos básicos a tu ritmo, sin prisa", key: undefined, program: undefined,

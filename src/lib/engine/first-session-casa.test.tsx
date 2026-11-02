@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { EX, FIRST_MAX_MIN, homeFirstAt, offersHomeFirst, planDay, scheduleFor, type Equipment } from "@/lib/engine";
+import { EX, FIRST_HOME_MIN, FIRST_MAX_MIN, homeFirstAt, offersHomeFirst, planDay, scheduleFor, type Equipment } from "@/lib/engine";
 import { firstSessionPlan } from "@/lib/athlete";
 import { cleanEvent } from "@/app/api/track/event";
 import { Readiness } from "@/components/readiness";
@@ -14,17 +14,19 @@ const dash = (equipment: Equipment, dow = 1, days = 6) => {
 };
 
 describe("primer entreno en casa con gym en el perfil (#194)", () => {
-  it.each(["gym", "mixto"] as const)("%s: la variante en casa usa los ejercicios sin equipo y dura 10 a 15 min", (equipment) => {
+  it.each(["gym", "mixto"] as const)("%s: la variante en casa usa los ejercicios sin equipo y dura 12 min", (equipment) => {
     expect(offersHomeFirst(equipment)).toBe(true);
     const d = dash(equipment);
     const gym = firstSessionPlan(d, 0)!;
     const home = firstSessionPlan(d, 0, true)!;
-    // Los mismos del primer entreno sin equipo (FIRST_EX.ninguno, recortado al tope de 15 min).
-    expect(home.exercises).toEqual(firstSessionPlan(dash("ninguno"), 0)!.exercises);
+    // Los mismos ejercicios del primer entreno sin equipo (FIRST_EX.ninguno), con descanso corto para caber en 12 min.
+    expect(home.exercises.map((e) => e.id)).toEqual(firstSessionPlan(dash("ninguno"), 0)!.exercises.map((e) => e.id));
     expect(home.exercises.map((e) => e.id).slice(0, 3)).toEqual(["bwsquat", "pushup", "glutebridge"]);
     for (const e of home.exercises) expect(EX[e.id].inc).toBe(0);
-    expect(home.mins).toBeGreaterThanOrEqual(10);
-    expect(home.mins).toBeLessThanOrEqual(FIRST_MAX_MIN);
+    // El botón de Hoy promete "(12 min, sin equipo)" y muestra home.mins.
+    expect(home.mins).toBe(FIRST_HOME_MIN);
+    expect(FIRST_HOME_MIN).toBe(12);
+    expect(gym.mins).toBeLessThanOrEqual(FIRST_MAX_MIN);
     // Se guarda con la misma plantilla que el primer entreno de gym: cuenta como el primero y la rutina no cambia.
     expect(home.tpl).toBe(gym.tpl);
     expect(gym.exercises.map((e) => e.id).slice(0, 3)).toEqual(["goblet", "incline", "lat"]);
