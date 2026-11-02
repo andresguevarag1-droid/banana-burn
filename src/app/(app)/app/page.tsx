@@ -3,7 +3,7 @@ import { demoCardState } from "@/lib/trial-demo";
 import { TrialCardNotice } from "@/components/trial-card-notice";
 import Link from "next/link";
 import { FunnelTracker } from "@/components/analytics";
-import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
+import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, House, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, firstSessionPlan, getAthlete } from "@/lib/athlete";
 import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
@@ -121,7 +121,15 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
       {header}
       {hero}
+      {/* Alternativa en casa: el exprés de 10 min sin equipo también cuenta como primer entreno guardado. */}
+      {(a.equipment === "gym" || a.equipment === "mixto") && (
+        <Link href="/app/entreno?expres=10" data-cta="hoy-primero-casa" className="btn-ghost flex w-full min-h-12 h-auto px-4 py-3 text-center">
+          <House weight="duotone" className="size-5 shrink-0" aria-hidden />
+          <span className="text-balance">¿No estás en el gym? Hazlo en casa ahora (10 min, sin equipo)</span>
+        </Link>
+      )}
       <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
+      <div id="hoy-continuar" className="scroll-mt-24" />
     </div>
   );
   const kgLost = a.startWeight - a.currentWeight;

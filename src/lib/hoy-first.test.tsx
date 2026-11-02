@@ -28,11 +28,13 @@ describe("Hoy del primer día", () => {
 
   it("con 0 entrenos muestra solo el saludo, el primer entreno y el aviso de tarjeta urgente", () => {
     const tags = [...firstReturn.matchAll(/<([A-Z]\w*)/g)].map((m) => m[1]);
-    expect(tags).toEqual(["FunnelTracker", "TrialCardNotice"]);
+    expect(tags).toEqual(["FunnelTracker", "Link", "House", "TrialCardNotice"]);
     expect(firstReturn).toContain("{header}");
     expect(firstReturn).toContain("{hero}");
     expect(firstReturn).toContain("minDay={FIRST_DAY_CARD_MIN_DAY}");
     expect(firstReturn).toMatch(/view="hoy_view" props=\{\{ first,/);
+    expect(firstReturn).toContain('href="/app/entreno?expres=10"');
+    expect(firstReturn).toMatch(/a\.equipment === "gym" \|\| a\.equipment === "mixto"/);
   });
 
   it("con 1 entreno guardado vuelve todo lo de antes", () => {
