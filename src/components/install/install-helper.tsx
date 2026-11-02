@@ -136,7 +136,12 @@ export function InstallHelper({ where, qrSvg, path = "/app", title = true }: { w
   const pass = useHandoff(env === "ios-inapp" || env === "android-inapp");
   const [done, setDone] = useState(false);
   useEffect(() => {
-    if (env && !seen.current) { seen.current = true; track("install_view", { where, env }); }
+    if (!env || seen.current) return;
+    seen.current = true;
+    // Una vez por sesión y lugar (#195): antes se contaba en cada montaje (672 vistas de 37 personas).
+    const k = `bb.installView.${where}`;
+    try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, "1"); } catch { /* sin sessionStorage: se cuenta */ }
+    track("install_view", { where, env });
   }, [env, where]);
   if (!env) return <div className="min-h-40" aria-hidden />;
   const onPrompt = async () => {
