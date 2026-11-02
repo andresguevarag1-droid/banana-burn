@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PLANS, annualSaving } from "./plans";
 import { amountMinorFor, firstChargeMinor, promoFor } from "./trial";
 import { activateHref, canActivatePlan, firstWorkoutOffer } from "./first-workout-offer";
+import { parseIntent } from "./checkout-intent";
 import type { Entitlements } from "./entitlements";
 
 type Ent = Parameters<typeof canActivatePlan>[0];
@@ -36,6 +37,13 @@ describe("Oferta del primer entreno: montos", () => {
   it("lleva a Mi plan con el plan y el periodo elegidos, directo a la tarjeta", () => {
     expect(activateHref()).toBe("/app/suscripcion?plan=entreno&pago=anual#tarjeta");
     expect(activateHref("mes")).toBe("/app/suscripcion?plan=entreno&pago=mes#tarjeta");
+  });
+
+  it("Mi plan lee ese plan y periodo tal cual (la elección de la tarjeta no se pierde)", () => {
+    for (const billing of ["anual", "mes"] as const) {
+      const query = new URL(activateHref(billing), "https://bananaburn.app").searchParams;
+      expect(parseIntent(query.get("plan"), query.get("pago"))).toEqual({ plan: "entreno", billing });
+    }
   });
 });
 
