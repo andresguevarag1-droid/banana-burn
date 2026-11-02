@@ -1,10 +1,12 @@
 "use client";
 import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowCounterClockwise, ArrowRight, ArrowUp, ChatCircle, Moon, Monkey, Plus, WarningCircle } from "@/components/icons";
 import { COACH_LIMITS, quotaFrom, quotaLine, resetLabel, type CoachLimitBody, type CoachQuota } from "@/lib/coach-quota";
 import { errorFor, isLocalOnly, splitCut, type ChatError } from "./errors";
+import { autoAsk } from "@/lib/coach-prompt";
 
 type Msg = { role: "user" | "assistant"; content: string; at?: string };
 /** Un envío que falló: el mensaje del usuario queda aparte (no entra al historial que se manda al modelo). */
@@ -79,7 +81,9 @@ function LimitCard({ q, now, coachName }: { q: CoachQuota; now: Date | null; coa
   );
 }
 
-export function Chat({ initial, opener, suggest, name, configured = true, quota: quota0 = null, demo = false, persona = null }: { initial: Msg[]; opener: string; suggest: string[]; name: string; configured?: boolean; quota?: CoachQuota | null; demo?: boolean; persona?: ChatPersona }) {
+export function Chat({ initial, opener, suggest, name, configured = true, quota: quota0 = null, demo = false, persona = null, ask = null }: { initial: Msg[]; opener: string; suggest: string[]; name: string; configured?: boolean; quota?: CoachQuota | null; demo?: boolean; persona?: ChatPersona;
+  /** Respuesta de un toque de la burbuja del coach (#198): se envía sola al abrir (o queda escrita si no quedan preguntas). */
+  ask?: string | null }) {
   const coachName = persona?.name ?? "Coach Banana";
   const [quota, setQuota] = useState<CoachQuota | null>(quota0);
   // La hora de renovación se muestra en la hora del navegador: solo después de montar (el servidor no la conoce).
@@ -87,7 +91,8 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
   useEffect(() => { setNow(new Date()); }, []);
   const out = !!quota && quota.left !== null && quota.left <= 0;
   const [msgs, setMsgs] = useState<Msg[]>(initial);
-  const [input, setInput] = useState("");
+  // Sin preguntas, la respuesta de la burbuja queda guardada desde el primer render (se ve aunque no haya campo).
+  const [input, setInput] = useState(() => (autoAsk({ ask, configured, out }) === "fill" ? ask! : ""));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<Failed | null>(null);
   const end = useRef<HTMLDivElement>(null);
@@ -154,6 +159,25 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
     } finally { setBusy(false); }
   }
 
+  // Una sola vez y sin el parámetro en la dirección: recargar o volver atrás no la reenvía ni gasta otra pregunta.
+  // Se envía en el render siguiente, con el historial ya filtrado por "Nueva conversación".
+  const router = useRouter();
+  const asked = useRef(false);
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => {
+    if (asked.current) return;
+    asked.current = true;
+    // "fill" ya quedó en el campo; el parámetro se queda en la dirección para que recargar no la pierda.
+    if (autoAsk({ ask, configured, out }) !== "send") return;
+    router.replace("/app/coach", { scroll: false });
+    setPending(ask);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- solo al abrir
+  useEffect(() => {
+    if (!pending) return;
+    setPending(null);
+    void send(pending);
+  }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps -- send cambia en cada render
+
   function newConversation() {
     try { localStorage.setItem(SINCE_KEY, new Date().toISOString()); } catch { /* sin almacenamiento */ }
     setMsgs([]); setFailed(null); setInput("");
@@ -215,6 +239,15 @@ export function Chat({ initial, opener, suggest, name, configured = true, quota:
               <span className="flex-1 min-w-0 font-semibold">{failed.err.text}</span>
               {failed.err.retry && <button type="button" onClick={() => send(failed.q)} disabled={busy} className="tap pressable inline-flex items-center gap-1.5 rounded-full bg-white border border-bad/30 px-3 h-11 font-bold text-bad hover:bg-bad/5"><ArrowCounterClockwise weight="bold" className="size-4" />Reintentar</button>}
             </div>
+          </div>
+        )}
+        {configured && out && input.trim() && (
+          <div className="space-y-1 animate-enter" data-held>
+            <div className="flex items-end gap-2 justify-end">
+              <div className="max-w-[80%] rounded-3xl rounded-br-lg px-4 py-3 text-[15px] leading-relaxed bg-ink/70 text-white">{input}</div>
+              <UserAvatar name={name} />
+            </div>
+            <p className="pr-11 text-right text-xs font-semibold text-muted">Sin enviar: podrás enviarla cuando se renueven tus preguntas.</p>
           </div>
         )}
         {configured && out && quota && <LimitCard q={quota} now={now} coachName={coachName} />}

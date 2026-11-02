@@ -1,5 +1,7 @@
 # R04: La Temporada 1 empieza el 9 de noviembre
 
+> **Temporada 1 (#215):** es la única pieza de Temporada de la semana del 2 al 8 nov. Se publica a más tardar el domingo 8 nov y nunca después del 22 nov. Ver [temporada-1-una-por-semana.md](../../estrategia/temporada-1-una-por-semana.md).
+
 Reel de motion graphics hecho en código. Temas: temporadas y running. Sin música ni voz: el audio en tendencia se pone al publicar.
 
 | Archivo | Qué es |

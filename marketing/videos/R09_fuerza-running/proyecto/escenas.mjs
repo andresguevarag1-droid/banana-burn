@@ -36,14 +36,14 @@ export const CONFIG = {
     },
     {
       "id": "t6",
-      "texto": "Conoce la Temporada de Running",
-      "visual": "Tarjeta de descubrimiento de la temporada, sin prometer inclusión.",
+      "texto": "Fuerza hoy, sin cambiar tus carreras",
+      "visual": "Tarjeta de primer entreno; sin vender la Temporada (#215: la pieza de Temporada de esa semana es K12).",
       "tipo": "texto"
     },
     {
       "id": "t7",
-      "texto": "Compra aparte; incluida con plan anual",
-      "visual": "Tarjeta de condiciones: una temporada incluida por año pagado.",
+      "texto": "12 minutos, también en casa",
+      "visual": "Tarjeta del CTA de noviembre: primer entreno corto.",
       "tipo": "texto"
     },
     {

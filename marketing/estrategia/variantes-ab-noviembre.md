@@ -1,5 +1,7 @@
 # 6 variantes de anuncio con hipótesis A/B a partir del ganador "Cuánto peso" (propuesta)
 
+> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** La prueba A/B desde el 5 de noviembre no se ejecuta: sin pauta no hay prueba. Las variantes V1 y V2 se pueden publicar en orgánico, de noche, con aprobación de Andrés. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215). Antes de reactivarlo, quitar de los textos de GLP-1 los gramos por kilo y la frecuencia exacta de fuerza, como ya se hizo en R02 y K14.
+
 Variantes para las campañas de Meta Ads del 5 al 30 de noviembre de 2026 (`marketing/estrategia/meta-ads-noviembre.md`). **Es solo una propuesta**: no se crea, edita ni pausa nada en Meta. Andrés aprueba cada anuncio antes de que exista, y ningún Reel entra en un anuncio antes de estar publicado en orgánico y aprobado.
 
 - **Qué métrica mueve**: el costo por registro de cada conjunto, para bajar el **costo por cliente que paga** (meta: $15.00 o menos). La cuenta es la del plan: costo por cliente que paga = costo por registro ÷ conversión de prueba a pago (meta 35 %). Si una variante baja el costo por registro de $5.25 a $4.50 con la misma conversión, el cliente que paga pasa de $15.00 a $12.86.

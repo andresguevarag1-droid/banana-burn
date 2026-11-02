@@ -1,8 +1,8 @@
-# Correo "Invita a 3 amigos y gana 1 mes gratis" (Resend)
+# Correo "Cada 3 amigos que pagan su plan te dan 1 mes gratis" (Resend)
 
 Correo de marketing (no transaccional): lleva enlace de baja. Un solo CTA, hacia la pantalla **Invita y gana** de la app, donde está el enlace para compartir.
 
-**Qué métrica mueve:** % de cuentas activas que comparten su enlace y, detrás, registros por referido. Cada referido que paga baja el **costo por cliente que paga** porque no tiene costo de anuncio. Meta de partida: 10 % de quienes lo abren tocan el CTA; se recalcula con los datos del 15 de noviembre.
+**Qué métrica mueve:** % de cuentas activas que comparten su enlace y, detrás, registros por referido. Desde el 1 de noviembre (0064) un amigo cuenta solo cuando paga su primer plan, así que cada recompensa llega con 3 pagos y cada referido que paga baja el **costo por cliente que paga** porque no tiene costo de anuncio. La regla y el texto de referencia están en `docs/emails/referidos.md`. Meta de partida: 10 % de quienes lo abren tocan el CTA; se recalcula con los datos del 15 de noviembre.
 
 ## Disparador y hora de envío
 
@@ -17,8 +17,8 @@ Por qué el segundo entreno: es alguien que ya volvió a la app y puede recomend
 
 ## Asunto y preheader
 
-- **Asunto:** Invita a 3 amigos y gana 1 mes gratis
-- **Preheader:** Y si uno de ellos elige el plan anual, ese mes se convierte en un trimestre.
+- **Asunto:** Cada 3 amigos que pagan su plan te dan 1 mes gratis
+- **Preheader:** Cuentan cuando pagan su primer plan. Si uno elige el anual, ganas un trimestre.
 
 ## Enlace del CTA
 
@@ -33,18 +33,18 @@ Hola, {nombre}:
 
 Entrenar con alguien rinde más. Ahora, además, te regala meses.
 
-Invita a 3 amigos y gana 1 mes gratis. Si uno de esos 3 compra el plan anual, ese mes se convierte en un trimestre: 3 meses gratis.
+Cada 3 amigos que pagan su plan te dan 1 mes gratis. Si uno de esos 3 paga el plan anual, ese mes se convierte en un trimestre: 3 meses gratis.
 
 Cómo funciona:
 1. Comparte tu enlace desde Invita y gana.
 2. Tu amigo crea su cuenta con ese enlace y tiene 7 días gratis, sin tarjeta.
-3. Cuenta cuando se activa: termina su bienvenida y, en sus primeros 7 días, completa un entreno o registra su agua, pasos o sueño.
-4. Cada 3 amigos activos te dan 1 mes gratis. Se suma al final de tu acceso actual, así que no pierdes ni un día.
+3. Cuenta cuando paga su primer plan, mensual o anual, dentro de 60 días desde que se registró. La prueba gratis no cuenta.
+4. Cada 3 amigos que pagan te dan 1 mes gratis. Se suma al final de tu acceso actual, así que no pierdes ni un día.
 
 Comparte tu enlace:
 https://bananaburn.app/app/referidos?utm_source=referido&utm_medium=email&utm_campaign=invita-y-gana&utm_content=lanzamiento
 
-Cada persona cuenta una sola vez y solo con una cuenta nueva. La compra anual cuenta cuando se confirma el pago. Máximo 12 recompensas por año.
+Cada persona cuenta una sola vez y solo con una cuenta nueva. Un pago reembolsado no cuenta. La compra anual cuenta cuando se confirma el pago. Máximo 12 recompensas por año.
 
 Coach Banana
 Banana Burn
@@ -63,10 +63,10 @@ Mismos estilos en línea que `src/lib/email/templates.ts` (encabezado blanco, h�
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Invita a 3 amigos y gana 1 mes gratis</title>
+<title>Cada 3 amigos que pagan su plan te dan 1 mes gratis</title>
 </head>
 <body style="margin:0;padding:0;background:#FFF8E3;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Y si uno de ellos elige el plan anual, ese mes se convierte en un trimestre.</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Cuentan cuando pagan su primer plan. Si uno elige el anual, ganas un trimestre.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8E3;">
 <tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -77,8 +77,8 @@ Mismos estilos en línea que `src/lib/email/templates.ts` (encabezado blanco, h�
 
   <tr><td style="background:#FFD60A;padding:32px 24px;">
     <p style="margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#1B1505;">Invita y gana</p>
-    <h1 style="margin:0 0 12px;font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.02em;color:#1B1505;">Invita a 3 amigos y gana 1 mes gratis</h1>
-    <p style="margin:0;font-size:16px;line-height:24px;color:#2E2818;">Si uno de esos 3 compra el plan anual, ese mes se convierte en un trimestre: 3 meses gratis.</p>
+    <h1 style="margin:0 0 12px;font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.02em;color:#1B1505;">Cada 3 amigos que pagan su plan te dan 1 mes gratis</h1>
+    <p style="margin:0;font-size:16px;line-height:24px;color:#2E2818;">Si uno de esos 3 paga el plan anual, ese mes se convierte en un trimestre: 3 meses gratis.</p>
   </td></tr>
 
   <tr><td style="background:#FFFFFF;border:1px solid #EDE3C6;border-top:0;padding:24px;">
@@ -88,8 +88,8 @@ Mismos estilos en línea que `src/lib/email/templates.ts` (encabezado blanco, h�
       <tr><td style="padding:16px;font-size:15px;line-height:22px;color:#2E2818;">
         <p style="margin:0 0 8px;"><b style="color:#1B1505;">1. Comparte tu enlace</b> desde Invita y gana.</p>
         <p style="margin:0 0 8px;"><b style="color:#1B1505;">2. Tu amigo crea su cuenta</b> con ese enlace y tiene 7 días gratis, sin tarjeta.</p>
-        <p style="margin:0 0 8px;"><b style="color:#1B1505;">3. Cuenta cuando se activa:</b> termina su bienvenida y, en sus primeros 7 días, completa un entreno o registra su agua, pasos o sueño.</p>
-        <p style="margin:0;"><b style="color:#1B1505;">4. Cada 3 amigos activos: 1 mes gratis.</b> Se suma al final de tu acceso actual, así que no pierdes ni un día.</p>
+        <p style="margin:0 0 8px;"><b style="color:#1B1505;">3. Cuenta cuando paga su primer plan,</b> mensual o anual, dentro de 60 días desde que se registró. La prueba gratis no cuenta.</p>
+        <p style="margin:0;"><b style="color:#1B1505;">4. Cada 3 amigos que pagan: 1 mes gratis.</b> Se suma al final de tu acceso actual, así que no pierdes ni un día.</p>
       </td></tr>
     </table>
 
@@ -99,7 +99,7 @@ Mismos estilos en línea que `src/lib/email/templates.ts` (encabezado blanco, h�
       </td></tr>
     </table>
 
-    <p style="margin:0 0 16px;font-size:13px;line-height:20px;color:#6A604B;">Cada persona cuenta una sola vez y solo con una cuenta nueva. La compra anual cuenta cuando se confirma el pago. Máximo 12 recompensas por año.</p>
+    <p style="margin:0 0 16px;font-size:13px;line-height:20px;color:#6A604B;">Cada persona cuenta una sola vez y solo con una cuenta nueva. Un pago reembolsado no cuenta. La compra anual cuenta cuando se confirma el pago. Máximo 12 recompensas por año.</p>
     <p style="margin:0;font-size:15px;line-height:22px;color:#2E2818;"><b style="color:#1B1505;">Coach Banana</b><br>Banana Burn</p>
   </td></tr>
 
@@ -120,4 +120,5 @@ Mismos estilos en línea que `src/lib/email/templates.ts` (encabezado blanco, h�
 - [ ] Andrés aprueba el texto y la fecha del envío de lanzamiento.
 - [ ] El CTA abre `/app/referidos` con sesión y sin sesión.
 - [ ] `{enlace_baja}` lo genera el sistema de correos (no es un enlace de marketing, no lleva UTM).
+- [ ] El texto dice la regla vigente (el amigo cuenta cuando paga su primer plan), igual que `docs/emails/referidos.md`.
 - [ ] Sin IA, sin testimonios, sin escasez, sin números de WhatsApp.

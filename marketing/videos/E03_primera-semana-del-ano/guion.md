@@ -36,7 +36,7 @@ Imagen fija de una agenda sin texto y mancuernas sobre fondo paper #FFF8E3, luz 
 
 ## Post propuesto
 
-Una idea para organizar tu primera semana: elige rutina, revisa qué toca, reserva recuperación, sigue tu plan, registra cómo te sientes, camina y revisa la semana. Adáptala a tu nivel y disponibilidad. Empieza siete días gratis sin tarjeta en bananaburn.app. Después, Entreno cuesta $9.99/mes.
+Una idea para organizar tu primera semana: elige rutina, revisa qué toca, reserva recuperación, sigue tu plan, registra cómo te sientes, camina y revisa la semana. Adáptala a tu nivel y disponibilidad. Empieza siete días gratis sin tarjeta en bananaburn.app. Después, Entreno cuesta $9.99/mes. Precios en USD, IVA incluido.
 
 #BananaBurn #PrimeraSemana #Propositos #Rutina #Recuperacion
 

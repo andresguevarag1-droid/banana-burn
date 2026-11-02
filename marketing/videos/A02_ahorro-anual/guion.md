@@ -42,7 +42,7 @@ Paper #FFF8E3, banana #FFD60A, ink #1B1505. Solo Plus Jakarta Sans 600/800; cifr
 
 ## Post propuesto
 
-> Entreno: 12 mensualidades de $9.99 suman $119.88; el anual de $59.99 ahorra $59.89. Entreno + Nutrición: 12 mensualidades de $14.99 suman $179.88; el anual de $89.99 ahorra $89.89. Comparación en USD a precio mensual regular, sin promociones ni compras extra. La promoción del primer mes mensual no se acumula con el anual. Compara en bananaburn.app/precios. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
+> Entreno: 12 mensualidades de $9.99 suman $119.88; el anual de $59.99 ahorra $59.89. Entreno + Nutrición: 12 mensualidades de $14.99 suman $179.88; el anual de $89.99 ahorra $89.89. Comparación en USD, IVA incluido, a precio mensual regular, sin promociones ni compras extra. La promoción del primer mes mensual no se acumula con el anual. Compara en bananaburn.app/precios. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
 >
 > #BananaBurn #PlanAnual #Ahorro #EntrenamientoDeFuerza #PlanesDeEntreno
 

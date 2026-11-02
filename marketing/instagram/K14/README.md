@@ -5,7 +5,7 @@ Carrusel de 6 láminas (1080 × 1350) para @bananaburnapp. Estado: borrador para
 | Archivo | Lámina |
 | --- | --- |
 | K14_01_portada.png | Portada (variante A) |
-| K14_02_regla.png | Regla de 1.2 a 1.6 g de proteína por kg |
+| K14_02_regla.png | Tu meta de proteína la acuerdas con tu médico (orientación general, sin gramos por kilo desde #215) |
 | K14_03_proteina-primero.png | Cómo comerla con poco apetito |
 | K14_04_ideas-latinas.png | 3 ideas latinas en porción pequeña |
 | K14_05_banana-shield.png | Banana Shield con captura de Nutrición: **[PENDIENTE]** |
@@ -22,17 +22,17 @@ La lámina 5 lleva un marcador [PENDIENTE]. La única captura de Nutrición del 
 
 | Dato | Fuente |
 | --- | --- |
-| 1.2 a 1.6 g de proteína por kg al día | Dato del Owner; `investigacion/evidencia-programas.md` 7.1 (advisory 2025 ACLM, ASN, OMA, TOS); `src/lib/glp1.ts` |
+| Proteína y fuerza ayudan a cuidar el músculo al bajar rápido (orientación general, sin cifras) | `investigacion/evidencia-programas.md` 7.1; `src/lib/glp1.ts` |
 | Peso de referencia con mucho peso por bajar | `src/lib/glp1.ts` (`refKg`); evidencia 6.2 |
 | Proteína primero; comidas pequeñas cada 3 a 4 h; parar al primer signo de llenura | Evidencia 7.1, estrategias prácticas; pantalla `/app/glp1` |
 | Batido de proteína o yogur griego si no llegas | Pantalla `/app/glp1`; evidencia 7.1 y 7.3 |
 | Huevos, lácteos, pollo, pescado, legumbres; evitar lo grasoso o frito si empeora la náusea | Evidencia 7.1 |
 | Meta en gramos al día y por comida; piso de calorías | `src/lib/glp1.ts` (`protein`, `perMeal`, `KCAL_FLOOR`) |
-| Fuerza 3 días o más por semana; modo suave después de la inyección | Evidencia 7.1; `src/lib/glp1.ts` (`injectionPhase`) |
+| Fuerza cada semana (sin frecuencia exacta en la pieza) | Evidencia 7.1 |
 | Banana Shield incluido en Entreno + Nutrición | `src/app/(app)/app/perfil/page.tsx` |
 | 7 días gratis sin tarjeta | Memoria de la oficina |
 
-No se nombran medicamentos, no hay cifras de gramos por plato, ni antes y después ni testimonios.
+No se nombran medicamentos, no hay gramos por kilo ni por plato (#215: nada de dosis ni gramos exactos), ni antes y después ni testimonios.
 
 ## Variantes A/B de portada
 

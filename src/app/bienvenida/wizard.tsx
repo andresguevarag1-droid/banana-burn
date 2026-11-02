@@ -9,6 +9,7 @@ import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
 import { completeOnboarding, type Onboard } from "./actions";
+import { TRAIN_SLOTS } from "@/lib/train-slot";
 import { COUNTRIES, countryFromTz } from "@/lib/countries";
 import { intentPath, type CheckoutIntent } from "@/lib/checkout-intent";
 import { PLANS } from "@/lib/plans";
@@ -16,7 +17,6 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
 import { safeAction } from "@/lib/action-client";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
-import { WelcomeInstall } from "@/components/install/welcome-install";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
@@ -220,7 +220,9 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     const savedPromo = saved?.charge ? saved.charge.promo : choice.billing === "mes";
     const savedAmount = saved?.charge?.amount ?? (savedPromo ? promoPrice(choice.plan) : PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]);
     return (
-      <WelcomeInstall name={full.name.trim().split(" ")[0]}>
+      <>
+      {/* #195: sin el paso "Instala tu LinkApp" antes del primer entreno: sacaba a la gente de Instagram y no volvía.
+          Se ofrece en Hoy (InstallCard) desde el primer entreno guardado. */}
       <main className="min-h-dvh bg-paper grid place-items-center px-6 py-10 text-center">
         <Confetti />
         <div className="max-w-md w-full animate-rise">
@@ -251,7 +253,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           )}
         </div>
       </main>
-      </WelcomeInstall>
+      </>
     );
   }
 
@@ -348,6 +350,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`pressable h-20 rounded-3xl border-2 text-3xl font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.days === n}>{n}</button>)}</div>
             <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`pressable h-14 rounded-2xl border-2 font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.minutes === n}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
               <p className="mt-2 text-xs text-muted">¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.</p></div>
+            <div><p className="text-sm font-bold text-ink mb-2">¿A qué hora sueles entrenar?</p><div className="grid grid-cols-2 gap-2">{TRAIN_SLOTS.map((s) => <button key={s.id} type="button" onClick={() => up({ trainSlot: s.id })} className={`pressable min-h-14 rounded-2xl border-2 px-3 py-2 text-left transition-[background-color,border-color,color,transform] ${o.trainSlot === s.id ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.trainSlot === s.id}><span className="block font-extrabold">{s.label}</span><span className="block text-xs font-semibold">{s.hint}</span></button>)}</div>
+              <p className="mt-2 text-xs text-muted">Te recordamos tu entreno a esa hora. Lo cambias cuando quieras en tu perfil.</p></div>
             <div className="card p-4">
               <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
               <ul className="space-y-1.5">{week.map((d) => <li key={d.dow} className="flex items-center justify-between text-sm"><span className="w-20 font-semibold text-muted capitalize">{DAY_NAMES[d.dow]}</span><span className={`flex-1 flex items-center gap-2 font-bold ${d.tpl ? "text-ink" : "text-faint"}`}><BrandIcon name={d.icon} className="size-4 shrink-0" />{d.name}</span>{d.tpl && <span className="text-xs text-muted tabular-nums">~{d.mins} min</span>}</li>)}</ul>

@@ -7,6 +7,8 @@ import { errCode, logError } from "@/lib/log";
 import { hasDevices, loadDevices, sendPush } from "@/lib/push";
 import { sendEmail } from "@/lib/email/send";
 import { avisoAdmin } from "@/lib/email/templates";
+import { activationText } from "@/lib/activacion";
+import { loadActivation } from "@/lib/activacion-server";
 import { alertText, channelsFor, firstName, normalizePrefs, summarize, summaryText, type AdminEvent, type AlertKind, type Person, type Prefs } from "@/lib/admin-avisos";
 
 type Admin = { id: string; prefs: Prefs };
@@ -144,12 +146,14 @@ export async function sendDailySummary(now = new Date(), dbIn?: SupabaseClient |
   if (!db) return { sent: 0, skipped: "sin base" };
   // El cron corre a las 02:00 UTC (20:00 en Costa Rica): el día que se resume es el que acaba de pasar en Costa Rica.
   const { start, end, label } = crDayRange(new Date(now.getTime() - 60_000));
-  const [{ data: evs }, first] = await Promise.all([
+  const [{ data: evs }, first, act] = await Promise.all([
     db.from("admin_events").select("kind,amount_minor,currency").gte("created_at", start).lt("created_at", end).limit(5000),
     firstWorkouts(db, start, end).catch(() => 0),
+    // Si la activación no se puede leer, el resumen sale igual, sin esa línea.
+    loadActivation(db, { start, end }, now).catch((e) => { logError("avisos", "activation_failed", { kind: errCode(e) }); return null; }),
   ]);
   const s = summarize((evs ?? []) as Pick<AdminEvent, "kind" | "amount_minor" | "currency">[], first);
-  const t = summaryText(s);
+  const t = summaryText(s, act ? activationText(act) : null);
   const admins = (await loadAdmins(db)).filter((a) => a.prefs.daily_summary);
   const devices = await loadDevices(db, admins.filter((a) => a.prefs.push).map((a) => a.id));
   let sent = 0;

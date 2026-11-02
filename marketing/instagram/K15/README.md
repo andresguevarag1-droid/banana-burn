@@ -1,5 +1,7 @@
 # K15: "Tu primer 5K con Banana Run" (carrusel, running)
 
+> **Temporada 1 (#215):** K15 es la única pieza de Temporada de la semana del 9 al 15 nov. Se publica entre el lunes 9 y el domingo 15 nov, de noche (20:00 a 22:00). **Después del 22 nov no se publica, no se fija en el perfil ni se promociona**: la inscripción cierra ese día. Ver [temporada-1-una-por-semana.md](../../estrategia/temporada-1-una-por-semana.md).
+
 Propuesta para el issue #11. Nada de esto está publicado: Andrés aprueba y publica.
 
 | Lámina | Archivo | Qué dice |
@@ -8,7 +10,7 @@ Propuesta para el issue #11. Nada de esto está publicado: Andrés aprueba y pub
 | 2 | `png/02-semanas.png` | Las semanas del plan, con la captura real "Km por semana del plan" (`running-plan`) |
 | 3 | `png/03-ritmos-gps.png` | Ritmo por km con GPS en todos los planes, con la captura real de Banana Run (`running-hub`) |
 | 4 | `png/04-fuerza.png` | Fuerza 2 veces por semana. **[PENDIENTE]**: falta la captura real (ver abajo) |
-| 5 | `png/05-cta.png` | CTA a bananaburn.app/running, con el precio de la Temporada Running |
+| 5 | `png/05-cta.png` | CTA a bananaburn.app/running, con el precio de la Temporada Running (USD, IVA incluido) |
 
 `caption.txt` es el pie de foto final. `vista-carrusel.png` muestra las 5 láminas en fila.
 
@@ -51,4 +53,4 @@ RESVG_DIR=/tmp/resvg node marketing/instagram/K15/generar.mjs
 1. **Captura real de una sesión de fuerza de la Temporada Running** (pantalla del entreno con los ejercicios), para reemplazar el [PENDIENTE] de la lámina 4. Con una cuenta que tenga la temporada basta una captura vertical como las de `public/landing`.
 2. Si quieres la tabla de ritmos en el carrusel: una captura de `running-ritmos` y `running-plan` hecha con una meta de **5K** (mejor sin meta de tiempo, o con "Terminar mi primera carrera"), para que coincida con el tema.
 3. Elegir la portada A o B (o decir "la apuesta").
-4. Fecha y hora de publicación: el calendario de noviembre aún no tiene a K15; propongo la semana del 9 al 15 nov, cuando abre la Temporada 1.
+4. Fecha y hora de publicación: el calendario de noviembre aún no tiene a K15; semana del 9 al 15 nov, cuando abre la Temporada 1 (fijado en #215).

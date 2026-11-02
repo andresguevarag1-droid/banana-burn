@@ -1,5 +1,7 @@
 # A03_temporada-incluida
 
+> **ARCHIVADO hasta Temporada 2 (#215).** No se publica ni se promociona después del 22 nov 2026 (cierre de inscripciones de Temporada 1), y antes de esa fecha cada semana ya tiene su pieza de Temporada. Ver [temporada-1-una-por-semana.md](../../estrategia/temporada-1-una-por-semana.md).
+
 Issue #153. Producción local sin servicios de pago. Borrador para revisión de Andrés; sin publicación, envío, gasto ni activación de campañas.
 
 ## Salidas
@@ -42,7 +44,7 @@ Paper #FFF8E3, banana #FFD60A, ink #1B1505. Solo Plus Jakarta Sans 600/800; cifr
 
 ## Post propuesto
 
-> Cada año pagado de Entreno ($59.99/año) o Entreno + Nutrición ($89.99/año) incluye una temporada deportiva gratis. Precios en USD. No incluye todas las temporadas ni los retos Premium, que se compran aparte. Consulta las condiciones en bananaburn.app/precios. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
+> Cada año pagado de Entreno ($59.99/año) o Entreno + Nutrición ($89.99/año) incluye una temporada deportiva gratis. Precios en USD, IVA incluido. No incluye todas las temporadas ni los retos Premium, que se compran aparte. Consulta las condiciones en bananaburn.app/precios. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
 >
 > #BananaBurn #PlanAnual #Temporadas #EntrenamientoDeFuerza #BananaRun
 

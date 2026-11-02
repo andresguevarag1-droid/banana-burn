@@ -49,7 +49,7 @@ Cierre exacto: Coach Banana señalando + botón ink “Empieza 7 días gratis en
 
 ## Post propuesto
 
-> Camina, alterna con trote y avanza según tu nivel, sin prometer una fecha para llegar a 5K. La captura muestra un recorte ilustrativo de la app, no un plan 5K personalizado. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Entreno: $9.99/mes después de la prueba.
+> Camina, alterna con trote y avanza según tu nivel, sin prometer una fecha para llegar a 5K. La captura muestra un recorte ilustrativo de la app, no un plan 5K personalizado. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Entreno: $9.99/mes después de la prueba. Precios en USD, IVA incluido.
 >
 > #BananaBurn #Primer5K #Running #CaminarYCorrer #Principiantes
 

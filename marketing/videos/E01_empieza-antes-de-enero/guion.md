@@ -36,7 +36,7 @@ Imagen fija de una agenda sin texto y mancuernas sobre fondo paper #FFF8E3, luz 
 
 ## Post propuesto
 
-Puedes empezar antes del 1 de enero, a tu ritmo y con el equipo disponible. Prueba siete días sin tarjeta en bananaburn.app. Después, Entreno cuesta $9.99/mes.
+Puedes empezar antes del 1 de enero, a tu ritmo y con el equipo disponible. Prueba siete días sin tarjeta en bananaburn.app. Después, Entreno cuesta $9.99/mes. Precios en USD, IVA incluido.
 
 #BananaBurn #Propositos #Fuerza #Habitos #Entrenamiento
 

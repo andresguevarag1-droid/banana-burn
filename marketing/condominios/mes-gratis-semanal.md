@@ -32,7 +32,7 @@ https://www.bananaburn.app/c/[codigo]
 ## Semana 4: qué pasa al terminar el mes
 
 ```text
-¿Cuándo termina tu mes gratis? Mira tu fecha en Mi plan: tienes 30 días desde tu activación. No hay cobro automático de la cortesía. Al terminar, cada residente decide si continúa y paga su propio plan: Entreno por $9.99/mes o Entreno + Nutrición por $14.99/mes. También hay planes anuales. La administración nunca paga. Si aún no lo activas, usa el enlace mientras el condominio siga en Mes gratis.
+¿Cuándo termina tu mes gratis? Mira tu fecha en Mi plan: tienes 30 días desde tu activación. No hay cobro automático de la cortesía. Al terminar, cada residente decide si continúa y paga su propio plan: Entreno por $9.99/mes o Entreno + Nutrición por $14.99/mes. Precios en USD, IVA incluido. También hay planes anuales. La administración nunca paga. Si aún no lo activas, usa el enlace mientras el condominio siga en Mes gratis.
 https://www.bananaburn.app/c/[codigo]
 ```
 

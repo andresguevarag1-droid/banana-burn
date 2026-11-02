@@ -33,10 +33,11 @@ describe("correo-invita-y-gana.md", () => {
     expect(links(text)).toEqual(links(html));
     expect(medium(links(text)[0])).toBe("email");
   });
-  it("asunto, texto y HTML dicen la oferta: 3 amigos = 1 mes, plan anual = trimestre", () => {
-    expect(doc).toMatch(/\*\*Asunto:\*\* Invita a 3 amigos y gana 1 mes gratis/);
+  it("asunto, texto y HTML dicen la oferta: 3 amigos que pagan = 1 mes, plan anual = trimestre", () => {
+    expect(doc).toMatch(/\*\*Asunto:\*\* Cada 3 amigos que pagan su plan te dan 1 mes gratis/);
     for (const b of [text, html]) {
-      expect(b).toContain("Invita a 3 amigos y gana 1 mes gratis");
+      expect(b).toContain("Cada 3 amigos que pagan su plan te dan 1 mes gratis");
+      expect(b).toContain("Cuenta cuando paga su primer plan");
       expect(b).toMatch(/plan anual[\s\S]*trimestre/);
     }
   });

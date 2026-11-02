@@ -64,7 +64,9 @@ describe("R09 a R11: importes publicados", () => {
     const captura = guion.split("## Captura real\n")[1].split("\n## ")[0];
     const post = guion.split("## Post propuesto\n")[1].split("\n## ")[0];
     expect(captura).toContain(`es una compra aparte de ${precio}, salvo la temporada incluida`);
-    expect(post).toContain(`Temporada de Running: ${precio} como compra aparte`);
+    // #215: R09 sale la semana del 16 al 22 nov, cuya única pieza de Temporada es K12.
+    expect(post).not.toMatch(/Temporada|\$/);
+    expect(post).toContain("primer entreno de fuerza: 12 min, también en casa");
   });
 });
 

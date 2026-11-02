@@ -180,7 +180,8 @@ export function summarize(events: Pick<AdminEvent, "kind" | "amount_minor" | "cu
   return s;
 }
 
-export function summaryText(s: DaySummary): { title: string; body: string } {
+/** `activacion`: la línea de activación (#200); sin ella el resumen sale como antes. */
+export function summaryText(s: DaySummary, activacion?: string | null): { title: string; body: string } {
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   return {
     title: `Tu día en Banana Burn: ${money(s.ingresoMinor, "USD")}`,
@@ -188,10 +189,10 @@ export function summaryText(s: DaySummary): { title: string; body: string } {
       plural(s.registros, "usuario nuevo", "usuarios nuevos"),
       plural(s.primerosEntrenos, "primer entreno", "primeros entrenos"),
       plural(s.pagos, "pago", "pagos"),
-      s.tarjetas ? plural(s.tarjetas, "tarjeta guardada", "tarjetas guardadas") : null,
+      s.tarjetas || activacion ? plural(s.tarjetas, "tarjeta guardada", "tarjetas guardadas") : null,
       s.rechazos ? plural(s.rechazos, "cobro rechazado", "cobros rechazados") : null,
       s.cancelaciones ? plural(s.cancelaciones, "cancelación", "cancelaciones") : null,
-    ),
+    ) + (activacion ? `. Activación: ${activacion}` : ""),
   };
 }
 

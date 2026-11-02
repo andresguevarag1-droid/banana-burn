@@ -76,8 +76,8 @@ Vertical 9:16 video, 1080x1920, 30fps, realistic. Hands holding a modern smartph
 | | 8 | La báscula no lo dice todo | 1 + 5 | progreso |
 | 16 al 22 nov | 9 | Corredor sin fuerza = corredor lesionado | 1 + 3 | running-plan |
 | | 10 | Administrador: el gym del condominio está vacío | 2 | hoy2 |
-| | 11 | Día de inyección: ¿entreno o descanso? | 1 + 5 | entreno |
-| | 12 | Últimos días para la Temporada 1 | 3 + 1 | temporadas |
+| | 11 | Día de inyección: ¿entreno o descanso? | 1 + 5 | entreno; ARCHIVADO (#215), no se publica |
+| | 12 | Últimos días para la Temporada 1 | 3 + 1 | temporadas; ARCHIVADO (#215), no se produce |
 | 23 al 29 nov | 13 | Lo que como en un día para no perder músculo | 4 | nutricion |
 | | 14 | 3 días por semana bastan | 1 + 5 | hoy2 |
 | | 15 | De 0 a tu primer 5K | 3 | running-plan |
@@ -87,11 +87,11 @@ Reparto: 40 % GLP-1 y bajar rápido (2, 6, 8, 11, 13), 30 % condominios (3, 7, 1
 
 ## Datos que se pueden usar en pantalla (verificados)
 
-- Planes: Entreno $9.99/mes y Entreno + Nutrición $14.99/mes. Los dos con 7 días gratis.
+- Planes: Entreno $9.99/mes y Entreno + Nutrición $14.99/mes. Precios en USD, IVA incluido. Los dos con 7 días gratis.
 - Temporada 1: del 9 nov 2026 al 3 ene 2027, inscripciones hasta el 22 nov. Running $14.99, Raquetas $16.99, Cross Training $18.99. El plan anual incluye 1 temporada gratis.
 - Banana Run: ritmo por kilómetro con el GPS del celular, en todos los planes.
 - Condominios: primer mes gratis para todos los residentes; el condominio no paga nada; cada residente decide y paga lo suyo; reunión de 30 min en bananaburn.app/condominios.
-- GLP-1: proteína de 1.2 a 1.6 g por kg; fuerza al menos 3 veces por semana (consenso 2025); Banana Shield baja la intensidad el día de la inyección.
+- GLP-1 (corregido en #215): solo orientación general, sin dosis, gramos por kilo ni frecuencias exactas. Proteína primero en cada comida y fuerza cada semana; la meta se acuerda con el médico. Banana Shield *sugiere* el modo suave después de la inyección (`src/lib/glp1.ts`), no baja la intensidad por su cuenta. Siempre con «No sustituye la indicación de tu médico.»
 
 ## Entregables por Reel
 
