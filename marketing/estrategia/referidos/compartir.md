@@ -2,7 +2,7 @@
 
 Lo que la persona manda desde **Invita y gana** (`/app/referidos`). Hay dos versiones: una para WhatsApp y una para otras redes (Instagram, Facebook, TikTok, Telegram, correo).
 
-**Qué métrica mueve:** registros que llegan por referido, con costo de anuncio $0. Cada referido que paga baja el **costo por cliente que paga** del mes. Métrica de control: % de registros por referido que se activan (terminan la bienvenida y un primer entreno o registro en sus primeros 7 días).
+**Qué métrica mueve:** registros que llegan por referido, con costo de anuncio $0. Cada referido que paga baja el **costo por cliente que paga** del mes. Métricas de control: % de registros por referido que terminan su primer entreno en 72 horas y % que pagan su primer plan dentro de 60 días (desde el 1 de noviembre solo cuentan para la recompensa quienes pagan).
 
 ## Enlace
 

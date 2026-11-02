@@ -8,10 +8,10 @@ Cada persona guarda sus entrenos en la app y lleva su cuenta privada. Los descan
 
 ## Invita a entrenar, sin condiciones nuevas
 
-Copy listo: «Construye tu constancia este noviembre. Apunta a 12 entrenos, con descanso. Si quieres compañía, comparte tu enlace desde Invita y gana. 3 amigos activos = 1 mes gratis. Cada amigo debe terminar la bienvenida y, en sus primeros 7 días, completar un entreno o registrar agua, pasos o sueño. No necesita pagar. Empieza en bananaburn.app.»
+Copy listo: «Construye tu constancia este noviembre. Apunta a 12 entrenos, con descanso. Si quieres compañía, comparte tu enlace desde Invita y gana. 3 amigos que pagan = 1 mes gratis. Cada amigo cuenta cuando paga su primer plan, mensual o anual, dentro de 60 días desde que se registró con tu enlace. La prueba gratis no cuenta. Empieza en bananaburn.app.»
 
 Los 12 entrenos no desbloquean el mes gratis ni son requisito para referir. El reto no amplía la prueba: después de sus 7 días, continuar entrenando requiere acceso vigente (plan o regalo aplicable). Participar en la conversación no requiere comprar. El mes gratis corresponde a quien invita, se añade al final del acceso actual y se valida en el sistema. No prometerlo a cada invitado ni darlo manualmente por DM.
 
-Usar el enlace personal real de Invita y gana, no un código genérico. Cuentas nuevas; atribución en primeras 72 horas, cookie 30 días, primer enlace prevalece. Si no se activa en 7 días, no cuenta. Máximo 12 recompensas en 365 días; posibles revisiones por abuso. Si uno del grupo compra anual con pago confirmado, el grupo da 3 meses en total, una sola mejora por grupo. Ver [reglas completas](../estrategia/referidos/reglas.md).
+Usar el enlace personal real de Invita y gana, no un código genérico. Cuentas nuevas; atribución en primeras 72 horas, cookie 30 días, primer enlace prevalece. Si no paga su primer plan dentro de 60 días desde que se registró, no cuenta. Máximo 12 recompensas en 365 días; posibles revisiones por abuso. Si uno del grupo compra anual con pago confirmado, el grupo da 3 meses en total, una sola mejora por grupo. Ver [reglas completas](../estrategia/referidos/reglas.md).
 
-Medir por separado: sesiones guardadas y retorno semanal para el reto; cuentas atribuidas, calificadas y recompensas para referidos; cobros exitosos para la meta de pago. No confundir los tres conteos.
+Medir por separado: sesiones guardadas y retorno semanal para el reto; cuentas atribuidas, calificadas (con primer pago desde el 1 de noviembre) y recompensas para referidos; cobros exitosos para la meta de pago. No confundir los tres conteos.

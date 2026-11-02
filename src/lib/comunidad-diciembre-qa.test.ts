@@ -29,12 +29,12 @@ describe("comunidad 30 noviembre a 6 diciembre: condiciones comerciales", () => 
     for (const plan of PLANS) expect(renewal).toContain(`${usd2(plan.price.mes)} en ${plan.name}`);
   });
 
-  it.fails("KNOWN BUG #178: 2026-12-04 y la semana dicen la regla vieja (activarse en 7 días, no necesita pagar); desde 0064 el amigo cuenta al pagar dentro de 60 días", () => {
+  it("2026-12-04 y la semana dicen que el amigo cuenta cuando paga su primer plan (0064)", () => {
     const referral = read("2026-12-04.md");
     for (const doc of [week, referral]) {
-      expect(doc).toContain(`${REF_GROUP_SIZE} amigos activos = ${REF_BASE_MONTHS} mes gratis`);
-      expect(doc).toContain(`primeros ${REF_WINDOW_DAYS} días`);
-      expect(doc).toContain("No necesita pagar");
+      expect(doc).toContain(`${REF_GROUP_SIZE} amigos que pagan = ${REF_BASE_MONTHS} mes gratis`);
+      expect(doc).toContain(`cuando paga su primer plan, mensual o anual, dentro de ${REF_WINDOW_DAYS} días`);
+      expect(doc).not.toMatch(/necesita pagar\.|amigos? activos?|primeros 7 días|activarse/i);
       expect(doc).toContain(`${REF_MAX_REWARDS_YEAR} recompensas en 365 días`);
       expect(doc).toContain(`grupo da ${REF_ANNUAL_MONTHS} meses en total`);
     }

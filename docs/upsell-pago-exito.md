@@ -6,7 +6,7 @@ El anual se ofrece solo con periodicidad mensual conocida. Sin el parámetro de 
 
 Temporada 1 usa `SEASONS_T1`, `canEnroll` y las fechas de `src/lib/seasons.ts`, con la fecha local de la persona como la tienda de temporadas: del 9 de noviembre de 2026 al 3 de enero de 2027, inscripciones hasta el 22 de noviembre inclusive. Desde el 23 no se muestra esa sección. La tienda verifica disponibilidad, propiedad y canje; la pantalla de éxito no promete un segundo canje al anual que ya lo usó.
 
-Referidos usa las constantes de `src/lib/referrals.ts`: 3 amigos calificados dan 1 mes; si uno del grupo compra anual confirmado, son 3 meses en total. Deben crear una cuenta nueva con el enlace, terminar bienvenida y completar un entreno o registrar agua, pasos o sueño dentro de sus primeros 7 días. Cuentas propias o repetidas no cuentan; las sospechosas requieren revisión. Máximo 12 recompensas en 365 días. El enlace personal y el detalle de las reglas se consultan en `/app/referidos`.
+Referidos usa las constantes de `src/lib/referrals.ts`: 3 amigos calificados dan 1 mes; si uno del grupo compra anual confirmado, son 3 meses en total. Deben crear una cuenta nueva con el enlace y pagar su primer plan (Entreno o Entreno + Nutrición, mensual o anual) dentro de 60 días desde que se registraron; desde el 1 de noviembre (0064) activarse ya no basta y la prueba gratis no cuenta. Cuentas propias o repetidas no cuentan; las sospechosas requieren revisión. Máximo 12 recompensas en 365 días. El enlace personal y el detalle de las reglas se consultan en `/app/referidos`.
 
 ## Dinero neto por cobro
 
