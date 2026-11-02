@@ -5,9 +5,9 @@ import type { Entitlements } from "@/lib/entitlements";
 import { amountMinorFor } from "@/lib/trial";
 import { usd2 } from "@/lib/num";
 
-export function TrialCardNotice({ ent, tz, screen, now }: { ent: Entitlements; tz: string; screen: "hoy" | "suscripcion"; now?: Date }) {
+export function TrialCardNotice({ ent, tz, screen, now, minDay = 0 }: { ent: Entitlements; tz: string; screen: "hoy" | "suscripcion"; now?: Date; /** Solo desde este día de la prueba. */ minDay?: number }) {
   const notice = trialCardNotice(ent, now);
-  if (!notice) return null;
+  if (!notice || notice.day < minDay) return null;
   const date = new Date(notice.chargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric", timeZone: tz });
   return <aside aria-label="Guardar tarjeta es opcional" className="card p-4 sm:p-6">
     <FunnelTracker view="card_banner_view" props={{ kind: "trial-optional", screen, day: notice.day }} />
