@@ -5,7 +5,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, firstSessionPlan, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
 import { getDaily, prefetchDaily } from "@/lib/daily";
-import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, nextTrainingDow, planDay, prescribe, DAY_NAMES, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
+import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, nextTrainingDow, offersHomeFirst, planDay, prescribe, DAY_NAMES, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
 import { plannedFromSession } from "@/lib/programs";
@@ -21,8 +21,8 @@ export const metadata = { title: "Entreno" };
 
 const isEngine = (id: string): id is ExerciseId => Object.hasOwn(EX, id);
 
-export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string; primera?: string }> }) {
-  const { dia, modo, expres, repetir, cambiar, por, sesion, primera } = await searchParams;
+export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string; primera?: string; casa?: string }> }) {
+  const { dia, modo, expres, repetir, cambiar, por, sesion, primera, casa } = await searchParams;
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
@@ -36,7 +36,10 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   // Con un programa activo, el entreno sale del programa: la sesión de hoy, otra de esta semana (?sesion=2) o, en un
   // día de descanso, la próxima (adelantarla). El exprés y ?dia= (rutina normal) siguen disponibles.
   let plan: PlannedDay;
-  const firstPlan = firstSessionPlan(d, saved ? 1 : 0);
+  const firstPlan = firstSessionPlan(d, saved ? 1 : 0, casa === "1");
+  // Primer entreno en casa con gym en el perfil (?casa=1): ejercicios y alternativas sin equipo; el perfil no cambia.
+  const homeFirst = casa === "1" && !!firstPlan && offersHomeFirst(d.equipment);
+  const eq = homeFirst ? "ninguno" : d.equipment;
   if (expres) plan = expressDay(Number(expres), d.week + d.today.dow);
   else if (dia != null && n >= 0 && n <= 6) plan = planDay(n, d.week, d.engineSched, d.opts);
   else if (firstPlan) plan = firstPlan;
@@ -59,13 +62,13 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
 
   const optionIds = slots.map((e) => {
     if (!isEngine(e.id)) return [] as ExerciseId[];
-    const pool = (e.slot ? SLOTS[e.slot] : ALTS[e.id] ?? []).map((x) => forEquipment(x, d.equipment, d.opts.level));
-    const home = d.equipment === "gym" || d.equipment === "mixto" ? HOME[e.id] : undefined; // opción "en casa / sin máquina" también en el gym
+    const pool = (e.slot ? SLOTS[e.slot] : ALTS[e.id] ?? []).map((x) => forEquipment(x, eq, d.opts.level));
+    const home = eq === "gym" || eq === "mixto" ? HOME[e.id] : undefined; // opción "en casa / sin máquina" también en el gym
     return [e.id, ...pool.filter((x) => x !== e.id), ...(home ? [home] : [])].filter((x, i, arr) => arr.indexOf(x) === i).slice(0, 5) as ExerciseId[];
   });
   // Ejercicios de la biblioteca: el del programa y alternativas del mismo patrón con el equipo de la persona.
   const libMain = slots.map((e) => (e.id.startsWith("ds:") ? getLibEx(e.id.slice(3)) : null));
-  const libAlts = slots.map((e, i) => (libMain[i] ? similar(libMain[i]!, d.equipment, 3) : isEngine(e.id) ? libraryAlternatives(e.id, d.equipment) : []));
+  const libAlts = slots.map((e, i) => (libMain[i] ? similar(libMain[i]!, eq, 3) : isEngine(e.id) ? libraryAlternatives(e.id, eq) : []));
   // Todo lo que no depende entre sí se pide en paralelo.
   const [g, hist, doneTemplates] = await Promise.all([
     getDaily(v, a.startWeight, a.currentWeight),
@@ -138,6 +141,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
     }
   }
-  return <Player firstSession={!!firstPlan && !expres && dia == null} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player firstSession={!!firstPlan && !expres && dia == null} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }

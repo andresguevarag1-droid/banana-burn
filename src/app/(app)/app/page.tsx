@@ -3,14 +3,14 @@ import { demoCardState } from "@/lib/trial-demo";
 import { TrialCardNotice } from "@/components/trial-card-notice";
 import Link from "next/link";
 import { FunnelTracker } from "@/components/analytics";
-import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, House, Monkey, Pause, Scales } from "@/components/icons";
+import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { dashboard, firstSessionPlan, getAthlete } from "@/lib/athlete";
 import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
 import { hoyTip } from "@/lib/plan-access";
-import { DAY_NAMES, EX, isTrainingDay, prescribe, type SlotCfg } from "@/lib/engine";
+import { DAY_NAMES, EX, homeFirstAt, isTrainingDay, offersHomeFirst, prescribe, type SlotCfg } from "@/lib/engine";
 import { getHistory } from "@/lib/history";
 import { WorkoutHero } from "@/components/hoy/workout-hero";
 import type { Viewer } from "@/lib/supabase/server";
@@ -91,6 +91,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?primera=1 muestra este estado.
   const first = isFirstDay({ program: !!d.program, demo: v.demo, primera: sp.primera, workouts: learnState.workouts, trainedToday: g.trainedToday });
   const firstPlan = first ? firstSessionPlan(d, 0) : null;
+  // Con gym, el primer entreno también en casa y sin equipo; si el registro terminó de noche, esa opción va primero.
+  const homePlan = firstPlan && offersHomeFirst(a.equipment) ? firstSessionPlan(d, 0, true) : null;
+  const home = homePlan ? { mins: homePlan.mins ?? 12, first: homeFirstAt(a.registeredAt ? localHour(new Date(a.registeredAt), v.tz) : v.demo ? localHour(new Date(), v.tz) : null) } : undefined;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = (firstPlan ?? plan).mins ?? (training || firstPlan ? 55 : 0);
   // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
@@ -112,7 +115,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       </div>
     </header>
   );
-  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} home={home} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
     readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>;
   // Primer día (sin ningún entreno guardado): solo el saludo y el primer entreno, sin tours, avisos ni tarjetas que lo
   // distraigan. El aviso de tarjeta sí sale si faltan 2 días o menos para el cobro. Desde el primer entreno, Hoy completo.
@@ -121,13 +124,6 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
       {header}
       {hero}
-      {/* Alternativa en casa: el exprés de 10 min sin equipo también cuenta como primer entreno guardado. */}
-      {(a.equipment === "gym" || a.equipment === "mixto") && (
-        <Link href="/app/entreno?expres=10" data-cta="hoy-primero-casa" className="btn-ghost flex w-full min-h-12 h-auto px-4 py-3 text-center">
-          <House weight="duotone" className="size-5 shrink-0" aria-hidden />
-          <span className="text-balance">¿No estás en el gym? Hazlo en casa ahora (10 min, sin equipo)</span>
-        </Link>
-      )}
       <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
       <div id="hoy-continuar" className="scroll-mt-24" />
     </div>

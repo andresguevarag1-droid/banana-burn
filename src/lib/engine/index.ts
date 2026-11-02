@@ -211,21 +211,31 @@ const FIRST_EX: Record<Equipment, ExerciseId[]> = {
 };
 /** Tope del primer entreno, en minutos (con el calentamiento). */
 export const FIRST_MAX_MIN = 15;
+/** Tope de la variante en casa sin equipo: el botón de Hoy promete 12 minutos. */
+export const FIRST_HOME_MIN = 12;
+
+/** Con equipo de gimnasio, el primer entreno también se ofrece en casa y sin equipo (quien llega desde el sillón). */
+export const offersHomeFirst = (equipment?: Equipment) => equipment === "gym" || equipment === "mixto";
+/** El registro terminó de noche (6 p.m. a 5 a.m., hora local): la opción en casa va primero. Sin hora, el gym primero. */
+export const homeFirstAt = (hour: number | null | undefined) => hour != null && (hour >= 18 || hour < 5);
 
 /**
  * Primer entreno de quien nunca ha entrenado: 10 a 15 minutos, 3 o 4 ejercicios básicos de su equipo, 2 series con
  * descanso corto y sin cardio. Conserva el día y la plantilla de `base` (así se guarda y la rutina sigue igual desde
  * el segundo entreno). Quién es "primera vez" lo decide el servidor con los entrenos guardados, nunca el cliente.
+ * `home`: la variante en casa sin equipo para quien tiene gym; cambia solo los ejercicios, no el equipo del perfil.
  */
-export function firstSessionDay(base: PlannedDay, opts: PlanOpts = {}): PlannedDay {
-  let exercises: PlannedExercise[] = FIRST_EX[opts.equipment ?? "gym"].map((id) => {
-    const cfg: SlotCfg = EX[id].m === "Core" ? { id, sets: 2, lo: 20, hi: 30, rest: 45, unit: "s" } : { id, sets: 2, lo: 8, hi: 12, rest: 60 };
+export function firstSessionDay(base: PlannedDay, opts: PlanOpts = {}, home = false): PlannedDay {
+  let exercises: PlannedExercise[] = FIRST_EX[home ? "ninguno" : opts.equipment ?? "gym"].map((id) => {
+    // En casa, con el peso del cuerpo, basta un descanso corto: así cabe en los 12 minutos que promete Hoy.
+    const cfg: SlotCfg = EX[id].m === "Core" ? { id, sets: 2, lo: 20, hi: 30, rest: home ? 30 : 45, unit: "s" } : { id, sets: 2, lo: 8, hi: 12, rest: home ? 30 : 60 };
     return { id, name: EX[id].n, muscle: EX[id].m, cfg };
   });
-  while (estimateMinutes(exercises) > FIRST_MAX_MIN && exercises.length > 3) exercises = exercises.slice(0, -1);
+  const max = home ? FIRST_HOME_MIN : FIRST_MAX_MIN;
+  while (estimateMinutes(exercises) > max && exercises.length > 3) exercises = exercises.slice(0, -1);
   return {
     ...base, name: "Cuerpo completo para empezar", tag: "Ligero", icon: "bolt", exercises, cardio: undefined, mins: estimateMinutes(exercises),
-    hook: "Hoy aprendes los movimientos básicos a tu ritmo, sin prisa", key: undefined, program: undefined,
+    hook: home ? "Hoy aprendes los movimientos básicos en casa, sin equipo y a tu ritmo" : "Hoy aprendes los movimientos básicos a tu ritmo, sin prisa", key: undefined, program: undefined,
   };
 }
 
