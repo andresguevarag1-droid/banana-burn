@@ -1,5 +1,7 @@
 # Boost orgánico: Costa Rica, 2 al 29 de noviembre de 2026
 
+> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** El impulso a seguidores y visitas al perfil no se ejecuta, ni siquiera con presupuesto bajo. La selección semanal de piezas sigue sirviendo para elegir qué publicar en orgánico. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215).
+
 Propuesta de Martín para Andrés. Estado: pendiente de aprobación. No hay resultados disponibles: por medir. Este archivo no autoriza gasto ni publicación. Andrés debe aprobar por escrito las piezas, el objetivo, el público, las fechas, el nivel de presupuesto y los límites de costo antes de activar cualquier anuncio. No se entra a Meta Ads ni se crean, modifican o pausan campañas desde esta tarea.
 
 El plan mueve descubrimiento y visita al perfil, pasos previos a visitar bananaburn.app, registrarse y completar el primer entreno. Seguidores y reproducciones son indicadores de apoyo; el resultado de negocio sigue siendo usuarios de pago activos. No se promete que más interacción pagada produzca más alcance orgánico, registros o pagos: esa relación está por medir.

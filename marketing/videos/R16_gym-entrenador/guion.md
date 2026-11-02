@@ -49,7 +49,7 @@ Cierre exacto: Coach Banana señalando + botón ink “Empieza 7 días gratis en
 
 ## Post propuesto
 
-> El gym de tu edificio puede ser tu punto de partida. Banana Burn te guía desde el celular y Comunidad te permite compartir el proceso. No incluye un entrenador presencial. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Cada residente elige su plan: Entreno desde $9.99/mes después de la prueba.
+> El gym de tu edificio puede ser tu punto de partida. Banana Burn te guía desde el celular y Comunidad te permite compartir el proceso. No incluye un entrenador presencial. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Cada residente elige su plan: Entreno desde $9.99/mes después de la prueba. Precios en USD, IVA incluido.
 >
 > #BananaBurn #GymDelEdificio #Condominios #Entrenamiento #Comunidad
 

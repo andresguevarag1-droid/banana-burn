@@ -18,10 +18,10 @@ export const BOTON = ["Empieza 7 días gratis", "en bananaburn.app"];
 export const ESCENAS = {
   gancho: { texto: ["Bajaste", "rápido…", "¿y tu músculo?"] },
   pierdes: { texto: ["Bajar rápido", "también se lleva", "músculo."] },
-  proteina: { texto: ["Proteína de", "1.2 a 1.6 g", "por kg"] },
+  proteina: { texto: ["Proteína", "primero", "en cada comida"] },
   captura: { texto: ["Tu meta de proteína,", "cada día."] },
   zoom: { texto: ["Y cuánto te falta hoy."] },
-  fuerza: { texto: ["Fuerza al menos", "3", "veces por semana"] },
+  fuerza: { texto: ["Entrena", "fuerza", "cada semana"] },
   entrena: { texto: ["El músculo", "se cuida", "entrenando."] },
   shield: { texto: ["Banana Shield", "lo arma por ti."] },
   pilares: { texto: ["Más proteína", "Fuerza primero", "Modo suave"] },
@@ -40,5 +40,5 @@ export const CORTES = {
   ],
 };
 
-/** Números permitidos en el texto: los del issue #14 y los 7 días del cierre estándar. */
-export const NUMEROS_PERMITIDOS = ["1.2", "1.6", "3", "7"];
+/** Números permitidos en el texto: solo los 7 días del cierre estándar. Sin gramos ni frecuencias exactas (#215). */
+export const NUMEROS_PERMITIDOS = ["7"];

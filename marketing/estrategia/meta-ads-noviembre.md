@@ -1,5 +1,7 @@
 # Meta Ads del 5 al 30 de noviembre de 2026 por país (propuesta)
 
+> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** Este plan ($40.00 al día del 5 al 30 de noviembre, con Costa Rica, Guatemala y Colombia) no se ejecuta. Guatemala además queda fuera de mercado. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215). Antes de reactivarlo, quitar de los textos de GLP-1 los gramos por kilo y la frecuencia exacta de fuerza, como ya se hizo en R02 y K14.
+
 Propuesta para Costa Rica, Guatemala y Colombia. **Es solo un plan**: no se crea, edita ni pausa nada en Meta. Andrés aprueba el presupuesto y cada anuncio antes de que exista.
 
 - **Arranca el jueves 5 de noviembre**, cuando termina la campaña actual (4 de noviembre). No toca la campaña activa ni sus conjuntos, anuncios, públicos o presupuesto: todo lo de aquí son campañas nuevas.

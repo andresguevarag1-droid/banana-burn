@@ -21,7 +21,7 @@ Deja tu tarjeta lista y paga 50 % menos tu primer mes.
 Si dejas tu tarjeta lista, tu primer mes cuesta 50 % menos. Hoy no te cobramos y cancelas cuando quieras desde Mi plan.
 
 Entreno mensual: $4.99 el primer mes, después $9.99.
-Entreno + Nutrición mensual: $7.49 el primer mes, después $14.99.
+Entreno + Nutrición mensual: $7.49 el primer mes, después $14.99. Precios en USD, IVA incluido.
 
 Tu prueba sigue igual: guardar la tarjeta no la alarga ni la acorta. El primer cobro es el {{fecha_cobro}}, cuando termina tu prueba, y te avisamos 2 días antes.
 

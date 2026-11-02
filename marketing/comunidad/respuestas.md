@@ -76,7 +76,7 @@ La oferta para condominios está disponible en Costa Rica cuando el condominio s
 
 ## 19. ¿Cuándo empieza Temporada 1? | Comentario
 
-Empieza el 9 de noviembre y termina el 3 de enero. Las inscripciones cierran el 22 de noviembre. Consulta las modalidades y condiciones en https://bananaburn.app/temporadas. Es una oferta distinta del reto de comunidad.
+Empieza el 9 de noviembre y termina el 3 de enero. Las inscripciones cierran el 22 de noviembre; después de esa fecha, responder que ya cerraron y no enlazar a la compra. Consulta las modalidades y condiciones en https://bananaburn.app/temporadas. Es una oferta distinta del reto de comunidad.
 
 ## 20. Me rechazaron el pago | DM
 

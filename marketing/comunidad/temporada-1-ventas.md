@@ -1,5 +1,7 @@
 # Temporada 1: ventas orgánicas del 1 al 22 de noviembre de 2026
 
+> **ARCHIVADO (#215).** Esta capa comercial diaria (un texto de Temporada por día del 1 al 22 nov) no se publica: Temporada 1 va como máximo en una pieza por semana. Solo se conserva el banco de respuestas R1 a R5 para contestar dudas que lleguen. Ver [temporada-1-una-por-semana.md](../estrategia/temporada-1-una-por-semana.md).
+
 BORRADOR PARA ANDRÉS. Instagram y Facebook de Banana Burn. Nada se publica, programa, envía ni responde sin aprobación escrita de Andrés por pieza y canal. Sin anuncios, campañas, descuentos nuevos ni mensajes a personas que solo votaron. Sofía prepara; Andrés revisa y ejecuta. Horas de Costa Rica (UTC-6).
 
 ## Oferta comprobada y prioridad comercial

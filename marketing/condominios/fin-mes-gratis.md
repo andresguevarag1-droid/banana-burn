@@ -114,7 +114,7 @@ El plan anual incluye 1 temporada deportiva gratis.
 
 Plan mensual, sin permanencia:
 Entreno: $9.99 al mes.
-Entreno + Nutrición: $14.99 al mes.
+Entreno + Nutrición: $14.99 al mes. Precios en USD, IVA incluido.
 
 Entreno + Nutrición suma calorías y macros calculados para ti, registro de comidas con alimentos latinos y Banana Shield para personas en GLP-1. No sustituye la indicación de tu médico.
 

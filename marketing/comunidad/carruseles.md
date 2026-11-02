@@ -31,6 +31,8 @@ Pie: «Invita a quien quiera empezar contigo. El mes se valida en el sistema y s
 
 ## C4, viernes 6: prepara tu siguiente objetivo
 
+> **ARCHIVADO (#215):** carrusel de Temporada 1; la pieza de Temporada de la semana del 2 al 8 es R04. Ver [temporada-1-una-por-semana.md](../estrategia/temporada-1-una-por-semana.md).
+
 1. Tu fuerza también necesita constancia.
 2. Temporada 1 empieza el 9 de noviembre.
 3. Hasta el 3 de enero. Inscripciones hasta el 22 de noviembre.

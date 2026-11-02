@@ -1,5 +1,7 @@
 # Cuánto peso usar: anuncios para Costa Rica y Colombia
 
+> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** Estos textos quedan guardados para cuando vuelva la pauta. Mientras tanto se pueden usar solo en orgánico, con aprobación de Andrés. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215).
+
 Textos propuestos para usar desde el 9 de noviembre de 2026. Pendientes de aprobación de Andrés: este documento no autoriza publicación, envío, gasto ni cambios en campañas. Destino: https://www.bananaburn.app/.
 
 ## Costa Rica
