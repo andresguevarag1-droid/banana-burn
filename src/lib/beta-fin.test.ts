@@ -7,10 +7,12 @@ vi.mock("@/lib/email/send", () => ({
 }));
 
 import { sendEmail } from "@/lib/email/send";
-import { finBeta } from "@/lib/email/templates";
+import { BETA_END_PUSH, finBeta } from "@/lib/email/templates";
+import { withLoginLinks } from "@/lib/email/login-link";
 import { sendBetaEndEmails, type RunStats } from "./notify-run";
 import { betaEndDay, betaEndEligible, betaEndIdemKey, betaEndStep } from "./beta-fin";
 import { BETA_ENDS_AT, BETA_GRACE_UNTIL, PLANS } from "./plans";
+import { SITE_URL } from "./env";
 
 const at = (iso: string) => new Date(iso);
 const nb = (s: string) => s.replace(/\u00a0/g, " ");
@@ -60,17 +62,11 @@ describe("plantillas", () => {
   const base = { name: "Ana López", promo: true, unsubscribe: "https://www.bananaburn.app/api/email/baja?token=x" };
   const all = ([1, 2, 3] as const).map((step) => finBeta({ ...base, step }));
 
-  it("cada una dice lo suyo con la fecha real", () => {
+  it("el paso 1 (ya enviado el 1 nov) no cambia", () => {
     expect(all[0].subject).toBe("Terminó la beta: sigues con todo incluido hasta el 7 de noviembre");
-    expect(all[1].subject).toBe("Ana, lo que conservas si eliges tu plan");
-    expect(all[1].text).toMatch(/Tu progreso/);
-    expect(all[1].text).toMatch(/Tu plan/);
-    expect(all[1].text).toMatch(/Tu racha/);
-    expect(all[2].subject).toBe("Hoy es tu último día con todo incluido");
-    expect(all[2].text).toContain("termina hoy, 7 de noviembre");
   });
-  it("botón a /app/suscripcion, anual antes que mensual, precios de plans.ts y enlace de baja", () => {
-    for (const e of all) {
+  it("paso 1: botón a /app/suscripcion, anual antes que mensual, precios de plans.ts y enlace de baja", () => {
+    for (const e of all.slice(0, 1)) {
       expect(e.html).toContain("/app/suscripcion");
       expect(e.html).toContain("Elegir mi plan");
       expect(e.html.indexOf("Plan anual")).toBeLessThan(e.html.indexOf("Plan mensual"));
@@ -94,6 +90,61 @@ describe("plantillas", () => {
       expect(e.html).toContain("#FFF8E3");
       expect(e.html).toContain("Plus Jakarta Sans");
     }
+  });
+});
+
+describe("pasos 2 y 3: primero el entreno (docs/emails/activacion.md, B2 y B3)", () => {
+  const base = { name: "Ana López", promo: true, unsubscribe: "https://www.bananaburn.app/api/email/baja?token=x" };
+  const b2 = finBeta({ ...base, step: 2 }), b3 = finBeta({ ...base, step: 3 });
+
+  it("asunto y preheader del documento", () => {
+    expect(b2.subject).toBe("Antes de elegir plan, prueba tu entreno");
+    expect(b2.preheader).toBe("Empieza con 12 minutos en casa. Después decides cómo seguir.");
+    expect(b3.subject).toBe("Hoy empieza por tu primer entreno");
+    expect(b3.preheader).toBe("Haz tus 12 minutos antes de decidir cómo seguir.");
+  });
+  it("un solo botón, al entreno, y sin enlace a pagar", () => {
+    for (const e of [b2, b3]) {
+      expect(e.html).toContain("Hacer mi primer entreno");
+      expect(e.html).toContain(`href="${SITE_URL}/app/entreno"`);
+      expect(e.text).toContain(`Hacer mi primer entreno: ${SITE_URL}/app/entreno\n`);
+      expect(e.html + e.text).not.toContain("/app/suscripcion");
+      expect(e.html).not.toContain("Elegir mi plan");
+      expect(e.html).toContain(base.unsubscribe);
+    }
+  });
+  it("sin entrenos y con gym o mixto, el botón abre el primer entreno en casa", () => {
+    for (const step of [2, 3] as const) {
+      const e = finBeta({ ...base, step, home: true });
+      expect(e.html).toContain(`href="${SITE_URL}/app/entreno?casa=1"`);
+      expect(e.text).toContain(`Hacer mi primer entreno: ${SITE_URL}/app/entreno?casa=1`);
+    }
+  });
+  it("el enlace de un toque conserva ?casa=1 como destino", () => {
+    const e = withLoginLinks(finBeta({ ...base, step: 2, home: true }), "11111111-1111-4111-8111-111111111111", { secret: "s", now: Date.parse("2026-11-05T13:00:00Z") });
+    expect(e.html).toContain(`next=${encodeURIComponent("/app/entreno?casa=1")}`);
+    expect(e.text).toContain(`next=${encodeURIComponent("/app/entreno?casa=1")}`);
+  });
+  it("las fechas salen de BETA_GRACE_UNTIL", () => {
+    expect(b2.text).toContain("sigue hasta el final del 7 de noviembre, hora de Costa Rica");
+    expect(b2.text).toContain("el primer cobro será el 8 de noviembre");
+    expect(b3.text).toContain("termina hoy, 7 de noviembre, a la medianoche de Costa Rica");
+    expect(b3.text).toContain("el primer cobro será mañana, 8 de noviembre");
+    const otra = finBeta({ ...base, step: 2, graceUntil: "2026-11-15T06:00:00.000Z" });
+    expect(otra.text).toContain("hasta el final del 14 de noviembre");
+    expect(otra.text).toContain("el primer cobro será el 15 de noviembre");
+  });
+  it("el 50 % solo con promo", () => {
+    for (const step of [2, 3] as const) {
+      expect(nb(finBeta({ ...base, step }).text)).toContain("recibes 50 % de descuento solo en el primer mes del plan mensual");
+      const sin = finBeta({ ...base, step, promo: false });
+      expect(nb(sin.text + sin.html)).not.toMatch(/50 %|descuento/);
+      expect(sin.text).toContain("puedes guardar tu tarjeta en Mi plan");
+    }
+  });
+  it("push de una línea, 40 caracteres o menos", () => {
+    expect(BETA_END_PUSH).toEqual({ 2: "Prueba tu entreno de 12 minutos", 3: "Hoy, tu primer entreno de 12 min" });
+    for (const t of Object.values(BETA_END_PUSH)) expect(t.length).toBeLessThanOrEqual(40);
   });
 });
 
@@ -194,6 +245,26 @@ describe("envío en runReminders", () => {
     expect(db.notification_log.filter((l) => l.user_id === "sin-tarjeta").map((l) => [l.kind, l.local_day])).toEqual([
       ["beta_fin_1", "2026-11-01"], ["beta_fin_2", "2026-11-05"], ["beta_fin_3", "2026-11-07"],
     ]);
+  });
+
+  it("pasos 2 y 3: ?casa=1 solo sin entrenos guardados y con gym o mixto", async () => {
+    const db = world();
+    db.profiles = [
+      profile("gym-nuevo", { equipment: "gym" }),
+      profile("mixto-nuevo", { equipment: "mixto" }),
+      profile("casa-nuevo", { equipment: "casa" }),
+      profile("gym-entreno", { equipment: "gym" }),
+    ];
+    db.workouts = [{ id: 1, user_id: "gym-entreno" }];
+    await sendBetaEndEmails(fakeAdmin(db), at("2026-11-05T13:00:00Z"), "daily", stats());
+    const html = (to: string) => vi.mocked(sendEmail).mock.calls.find((c) => c[0] === `${to}@correo.com`)![1].html;
+    expect(html("gym-nuevo")).toContain("/app/entreno?casa=1");
+    expect(html("mixto-nuevo")).toContain("/app/entreno?casa=1");
+    for (const id of ["casa-nuevo", "gym-entreno"]) {
+      expect(html(id)).toContain('/app/entreno"');
+      expect(html(id)).not.toContain("casa=1");
+    }
+    expect(vi.mocked(sendEmail).mock.calls[0][1].subject).toBe("Antes de elegir plan, prueba tu entreno");
   });
 
   it("fuera de la semana del 1 al 7 de noviembre no hace nada", async () => {

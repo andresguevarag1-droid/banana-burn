@@ -4,7 +4,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { errCode, logError } from "@/lib/log";
-import { EX, nextTrainingDow, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
+import { EX, nextTrainingDow, offersHomeFirst, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { parseVoice, type Voice } from "@/lib/voice";
 import { streakOf } from "@/lib/gamify";
 import { DEFAULT_PREFS, ONCE_DAY, copyFor, cronModeFrom, daysBetween, decide, inQuietHours, isHHMM, isRelevantHour, liftFact, liftLine, localClock, toMinutes, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
@@ -605,7 +605,7 @@ function emailFor(kind: Kind, x: { u: Profile; name: string; plan: ReturnType<ty
 
 // ───────────── Fin de la beta (#109) ─────────────
 
-type BetaProfile = { id: string; created_at: string | null; full_name: string | null; plan: string | null; role: string | null; timezone: string | null };
+type BetaProfile = { id: string; created_at: string | null; full_name: string | null; plan: string | null; role: string | null; timezone: string | null; equipment?: string | null };
 const SUB_READ = "id,user_id,provider_customer_id,provider_subscription_id,status,price_id,plan,billing,cancel_at_period_end,canceled_at,current_period_start,current_period_end,created_at";
 
 /**
@@ -621,20 +621,21 @@ export async function sendBetaEndEmails(admin: SupabaseClient, now: Date, mode: 
   const kind = betaEndKind(step), day = betaEndDay(step);
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
-    const { data, error } = await admin.from("profiles").select("id,created_at,full_name,plan,role,timezone")
+    const { data, error } = await admin.from("profiles").select("id,created_at,full_name,plan,role,timezone,equipment")
       .eq("onboarded", true).lt("created_at", BETA_ENDS_AT).order("id").range(from, from + PAGE - 1);
     if (error) { stats.ok = false; stats.errors++; logError("cron:fin-beta", "profiles_query_failed", { code: error.code, from }); break; }
     const profiles = (data ?? []) as BetaProfile[];
     if (!profiles.length) break;
     const ids = profiles.map((p) => p.id);
-    const [prefs, subs, comps, charges, cards] = await Promise.all([
+    const [prefs, subs, comps, charges, cards, trained] = await Promise.all([
       allPages((a, b) => admin.from("notification_prefs").select("user_id,email_reminders,timezone,quiet_start,quiet_end").in("user_id", ids).order("user_id").range(a, b)),
       allPages((a, b) => admin.from("subscriptions").select(SUB_READ).in("user_id", ids).order("id").range(a, b)),
       allPages((a, b) => admin.from("comp_grants").select("user_id,plan,previous_plan,starts_at,expires_at,revoked_at,created_at").in("user_id", ids).order("user_id").order("created_at").range(a, b)),
       allPages((a, b) => admin.from("trial_charges").select("user_id").in("user_id", ids).order("user_id").range(a, b)),
       allPages((a, b) => admin.from("payment_methods").select("user_id").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("workouts").select("user_id").in("user_id", ids).order("id").range(a, b)),
     ]);
-    const failed = [prefs, subs, comps, charges, cards].find((r) => r.error);
+    const failed = [prefs, subs, comps, charges, cards, trained].find((r) => r.error);
     if (failed) { stats.ok = false; stats.errors++; logError("cron:fin-beta", "query_failed", { code: failed.error?.code }); if (profiles.length < PAGE) break; continue; }
     const prefBy = new Map((prefs.data as { user_id: string; email_reminders: boolean | null; timezone: string | null; quiet_start: string | null; quiet_end: string | null }[]).map((r) => [r.user_id, r]));
     const subsBy = new Map<string, SubscriptionRow[]>(), compsBy = new Map<string, CompRow[]>();
@@ -642,6 +643,7 @@ export async function sendBetaEndEmails(admin: SupabaseClient, now: Date, mode: 
     for (const r of comps.data as (CompRow & { user_id: string })[]) compsBy.set(r.user_id, [...(compsBy.get(r.user_id) ?? []), r]);
     const charged = new Set((charges.data as { user_id: string }[]).map((r) => r.user_id));
     const carded = new Set((cards.data as { user_id: string }[]).map((r) => r.user_id));
+    const withWorkout = new Set((trained.data as { user_id: string }[]).map((r) => r.user_id));
 
     const due = profiles.filter((p) => {
       const pref = prefBy.get(p.id);
@@ -671,7 +673,9 @@ export async function sendBetaEndEmails(admin: SupabaseClient, now: Date, mode: 
         const paidBefore = (subsBy.get(p.id) ?? []).some((s) => Boolean(s.current_period_start));
         const promo = promoFor(kindFor({ createdAt: p.created_at, now }), paidBefore) !== null;
         const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
-        const msg = T.finBeta({ name: p.full_name || "", step, promo, unsubscribe });
+        // Pasos 2 y 3: sin entrenos guardados y con gym o mixto, el botón abre el primer entreno en casa (#194).
+        const home = !withWorkout.has(p.id) && offersHomeFirst((p.equipment ?? "gym") as Equipment);
+        const msg = T.finBeta({ name: p.full_name || "", step, promo, unsubscribe, home });
         const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: betaEndIdemKey(step, p.id), unsubscribe, tags: { kind } });
         if (r.ok) stats.email++;
         stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
