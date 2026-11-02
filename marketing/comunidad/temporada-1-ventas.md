@@ -1,5 +1,7 @@
 # Temporada 1: ventas orgánicas del 1 al 22 de noviembre de 2026
 
+> **ARCHIVADO (#215).** Esta capa comercial diaria (un texto de Temporada por día del 1 al 22 nov) no se publica: Temporada 1 va como máximo en una pieza por semana. Solo se conserva el banco de respuestas R1 a R5 para contestar dudas que lleguen. Ver [temporada-1-una-por-semana.md](../estrategia/temporada-1-una-por-semana.md).
+
 BORRADOR PARA ANDRÉS. Instagram y Facebook de Banana Burn. Nada se publica, programa, envía ni responde sin aprobación escrita de Andrés por pieza y canal. Sin anuncios, campañas, descuentos nuevos ni mensajes a personas que solo votaron. Sofía prepara; Andrés revisa y ejecuta. Horas de Costa Rica (UTC-6).
 
 ## Oferta comprobada y prioridad comercial
@@ -57,7 +59,7 @@ CTA **T**: «Conoce la temporada» a https://bananaburn.app/temporadas. CTA **A*
 
 ### Carruseles y pies que se reutilizan
 
-Fuentes sin copiar sus láminas: [C1 a C4](carruseles.md), [9 de noviembre](2026-11-09.md), [11 de noviembre](2026-11-11.md), [13 de noviembre](2026-11-13.md). Son guiones existentes, pendientes de arte final y aprobación; no se presentan como PNG terminados. Semana del 2 al 8: C2/C3/C4; del 9 al 15: días 9/11/13; del 16 al 22: C2/día 9/C4. El 1 suma C1. Son tres carruseles por semana completa, con republicación explícita en la tercera semana, sin producir otros tres iguales.
+Fuentes sin copiar sus láminas: [C1 a C4](carruseles.md), [9 de noviembre](2026-11-09.md), [11 de noviembre](2026-11-11.md), [13 de noviembre](../archivo/comunidad/2026-11-13.md). Son guiones existentes, pendientes de arte final y aprobación; no se presentan como PNG terminados. Semana del 2 al 8: C2/C3/C4; del 9 al 15: días 9/11/13; del 16 al 22: C2/día 9/C4. El 1 suma C1. Son tres carruseles por semana completa, con republicación explícita en la tercera semana, sin producir otros tres iguales.
 
 Para reutilizar el del 9 el día 18, cambiar solo su primera lámina temporal «Hoy empieza Temporada 1» por «Temporada 1 ya empezó» en el mismo recurso al producir; no abrir otro carrusel. Si no puede actualizarse, bloquear esa republicación: un pie no corrige una portada falsa. C4 dice «empieza el 9» con fecha concreta: añadir «Ya empezó» en el pie del 20 y comprobar que el arte no diga «próximamente».
 

@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-21",
+  "title": "No esperes al lunes",
+  "lines": [
+    "No esperes",
+    "al lunes."
+  ],
+  "sub": "¿Llevas 0? 12 min hoy, en casa.",
+  "hour": "20:00",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Cuántos llevas del reto de 12?",
+  "options": [
+    "0",
+    "1 o más"
+  ]
+}

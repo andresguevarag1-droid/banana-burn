@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-11",
+  "title": "Tu progreso empieza con 1 entreno",
+  "lines": [
+    "Tu progreso empieza",
+    "con 1 entreno."
+  ],
+  "sub": "Hazlo hoy: 12 min, también en casa.",
+  "hour": "20:30",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Cuántos entrenos llevas en noviembre?",
+  "options": [
+    "0",
+    "1 o más"
+  ]
+}
