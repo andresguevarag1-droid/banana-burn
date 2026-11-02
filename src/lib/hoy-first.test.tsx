@@ -9,8 +9,12 @@ import type { Entitlements } from "./entitlements";
 const page = readFileSync("src/app/(app)/app/page.tsx", "utf8");
 const base = { program: false, demo: false, workouts: 0, trainedToday: false };
 // El retorno del primer día y el de Hoy completo, por separado.
-const firstReturn = page.slice(page.indexOf("if (first) return ("), page.indexOf("const kgLost"));
-const fullReturn = page.slice(page.indexOf("const kgLost"));
+const firstIndex = page.indexOf("if (first) return (");
+const fullIndex = page.indexOf("const kgLost");
+expect(firstIndex, "debe existir el retorno del primer día").toBeGreaterThan(-1);
+expect(fullIndex, "el retorno completo debe seguir al inicial").toBeGreaterThan(firstIndex);
+const firstReturn = page.slice(firstIndex, fullIndex);
+const fullReturn = page.slice(fullIndex);
 
 describe("Hoy del primer día", () => {
   it("es primer día solo con 0 entrenos guardados, sin programa y sin entreno hoy", () => {
@@ -47,5 +51,13 @@ describe("Hoy del primer día", () => {
     expect(html(4, FIRST_DAY_CARD_MIN_DAY)).toBe("");
     expect(html(5, FIRST_DAY_CARD_MIN_DAY)).toContain("Día 6 de 7");
     expect(html(6, FIRST_DAY_CARD_MIN_DAY)).toContain("Día 7 de 7");
+  });
+
+  it("Continuar sin tarjeta tiene un destino en la vista del primer día", () => {
+    const ent = { access: "trial", trial: { endsAt: "2026-11-09T18:30:00Z" }, card: null, charge: null, cardStep: "trial" } as unknown as Entitlements;
+    const html = renderToStaticMarkup(<TrialCardNotice ent={ent} tz="America/Costa_Rica" screen="hoy" now={new Date("2026-11-08T18:30:00Z")} minDay={FIRST_DAY_CARD_MIN_DAY} />);
+    const target = html.match(/href="#([^"]+)"/);
+    expect(target, "el aviso urgente ofrece continuar sin tarjeta").not.toBeNull();
+    expect(firstReturn).toContain(`id="${target![1]}"`);
   });
 });
