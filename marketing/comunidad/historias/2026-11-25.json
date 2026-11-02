@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-25",
+  "title": "¿Vas en 0? Empieza esta noche",
+  "lines": [
+    "¿Vas en 0?",
+    "Empieza esta noche."
+  ],
+  "sub": "12 min, también en casa.",
+  "hour": "20:00",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Cuántos entrenos llevas?",
+  "options": [
+    "Ninguno",
+    "1 o más"
+  ]
+}
