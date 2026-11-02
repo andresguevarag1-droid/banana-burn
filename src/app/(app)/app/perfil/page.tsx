@@ -6,6 +6,7 @@ import { NotificationSettings } from "@/components/notifications/settings";
 import { getNotificationPrefs } from "@/app/actions/notifications";
 import { AccountSettings } from "./account";
 import { getEntitlements } from "@/lib/entitlements";
+import { activateHref, canActivatePlan } from "@/lib/first-workout-offer";
 import { getAthlete } from "@/lib/athlete";
 import { coachOf } from "@/lib/coaches";
 import { getDaily, prefetchDaily } from "@/lib/daily";
@@ -110,7 +111,8 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
       <section className="card p-5">
         <div className="flex items-center justify-between">
           <div><p className="text-sm font-semibold text-muted">Suscripción</p><p className="text-lg font-extrabold text-ink">{planTitle}</p></div>
-          <Link href="/app/suscripcion" className="btn-ghost h-11 text-sm px-4">{ent.fromSubscription ? "Gestionar" : "Ver planes"}</Link>
+          {canActivatePlan(ent) ? <Link href={activateHref()} data-cta="perfil-activar-plan" className="btn-banana h-11 text-sm px-4">Activar mi plan</Link>
+            : <Link href="/app/suscripcion" className="btn-ghost h-11 text-sm px-4">{ent.fromSubscription ? "Gestionar" : "Ver planes"}</Link>}
         </div>
         <p className="mt-2 text-sm text-muted">{planText}</p>
       </section>

@@ -28,6 +28,8 @@ export const FUNNEL_EVENTS = [
   "rest_skip",
   "exercise_swap",
   "help_open",
+  // El coach se presenta (#198): tocó una respuesta de la burbuja del coach (resumen del primer entreno u Hoy).
+  "coach_prompt_tap",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 

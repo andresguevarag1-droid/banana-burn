@@ -1,4 +1,5 @@
 import { getEntitlements } from "@/lib/entitlements";
+import { canActivatePlan } from "@/lib/first-workout-offer";
 import { betaLive } from "@/lib/plans";
 import { canUpsellNutrition } from "@/lib/plan-access";
 import { getViewer } from "@/lib/supabase/server";
@@ -16,6 +17,7 @@ import { Player, type PlayerExercise } from "./player";
 import { hasSavedWorkout, templatesDoneToday } from "./done-today";
 import { getVoice } from "@/lib/voice-server";
 import { modeNote, programTempoNote, rxNote } from "@/lib/voice";
+import { inCoachPromptWindow } from "@/lib/coach-prompt";
 
 export const metadata = { title: "Entreno" };
 
@@ -26,8 +28,10 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
-  const [a, voice, saved] = await Promise.all([getAthlete(v), getVoice(v), expres || dia != null ? Promise.resolve(true) : v.demo && primera === "1" ? Promise.resolve(false) : hasSavedWorkout(v)]);
-  const ent = await getEntitlements(v);
+  const [a, voice, everSaved, ent] = await Promise.all([getAthlete(v), getVoice(v), v.demo && primera === "1" ? Promise.resolve(false) : hasSavedWorkout(v), getEntitlements(v)]);
+  const saved = expres || dia != null ? true : everSaved;
+  // Oferta al guardar el primer entreno (cualquiera, también el exprés): solo en la prueba, sin tarjeta y sin haber pagado.
+  const firstOffer = !everSaved && canActivatePlan(ent) ? v.id : undefined;
   const nutritionUpsell = canUpsellNutrition(ent, betaLive()) ? { account: v.id, goal: a.glp1.on || a.goalWeight < a.currentWeight ? "protein" as const : "strength" as const } : undefined;
   const d = dashboard(a);
   const n = Number(dia);
@@ -141,6 +145,9 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
     }
   }
-  return <Player firstSession={!!firstPlan && !expres && dia == null} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  const firstSession = !!firstPlan && !expres && dia == null;
+  // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
+  const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
+  return <Player firstSession={firstSession} firstOffer={firstOffer} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }
