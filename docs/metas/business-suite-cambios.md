@@ -8,7 +8,7 @@ Lista de lo que ya está programado en Meta Business Suite (página de Facebook 
 - **La llamada principal de noviembre va de noche (20:00 a 22:00):** «Regístrate y haz tu primer entreno hoy (12 min, también en casa)». La llevan las [10 piezas de activación](../../marketing/comunidad/activacion/README.md). Los posts de Business Suite de las 7:00 p. m. se quedan a esa hora para no mover 20 piezas: solo cambian su texto. Donde una pieza nueva ocupa la noche, la de las 7:00 p. m. se borra.
 - **Comentar y recibir DM se acaba.** No hay ManyChat y el DM a mano frena a quien llega de noche. En FUERZA, BANANA, RETO y PLATO el pie termina con el enlace: «Tu primer entreno está en bananaburn.app».
 - **Duración: 12 min.** Es lo que dice el botón de Hoy el primer día («¿No estás en el gym? Hazlo en casa ahora (12 min, sin equipo)», `src/components/readiness.tsx`). No usar 10, 15 ni 15–20 min.
-- **Precios:** en dólares, «USD, IVA incluido», como el checkout. Nunca «equivale a $5 al mes».
+- **Precios:** en dólares, «USD, IVA incluido», como el checkout. Nunca el anual dividido entre 12 (precio por mes del anual).
 - **Carruseles:** Business Suite deja editar el pie de foto de un post programado; cambiar una lámina obliga a subir el carrusel otra vez. Esta lista solo pide cambiar pies, salvo donde dice lo contrario.
 - **Historias:** Business Suite no deja editar historias programadas. Se borran y, si hace falta, se sube una nueva.
 - Antes de guardar cada cambio, revisa la vista previa en el celular.

@@ -24,7 +24,7 @@ Reemplaza «Qué plan elegir» de Business Suite (7:00 p. m. del 11 nov), que se
 3. Fondo paper. «Primeros 7 días gratis, sin tarjeta.» Debajo: «Si guardas tu tarjeta antes del primer cobro, tu primer mes mensual va al 50 %: $4.99 o $7.49. Una vez por cuenta. No aplica al anual.»
 4. Fondo banana. «Antes de pagar, haz tu primer entreno.» Botón ink «Empieza 7 días gratis en bananaburn.app». Cuerpo: «12 min, también en casa.»
 
-No escribir «equivale a $5 al mes» ni ningún precio por mes del anual: choca con el primer mes al 50 % y la app no lo muestra (`src/lib/plans.ts`). Si se quiere hablar de ahorro, usar el que muestra la app: ahorras $59.89 al año con Entreno y $89.89 con Entreno + Nutrición.
+No dividir el anual entre 12 ni mostrar ningún precio por mes del anual: choca con el primer mes al 50 % y la app no lo muestra (`src/lib/plans.ts`). Si se quiere hablar de ahorro, usar el que muestra la app: ahorras $59.89 al año con Entreno y $89.89 con Entreno + Nutrición.
 
 ## Pie de foto
 
