@@ -1,5 +1,7 @@
 # Calendario de redes Banana Burn (programado)
 
+> **Temporada 1 (#215):** como máximo una pieza por semana: R04 (2 al 8 nov), K15 (9 al 15 nov) y K12 (20 nov). K09 queda archivado y desde el 23 nov nada vende Temporada 1. Ver [temporada-1-una-por-semana.md](estrategia/temporada-1-una-por-semana.md).
+
 Programado en Meta Business Suite para la página de Facebook "Banana Burn" y para Instagram @bananaburnapp a la vez. Hora de Costa Rica. Personajes permitidos: Coach Banana, Coach Platanita y El Nuevo. Ningún otro mono o versión fuera del diseño oficial.
 
 Ritmo desde el 24 de octubre: posts a las 8:00 a. m. y 12:00 p. m. (piezas OX/NX) más el post de las 7:00 p. m.
@@ -35,13 +37,13 @@ Ritmo desde el 24 de octubre: posts a las 8:00 a. m. y 12:00 p. m. (piezas OX/NX
 | Mié 11 nov | | | | Qué plan elegir |
 | Jue 12 nov | | NX08 Qué llevar al gym | | Carrusel K08 La báscula no lo dice todo |
 | Vie 13 nov | | NX09 3 a 4 días por semana | | |
-| Sáb 14 nov | | NX10 Lo que como en un día (PLATO) | | Carrusel K09 Raquetas y Cross |
+| Sáb 14 nov | | NX10 Lo que como en un día (PLATO) | | ~~Carrusel K09 Raquetas y Cross~~ ARCHIVADO (#215) |
 | Dom 15 nov | | | | Mitad del reto (1 a 12) |
 | Lun 16 nov | | NX11 No fue magia (RETO) | | |
 | Mar 17 nov | | | | Carrusel K10 Instalar la app |
-| Mié 18 nov | | | | Referidos: 3 amigos = 1 mes |
+| Mié 18 nov | | | | Referidos: 3 amigos que pagan = 1 mes (revisar en Business Suite: el texto programado no está en el repo y debe decir que el amigo cuenta cuando paga su primer plan) |
 | Jue 19 nov | | | | Carrusel K11 Administradores de condominio |
-| Vie 20 nov | | NX07 Cuánto descansar (de 1 a 3 minutos) | | Carrusel K12 Cierre de inscripciones |
+| Vie 20 nov | | NX07 Cuánto descansar (de 1 a 3 minutos) | | Carrusel K12 Cierre de inscripciones (única pieza de Temporada 1 del 16 al 22 nov, #215) |
 | Sáb 21 nov | | | | Meme "el lunes empiezo" |
 
 ## Carruseles K01 a K12

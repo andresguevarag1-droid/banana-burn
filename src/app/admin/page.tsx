@@ -6,6 +6,9 @@ import { delta, pct, RETENTION_WINDOWS, type Cell } from "@/lib/admin-kpis";
 import { can, canSee, SECTION_CAPS, type Section } from "@/lib/admin-perms";
 import { openSupportCount } from "@/lib/support-server";
 import { getInstallStats } from "@/lib/install-stats";
+import { ACTIVATION_GOAL_PCT, activationPct } from "@/lib/activacion";
+import { getTodayActivation } from "@/lib/activacion-server";
+import { crDayRange } from "@/lib/admin-avisos-server";
 import { BarChart, LineChart } from "@/components/admin/charts";
 import { DemoNotice, Empty, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDate, fmtNum, fmtPct, link, money, panel, tr } from "@/components/admin/ui";
 
@@ -29,7 +32,8 @@ const d0demo = (v: { demo?: boolean }) => Boolean(v.demo);
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ sin_acceso?: string }> }) {
   const v = await requireSection("resumen");
   const { sin_acceso } = await searchParams;
-  const [d, coach, support, inst] = await Promise.all([getDashboard(v), getCoachTotals(v).catch(() => null), canSee(v.role, "soporte") ? openSupportCount(v).catch(() => null) : Promise.resolve(null), d0demo(v) ? Promise.resolve(null) : getInstallStats()]);
+  const [d, coach, support, inst, act] = await Promise.all([getDashboard(v), getCoachTotals(v).catch(() => null), canSee(v.role, "soporte") ? openSupportCount(v).catch(() => null) : Promise.resolve(null), d0demo(v) ? Promise.resolve(null) : getInstallStats(), d0demo(v) ? Promise.resolve(null) : getTodayActivation(crDayRange())]);
+  const actPct = act ? activationPct(act) : null;
   const dNew = delta(d.new_7, d.new_prev_7);
   const workouts = d.series.map((s) => ({ day: s.day, n: s.workouts }));
   const signups = d.series.map((s) => ({ day: s.day, n: s.signups }));
@@ -63,6 +67,21 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <Kpi label="Entrenos hoy" value={fmtNum(d.workouts_today)} hint={`${fmtNum(d.workouts_7)} en 7 d, ${avgWorkouts} por día en 30 d`} />
         </div>
       </section>
+
+      {act && (
+        <section aria-labelledby="kpi-activacion" className="space-y-2.5">
+          <SectionHeading id="kpi-activacion" title="Activación de hoy" />
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            <Kpi label="Primer entreno en 72 h" value={actPct === null ? "Sin cohorte" : fmtPct(actPct)} hint={`${fmtNum(act.cohorteActivada)} de ${fmtNum(act.cohorte)} registrados hace 3 días, meta ${fmtPct(ACTIVATION_GOAL_PCT)}`} tone={actPct === null ? "muted" : actPct >= ACTIVATION_GOAL_PCT ? "good" : "bad"} />
+            <Kpi label="Registros hoy" value={fmtNum(act.registros)} hint="cuentas creadas" />
+            <Kpi label="Entrenos abiertos" value={fmtNum(act.abiertos)} hint="personas" />
+            <Kpi label="Abandonados" value={fmtNum(act.abandonados)} hint="se salieron sin terminar" tone={act.abandonados ? "bad" : "muted"} />
+            <Kpi label="Terminados" value={fmtNum(act.terminados)} hint="personas con un entreno guardado" />
+            <Kpi label="Tarjetas guardadas" value={fmtNum(act.tarjetas)} />
+            <Kpi label="Pagos" value={fmtNum(act.pagos)} hint="primer pago de la persona" />
+          </div>
+        </section>
+      )}
 
       {inst && (
         <section aria-labelledby="kpi-linkapp" className="space-y-2.5">

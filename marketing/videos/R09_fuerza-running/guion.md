@@ -20,8 +20,8 @@ Gancho visible desde cuadro 0, sin logo al inicio. Máximo ocho palabras añadid
 | 4 a 6 s | 3 a 4.5 s | Combina carrera y fuerza | 4 | Tomas propias alternadas de carrera cómoda y fuerza controlada. |
 | 6 a 8 s | 4.5 a 6 s | Revisa tu plan de carrera + etiqueta “Ejemplo” | 6 | Captura real completa de running-plan. |
 | 8 a 10 s | 6 a 7.5 s | Organiza tus sesiones + etiqueta “Ejemplo” | 4 | Misma captura completa; entrada nueva sin cambiar cifras. |
-| 10 a 12 s | 7.5 a 9 s | Conoce la Temporada de Running | 5 | Tarjeta de descubrimiento de la temporada, sin prometer inclusión. |
-| 12 a 14 s | 9 a 10.5 s | Compra aparte; incluida con plan anual | 6 | Tarjeta de condiciones: una temporada incluida por año pagado. |
+| 10 a 12 s | 7.5 a 9 s | Fuerza hoy, sin cambiar tus carreras | 6 | Tarjeta de primer entreno; sin vender la Temporada (#215: la pieza de Temporada de esa semana es K12). |
+| 12 a 14 s | 9 a 10.5 s | 12 minutos, también en casa | 5 | Tarjeta del CTA de noviembre: primer entreno corto. |
 | 14 a 16 s | 10.5 a 12 s | Empieza con un plan + etiqueta “Ejemplo” | 5 | Regreso al ejemplo real de running-plan. |
 | 16 a 19 s | 12 a 15 s | Empieza 7 días gratis en bananaburn.app | 6 | Coach Banana señalando + botón ink + logo oficial. |
 
@@ -47,9 +47,9 @@ Prompt opcional archivado para una futura autorización específica: «Imagen fi
 
 ## Post propuesto
 
-> La fuerza complementa la preparación para correr; no garantiza evitar lesiones. Revisa el plan de carrera y conoce la Temporada de Running: $14.99 como compra aparte; cada año pagado incluye una temporada deportiva. Empieza 7 días gratis en bananaburn.app. La prueba no incluye la compra de una temporada.
+> La fuerza complementa la preparación para correr; no garantiza evitar lesiones. Revisa el plan de carrera y haz hoy tu primer entreno de fuerza: 12 min, también en casa. Empieza 7 días gratis en bananaburn.app.
 >
-> #BananaBurn #Running #EntrenamientoDeFuerza #PlanDeCarrera #Temporadas
+> #BananaBurn #Running #EntrenamientoDeFuerza #PlanDeCarrera #PrimerEntreno
 
 ## Producción y revisión
 

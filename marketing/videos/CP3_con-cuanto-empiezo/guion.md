@@ -51,7 +51,7 @@ Paper #FFF8E3, banana #FFD60A, ink #1B1505. Solo Plus Jakarta Sans 600/800. Zona
 
 ## Post propuesto para ambos países
 
-> Cuando no sabes cuánto peso usar, abre tu entreno y revisa la carga y las repeticiones indicadas. La pantalla muestra un ejemplo; tu carga depende de tu nivel y del ejercicio. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Después eliges tu plan: Entreno desde $9.99 al mes.
+> Cuando no sabes cuánto peso usar, abre tu entreno y revisa la carga y las repeticiones indicadas. La pantalla muestra un ejemplo; tu carga depende de tu nivel y del ejercicio. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Después eliges tu plan: Entreno desde $9.99 al mes. Precios en USD, IVA incluido.
 >
 > #BananaBurn #EntrenamientoDeFuerza #GymDelCondominio #RutinaDeGym #Entrenamiento
 

@@ -819,12 +819,20 @@ export function temporadaCierre(d: { day: SeasonCloseDay; unsubscribe: string })
 const dayCR = (t: number) => new Date(t).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
 
 /**
- * 1: fin de la beta (1 nov). 2: lo que conservas (5 nov). 3: último día (7 nov). `promo`: el 50 % del primer mes solo
+ * 1: fin de la beta (1 nov). 2 y 3 (5 y 7 nov): primero el entreno (finBetaActivation). `promo`: el 50 % del primer mes solo
  * cuando el servidor se lo daría a esta persona (promoFor en trial.ts: cobro "beta" y nunca pagó un plan).
  */
-export type BetaEndMailData = { name: string; step: 1 | 2 | 3; promo: boolean; unsubscribe: string; graceUntil?: string };
+export type BetaEndMailData = {
+  name: string; step: 1 | 2 | 3; promo: boolean; unsubscribe: string; graceUntil?: string;
+  /** Pasos 2 y 3: sin entrenos guardados y con gym o mixto, el botón abre el primer entreno en casa (/app/entreno?casa=1, #194). */
+  home?: boolean;
+};
+
+/** Push de B2 y B3 (docs/emails/activacion.md, 40 caracteres o menos). Todavía no hay envío push de la beta. */
+export const BETA_END_PUSH: Record<2 | 3, string> = { 2: "Prueba tu entreno de 12 minutos", 3: "Hoy, tu primer entreno de 12 min" };
 
 export function finBeta(d: BetaEndMailData): Email {
+  if (d.step !== 1) return finBetaActivation({ ...d, step: d.step });
   const n = firstName(d.name);
   const end = Date.parse(d.graceUntil ?? BETA_GRACE_UNTIL);
   // El acceso gratis llega hasta la medianoche que abre BETA_GRACE_UNTIL: el último día es el anterior.
@@ -838,29 +846,15 @@ export function finBeta(d: BetaEndMailData): Email {
   const noCharge = `Hoy no se cobra nada. Si dejas tu tarjeta lista, el primer cobro es el ${chargeDay} y cancelas sin costo antes desde Mi plan.`;
 
   const copy = {
-    1: {
-      subject: `Terminó la beta: sigues con todo incluido hasta el ${last}`,
-      hero: { eyebrow: "Fin de la beta", title: `${esc(n)}, gracias por estar en la beta`, lead: `La beta terminó. Tu cuenta sigue con todo incluido y sin costo hasta el final del <b>${esc(last)}</b>.` },
-      lines: [`Desde el ${chargeDay}, para seguir con tu plan eliges uno en Mi plan.`, "No tienes tarjeta guardada, así que no te cobramos nada de forma automática."],
-      coach: "Gracias por entrenar conmigo en la beta. Sigo aquí para lo que viene.",
-    },
-    2: {
-      subject: `${n}, lo que conservas si eliges tu plan`,
-      hero: { eyebrow: "Tu plan", title: "Lo que conservas si eliges tu plan", lead: `Sigues con todo incluido hasta el final del <b>${esc(last)}</b>. Si eliges un plan, sigues sin cortes.` },
-      lines: ["Tu progreso: entrenos, récords, pesajes y medidas, con tus gráficas al día.", "Tu plan: la rutina hecha a tu nivel, tiempo y equipo, con la progresión de cargas.", "Tu racha: si no cortas, sigue contando.", `Si no eliges plan, tus datos quedan guardados, pero desde el ${chargeDay} la app te pide un plan para seguir.`],
-      coach: "Lo que ya construiste no se pierde. La idea es no cortar el ritmo.",
-    },
-    3: {
-      subject: "Hoy es tu último día con todo incluido",
-      hero: { eyebrow: "Último día", title: `${esc(n)}, hoy es el último día`, lead: `Tu acceso con todo incluido termina hoy, <b>${esc(last)}</b>, a la medianoche (hora de Costa Rica).` },
-      lines: ["Desde mañana la app te pide elegir un plan para seguir.", "Tu progreso queda guardado, elijas o no."],
-      coach: "Hoy entrenamos igual. Mañana seguimos juntos si eliges tu plan.",
-    },
-  }[d.step];
+    subject: `Terminó la beta: sigues con todo incluido hasta el ${last}`,
+    hero: { eyebrow: "Fin de la beta", title: `${esc(n)}, gracias por estar en la beta`, lead: `La beta terminó. Tu cuenta sigue con todo incluido y sin costo hasta el final del <b>${esc(last)}</b>.` },
+    lines: [`Desde el ${chargeDay}, para seguir con tu plan eliges uno en Mi plan.`, "No tienes tarjeta guardada, así que no te cobramos nada de forma automática."],
+    coach: "Gracias por entrenar conmigo en la beta. Sigo aquí para lo que viene.",
+  };
 
-  const preheader = d.step === 3 ? `Tu acceso con todo incluido termina hoy, ${last}.` : d.step === 2 ? `Tu progreso, tu plan y tu racha siguen si eliges un plan antes del final del ${last}.` : `Sigues con todo incluido hasta el final del ${last}. No te cobramos nada.`;
+  const preheader = `Sigues con todo incluido hasta el final del ${last}. No te cobramos nada.`;
   const body =
-    (d.step === 2 ? list(copy.lines.slice(0, 3).map((l) => `${dot()}${esc(l)}`)) + p(esc(copy.lines[3])) : copy.lines.map((l) => p(esc(l))).join("")) +
+    copy.lines.map((l) => p(esc(l))).join("") +
     eyebrow("Plan anual") + rows(annual) + small(esc(saving)) +
     eyebrow("Plan mensual") + rows(monthly) + (promoLine ? small(esc(promoLine)) : "") +
     small(esc(noCharge)) + button("Elegir mi plan", "/app/suscripcion");
@@ -874,6 +868,46 @@ export function finBeta(d: BetaEndMailData): Email {
       "Plan mensual:", ...monthly.map(([k, v]) => `- ${k}: ${v}`), ...(promoLine ? [promoLine] : []), "",
       noCharge, "", `Elegir mi plan: ${abs("/app/suscripcion")}`,
     ], d.unsubscribe, reason, copy.coach),
+  };
+}
+
+/**
+ * B2 (5 nov) y B3 (7 nov) de docs/emails/activacion.md: primero el entreno de 12 minutos, después cómo seguir.
+ * Un solo botón, al entreno; el 50 % solo con `promo` (promoFor). Fechas desde BETA_GRACE_UNTIL.
+ */
+function finBetaActivation(d: BetaEndMailData & { step: 2 | 3 }): Email {
+  const end = Date.parse(d.graceUntil ?? BETA_GRACE_UNTIL);
+  const last = dayCR(end - 1), chargeDay = dayCR(end);
+  const promoLine = d.promo ? ` Si nunca pagaste un plan, recibes ${PROMO_PCT}\u00a0% de descuento solo en el primer mes del plan mensual, una vez por cuenta. No aplica al anual. Desde el segundo mes se cobra el precio normal.` : "";
+  const c = d.step === 2 ? {
+    subject: "Antes de elegir plan, prueba tu entreno",
+    preheader: "Empieza con 12 minutos en casa. Después decides cómo seguir.",
+    eyebrow: "Tu primer entreno",
+    paragraphs: [
+      "Primero, haz tu entreno de 12 minutos en casa. Sigue las indicaciones de cada ejercicio y guarda la sesión al terminar.",
+      `Tu acceso gratis de la beta sigue hasta el final del ${last}, hora de Costa Rica. No necesitas tarjeta para hacer este entreno.`,
+      `Después de probarlo, si quieres seguir, puedes guardar tu tarjeta en Mi plan antes de que termine ese acceso.${promoLine}`,
+      `Si guardas la tarjeta dentro de ese plazo, el primer cobro será el ${chargeDay}. Puedes cancelar sin costo antes del cobro desde Mi plan. Sin tarjeta no hay cobro automático; al terminar el acceso gratis necesitarás un plan para seguir entrenando.`,
+    ],
+  } : {
+    subject: "Hoy empieza por tu primer entreno",
+    preheader: "Haz tus 12 minutos antes de decidir cómo seguir.",
+    eyebrow: "Último día",
+    paragraphs: [
+      "Hoy empieza por entrenar: 12 minutos en casa, con las indicaciones en tu celular. Guarda la sesión cuando termines.",
+      `Tu acceso gratis de la beta termina hoy, ${last}, a la medianoche de Costa Rica. Puedes hacer este entreno sin tarjeta mientras siga vigente tu acceso.`,
+      `Después, si quieres continuar, puedes guardar tu tarjeta en Mi plan antes de que termine el día.${promoLine}`,
+      `Si guardas la tarjeta dentro de ese plazo, el primer cobro será mañana, ${chargeDay}. Puedes cancelar sin costo antes del cobro desde Mi plan. Sin tarjeta no hay cobro automático; desde mañana necesitarás un plan para seguir entrenando.`,
+    ],
+  };
+  const cta = "Hacer mi primer entreno", path = d.home ? "/app/entreno?casa=1" : "/app/entreno";
+  const hero: Hero = { eyebrow: c.eyebrow, title: esc(c.subject), lead: esc(c.preheader), mascot: true };
+  const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
+  const reason = "Recibes este correo porque tu cuenta es de la beta de Banana Burn y todavía no tiene un plan.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason),
   };
 }
 

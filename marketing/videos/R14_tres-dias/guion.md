@@ -49,7 +49,7 @@ Cierre exacto: Coach Banana señalando + botón ink “Empieza 7 días gratis en
 
 ## Post propuesto
 
-> Tres días de fuerza pueden ser un punto de partida. Ajusta frecuencia, esfuerzo y recuperación a tu nivel y disponibilidad. Revisa qué toca hoy con Banana Burn. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Entreno: $9.99/mes después de la prueba.
+> Tres días de fuerza pueden ser un punto de partida. Ajusta frecuencia, esfuerzo y recuperación a tu nivel y disponibilidad. Revisa qué toca hoy con Banana Burn. Empieza 7 días gratis en bananaburn.app, sin tarjeta. Entreno: $9.99/mes después de la prueba. Precios en USD, IVA incluido.
 >
 > #BananaBurn #Fuerza #Constancia #Rutina #Principiantes
 

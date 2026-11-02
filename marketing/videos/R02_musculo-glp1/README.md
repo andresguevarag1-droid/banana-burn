@@ -11,16 +11,18 @@ Reel para quienes bajaron de peso rápido (público GLP-1, issue #14), hecho en 
 
 Specs: 1080 x 1920, 30 fps, H.264 (yuv420p), sin audio. Zona segura de 250 px arriba y 350 px abajo: todo el texto, la captura y el botón viven entre y = 250 y y = 1570. Fuente Plus Jakarta Sans (la de `src/app/og/`), colores de `src/app/globals.css`.
 
+Cambio del 2 nov 2026 (#215): se quitaron los gramos por kilo y la frecuencia exacta de fuerza de la pantalla y del pie de foto; los dos MP4 están renderizados de nuevo.
+
 ## Guion con tiempos (24 s)
 
 | Tiempo | Pantalla | Texto en pantalla | Palabras |
 | --- | --- | --- | --- |
 | 0.0 a 2.0 | Fondo banana. Gancho completo desde el cuadro 0, acercamiento lento | Bajaste rápido… ¿y tu músculo? | 4 |
 | 2.0 a 4.0 | Fondo ink, "músculo." grande en banana | Bajar rápido también se lleva músculo. | 6 |
-| 4.0 a 6.0 | Fondo paper, cifra con resaltado banana | Proteína de 1.2 a 1.6 g por kg | 8 |
+| 4.0 a 6.0 | Fondo paper, "primero" con resaltado banana | Proteína primero en cada comida | 5 |
 | 6.0 a 8.0 | Captura real de Nutrición en marco de teléfono ink (radio 42), sube desde abajo | Tu meta de proteína, cada día. | 6 |
 | 8.0 a 10.0 | Zoom a la tarjeta "Te quedan" de la misma captura; anillo banana sobre la sugerencia de proteína | Y cuánto te falta hoy. | 5 |
-| 10.0 a 12.0 | Fondo ink, "3" gigante en banana | Fuerza al menos 3 veces por semana | 7 |
+| 10.0 a 12.0 | Fondo ink, "fuerza" grande en banana | Entrena fuerza cada semana | 4 |
 | 12.0 a 14.0 | Fondo banana, mancuerna que gira | El músculo se cuida entrenando. | 5 |
 | 14.0 a 16.0 | Fondo paper, escudo banana | Banana Shield lo arma por ti. | 6 |
 | 16.0 a 18.5 | Tres tarjetas que entran en cascada | Más proteína / Fuerza primero / Modo suave | 6 |
@@ -32,9 +34,9 @@ Specs: 1080 x 1920, 30 fps, H.264 (yuv420p), sin audio. Zona segura de 250 px ar
 | Tiempo | Pantalla |
 | --- | --- |
 | 0.0 a 2.0 | Gancho |
-| 2.0 a 4.0 | Proteína de 1.2 a 1.6 g por kg |
+| 2.0 a 4.0 | Proteína primero en cada comida |
 | 4.0 a 6.0 | Captura real de Nutrición |
-| 6.0 a 8.0 | Fuerza al menos 3 veces por semana |
+| 6.0 a 8.0 | Entrena fuerza cada semana |
 | 8.0 a 9.5 | Banana Shield lo arma por ti. |
 | 9.5 a 12.0 | No sustituye la indicación de tu médico. (2.5 s) |
 | 12.0 a 15.0 | Cierre |
@@ -42,7 +44,7 @@ Specs: 1080 x 1920, 30 fps, H.264 (yuv420p), sin audio. Zona segura de 250 px ar
 ## Reglas que cumple
 
 - No nombra ningún medicamento, ni dice "GLP-1", "¿usas GLP-1?" ni "tu tratamiento" en pantalla.
-- Números en el texto: solo los del issue (1.2, 1.6 y 3) y los 7 días del cierre estándar. La captura de Nutrición es la real de `public/landing/nutricion.png`, sin tocar: sus cifras son las de la app.
+- Sin gramos por kilo ni frecuencias exactas (#215): la meta de proteína y de entreno la acuerda cada persona con su médico. El único número en pantalla son los 7 días del cierre estándar. La captura de Nutrición es la real de `public/landing/nutricion.png`, sin tocar: sus cifras son las de la app.
 - Banana Shield se describe con lo que dice la app (más proteína, fuerza primero, modo suave), sin prometer resultados.
 - Sin emojis, sin guiones largos, sin exclamaciones, sin IA, sin testimonios ni antes/después.
 
@@ -65,6 +67,6 @@ Los textos y tiempos están en `escenas.mjs`; el dibujo de cada escena en `DIBUJ
 
 ## Pie de foto sugerido
 
-Bajaste rápido… ¿y tu músculo? Proteína de 1.2 a 1.6 g por kg y fuerza al menos 3 veces por semana. Banana Shield te lo arma en tu plan. Empieza 7 días gratis en bananaburn.app. No sustituye la indicación de tu médico.
+Bajaste rápido… ¿y tu músculo? Proteína primero en cada comida y fuerza cada semana; tu meta la acuerdas con tu médico. Banana Shield lo organiza en tu plan. Regístrate y haz tu primer entreno hoy (12 min, también en casa): 7 días gratis en bananaburn.app. No sustituye la indicación de tu médico.
 
 #BananaBurn #Recomposicion #Fuerza #Proteina #MasaMuscular

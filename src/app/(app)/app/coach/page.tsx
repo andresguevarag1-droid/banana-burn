@@ -8,12 +8,13 @@ import { demoQuota, parseQuota, tierFromAccess, type CoachQuota } from "@/lib/co
 import { Chat } from "./chat";
 import { coachOf } from "@/lib/coaches";
 import { todayLine } from "@/lib/coach";
+import { coachPromptMessage } from "@/lib/coach-prompt";
 
 export const metadata = { title: "Coach Banana" };
 
-export default async function Coach({ searchParams }: { searchParams: Promise<{ cuota?: string; nivel?: string }> }) {
+export default async function Coach({ searchParams }: { searchParams: Promise<{ cuota?: string; nivel?: string; pregunta?: string }> }) {
   const v = (await getViewer())!;
-  const { cuota, nivel } = await searchParams;
+  const { cuota, nivel, pregunta } = await searchParams;
   const a = await getAthlete(v);
   // Sin llave de Anthropic, con cuentas reales el coach todavía no responde (la demo usa respuestas de ejemplo).
   const configured = v.demo || Boolean(process.env.ANTHROPIC_API_KEY);
@@ -59,5 +60,5 @@ export default async function Coach({ searchParams }: { searchParams: Promise<{ 
   const coach = d.program ? coachOf(d.program.meta.experience) : null;
   const persona = coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null;
   if (persona && d.program) lines.splice(1, 0, `Soy ${persona.name}, tu coach en **${d.program.title}**.`);
-  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} configured={configured} quota={quota} demo={v.demo} persona={persona} />;
+  return <Chat initial={initial} opener={lines.join("\n")} suggest={suggest} name={a.name} configured={configured} quota={quota} demo={v.demo} persona={persona} ask={coachPromptMessage(pregunta)} />;
 }

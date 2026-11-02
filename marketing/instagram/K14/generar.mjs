@@ -148,15 +148,16 @@ function cover(title, sub, n = 1) {
 }
 
 function slide2() {
-  const big = text("1.2 a 1.6 g", { y: 280, size: 176, weight: 800 });
-  const sub = text("de **proteína** por cada kg de peso, al día", { y: big.bottom + 30, size: 58, weight: 800, lh: 1.15 });
+  // #215: sin gramos por kilo. La meta de proteína es orientación general y se acuerda con el médico.
+  const big = text("Tu meta de **proteína**", { y: 280, size: 104, weight: 800, lh: 1.08 });
+  const sub = text("la acuerdas con tu médico", { y: big.bottom + 24, size: 58, weight: 800, lh: 1.15 });
   const y = sub.bottom + 90;
-  const c1 = text("Saca tu rango", { x: M + 48, y: y + 48, size: 42, weight: 800 });
-  const c1b = text("Multiplica tu peso en kg por 1.2 y por 1.6. Tu meta del día cae entre esos dos números.", { x: M + 48, y: c1.bottom + 14, size: 34, weight: 400, fill: C.body, maxW: W - 2 * M - 96, lh: 1.35 });
-  const c2 = text("Si tienes mucho peso por bajar, se calcula con un peso de referencia, no con tu peso actual. Banana Shield lo hace por ti.", { x: M + 48, y: c1b.bottom + 30, size: 34, weight: 400, fill: C.body, maxW: W - 2 * M - 96, lh: 1.35 });
+  const c1 = text("Por qué importa", { x: M + 48, y: y + 48, size: 42, weight: 800 });
+  const c1b = text("Si bajas de peso rápido, comer proteína y entrenar fuerza ayudan a cuidar tu músculo.", { x: M + 48, y: c1.bottom + 14, size: 34, weight: 400, fill: C.body, maxW: W - 2 * M - 96, lh: 1.35 });
+  const c2 = text("Banana Shield te sugiere una meta del día y la reparte en tus comidas. Si tu médico te indica otra, manda la de tu médico.", { x: M + 48, y: c1b.bottom + 30, size: 34, weight: 400, fill: C.body, maxW: W - 2 * M - 96, lh: 1.35 });
   const h = c2.bottom - y + 48;
-  const src = text("Rango del consenso de nutrición 2025 para personas en tratamiento con GLP-1 (ACLM, ASN, OMA y The Obesity Society).", { y: y + h + 44, size: 26, weight: 400, fill: C.muted, lh: 1.4 });
-  return svgDoc(C.paper, header(2, false) + eyebrow("La regla", 184) + big.svg + sub.svg + card(M, y, W - 2 * M, h) + c1.svg + c1b.svg + c2.svg + src.svg + footer(C.muted));
+  const src = text("Orientación general, no es una indicación médica.", { y: y + h + 44, size: 26, weight: 400, fill: C.muted, lh: 1.4 });
+  return svgDoc(C.paper, header(2, false) + eyebrow("Orientación general", 184) + big.svg + sub.svg + card(M, y, W - 2 * M, h) + c1.svg + c1b.svg + c2.svg + src.svg + footer(C.muted));
 }
 
 function slide3() {
@@ -241,5 +242,5 @@ const slides = [
 for (const [f, svg] of slides) render(svg, join(HERE, f));
 
 mkdirSync(join(HERE, "variantes"), { recursive: true });
-render(cover("¿Comes poco con GLP-1? Así llegas a tu **proteína**", "Una regla, 3 ideas latinas y cómo te ayuda la app."), join(HERE, "variantes/K14_01_portada_B.png"));
+render(cover("¿Comes poco con GLP-1? Así llegas a tu **proteína**", "Proteína primero, 3 ideas latinas y cómo te ayuda la app."), join(HERE, "variantes/K14_01_portada_B.png"));
 render(cover("Si te llenas rápido, empieza por **esto**", "Lo que va primero en el plato cuando el apetito baja."), join(HERE, "variantes/K14_01_portada_C.png"));

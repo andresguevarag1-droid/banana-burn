@@ -1,0 +1,32 @@
+# #197: el recordatorio de entreno sale a la hora local de cada persona. Vercel Hobby solo permite crons diarios, así
+# que GitHub llama cada hora al cron de recordatorios. Solo tiene efecto con NOTIFY_CRON_MODE=hourly en Vercel
+# (en modo diario la app ya manda todo en su corrida de las 13:00 UTC y las llamadas extra no repiten envíos).
+# Necesita el secreto CRON_SECRET en GitHub (Settings > Secrets and variables > Actions). Sin él, no hace nada.
+name: Recordatorios cada hora
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: recordatorios-cada-hora
+  cancel-in-progress: false
+
+jobs:
+  llamar:
+    name: Llamar al cron de recordatorios
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Llamar
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "Falta el secreto CRON_SECRET: no se llama."; exit 0; fi
+          code=$(curl -sS -o /tmp/r.json -w "%{http_code}" --max-time 90 -H "Authorization: Bearer $CRON_SECRET" https://www.bananaburn.app/api/cron/recordatorios)
+          echo "HTTP $code"
+          head -c 600 /tmp/r.json; echo
+          [ "$code" -lt 500 ] || exit 1

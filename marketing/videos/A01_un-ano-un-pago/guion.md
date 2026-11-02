@@ -42,7 +42,7 @@ Paper #FFF8E3, banana #FFD60A, ink #1B1505. Solo Plus Jakarta Sans 600/800; cifr
 
 ## Post propuesto
 
-> Un año de entreno en un solo pago. Entreno cuesta $59.99/año y Entreno + Nutrición $89.99/año, en USD. Eliges después de probar; el pago anual cubre doce meses. Compara en bananaburn.app/precios. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
+> Un año de entreno en un solo pago. Entreno cuesta $59.99/año y Entreno + Nutrición $89.99/año. Precios en USD, IVA incluido. Eliges después de probar; el pago anual cubre doce meses. Compara en bananaburn.app/precios. Empieza 7 días gratis en bananaburn.app, sin tarjeta.
 >
 > #BananaBurn #PlanAnual #EntrenamientoDeFuerza #RutinaDeGym #RecomposicionCorporal
 

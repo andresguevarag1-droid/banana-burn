@@ -22,14 +22,16 @@ Pie: «Construye una rutina que puedas sostener. Conoce tu plan en bananaburn.ap
 
 ## C3, miércoles 4: compañía que suma
 
-1. 3 amigos activos = 1 mes gratis.
+1. 3 amigos que pagan = 1 mes gratis.
 2. Comparte tu enlace desde Invita y gana.
-3. Cada amigo termina la bienvenida y, en sus primeros 7 días, completa un entreno o registra agua, pasos o sueño. No necesita pagar.
+3. Cada amigo cuenta cuando paga su primer plan, mensual o anual, dentro de 60 días desde que se registró con tu enlace. La prueba gratis no cuenta.
 4. Revisa las reglas en Invita y gana. Empieza en bananaburn.app.
 
 Pie: «Invita a quien quiera empezar contigo. El mes se valida en el sistema y se suma al final de tu acceso actual. El reto de 12 entrenos es una meta distinta. Revisa las reglas desde Invita y gana en bananaburn.app. #BananaBurn #EntrenarEnCompania #Fuerza #Habitos #Constancia».
 
 ## C4, viernes 6: prepara tu siguiente objetivo
+
+> **ARCHIVADO (#215):** carrusel de Temporada 1; la pieza de Temporada de la semana del 2 al 8 es R04. Ver [temporada-1-una-por-semana.md](../estrategia/temporada-1-una-por-semana.md).
 
 1. Tu fuerza también necesita constancia.
 2. Temporada 1 empieza el 9 de noviembre.

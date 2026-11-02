@@ -36,7 +36,7 @@ Imagen fija de una agenda sin texto y mancuernas sobre fondo paper #FFF8E3, luz 
 
 ## Post propuesto
 
-Banana Burn reúne rutina según tu nivel y equipo, guía de técnica y progresión automática de cargas. Entreno cuesta $9.99/mes; Entreno + Nutrición, $14.99/mes. Prueba todo durante siete días sin tarjeta en bananaburn.app. Elige después el plan que necesitas.
+Banana Burn reúne rutina según tu nivel y equipo, guía de técnica y progresión automática de cargas. Entreno cuesta $9.99/mes; Entreno + Nutrición, $14.99/mes. Precios en USD, IVA incluido. Prueba todo durante siete días sin tarjeta en bananaburn.app. Elige después el plan que necesitas.
 
 #BananaBurn #Entrenamiento #Fuerza #Nutricion #Propositos
 

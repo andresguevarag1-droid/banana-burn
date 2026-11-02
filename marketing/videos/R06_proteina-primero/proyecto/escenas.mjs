@@ -29,10 +29,9 @@ export const CONFIG = {
     },
     {
       "id": "t5",
-      "texto": "Revisa tu proteína del día",
-      "visual": "Acercamiento al dato original, sin modificarlo.",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "texto": "Tu meta de proteína, con tu médico",
+      "visual": "Tarjeta paper sin cifras: sin gramos ni acercamiento al dato de la captura (#215).",
+      "tipo": "texto"
     },
     {
       "id": "t6",

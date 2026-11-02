@@ -5,17 +5,18 @@ import { REF_GROUP_SIZE, REF_BASE_MONTHS, REF_WINDOW_DAYS } from "./referrals";
 const read = (name: string) => readFileSync(new URL(`../../marketing/comunidad/${name}`, import.meta.url), "utf8");
 
 describe("comunidad noviembre: ofertas y entregables revisables", () => {
-  it("mantiene la recompensa y ventana de activación del programa real", () => {
+  it("mantiene la recompensa del programa real", () => {
     const docs = read("reto-12-entrenos.md") + read("respuestas.md");
-    expect(docs).toContain(`${REF_GROUP_SIZE} amigos activos = ${REF_BASE_MONTHS} mes gratis`);
+    expect(docs).toContain(`${REF_GROUP_SIZE} amigos que pagan`);
+    expect(read("reto-12-entrenos.md")).toContain(`${REF_GROUP_SIZE} amigos que pagan = ${REF_BASE_MONTHS} mes gratis`);
     expect(read("reto-12-entrenos.md")).toContain("Los 12 entrenos no desbloquean el mes gratis");
     expect(read("respuestas.md").match(/^## \d{2}\./gm)).toHaveLength(20);
   });
 
-  it.fails("KNOWN BUG #178: reto-12-entrenos.md y respuestas.md dicen la regla vieja (activarse en 7 días, sin pagar); desde 0064 el amigo cuenta al pagar dentro de 60 días", () => {
+  it("el amigo cuenta cuando paga su primer plan dentro del plazo de referrals.ts (0064)", () => {
     const docs = read("reto-12-entrenos.md") + read("respuestas.md");
-    expect(docs).toContain(`${REF_WINDOW_DAYS} días`);
-    expect(docs).not.toMatch(/no necesita pagar|primeros 7 días/i);
+    expect(docs).toContain(`dentro de ${REF_WINDOW_DAYS} días`);
+    expect(docs).not.toMatch(/no necesita pagar|primeros 7 días|amigos? activos?|activarse/i);
   });
 
   it("entrega cada fecha con aprobación, encuesta y PNG vertical válido", () => {

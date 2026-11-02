@@ -44,11 +44,11 @@ La propuesta es completar 12 entrenos durante noviembre, con descanso y a tu rit
 
 ## 11. ¿12 entrenos me dan el mes gratis? | DM
 
-El mes gratis viene del programa de referidos: 3 amigos activos = 1 mes gratis. Completar los 12 entrenos es una meta de constancia distinta. Encuentra tu enlace en Invita y gana: https://bananaburn.app/app/referidos.
+El mes gratis viene del programa de referidos: 3 amigos que pagan su primer plan = 1 mes gratis. Completar los 12 entrenos es una meta de constancia distinta. Encuentra tu enlace en Invita y gana: https://bananaburn.app/app/referidos.
 
-## 12. ¿Qué es un amigo activo? | DM
+## 12. ¿Cuándo cuenta un amigo? | DM
 
-Es una cuenta nueva que llegó con tu enlace, terminó la bienvenida y, dentro de sus primeros 7 días, completó un entreno o registró agua, pasos o sueño. No necesita pagar. Solo registrarse no basta. Revisa el estado en https://bananaburn.app/app/referidos.
+Cuando una cuenta nueva que llegó con tu enlace paga su primer plan, Entreno o Entreno + Nutrición, mensual o anual, dentro de 60 días desde que se registró. Registrarse, usar la prueba gratis o guardar la tarjeta sin cobro no basta. Revisa el estado en https://bananaburn.app/app/referidos.
 
 ## 13. ¿Cómo vuelvo más fácil a la app? | DM
 
@@ -60,11 +60,11 @@ Abre Invita y gana: https://bananaburn.app/app/referidos. Copia tu enlace person
 
 ## 15. Invité a tres y no veo mi mes | DM
 
-Revisa sus estados en Invita y gana: https://bananaburn.app/app/referidos. Cada amigo debe completar la bienvenida y activarse en sus primeros 7 días. Puede haber cuentas en revisión. Si no te queda claro, abre Ayuda y reportes dentro de la app; no compartas sus datos aquí. El equipo debe revisar antes de confirmar una recompensa.
+Revisa sus estados en Invita y gana: https://bananaburn.app/app/referidos. Cada amigo cuenta cuando paga su primer plan dentro de 60 días desde que se registró; mientras no paga aparece como Registrado. Puede haber cuentas en revisión. Si no te queda claro, abre Ayuda y reportes dentro de la app; no compartas sus datos aquí. El equipo debe revisar antes de confirmar una recompensa.
 
 ## 16. ¿Y si un amigo compra anual? | DM
 
-Si uno de tus 3 amigos activos compra un plan anual y se confirma el pago, ese grupo da 3 meses gratis en total. Si ya recibiste 1, se añaden 2 más, una sola vez por grupo. Consulta las reglas desde https://bananaburn.app/app/referidos.
+Si uno de tus 3 amigos que pagan elige el plan anual y se confirma el pago, ese grupo da 3 meses gratis en total. Si ya recibiste 1, se añaden 2 más, una sola vez por grupo. Consulta las reglas desde https://bananaburn.app/app/referidos.
 
 ## 17. Uso GLP-1, ¿puedo empezar? | DM
 
@@ -76,7 +76,7 @@ La oferta para condominios está disponible en Costa Rica cuando el condominio s
 
 ## 19. ¿Cuándo empieza Temporada 1? | Comentario
 
-Empieza el 9 de noviembre y termina el 3 de enero. Las inscripciones cierran el 22 de noviembre. Consulta las modalidades y condiciones en https://bananaburn.app/temporadas. Es una oferta distinta del reto de comunidad.
+Empieza el 9 de noviembre y termina el 3 de enero. Las inscripciones cierran el 22 de noviembre; después de esa fecha, responder que ya cerraron y no enlazar a la compra. Consulta las modalidades y condiciones en https://bananaburn.app/temporadas. Es una oferta distinta del reto de comunidad.
 
 ## 20. Me rechazaron el pago | DM
 

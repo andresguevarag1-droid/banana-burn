@@ -55,15 +55,18 @@ describe("lo que lee el usuario", () => {
 
 describe("reglas contra el código", () => {
   const r = docs["reglas.md"];
-  it.fails("KNOWN BUG #178: reglas.md dice la regla vieja (activarse en sus primeros 7 días); desde 0064 el amigo cuenta al pagar dentro de 60 días", () => {
-    expect(r).toContain(`${REF_WINDOW_DAYS} días`);
-    expect(r).not.toContain("primeros 7 días");
+  it("el amigo cuenta cuando paga su primer plan dentro del plazo de referrals.ts (0064)", () => {
+    expect(r).toContain(`**dentro de ${REF_WINDOW_DAYS} días**`);
+    expect(r).not.toMatch(/primeros 7 días|amigos activos|hace falta que pague|no se activó/i);
+  });
+  it.each(pieces)("%s: ninguna pieza dice la regla vieja", (f) => {
+    expect(docs[f]).not.toMatch(/amigos? activos?|necesita pagar|hace falta que pague|cuando se activa|primeros 7 días/i);
   });
   it("dicen la oferta con las cifras de referrals.ts", () => {
     expect(REF_GROUP_SIZE).toBe(3);
     expect(REF_BASE_MONTHS).toBe(1);
     expect(REF_ANNUAL_MONTHS).toBe(3);
-    expect(r).toContain("**3 amigos activos = 1 mes gratis.**");
+    expect(r).toContain("**3 amigos que pagan su primer plan = 1 mes gratis.**");
     expect(r).toContain("1 trimestre gratis");
     expect(r).toContain(`de a ${REF_GROUP_SIZE}`);
     expect(r).toContain("de 1 a 3 meses");
