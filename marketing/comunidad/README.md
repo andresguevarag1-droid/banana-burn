@@ -44,3 +44,7 @@ Mueve registro completo, primer entreno y retención en semana 1 mediante histor
 ## Continuación: 9 al 22 de noviembre
 
 Los planes del [9 al 15](semana-2026-11-09.md) y del [16 al 22](semana-2026-11-16.md) se reescribieron para el primer entreno (#214): la historia principal de cada día va de noche (20:00 a 21:00) con el enlace «Tu primer entreno hoy», y la última llamada a las 22:00. Las bases PNG y SVG salen de los JSON de `historias/` con generar.mjs. Lo que se quitó está en [marketing/archivo](../archivo/README.md).
+
+## Del 23 de noviembre al 6 de diciembre
+
+Los planes del [23 al 29](semana-2026-11-23.md) y del [30 al 6](semana-2026-11-30.md) se reescribieron para el primer entreno (#220): la historia principal de cada día va de noche (20:00 a 20:30) con el enlace «Tu primer entreno hoy», y la última llamada a las 22:00. Sin historias de las 07:00 ni piezas de renovación o fecha de cobro. El 26 se archivó. Las bases PNG y SVG salen de los JSON de `historias/` con generar.mjs. Lo que se quitó está en [marketing/archivo](../archivo/README.md).

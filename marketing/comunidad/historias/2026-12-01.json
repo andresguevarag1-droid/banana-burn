@@ -1,0 +1,17 @@
+{
+  "date": "2026-12-01",
+  "title": "Diciembre empieza con 12 minutos",
+  "lines": [
+    "Diciembre empieza",
+    "con 12 minutos."
+  ],
+  "sub": "Tu primer entreno, también en casa.",
+  "hour": "20:00",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Qué necesitas esta semana?",
+  "options": [
+    "Empezar",
+    "Retomar"
+  ]
+}

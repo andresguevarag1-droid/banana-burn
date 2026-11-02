@@ -678,6 +678,8 @@ export async function sendBetaEndEmails(admin: SupabaseClient, now: Date, mode: 
         const msg = T.finBeta({ name: p.full_name || "", step, promo, unsubscribe, home });
         const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: betaEndIdemKey(step, p.id), unsubscribe, tags: { kind } });
         if (r.ok) stats.email++;
+        // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (antes quedaba como enviado).
+        else if (!r.skipped) await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", kind).eq("local_day", day).then(() => null, () => null);
         stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
       } catch (e) { stats.errors++; logError("cron:fin-beta", "user_failed", { kind: errCode(e) }); }
     });
