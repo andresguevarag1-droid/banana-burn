@@ -3,7 +3,17 @@ import { SITE_URL } from "@/lib/env";
 import { errCode, logError } from "@/lib/log";
 import { signUnsubToken, unsubSecret, type UnsubScope } from "./token";
 
-export const EMAIL_FROM = process.env.EMAIL_FROM || "Banana Burn <hola@bananaburn.app>";
+const DEFAULT_FROM = "Banana Burn <hola@bananaburn.app>";
+/**
+ * Remitente. Solo se acepta EMAIL_FROM si es del dominio verificado en Resend (bananaburn.app): con otro dominio Resend
+ * rechaza cada envío con 403. Pasó en producción: EMAIL_FROM tenía el valor de ejemplo (hola@tudominio.com) y no salía
+ * ningún correo (nov 2026).
+ */
+export function emailFrom(v = process.env.EMAIL_FROM): string {
+  const at = /@([a-z0-9.-]+)>?\s*$/i.exec(v?.trim() ?? "");
+  return at && at[1].toLowerCase() === "bananaburn.app" ? v!.trim() : DEFAULT_FROM;
+}
+export const EMAIL_FROM = emailFrom();
 export const isEmailConfigured = () => Boolean(process.env.RESEND_API_KEY);
 
 export type EmailMessage = { subject: string; html: string; text: string };
@@ -33,7 +43,7 @@ export async function sendEmail(to: string, msg: EmailMessage, opts: { idempoten
     if (opts.unsubscribe.includes("/api/email/baja")) headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
   }
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const post = () => fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
@@ -50,10 +60,13 @@ export async function sendEmail(to: string, msg: EmailMessage, opts: { idempoten
         tags: Object.entries(opts.tags ?? {}).map(([name, value]) => ({ name, value: value.replace(/[^a-zA-Z0-9_-]/g, "_") })),
       }),
       // Sin tiempo límite, un Resend lento dejaría colgado el cron o la acción que manda el correo.
-      // No se reintenta aquí: el reintento seguro lo da la Idempotency-Key en la próxima corrida.
+      // Solo se reintenta un 429 (abajo); lo demás lo reintenta la próxima corrida con la misma Idempotency-Key.
       signal: AbortSignal.timeout(10_000),
       cache: "no-store",
     });
+    let res = await post();
+    // Resend limita los envíos por segundo: ante 429 se espera y se reintenta una vez (la Idempotency-Key evita duplicados).
+    if (res.status === 429) { await new Promise((r) => setTimeout(r, 1100)); res = await post(); }
     const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
     if (!res.ok) { logError("email", `resend_${res.status}`); return { ok: false, error: `HTTP ${res.status}` }; }
     return { ok: true, id: data.id };
