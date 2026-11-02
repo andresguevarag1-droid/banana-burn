@@ -29,7 +29,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
   if (first) return (
     <Link href={`/app/entreno${demo ? "?primera=1" : ""}`} className="btn-primary flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center">
       <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-      <span>Empieza tu primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>
+      <span>Empezar mi primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>
     </Link>
   );
   const tips = readinessTips(voice, program);
@@ -41,7 +41,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
       {/* Lo primero: el botón grande para empezar. Cómo te sientes es opcional y ajusta el entreno. */}
       <Link href={`/app/entreno${sel?.q ?? ""}${demo && first ? `${sel?.q ? "&" : "?"}primera=1` : ""}`} className="btn-primary flex w-full min-h-16 h-auto py-3 px-5 text-lg leading-tight font-extrabold text-center shadow-lift">
         <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-        <span className="min-w-0 text-balance">{first ? `Empieza tu primer entreno (${sel?.v === 1 ? Math.round(mins * 0.75) : mins} min)` : sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
+        <span className="min-w-0 text-balance">{first ? `Empezar mi primer entreno (${sel?.v === 1 ? Math.round(mins * 0.75) : mins} min)` : sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
         {!first && <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>}
       </Link>
       <p className="mt-4 text-sm font-bold text-ink/80">¿Cómo te sientes hoy? <span className="font-semibold text-ink/70">Opcional</span></p>

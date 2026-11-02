@@ -50,6 +50,7 @@ import { HowToButton, PageTour } from "@/components/primeros-pasos/page-tour";
 import { WeekRecap } from "@/components/primeros-pasos/week-recap";
 import { LoMejor } from "@/components/primeros-pasos/lo-mejor";
 import { weekRecapFor } from "@/lib/week-recap-server";
+import { FIRST_DAY_CARD_MIN_DAY, isFirstDay } from "@/lib/hoy-first";
 
 export const metadata = { title: "Hoy" };
 
@@ -88,18 +89,47 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // la primera sesión del calendario). Antes, quien se registraba un domingo veía "Descanso" y no tenía nada que empezar.
   // El primer entreno es corto (10 a 15 min, 3 o 4 ejercicios básicos): el mismo que arma /app/entreno.
   // Demo: ?primera=1 muestra este estado.
-  const first = !d.program && (v.demo ? sp.primera === "1" : learnState.workouts === 0) && !g.trainedToday;
+  const first = isFirstDay({ program: !!d.program, demo: v.demo, primera: sp.primera, workouts: learnState.workouts, trainedToday: g.trainedToday });
   const firstPlan = first ? firstSessionPlan(d, 0) : null;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
   const mins = (firstPlan ?? plan).mins ?? (training || firstPlan ? 55 : 0);
-  const kgLost = a.startWeight - a.currentWeight;
   // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
-  const lastTime = training && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
+  const lastTime = training && !first && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
+  const header = (
+    <header className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
+        <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{greetingAt(v.tz)}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
+        {!first && <HowToButton tour="hoy" className="-ml-1" />}
+      </div>
+      <div className="shrink-0 flex items-center gap-2">
+        <NotificationBell className="lg:hidden" />
+        <Link href="/app/progreso#logros" className={`pressable flex items-center gap-1.5 h-12 rounded-2xl border px-3 ${g.streak.todayDone ? "bg-banana border-banana hover:brightness-95" : "bg-white border-line hover:border-ink/25"}`} aria-label={`Racha de ${g.streak.days} días${g.streak.todayDone ? "" : ", aún sin registrar hoy"}`}>
+          <BananaFlame weight={g.streak.todayDone ? "fill" : "duotone"} className={`size-6 ${g.streak.todayDone ? "text-ink" : "text-banana-ink"}`} />
+          <span className="text-lg font-extrabold text-ink tabular-nums leading-none">{g.streak.days}</span>
+        </Link>
+        <Link href="/app/perfil" className="pressable lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink hover:brightness-95" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
+      </div>
+    </header>
+  );
+  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+    readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>;
+  // Primer día (sin ningún entreno guardado): solo el saludo y el primer entreno, sin tours, avisos ni tarjetas que lo
+  // distraigan. El aviso de tarjeta sí sale si faltan 2 días o menos para el cobro. Desde el primer entreno, Hoy completo.
+  if (first) return (
+    <div className="space-y-5 animate-enter">
+      <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
+      {header}
+      {hero}
+      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
+    </div>
+  );
+  const kgLost = a.startWeight - a.currentWeight;
   // Primeros pasos: lo acompaña Coach Platanita si el perfil es de mujer o el programa es suyo; si no, Coach Banana.
   const guideCoach = coach.id !== "banana" ? coach : a.sex === "f" ? COACHES.platanita : null;
   const recap = await weekRecapFor(v, d.today, a.trainDays, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[]).catch(() => null);
   const tourSteps = [
-    { target: "hoy-entreno", title: first ? "Empieza aquí: tu primer entreno" : "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
+    { target: "hoy-entreno", title: "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
     { target: "hoy-pasos", title: "Tus primeros pasos", body: "Esta lista te enseña el resto de la app, un paso a la vez." },
     { target: "hoy-coach", title: `${guideCoach?.name ?? "Coach Banana"}, tu entrenador 24/7`, body: "Pregúntale lo que quieras de tu entreno. Te responde con tu plan en mente." },
   ];
@@ -107,29 +137,13 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   return (
     <div className="space-y-5 animate-enter">
       <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
-      {/* Encabezado + motivación */}
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
-          <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{greetingAt(v.tz)}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
-          {!first && <HowToButton tour="hoy" className="-ml-1" />}
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          <NotificationBell className="lg:hidden" />
-          <Link href="/app/progreso#logros" className={`pressable flex items-center gap-1.5 h-12 rounded-2xl border px-3 ${g.streak.todayDone ? "bg-banana border-banana hover:brightness-95" : "bg-white border-line hover:border-ink/25"}`} aria-label={`Racha de ${g.streak.days} días${g.streak.todayDone ? "" : ", aún sin registrar hoy"}`}>
-            <BananaFlame weight={g.streak.todayDone ? "fill" : "duotone"} className={`size-6 ${g.streak.todayDone ? "text-ink" : "text-banana-ink"}`} />
-            <span className="text-lg font-extrabold text-ink tabular-nums leading-none">{g.streak.days}</span>
-          </Link>
-          <Link href="/app/perfil" className="pressable lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink hover:brightness-95" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
-        </div>
-      </header>
+      {header}
 
-      {!first && <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />}
+      <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />
 
       {/* 1. Lo que toca hoy, con el botón grande para empezar. Con un programa activo, su sesión. */}
       {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
-        : <div data-tour="hoy-entreno"><WorkoutHero first={first} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
-          readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>}
+        : hero}
 
       {/* 2. Cómo vas, en una línea. */}
       <WeekLine week={g.week} sched={d.sched} todayIso={d.today.iso} streak={g.streak.days} todayDone={g.streak.todayDone} />
@@ -163,7 +177,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
           El exprés acompaña al lado en escritorio (fijo mientras bajas). */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <div data-tour="hoy-numeros"><TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} /></div>
-        {!first && !g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} /></div>}
+        {!g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} /></div>}
       </div>
       {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
 

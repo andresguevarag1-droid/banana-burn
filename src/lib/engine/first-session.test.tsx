@@ -69,14 +69,15 @@ describe("primer entreno corto", () => {
   it("el botón de Hoy muestra la duración corta del primer entreno", () => {
     const first = firstSessionPlan(dash("ninguno", "m"), 0)!;
     const html = renderToStaticMarkup(<Readiness first initial={0} dateKey="2026-10-30" demo mins={first.mins!} />);
-    expect(html).toContain(`Empieza tu primer entreno (${first.mins} min)`);
+    expect(html).toContain(`Empezar mi primer entreno (${first.mins} min)`);
     expect((html.match(/<a /g) ?? []).length).toBe(1);
     expect(html).not.toContain("¿Cómo te sientes hoy?");
   });
 
   it("Hoy y Entreno deciden la primera vez en el servidor con los entrenos guardados", () => {
     const hoy = readFileSync("src/app/(app)/app/page.tsx", "utf8");
-    expect(hoy).toMatch(/learnState\.workouts === 0/);
+    expect(hoy).toMatch(/isFirstDay\(\{[^}]*workouts: learnState\.workouts/);
+    expect(readFileSync("src/lib/hoy-first.ts", "utf8")).toMatch(/workouts === 0/);
     expect(hoy).toMatch(/firstSessionPlan\(d, 0\)/);
     const entreno = readFileSync("src/app/(app)/app/entreno/page.tsx", "utf8");
     expect(entreno).toMatch(/hasSavedWorkout\(v\)/);
@@ -87,7 +88,7 @@ describe("primer entreno corto", () => {
     for (const demo of [true, false]) {
       const html = renderToStaticMarkup(<Readiness first initial={initial} dateKey="2026-11-01" demo={demo} mins={13} suggestSoft />);
       expect(html).toContain(`href="/app/entreno${demo ? "?primera=1" : ""}"`);
-      expect(html).toContain("Empieza tu primer entreno (13 min)");
+      expect(html).toContain("Empezar mi primer entreno (13 min)");
       expect(html).not.toContain("modo=suave");
       expect(html).not.toContain("<button");
     }
