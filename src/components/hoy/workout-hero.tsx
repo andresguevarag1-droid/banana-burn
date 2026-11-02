@@ -12,10 +12,12 @@ import { dayTag, sessionBenefit, setsLegend, t, type Voice } from "@/lib/voice";
 
 type Mini = Pick<PlannedDay, "name" | "icon" | "tpl" | "key">;
 
-export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false }: {
+export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false, home }: {
   plan: PlannedDay; voice: Voice; mins: number; trainedToday: boolean; deload: boolean; dayName: string; yesterday: Mini; tomorrow: Mini;
   /** Nunca ha entrenado: el entreno se presenta como "Tu primer entreno" (en un día de descanso, la próxima sesión adelantada). */
   first?: boolean;
+  /** Primer entreno con gym o mixto: la opción en casa sin equipo, sus minutos y si va primero (registro de noche). */
+  home?: { mins: number; first: boolean };
   /** "La última vez hiciste..." con números reales del historial, o null. */
   lastTime: string | null;
   readiness: { initial: number; dateKey: string; demo: boolean; suggestSoft: boolean; she?: boolean };
@@ -76,7 +78,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
           {trainedToday ? (
             <p className="relative mt-4 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." })}</p>
           ) : (
-            <div className="relative mt-4"><Readiness first={first} voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
+            <div className="relative mt-4"><Readiness first={first} home={first ? home : undefined} voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
           )}
 
           {/* Coach Banana: el gancho y lo que hiciste la última vez */}
