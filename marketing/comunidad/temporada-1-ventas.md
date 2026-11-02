@@ -59,7 +59,7 @@ CTA **T**: «Conoce la temporada» a https://bananaburn.app/temporadas. CTA **A*
 
 ### Carruseles y pies que se reutilizan
 
-Fuentes sin copiar sus láminas: [C1 a C4](carruseles.md), [9 de noviembre](2026-11-09.md), [11 de noviembre](2026-11-11.md), [13 de noviembre](2026-11-13.md). Son guiones existentes, pendientes de arte final y aprobación; no se presentan como PNG terminados. Semana del 2 al 8: C2/C3/C4; del 9 al 15: días 9/11/13; del 16 al 22: C2/día 9/C4. El 1 suma C1. Son tres carruseles por semana completa, con republicación explícita en la tercera semana, sin producir otros tres iguales.
+Fuentes sin copiar sus láminas: [C1 a C4](carruseles.md), [9 de noviembre](2026-11-09.md), [11 de noviembre](2026-11-11.md), [13 de noviembre](../archivo/comunidad/2026-11-13.md). Son guiones existentes, pendientes de arte final y aprobación; no se presentan como PNG terminados. Semana del 2 al 8: C2/C3/C4; del 9 al 15: días 9/11/13; del 16 al 22: C2/día 9/C4. El 1 suma C1. Son tres carruseles por semana completa, con republicación explícita en la tercera semana, sin producir otros tres iguales.
 
 Para reutilizar el del 9 el día 18, cambiar solo su primera lámina temporal «Hoy empieza Temporada 1» por «Temporada 1 ya empezó» en el mismo recurso al producir; no abrir otro carrusel. Si no puede actualizarse, bloquear esa republicación: un pie no corrige una portada falsa. C4 dice «empieza el 9» con fecha concreta: añadir «Ya empezó» en el pie del 20 y comprobar que el arte no diga «próximamente».
 

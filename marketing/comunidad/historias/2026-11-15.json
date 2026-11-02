@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-15",
+  "title": "¿Vas en 0? Haz el 1 hoy",
+  "lines": [
+    "¿Vas en 0?",
+    "Haz el 1 hoy."
+  ],
+  "sub": "12 min, también en casa.",
+  "hour": "20:30",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Cuándo es tu próximo entreno?",
+  "options": [
+    "Hoy",
+    "Esta semana"
+  ]
+}

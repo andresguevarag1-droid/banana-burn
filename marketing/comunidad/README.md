@@ -41,9 +41,9 @@ Métrica final: usuarios únicos con trial_charges.status = 'succeeded' o suscri
 
 Mueve registro completo, primer entreno y retención en semana 1 mediante historias del 1 al 8, respuestas a dudas y un reto mensual de 12 entrenos ligado a 3 amigos que pagan = 1 mes gratis (regla vigente desde el 1 de noviembre, 0064: el amigo cuenta cuando paga su primer plan). Apoya tarjeta opcional y primer pago con aclaraciones de fechas. Medición: clics y votos por pieza en las redes; bienvenida terminada, primer entreno persistido, retorno en dos días distintos de la semana 1 y referidos calificados en datos agregados. Resultado final: usuarios únicos de pago hacia la meta de 100. Los UTM de referidos aún se pierden, por lo que no se atribuyen pagos a piezas. Incluye bases PNG de historias, guiones de carrusel y 20 respuestas. Pendiente de aprobación escrita de Andrés; nada publicado ni enviado.
 
-## Continuación: 9 al 15 de noviembre
+## Continuación: 9 al 22 de noviembre
 
-El [plan de prueba a pago](semana-2026-11-09.md) enlaza los siete días, sus tres carruseles, dos Reels, historias y respuestas. Para esa semana aplica la cadencia del playbook de crecimiento (07:00, 18:00 y 22:00), con bases SVG que incluyen capturas reales, pendientes de exportación y aprobación.
+Los planes del [9 al 15](semana-2026-11-09.md) y del [16 al 22](semana-2026-11-16.md) se reescribieron para el primer entreno (#214): la historia principal de cada día va de noche (20:00 a 21:00) con el enlace «Tu primer entreno hoy», y la última llamada a las 22:00. Las bases PNG y SVG salen de los JSON de `historias/` con generar.mjs. Lo que se quitó está en [marketing/archivo](../archivo/README.md).
 
 ## Del 23 de noviembre al 6 de diciembre
 

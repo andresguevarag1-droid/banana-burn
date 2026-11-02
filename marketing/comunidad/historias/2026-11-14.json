@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-14",
+  "title": "Entreno 1 de 12, esta noche",
+  "lines": [
+    "Entreno 1 de 12:",
+    "esta noche."
+  ],
+  "sub": "12 min, también en casa.",
+  "hour": "21:00",
+  "cta": "Tu primer entreno hoy",
+  "url": "https://bananaburn.app/entrar?modo=registro",
+  "question": "¿Cuántos llevas del reto de 12?",
+  "options": [
+    "Ninguno todavía",
+    "1 o más"
+  ]
+}
