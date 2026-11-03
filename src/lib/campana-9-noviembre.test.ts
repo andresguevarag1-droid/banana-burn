@@ -76,8 +76,11 @@ describe("anuncios de la campaña del 9 de noviembre", () => {
     const guided = readFileSync("src/components/workout/guided.tsx", "utf8");
     const recap = readFileSync("src/components/workout/recap.tsx", "utf8");
     const wizard = readFileSync("src/app/bienvenida/wizard.tsx", "utf8");
-    expect(readiness).toContain("¿No estás en el gym? Hazlo en casa ahora ({home.mins} min, sin equipo)");
-    expect(doc).toContain(`"¿No estás en el gym? Hazlo en casa ahora (${FIRST_HOME_MIN} min, sin equipo)"`);
+    expect(readiness).toContain("Empezar en casa<span");
+    expect(readiness).toContain("Sin equipo, unos {home.mins} min");
+    expect(doc).toContain(`"Empezar en casa" ("Sin equipo, unos ${FIRST_HOME_MIN} min")`);
+    expect(readiness).toContain("Empezar mi entreno<span");
+    expect(doc).toContain('botón "Empezar mi entreno"');
     for (const s of ["Sugerido. Ajústalo si quieres.", "Descansa", "Sigue", "Terminé la serie", "Ver cómo se hace"]) expect(guided).toContain(s);
     expect(recap).toContain('"Entreno completado"');
     for (const s of ['t="Gimnasio"', 't="Sin equipo"', 't="En casa con mancuernas"']) expect(wizard).toContain(s);

@@ -31,7 +31,10 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
     const gym = (
       <Link key="gym" href={`/app/entreno${demo ? "?primera=1" : ""}`} className={`${home?.first ? "btn-ghost" : "btn-primary"} flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center`}>
         <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-        <span>Empezar mi primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>
+        {/* Con la opción en casa, los dos botones se distinguen por dónde: cortos, para que ambos quepan sin desplazar. */}
+        {home
+          ? <span>Empezar mi entreno<span className="mt-1 block text-sm font-semibold">Unos {mins} min</span></span>
+          : <span>Empezar mi primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>}
       </Link>
     );
     if (!home) return gym;
@@ -39,7 +42,7 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
     const casa = (
       <Link key="casa" href={`/app/entreno?casa=1${demo ? "&primera=1" : ""}`} className={`${home.first ? "btn-primary" : "btn-ghost"} flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center`}>
         <House weight="fill" className="size-6 shrink-0" aria-hidden />
-        <span className="min-w-0 text-balance">¿No estás en el gym? Hazlo en casa ahora ({home.mins} min, sin equipo)</span>
+        <span>Empezar en casa<span className="mt-1 block text-sm font-semibold">Sin equipo, unos {home.mins} min</span></span>
       </Link>
     );
     return <div className="flex flex-col gap-2.5">{home.first ? [casa, gym] : [gym, casa]}</div>;
