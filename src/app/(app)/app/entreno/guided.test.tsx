@@ -5,7 +5,7 @@ import { EX, planDay, prescribe, scheduleFor, type Equipment, type ExerciseId } 
 import { TECH } from "@/lib/engine/technique";
 import { firstSessionPlan } from "@/lib/athlete";
 import { loadKindOf } from "@/components/workout/logic";
-import { GuidedRest, guidedLine } from "@/components/workout/guided";
+import { GuidedRest, GuidedSet, guidedLine } from "@/components/workout/guided";
 import { Readiness } from "@/components/readiness";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, replace: () => {} }) }));
@@ -54,6 +54,18 @@ describe("primer entreno guiado (#226)", () => {
     expect(html).toContain('aria-label="Más peso"');
     expect(html).not.toContain("Elige un peso");
     expect(render("ninguno", true)).not.toContain("Sugerido. Ajústalo");
+  });
+
+  it("un ejercicio con carga no baja a 0 kg con Menos peso (QA #226)", () => {
+    const set = (kg: number) => renderToStaticMarkup(<GuidedSet name="Press" line="Serie 1 de 2 · 10 repeticiones" exNo={1} exTotal={4} kg={kg} kgMin={1} onKg={() => {}} onDone={() => {}} onHow={() => {}} onExit={() => {}} />);
+    const minus = (html: string) => html.match(/<button[^>]*aria-label="Menos peso"[^>]*>/)?.[0] ?? "";
+    expect(minus(set(1))).toContain('disabled=""');
+    expect(set(1)).not.toContain("Sin peso");
+    expect(minus(set(4))).not.toContain('disabled=""');
+    // Y el paso de kilos del reproductor respeta ese mínimo.
+    const src = readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8");
+    expect(src).toContain('onKg={(d) => step(activeSet, "kg", d, guidedMinKg)} kgMin={guidedMinKg}');
+    expect(src).toMatch(/const next = Math\.max\(min, bump\(/);
   });
 
   it("del Empezar de Hoy a la primera serie marcada hay 2 toques", () => {

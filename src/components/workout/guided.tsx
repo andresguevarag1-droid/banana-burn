@@ -15,10 +15,12 @@ export function guidedLine(o: { setNo: number; sets: number; reps: string; unit?
   return `Serie ${o.setNo} de ${o.sets} · ${t.line}`;
 }
 
-export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, timer, onDone, onStart, onKg, onHow, onExit }: {
+export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin = 0, timer, onDone, onStart, onKg, onHow, onExit }: {
   name: string; cue?: string | null; anim?: string; art?: string | null; line: string; exNo: number; exTotal: number;
   /** Peso sugerido (solo si el ejercicio usa peso): se puede ajustar, no es obligatorio. */
   kg?: number | null;
+  /** Menos peso se apaga al llegar aquí: un ejercicio con carga no se guarda en 0 kg. */
+  kgMin?: number;
   /** Serie por tiempo: `null` sin empezar (el botón grande la inicia), o los segundos que quedan. */
   timer?: { left: number; label: string } | null;
   onDone: () => void; onStart?: () => void; onKg?: (d: number) => void; onHow: () => void; onExit: () => void;
@@ -60,7 +62,7 @@ export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, timer
           {kg != null && onKg && (
             <div className="mt-3 flex items-center gap-3 rounded-2xl bg-cream px-3 py-2">
               <p className="flex-1 min-w-0 text-sm text-body"><span className="block font-bold text-ink tabular-nums">{kg > 0 ? `${kgFmt(kg)} kg` : "Sin peso"}</span>Sugerido. Ajústalo si quieres.</p>
-              <button type="button" onClick={() => onKg(-1)} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line" aria-label="Menos peso"><Minus weight="bold" className="size-5" /></button>
+              <button type="button" onClick={() => onKg(-1)} disabled={kg <= kgMin} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line disabled:opacity-40" aria-label="Menos peso"><Minus weight="bold" className="size-5" /></button>
               <button type="button" onClick={() => onKg(1)} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line" aria-label="Más peso"><Plus weight="bold" className="size-5" /></button>
             </div>
           )}

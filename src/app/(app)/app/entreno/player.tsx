@@ -331,9 +331,9 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
 
   /* ---------- Editar series ---------- */
   const setRowsAt = (ei: number, si: number, patch: Partial<Row>) => setRows((all) => all.map((r, i) => (i !== ei ? r : r.map((s, j) => (j === si ? { ...s, ...patch } : s)))));
-  const step = (si: number, field: "kg" | "reps", d: number) => {
+  const step = (si: number, field: "kg" | "reps", d: number, min = 0) => {
     const cur = num(here[si][field]);
-    const next = bump(cur, d * stepFor(field, { unit: ex.cfg.unit, barbell: ex.barbell, cur }));
+    const next = Math.max(min, bump(cur, d * stepFor(field, { unit: ex.cfg.unit, barbell: ex.barbell, cur })));
     // al cambiar kg de una serie pendiente, propaga a las siguientes pendientes
     setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j === si || (field === "kg" && j > si && !s.done) ? { ...s, [field]: String(next) } : s)))));
   };
@@ -852,6 +852,8 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
   };
   // Guiado: sin tarjeta previa, calentamiento ni lista de series. La serie se marca con los valores sugeridos.
   const guidedNow = guided && activeSet >= 0;
+  // Un ejercicio con carga nunca baja a 0 kg en el guiado: esa serie alimentaría la receta del segundo entreno.
+  const guidedMinKg = stepFor("kg", { unit: ex.cfg.unit, barbell: ex.barbell, cur: 0 });
   const guidedTimer = timed ? (timerOn && tp ? { left: tp.left, label: tp.paused ? "En pausa" : segLabel(tp.seg) } : null) : undefined;
   const lineOf = (ei: number, si: number) => { const e = exercises[ei], r = rows[ei]; return guidedLine({ setNo: si + 1, sets: r.length, reps: r[si].reps, unit: e.cfg.unit, lo: e.cfg.lo, hi: e.cfg.hi, perSide: e.cfg.perSide }); };
   const guidedNext = guidedNow && rest ? (() => { const t = nextPending(rows, idx); return t ? { name: exercises[t.ex].name, line: lineOf(t.ex, t.si) } : null; })() : null;
@@ -860,7 +862,7 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
       {guidedNow ? (
         <div className="contents" inert={!!rest}>
           <GuidedSet name={ex.name} cue={ex.tech?.cues[0]} anim={ex.tech?.anim || undefined} art={ex.art} line={lineOf(idx, activeSet)} exNo={idx + 1} exTotal={exercises.length}
-            kg={needsLoad(ex) ? num(here[activeSet].kg) : null} onKg={(d) => step(activeSet, "kg", d)} timer={guidedTimer}
+            kg={needsLoad(ex) ? num(here[activeSet].kg) : null} onKg={(d) => step(activeSet, "kg", d, guidedMinKg)} kgMin={guidedMinKg} timer={guidedTimer}
             onStart={startTimed} onDone={() => { if (timerOn) setWork(null); complete(activeSet); }} onHow={() => setSheet("tech")} onExit={() => setSheet("exit")} />
         </div>
       ) : (
