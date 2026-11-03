@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { cleanEvent } from "@/app/api/track/event";
 
+const navigation = vi.hoisted(() => ({ query: "modo=registro" }));
+
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams("modo=registro"),
+  useSearchParams: () => new URLSearchParams(navigation.query),
   useRouter: () => ({ replace: () => {}, refresh: () => {} }),
 }));
 vi.mock("./actions", () => ({ afterSocialSignIn: vi.fn(), confirmAndCheck: vi.fn(), signUpConfirmed: vi.fn() }));
@@ -31,5 +33,22 @@ describe("registro dentro de Instagram o Facebook (#235)", () => {
   it("signup_view es un evento permitido y guarda inapp", () => {
     expect(cleanEvent({ name: "signup_view", props: { inapp: true } })).toEqual({ name: "signup_view", props: { inapp: true } });
     expect(cleanEvent({ name: "signup_view", props: { inapp: false } })?.props).toEqual({ inapp: false });
+  });
+});
+
+
+describe("login dentro de otra app (#235)", () => {
+  it("mantiene correo y contraseña antes del enlace y oculta Google", () => {
+    navigation.query = "";
+    try {
+      for (const openIn of ["Safari", "Chrome"] as const) {
+        const html = renderToStaticMarkup(<LoginForm configured googleEnabled openIn={openIn} />);
+        expect(html).not.toContain("Continuar con Google");
+        expect(html).toContain('type="password"');
+        expect(html.indexOf("</form>")).toBeLessThan(html.indexOf("¿Prefieres Google?"));
+        expect(html).toContain('aria-expanded="false"');
+        expect(html).toContain('data-cta="entrar-google-fuera"');
+      }
+    } finally { navigation.query = "modo=registro"; }
   });
 });
