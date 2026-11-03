@@ -1,5 +1,6 @@
 // #68: Subscribe por la API de Conversiones cuando el cobro automático sale bien (fin de la prueba, primer mes con 50 %,
-// suscripción de ONVO creada por la prueba). /pago/exito sigue mandando el suyo desde el píxel; aquí no se toca.
+// suscripción de ONVO creada por la prueba). #228: también la compra de /pago/checkout (webhook de ONVO y vuelta de Tilopay),
+// con el event_id de purchaseEventId, el mismo que manda el píxel de /pago/exito, para que Meta la cuente una vez.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fakeDb } from "./fake-db";
@@ -28,6 +29,7 @@ const { OnvoError } = await import("./onvo");
 const tb = await import("./trial-billing");
 const billing = await import("./billing");
 const { chargePayload } = await import("./meta-capi");
+const { purchaseEventId } = await import("./meta-pixel");
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const EMAIL = "ana@prueba.test";
@@ -124,11 +126,13 @@ describe("Subscribe del cobro automático", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("un pago a mano verificado (sin auto) no manda: ese Subscribe sale de /pago/exito", async () => {
-    const f = setup({ subscriptions: [{ id: 5, user_id: USER, provider: "tilopay", provider_subscription_id: "tp_1", status: "incomplete", plan: "entreno", billing: "mes" }] });
-    await billing.activateVerified(f.db, f.tables.subscriptions[0] as never, { periodStart: D7.toISOString(), periodEnd: D7.toISOString(), amountMinor: 999, currency: "USD", reference: "orden_1", provider: "tilopay" });
+  it("#228: compra de /pago/checkout con Tilopay (vuelve a Mi plan, sin píxel): 1 evento con el event_id de la suscripción", async () => {
+    const f = setup({ subscriptions: [{ id: 5, user_id: USER, provider: "tilopay", provider_subscription_id: "tlp:bbc-1", status: "incomplete", plan: "entreno", billing: "mes" }] });
+    const pay = { periodStart: D7.toISOString(), periodEnd: D7.toISOString(), amountMinor: 999, currency: "USD", reference: "orden_1", provider: "tilopay" as const };
+    await billing.activateVerified(f.db, f.tables.subscriptions[0] as never, pay);
+    expect(await billing.activateVerified(f.db, f.tables.subscriptions[0] as never, pay)).toMatchObject({ note: "duplicado" });
     expect(f.tables.profiles[0].plan).toBe("entreno");
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sent().map((x) => x.body.data[0])).toMatchObject([{ event_name: "Subscribe", event_id: purchaseEventId("tlp:bbc-1"), custom_data: { value: 9.99, currency: "USD" } }]);
   });
 });
 
@@ -154,10 +158,21 @@ describe("Subscribe del webhook de ONVO", () => {
     expect(sent().map((x) => x.body.data[0].event_id)).toEqual(["onvo.first:sub_8"]);
   });
 
-  it("una suscripción de /pago/checkout no manda (ya la cuenta el píxel en /pago/exito)", async () => {
+  it("#228: compra de /pago/checkout: 1 evento con valor en USD y el mismo event_id que el píxel de /pago/exito", async () => {
     setup({ subscriptions: [sub("sub_checkout")] });
     const evt = renewal("sub_checkout", 1499);
     expect(await billing.processWebhook(evt, JSON.stringify(evt))).toMatchObject({ status: "processed" });
+    expect(await billing.processWebhook(evt, JSON.stringify(evt))).toMatchObject({ status: "duplicate" });
+    expect(sent().map((x) => x.body.data[0])).toMatchObject([{ event_name: "Subscribe", event_id: purchaseEventId("sub_checkout"), custom_data: { value: 14.99, currency: "USD" } }]);
+    expect(purchaseEventId("sub_checkout")).toBe("buy-sub-checkout");
+  });
+
+  it("#228: sin META_CAPI_TOKEN la compra se activa igual y no llama a Meta", async () => {
+    vi.stubEnv("META_CAPI_TOKEN", "");
+    const f = setup({ subscriptions: [sub("sub_sin_token")] });
+    const evt = renewal("sub_sin_token", 1499);
+    expect(await billing.processWebhook(evt, JSON.stringify(evt))).toMatchObject({ status: "processed" });
+    expect(f.tables.profiles[0].plan).toBe("completo");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import { getEntitlements } from "@/lib/entitlements";
 import { ANNUAL_SEASON_NOTE, annualSaving, PLANS } from "@/lib/plans";
 import { AutoRefresh } from "./auto-refresh";
 import { FunnelTracker } from "@/components/analytics";
+import { purchaseEventId } from "@/lib/meta-pixel";
 
 import { usd2 } from "@/lib/num";
 import { canEnroll, longDate, SEASONS_T1 } from "@/lib/seasons";
@@ -81,7 +82,7 @@ export default async function Exito({ searchParams }: { searchParams: Promise<{ 
   const seasonOpen = canEnroll(season, todayFor(v).iso);
   return (
     <Card icon={<MonkeyBanana className="size-10" />} tone="ok" title={`${planName ?? "Tu plan"} ya está activo`} body="Todo lo que llevas sigue ahí. El siguiente paso es tu entreno de hoy.">
-      <FunnelTracker view="purchase_success" props={{ plan: planName ?? "", ...(billing ? { billing } : {}) }} />
+      <FunnelTracker view="purchase_success" props={{ plan: planName ?? "", ...(billing ? { billing } : {}), ...(s ? { event_id: purchaseEventId(s) } : {}) }} />
       <Link href="/app/entreno" data-cta="exito-entreno" className="btn-banana w-full h-14 text-base">Ir a mi entreno de hoy<ArrowRight weight="bold" className="size-5" /></Link>
       <ol className="text-left space-y-3 text-[15px] border-t border-line pt-5">
         <Step n={1}>Haz tu rutina de hoy: cada serie trae su peso.</Step>

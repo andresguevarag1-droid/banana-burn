@@ -12,6 +12,7 @@ const TASK: Record<string, string> = { "cron:recordatorios": "Cron diario (aviso
 const INTEGRATION: Record<string, string> = {
   supabase: "Supabase (base y login)", serviceRole: "Service role (tareas del servidor)", anthropic: "Coach Banana (Anthropic)", onvo: "Pagos de planes (ONVO)",
   onvoOneTime: "Pagos de retos (ONVO)", resend: "Correos (Resend)", vapid: "Avisos push (VAPID)", cron: "Cron (CRON_SECRET)", emailUnsub: "Baja de correos firmada",
+  metaCapi: "Meta (API de Conversiones)",
 };
 
 function BeatBadge({ b }: { b: Beat | undefined }) {

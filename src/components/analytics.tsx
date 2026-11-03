@@ -13,7 +13,8 @@ import { fbq } from "@/components/meta-pixel";
 export function track(name: FunnelEvent, props: FunnelProps = {}) {
   // Meta Pixel: mismo event_id que el beacon, para que Meta deduplique con la API de Conversiones del servidor.
   const meta = toMetaEvent(name, props);
-  const eid = meta ? newEventId() : "";
+  // Un event_id que ya trae el evento (la compra, que el servidor también manda) se respeta; si no, uno nuevo.
+  const eid = meta ? (typeof props.event_id === "string" && props.event_id ? props.event_id : newEventId()) : "";
   if (meta) fbq(meta.custom ? "trackCustom" : "track", meta.name, meta.params, { eventID: eid });
   try {
     if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return;
