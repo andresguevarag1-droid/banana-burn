@@ -56,6 +56,9 @@ import { FIRST_DAY_CARD_MIN_DAY, isFirstDay } from "@/lib/hoy-first";
 import { CoachPrompt } from "@/components/coach-prompt";
 import { inCoachPromptWindow, showHoyCoachPrompt } from "@/lib/coach-prompt";
 import { FirstPartialCard } from "@/components/hoy/first-partial-card";
+import { ReminderPrompt } from "@/components/hoy/reminder-prompt";
+import { getNotificationPrefs } from "@/app/actions/notifications";
+import { DEFAULT_PREFS } from "@/lib/notify";
 
 export const metadata = { title: "Hoy" };
 
@@ -68,7 +71,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
   const demoTester = v.demo ? sp.tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
-  const [a, meals, ent, xs, tester, voice, learnState] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v)]);
+  const [a, meals, ent, xs, tester, voice, learnState, prefs] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v), getNotificationPrefs().catch(() => null)]);
   const noticeDemo = v.demo && sp.demo ? demoCardState(sp.demo) : null;
   const noticeEnt = noticeDemo ? { ...ent, ...noticeDemo, access: "trial" as const } : ent;
   const d = dashboard(a);
@@ -175,6 +178,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <PromptQueue>
         {/* El coach se presenta (#198): el día después del primer entreno, si hoy no entrena, primero en la fila. */}
         {coachPrompt && <CoachPrompt where="hoy" home={a.equipment === "casa" || a.equipment === "ninguno"} coach={coach.id === "banana" ? null : coach} />}
+        {/* #255: la hora del recordatorio, desde el primer entreno guardado y solo si sigue en la hora por defecto. */}
+        {(learnState.workouts > 0 || g.trainedToday) && prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time && <ReminderPrompt />}
         {paused && (
           <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cream text-ink"><Pause weight="duotone" className="size-5" /></span>

@@ -15,12 +15,26 @@ describe("franja de entreno (#197)", () => {
     for (const v of ["", "madrugada", null, undefined, 7]) expect(isTrainSlot(v)).toBe(false);
   });
 
-  it("la bienvenida pregunta la franja y la acción la guarda en notification_prefs", () => {
+  it("Hoy pregunta la franja después del primer entreno (#255) y la guarda como hora del recordatorio", () => {
+    const c = readFileSync(new URL("../components/hoy/reminder-prompt.tsx", import.meta.url), "utf8");
+    expect(c).toContain("¿A qué hora sueles entrenar?");
+    expect(c).toContain("saveNotificationPrefs({ reminder_time: reminderTimeFor(slot) })");
+    const hoy = readFileSync(new URL("../app/(app)/app/page.tsx", import.meta.url), "utf8");
+    expect(hoy).toContain("(learnState.workouts > 0 || g.trainedToday) && prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time && <ReminderPrompt />");
+    // Antes del primer entreno, Hoy devuelve solo el saludo y el entreno: la tarjeta va después de ese return.
+    expect(hoy.indexOf("<ReminderPrompt />")).toBeGreaterThan(hoy.indexOf("if (first) return ("));
+  });
+
+  it("la bienvenida ya no pregunta la franja ni la voz (#255)", () => {
     const w = readFileSync(new URL("../app/bienvenida/wizard.tsx", import.meta.url), "utf8");
-    expect(w).toContain("¿A qué hora sueles entrenar?");
-    expect(w).toContain("up({ trainSlot: s.id })");
+    expect(w).not.toContain("TRAIN_SLOTS");
+    expect(w).not.toContain("VoicePicker");
+    // El nivel se elige a mano: empieza vacío y el paso 3 no avanza sin él.
+    expect(w).toContain('level: startOnCard ? "intermedio" : null');
+    expect(w).toContain("o.level != null, true, true,");
+    expect(w).toContain("voice: voiceForLevel(o.level)");
     const a = readFileSync(new URL("../app/bienvenida/actions.ts", import.meta.url), "utf8");
-    expect(a).toMatch(/isTrainSlot\(o\.trainSlot\)\) await sb\.from\("notification_prefs"\)\.upsert\(\{ user_id: v\.id, reminder_time: reminderTimeFor\(o\.trainSlot\) \}/);
+    expect(a).not.toContain("trainSlot");
   });
 
   it("el workflow horario no hace nada sin el secreto", () => {

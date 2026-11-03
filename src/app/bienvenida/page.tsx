@@ -48,7 +48,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
   const vista = (await searchParams).vista;
   const startOnCard = v.demo && cardOffer && vista === "tarjeta";
-  // Solo demo: ?vista=lenguaje abre el paso de experiencia y "Cómo te hablo" para revisarlo.
+  // Solo demo: ?vista=lenguaje abre el paso de experiencia para revisarlo ("Cómo te hablo" está en Perfil desde #255).
   const startOnVoice = v.demo && vista === "lenguaje";
 
   return (
