@@ -112,8 +112,8 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
       </div>
       {checkout.error && <p role="alert" className="mt-6 text-center text-sm font-semibold text-bad">{checkout.error}</p>}
       {/* La prueba gratis solo se le cuenta a quien aún no tiene cuenta: en el muro (prueba terminada) y en Mi plan no aplica. */}
-      {!loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido, sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD).</p>}
-      {loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Precios en dólares (USD).</p>}
+      {!loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido, sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD), IVA incluido.</p>}
+      {loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Precios en dólares (USD), IVA incluido.</p>}
       <p className="mt-2 text-center text-sm text-muted text-pretty">{PREMIUM_RETOS_NOTE}</p>
 
       {/* Título arriba y las cuatro garantías en dos columnas: en escritorio la columna del título quedaba casi vacía. */}
