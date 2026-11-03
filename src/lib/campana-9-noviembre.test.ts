@@ -78,7 +78,7 @@ describe("anuncios de la campaña del 9 de noviembre", () => {
     const wizard = readFileSync("src/app/bienvenida/wizard.tsx", "utf8");
     expect(readiness).toContain("¿No estás en el gym? Hazlo en casa ahora ({home.mins} min, sin equipo)");
     expect(doc).toContain(`"¿No estás en el gym? Hazlo en casa ahora (${FIRST_HOME_MIN} min, sin equipo)"`);
-    for (const s of ["Sugerido. Ajústalo si quieres.", "Descansa", "Sigue", "Hecho", "Ver cómo se hace"]) expect(guided).toContain(s);
+    for (const s of ["Sugerido. Ajústalo si quieres.", "Descansa", "Sigue", "Terminé la serie", "Ver cómo se hace"]) expect(guided).toContain(s);
     expect(recap).toContain('"Entreno completado"');
     for (const s of ['t="Gimnasio"', 't="Sin equipo"', 't="En casa con mancuernas"']) expect(wizard).toContain(s);
     expect(existsSync("public/landing/entreno.png")).toBe(true);
