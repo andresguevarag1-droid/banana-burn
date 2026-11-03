@@ -5,7 +5,7 @@ import { EX, planDay, prescribe, scheduleFor, type Equipment, type ExerciseId } 
 import { TECH } from "@/lib/engine/technique";
 import { firstSessionPlan } from "@/lib/athlete";
 import { loadKindOf } from "@/components/workout/logic";
-import { GuidedRest, GuidedSet, guidedLine } from "@/components/workout/guided";
+import { GuidedRest, GuidedSet, guidedHint, guidedLine } from "@/components/workout/guided";
 import { Readiness } from "@/components/readiness";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, replace: () => {} }) }));
@@ -33,7 +33,7 @@ const render = (equipment: Equipment, firstSession: boolean) => renderToStaticMa
 const mainButtons = (html: string) => html.match(/data-tour="done"[^>]*>.*?<\/button>/g) ?? [];
 
 describe("primer entreno guiado (#226)", () => {
-  it.each(["gym", "ninguno"] as const)("%s: un ejercicio por pantalla con la serie actual y un solo botón grande de Hecho", (equipment) => {
+  it.each(["gym", "ninguno"] as const)("%s: un ejercicio por pantalla con la serie actual y un solo botón grande de Terminé la serie", (equipment) => {
     const html = render(equipment, true);
     const options = optionsOf(equipment), first = options[0][0];
     expect(html).toContain(`>${first.name}</h1>`);
@@ -43,9 +43,9 @@ describe("primer entreno guiado (#226)", () => {
     expect(html).toContain("Ver cómo se hace");
     const buttons = mainButtons(html);
     expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toContain("Hecho");
+    expect(buttons[0]).toContain("Terminé la serie");
     // Nada de lo que asusta al empezar: ni lista de series, ni tarjeta previa, ni calentamiento.
-    for (const t of ["Terminé la serie", "Empezar serie", "Calienta primero", "Más opciones", "Cambiar"]) expect(html).not.toContain(t);
+    for (const t of ["Empezar serie", "Calienta primero", "Más opciones", "Cambiar"]) expect(html).not.toContain(t);
   });
 
   it("con mancuerna muestra el peso sugerido para ajustar, sin exigirlo", () => {
@@ -72,7 +72,7 @@ describe("primer entreno guiado (#226)", () => {
     // Toque 1: el botón de Hoy lleva directo a /app/entreno. Toque 2: el único botón grande del guiado marca la serie.
     const hoy = renderToStaticMarkup(<Readiness first initial={0} dateKey="2026-11-03" demo={false} mins={12} />);
     expect(hoy.match(/<a [^>]*href="([^"]+)"/)?.[1]).toBe("/app/entreno");
-    expect(mainButtons(render("gym", true))[0]).toContain("Hecho");
+    expect(mainButtons(render("gym", true))[0]).toContain("Terminé la serie");
     // Y marcar no espera un peso: la condición de kilos se salta en el guiado.
     expect(readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8")).toMatch(/needsLoad\(ex\) && num\(row\.kg\) <= 0 && !guided\) return/);
   });
@@ -82,7 +82,28 @@ describe("primer entreno guiado (#226)", () => {
     expect(html).toContain("Empezar serie 1 de 2");
     expect(html).toContain("Más opciones");
     expect(html).not.toContain("Sugerido. Ajústalo");
-    expect(mainButtons(html).join("")).not.toContain("Hecho");
+    expect(mainButtons(html).join("")).not.toContain("Terminé la serie");
+    expect(html).not.toContain(guidedHint(false, false));
+  });
+
+  it("antes de tocar dice qué hacer, con la clave completa y sin pantalla ni toque extra (#252)", () => {
+    const html = render("ninguno", true);
+    expect(html).toContain("Haz las repeticiones y después toca Terminé la serie.");
+    // La clave puede ocupar dos líneas: nada de truncate.
+    expect(html.match(/<p class="([^"]*)">Clave:/)?.[1]).not.toContain("truncate");
+    const long = renderToStaticMarkup(<GuidedSet name="Peso muerto" cue="Pies separados para estabilidad" line="Serie 1 de 2 · 10 repeticiones" exNo={1} exTotal={3} onDone={() => {}} onHow={() => {}} onExit={() => {}} />);
+    expect(long).toContain("Clave: pies separados para estabilidad</p>");
+    // El botón sigue siendo uno, grande (80 px), y la serie sigue describiéndolo.
+    expect(mainButtons(long)).toHaveLength(1);
+    expect(mainButtons(long)[0]).toMatch(/h-20[^>]*>Terminé la serie/);
+    expect(mainButtons(long)[0]).toContain('aria-describedby="serie-guiada"');
+    // Por tiempo: primero Empezar, y con el reloj corriendo se sigue hasta 0.
+    const timed = (timer: { left: number; label: string } | null) => renderToStaticMarkup(<GuidedSet name="Plancha" line="Serie 1 de 2 · 20 segundos" exNo={1} exTotal={3} timer={timer} onStart={() => {}} onDone={() => {}} onHow={() => {}} onExit={() => {}} />);
+    expect(timed(null)).toContain("Toca Empezar y sigue el reloj.");
+    expect(mainButtons(timed(null))[0]).toContain("Empezar");
+    expect(timed({ left: 12, label: "seg" })).toContain("Sigue hasta que el reloj llegue a 0.");
+    // El movimiento conserva su tamaño.
+    expect(long).toContain("h-[clamp(170px,34dvh,420px)]");
   });
 
   it("la línea de la serie usa el valor sugerido, también por tiempo", () => {
