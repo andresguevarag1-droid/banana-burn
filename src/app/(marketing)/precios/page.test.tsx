@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import Precios, { generateMetadata } from "./page";
-import { PLANS, ANNUAL_SEASON_NOTE } from "@/lib/plans";
+import { PLANS, ANNUAL_SEASON_NOTE, annualSaving } from "@/lib/plans";
 import { money, noBreakGlp1 } from "@/lib/copy";
 import { toMetaEvent } from "@/lib/meta-pixel";
 import { pricingFaq } from "../content";
@@ -25,6 +25,15 @@ describe("/precios", () => {
     expect(html).toContain("sin prorrateo");
     expect(html).toContain("ONVO Pay");
     expect(html).toContain("Tilopay");
+  });
+
+  it("anual preseleccionado, ahorro en dólares e IVA incluido, sin 'equivale' (#227)", () => {
+    const html = renderToStaticMarkup(<Precios />);
+    const tabs = [...html.matchAll(/role="tab" aria-selected="(true|false)"[^>]*>([^<]+)/g)].map((m) => [m[1], m[2].trim()]);
+    expect(tabs[0]).toEqual(["true", "Anual"]);
+    for (const plan of PLANS) expect(html).toContain(`Ahorras ${money(annualSaving(plan))}`);
+    expect(html).toContain("Precios en dólares (USD), IVA incluido.");
+    expect(html).not.toMatch(/equivale/i);
   });
 
   it("mantiene los CTA como Lead y los metadatos para compartir", () => {

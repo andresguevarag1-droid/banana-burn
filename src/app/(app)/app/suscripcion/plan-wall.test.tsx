@@ -36,6 +36,8 @@ describe("Muro de planes (#91)", () => {
       expect(html).toContain(money(p.price.anual));
     }
     expect(html.match(/Incluye 1 temporada deportiva gratis/g)?.length).toBe(PLANS.length);
+    expect(html).toContain("Precios en dólares (USD), IVA incluido.");
+    expect(html).not.toMatch(/equivale/i);
   });
 
   it("con sesión, el botón de cada plan va al checkout anual y aparece antes del detalle desplegable", () => {

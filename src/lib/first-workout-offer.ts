@@ -10,6 +10,8 @@ export const OFFER_PLAN: PlanId = "entreno";
 
 /** Clave de "Ahora no" en este teléfono: una vez cerrada, la tarjeta no vuelve (se ve luego en Mi plan desde el perfil). */
 export const offerDismissKey = (userId: string) => `bb.first-offer-dismiss.${userId}`;
+/** Clave de la oferta de salida (#227): se ve una sola vez por cuenta en este teléfono; /api/track repite el freno por cuenta. */
+export const exitOfferKey = (userId: string) => `bb.exit-offer.${userId}`;
 
 /** Mi plan con el plan y el periodo ya elegidos, directo al formulario de la tarjeta. */
 export const activateHref = (billing: Billing = "anual", plan: PlanId = OFFER_PLAN) => `/app/suscripcion?plan=${plan}&pago=${billing}#tarjeta`;

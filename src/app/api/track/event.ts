@@ -6,6 +6,8 @@ export const FUNNEL_EVENTS = [
   "cta_click",
   "trial_banner_view",
   "plan_wall_view",
+  // Oferta de salida del muro de planes (#227): "Ahora no" muestra una vez el 50 % del primer mes dejando la tarjeta.
+  "plan_wall_exit_offer",
   "checkout_view",
   "purchase_success",
   "onboarding_done",
@@ -34,7 +36,7 @@ export const FUNNEL_EVENTS = [
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
 /** Eventos que cuentan una sola vez por cuenta: el navegador los guarda en sessionStorage y /api/track rechaza el segundo. */
-export const ONCE_PER_ACCOUNT: ReadonlySet<FunnelEvent> = new Set<FunnelEvent>(["onboarding_done"]);
+export const ONCE_PER_ACCOUNT: ReadonlySet<FunnelEvent> = new Set<FunnelEvent>(["onboarding_done", "plan_wall_exit_offer"]);
 
 export type FunnelProps = Record<string, string | number | boolean>;
 export type CleanEvent = { name: FunnelEvent; props: FunnelProps };
