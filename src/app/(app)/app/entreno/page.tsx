@@ -14,7 +14,8 @@ import { coachArt, coachOf } from "@/lib/coaches";
 import { exInfo } from "@/lib/programs-server";
 import { cap, loadKindOf } from "@/components/workout/logic";
 import { Player, type PlayerExercise } from "./player";
-import { hasSavedWorkout, templatesDoneToday } from "./done-today";
+import { hasSavedWorkout, templatesDoneToday, testimonialState } from "./done-today";
+import { asksTestimonial } from "@/lib/testimonials";
 import { getVoice } from "@/lib/voice-server";
 import { modeNote, programTempoNote, rxNote } from "@/lib/voice";
 import { inCoachPromptWindow } from "@/lib/coach-prompt";
@@ -28,10 +29,12 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
-  const [a, voice, everSaved, ent] = await Promise.all([getAthlete(v), getVoice(v), v.demo && primera === "1" ? Promise.resolve(false) : hasSavedWorkout(v), getEntitlements(v)]);
+  const [a, voice, everSaved, ent, opinion] = await Promise.all([getAthlete(v), getVoice(v), v.demo && primera === "1" ? Promise.resolve(false) : hasSavedWorkout(v), getEntitlements(v), testimonialState(v)]);
   const saved = expres || dia != null ? true : everSaved;
   // Oferta al guardar el primer entreno (cualquiera, también el exprés): solo en la prueba, sin tarjeta y sin haber pagado.
   const firstOffer = !everSaved && canActivatePlan(ent) ? v.id : undefined;
+  // Opinión con permiso para publicarla (#238): al guardar el tercer entreno de la cuenta, una sola vez.
+  const askTestimonial = asksTestimonial({ ...opinion, demo: v.demo });
   const nutritionUpsell = canUpsellNutrition(ent, betaLive()) ? { account: v.id, goal: a.glp1.on || a.goalWeight < a.currentWeight ? "protein" as const : "strength" as const } : undefined;
   const d = dashboard(a);
   const n = Number(dia);
@@ -148,6 +151,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const firstSession = !!firstPlan && !expres && dia == null;
   // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
   const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
-  return <Player firstSession={firstSession} firstOffer={firstOffer} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player firstSession={firstSession} firstOffer={firstOffer} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }

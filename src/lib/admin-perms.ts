@@ -40,6 +40,7 @@ export type Capability =
   | "ops.health"           // salud técnica: versión, base, errores de la app, cron y webhooks fallidos (0041)
   | "affiliates.manage"    // programa de referidores (0051): invitar, asignar, comisiones y pagos. Solo el dueño
   | "leads.b2b"            // solicitudes de reunión de condominios (0052): ver, cambiar estado y notas
+  | "testimonials.manage" // opiniones del tercer entreno (0065): ver todas y aprobar cuáles se usan
   | "alerts.manage"       // avisos al dueño cuando entra alguien o entra dinero (0059). Solo el dueño
   | "users.manage";        // gestión completa de la cuenta (0056): nombre, correo, acceso, bloqueo, temporadas, retos, insignias y XP. Solo el dueño
 
@@ -78,6 +79,7 @@ export const MATRIX: Record<Capability, Role[]> = {
   "affiliates.manage": ["superadmin"], // igual que public.is_superadmin() en las tablas de 0051
   "leads.b2b": SUPPORT_ADMIN, // igual que public.is_support_staff() en b2b_leads (0052)
   "users.manage": ["superadmin"], // igual que public.is_superadmin() en las RPC de 0056
+  "testimonials.manage": PRIVILEGED, // igual que public.is_admin() en testimonials (0065)
   "alerts.manage": ["superadmin"], // igual que public.is_superadmin() en admin_events y admin_notify_prefs (0059)
 };
 
@@ -85,7 +87,7 @@ export function can(role: Role | null | undefined, cap: Capability): boolean {
   return !!role && MATRIX[cap].includes(role);
 }
 
-export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud" | "referidores" | "condominios" | "avisos";
+export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud" | "referidores" | "condominios" | "avisos" | "testimonios";
 
 /** Una sección es visible si el rol tiene al menos una de sus capacidades. */
 export const SECTION_CAPS: Record<Section, Capability[]> = {
@@ -102,6 +104,7 @@ export const SECTION_CAPS: Record<Section, Capability[]> = {
   referidores: ["affiliates.manage"],
   condominios: ["leads.b2b"],
   avisos: ["alerts.manage"],
+  testimonios: ["testimonials.manage"],
 };
 
 export function canSee(role: Role | null | undefined, section: Section): boolean {

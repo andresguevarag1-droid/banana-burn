@@ -2512,6 +2512,35 @@ select bbtest.fails('0062: liberada sin fecha rechazada',
   $q$update public.charge_keys set estado = 'liberado' where user_id = bbtest.u('B')$q$, '23514');
 delete from public.charge_keys;
 
+-- ───────────── 0065: testimonios (opinión del tercer entreno) ─────────────
+set role authenticated; select bbtest.login('A');
+insert into public.testimonials (stars, text, publish_ok) values (5, 'Me gusta entrenar en casa', true);
+select bbtest.ok('0065: A guarda su opinión a su nombre (user_id = auth.uid())', (select count(*) = 1 from public.testimonials where user_id = bbtest.u('A')));
+select bbtest.fails('0065: A no deja una segunda opinión', $q$insert into public.testimonials (stars) values (4)$q$, '23505');
+select bbtest.fails('0065: A no escribe a nombre de B', $q$insert into public.testimonials (user_id, stars) values (bbtest.u('B'), 4)$q$, '42501');
+select bbtest.fails('0065: A no se aprueba sola al insertar', $q$insert into public.testimonials (stars, approved_at) values (4, now())$q$, '42501');
+select bbtest.fails('0065: estrellas fuera de 1 a 5 rechazadas', $q$insert into public.testimonials (stars) values (6)$q$, '23514');
+select bbtest.zero('0065: A no aprueba su propia opinión', $q$update public.testimonials set approved_at = now()$q$);
+select bbtest.zero('0065: A no edita su opinión', $q$update public.testimonials set text = 'otra' where user_id = auth.uid()$q$);
+select bbtest.zero('0065: A no borra su opinión', $q$delete from public.testimonials$q$);
+select bbtest.login('B');
+select bbtest.ok('0065: B no ve la opinión de A', (select count(*) = 0 from public.testimonials));
+select bbtest.fails('0065: B no escribe más de 200 caracteres', $q$insert into public.testimonials (stars, text) values (3, repeat('a', 201))$q$, '23514');
+insert into public.testimonials (stars) values (3);
+select bbtest.ok('0065: B lee solo la suya, sin permiso para publicar por defecto', (select count(*) = 1 and bool_and(not publish_ok and user_id = bbtest.u('B')) from public.testimonials));
+select bbtest.login('P');
+select bbtest.ok('0065: soporte no lee las opiniones', (select count(*) = 0 from public.testimonials));
+select bbtest.zero('0065: soporte no aprueba', $q$update public.testimonials set approved_at = now()$q$);
+select bbtest.login('S');
+select bbtest.ok('0065: el admin lee todas', (select count(*) = 2 from public.testimonials));
+update public.testimonials set approved_at = now() where user_id = bbtest.u('A');
+select bbtest.ok('0065: el admin aprueba la que se puede publicar', (select approved_at is not null from public.testimonials where user_id = bbtest.u('A')));
+select bbtest.fails('0065: el admin no aprueba una sin permiso para publicar', $q$update public.testimonials set approved_at = now() where user_id = bbtest.u('B')$q$, '23514');
+select bbtest.fails('0065: el admin no cambia el texto', $q$update public.testimonials set text = 'otra' where user_id = bbtest.u('A')$q$, '42501');
+reset role;
+select bbtest.ok('0065: anónimo no lee opiniones', not has_table_privilege('anon', 'public.testimonials', 'select'));
+delete from public.testimonials;
+
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
 do $$

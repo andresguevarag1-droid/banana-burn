@@ -32,6 +32,9 @@ export const FUNNEL_EVENTS = [
   "help_open",
   // El coach se presenta (#198): tocó una respuesta de la burbuja del coach (resumen del primer entreno u Hoy).
   "coach_prompt_tap",
+  // Opinión del tercer entreno (#238): se vio la tarjeta y se envió (estrellas, con texto, permiso para publicar).
+  "testimonial_view",
+  "testimonial_sent",
   // Registro (#236): dónde se cae entre tocar "Empezar" y la cuenta creada. Solo códigos fijos, nunca el correo.
   // signup_view lleva `inapp` (#235): si llegó dentro de Instagram o Facebook, donde no se muestra Google.
   "signup_view",
