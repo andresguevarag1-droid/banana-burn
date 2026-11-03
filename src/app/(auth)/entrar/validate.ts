@@ -1,4 +1,5 @@
 // Validación de credenciales compartida por el formulario (cliente) y las acciones de servidor.
+import type { SignupErrorReason } from "@/app/api/track/event";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export const normEmail = (e: unknown) => (typeof e === "string" ? e.trim().toLowerCase() : "");
@@ -30,4 +31,18 @@ export function loginOutcome(error: { code?: string; message?: string } | null |
  */
 export function requireEmailConfirm(env: Record<string, string | undefined> = process.env): boolean {
   return /^(1|true|si|sí|yes)$/i.test((env.AUTH_EMAIL_CONFIRM ?? "").trim());
+}
+
+/**
+ * Motivo corto de un registro fallido para signup_error, a partir del mensaje de Supabase (inglés) o del nuestro (español).
+ * Nunca devuelve el mensaje: solo uno de SIGNUP_ERRORS, así el correo no llega al embudo.
+ */
+export function signupReason(message: unknown): SignupErrorReason {
+  const m = typeof message === "string" ? message : "";
+  if (/already registered|already been registered|already exists|ya existe una cuenta/i.test(m)) return "email_taken";
+  if (/correo esté bien|invalid.*email|email.*invalid/i.test(m)) return "invalid_email";
+  if (/password|contraseña es muy débil|caracteres/i.test(m)) return "weak_password";
+  if (/rate limit|security purposes|demasiados intentos|ya te enviamos/i.test(m)) return "rate_limit";
+  if (/failed to fetch|network|load failed|no pudimos conectar/i.test(m)) return "network";
+  return "other";
 }

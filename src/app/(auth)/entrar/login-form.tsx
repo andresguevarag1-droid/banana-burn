@@ -10,8 +10,10 @@ import { PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { NATIVE_AUTH, socialButtonsFor } from "@/lib/native/auth-options";
 import type { AppPlatform } from "@/lib/platform";
+import { CopyLink } from "@/components/install/install-helper";
 import { afterSocialSignIn, confirmAndCheck, signUpConfirmed } from "./actions";
-import { signupError } from "./validate";
+import { signupError, signupReason } from "./validate";
+import { track } from "@/components/analytics";
 
 type Step = "email" | "code" | "reset";
 /** Cuenta bloqueada desde el panel (0056): Supabase responde "User is banned". */
@@ -57,8 +59,10 @@ function AppleLogo() {
 /**
  * `signupChecks`: las dos marcas bajo el registro según la fecha (offer.ts, las calcula el servidor para no depender del reloj del teléfono).
  * `platform`: la calcula el servidor (user agent). En la app nativa, Google y Apple usan el login del sistema (auth-options.ts).
+ * `openIn`: dentro de Instagram o Facebook, el navegador donde abrirla ("Safari" o "Chrome"). Ahí Google no deja entrar,
+ * así que no se muestra su botón y queda un enlace para copiar la página.
  */
-export function LoginForm({ configured, googleEnabled = false, signupChecks = ["7 días gratis", "Todo incluido"], platform = "web" }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string]; platform?: AppPlatform }) {
+export function LoginForm({ configured, googleEnabled = false, signupChecks = ["7 días gratis", "Todo incluido"], platform = "web", openIn = null }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string]; platform?: AppPlatform; openIn?: "Safari" | "Chrome" | null }) {
   const params = useSearchParams();
   const router = useRouter();
   const isSignup = params.get("modo") === "registro";
@@ -77,8 +81,11 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(linkError(params.get("error")));
   const [wait, setWait] = useState(0);
-  const social = socialButtonsFor(platform, NATIVE_AUTH, googleEnabled);
+  const [openHelp, setOpenHelp] = useState(false);
+  const social = socialButtonsFor(platform, NATIVE_AUTH, googleEnabled, openIn !== null);
   const native = platform !== "web";
+  /** Google existe en la web pero este navegador lo bloquea: se ofrece abrir la misma página en Safari o Chrome. */
+  const googleElsewhere = !native && googleEnabled && openIn !== null;
   useEffect(() => { if (wait <= 0) return; const t = setTimeout(() => setWait((w) => w - 1), 1000); return () => clearTimeout(t); }, [wait]);
 
   // Lo que el visitante eligió en la landing (objetivo, programa GLP-1, plan) sobrevive al registro en cookies de 1 día.
@@ -88,6 +95,9 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     if (objetivo && ["grasa", "recomp", "fuerza"].includes(objetivo)) setCookie("bb_objetivo", objetivo, 86400);
     if (intent) setCookie(INTENT_COOKIE, encodeIntent(intent), INTENT_MAX_AGE);
   }, [programa, objetivo, intent?.plan, intent?.billing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Embudo del registro (#236): una vista por llegada al modo registro (también al pasar desde "Entrar").
+  // signup_view lo mide la página (/entrar), una sola vez y con `inapp` detectado en el servidor (#235).
 
   // Si la persona vuelve desde Google con "Atrás", la página sale del bfcache con el botón trabado: lo liberamos.
   useEffect(() => {
@@ -110,6 +120,12 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   const sb = () => createClient();
   const callback = (n: string) => `${location.origin}/auth/callback?next=${encodeURIComponent(n)}`;
   /** Navega tras entrar. Si el router no sale de /entrar (sesión recién creada, caché), forzamos la carga completa. */
+  /** Error del registro: lo muestra y, en modo registro, manda solo el motivo corto (nunca el correo ni el mensaje). */
+  const fail = (msg: string, reason = signupReason(msg)) => {
+    if (isSignup) track("signup_error", { reason });
+    setBusy(false);
+    setErr(msg);
+  };
   const go = () => {
     router.replace(next);
     router.refresh();
@@ -119,6 +135,9 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
     if (wait > 0) return;
+    // Solo el primer envío desde el formulario cuenta como intento de registro; "Reenviar" no.
+    const counted = isSignup && step === "email";
+    if (counted) track("signup_submit", { method: "code" });
     setBusy(true); setErr(null);
     const { error } = await sb().auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true, emailRedirectTo: callback(next) } });
     setBusy(false);
@@ -126,6 +145,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
       const rate = error.status === 429 || /rate limit|security purposes/i.test(error.message);
       const secs = Number(error.message.match(/after (\d+) seconds/)?.[1] ?? 0);
       if (secs) setWait(secs);
+      if (counted) track("signup_error", { reason: rate ? "rate_limit" : signupReason(error.message) });
       return setErr(rate ? `Ya te enviamos un correo hace poco. ${secs ? `Puedes pedir otro en ${secs} segundos.` : "Espera unos minutos antes de pedir otro."} Revisa también Correo no deseado.` : "No pudimos enviar el correo. Revisa que la dirección esté bien e intenta de nuevo.");
     }
     setWait(60);
@@ -137,28 +157,29 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     setBusy(true); setErr(null);
     const { error } = await sb().auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: "email" });
     setBusy(false);
-    if (error) return setErr("Código incorrecto o vencido.");
+    if (error) return fail("Código incorrecto o vencido.", "bad_code");
     go();
   }
 
   async function withPassword(e: React.FormEvent) {
     e.preventDefault();
+    if (isSignup) track("signup_submit", { method: "password" });
     setBusy(true); setErr(null); setInfo(null);
     const mail = email.trim().toLowerCase();
     try {
       if (isSignup) {
         const invalid = signupError(mail, password);
-        if (invalid) { setBusy(false); return setErr(invalid); }
+        if (invalid) return fail(invalid);
         // Primero en el servidor: cuenta ya confirmada, sin esperar un correo que puede no llegar.
         const r = await signUpConfirmed(mail, password);
         if (r.ok) {
           const { error } = await sb().auth.signInWithPassword({ email: mail, password });
-          if (error) { setBusy(false); return setErr(authError(error.message)); }
+          if (error) return fail(authError(error.message), signupReason(error.message));
         } else if (r.fallback) {
           const { data, error } = await sb().auth.signUp({ email: mail, password, options: { emailRedirectTo: callback(next) } });
-          if (error) { setBusy(false); return setErr(authError(error.message)); }
+          if (error) return fail(authError(error.message), signupReason(error.message));
           if (!data.session) { setBusy(false); return setInfo("Cuenta creada. Te enviamos un correo para confirmarla; ábrelo y luego entra con tu contraseña."); }
-        } else { setBusy(false); return setErr(r.error); }
+        } else return fail(r.error);
       } else {
         let { error } = await sb().auth.signInWithPassword({ email: mail, password });
         if (error && /email not confirmed/i.test(error.message)) {
@@ -170,8 +191,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
         if (error) { setBusy(false); return setErr(authError(error.message)); }
       }
     } catch {
-      setBusy(false);
-      return setErr("No pudimos conectar. Revisa tu internet e intenta de nuevo.");
+      return fail("No pudimos conectar. Revisa tu internet e intenta de nuevo.", "network");
     }
     go();
   }
@@ -190,24 +210,25 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   }
 
   async function google() {
+    if (isSignup) track("signup_submit", { method: "google" });
     setBusy(true); setErr(null);
     try {
       const { error } = await sb().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback(next) } });
       if (error) throw error;
     } catch {
-      setBusy(false);
-      setErr("El acceso con Google no está disponible todavía. Usa tu correo.");
+      fail("El acceso con Google no está disponible todavía. Usa tu correo.", "oauth_blocked");
     }
   }
 
   /** App nativa: hoja de login del sistema y sesión con el id token. Cerrar la hoja no es un error. */
   async function nativeSocial(provider: "google" | "apple") {
+    if (isSignup) track("signup_submit", { method: provider });
     setBusy(true); setErr(null);
     const { signInNative } = await import("@/lib/native/auth");
     const r = await signInNative(provider);
     if (!r.ok) {
+      if (!r.canceled) return fail(`No pudimos entrar con ${provider === "apple" ? "Apple" : "Google"}. Intenta de nuevo o usa tu correo.`, "oauth_blocked");
       setBusy(false);
-      if (!r.canceled) setErr(`No pudimos entrar con ${provider === "apple" ? "Apple" : "Google"}. Intenta de nuevo o usa tu correo.`);
       return;
     }
     await afterSocialSignIn().catch(() => {});
@@ -258,6 +279,17 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
             )}
           </form>
           <button type="button" onClick={() => { setMethod(method === "password" ? "code" : "password"); setErr(null); setInfo(null); }} className="tap mt-3 w-full text-sm font-semibold text-muted underline-offset-4 hover:text-ink hover:underline">{method === "password" ? "Prefiero recibir un código por correo" : "Prefiero usar contraseña"}</button>
+          {googleElsewhere && (
+            <div className="mt-2 text-center">
+              <button type="button" onClick={() => setOpenHelp((o) => !o)} aria-expanded={openHelp} data-cta={isSignup ? "registro-google-fuera" : "entrar-google-fuera"} className="tap text-xs font-semibold text-muted underline underline-offset-4 hover:text-ink">¿Prefieres Google? Ábrelo en {openIn}</button>
+              {openHelp && (
+                <div className="mt-2 rounded-2xl bg-cream p-3 text-left">
+                  <p className="text-sm text-body">Google no deja entrar desde esta app. Copia el enlace y pégalo en {openIn}.</p>
+                  <CopyLink path={`/entrar${params.toString() ? `?${params.toString()}` : ""}`} where={isSignup ? "registro" : "entrar"} />
+                </div>
+              )}
+            </div>
+          )}
           {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{info}</p>}
           <p className="mt-6 text-sm text-muted text-center">
             {isSignup ? <>¿Ya tienes cuenta? <Link href="/entrar" className="tap font-semibold text-ink underline">Entrar</Link></> : <>¿Nuevo aquí? <Link href="/entrar?modo=registro" className="tap font-semibold text-ink underline">Prueba gratis {TRIAL_DAYS} días</Link></>}
