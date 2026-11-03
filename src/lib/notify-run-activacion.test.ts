@@ -76,6 +76,25 @@ beforeEach(() => {
 });
 
 describe("correos de activación en runReminders (diario)", () => {
+  it("QA #225: el modo diario respeta las horas de silencio", async () => {
+    tables.profiles = [profile(1)];
+    tables.notification_prefs = [{
+      user_id: uid(1), email_reminders: true, timezone: "America/Costa_Rica",
+      quiet_start: "06:00", quiet_end: "08:00",
+    }];
+    await runReminders(DAY0, "daily"); // 07:00 CR, dentro del silencio configurado
+    expect(kinds(1).filter((kind) => kind?.startsWith("activacion_"))).toEqual([]);
+    expect(logOf(1, "activacion_0")).toEqual([]);
+  });
+
+  it("QA #225: A0 sale en la corrida diaria siguiente si el registro fue menos de una hora antes del cron", async () => {
+    tables.profiles = [profile(1, { created_at: "2026-11-02T12:30:00.000Z" })];
+    await runReminders(DAY0, "daily"); // registro + 30 min: todavía no corresponde A0
+    expect(kinds(1).filter((kind) => kind?.startsWith("activacion_"))).toEqual([]);
+    await runReminders(DAY1, "daily"); // corrida siguiente: registro + 24 h 30 min
+    expect(kinds(1).filter((kind) => kind?.startsWith("activacion_"))).toEqual(["activacion_0"]);
+  });
+
   it("A0, A1 y A2 a quien no tiene entrenos, uno por corrida y en su día; las estadísticas los cuentan", async () => {
     tables.profiles = [profile(1)];
     const s0 = await runReminders(DAY0, "daily");
