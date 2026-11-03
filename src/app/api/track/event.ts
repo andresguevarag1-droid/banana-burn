@@ -32,6 +32,9 @@ export const FUNNEL_EVENTS = [
   "help_open",
   // El coach se presenta (#198): tocó una respuesta de la burbuja del coach (resumen del primer entreno u Hoy).
   "coach_prompt_tap",
+  // Opinión del tercer entreno (#238): se vio la tarjeta y se envió (estrellas, con texto, permiso para publicar).
+  "testimonial_view",
+  "testimonial_sent",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
