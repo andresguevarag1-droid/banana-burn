@@ -32,11 +32,36 @@ export const FUNNEL_EVENTS = [
   "help_open",
   // El coach se presenta (#198): tocó una respuesta de la burbuja del coach (resumen del primer entreno u Hoy).
   "coach_prompt_tap",
+  // Registro (#236): dónde se cae entre tocar "Empezar" y la cuenta creada. Solo códigos fijos, nunca el correo.
+  "signup_view",
+  "signup_submit",
+  "signup_error",
+  "onboarding_step",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
 /** Eventos que cuentan una sola vez por cuenta: el navegador los guarda en sessionStorage y /api/track rechaza el segundo. */
 export const ONCE_PER_ACCOUNT: ReadonlySet<FunnelEvent> = new Set<FunnelEvent>(["onboarding_done", "plan_wall_exit_offer"]);
+
+/** Cómo se intenta crear la cuenta en /entrar?modo=registro. */
+export const SIGNUP_METHODS = ["password", "code", "google", "apple"] as const;
+export type SignupMethod = (typeof SIGNUP_METHODS)[number];
+/** Motivo corto de un registro fallido (ver signupReason en src/app/(auth)/entrar/validate.ts). */
+export const SIGNUP_ERRORS = ["invalid_email", "weak_password", "email_taken", "rate_limit", "bad_code", "network", "oauth_blocked", "other"] as const;
+export type SignupErrorReason = (typeof SIGNUP_ERRORS)[number];
+/** Pasos de la bienvenida que cuentan en onboarding_step: 0 a 6 (la oferta de la tarjeta ya tiene card_banner_view). */
+export const ONBOARDING_STEPS = 7;
+
+/**
+ * Eventos del registro con forma fija: solo `path` y su único dato permitido. Lo demás se descarta, y si el dato no es uno
+ * de los valores conocidos el evento entero se rechaza (así nunca entra texto libre, como un correo).
+ */
+const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolean }>> = {
+  signup_view: {},
+  signup_submit: { key: "method", ok: (v) => (SIGNUP_METHODS as readonly unknown[]).includes(v) },
+  signup_error: { key: "reason", ok: (v) => (SIGNUP_ERRORS as readonly unknown[]).includes(v) },
+  onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
+};
 
 export type FunnelProps = Record<string, string | number | boolean>;
 export type CleanEvent = { name: FunnelEvent; props: FunnelProps };
@@ -52,6 +77,14 @@ export function cleanEvent(raw: unknown): CleanEvent | null {
   const { name, props } = raw as { name?: unknown; props?: unknown };
   if (typeof name !== "string" || !(FUNNEL_EVENTS as readonly string[]).includes(name)) return null;
   const out: FunnelProps = {};
+  const strict = STRICT[name];
+  if (strict) {
+    const p = (props && typeof props === "object" && !Array.isArray(props) ? props : {}) as Record<string, unknown>;
+    if (strict.key && !strict.ok?.(p[strict.key])) return null;
+    if (typeof p.path === "string" && !PII.test(p.path)) out.path = p.path.slice(0, 120);
+    if (strict.key) out[strict.key] = p[strict.key] as string | number;
+    return { name: name as FunnelEvent, props: out };
+  }
   if (props && typeof props === "object" && !Array.isArray(props)) {
     for (const [k, v] of Object.entries(props as Record<string, unknown>).slice(0, MAX_PROPS)) {
       if (!KEY.test(k)) continue;

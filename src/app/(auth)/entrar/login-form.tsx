@@ -11,7 +11,8 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { NATIVE_AUTH, socialButtonsFor } from "@/lib/native/auth-options";
 import type { AppPlatform } from "@/lib/platform";
 import { afterSocialSignIn, confirmAndCheck, signUpConfirmed } from "./actions";
-import { signupError } from "./validate";
+import { signupError, signupReason } from "./validate";
+import { track } from "@/components/analytics";
 
 type Step = "email" | "code" | "reset";
 /** Cuenta bloqueada desde el panel (0056): Supabase responde "User is banned". */
@@ -89,6 +90,9 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     if (intent) setCookie(INTENT_COOKIE, encodeIntent(intent), INTENT_MAX_AGE);
   }, [programa, objetivo, intent?.plan, intent?.billing]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Embudo del registro (#236): una vista por llegada al modo registro (también al pasar desde "Entrar").
+  useEffect(() => { if (configured && isSignup) track("signup_view"); }, [configured, isSignup]);
+
   // Si la persona vuelve desde Google con "Atrás", la página sale del bfcache con el botón trabado: lo liberamos.
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => { if (e.persisted) setBusy(false); };
@@ -110,6 +114,12 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   const sb = () => createClient();
   const callback = (n: string) => `${location.origin}/auth/callback?next=${encodeURIComponent(n)}`;
   /** Navega tras entrar. Si el router no sale de /entrar (sesión recién creada, caché), forzamos la carga completa. */
+  /** Error del registro: lo muestra y, en modo registro, manda solo el motivo corto (nunca el correo ni el mensaje). */
+  const fail = (msg: string, reason = signupReason(msg)) => {
+    if (isSignup) track("signup_error", { reason });
+    setBusy(false);
+    setErr(msg);
+  };
   const go = () => {
     router.replace(next);
     router.refresh();
@@ -119,6 +129,9 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
     if (wait > 0) return;
+    // Solo el primer envío desde el formulario cuenta como intento de registro; "Reenviar" no.
+    const counted = isSignup && step === "email";
+    if (counted) track("signup_submit", { method: "code" });
     setBusy(true); setErr(null);
     const { error } = await sb().auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true, emailRedirectTo: callback(next) } });
     setBusy(false);
@@ -126,6 +139,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
       const rate = error.status === 429 || /rate limit|security purposes/i.test(error.message);
       const secs = Number(error.message.match(/after (\d+) seconds/)?.[1] ?? 0);
       if (secs) setWait(secs);
+      if (counted) track("signup_error", { reason: rate ? "rate_limit" : signupReason(error.message) });
       return setErr(rate ? `Ya te enviamos un correo hace poco. ${secs ? `Puedes pedir otro en ${secs} segundos.` : "Espera unos minutos antes de pedir otro."} Revisa también Correo no deseado.` : "No pudimos enviar el correo. Revisa que la dirección esté bien e intenta de nuevo.");
     }
     setWait(60);
@@ -137,28 +151,29 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     setBusy(true); setErr(null);
     const { error } = await sb().auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: "email" });
     setBusy(false);
-    if (error) return setErr("Código incorrecto o vencido.");
+    if (error) return fail("Código incorrecto o vencido.", "bad_code");
     go();
   }
 
   async function withPassword(e: React.FormEvent) {
     e.preventDefault();
+    if (isSignup) track("signup_submit", { method: "password" });
     setBusy(true); setErr(null); setInfo(null);
     const mail = email.trim().toLowerCase();
     try {
       if (isSignup) {
         const invalid = signupError(mail, password);
-        if (invalid) { setBusy(false); return setErr(invalid); }
+        if (invalid) return fail(invalid);
         // Primero en el servidor: cuenta ya confirmada, sin esperar un correo que puede no llegar.
         const r = await signUpConfirmed(mail, password);
         if (r.ok) {
           const { error } = await sb().auth.signInWithPassword({ email: mail, password });
-          if (error) { setBusy(false); return setErr(authError(error.message)); }
+          if (error) return fail(authError(error.message), signupReason(error.message));
         } else if (r.fallback) {
           const { data, error } = await sb().auth.signUp({ email: mail, password, options: { emailRedirectTo: callback(next) } });
-          if (error) { setBusy(false); return setErr(authError(error.message)); }
+          if (error) return fail(authError(error.message), signupReason(error.message));
           if (!data.session) { setBusy(false); return setInfo("Cuenta creada. Te enviamos un correo para confirmarla; ábrelo y luego entra con tu contraseña."); }
-        } else { setBusy(false); return setErr(r.error); }
+        } else return fail(r.error);
       } else {
         let { error } = await sb().auth.signInWithPassword({ email: mail, password });
         if (error && /email not confirmed/i.test(error.message)) {
@@ -170,8 +185,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
         if (error) { setBusy(false); return setErr(authError(error.message)); }
       }
     } catch {
-      setBusy(false);
-      return setErr("No pudimos conectar. Revisa tu internet e intenta de nuevo.");
+      return fail("No pudimos conectar. Revisa tu internet e intenta de nuevo.", "network");
     }
     go();
   }
@@ -190,24 +204,25 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   }
 
   async function google() {
+    if (isSignup) track("signup_submit", { method: "google" });
     setBusy(true); setErr(null);
     try {
       const { error } = await sb().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback(next) } });
       if (error) throw error;
     } catch {
-      setBusy(false);
-      setErr("El acceso con Google no está disponible todavía. Usa tu correo.");
+      fail("El acceso con Google no está disponible todavía. Usa tu correo.", "oauth_blocked");
     }
   }
 
   /** App nativa: hoja de login del sistema y sesión con el id token. Cerrar la hoja no es un error. */
   async function nativeSocial(provider: "google" | "apple") {
+    if (isSignup) track("signup_submit", { method: provider });
     setBusy(true); setErr(null);
     const { signInNative } = await import("@/lib/native/auth");
     const r = await signInNative(provider);
     if (!r.ok) {
+      if (!r.canceled) return fail(`No pudimos entrar con ${provider === "apple" ? "Apple" : "Google"}. Intenta de nuevo o usa tu correo.`, "oauth_blocked");
       setBusy(false);
-      if (!r.canceled) setErr(`No pudimos entrar con ${provider === "apple" ? "Apple" : "Google"}. Intenta de nuevo o usa tu correo.`);
       return;
     }
     await afterSocialSignIn().catch(() => {});
