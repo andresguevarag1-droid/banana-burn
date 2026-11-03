@@ -34,7 +34,7 @@ import { ExerciseBrief } from "@/components/workout/brief";
 import { briefSteps, formatExerciseTask, leftText, planChips, plainMuscles, secondsLeft } from "@/components/workout/task";
 import { LevelMeter, LevelUpBurst, SessionRing, XpPop } from "@/components/workout/ui";
 import { MILESTONES, expressRows, finishValue, lastVolume, levelGoal, levelGoalText, nextMilestone, pickFact, reachedMilestones, restFacts, volumeWithHistory, type LevelGoal } from "@/components/workout/motivation";
-import type { SaveResult } from "./actions";
+import { rateWorkout, type SaveResult } from "./actions";
 import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/components/offline/outbox";
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
@@ -567,6 +567,8 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
   const partialRef = useRef(false);
   /** El reproductor ya se desmontó (salió dentro de la app): nadie ve el cierre. */
   const gone = useRef(false);
+  /** Primer entreno completo (#253): se guardó solo al llegar al resumen y las preguntas opcionales van después. */
+  const early = useRef(false);
   function onSaved(res: SaveResult) {
     if (!res.ok) { setQueued(false); setSaveMsg(res.error ?? "No pudimos guardar. Intenta de nuevo."); return; }
     if (savedOnce.current) return;
@@ -575,15 +577,28 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
     store.del(key);
     setSaved(res);
     setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
-    setPhase("saved");
+    if (!early.current) setPhase("saved");
     if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal, ...(variant ? { variant } : {}), ...(partialRef.current ? { partial: true } : {}) });
     learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
     if (gone.current) return; // salió a medias dentro de la app: el cierre lo muestra Hoy (#246)
     buzz([60, 40, 60, 40, 200]);
+    if (!early.current) coachFeedback(res);
+  }
+  function coachFeedback(res: SaveResult) {
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
       title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
       mins: Math.round(elapsed / 60), fun: fun ?? 0, easy: rows.flat().filter((r) => effortOf(r) === "f").length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
     }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino."));
+  }
+  /** Del resumen ya guardado a la celebración: anota las respuestas opcionales y pide el comentario del coach con ellas. */
+  function celebrate() {
+    if (!saved) return;
+    const row = askLast ? rows[askLast.ex]?.[askLast.si] : null;
+    const rir = row ? rirOf(row) : null;
+    const last = askLast && rir != null ? { exercise: exercises[askLast.ex].id, setNo: rows[askLast.ex].slice(0, askLast.si + 1).filter((r) => r.done).length, rir } : null;
+    if (saved.ok && !saved.demo && (fun != null || last)) rateWorkout({ template, startedAt, fun, last }).catch(() => false);
+    coachFeedback(saved);
+    setPhase("saved");
   }
   /** Lo que se guarda: solo las series hechas. `at`: hora de fin si no pasó por el resumen (salió a medias). */
   const finished = (at?: number) => ({
@@ -629,6 +644,14 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
     window.addEventListener(OUTBOX_EVENT, h);
     return () => window.removeEventListener(OUTBOX_EVENT, h);
   }); // sin dependencias a propósito: se vuelve a suscribir en cada render con el estado más reciente
+  // Primer entreno completo (#253): se guarda apenas termina las series, sin esperar otro toque ni las preguntas del cierre.
+  // Va por la misma bandeja que el botón: sin señal queda pendiente y la celebración espera la confirmación del servidor.
+  const firstDone = firstSession && doneSets > 0 && doneSets === totalSets;
+  useEffect(() => {
+    if (phase !== "summary" || !firstDone || early.current || savedOnce.current || sending.current) return;
+    early.current = true;
+    save();
+  }, [phase, firstDone]); // eslint-disable-line react-hooks/exhaustive-deps -- una vez, al llegar al resumen
 
   // Embudo del entreno (0061): abrir, primera serie, resumen, guardado y salida. La fila de workouts solo existe al guardar,
   // así que sin esto no se sabía cuántos empiezan y dónde se van.
@@ -743,15 +766,28 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
     const empty = doneSets === 0;
     const lastSet = askLast;
     const last = lastSet ? rows[lastSet.ex]?.[lastSet.si] : null;
+    // Primer entreno completo (#253): primero se confirma el guardado; XP y preguntas opcionales vienen después.
+    const confirmed = !!saved;
+    const retry = firstDone && !confirmed && !pending && (queued || !!saveMsg);
+    const cooldown = (
+      <div className="mt-3 flex gap-3 rounded-[1.5rem] bg-white border border-line/70 p-4">
+        <PersonSimpleWalk weight="duotone" className="size-6 shrink-0 text-banana-ink" />
+        <div><p className="font-bold text-ink">Para cerrar</p><p className="text-sm text-body">{cardio ? `${cardio}. Luego ` : ""}{cardio ? cool.text[0].toLowerCase() + cool.text.slice(1) : cool.text}</p></div>
+      </div>
+    );
     return (
       <Shell>
         <div className="flex-1 overflow-y-auto px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 animate-enter">
           <div className="mx-auto max-w-md">
-            <button onClick={backToPlay} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver al entreno</button>
-            <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink">{empty ? "Aún no empiezas" : doneSets === totalSets ? "Lo lograste" : "¿Terminamos?"}</h1>
+            {!firstDone && <button onClick={backToPlay} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver al entreno</button>}
+            <h1 aria-live="polite" className="mt-3 text-3xl font-extrabold tracking-tight text-ink">
+              {empty ? "Aún no empiezas" : firstDone ? (confirmed && !saved?.demo ? "Guardamos tu primer entreno" : confirmed || retry ? "Terminaste las series" : "Guardando tu primer entreno…") : doneSets === totalSets ? "Lo lograste" : "¿Terminamos?"}
+            </h1>
             <p className="text-muted tabular-nums">{doneSets} de {totalSets} {setWord} en {clock(elapsed)}{plan ? ` (modo exprés, plan de ${plan})` : ""}</p>
             {empty ? (
               <p className="mt-4 rounded-2xl bg-cream p-4 text-[15px] text-body">Todavía no marcas {interval ? "ningún intervalo" : "ninguna serie"}, así que no hay nada que guardar. Vuelve al entreno o sal sin guardar.</p>
+            ) : firstDone && !confirmed ? (
+              cooldown
             ) : (
               <>
                 <dl className="mt-4 grid grid-cols-3 gap-2">
@@ -773,7 +809,7 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
                   <fieldset className="mt-3 card p-5">
                     <legend className="sr-only">Esfuerzo de la última serie</legend>
                     <p className="font-bold text-ink">¿Cómo se sintió la última serie?</p>
-                    <p className="text-sm text-muted">{exercises[lastSet.ex].name}, {targetText(last, { unit: exercises[lastSet.ex].cfg.unit, bw: exercises[lastSet.ex].bw, perSide: exercises[lastSet.ex].cfg.perSide })}. Con esto ajusto el peso de la próxima vez.</p>
+                    <p className="text-sm text-muted">{exercises[lastSet.ex].name}, {targetText(last, { unit: exercises[lastSet.ex].cfg.unit, bw: exercises[lastSet.ex].bw, perSide: exercises[lastSet.ex].cfg.perSide })}. {firstDone ? "Opcional. " : ""}Con esto ajusto el peso de la próxima vez.</p>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       {EFFORTS.map((e) => {
                         const on = effortOf(last) === e.id;
@@ -788,10 +824,7 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
                     </div>
                   </fieldset>
                 )}
-                <div className="mt-3 flex gap-3 rounded-[1.5rem] bg-white border border-line/70 p-4">
-                  <PersonSimpleWalk weight="duotone" className="size-6 shrink-0 text-banana-ink" />
-                  <div><p className="font-bold text-ink">Para cerrar</p><p className="text-sm text-body">{cardio ? `${cardio}. Luego ` : ""}{cardio ? cool.text[0].toLowerCase() + cool.text.slice(1) : cool.text}</p></div>
-                </div>
+                {cooldown}
                 <fieldset className="mt-3 card p-5">
                   <legend className="sr-only">Diversión del entreno</legend>
                   <p className="font-bold text-ink">¿Qué tan divertido estuvo?</p>
@@ -819,6 +852,16 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
               <button onClick={leave} className="btn-ghost flex-1 h-16 text-base">Salir sin guardar</button>
               <button onClick={backToPlay} className="btn-banana flex-1 h-16 text-base font-extrabold">Volver al entreno</button>
             </div>
+          ) : firstDone ? (
+            <>
+            {saveMsg && <p role="alert" className={`mx-auto mb-2 max-w-md text-sm font-semibold text-pretty ${queued || confirmed ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
+            {confirmed ? (
+              <button onClick={celebrate} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold">Continuar</button>
+            ) : (
+              <button onClick={() => save()} disabled={!retry} aria-busy={!retry} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{retry ? "Reintentar ahora" : "Guardando…"}</button>
+            )}
+            {queued && !confirmed && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">Salir: se sube solo al volver la señal</Link>}
+            </>
           ) : (
             <>
             {/* Junto al botón (no al final del resumen): quien toca Guardar ve de inmediato qué pasó. */}

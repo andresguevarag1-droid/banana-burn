@@ -9,7 +9,7 @@ import { workoutXp } from "@/lib/gamify";
 import { getHistory } from "@/lib/history";
 import { EX, type ExerciseId } from "@/lib/engine";
 import { getLibEx } from "@/lib/library";
-import { normalizeWorkout, serverPrs, workoutTiming, type Finished } from "./validate";
+import { normalizeRating, normalizeWorkout, serverPrs, workoutTiming, type Finished, type Rating } from "./validate";
 import { errCode, logError } from "@/lib/log";
 import { parseProgramTemplate, weeksOf } from "@/lib/programs";
 import { limitError } from "@/lib/security/limits";
@@ -125,4 +125,32 @@ async function save(input: Finished): Promise<SaveResult> {
   }
   revalidatePath("/app", "layout");
   return { ok: true, postId, xp, prNames, repeat };
+}
+
+/**
+ * Primer entreno (#253): se guarda apenas termina las series y las preguntas opcionales (diversión y esfuerzo de la última
+ * serie) llegan después. Anota esas respuestas en el entreno ya guardado. Si falla, el entreno sigue guardado igual.
+ */
+export async function rateWorkout(input: Rating): Promise<boolean> {
+  try {
+    const v = await getViewer();
+    const r = normalizeRating(input);
+    if (!v || !r) return false;
+    if (v.demo) return true;
+    if (await limitError("entreno:valorar", v.id)) return false;
+    const sb = await createClient();
+    const { data: wk } = await sb.from("workouts").select("id").eq("user_id", v.id).eq("template", r.template).eq("started_at", r.startIso).limit(1).maybeSingle();
+    if (!wk) return false;
+    const done = await Promise.all([
+      r.fun != null ? sb.from("workouts").update({ fun: r.fun }).eq("id", wk.id).eq("user_id", v.id) : null,
+      r.last ? sb.from("workout_sets").update({ rir: r.last.rir }).eq("workout_id", wk.id).eq("user_id", v.id).eq("exercise", r.last.exercise).eq("set_no", r.last.setNo) : null,
+    ]);
+    const err = done.find((d) => d?.error)?.error;
+    if (err) { logError("entreno", "rate_failed", { code: err.code }); return false; }
+    return true;
+  } catch (e) {
+    unstable_rethrow(e);
+    logError("entreno", "rate_failed", { kind: errCode(e) });
+    return false;
+  }
 }

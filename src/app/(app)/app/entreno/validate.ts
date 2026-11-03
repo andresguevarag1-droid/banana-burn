@@ -32,11 +32,12 @@ export function workoutTiming(startedAt: string | undefined, finishedAt: string 
 const fin = (x: unknown, lo: number, hi: number) => (typeof x === "number" && Number.isFinite(x) && x >= lo && x <= hi);
 /** Ejercicios del motor ("squat") y de la biblioteca ("ds:0043"). */
 export const EXERCISE_ID = /^(ds:)?[A-Za-z0-9_]{1,40}$/;
+const TEMPLATE = /^[A-Za-z0-9 _.:áéíóúñÁÉÍÓÚÑ+-]{1,80}$/;
 
 /** El navegador manda el entreno: acotamos tamaños y valores antes de tocar la base de datos. */
 export function normalizeWorkout(w: Finished): Finished | null {
   if (!w || typeof w !== "object" || !Array.isArray(w.exercises) || w.exercises.length > 30) return null;
-  if (typeof w.template !== "string" || !/^[A-Za-z0-9 _.:áéíóúñÁÉÍÓÚÑ+-]{1,80}$/.test(w.template)) return null;
+  if (typeof w.template !== "string" || !TEMPLATE.test(w.template)) return null;
   const exercises: Finished["exercises"] = [];
   for (const e of w.exercises) {
     if (!e || typeof e.id !== "string" || !EXERCISE_ID.test(e.id) || !Array.isArray(e.sets) || e.sets.length > 12) return null;
@@ -54,6 +55,24 @@ export function normalizeWorkout(w: Finished): Finished | null {
     note: typeof w.note === "string" ? w.note : undefined,
     finishedAt: typeof w.finishedAt === "string" && w.finishedAt.length <= 40 ? w.finishedAt : undefined,
   };
+}
+
+export type Rating = { template: string; startedAt: string; fun: number | null; last: { exercise: string; setNo: number; rir: number } | null };
+
+/**
+ * Respuestas que llegan después de guardar el primer entreno (#253): diversión (1 a 5) y esfuerzo (RIR) de la última serie.
+ * El entreno se reconoce por plantilla y hora de inicio, igual que el doble envío. Sin nada que anotar, null.
+ */
+export function normalizeRating(r: Rating): (Rating & { startIso: string }) | null {
+  if (!r || typeof r !== "object" || typeof r.template !== "string" || !TEMPLATE.test(r.template)) return null;
+  const t0 = typeof r.startedAt === "string" && r.startedAt.length <= 40 ? Date.parse(r.startedAt) : NaN;
+  if (!Number.isFinite(t0)) return null;
+  const fun = fin(r.fun, 1, 5) ? Math.round(r.fun as number) : null;
+  const l = r.last;
+  const last = l && typeof l.exercise === "string" && EXERCISE_ID.test(l.exercise) && fin(l.setNo, 1, 12) && fin(l.rir, 0, 10)
+    ? { exercise: l.exercise, setNo: Math.round(l.setNo), rir: Math.round(l.rir) } : null;
+  if (fun === null && !last) return null;
+  return { template: r.template, startedAt: r.startedAt, startIso: new Date(t0).toISOString(), fun, last };
 }
 
 /**
