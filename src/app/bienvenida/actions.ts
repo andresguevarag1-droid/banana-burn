@@ -10,9 +10,8 @@ import { cookies } from "next/headers";
 import { isVoice, type Voice } from "@/lib/voice";
 import { DEMO_VOICE_COOKIE } from "@/lib/voice-server";
 import { limitError } from "@/lib/security/limits";
-import { isTrainSlot, reminderTimeFor, type TrainSlot } from "@/lib/train-slot";
 
-export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string; /** "Cómo te hablo" (0035). */ voice?: Voice; /** A qué hora suele entrenar (#197): fija la hora del recordatorio. */ trainSlot?: TrainSlot };
+export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string; /** "Cómo te hablo" (0035): sale del nivel; se cambia después en Perfil (#255). */ voice?: Voice };
 
 export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
@@ -35,8 +34,7 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   if (p.error) return { ok: false, error: "No se pudo guardar tu perfil." };
   // Aparte: si 0035 todavía no corrió, el registro queda en intermedio y la bienvenida sigue sin error.
   if (isVoice(o.voice)) await sb.from("profiles").update({ lenguaje: o.voice }).eq("id", v.id).then(() => null, () => null);
-  // #197: el recordatorio sale a la hora en que la persona entrena. Aparte: si falla, el registro sigue sin error.
-  if (isTrainSlot(o.trainSlot)) await sb.from("notification_prefs").upsert({ user_id: v.id, reminder_time: reminderTimeFor(o.trainSlot) }, { onConflict: "user_id" }).then(() => null, () => null);
+  // #255: la hora del recordatorio ya no se pregunta aquí; Hoy la pide después del primer entreno (ReminderPrompt).
   await sb.from("goals").update({ active: false }).eq("user_id", v.id).eq("active", true);
   const g = await sb.from("goals").insert({ user_id: v.id, start_weight: o.weight, goal_weight: o.goalWeight, goal_date: o.goalDate, mode: o.goal === "grasa" ? "acelerada" : o.goal === "fuerza" ? "fuerza" : "recomp" });
   if (g.error) return { ok: false, error: "No se pudo guardar tu meta." };

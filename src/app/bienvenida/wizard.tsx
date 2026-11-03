@@ -10,7 +10,6 @@ import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
 import { completeOnboarding, type Onboard } from "./actions";
-import { TRAIN_SLOTS } from "@/lib/train-slot";
 import { COUNTRIES, countryFromTz } from "@/lib/countries";
 import { intentPath, type CheckoutIntent } from "@/lib/checkout-intent";
 import { PLANS } from "@/lib/plans";
@@ -21,7 +20,6 @@ import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
-import { VoicePicker } from "@/components/voice-picker";
 import { voiceForLevel } from "@/lib/voice";
 
 const STEPS = 7;
@@ -34,7 +32,8 @@ const COMPLETO = PLANS.find((p) => p.nutrition)!;
 const GOAL_ICON: Record<Goal, React.ReactNode> = { grasa: <BananaFlame />, recomp: <Scales weight="duotone" />, fuerza: <Barbell weight="duotone" /> };
 
 /** Datos del wizard: lo que no se ha confirmado queda vacío (null) hasta que la persona lo toque. */
-type Draft = Omit<Onboard, "sex" | "dob" | "heightCm" | "weight" | "goalWeight"> & { sex: Onboard["sex"] | null; heightCm: number | null; weight: number | null; goalWeight: number | null };
+// #255: el nivel también empieza vacío (se elige a mano); la voz sale del nivel y se cambia después en Perfil.
+type Draft = Omit<Onboard, "sex" | "dob" | "heightCm" | "weight" | "goalWeight" | "level" | "voice"> & { sex: Onboard["sex"] | null; heightCm: number | null; weight: number | null; goalWeight: number | null; level: Onboard["level"] | null };
 type Dob = { d: number | null; m: number | null; y: number | null };
 
 /**
@@ -88,7 +87,7 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 const SELECT = "input h-14 text-lg px-3";
 
 export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
-  /** Solo demo: abrir en el paso de experiencia y lenguaje (?vista=lenguaje). */
+  /** Solo demo: abrir en el paso de experiencia (?vista=lenguaje). */
   startOnVoice?: boolean;
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
   /**
@@ -114,8 +113,6 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const router = useRouter();
   const TOTAL = cardOffer ? STEPS + 1 : STEPS;
   const [step, setStep] = useState(startOnCard && cardOffer ? STEPS : startOnVoice ? 3 : 0);
-  /** El registro sigue al nivel hasta que la persona elige uno a mano. */
-  const [voiceTouched, setVoiceTouched] = useState(false);
   const [choice, setChoice] = useState<PlanChoice>(intent ?? { plan: "completo", billing: "mes" });
   const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
@@ -124,7 +121,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
   const [o, setO] = useState<Draft>(() => ({
     name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
-    days: 4, equipment: "gym", level: "intermedio", voice: "basico", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
+    days: 4, equipment: "gym", level: startOnCard ? "intermedio" : null, minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
   }));
   const [dob, setDob] = useState<Dob>(startOnCard ? { d: 27, m: 1, y: 1999 } : { d: null, m: null, y: null });
   const [touchedDate, setTouchedDate] = useState(false);
@@ -143,7 +140,6 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
 
   const up = (p: Partial<Draft>) => setO((x) => {
     const n = { ...x, ...p };
-    if (p.level && !voiceTouched && !p.voice) n.voice = voiceForLevel(p.level);
     if (!touchedDate && (p.weight != null || p.goalWeight != null) && n.weight != null && n.goalWeight != null) n.goalDate = suggestDate(n.weight, n.goalWeight).date;
     return n;
   });
@@ -158,8 +154,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     return n;
   });
 
-  const full: Onboard | null = o.sex && dobIso && o.heightCm != null && o.weight != null && o.goalWeight != null && o.goalDate
-    ? { ...o, sex: o.sex, dob: dobIso, heightCm: o.heightCm, weight: o.weight, goalWeight: o.goalWeight }
+  const full: Onboard | null = o.sex && dobIso && o.heightCm != null && o.weight != null && o.goalWeight != null && o.goalDate && o.level
+    ? { ...o, sex: o.sex, dob: dobIso, heightCm: o.heightCm, weight: o.weight, goalWeight: o.goalWeight, level: o.level, voice: voiceForLevel(o.level) }
     : null;
   // Metas del resumen final (cálculo barato: no hace falta memorizarlo).
   const t = (() => {
@@ -175,7 +171,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const pace = o.weight != null && o.goalWeight != null && o.goalDate && !goalErr ? paceFor({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, goalDate: o.goalDate }) : null;
   const sug = o.weight != null && o.goalWeight != null ? suggestDate(o.weight, o.goalWeight) : null;
   const parqYes = parq.some(Boolean);
-  const week = planWeek(0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
+  const week = planWeek(0, scheduleFor(o.days), { equipment: o.equipment, level: o.level ?? "intermedio", minutes: o.minutes });
   // En la beta el fin llega a medianoche del día siguiente: se muestra el último día con acceso (igual que el aviso de la tarjeta).
   const trialEnd = trialBeta && betaLastFree ? betaLastFree : trialEndsAt ? new Date(trialEndsAt).toLocaleDateString("es-419", { day: "numeric", month: "long" }) : null;
   const intentPlan = intent ? PLANS.find((p) => p.id === intent.plan) : null;
@@ -185,7 +181,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     true,
     o.name.trim().length > 0 && o.sex != null && age != null && age >= 18 && age <= 90 && o.heightCm != null && Boolean(o.country),
     o.weight != null && o.goalWeight != null && Boolean(o.goalDate) && !goalErr,
-    true, true, true,
+    o.level != null, true, true,
     Boolean(full) && o.consent && (!parqYes || medOk),
   ][step];
 
@@ -337,14 +333,9 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           {step === 3 && (<>
             <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuánta experiencia tienes?</h1><p className="mt-2 text-muted">Ajustamos ejercicios, series y descansos a tu nivel.</p></div>
             <div className="space-y-3">
-              <Choice on={o.level === "principiante"} onClick={() => up({ level: "principiante" })} icon={<BrandIcon name="plant" />} t="Principiante" d="Nunca o casi nunca he entrenado con pesas" />
+              <Choice on={o.level === "principiante"} onClick={() => up({ level: "principiante" })} icon={<BrandIcon name="plant" />} t="Principiante" d="Nunca o casi nunca he entrenado con pesas. Te lo explicamos paso a paso." />
               <Choice on={o.level === "intermedio"} onClick={() => up({ level: "intermedio" })} icon={<Banana />} t="Intermedio" d="Entreno hace meses y conozco los básicos" />
               <Choice on={o.level === "avanzado"} onClick={() => up({ level: "avanzado" })} icon={<Gorilla />} t="Avanzado" d="Más de 2 años entrenando en serio" />
-            </div>
-            <div className="pt-2">
-              <h2 className="text-xl font-extrabold tracking-tight text-ink">¿Cómo quieres que te hable?</h2>
-              <p className="mt-1 text-sm text-muted">Coach Banana te explica cada serie a tu manera. Los números son los mismos; lo cambias cuando quieras en tu perfil.</p>
-              <div className="mt-3"><VoicePicker value={o.voice ?? "basico"} onChange={(voice) => { setVoiceTouched(true); up({ voice }); }} /></div>
             </div>
           </>)}
 
@@ -353,8 +344,6 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`pressable h-20 rounded-3xl border-2 text-3xl font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.days === n}>{n}</button>)}</div>
             <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`pressable h-14 rounded-2xl border-2 font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.minutes === n}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
               <p className="mt-2 text-xs text-muted">¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.</p></div>
-            <div><p className="text-sm font-bold text-ink mb-2">¿A qué hora sueles entrenar?</p><div className="grid grid-cols-2 gap-2">{TRAIN_SLOTS.map((s) => <button key={s.id} type="button" onClick={() => up({ trainSlot: s.id })} className={`pressable min-h-14 rounded-2xl border-2 px-3 py-2 text-left transition-[background-color,border-color,color,transform] ${o.trainSlot === s.id ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.trainSlot === s.id}><span className="block font-extrabold">{s.label}</span><span className="block text-xs font-semibold">{s.hint}</span></button>)}</div>
-              <p className="mt-2 text-xs text-muted">Te recordamos tu entreno a esa hora. Lo cambias cuando quieras en tu perfil.</p></div>
             <div className="card p-4">
               <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
               <ul className="space-y-1.5">{week.map((d) => <li key={d.dow} className="flex items-center justify-between text-sm"><span className="w-20 font-semibold text-muted capitalize">{DAY_NAMES[d.dow]}</span><span className={`flex-1 flex items-center gap-2 font-bold ${d.tpl ? "text-ink" : "text-faint"}`}><BrandIcon name={d.icon} className="size-4 shrink-0" />{d.name}</span>{d.tpl && <span className="text-xs text-muted tabular-nums">~{d.mins} min</span>}</li>)}</ul>
