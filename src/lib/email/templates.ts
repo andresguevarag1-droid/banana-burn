@@ -911,6 +911,60 @@ function finBetaActivation(d: BetaEndMailData & { step: 2 | 3 }): Email {
   };
 }
 
+// ───────────── Activación: primer entreno (docs/emails/activacion.md, #225) ─────────────
+// A0 (1 h), A1 (día 1) y A2 (día 3; es la pieza "A3" del documento) a quien no tiene entrenos guardados. Los envía
+// sendActivationEmails (notify-run.ts) y reemplazan al recordatorio de ese día.
+
+export type ActivationMailStep = 0 | 1 | 2;
+
+/** Copy de cada pieza. Un solo botón, al entreno; sin oferta. */
+export const ACTIVATION_MAILS: Record<ActivationMailStep, { subject: string; preheader: string; paragraphs: string[] }> = {
+  0: {
+    subject: "Tu primer entreno: 12 minutos en casa",
+    preheader: "Puedes hacerlo ahora, sin ir al gimnasio.",
+    paragraphs: [
+      "Tu primer entreno dura 12 minutos y lo puedes hacer en casa ahora.",
+      "Abre la sesión, sigue las indicaciones de cada ejercicio y avanza a tu ritmo. No tienes que resolver toda la semana hoy: empieza con este entreno.",
+      "Al terminar, guarda la sesión para que tu primer paso quede registrado.",
+    ],
+  },
+  1: {
+    subject: "Lo difícil es empezar",
+    preheader: "Hoy empieza con un entreno de 12 minutos.",
+    paragraphs: [
+      "A veces cuesta más empezar que encontrar tiempo.",
+      "Hoy no necesitas ir al gimnasio ni reservar una hora. Tu primer entreno son 12 minutos en casa, con las indicaciones de cada ejercicio en el celular.",
+      "Empieza a tu ritmo. Al terminar, guarda tu sesión: ya tendrás un punto de partida.",
+    ],
+  },
+  2: {
+    subject: "Hoy también puedes empezar",
+    preheader: "Tu primer entreno sigue siendo un paso pequeño: 12 minutos.",
+    paragraphs: [
+      "Si todavía no encontraste el momento, hoy puedes empezar en casa con 12 minutos.",
+      "La sesión te muestra qué hacer en cada ejercicio. Sigue las indicaciones, avanza a tu ritmo y guarda el entreno al terminar.",
+      "No necesitas recuperar los días que pasaron. Empieza por hoy.",
+    ],
+  },
+};
+
+/** Destino del botón: con gym o mixto, el primer entreno en casa (/app/entreno?casa=1, #194); si no, el entreno del día. */
+export const activationPath = (home: boolean) => (home ? "/app/entreno?casa=1" : "/app/entreno");
+
+/** Una pieza de activación. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function activacion(d: { step: ActivationMailStep; home: boolean; unsubscribe: string }): Email {
+  const c = ACTIVATION_MAILS[d.step];
+  const cta = "Empezar mi entreno", path = activationPath(d.home);
+  const hero: Hero = { eyebrow: "Tu primer entreno", title: esc(c.subject), lead: esc(c.preheader), mascot: true };
+  const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
+  const reason = "Recibes este correo porque creaste tu cuenta en Banana Burn y tienes activados los recordatorios.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason),
+  };
+}
+
 // ───────────── Recuperación al terminar la prueba sin plan (docs/emails/recuperacion-prueba.md) ─────────────
 // Días 8 y 14 desde el registro. La envía runReminders (notify-run.ts) en lugar de los demás correos de ese día.
 

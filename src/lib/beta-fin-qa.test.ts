@@ -25,6 +25,7 @@ function fakeAdmin(db: Record<string, Row[]>, fail: Record<string, boolean> = {}
         select: () => q,
         eq: (c: string, v: unknown) => { filters.push((r) => r[c] === v); return q; },
         lt: (c: string, v: string) => { filters.push((r) => String(r[c]) < v); return q; },
+        gte: (c: string, v: string) => { filters.push((r) => String(r[c]) >= v); return q; },
         in: (c: string, vs: unknown[]) => { filters.push((r) => vs.includes(r[c])); return q; },
         order: () => q,
         range: async (a: number, b: number) =>

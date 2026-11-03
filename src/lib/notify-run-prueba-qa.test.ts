@@ -50,6 +50,9 @@ vi.mock("@/lib/email/send", () => ({
   },
 }));
 
+// Sin la activación (#225): aquí se prueba solo la secuencia. Que la pieza ceda ante A1 y A2 está en notify-run-activacion.test.ts.
+vi.mock("@/lib/activacion-correos", async (orig) => ({ ...(await orig<typeof import("@/lib/activacion-correos")>()), activationDue: () => null }));
+
 const { runReminders } = await import("./notify-run");
 
 const SIGNUP = "2026-11-02T12:00:00.000Z";
