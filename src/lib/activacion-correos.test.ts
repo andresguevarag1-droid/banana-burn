@@ -37,6 +37,12 @@ describe("activationDue", () => {
     expect(activationDue(base({ now: at(25) }))).toBe(1);
   });
 
+  it("modo diario: A0 en la primera corrida después de la primera hora, aunque sea al día siguiente; respeta el silencio", () => {
+    const cases: [number, number | null][] = [[0.5, null], [24.5, 0], [25, 1], [48.5, 1], [49, null], [72.5, null], [96.5, 2], [97, null]];
+    for (const [h, step] of cases) expect(activationDue(base({ now: at(h), quietEnd: "06:00" })), `${h} h`).toBe(step);
+    expect(activationDue(base({ now: at(2), quietStart: "11:00", quietEnd: "13:00" }))).toBeNull(); // 12:00 CR
+  });
+
   it("cada hora: A0 a cualquier hora fuera del silencio; A1 y A2 solo a la hora del recordatorio", () => {
     const hourly = (now: Date, reminderAt: Date) => activationDue(base({ mode: "hourly", now, reminderAt }));
     expect(hourly(at(1), at(-3))).toBe(0); // 11:00 CR

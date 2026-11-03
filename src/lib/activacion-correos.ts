@@ -2,12 +2,13 @@
 // no tiene ningún entreno guardado. Reglas puras (activacion-correos.test.ts); el envío lo hace sendActivationEmails en
 // notify-run.ts, dentro del cron de recordatorios y antes de los demás avisos del día.
 //
-// - A0: de 1 a 24 h después del registro (profiles.created_at). Cada hora: en la corrida siguiente. Diario: en la corrida
-//   del día siguiente (si ya pasaron 24 h, toca A1 y A0 no sale).
+// - A0: de 1 a 24 h después del registro (profiles.created_at). Cada hora: en la corrida siguiente. Diario: en la primera
+//   corrida después de la primera hora (de 1 a 25 h; si ya pasaron 25 h, toca A1 y A0 no sale). En modo diario cada
+//   ventana dura 24 h desde su inicio (A1 de 25 a 49 h, A2 de 73 a 97 h), así cada corrida cae en una sola.
 // - A1: de 24 a 48 h. A2: de 72 a 96 h. Cada hora salen a la hora del recordatorio de la persona (como la secuencia de la
 //   prueba): así reemplazan al recordatorio del primer entreno de ese día en vez de chocar con él.
 // - Una vez por persona y pieza (notification_log, kind activacion_N), nunca una vieja cuando ya toca la siguiente.
-// - Con email_reminders, fuera de las horas de silencio (modo cada hora) y solo si hoy no recibió otro correo.
+// - Con email_reminders, fuera de las horas de silencio (en los dos modos) y solo si hoy no recibió otro correo.
 //
 // Embudo: registro → primer entreno terminado. Se mide con workout_saved (funnel_events) y el % de registrados que
 // terminan su primer entreno en 72 h, cruzado con notification_log (kind activacion_*) para saber quién recibió cada correo.
@@ -25,15 +26,20 @@ export const activationIdemKey = (step: ActivationStep, userId: string) => `${ac
 const HOUR_MS = 36e5;
 /** Ventana de cada pieza, en horas desde el registro: [desde, hasta). */
 export const ACTIVATION_WINDOWS: Record<ActivationStep, [number, number]> = { 0: [1, 24], 1: [24, 48], 2: [72, 96] };
+/**
+ * Ventanas del modo diario: las corridas van cada 24 h, así que cada ventana dura 24 h desde su inicio y no se pisan.
+ * A0 sale en la primera corrida después de la primera hora, aunque sea al día siguiente del registro.
+ */
+export const ACTIVATION_DAILY_WINDOWS: Record<ActivationStep, [number, number]> = { 0: [1, 25], 1: [25, 49], 2: [73, 97] };
 /** Horas desde el registro en que cierra la última ventana: el cron solo lee cuentas más nuevas. */
-export const ACTIVATION_MAX_HOURS = ACTIVATION_WINDOWS[2][1];
+export const ACTIVATION_MAX_HOURS = Math.max(ACTIVATION_WINDOWS[2][1], ACTIVATION_DAILY_WINDOWS[2][1]);
 
 /** Pieza cuya ventana está abierta en el instante `at` para una cuenta creada en `createdAt`. */
-export function activationStepAt(createdAt: string | null | undefined, at: Date): ActivationStep | null {
+export function activationStepAt(createdAt: string | null | undefined, at: Date, windows = ACTIVATION_WINDOWS): ActivationStep | null {
   const c = Date.parse(createdAt ?? "");
   if (!Number.isFinite(c)) return null;
   const h = (at.getTime() - c) / HOUR_MS;
-  return ACTIVATION_STEPS.find((s) => h >= ACTIVATION_WINDOWS[s][0] && h < ACTIVATION_WINDOWS[s][1]) ?? null;
+  return ACTIVATION_STEPS.find((s) => h >= windows[s][0] && h < windows[s][1]) ?? null;
 }
 
 export type ActivationInput = {
@@ -58,11 +64,11 @@ export type ActivationInput = {
 /** Pieza que hay que mandar en esta corrida, o null. No mira los otros correos del día (emailedToday). */
 export function activationDue(i: ActivationInput): ActivationStep | null {
   if (i.trained || !i.emailReminders) return null;
+  const c = localClock(i.now, i.timezone);
+  if (inQuietHours(c, i.quietStart, i.quietEnd)) return null;
   let step: ActivationStep | null;
-  if (i.mode === "daily") step = activationStepAt(i.createdAt, i.now);
+  if (i.mode === "daily") step = activationStepAt(i.createdAt, i.now, ACTIVATION_DAILY_WINDOWS);
   else {
-    const c = localClock(i.now, i.timezone);
-    if (inQuietHours(c, i.quietStart, i.quietEnd)) return null;
     // A1 y A2: solo a la hora del recordatorio, según la ventana de ese instante del día local. A0: a cualquier hora.
     const later = c.hour === i.reminderHour ? activationStepAt(i.createdAt, i.reminderAt) : null;
     step = later ? later : activationStepAt(i.createdAt, i.now) === 0 ? 0 : null;
