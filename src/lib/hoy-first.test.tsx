@@ -26,6 +26,12 @@ describe("Hoy del primer día", () => {
     expect(isFirstDay({ ...base, demo: true, workouts: 3, primera: "1" })).toBe(true);
   });
 
+  it("un primer entreno guardado a medias (#246) es un entreno guardado: Hoy sale del primer día y muestra su cierre", () => {
+    expect(isFirstDay({ ...base, workouts: 1, trainedToday: true })).toBe(false);
+    expect(fullReturn).toContain("<FirstPartialCard");
+    expect(firstReturn).not.toContain("FirstPartialCard");
+  });
+
   it("con 0 entrenos muestra solo el saludo, el primer entreno y el aviso de tarjeta urgente", () => {
     const tags = [...firstReturn.matchAll(/<([A-Z]\w*)/g)].map((m) => m[1]);
     expect(tags).toEqual(["FunnelTracker", "TrialCardNotice"]);

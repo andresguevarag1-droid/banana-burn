@@ -131,6 +131,7 @@ describe("inventario: cada entrada que se puede abusar tiene su freno", async ()
     "api/cron/recordatorios/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
     "api/cron/cobros/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
     "api/cron/avisos/route.ts": "Bearer CRON_SECRET en tiempo constante antes de cualquier trabajo",
+    "api/entreno/guardar/route.ts": "llama a saveWorkout, que aplica limitError(\"entreno:guardar\") por cuenta antes de tocar la base",
   };
   const FRENO = /hitLimit\(|memoryRateLimit\(|dbRateLimit(All)?\(|tooFast\(/;
   for (const f of files.filter((x) => /\/route\.tsx?$/.test(x))) {

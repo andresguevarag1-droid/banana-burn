@@ -39,7 +39,8 @@ import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/comp
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
 import { track } from "@/components/analytics";
-import { shouldAutoSave } from "./leave";
+import { HIDDEN_SAVE_MS, partialSaver, shouldAutoSave } from "./leave";
+import { clearFirstPartial, markFirstPartial } from "@/lib/first-partial";
 import { showsTestimonialCard } from "@/lib/testimonials";
 import { hookLine } from "@/lib/engine";
 import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice } from "@/lib/voice";
@@ -562,6 +563,10 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
   const outId = outboxId({ template, startedAt });
   const sending = useRef(false);
   const savedOnce = useRef(false);
+  /** El guardado en curso es el del primer entreno a medias (#246). */
+  const partialRef = useRef(false);
+  /** El reproductor ya se desmontó (salió dentro de la app): nadie ve el cierre. */
+  const gone = useRef(false);
   function onSaved(res: SaveResult) {
     if (!res.ok) { setQueued(false); setSaveMsg(res.error ?? "No pudimos guardar. Intenta de nuevo."); return; }
     if (savedOnce.current) return;
@@ -571,21 +576,24 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
     setSaved(res);
     setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
     setPhase("saved");
-    if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal, ...(variant ? { variant } : {}) });
+    if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal, ...(variant ? { variant } : {}), ...(partialRef.current ? { partial: true } : {}) });
     learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
+    if (gone.current) return; // salió a medias dentro de la app: el cierre lo muestra Hoy (#246)
     buzz([60, 40, 60, 40, 200]);
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
       title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
       mins: Math.round(elapsed / 60), fun: fun ?? 0, easy: rows.flat().filter((r) => effortOf(r) === "f").length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
     }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino."));
   }
-  function save() {
+  /** Lo que se guarda: solo las series hechas. `at`: hora de fin si no pasó por el resumen (salió a medias). */
+  const finished = (at?: number) => ({
+    template, startedAt, finishedAt: new Date(endedAt ?? at ?? Date.now()).toISOString(), fun, total: planTotal, title, icon,
+    exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) })) })).filter((e) => e.sets.length),
+  });
+  function save(at?: number) {
     if (pending) return; // doble toque: el botón ya está guardando
     // Primero al teléfono (bandeja de salida), luego al servidor: si se cae la señal o se cierra la app, el entreno no se pierde.
-    const item = queueWorkout({
-      template, startedAt, finishedAt: new Date(endedAt ?? Date.now()).toISOString(), fun, total: planTotal, title, icon,
-      exercises: exercises.map((e, i) => ({ id: e.id, sets: rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) })) })).filter((e) => e.sets.length),
-    }, key);
+    const item = queueWorkout(finished(at), key);
     setSaveMsg(null);
     sending.current = true;
     start(async () => {
@@ -600,6 +608,20 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
       onSaved(res);
     });
   }
+  /**
+   * Primer entreno a medias (#246): se guarda lo hecho como su primer entreno y Hoy lo celebra al volver si no vio el cierre.
+   * Al cerrar la pestaña o la app va con sendBeacon (una acción del servidor no alcanza a salir); si no llega, la bandeja del
+   * teléfono lo sube al abrir de nuevo y el servidor reconoce el doble envío por la hora de inicio.
+   */
+  function savePartial(how: "beacon" | "save") {
+    const at = Date.now();
+    partialRef.current = true;
+    try { markFirstPartial(localStorage, { title, done: doneSets, total: planTotal, mins: Math.max(1, Math.round((at - startMs) / 60_000)), at }); } catch { /* sin almacenamiento */ }
+    if (how === "save") return save(at);
+    const item = queueWorkout(finished(at), key);
+    const body = new Blob([JSON.stringify(item.payload)], { type: "application/json" });
+    if (typeof navigator.sendBeacon === "function" && navigator.sendBeacon("/api/entreno/guardar?parcial=1", body)) store.del(key);
+  }
   // Si la sincronización global (al volver la señal) sube este entreno mientras sigues en el resumen, se celebra aquí.
   useEffect(() => {
     if (phase !== "summary") return;
@@ -610,8 +632,8 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
 
   // Embudo del entreno (0061): abrir, primera serie, resumen, guardado y salida. La fila de workouts solo existe al guardar,
   // así que sin esto no se sabía cuántos empiezan y dónde se van.
-  const flow = useRef({ phase, doneSets, planTotal, save, saved: false });
-  useEffect(() => { flow.current = { phase, doneSets, planTotal, save, saved: savedOnce.current }; });
+  const flow = useRef({ phase, doneSets, planTotal, save, savePartial, saved: false });
+  useEffect(() => { flow.current = { phase, doneSets, planTotal, save, savePartial, saved: savedOnce.current }; });
   const tpl = template.slice(0, 40);
   useEffect(() => { trackRef.current = (n) => track(n, { template: tpl, done: flow.current.doneSets, total: flow.current.planTotal }); }, [tpl]);
   useEffect(() => {
@@ -625,18 +647,45 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
       const l = flow.current;
       if (shouldAutoSave({ phase: l.phase, doneSets: l.doneSets, saved: savedOnce.current, sending: sending.current })) l.save();
     };
-    const leave = () => {
+    // Primer entreno (#246): salir en medio con al menos una serie también lo guarda, una sola vez. Desde el segundo, no.
+    const partial = partialSaver<"beacon" | "save">((how) => flow.current.savePartial(how));
+    const keepPartial = (how: "beacon" | "save") => {
+      const l = flow.current;
+      return partial({ first: firstSession, phase: l.phase, doneSets: l.doneSets, saved: savedOnce.current, sending: sending.current }, how);
+    };
+    let hidden: ReturnType<typeof setTimeout> | undefined;
+    gone.current = false;
+    const leave = (how: "beacon" | "save") => {
       keep();
+      keepPartial(how);
       if (left) return;
       left = true;
       const l = flow.current;
       if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal, seconds_on_screen: Math.round((Date.now() - opened) / 1000), ...(guided ? { guided: true } : {}) });
     };
-    const onHide = () => { if (document.visibilityState === "hidden") keep(); };
-    window.addEventListener("pagehide", leave);
+    // Con la app en segundo plano más de 60 s, el primer entreno a medias se guarda; al volver se ve su cierre.
+    const onHide = () => {
+      clearTimeout(hidden);
+      if (document.visibilityState !== "hidden") return;
+      keep();
+      hidden = setTimeout(() => { if (document.visibilityState === "hidden") keepPartial("save"); }, HIDDEN_SAVE_MS);
+    };
+    const onPageHide = () => leave("beacon");
+    window.addEventListener("pagehide", onPageHide);
     document.addEventListener("visibilitychange", onHide);
-    return () => { window.removeEventListener("pagehide", leave); document.removeEventListener("visibilitychange", onHide); leave(); };
+    return () => {
+      clearTimeout(hidden); window.removeEventListener("pagehide", onPageHide); document.removeEventListener("visibilitychange", onHide);
+      gone.current = true; leave("save");
+    };
   }, [tpl]); // eslint-disable-line react-hooks/exhaustive-deps -- una vez por entreno
+  // Vio el cierre del primer entreno a medias: Hoy ya no lo repite.
+  useEffect(() => {
+    if (phase !== "saved") return;
+    const seen = () => { if (document.visibilityState === "visible") try { clearFirstPartial(localStorage); } catch { /* */ } };
+    seen();
+    document.addEventListener("visibilitychange", seen);
+    return () => document.removeEventListener("visibilitychange", seen);
+  }, [phase]);
   const prevDone = useRef(doneSets);
   useEffect(() => {
     if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { first_session: firstSession, template: tpl, total: planTotal, ...(guided ? { guided: true } : {}) });
@@ -767,7 +816,7 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
             <>
             {/* Junto al botón (no al final del resumen): quien toca Guardar ve de inmediato qué pasó. */}
             {saveMsg && <p role="alert" className={`mx-auto mb-2 max-w-md text-sm font-semibold text-pretty ${queued ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
-            <button onClick={save} disabled={pending} aria-busy={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{pending ? "Guardando…" : queued ? "Reintentar ahora" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno"}</button>
+            <button onClick={() => save()} disabled={pending} aria-busy={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{pending ? "Guardando…" : queued ? "Reintentar ahora" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno"}</button>
             {queued && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">Salir: se sube solo al volver la señal</Link>}
             </>
           )}
@@ -798,7 +847,7 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
           onExit={() => { setIv((v) => (v.phase === "ready" || v.paused != null ? v : { ...v, paused: Math.max(0, v.end - Date.now()) })); setSheet("exit"); }}
           onFinish={() => toSummary()} />
         <p aria-live="polite" className="sr-only">{live}</p>
-        <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={() => toSummary()} goal={goal} />
+        <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={() => toSummary()} goal={goal} keeps={firstSession} />
       </>
     );
   }
@@ -1155,7 +1204,7 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
           )}
         </div>
       </BottomSheet>
-      <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={finishNow} goal={goal}
+      <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={finishNow} goal={goal} keeps={firstSession}
         bonus={!noXp && !plan ? FULL_BONUS : 0} onExpress={express ? applyExpress : undefined} />
 
       {/* El aviso flotante nunca tapa el descanso (ahí está la pregunta de esfuerzo) ni una hoja abierta */}
@@ -1171,9 +1220,11 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
  * Salir a medias: muestra lo que queda en la mesa sin culpa, con seguir como acción principal.
  * "Salir sin guardar" no borra nada: lo hecho queda en el teléfono por hoy, por si vuelves.
  */
-function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish, goal, bonus = 0, onExpress }: {
+function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish, goal, bonus = 0, onExpress, keeps = false }: {
   open: boolean; onClose: () => void; doneSets: number; totalSets: number; unit: string; onFinish: () => void;
   goal?: LevelGoal | null; bonus?: number; onExpress?: () => void;
+  /** Primer entreno (#246): salir guarda lo hecho como su primer entreno. */
+  keeps?: boolean;
 }) {
   const left = Math.max(0, totalSets - doneSets);
   const one = unit === "series" ? "serie" : "intervalo";
@@ -1198,8 +1249,8 @@ function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish, goal, b
             <span className="min-w-0"><span className="block font-bold text-ink">Modo exprés</span><span className="block text-sm text-muted">¿Sin tiempo? Termina ahora con 1 serie por ejercicio que falta. Cada serie suma igual{bonus > 0 ? ", sin el bono de completo" : ""}.</span></span>
           </button>
         )}
-        <Link href="/app" className="btn w-full h-13 text-muted">Salir sin guardar</Link>
-        {doneSets > 0 && <p className="-mt-1 text-center text-xs text-muted">Lo que llevas queda en este teléfono por hoy, por si vuelves.</p>}
+        <Link href="/app" className="btn w-full h-13 text-muted">{keeps && doneSets > 0 ? "Salir" : "Salir sin guardar"}</Link>
+        {doneSets > 0 && <p className="-mt-1 text-center text-xs text-muted">{keeps ? "Lo que hiciste queda guardado como tu primer entreno." : "Lo que llevas queda en este teléfono por hoy, por si vuelves."}</p>}
       </div>
     </BottomSheet>
   );
