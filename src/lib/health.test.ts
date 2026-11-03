@@ -15,4 +15,12 @@ describe("salud", () => {
     expect(missingFor(i).length).toBeGreaterThanOrEqual(6);
     expect(missingFor(i).join(" ")).toContain("Coach Banana");
   });
+  it("#228: Meta CAPI es solo si existe META_CAPI_TOKEN, sin el valor", () => {
+    expect(integrationsFrom({}, { full: false, oneTime: false }).metaCapi).toBe(false);
+    expect(missingFor(integrationsFrom({}, { full: false, oneTime: false })).join(" ")).toContain("META_CAPI_TOKEN");
+    const i = integrationsFrom({ META_CAPI_TOKEN: "EAAG-secreto" }, { full: false, oneTime: false });
+    expect(i.metaCapi).toBe(true);
+    expect(JSON.stringify(i)).not.toContain("EAAG-secreto");
+    expect(missingFor(i).join(" ")).not.toContain("META_CAPI_TOKEN");
+  });
 });

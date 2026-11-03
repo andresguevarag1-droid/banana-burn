@@ -2,7 +2,7 @@
 
 export type Integrations = {
   supabase: boolean; serviceRole: boolean; anthropic: boolean; onvo: boolean; onvoOneTime: boolean;
-  resend: boolean; vapid: boolean; cron: boolean; emailUnsub: boolean;
+  resend: boolean; vapid: boolean; cron: boolean; emailUnsub: boolean; metaCapi: boolean;
 };
 
 type Env = Record<string, string | undefined>;
@@ -19,6 +19,8 @@ export function integrationsFrom(env: Env, onvo: { full: boolean; oneTime: boole
     vapid: Boolean((env.VAPID_PUBLIC_KEY || env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)?.trim() && env.VAPID_PRIVATE_KEY?.trim()),
     cron: has(env, "CRON_SECRET"),
     emailUnsub: has(env, "EMAIL_UNSUB_SECRET"),
+    // Subscribe de cada pago desde el servidor (src/lib/meta-capi.ts): sin la llave, Meta solo ve el píxel del navegador.
+    metaCapi: has(env, "META_CAPI_TOKEN"),
   };
 }
 
@@ -32,5 +34,6 @@ export function missingFor(i: Integrations): string[] {
   if (!i.resend) out.push("RESEND_API_KEY (correos)");
   if (!i.vapid) out.push("VAPID (avisos push)");
   if (!i.cron) out.push("CRON_SECRET (recordatorios diarios)");
+  if (!i.metaCapi) out.push("META_CAPI_TOKEN (pagos a Meta como Subscribe desde el servidor)");
   return out;
 }

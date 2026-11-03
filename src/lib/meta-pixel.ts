@@ -63,6 +63,14 @@ export function toMetaEvent(name: FunnelEvent, props: FunnelProps = {}): MetaEve
 /** Precio del plan para eventos de compra (exportado para pruebas). */
 export const priceOf = (plan: PlanId, billing: Billing) => planValue(plan, billing);
 
+/**
+ * event_id del Subscribe de una compra en /pago/checkout: sale de la suscripción, así el píxel de /pago/exito y el webhook
+ * del pago (billing.ts) mandan el mismo y Meta cuenta un solo pago. Cabe en el formato que acepta /api/track.
+ */
+export function purchaseEventId(subscriptionId: string): string {
+  return `buy-${subscriptionId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`.slice(0, 40);
+}
+
 /** Id corto y aleatorio para deduplicar navegador y servidor. */
 export function newEventId(): string {
   const r = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
