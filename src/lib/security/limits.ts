@@ -64,6 +64,8 @@ export const RULES = {
   // ── Registro diario
   "comidas": { windows: [{ sec: HOUR, max: 300 }], db: true, msg: SLOW },
   "entreno:guardar": { windows: [{ sec: HOUR, max: 30 }], db: true, msg: "Guardaste muchos entrenos seguidos. Espera un momento." },
+  // Respuestas después de guardar el primer entreno (#253): una por entreno; esto frena los reintentos en bucle.
+  "entreno:valorar": { windows: [{ sec: HOUR, max: 30 }], db: false, msg: SLOW },
   // Opinión del tercer entreno (#238): la base ya deja una por cuenta; esto frena los reintentos en bucle.
   "testimonio": { windows: [{ sec: HOUR, max: 10 }], db: false, msg: SLOW },
   "correr:objetivo": { windows: [{ sec: HOUR, max: 30 }], db: true, msg: "Cambiaste tu carrera muchas veces seguidas. Espera un momento." },

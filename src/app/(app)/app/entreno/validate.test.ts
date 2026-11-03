@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeWorkout, serverPrs, workoutTiming, type Finished } from "./validate";
+import { normalizeRating, normalizeWorkout, serverPrs, workoutTiming, type Finished } from "./validate";
 
 const base = (p: Partial<Finished> = {}): Finished => ({ template: "pushA", startedAt: "2026-10-22T12:00:00.000Z", fun: 4, exercises: [{ id: "bench", sets: [{ kg: 80, reps: 8, rir: 2 }] }], ...p });
 
@@ -79,5 +79,25 @@ describe("normalizeWorkout finishedAt", () => {
   it("acepta finishedAt corto y descarta lo demás", () => {
     expect(normalizeWorkout(base({ finishedAt: "2026-10-22T13:00:00.000Z" }))!.finishedAt).toBe("2026-10-22T13:00:00.000Z");
     expect(normalizeWorkout(base({ finishedAt: "x".repeat(200) }))!.finishedAt).toBeUndefined();
+  });
+});
+
+describe("normalizeRating (#253: preguntas después de guardar el primer entreno)", () => {
+  const r = { template: "pushA", startedAt: "2026-10-22T12:00:00.000Z", fun: 4, last: { exercise: "bench", setNo: 3, rir: 2 } };
+  it("reconoce el entreno por plantilla y hora de inicio, como el doble envío", () => {
+    expect(normalizeRating(r)).toEqual({ ...r, startIso: "2026-10-22T12:00:00.000Z" });
+  });
+  it("sin respuestas no hay nada que anotar", () => {
+    expect(normalizeRating({ ...r, fun: null, last: null })).toBeNull();
+  });
+  it("descarta valores fuera de rango y deja el resto", () => {
+    expect(normalizeRating({ ...r, fun: 9 })).toMatchObject({ fun: null, last: r.last });
+    expect(normalizeRating({ ...r, last: { exercise: "../x", setNo: 1, rir: 2 } })).toMatchObject({ fun: 4, last: null });
+    expect(normalizeRating({ ...r, last: { exercise: "bench", setNo: 0, rir: 2 } })!.last).toBeNull();
+    expect(normalizeRating({ ...r, last: { exercise: "bench", setNo: 1, rir: 11 } })!.last).toBeNull();
+  });
+  it("rechaza plantilla u hora inválidas", () => {
+    expect(normalizeRating({ ...r, template: "a;drop" })).toBeNull();
+    expect(normalizeRating({ ...r, startedAt: "ayer" })).toBeNull();
   });
 });
