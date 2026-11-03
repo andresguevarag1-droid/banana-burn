@@ -23,6 +23,7 @@ import { firstPaymentDay, firstPaymentStep, isFirstPaymentStep, type FirstPaymen
 import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, type RecoveryStep } from "@/lib/recuperacion";
 import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
 import { todayIn } from "@/lib/today";
+import { ACTIVATION_KINDS, ACTIVATION_MAX_HOURS, activationDue, activationIdemKey, activationKind, emailedToday, isActivationKind, type LogEntry } from "@/lib/activacion-correos";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
 const PAGE = 200;
@@ -66,6 +67,9 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   // Fin de la beta (1 al 7 nov): primero, porque es una sola semana y son los primeros clientes posibles.
   try { await sendBetaEndEmails(admin, now, mode, stats, late); }
   catch (e) { stats.errors++; logError("cron:fin-beta", "run_failed", { kind: errCode(e) }); }
+  // Activación (#225): antes de los avisos del día, para que la pieza reemplace al recordatorio del primer entreno.
+  try { await sendActivationEmails(admin, now, mode, stats, late); }
+  catch (e) { stats.errors++; logError("cron:activacion", "run_failed", { kind: errCode(e) }); }
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
     const { data: profiles, error } = await profilePage(admin, from);
@@ -420,7 +424,12 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const recoveryNow = recovery && (mode === "daily" || c.hour === remindHour) ? recovery : null;
     const season = seasonBy.get(u.id) ?? null;
     const seasonDue = season && !userLogs.some((l) => l.kind === season.step) ? season : null;
-    if (!decisions.length && !step && !recoveryNow && !payDue && !seasonDue) return;
+    // Activación (#225): si hoy salió una pieza, ese día no sale otro correo de rutina ni la pieza de la prueba (cede ante
+    // A1 y A2, docs/emails/activacion.md). Push y campanita siguen igual.
+    const activationToday = todayLogs.some((l) => isActivationKind(l.kind) && l.channels?.includes("email"));
+    if (activationToday) for (const d of decisions) d.email = false;
+    const trialStep = activationToday ? null : step;
+    if (!decisions.length && !trialStep && !recoveryNow && !payDue && !seasonDue) return;
 
     let email: string | null | undefined;
     const getEmail = async () => {
@@ -432,7 +441,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const goal = goalFor(goalBy.get(u.id), wsBy.get(u.id) ?? []);
 
     // La pieza reemplaza el correo del recordatorio (o la reactivación) de ese día; push y campanita siguen igual.
-    const stepSent = !!step && await sendTrialStep(admin, u.id, step, getEmail, stats);
+    const stepSent = !!trialStep && await sendTrialStep(admin, u.id, trialStep, getEmail, stats);
     if (stepSent) for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
     // Recuperación: en su día local no sale ningún otro correo, ni el semanal, a ninguna hora (antes o después de la pieza).
     // Solo si reclamarla falló siguen los demás (ese día no salió). Push y campanita siguen igual.
@@ -458,7 +467,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const seasonSentToday = todayLogs.some((l) => isSeasonCloseStep(l.kind) && l.channels?.includes("email"));
     let seasonSent = false;
     if (seasonDue) {
-      const otherEmail = seasonDue.chargeToday || !!step || !!recovery || !!payDue || paySentToday || todayLogs.some((l) => l.channels?.includes("email"));
+      const otherEmail = seasonDue.chargeToday || !!trialStep || !!recovery || !!payDue || paySentToday || todayLogs.some((l) => l.channels?.includes("email"));
       seasonSent = await sendSeasonClose(admin, u.id, seasonDue.step, c.iso, otherEmail, getEmail, stats);
     }
     if (seasonSent || seasonSentToday) for (const d of decisions) d.email = false;
@@ -682,6 +691,81 @@ export async function sendBetaEndEmails(admin: SupabaseClient, now: Date, mode: 
         else if (!r.skipped) await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", kind).eq("local_day", day).then(() => null, () => null);
         stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
       } catch (e) { stats.errors++; logError("cron:fin-beta", "user_failed", { kind: errCode(e) }); }
+    });
+    if (stats.partial || profiles.length < PAGE) break;
+  }
+}
+
+// ───────────── Activación: primer entreno (#225) ─────────────
+
+type ActivationProfile = { id: string; created_at: string | null; timezone: string | null; equipment: string | null };
+
+/**
+ * Correos de activación A0, A1 y A2 (activacion-correos.ts) a las cuentas de menos de 96 horas sin ningún entreno guardado.
+ * Cada pieza se reclama en notification_log (kind activacion_N, local_day = día local del envío) antes de enviarse: una
+ * vez por persona y pieza. Se omite (sin reclamar, `activacion_N_omitido` en las estadísticas) si hoy ya recibió otro
+ * correo. Si Resend la rechaza, se libera el turno. Si falla una lectura, la página se salta. Exportada para pruebas.
+ */
+export async function sendActivationEmails(admin: SupabaseClient, now: Date, mode: "hourly" | "daily", stats: RunStats, late: () => boolean = () => false) {
+  const since = new Date(now.getTime() - ACTIVATION_MAX_HOURS * 36e5).toISOString();
+  const utcToday = now.toISOString().slice(0, 10);
+  for (let from = 0; ; from += PAGE) {
+    if (late()) { stats.partial = true; break; }
+    const { data, error } = await admin.from("profiles").select("id,created_at,timezone,equipment")
+      .eq("onboarded", true).gte("created_at", since).order("id").range(from, from + PAGE - 1);
+    if (error) { stats.ok = false; stats.errors++; logError("cron:activacion", "profiles_query_failed", { code: error.code, from }); break; }
+    const profiles = (data ?? []) as ActivationProfile[];
+    if (!profiles.length) break;
+    const ids = profiles.map((p) => p.id);
+    const [prefs, trained, dated, once] = await Promise.all([
+      allPages((a, b) => admin.from("notification_prefs").select("*").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("workouts").select("user_id").in("user_id", ids).order("id").range(a, b)),
+      // Piezas ya reclamadas (las cuentas tienen menos de 96 h) y correos con fecha de hoy.
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,channels,created_at").in("user_id", ids).gte("local_day", isoMinus(utcToday, 5)).order("id").range(a, b)),
+      // Correos únicos (ONCE_DAY: secuencia de la prueba, recuperación) que salieron hoy.
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,channels,created_at").in("user_id", ids).eq("local_day", ONCE_DAY).gte("created_at", isoMinus(utcToday, 1) + "T00:00:00Z").order("id").range(a, b)),
+    ]);
+    const failed = [prefs, trained, dated, once].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:activacion", "query_failed", { code: failed.error?.code }); if (profiles.length < PAGE) break; continue; }
+    const prefsOf = new Map<string, Prefs>();
+    for (const p of profiles) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
+    for (const r of prefs.data as Record<string, unknown>[]) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
+    const withWorkout = new Set((trained.data as { user_id: string }[]).map((r) => r.user_id));
+    const logsBy = new Map<string, LogEntry[]>();
+    for (const r of [...dated.data, ...once.data] as (LogEntry & { user_id: string })[]) logsBy.set(r.user_id, [...(logsBy.get(r.user_id) ?? []), r]);
+
+    await forEachLimit(profiles, USER_CONCURRENCY, async (p) => {
+      if (late()) { stats.partial = true; return; }
+      try {
+        const pr = prefsOf.get(p.id)!;
+        const logs = logsBy.get(p.id) ?? [];
+        const step = activationDue({
+          createdAt: p.created_at, now, mode, trained: withWorkout.has(p.id), emailReminders: pr.email_reminders !== false,
+          timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end, reminderHour: reminderHour(pr), reminderAt: recoveryAt(now, pr),
+          sent: logs.filter((l) => ACTIVATION_KINDS.includes(l.kind as (typeof ACTIVATION_KINDS)[number])).map((l) => l.kind),
+        });
+        if (step === null) return;
+        const kind = activationKind(step);
+        // Para no saturar: si hoy ya recibió otro correo (recordatorio, fin de la beta, prueba), hoy no sale.
+        if (emailedToday(logs, now, pr.timezone)) { stats.sent[`${kind}_omitido`] = (stats.sent[`${kind}_omitido`] ?? 0) + 1; return; }
+        const day = localClock(now, pr.timezone).iso;
+        const { data: claimed, error: claimErr } = await admin.from("notification_log")
+          .upsert({ user_id: p.id, kind, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .select("id");
+        if (claimErr) { stats.errors++; return; }
+        if (!claimed?.length) return;
+        const { data: u } = await admin.auth.admin.getUserById(p.id);
+        const to = u.user?.email;
+        if (!to) return;
+        const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
+        // Misma regla que el fin de la beta (#207/#209): con gym o mixto, el botón abre el primer entreno en casa.
+        const msg = T.activacion({ step, home: offersHomeFirst((p.equipment ?? "gym") as Equipment), unsubscribe });
+        const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: activationIdemKey(step, p.id), unsubscribe, tags: { kind } });
+        if (r.ok) stats.email++;
+        // Si Resend la rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (como el fin de la beta).
+        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", kind).eq("local_day", day).then(() => null, () => null); return; }
+        stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:activacion", "user_failed", { kind: errCode(e) }); }
     });
     if (stats.partial || profiles.length < PAGE) break;
   }
