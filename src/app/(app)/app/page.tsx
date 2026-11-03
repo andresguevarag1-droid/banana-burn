@@ -54,7 +54,8 @@ import { LoMejor } from "@/components/primeros-pasos/lo-mejor";
 import { weekRecapFor } from "@/lib/week-recap-server";
 import { FIRST_DAY_CARD_MIN_DAY, isFirstDay } from "@/lib/hoy-first";
 import { CoachPrompt } from "@/components/coach-prompt";
-import { showHoyCoachPrompt } from "@/lib/coach-prompt";
+import { inCoachPromptWindow, showHoyCoachPrompt } from "@/lib/coach-prompt";
+import { FirstPartialCard } from "@/components/hoy/first-partial-card";
 
 export const metadata = { title: "Hoy" };
 
@@ -148,6 +149,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
     <div className="space-y-5 animate-enter">
       <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
       {header}
+      {/* Primer entreno guardado a medias (#246): si salió antes del cierre, lo ve aquí con la oferta y el coach. */}
+      <FirstPartialCard offer={canActivatePlan(noticeEnt) ? v.id : undefined} coach={coach.id === "banana" ? null : coach}
+        coachPrompt={learnState.coachMessages === 0 && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: a.equipment === "casa" || a.equipment === "ninguno" } : null} />
 
       <PageTour tour="hoy" steps={tourSteps} serverKeys={learnState.keys} />
 
