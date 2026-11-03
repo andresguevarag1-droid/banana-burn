@@ -47,6 +47,13 @@ export function detectInstallEnv(ua: string, hints: EnvHints = {}): InstallEnv {
   return "desktop";
 }
 
+/**
+ * Dentro de Instagram, Facebook u otra app: en qué navegador abrirla (null fuera de ellas). Google bloquea ahí su login
+ * (disallowed_useragent), así que el registro esconde "Continuar con Google" y ofrece copiar el enlace (#235).
+ */
+export const inAppOpenIn = (env: InstallEnv): "Safari" | "Chrome" | null =>
+  env === "ios-inapp" ? "Safari" : env === "android-inapp" ? "Chrome" : null;
+
 /** ¿Hay que mostrar algo para instalar? Solo no en la app ya instalada. */
 export const canSuggestInstall = (env: InstallEnv) => env !== "standalone";
 

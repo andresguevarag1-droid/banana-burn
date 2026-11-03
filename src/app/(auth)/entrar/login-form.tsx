@@ -10,6 +10,7 @@ import { PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { NATIVE_AUTH, socialButtonsFor } from "@/lib/native/auth-options";
 import type { AppPlatform } from "@/lib/platform";
+import { CopyLink } from "@/components/install/install-helper";
 import { afterSocialSignIn, confirmAndCheck, signUpConfirmed } from "./actions";
 import { signupError, signupReason } from "./validate";
 import { track } from "@/components/analytics";
@@ -58,8 +59,10 @@ function AppleLogo() {
 /**
  * `signupChecks`: las dos marcas bajo el registro según la fecha (offer.ts, las calcula el servidor para no depender del reloj del teléfono).
  * `platform`: la calcula el servidor (user agent). En la app nativa, Google y Apple usan el login del sistema (auth-options.ts).
+ * `openIn`: dentro de Instagram o Facebook, el navegador donde abrirla ("Safari" o "Chrome"). Ahí Google no deja entrar,
+ * así que no se muestra su botón y queda un enlace para copiar la página.
  */
-export function LoginForm({ configured, googleEnabled = false, signupChecks = ["7 días gratis", "Todo incluido"], platform = "web" }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string]; platform?: AppPlatform }) {
+export function LoginForm({ configured, googleEnabled = false, signupChecks = ["7 días gratis", "Todo incluido"], platform = "web", openIn = null }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string]; platform?: AppPlatform; openIn?: "Safari" | "Chrome" | null }) {
   const params = useSearchParams();
   const router = useRouter();
   const isSignup = params.get("modo") === "registro";
@@ -78,8 +81,11 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(linkError(params.get("error")));
   const [wait, setWait] = useState(0);
-  const social = socialButtonsFor(platform, NATIVE_AUTH, googleEnabled);
+  const [openHelp, setOpenHelp] = useState(false);
+  const social = socialButtonsFor(platform, NATIVE_AUTH, googleEnabled, openIn !== null);
   const native = platform !== "web";
+  /** Google existe en la web pero este navegador lo bloquea: se ofrece abrir la misma página en Safari o Chrome. */
+  const googleElsewhere = !native && googleEnabled && openIn !== null;
   useEffect(() => { if (wait <= 0) return; const t = setTimeout(() => setWait((w) => w - 1), 1000); return () => clearTimeout(t); }, [wait]);
 
   // Lo que el visitante eligió en la landing (objetivo, programa GLP-1, plan) sobrevive al registro en cookies de 1 día.
@@ -273,6 +279,17 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
             )}
           </form>
           <button type="button" onClick={() => { setMethod(method === "password" ? "code" : "password"); setErr(null); setInfo(null); }} className="tap mt-3 w-full text-sm font-semibold text-muted underline-offset-4 hover:text-ink hover:underline">{method === "password" ? "Prefiero recibir un código por correo" : "Prefiero usar contraseña"}</button>
+          {googleElsewhere && (
+            <div className="mt-2 text-center">
+              <button type="button" onClick={() => setOpenHelp((o) => !o)} aria-expanded={openHelp} data-cta={isSignup ? "registro-google-fuera" : "entrar-google-fuera"} className="tap text-xs font-semibold text-muted underline underline-offset-4 hover:text-ink">¿Prefieres Google? Ábrelo en {openIn}</button>
+              {openHelp && (
+                <div className="mt-2 rounded-2xl bg-cream p-3 text-left">
+                  <p className="text-sm text-body">Google no deja entrar desde esta app. Copia el enlace y pégalo en {openIn}.</p>
+                  <CopyLink path={`/entrar${params.toString() ? `?${params.toString()}` : ""}`} where={isSignup ? "registro" : "entrar"} />
+                </div>
+              )}
+            </div>
+          )}
           {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{info}</p>}
           <p className="mt-6 text-sm text-muted text-center">
             {isSignup ? <>¿Ya tienes cuenta? <Link href="/entrar" className="tap font-semibold text-ink underline">Entrar</Link></> : <>¿Nuevo aquí? <Link href="/entrar?modo=registro" className="tap font-semibold text-ink underline">Prueba gratis {TRIAL_DAYS} días</Link></>}
