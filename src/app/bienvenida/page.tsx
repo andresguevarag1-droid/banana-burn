@@ -45,6 +45,8 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
     if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
     chargeAt = cardOffer ? (ent.cardStep === "beta" ? BETA_GRACE_UNTIL : trialEndsAt) : null;
   }
+  // #254: la bienvenida ya no ofrece la tarjeta. Primero el primer entreno (el resumen muestra la oferta, #199) y la tarjeta
+  // siempre está en Mi plan. El paso solo se abre en la demo con ?vista=tarjeta, para revisarlo.
   // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
   const vista = (await searchParams).vista;
   const startOnCard = v.demo && cardOffer && vista === "tarjeta";
@@ -54,7 +56,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={cardOffer} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
+      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
     </>
   );
 }
