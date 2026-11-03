@@ -23,7 +23,8 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-function CopyLink({ path }: { path: string }) {
+/** Enlace con botón de copiar. También lo usa el registro dentro de Instagram o Facebook (`where`: "registro"). */
+export function CopyLink({ path, where }: { path: string; where?: string }) {
   const [ok, setOk] = useState(false);
   const url = `${SITE}${path}`;
   const copy = async () => {
@@ -31,7 +32,7 @@ function CopyLink({ path }: { path: string }) {
       // Algunas WebViews no dejan usar el portapapeles: seleccionamos el texto para copiarlo a mano.
       const i = document.getElementById("bb-install-url") as HTMLInputElement | null; i?.select();
     }
-    setOk(true); track("install_click", { action: "copy_link" });
+    setOk(true); track("install_click", { action: "copy_link", ...(where ? { where } : {}) });
     setTimeout(() => setOk(false), 2500);
   };
   return (

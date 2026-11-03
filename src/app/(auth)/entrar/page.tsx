@@ -6,11 +6,12 @@ import { FunnelTracker } from "@/components/analytics";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { isSupabaseConfigured } from "@/lib/env";
 import { blockedSession, getViewer } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { REF_COOKIE, normalizeCode } from "@/lib/referrals";
 import { LoginForm } from "./login-form";
 import { offer } from "@/lib/offer";
 import { requestPlatform } from "@/lib/platform-server";
+import { detectInstallEnv, inAppOpenIn } from "@/lib/install-env";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
@@ -31,9 +32,12 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   const blocked = !v && (await blockedSession().catch(() => false));
   const invited = signup && !v && !!normalizeCode((await cookies()).get(REF_COOKIE)?.value);
   const o = offer();
+  // Dentro de Instagram o Facebook: sin Google (lo bloquea ahí) y con el enlace para abrirla en Safari o Chrome.
+  const openIn = inAppOpenIn(detectInstallEnv((await headers()).get("user-agent") ?? ""));
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
       <FunnelTracker view="page_view" props={{ screen: signup ? "registro" : "entrar" }} />
+      {signup && !v && !blocked && <FunnelTracker view="signup_view" props={{ inapp: openIn !== null }} />}
       <div className="flex flex-col px-5 sm:px-10 py-6">
         <header><Logo /></header>
         <main className="flex-1 grid place-items-center py-10">
@@ -63,7 +67,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
             ) : (
               <>
                 {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />Llegaste con una invitación. Crea tu cuenta y entrena gratis {TRIAL_DAYS} días.</p>}
-                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} /></Suspense>
+                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} openIn={openIn} /></Suspense>
               </>
             )}
           </div>
