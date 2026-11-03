@@ -36,6 +36,8 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * Y la limpieza de tablas que crecen sin fin (0040).
  * Y las renovaciones con Tilopay (0042), que cobramos nosotros con la tarjeta guardada.
  * Y los condominios afiliados (0053): plan del condominio para sus residentes y aviso de fin del mes gratis.
+ * Y el correo de checkout abandonado (#237, dentro de runReminders): 1 hora después de abrir el pago sin pagar, en
+ *   sent.checkout_abandonado.
  */
 export async function GET(req: Request) {
   if (!process.env.CRON_SECRET) return NextResponse.json({ ok: true, skipped: "CRON_SECRET no configurado (modo demo)" });

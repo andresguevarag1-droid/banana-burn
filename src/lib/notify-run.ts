@@ -23,6 +23,7 @@ import { firstPaymentDay, firstPaymentStep, isFirstPaymentStep, type FirstPaymen
 import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, type RecoveryStep } from "@/lib/recuperacion";
 import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
 import { todayIn } from "@/lib/today";
+import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
 import { ACTIVATION_KINDS, ACTIVATION_MAX_HOURS, activationDue, activationIdemKey, activationKind, emailedToday, isActivationKind, type LogEntry } from "@/lib/activacion-correos";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
@@ -70,6 +71,9 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   // Activación (#225): antes de los avisos del día, para que la pieza reemplace al recordatorio del primer entreno.
   try { await sendActivationEmails(admin, now, mode, stats, late); }
   catch (e) { stats.errors++; logError("cron:activacion", "run_failed", { kind: errCode(e) }); }
+  // Checkout abandonado (#237): 1 hora después de abrir el pago sin pagar.
+  try { await sendAbandonedCheckoutEmails(admin, now, stats, late); }
+  catch (e) { stats.errors++; logError("cron:checkout-abandonado", "run_failed", { kind: errCode(e) }); }
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
     const { data: profiles, error } = await profilePage(admin, from);
@@ -768,5 +772,81 @@ export async function sendActivationEmails(admin: SupabaseClient, now: Date, mod
       } catch (e) { stats.errors++; logError("cron:activacion", "user_failed", { kind: errCode(e) }); }
     });
     if (stats.partial || profiles.length < PAGE) break;
+  }
+}
+
+// ───────────── Checkout abandonado (#237) ─────────────
+
+/**
+ * "Tu plan quedó a medio camino" (checkout-abandonado.ts) a quien abrió el pago en las últimas 24 h, no pagó en 1 hora y no
+ * tiene tarjeta guardada. Se reclama en notification_log (kind checkout_abandonado, local_day = día local) antes de enviarse;
+ * una vez cada 7 días. Si Resend lo rechaza, se libera el turno. Si falla una lectura, el lote se salta. Exportada para pruebas.
+ */
+export async function sendAbandonedCheckoutEmails(admin: SupabaseClient, now: Date, stats: RunStats, late: () => boolean = () => false) {
+  if (late()) { stats.partial = true; return; }
+  const since = new Date(now.getTime() - ABANDONED_LOOKBACK_MS).toISOString();
+  const events = await allPages((a, b) => admin.from("payment_events").select("user_id,received_at,payload")
+    .eq("type", "app.checkout_started").gte("received_at", since).order("id").range(a, b));
+  if (events.error) { stats.ok = false; stats.errors++; logError("cron:checkout-abandonado", "events_query_failed", { code: events.error.code }); return; }
+  const byUser = new Map<string, CheckoutEvent[]>();
+  for (const e of events.data as (CheckoutEvent & { user_id: string | null })[]) if (e.user_id) byUser.set(e.user_id, [...(byUser.get(e.user_id) ?? []), e]);
+  const all = [...byUser.keys()];
+  const utcToday = now.toISOString().slice(0, 10);
+  for (let i = 0; i < all.length; i += CHUNK) {
+    if (late()) { stats.partial = true; break; }
+    const ids = all.slice(i, i + CHUNK);
+    const [profiles, prefs, subs, charges, cards, logs] = await Promise.all([
+      allPages((a, b) => admin.from("profiles").select("id,created_at,timezone").in("id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("notification_prefs").select("*").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("subscriptions").select("user_id,status,current_period_start").in("user_id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("trial_charges").select("user_id,status").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("payment_methods").select("user_id").in("user_id", ids).eq("status", "active").order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("notification_log").select("user_id,local_day").in("user_id", ids).eq("kind", ABANDONED_KIND).gte("local_day", isoMinus(utcToday, 8)).order("id").range(a, b)),
+    ]);
+    const failed = [profiles, prefs, subs, charges, cards, logs].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:checkout-abandonado", "query_failed", { code: failed.error?.code }); continue; }
+    const group = <T extends { user_id: string }>(rows: T[]) => { const m = new Map<string, T[]>(); for (const r of rows) m.set(r.user_id, [...(m.get(r.user_id) ?? []), r]); return m; };
+    const prefsOf = new Map<string, Prefs>();
+    for (const p of profiles.data as { id: string; timezone: string | null }[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
+    for (const r of prefs.data as Record<string, unknown>[]) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
+    const createdOf = new Map((profiles.data as { id: string; created_at: string | null }[]).map((p) => [p.id, p.created_at]));
+    const subsBy = group(subs.data as (PaidSub & { user_id: string })[]);
+    const chargesBy = group(charges.data as { user_id: string; status: string }[]);
+    const cardsBy = group(cards.data as { user_id: string }[]);
+    const logsBy = group(logs.data as { user_id: string; local_day: string }[]);
+
+    await forEachLimit(ids, USER_CONCURRENCY, async (id) => {
+      if (late()) { stats.partial = true; return; }
+      try {
+        // Sin perfil (cuenta borrada) no se manda nada.
+        const pr = prefsOf.get(id);
+        if (!pr) return;
+        const userSubs = subsBy.get(id) ?? [];
+        const intent = abandonedCheckoutDue({
+          now, checkouts: byUser.get(id) ?? [], subs: userSubs, chargeStatuses: (chargesBy.get(id) ?? []).map((c) => c.status), cards: (cardsBy.get(id) ?? []).length,
+          emailReminders: pr.email_reminders !== false, timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end,
+          sentDays: (logsBy.get(id) ?? []).map((l) => l.local_day),
+        });
+        if (!intent) return;
+        const day = localClock(now, pr.timezone).iso;
+        const { data: claimed, error: claimErr } = await admin.from("notification_log")
+          .upsert({ user_id: id, kind: ABANDONED_KIND, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .select("id");
+        if (claimErr) { stats.errors++; return; }
+        if (!claimed?.length) return;
+        const { data: u } = await admin.auth.admin.getUserById(id);
+        const to = u.user?.email;
+        if (!to) return;
+        // El 50 % del primer mes, solo si el servidor se lo daría al guardar la tarjeta hoy (trial-billing.ts: promoFor).
+        const promo = intent.billing === "mes" && promoFor(kindFor({ createdAt: createdOf.get(id), now }), userSubs.some((s) => Boolean(s.current_period_start))) !== null;
+        const unsubscribe = unsubscribeUrl(id, "recordatorios");
+        const msg = T.checkoutAbandonado({ ...intent, promo, unsubscribe });
+        const r = await sendEmail(to, withLoginLinks(msg, id), { idempotencyKey: abandonedIdemKey(id, day), unsubscribe, tags: { kind: ABANDONED_KIND } });
+        if (r.ok) stats.email++;
+        // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (como la activación).
+        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", id).eq("kind", ABANDONED_KIND).eq("local_day", day).then(() => null, () => null); return; }
+        stats.sent[ABANDONED_KIND] = (stats.sent[ABANDONED_KIND] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:checkout-abandonado", "user_failed", { kind: errCode(e) }); }
+    });
   }
 }

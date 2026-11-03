@@ -12,8 +12,9 @@
 // Los correos no transaccionales llevan enlace de baja; los transaccionales (bienvenida, plan, pagos) no lo necesitan.
 import { SITE_URL } from "../env";
 import { nfmt, usd2 } from "../num";
-import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving } from "../plans";
-import { PROMO_PCT, promoPrice } from "../trial";
+import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving, type Billing, type PlanId } from "../plans";
+import { PROMO_PCT, planLine, promoPrice } from "../trial";
+import { intentPath } from "../checkout-intent";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
@@ -1006,6 +1007,36 @@ export function recuperacionPrueba(d: { day: RecoveryDay; unsubscribe: string })
     subject: c.subject, preheader: c.preheader,
     html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
     text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+  };
+}
+
+// ───────────── Checkout abandonado (#237) ─────────────
+// 1 hora después de abrir el pago sin pagar. Lo envía sendAbandonedCheckoutEmails (notify-run.ts, checkout-abandonado.ts).
+
+export const ABANDONED_SUBJECT = "Tu plan quedó a medio camino";
+
+/**
+ * Tres líneas: el plan elegido, el precio con IVA y "Cancela cuando quieras". `promo`: solo en el mensual y si el servidor
+ * le daría el 50 % del primer mes al guardar la tarjeta hoy (promoFor en trial.ts). El botón abre el mismo plan y periodo.
+ */
+export function checkoutAbandonado(d: { plan: PlanId; billing: Billing; promo: boolean; unsubscribe: string }): Email {
+  const pl = PLANS.find((x) => x.id === d.plan)!;
+  const path = intentPath({ plan: d.plan, billing: d.billing });
+  const cta = "Terminar mi pago";
+  const lines = [
+    `Elegiste ${planLine(d.plan, d.billing)}.`,
+    `Cuesta ${usd2(pl.price[d.billing])} ${d.billing === "anual" ? "al año" : "al mes"}, con IVA incluido.`,
+    "Cancela cuando quieras desde Mi plan.",
+  ];
+  const promoLine = d.promo && d.billing === "mes" ? `Como nunca pagaste un plan, si dejas tu tarjeta lista tu primer mes cuesta ${PROMO_PCT}\u00a0% menos: ${usd2(promoPrice(d.plan))}. Desde el segundo mes, precio normal.` : "";
+  const preheader = "Tu pago quedó pendiente. Lo terminas con un toque.";
+  const hero: Hero = { eyebrow: "Tu plan", title: esc(ABANDONED_SUBJECT), lead: esc(preheader) };
+  const html = lines.map((x) => p(esc(x))).join("") + (promoLine ? small(esc(promoLine)) : "") + small("<b>Coach Banana</b>") + button(cta, path);
+  const reason = "Recibes este correo porque abriste el pago de un plan en Banana Burn y tienes activados los recordatorios.";
+  return {
+    subject: ABANDONED_SUBJECT, preheader,
+    html: layout({ preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
+    text: textLayout([ABANDONED_SUBJECT, "", ...lines, ...(promoLine ? ["", promoLine] : []), "", "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason),
   };
 }
 
