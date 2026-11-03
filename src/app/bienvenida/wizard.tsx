@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { trackOnce, FunnelTracker } from "@/components/analytics";
+import { track, trackOnce, FunnelTracker } from "@/components/analytics";
+import { ONBOARDING_STEPS } from "@/app/api/track/event";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning } from "@/components/icons";
@@ -119,6 +120,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
+  // Embudo del registro (#236): un onboarding_step al entrar a cada paso 0 a 6 (la oferta de la tarjeta no cuenta aquí).
+  useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
   const [o, setO] = useState<Draft>(() => ({
     name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
     days: 4, equipment: "gym", level: "intermedio", voice: "basico", minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
