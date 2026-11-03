@@ -3,8 +3,6 @@
 /** Eventos permitidos. Cualquier otro nombre se descarta. */
 export const FUNNEL_EVENTS = [
   "page_view",
-  // Registro (#235): `inapp` dice si llegó dentro de Instagram o Facebook, donde no se muestra Google.
-  "signup_view",
   "cta_click",
   "trial_banner_view",
   "plan_wall_view",
@@ -35,6 +33,7 @@ export const FUNNEL_EVENTS = [
   // El coach se presenta (#198): tocó una respuesta de la burbuja del coach (resumen del primer entreno u Hoy).
   "coach_prompt_tap",
   // Registro (#236): dónde se cae entre tocar "Empezar" y la cuenta creada. Solo códigos fijos, nunca el correo.
+  // signup_view lleva `inapp` (#235): si llegó dentro de Instagram o Facebook, donde no se muestra Google.
   "signup_view",
   "signup_submit",
   "signup_error",
@@ -59,7 +58,7 @@ export const ONBOARDING_STEPS = 7;
  * de los valores conocidos el evento entero se rechaza (así nunca entra texto libre, como un correo).
  */
 const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolean }>> = {
-  signup_view: {},
+  signup_view: { key: "inapp", ok: (v) => typeof v === "boolean" },
   signup_submit: { key: "method", ok: (v) => (SIGNUP_METHODS as readonly unknown[]).includes(v) },
   signup_error: { key: "reason", ok: (v) => (SIGNUP_ERRORS as readonly unknown[]).includes(v) },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },

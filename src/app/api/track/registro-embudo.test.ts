@@ -9,8 +9,9 @@ import { signupReason } from "@/app/(auth)/entrar/validate";
 import { toMetaEvent } from "@/lib/meta-pixel";
 
 describe("cleanEvent: eventos del registro con forma fija", () => {
-  it("signup_view guarda solo la ruta", () => {
-    expect(cleanEvent({ name: "signup_view", props: { path: "/entrar", email: "ana@correo.com", cta: "hero" } })).toEqual({ name: "signup_view", props: { path: "/entrar" } });
+  it("signup_view guarda solo la ruta e inapp (#235)", () => {
+    expect(cleanEvent({ name: "signup_view", props: { path: "/entrar", inapp: true, email: "ana@correo.com", cta: "hero" } })).toEqual({ name: "signup_view", props: { path: "/entrar", inapp: true } });
+    expect(cleanEvent({ name: "signup_view", props: { path: "/entrar", inapp: "ana@correo.com" } })).toBeNull();
   });
   it("signup_submit acepta solo los métodos conocidos y descarta todo lo demás", () => {
     for (const method of SIGNUP_METHODS) expect(cleanEvent({ name: "signup_submit", props: { path: "/entrar", method } })?.props).toEqual({ path: "/entrar", method });
@@ -66,9 +67,10 @@ const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
 describe("/entrar: un evento por vista o acción, sin datos personales", () => {
   const src = readFileSync("src/app/(auth)/entrar/login-form.tsx", "utf8");
 
-  it("signup_view sale una sola vez, en un efecto que depende solo del modo registro", () => {
-    expect(count(src, /track\("signup_view"/g)).toBe(1);
-    expect(src).toContain('useEffect(() => { if (configured && isSignup) track("signup_view"); }, [configured, isSignup]);');
+  it("signup_view sale una sola vez: lo mide la página /entrar con inapp, no el formulario (#235)", () => {
+    expect(count(src, /track\("signup_view"/g)).toBe(0);
+    const page = readFileSync("src/app/(auth)/entrar/page.tsx", "utf8");
+    expect(count(page, /view="signup_view"/g)).toBe(1);
   });
 
   it("cada forma de crear la cuenta manda un solo signup_submit con su método, y solo en modo registro", () => {
@@ -89,7 +91,6 @@ describe("/entrar: un evento por vista o acción, sin datos personales", () => {
     // Todo lo que el formulario manda al embudo: un método fijo o un motivo de signupReason, nada más (el servidor rechaza el resto).
     const args = [...src.matchAll(/track\("signup_(?:view|submit|error)"(.*?)\);/g)].map((m) => m[1]).sort();
     expect(args).toEqual([
-      "",
       ', { method: "code" }', ', { method: "google" }', ', { method: "password" }', ", { method: provider }",
       ', { reason: rate ? "rate_limit" : signupReason(error.message) }', ", { reason }",
     ].sort());

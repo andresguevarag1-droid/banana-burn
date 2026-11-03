@@ -97,7 +97,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
   }, [programa, objetivo, intent?.plan, intent?.billing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Embudo del registro (#236): una vista por llegada al modo registro (también al pasar desde "Entrar").
-  useEffect(() => { if (configured && isSignup) track("signup_view"); }, [configured, isSignup]);
+  // signup_view lo mide la página (/entrar), una sola vez y con `inapp` detectado en el servidor (#235).
 
   // Si la persona vuelve desde Google con "Atrás", la página sale del bfcache con el botón trabado: lo liberamos.
   useEffect(() => {
