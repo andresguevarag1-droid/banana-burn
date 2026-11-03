@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { partialSaver, shouldAutoSave, shouldSavePartial } from "./leave";
+import { HIDDEN_SAVE_MS, hiddenLongEnough, partialSaver, shouldAutoSave, shouldSavePartial } from "./leave";
 
 describe("shouldAutoSave", () => {
   const base = { phase: "summary" as const, doneSets: 1, saved: false, sending: false };
@@ -48,5 +48,20 @@ describe("primer entreno a medias (#246)", () => {
     expect(shouldSavePartial({ ...play, phase: "saved" })).toBe(false);
     expect(shouldSavePartial({ ...play, saved: true })).toBe(false);
     expect(shouldSavePartial({ ...play, sending: true })).toBe(false);
+  });
+});
+
+describe("hiddenLongEnough: 60 s en segundo plano, medidos al volver (iOS congela los temporizadores)", () => {
+  const t0 = 1_000_000;
+  it("con 60 s o más cuenta como salir", () => {
+    expect(hiddenLongEnough(t0, t0 + HIDDEN_SAVE_MS)).toBe(true);
+    expect(hiddenLongEnough(t0, t0 + 5 * 60_000)).toBe(true);
+  });
+  it("con menos de 60 s no cuenta", () => {
+    expect(hiddenLongEnough(t0, t0 + HIDDEN_SAVE_MS - 1)).toBe(false);
+    expect(hiddenLongEnough(t0, t0)).toBe(false);
+  });
+  it("sin hora de salida no cuenta", () => {
+    expect(hiddenLongEnough(undefined, t0)).toBe(false);
   });
 });

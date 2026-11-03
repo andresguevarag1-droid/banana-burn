@@ -10,6 +10,14 @@ export function shouldAutoSave(s: { phase: "play" | "summary" | "saved"; doneSet
 /** Primer entreno (#246): tanto tiempo con la app en segundo plano cuenta como salir. */
 export const HIDDEN_SAVE_MS = 60_000;
 
+/**
+ * ¿Ya pasó el tiempo en segundo plano que cuenta como salir? Se mide al volver, porque iOS y la app (Capacitor) congelan
+ * los temporizadores apenas la app se va al fondo. Sin hora de salida (nunca se ocultó) no cuenta.
+ */
+export function hiddenLongEnough(hiddenAt: number | undefined, now: number): boolean {
+  return hiddenAt !== undefined && now - hiddenAt >= HIDDEN_SAVE_MS;
+}
+
 type PartialState = { first: boolean; phase: "play" | "summary" | "saved"; doneSets: number; saved: boolean; sending: boolean };
 
 /**

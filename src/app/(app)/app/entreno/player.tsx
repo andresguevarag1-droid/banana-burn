@@ -39,7 +39,7 @@ import { OUTBOX_EVENT, queueWorkout, sendQueued, type OutboxEvent } from "@/comp
 import { useOnline } from "@/components/offline/connection-status";
 import { outboxId } from "@/lib/offline-queue";
 import { track } from "@/components/analytics";
-import { HIDDEN_SAVE_MS, partialSaver, shouldAutoSave } from "./leave";
+import { HIDDEN_SAVE_MS, hiddenLongEnough, partialSaver, shouldAutoSave } from "./leave";
 import { clearFirstPartial, markFirstPartial } from "@/lib/first-partial";
 import { showsTestimonialCard } from "@/lib/testimonials";
 import { hookLine } from "@/lib/engine";
@@ -663,10 +663,17 @@ export function Player({ firstSession = false, firstOffer, askTestimonial = fals
       const l = flow.current;
       if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal, seconds_on_screen: Math.round((Date.now() - opened) / 1000), ...(guided ? { guided: true } : {}) });
     };
-    // Con la app en segundo plano más de 60 s, el primer entreno a medias se guarda; al volver se ve su cierre.
+    let hiddenAt: number | undefined;
+    // Con la app en segundo plano más de 60 s, el primer entreno a medias se guarda; al volver se ve su cierre. El
+    // temporizador sirve en Android; iOS y la app congelan JS en el fondo, así que también se mide el tiempo al volver.
     const onHide = () => {
       clearTimeout(hidden);
-      if (document.visibilityState !== "hidden") return;
+      if (document.visibilityState !== "hidden") {
+        if (hiddenLongEnough(hiddenAt, Date.now())) keepPartial("save");
+        hiddenAt = undefined;
+        return;
+      }
+      hiddenAt = Date.now();
       keep();
       hidden = setTimeout(() => { if (document.visibilityState === "hidden") keepPartial("save"); }, HIDDEN_SAVE_MS);
     };
