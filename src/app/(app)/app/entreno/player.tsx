@@ -28,6 +28,7 @@ import { IntervalScreen } from "@/components/workout/interval-screen";
 import { SIDE_LABEL, advanceTimed, segLabel, pauseTimed, resumeTimed, segCue, skipTimed, startTimed as startTimed0, timedSegments, timedView, type TimedRun } from "@/components/workout/sides";
 import { TimedBar } from "@/components/workout/timed-bar";
 import { Recap } from "@/components/workout/recap";
+import { GuidedRest, GuidedSet, guidedLine } from "@/components/workout/guided";
 import { CoachArtFill, CoachPic } from "@/components/coach-pic";
 import { ExerciseBrief } from "@/components/workout/brief";
 import { briefSteps, formatExerciseTask, leftText, planChips, plainMuscles, secondsLeft } from "@/components/workout/task";
@@ -169,6 +170,8 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
   const shownInfo = useSticky(restInfo);
   const now = useNow(250);
   const interval = isIntervalPlan(exercises);
+  // Primer entreno guiado (#226): un ejercicio por pantalla y un botón grande de Hecho. Desde el segundo, el reproductor de siempre.
+  const guided = firstSession && !interval;
   // Repetir la misma plantilla el mismo día se guarda, pero no suma XP (el servidor aplica la misma regla).
   const noXp = doneToday;
 
@@ -355,7 +358,7 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
   function complete(si: number, opts: { silentRest?: boolean } = {}) {
     const row = here[si];
     if (!row || row.done) return;
-    if (needsLoad(ex) && num(row.kg) <= 0) return;
+    if (needsLoad(ex) && num(row.kg) <= 0 && !guided) return; // en el guiado los kilos no son obligatorios
     unlockAudio();
     const t = Date.now();
     const seconds = (t - startMs) / 1000;
@@ -624,7 +627,7 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
       if (left) return;
       left = true;
       const l = flow.current;
-      if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal, seconds_on_screen: Math.round((Date.now() - opened) / 1000) });
+      if (l.phase !== "saved" && !savedOnce.current) track("workout_leave", { template: tpl, phase: l.phase, done: l.doneSets, total: l.planTotal, seconds_on_screen: Math.round((Date.now() - opened) / 1000), ...(guided ? { guided: true } : {}) });
     };
     const onHide = () => { if (document.visibilityState === "hidden") keep(); };
     window.addEventListener("pagehide", leave);
@@ -633,11 +636,11 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
   }, [tpl]); // eslint-disable-line react-hooks/exhaustive-deps -- una vez por entreno
   const prevDone = useRef(doneSets);
   useEffect(() => {
-    if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { first_session: firstSession, template: tpl, total: planTotal });
+    if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { first_session: firstSession, template: tpl, total: planTotal, ...(guided ? { guided: true } : {}) });
     // Cada serie marcada (solo al subir: deshacer una serie no cuenta): dónde se cortan los que empiezan.
     if (doneSets > prevDone.current && phase === "play") track("set_done", { template: tpl, n: doneSets, total: planTotal });
     prevDone.current = doneSets;
-  }, [doneSets, phase, tpl, planTotal]);
+  }, [doneSets, phase, tpl, planTotal, guided]);
   // Abrió cómo se hace: si muchos lo abren y luego se van, la explicación no alcanza.
   useEffect(() => { if (sheet === "tech") track("help_open", { template: tpl, ex: idx + 1 }); }, [sheet]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -847,8 +850,20 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
     document.querySelector('[aria-label="Ejercicio y series"]')?.scrollTo({ top: 0 });
     announce(task.say);
   };
+  // Guiado: sin tarjeta previa, calentamiento ni lista de series. La serie se marca con los valores sugeridos.
+  const guidedNow = guided && activeSet >= 0;
+  const guidedTimer = timed ? (timerOn && tp ? { left: tp.left, label: tp.paused ? "En pausa" : segLabel(tp.seg) } : null) : undefined;
+  const lineOf = (ei: number, si: number) => { const e = exercises[ei], r = rows[ei]; return guidedLine({ setNo: si + 1, sets: r.length, reps: r[si].reps, unit: e.cfg.unit, lo: e.cfg.lo, hi: e.cfg.hi, perSide: e.cfg.perSide }); };
+  const guidedNext = guidedNow && rest ? (() => { const t = nextPending(rows, idx); return t ? { name: exercises[t.ex].name, line: lineOf(t.ex, t.si) } : null; })() : null;
   return (
     <Shell>
+      {guidedNow ? (
+        <div className="contents" inert={!!rest}>
+          <GuidedSet name={ex.name} cue={ex.tech?.cues[0]} anim={ex.tech?.anim || undefined} art={ex.art} line={lineOf(idx, activeSet)} exNo={idx + 1} exTotal={exercises.length}
+            kg={needsLoad(ex) ? num(here[activeSet].kg) : null} onKg={(d) => step(activeSet, "kg", d)} timer={guidedTimer}
+            onStart={startTimed} onDone={() => { if (timerOn) setWork(null); complete(activeSet); }} onHow={() => setSheet("tech")} onExit={() => setSheet("exit")} />
+        </div>
+      ) : (
       <div className="contents" inert={!!rest && restOpen}>
       {/* Encabezado delgado: salir, qué entreno es, el tiempo total (secundario), sonido y avance. */}
       <header data-tour-anchor className="px-4 pt-[max(.5rem,env(safe-area-inset-top))] pb-1.5 bg-paper/95 backdrop-blur border-b border-line/60">
@@ -1049,9 +1064,11 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
         </div>
       </footer>
       </div>
+      )}
 
       {/* Descanso */}
-      {restP.mounted && shownRest && shownInfo && (
+      {guidedNow && rest && <GuidedRest left={restLeft} total={rest.total} next={guidedNext} onSkip={cancelRest} />}
+      {!guidedNow && restP.mounted && shownRest && shownInfo && (
         <RestScreen left={rest ? restLeft : 0} total={shownRest.total} info={shownInfo} closing={restP.closing}
           minimizeLabel={ex.bw && !ex.load ? "Ajustar la serie" : "Ajustar pesos"}
           onEffort={(e) => restTarget.current && setEffort(restTarget.current.ex, restTarget.current.si, e)}
@@ -1059,7 +1076,7 @@ export function Player({ firstSession = false, firstOffer, coachPrompt = null, v
           onSkip={cancelRest}
           onMinimize={() => setRestOpen(false)} />
       )}
-      {rest && !restOpen && <RestPill left={restLeft} onOpen={() => setRestOpen(true)} onSkip={cancelRest} />}
+      {!guidedNow && rest && !restOpen && <RestPill left={restLeft} onOpen={() => setRestOpen(true)} onSkip={cancelRest} />}
 
       {/* Hojas */}
       <BottomSheet open={!!sheet && sheet !== "exit"} onClose={() => { setSheet(null); setSwapAsk(null); }} label={shownSheet === "tech" && !ex.tech ? "Técnica" : undefined} className="max-h-[88dvh] overflow-y-auto">
