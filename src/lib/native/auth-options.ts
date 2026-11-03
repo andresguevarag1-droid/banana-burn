@@ -33,8 +33,9 @@ export const NATIVE_AUTH = nativeAuthConfigFrom({
 
 export type SocialButtons = { google: boolean; apple: boolean };
 
-export function socialButtonsFor(platform: AppPlatform, cfg: NativeAuthConfig, webGoogle: boolean): SocialButtons {
-  if (platform === "web") return { google: webGoogle, apple: false };
+/** `inApp`: navegador dentro de Instagram o Facebook (install-env.ts), donde Google rechaza su login web. */
+export function socialButtonsFor(platform: AppPlatform, cfg: NativeAuthConfig, webGoogle: boolean, inApp = false): SocialButtons {
+  if (platform === "web") return { google: webGoogle && !inApp, apple: false };
   if (platform === "android") return { google: Boolean(cfg.googleWebClientId), apple: false };
   const apple = cfg.apple;
   return { apple, google: apple && Boolean(cfg.googleWebClientId && cfg.googleIosClientId) };

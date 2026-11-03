@@ -3,6 +3,8 @@
 /** Eventos permitidos. Cualquier otro nombre se descarta. */
 export const FUNNEL_EVENTS = [
   "page_view",
+  // Registro (#235): `inapp` dice si llegó dentro de Instagram o Facebook, donde no se muestra Google.
+  "signup_view",
   "cta_click",
   "trial_banner_view",
   "plan_wall_view",
