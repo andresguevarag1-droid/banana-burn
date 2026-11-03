@@ -31,7 +31,7 @@ Cada anuncio se juzga por su **costo por usuario de pago**, no por clic ni por r
 
 ## Anuncio 1: Tu primer entreno, 12 minutos, en tu sala
 
-**Para quién:** quien no va al gym o no tiene tiempo de ir. **Qué muestra:** el primer entreno en casa y guiado (#194 y #226): un ejercicio por pantalla, la serie en una línea, un botón grande de Hecho y el descanso con cuenta regresiva.
+**Para quién:** quien no va al gym o no tiene tiempo de ir. **Qué muestra:** el primer entreno en casa y guiado (#194 y #226): un ejercicio por pantalla, la serie en una línea, un botón grande de "Terminé la serie" y el descanso con cuenta regresiva.
 
 **Gancho de los primeros 2 segundos:** de noche, una persona en el sillón de su sala mira el celular y lo deja en la mesa. Texto grande desde el cuadro 0: "Tu primer entreno: 12 minutos, en tu sala".
 
@@ -43,7 +43,7 @@ Cada anuncio se juzga por su **costo por usuario de pago**, no por clic ni por r
 | 2 a 4 | Captura C1: Hoy con el botón "Empezar en casa" ("Sin equipo, unos 12 min") | Sin equipo y sin gym |
 | 4 a 6.5 | Captura C2: "Ejercicio 1 de 3", Sentadilla con peso corporal, "Serie 1 de 2" | Un ejercicio por pantalla |
 | 6.5 a 8.5 | La persona hace sentadillas junto al sillón (escena ilustrativa) | Haces la serie |
-| 8.5 a 10.5 | Captura C3: el dedo toca el botón Hecho | Tocas Hecho |
+| 8.5 a 10.5 | Captura C3: el dedo toca el botón "Terminé la serie" | Terminas la serie |
 | 10.5 a 12.5 | Captura C4: "Descansa", cuenta regresiva y "Sigue: Flexiones" | Descansas 30 segundos |
 | 12.5 a 14.5 | La persona hace puente de glúteo en el piso de la sala (escena ilustrativa) | 3 ejercicios, 2 series cada uno |
 | 14.5 a 17 | Captura C5: "Entreno completado" | Tu primer entreno, hecho |
@@ -55,7 +55,7 @@ Cada anuncio se juzga por su **costo por usuario de pago**, no por clic ni por r
 
 - **Texto principal:**
   Tu primer entreno: 12 minutos, en tu sala.
-  Sin equipo. Un ejercicio a la vez y tocas Hecho.
+  Sin equipo. Un ejercicio a la vez, a tu ritmo.
   Empieza 7 días gratis, sin tarjeta.
 - **Título:** Empieza 7 días gratis
 - **Descripción:** Sin tarjeta. Cancelas cuando quieras.
@@ -153,9 +153,9 @@ Todas son reales, de una cuenta de prueba o del modo demo de la app, sin cambiar
 | Código | Pantalla | Cómo llegar | ¿Existe? | Anuncios |
 | --- | --- | --- | --- | --- |
 | C1 | Hoy del primer día con el botón "Empezar en casa" ("Sin equipo, unos 12 min") arriba | Cuenta nueva con equipo Gimnasio, bienvenida terminada entre las 6 p.m. y las 5 a.m., sin entrenos guardados | No | 1 y 3 |
-| C2 | Primer entreno guiado en casa: "Ejercicio 1 de 3", Sentadilla con peso corporal, "Serie 1 de 2" y el botón Hecho | Desde C1, tocar el botón en casa (`/app/entreno?casa=1`) | No | 1 |
-| C3 | La misma pantalla con el dedo sobre el botón Hecho (grabación de pantalla de 2 s) | Igual que C2 | No | 1 |
-| C4 | Descanso del entreno guiado: "Descansa", cuenta regresiva y "Sigue: Flexiones" | Tocar Hecho en la primera serie de C2 | No | 1 |
+| C2 | Primer entreno guiado en casa: "Ejercicio 1 de 3", Sentadilla con peso corporal, "Serie 1 de 2" y el botón "Terminé la serie" | Desde C1, tocar el botón en casa (`/app/entreno?casa=1`) | No | 1 |
+| C3 | La misma pantalla con el dedo sobre el botón "Terminé la serie" (grabación de pantalla de 2 s) | Igual que C2 | No | 1 |
+| C4 | Descanso del entreno guiado: "Descansa", cuenta regresiva y "Sigue: Flexiones" | Tocar "Terminé la serie" en la primera serie de C2 | No | 1 |
 | C5 | Resumen al terminar: "Entreno completado" | Terminar las 6 series de C2. Recortar arriba de la tarjeta de planes y de la burbuja del coach | No | 1 |
 | C6 | Primer entreno guiado en el gym: "Ejercicio 1 de 3", Sentadilla goblet, los kilos con "Sugerido. Ajústalo si quieres." | Cuenta nueva con equipo Gimnasio, botón "Empezar mi entreno" | No | 2 |
 | C7 | Reproductor normal: "Puente de glúteo con barra", "10 a 12 repeticiones con 20 kg", "Ejercicio 1 de 6", "Faltan unos 36 min" | `public/landing/entreno.png` | Sí | 2 y 3 |

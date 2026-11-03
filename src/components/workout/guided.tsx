@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-// Primer entreno guiado (#226): un ejercicio por pantalla, la serie actual en una línea y un botón grande de Hecho.
+// Primer entreno guiado (#226): un ejercicio por pantalla, la serie actual en una línea y un botón grande de Terminé la serie.
 // Sin lista de series, kilos obligatorios ni tarjeta previa: del Empezar de Hoy a la primera serie marcada hay 2 toques.
 import { Barbell, Check, Eye, Minus, Play, Plus, X } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
@@ -13,6 +13,12 @@ import { CountRing } from "./ui";
 export function guidedLine(o: { setNo: number; sets: number; reps: string; unit?: string; lo: number; hi: number; perSide?: boolean }) {
   const t = formatExerciseTask({ unit: o.unit, reps: o.reps, kg: "", lo: o.lo, hi: o.hi, bw: true, perSide: !!o.perSide, setNo: o.setNo, sets: o.sets });
   return `Serie ${o.setNo} de ${o.sets} · ${t.line}`;
+}
+
+/** La instrucción bajo la serie: qué hacer ahora y qué tocar después. */
+export function guidedHint(timed: boolean, running: boolean) {
+  if (!timed) return "Haz las repeticiones y después toca Terminé la serie.";
+  return running ? "Sigue hasta que el reloj llegue a 0." : "Toca Empezar y sigue el reloj.";
 }
 
 export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin = 0, timer, onDone, onStart, onKg, onHow, onExit }: {
@@ -57,8 +63,12 @@ export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin
             )}
           </button>
           <h1 className="mt-4 text-[clamp(26px,7.6vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink text-balance break-words">{name}</h1>
-          {cue && <p className="mt-1 truncate text-[16px] font-semibold text-body">Clave: {cue.replace(/^./, (c) => c.toLowerCase())}</p>}
-          <p id="serie-guiada" className="mt-4 rounded-2xl bg-white border border-line/70 px-4 py-3 text-xl font-extrabold text-ink tabular-nums">{line}</p>
+          {cue && <p className="mt-1 text-[16px] leading-snug font-semibold text-body break-words">Clave: {cue.replace(/^./, (c) => c.toLowerCase())}</p>}
+          {/* Qué hacer antes de tocar (#252): sin pantalla previa ni toque extra, el botón dice que la serie ya se hizo. */}
+          <div className="mt-4 rounded-2xl bg-white border border-line/70 px-4 py-3">
+            <p id="serie-guiada" className="text-xl font-extrabold text-ink tabular-nums">{line}</p>
+            <p className="mt-0.5 text-[15px] leading-snug font-semibold text-body">{guidedHint(timed, running)}</p>
+          </div>
           {kg != null && onKg && (
             <div className="mt-3 flex items-center gap-3 rounded-2xl bg-cream px-3 py-2">
               <p className="flex-1 min-w-0 text-sm text-body"><span className="block font-bold text-ink tabular-nums">{kg > 0 ? `${kgFmt(kg)} kg` : "Sin peso"}</span>Sugerido. Ajústalo si quieres.</p>
@@ -74,7 +84,7 @@ export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin
           {timed && !running ? (
             <button type="button" data-tour="done" onClick={onStart} className="pressable w-full h-20 inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-2xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)]"><Play weight="fill" className="size-7" />Empezar</button>
           ) : (
-            <button type="button" data-tour="done" onClick={onDone} aria-describedby="serie-guiada" className="pressable w-full h-20 inline-flex items-center justify-center gap-2.5 rounded-[1.75rem] bg-banana text-ink text-2xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] hover:brightness-95">Hecho<Check weight="bold" className="size-7" /></button>
+            <button type="button" data-tour="done" onClick={onDone} aria-describedby="serie-guiada" className="pressable w-full h-20 inline-flex items-center justify-center gap-2.5 rounded-[1.75rem] bg-banana text-ink text-2xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] hover:brightness-95">Terminé la serie<Check weight="bold" className="size-7" /></button>
           )}
         </div>
       </footer>
