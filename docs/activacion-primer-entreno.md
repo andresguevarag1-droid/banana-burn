@@ -3,7 +3,7 @@
 El paso que mueve este cambio es bienvenida completada → primer entreno → pago.
 Al guardar la bienvenida se abre Hoy directamente, sin interponer instalación ni
 el resumen del plan. Se conserva la oferta opcional de tarjeta anterior al cierre.
-Hoy muestra «Tu primer entreno de hoy» y un único botón para empezar con los
+Hoy muestra «Tu primer entreno» y un único botón para empezar con los
 minutos estimados por el motor a partir de ejercicios y descansos, no el tiempo
 preferido del perfil. No es una promesa de duración exacta: el ritmo personal varía.
 

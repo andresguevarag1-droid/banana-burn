@@ -40,7 +40,7 @@ Cada anuncio se juzga por su **costo por usuario de pago**, no por clic ni por r
 | Segundo | Escena | Texto en pantalla |
 | --- | --- | --- |
 | 0 a 2 | Sala de noche, persona en el sillón con el celular (escena ilustrativa) | Tu primer entreno: 12 minutos, en tu sala |
-| 2 a 4 | Captura C1: Hoy con el botón "¿No estás en el gym? Hazlo en casa ahora (12 min, sin equipo)" | Sin equipo y sin gym |
+| 2 a 4 | Captura C1: Hoy con el botón "Empezar en casa" ("Sin equipo, unos 12 min") | Sin equipo y sin gym |
 | 4 a 6.5 | Captura C2: "Ejercicio 1 de 3", Sentadilla con peso corporal, "Serie 1 de 2" | Un ejercicio por pantalla |
 | 6.5 a 8.5 | La persona hace sentadillas junto al sillón (escena ilustrativa) | Haces la serie |
 | 8.5 a 10.5 | Captura C3: el dedo toca el botón Hecho | Tocas Hecho |
@@ -121,7 +121,7 @@ La captura C7 es una sesión concreta de otra persona: los 20 kg no son la carga
 | 6 a 8 | La misma captura, recorte a "10 a 12 repeticiones" | Y cuántas repeticiones + Ejemplo |
 | 8 a 10 | La misma captura, recorte a "Ejercicio 1 de 6" y "Faltan unos 36 min" | Sabes cuánto te falta + Ejemplo |
 | 10 a 12.5 | La persona termina la serie y guarda el celular (escena ilustrativa) | Entras, entrenas y te vas |
-| 12.5 a 15 | Captura C1: Hoy con "¿No estás en el gym? Hazlo en casa ahora (12 min, sin equipo)" | ¿Saliste tarde? Hazlo en casa |
+| 12.5 a 15 | Captura C1: Hoy con "Empezar en casa" ("Sin equipo, unos 12 min") | ¿Saliste tarde? Hazlo en casa |
 | 15 a 17 | Tarjeta paper con el precio, sin captura | US$9.99 al mes. Cancela cuando quieras |
 | 17 a 20 | Cierre: Coach Banana señalando, botón ink y logo | Empieza 7 días gratis en bananaburn.app |
 
@@ -152,12 +152,12 @@ Todas son reales, de una cuenta de prueba o del modo demo de la app, sin cambiar
 
 | Código | Pantalla | Cómo llegar | ¿Existe? | Anuncios |
 | --- | --- | --- | --- | --- |
-| C1 | Hoy del primer día con el botón "¿No estás en el gym? Hazlo en casa ahora (12 min, sin equipo)" arriba | Cuenta nueva con equipo Gimnasio, bienvenida terminada entre las 6 p.m. y las 5 a.m., sin entrenos guardados | No | 1 y 3 |
+| C1 | Hoy del primer día con el botón "Empezar en casa" ("Sin equipo, unos 12 min") arriba | Cuenta nueva con equipo Gimnasio, bienvenida terminada entre las 6 p.m. y las 5 a.m., sin entrenos guardados | No | 1 y 3 |
 | C2 | Primer entreno guiado en casa: "Ejercicio 1 de 3", Sentadilla con peso corporal, "Serie 1 de 2" y el botón Hecho | Desde C1, tocar el botón en casa (`/app/entreno?casa=1`) | No | 1 |
 | C3 | La misma pantalla con el dedo sobre el botón Hecho (grabación de pantalla de 2 s) | Igual que C2 | No | 1 |
 | C4 | Descanso del entreno guiado: "Descansa", cuenta regresiva y "Sigue: Flexiones" | Tocar Hecho en la primera serie de C2 | No | 1 |
 | C5 | Resumen al terminar: "Entreno completado" | Terminar las 6 series de C2. Recortar arriba de la tarjeta de planes y de la burbuja del coach | No | 1 |
-| C6 | Primer entreno guiado en el gym: "Ejercicio 1 de 3", Sentadilla goblet, los kilos con "Sugerido. Ajústalo si quieres." | Cuenta nueva con equipo Gimnasio, botón "Empezar mi primer entreno" | No | 2 |
+| C6 | Primer entreno guiado en el gym: "Ejercicio 1 de 3", Sentadilla goblet, los kilos con "Sugerido. Ajústalo si quieres." | Cuenta nueva con equipo Gimnasio, botón "Empezar mi entreno" | No | 2 |
 | C7 | Reproductor normal: "Puente de glúteo con barra", "10 a 12 repeticiones con 20 kg", "Ejercicio 1 de 6", "Faltan unos 36 min" | `public/landing/entreno.png` | Sí | 2 y 3 |
 | C8 | La técnica animada de un ejercicio, abierta desde "Ver cómo se hace" | Tocar "Ver cómo se hace" en el reproductor | No | 2 |
 

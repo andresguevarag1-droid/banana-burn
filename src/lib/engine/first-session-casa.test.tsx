@@ -5,6 +5,7 @@ import { EX, FIRST_HOME_MIN, FIRST_MAX_MIN, homeFirstAt, offersHomeFirst, planDa
 import { firstSessionPlan } from "@/lib/athlete";
 import { cleanEvent } from "@/app/api/track/event";
 import { Readiness } from "@/components/readiness";
+import { WorkoutHero } from "@/components/hoy/workout-hero";
 
 // Mismo recorte del dashboard que usan Hoy y /app/entreno.
 const dash = (equipment: Equipment, dow = 1, days = 6) => {
@@ -56,13 +57,14 @@ describe("primer entreno en casa con gym en el perfil (#194)", () => {
     expect(homeFirstAt(undefined)).toBe(false);
   });
 
-  const order = (html: string) => [html.indexOf("Empezar mi primer entreno"), html.indexOf("¿No estás en el gym?")];
+  const order = (html: string) => [html.indexOf("Empezar mi entreno"), html.indexOf("Empezar en casa")];
 
   it.each([true, false])("el botón en casa abre ?casa=1 y su orden sigue la hora (de noche = %s)", (night) => {
     for (const demo of [true, false]) {
       const html = renderToStaticMarkup(<Readiness first initial={0} dateKey="2026-11-02" demo={demo} mins={14} home={{ mins: 12, first: night }} />);
       expect((html.match(/<a /g) ?? []).length).toBe(2);
-      expect(html).toContain("¿No estás en el gym? Hazlo en casa ahora (12 min, sin equipo)");
+      expect(html).toContain("Empezar en casa<span class=\"mt-1 block text-sm font-semibold\">Sin equipo, unos 12 min</span>");
+      expect(html).toContain("Empezar mi entreno<span class=\"mt-1 block text-sm font-semibold\">Unos 14 min</span>");
       expect(html).toContain(`href="/app/entreno?casa=1${demo ? "&amp;primera=1" : ""}"`);
       expect(html).toContain(`href="/app/entreno${demo ? "?primera=1" : ""}"`);
       const [gym, casa] = order(html);
@@ -87,5 +89,22 @@ describe("primer entreno en casa con gym en el perfil (#194)", () => {
     expect(entreno).toContain('variant={homeFirst ? "casa-primero" : undefined}');
     // El perfil no cambia: el equipo de la variante solo vive en esta página.
     expect(entreno).not.toMatch(/update\(\{[^}]*equipment/);
+  });
+
+  // #256: título corto y mascota chica en el primer entreno para que los dos botones quepan sin desplazar en 375 × 667.
+  it.each([true, false])("el hero del primer entreno usa el título corto y los dos botones van antes de los ejercicios (primero=%s)", (first) => {
+    const d = dash("gym");
+    const plan = firstSessionPlan(d, 0)!;
+    const home = firstSessionPlan(d, 0, true)!;
+    const html = renderToStaticMarkup(<WorkoutHero plan={plan} voice="basico" mins={plan.mins!} trainedToday={false} deload={false} dayName="lunes" yesterday={plan} tomorrow={plan} lastTime={null} first={first} home={{ mins: home.mins!, first: true }} readiness={{ initial: 0, dateKey: "2026-11-03", demo: false, suggestSoft: false }} />);
+    const h2 = html.match(/<h2 id="hoy-entreno"[^>]*>([^<]*)<\/h2>/)![1];
+    expect(h2).toBe(first ? "Tu primer entreno" : plan.name);
+    expect(html.includes("size-24 sm:size-32")).toBe(first);
+    if (first) {
+      const casa = html.indexOf("Empezar en casa"), gym = html.indexOf("Empezar mi entreno"), ejercicios = html.indexOf("Lo que vas a hacer");
+      expect(casa).toBeGreaterThan(0);
+      expect(casa).toBeLessThan(gym);
+      expect(gym).toBeLessThan(ejercicios);
+    }
   });
 });

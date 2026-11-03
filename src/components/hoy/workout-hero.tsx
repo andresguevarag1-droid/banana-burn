@@ -28,6 +28,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
   const hook = hookLine(plan.hook, null);
   const legend = setsLegend(voice);
   const tomorrowTraining = isTrainingDay(tomorrow);
+  const firstView = first && !trainedToday;
 
   if (!training) {
     return (
@@ -46,14 +47,15 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
     <section aria-labelledby="hoy-entreno" className={`relative overflow-hidden rounded-[1.75rem] p-5 sm:p-6 ${trainedToday ? "border border-banana bg-banana-soft" : "bg-banana"}`}>
       <div className="relative lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:gap-7">
         <div className="min-w-0">
-          {/* Encabezado: Coach Banana posa según el día */}
-          <div className="relative pr-28 sm:pr-36">
+          {/* Encabezado: Coach Banana posa según el día. El primer entreno lleva título y mascota más chicos para que
+              los dos botones (gym y casa) se vean sin desplazar en 375 × 667. */}
+          <div className={`relative ${firstView ? "pr-20 sm:pr-28" : "pr-28 sm:pr-36"}`}>
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-bold text-ink/80">
-              <span className="first-letter:uppercase">{first && !trainedToday ? "Tu primer entreno de hoy" : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
+              <span className="first-letter:uppercase">{firstView ? plan.name : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
               {deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />{t(voice, { basico: "Semana suave", intermedio: "Semana de descarga", tecnico: "Descarga" })}</span>}
             </p>
-            <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{plan.name}</h2>
-            <span aria-hidden className="pointer-events-none absolute -right-3 -top-4 block size-32 select-none sm:size-40">
+            <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{firstView ? "Tu primer entreno" : plan.name}</h2>
+            <span aria-hidden className={`pointer-events-none absolute -right-3 -top-4 block select-none ${firstView ? "size-24 sm:size-32" : "size-32 sm:size-40"}`}>
               <SafeImage src={poseForTag(plan.tag)} alt="" fill sizes="160px" priority className="object-contain drop-shadow-[0_8px_14px_rgb(27_21_5/.25)]" fallbackClassName="object-contain" />
             </span>
             {benefit && !trainedToday && !first && <p className="relative mt-3 -mr-28 sm:mr-0 max-w-[52ch] text-[15px] font-semibold leading-snug text-ink text-pretty">{benefit}</p>}
