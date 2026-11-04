@@ -432,3 +432,52 @@ describe("0043: primer mes con 50 % en ONVO (cobro único y luego la suscripci�
     expect(f.tables.subscriptions[0]).toMatchObject({ status: "active" });
   });
 });
+
+describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de enero y luego precio normal", () => {
+  const UNTIL = "2027-01-01T06:00:00.000Z";
+  const soho = { id: 5, code: "soho-paradisus", name: "Soho Paradisus", status: "mes_gratis", free_starts_at: "2026-11-04T00:00:00.000Z", free_ends_at: UNTIL, paid_plan: null, paid_until: null, card_required: true, free_until: UNTIL };
+  const withCondo = (c: Record<string, unknown> = soho) => setup({ condos: [c], condo_members: [], comp_grants: [] });
+
+  it("cuenta nueva: el cobro nace programado para el 1 de enero, a precio normal y sin cobrar hoy; queda vinculada con acceso hasta esa fecha", async () => {
+    const f = withCondo();
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, T0);
+    expect(r.outcome).toBe("programado");
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, next_attempt_at: UNTIL, moved_from: "2026-11-16T12:00:00.000Z", promo: null, amount_minor: 999 });
+    expect(f.tables.comp_grants[0]).toMatchObject({ user_id: NEW_USER, plan: "completo", source: "condominio", expires_at: UNTIL });
+    expect(f.tables.condo_members[0]).toMatchObject({ condo_id: 5, user_id: NEW_USER });
+    expect((mail.sendTrialStarted.mock.calls as unknown[][])[0][0]).toMatchObject({ amount: 9.99, promo: false, chargeAt: UNTIL });
+  });
+  it("cuenta vieja cuya prueba ya terminó: tampoco se cobra hoy", async () => {
+    const f = withCondo();
+    onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
+    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes", condo: "soho-paradisus" }, T0);
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, promo: null, amount_minor: 1499 });
+    expect(f.tables.comp_grants).toHaveLength(1);
+  });
+  it("ya tenía el cobro programado: pasa al 1 de enero y pierde el 50 % (precio normal)", async () => {
+    const f = withCondo();
+    const original = scheduled(f, { plan: "entreno", amount_minor: 499, promo: "primer_mes_50" } as Partial<TrialChargeRow>).charge_at;
+    onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_2" }));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, T0);
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, moved_from: original, promo: null, amount_minor: 999, reminder_sent_at: null });
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL, source: "condominio" });
+  });
+  it("un condominio sin tarjeta ignora el código: la tarjeta se guarda como siempre (con el 50 %)", async () => {
+    const f = withCondo({ ...soho, card_required: false, free_until: null });
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, T0);
+    expect(charge(f)).toMatchObject({ charge_at: "2026-11-16T12:00:00.000Z", promo: "primer_mes_50", amount_minor: 499 });
+    expect(f.tables.comp_grants).toHaveLength(0);
+  });
+  it("después del 1 de enero el enlace ya no aplica", async () => {
+    const f = withCondo();
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, new Date("2027-01-02T12:00:00.000Z"));
+    expect(f.tables.comp_grants).toHaveLength(0);
+  });
+});

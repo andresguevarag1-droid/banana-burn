@@ -4,6 +4,8 @@
 //   - Activo: el condominio eligió un plan y lo paga fuera de la app; sus residentes tienen ese plan hasta paid_until.
 //   - Terminado: el enlace deja de servir y no se extiende el acceso de nadie (lo que ya tenían corre hasta su fecha).
 //   - Un mes gratis por cuenta y una cuenta en un solo condominio. Una cuenta con plan pagado no lo necesita.
+//   - Con tarjeta hasta una fecha (0066, piloto Soho Paradisus): gratis con todo incluido hasta free_until y solo con una
+//     tarjeta activa y su cobro programado; ese cobro pasa a free_until a precio normal.
 import { SITE_URL } from "@/lib/env";
 import type { PlanId } from "@/lib/plans";
 
@@ -25,7 +27,12 @@ export const condoStatusLabel = (s: string) => CONDO_STATUSES.find(([k]) => k ==
 export type CondoRow = {
   id: number; code: string; name: string; status: CondoStatus;
   free_starts_at?: string | null; free_ends_at: string | null; paid_plan: PlanId | null; paid_until: string | null;
+  /** 0066: el acceso se da solo con tarjeta, y termina en free_until (fecha fija) en vez de 30 días desde que se activa. */
+  card_required?: boolean | null; free_until?: string | null;
 };
+
+/** Último día gratis para mostrar ("31 de diciembre"): free_until es la medianoche en que empieza el cobro. */
+export const lastFreeDay = (freeUntil: string) => new Date(Date.parse(freeUntil) - 1000).toISOString();
 export type CondoGrant = { id: number; plan: string; starts_at: string; expires_at: string; revoked_at: string | null };
 
 const CODE_RE = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
@@ -52,7 +59,19 @@ export function condoCodeFromName(name: string): string {
 export const condoLink = (code: string) => `${SITE_URL.replace(/\/$/, "")}/c/${code}`;
 
 /** Mensaje listo para pegar en el grupo de WhatsApp del condominio. Sin emojis (libro de marca). */
-export function condoWhatsapp(c: { name: string; code: string }): string {
+export function condoWhatsapp(c: { name: string; code: string; card_required?: boolean | null; free_until?: string | null }): string {
+  if (c.card_required && c.free_until) {
+    const d = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
+    return [
+      `Hola, vecinos de ${c.name}.`,
+      "",
+      "Banana Burn es un entrenador personal en el celular: el plan de cada semana, la técnica de cada ejercicio y un coach que responde dudas a cualquier hora.",
+      "",
+      `Para los residentes es gratis con todo incluido hasta el ${d(lastFreeDay(c.free_until))}. Solo se deja la tarjeta: no se cobra nada hasta el ${d(c.free_until)} y se cancela cuando quieras antes de esa fecha.`,
+      "",
+      `Actívalo aquí: ${condoLink(c.code)}`,
+    ].join("\n");
+  }
   return [
     `Hola, vecinos de ${c.name}.`,
     "",
@@ -65,14 +84,25 @@ export function condoWhatsapp(c: { name: string; code: string }): string {
 }
 
 /** Lo que da hoy el enlace del condominio a una cuenta nueva en él. null: el enlace no está activo. */
-export function condoOffer(c: Pick<CondoRow, "status" | "paid_plan" | "paid_until">, now = new Date()): { plan: PlanId; expiresAt: string; free: boolean } | null {
-  if (c.status === "mes_gratis") return { plan: "completo", expiresAt: new Date(now.getTime() + CONDO_FREE_DAYS * 864e5).toISOString(), free: true };
-  if (c.status === "activo" && c.paid_plan && c.paid_until && Date.parse(c.paid_until) > now.getTime()) return { plan: c.paid_plan, expiresAt: new Date(c.paid_until).toISOString(), free: false };
+export type CondoOffer = { plan: PlanId; expiresAt: string; free: boolean; card: boolean };
+
+/** Lo que da hoy el enlace del condominio a una cuenta nueva en él. null: el enlace no está activo. */
+export function condoOffer(c: Pick<CondoRow, "status" | "paid_plan" | "paid_until"> & Partial<Pick<CondoRow, "card_required" | "free_until">>, now = new Date()): CondoOffer | null {
+  if (c.status === "mes_gratis") {
+    if (c.free_until) {
+      // Fecha fija (0066): después de free_until el enlace ya no da nada.
+      if (Date.parse(c.free_until) <= now.getTime()) return null;
+      return { plan: "completo", expiresAt: new Date(c.free_until).toISOString(), free: true, card: !!c.card_required };
+    }
+    return { plan: "completo", expiresAt: new Date(now.getTime() + CONDO_FREE_DAYS * 864e5).toISOString(), free: true, card: !!c.card_required };
+  }
+  if (c.status === "activo" && c.paid_plan && c.paid_until && Date.parse(c.paid_until) > now.getTime()) return { plan: c.paid_plan, expiresAt: new Date(c.paid_until).toISOString(), free: false, card: false };
   return null;
 }
 
 export type JoinDecision =
-  | { kind: "join"; plan: PlanId; expiresAt: string; free: boolean }
+  | ({ kind: "join" } & CondoOffer)
+  | { kind: "falta_tarjeta" } // 0066: el condominio pide tarjeta y la cuenta todavía no tiene una lista
   | { kind: "inactivo" } // no existe, terminado o el acuerdo venció
   | { kind: "ya_vinculado" } // ya es residente de este condominio
   | { kind: "otro_condominio" } // ya es residente de otro condominio
@@ -80,7 +110,7 @@ export type JoinDecision =
   | { kind: "plan_pagado" }; // ya paga su plan: no lo necesita
 
 /** ¿Qué pasa cuando una cuenta abre el enlace del condominio? Orden: enlace activo, vínculo, mes ya usado, plan pagado. */
-export function decideJoin(i: { condo: Pick<CondoRow, "id" | "status" | "paid_plan" | "paid_until"> | null; memberOf: number | null; hadCondoGrant: boolean; hasPaidPlan: boolean; now?: Date }): JoinDecision {
+export function decideJoin(i: { condo: (Pick<CondoRow, "id" | "status" | "paid_plan" | "paid_until"> & Partial<Pick<CondoRow, "card_required" | "free_until">>) | null; memberOf: number | null; hadCondoGrant: boolean; hasPaidPlan: boolean; cardReady?: boolean; now?: Date }): JoinDecision {
   const now = i.now ?? new Date();
   if (i.memberOf != null && i.condo && i.memberOf === i.condo.id) return { kind: "ya_vinculado" };
   const offer = i.condo ? condoOffer(i.condo, now) : null;
@@ -88,6 +118,7 @@ export function decideJoin(i: { condo: Pick<CondoRow, "id" | "status" | "paid_pl
   if (i.memberOf != null) return { kind: "otro_condominio" };
   if (i.hadCondoGrant) return { kind: "ya_usado" };
   if (i.hasPaidPlan) return { kind: "plan_pagado" };
+  if (offer.card && !i.cardReady) return { kind: "falta_tarjeta" };
   return { kind: "join", ...offer };
 }
 
@@ -118,8 +149,11 @@ export function endingNoticeDue(c: Pick<CondoRow, "status" | "paid_until">, g: C
 export const condoLapsed = (c: Pick<CondoRow, "status" | "paid_until">, now = new Date()) => c.status === "activo" && !!c.paid_until && Date.parse(c.paid_until) <= now.getTime();
 
 /** Texto para el residente según la decisión. */
-export function joinMessage(d: JoinDecision["kind"], name: string): { title: string; body: string } {
+export function joinMessage(d: JoinDecision["kind"], name: string, freeUntil?: string | null): { title: string; body: string } {
+  const day = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
+  if (freeUntil && d === "join") return { title: `Listo: Banana Burn gratis hasta el ${day(lastFreeDay(freeUntil))}`, body: `Tienes todo incluido, con entreno y nutrición. El ${day(freeUntil)} se cobra el plan que elegiste y te avisamos 2 días antes.` };
   switch (d) {
+    case "falta_tarjeta": return { title: "Falta tu tarjeta", body: `Para activar el regalo de ${name}, deja tu tarjeta lista. Hoy no se cobra nada.` };
     case "join": return { title: `Tu condominio ${name} te regala el primer mes`, body: "Ya tienes Banana Burn completo, con entreno y nutrición. Arma tu plan en 2 minutos." };
     case "ya_vinculado": return { title: `Ya eres parte de ${name}`, body: "Tu cuenta ya está vinculada a tu condominio. Sigue entrenando." };
     case "otro_condominio": return { title: "Tu cuenta ya está vinculada a otro condominio", body: "Cada cuenta puede pertenecer a un solo condominio. Si te mudaste, escríbenos a hola@bananaburn.app y lo revisamos." };

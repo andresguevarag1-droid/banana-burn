@@ -11,8 +11,9 @@ import { ArrowRight, Barbell, Buildings, ChatCircle, Check, CheckCircle, ForkKni
 import { getViewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { isDemoMode } from "@/lib/env";
-import { condoOffer, joinMessage, normalizeCondoCode, type CondoRow, type JoinDecision } from "@/lib/condos";
-import { condoByCode } from "@/lib/condos-server";
+import { condoOffer, joinMessage, lastFreeDay, normalizeCondoCode, type CondoRow, type JoinDecision } from "@/lib/condos";
+import { condoByCode, condoCardReady } from "@/lib/condos-server";
+import { CondoCard } from "./condo-card";
 import { longDate } from "@/lib/email/templates";
 import { TECHNIQUE_COUNT } from "@/lib/exercise-frames";
 
@@ -27,7 +28,7 @@ const PERKS: [PhosphorIcon, string, string][] = [
   [Barbell, "Tu plan de cada semana", "Series, repeticiones y el peso de cada serie, con el equipo del gimnasio del condominio o en casa."],
   [Sparkle, "Técnica animada", `${TECHNIQUE_COUNT} técnicas animadas por Coach Banana para que nunca entrenes a ciegas.`],
   [ChatCircle, "Coach Banana 24/7", "Resuelve tus dudas a cualquier hora, con tu plan y tus entrenos a la vista."],
-  [ForkKnife, "Plan de comidas", "El mes gratis incluye nutrición: calorías, proteína y comidas para tu meta."],
+  [ForkKnife, "Plan de comidas", "Incluye nutrición: calorías, proteína y comidas para tu meta."],
 ];
 
 const RESULTS = new Set<JoinDecision["kind"]>(["join", "inactivo", "ya_vinculado", "otro_condominio", "ya_usado", "plan_pagado"]);
@@ -40,7 +41,7 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
   const db = adminClient();
   const demo = !db && isDemoMode;
   const condo: CondoRow | null = db ? await condoByCode(db, code)
-    : demo ? { id: 0, code, name: "Condominio de ejemplo", status: "mes_gratis", free_ends_at: null, paid_plan: null, paid_until: null } : null;
+    : demo ? { id: 0, code, name: "Condominio de ejemplo", status: "mes_gratis", free_ends_at: null, paid_plan: null, paid_until: null, ...(code === "con-tarjeta" ? { card_required: true, free_until: "2027-01-01T06:00:00.000Z" } : {}) } : null;
   const v = await getViewer().catch(() => null);
   let member = false, grantUntil: string | null = null;
   if (v && !v.demo && db && condo) {
@@ -55,10 +56,17 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
   if (v?.demo && estado === "join") { member = true; grantUntil = new Date(Date.now() + 30 * 864e5).toISOString(); }
   const offer = condo ? condoOffer(condo) : null;
   const name = condo?.name ?? "tu condominio";
+  // 0066: gratis hasta una fecha y solo con tarjeta. cardReady: ya tiene tarjeta activa y su cobro programado.
+  const withCard = !!offer?.card;
+  const until = withCard ? offer!.expiresAt : null;
+  const day = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
+  const freeDay = until ? day(lastFreeDay(until)) : "";
+  const chargeDay = until ? day(until) : "";
+  const cardReady = withCard && v && !v.demo && db ? await condoCardReady(db, v.id).catch(() => false) : false;
   // Qué se muestra: vinculado (éxito), un resultado que no es éxito, la oferta o el enlace inactivo.
   const view: "member" | "result" | "offer" | "inactive" = member ? "member" : estado && estado !== "join" ? "result" : offer ? "offer" : "inactive";
-  const msg = joinMessage(view === "member" ? "join" : view === "result" ? estado! : "inactivo", name);
-  const cta = offer?.free === false ? "Activar mi acceso" : "Activar mi mes gratis";
+  const msg = joinMessage(view === "member" ? "join" : view === "result" ? estado! : "inactivo", name, condo?.card_required ? condo.free_until : null);
+  const cta = withCard ? `Activar gratis hasta el ${freeDay}` : offer?.free === false ? "Activar mi acceso" : "Activar mi mes gratis";
   const live = grantUntil && Date.parse(grantUntil) > Date.now();
 
   return (
@@ -74,14 +82,18 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
           {view === "offer" && (
             <>
               <h1 className="mt-5 text-[2.1rem] font-extrabold leading-[1.06] tracking-tight text-ink text-balance sm:text-5xl">
-                {offer?.free ? <>Tu condominio te regala el primer mes de Banana Burn.</> : <>Tu condominio te da Banana Burn.</>}
+                {withCard ? <>Banana Burn gratis hasta el {freeDay} para los vecinos de {name}.</> : offer?.free ? <>Tu condominio te regala el primer mes de Banana Burn.</> : <>Tu condominio te da Banana Burn.</>}
               </h1>
               <p className="mt-4 text-lg leading-relaxed text-ink/85 text-pretty">
-                {offer?.free
+                {withCard
+                  ? `Un entrenador personal en tu celular, con todo incluido. Solo deja tu tarjeta: hoy no se cobra nada y desde el ${chargeDay} pagas el plan que elijas, si decides seguir.`
+                  : offer?.free
                   ? "Un entrenador personal en tu celular, con todo incluido durante 30 días. Sin tarjeta y sin pagar nada."
                   : `Un entrenador personal en tu celular, pagado por ${name}. Sin tarjeta y sin pagar nada.`}
               </p>
-              {v ? (
+              {withCard && v && !cardReady ? (
+                <CondoCard code={code} demo={!!v.demo} freeDay={freeDay} chargeDay={chargeDay} />
+              ) : v ? (
                 <form action={`/c/${code}/activar`} method="post" className="mt-7">
                   <button type="submit" className="btn-primary h-14! w-full px-7! text-base! sm:w-auto">{cta} <ArrowRight weight="bold" className="size-5" /></button>
                   <p className="mt-3 text-sm text-ink/75">Se activa en la cuenta con la que entraste: {v.email}.</p>
@@ -98,7 +110,8 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
             <div role="status">
               <span className="mt-5 grid size-14 place-items-center rounded-full bg-ink text-banana"><Gift weight="fill" className="size-8" /></span>
               <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-ink text-balance sm:text-4xl">{msg.title}</h1>
-              <p className="mt-3 text-lg text-ink/85 text-pretty">{live ? `Tienes Banana Burn hasta el ${longDate(grantUntil!)}.` : "Tu cuenta está vinculada a tu condominio."} {msg.body}</p>
+              <p className="mt-3 text-lg text-ink/85 text-pretty">{live && condo?.card_required ? null : live ? `Tienes Banana Burn hasta el ${longDate(grantUntil!)}. ` : "Tu cuenta está vinculada a tu condominio. "}{msg.body}</p>
+              {live && condo?.card_required && <p className="mt-2 text-[15px] text-ink/80 text-pretty">Si no quieres seguir, cancela desde Mi plan antes del {day(grantUntil!)} y no se cobra nada.</p>}
               <Link href="/app" className="btn-primary mt-7 h-14! px-7! text-base!">{v?.onboarded === false ? "Armar mi plan" : "Ir a mi entreno"} <ArrowRight weight="bold" className="size-5" /></Link>
             </div>
           )}
@@ -115,7 +128,7 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
         {view === "offer" && (
           <>
             <section className="mt-10">
-              <h2 className="text-2xl font-extrabold tracking-tight text-ink">{offer?.free ? "Lo que incluye tu mes gratis" : "Lo que incluye"}</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">{withCard ? `Lo que incluye hasta el ${freeDay}` : offer?.free ? "Lo que incluye tu mes gratis" : "Lo que incluye"}</h2>
               <ul className="mt-5 grid gap-3 sm:grid-cols-2">
                 {PERKS.filter(([, t]) => offer?.plan === "completo" || t !== "Plan de comidas").map(([I, t, d]) => (
                   <li key={t} className="card flex gap-4 p-5">
@@ -128,11 +141,16 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
             <section className="mt-10 rounded-[1.5rem] bg-white p-6 ring-1 ring-line">
               <h2 className="text-xl font-extrabold text-ink">Cómo funciona</h2>
               <ul className="mt-4 space-y-3 text-[15px]">
-                {[
+                {(withCard ? [
+                  "Creas tu cuenta en 2 minutos desde el celular y dejas tu tarjeta. Hoy no se cobra nada.",
+                  `Tienes todo incluido, con entreno y nutrición, hasta el ${freeDay}.`,
+                  `El ${chargeDay} se cobra el plan que elegiste: Entreno $9.99 o Entreno + Nutrición $14.99 al mes. Te avisamos 2 días antes.`,
+                  `Si no quieres seguir, cancelas desde Mi plan antes del ${chargeDay} y no se cobra nada.`,
+                ] : [
                   "Creas tu cuenta en 2 minutos desde el celular. No necesitas tarjeta.",
                   offer?.free ? "Tienes 30 días con todo incluido desde que lo activas." : "Tu acceso dura mientras el condominio mantenga su plan.",
                   "Al terminar, tú decides si sigues con un plan individual o dejas de usar la app. No te cobramos nada automáticamente.",
-                ].map((t) => (
+                ]).map((t) => (
                   <li key={t} className="flex items-start gap-2.5"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3" /></span>{t}</li>
                 ))}
               </ul>

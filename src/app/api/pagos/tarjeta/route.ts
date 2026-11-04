@@ -6,6 +6,7 @@ import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
 import { prepareCard, removeCard, saveCard } from "@/lib/trial-billing";
 import { adminClient } from "@/lib/supabase/admin";
+import { normalizeCondoCode } from "@/lib/condos";
 import { dbRateLimit, dbRateLimitAll } from "@/lib/security/db-rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export const runtime = "nodejs";
  * Tarjeta guardada (0026). El número de la tarjeta NUNCA llega aquí: el navegador la crea directo en ONVO con la llave
  * publicable y solo nos manda el ID.
  *   { action: "preparar" }                                   -> { customerId, publicKey }
- *   { action: "guardar", paymentMethodId, plan, billing }    -> { card, charge, outcome }  (plan y precio los valida el servidor)
+ *   { action: "guardar", paymentMethodId, plan, billing, condo? } -> { card, charge, outcome }  (plan y precio los valida el servidor)
  *   { action: "quitar" }                                     -> { ok }
  * Límite de intentos por persona en la base (rate_hit de 0023) y en memoria.
  */
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
   if (!isSameOrigin(req)) return NextResponse.json({ ok: false, error: "Origen no permitido." }, { status: 403 });
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "Inicia sesión para continuar." }, { status: 401 });
-  const body = (await req.json().catch(() => ({}))) as { action?: unknown; paymentMethodId?: unknown; plan?: unknown; billing?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { action?: unknown; paymentMethodId?: unknown; plan?: unknown; billing?: unknown; condo?: unknown };
   const action = body.action;
   if (action !== "preparar" && action !== "guardar" && action !== "quitar") return NextResponse.json({ ok: false, error: "Acción inválida." }, { status: 400 });
   // Modo demo: la pantalla simula la tarjeta sin llamar a ONVO.
@@ -51,7 +52,9 @@ export async function POST(req: Request) {
     if (!pb) return NextResponse.json({ ok: false, error: "Plan o periodo inválido." }, { status: 400 });
     if (typeof body.paymentMethodId !== "string") return NextResponse.json({ ok: false, error: "Tarjeta inválida." }, { status: 400 });
     const pmId = body.paymentMethodId;
-    const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing }));
+    // 0066: desde el enlace de un condominio con tarjeta (/c/<código>). El servidor decide si aplica.
+    const condo = normalizeCondoCode(body.condo);
+    const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo }));
     return NextResponse.json({ ok: true, ...r });
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });

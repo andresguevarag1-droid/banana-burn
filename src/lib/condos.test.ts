@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  condoCodeFromName, condoLapsed, condoLink, condoOffer, condoWhatsapp, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant,
+  condoCodeFromName, condoLapsed, lastFreeDay, condoLink, condoOffer, condoWhatsapp, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant,
   CONDO_FREE_DAYS, type CondoGrant, type CondoRow,
 } from "./condos";
 import { entitlementsFrom, type CompRow } from "./entitlements";
@@ -41,10 +41,10 @@ describe("código del enlace del condominio", () => {
 
 describe("qué da el enlace", () => {
   it("mes gratis: plan completo por 30 días desde que el residente lo activa", () => {
-    expect(condoOffer(condo(), NOW)).toEqual({ plan: "completo", expiresAt: inDays(CONDO_FREE_DAYS), free: true });
+    expect(condoOffer(condo(), NOW)).toEqual({ plan: "completo", expiresAt: inDays(CONDO_FREE_DAYS), free: true, card: false });
   });
   it("activo: el plan que paga el condominio hasta la fecha pagada", () => {
-    expect(condoOffer(condo({ status: "activo", paid_plan: "entreno", paid_until: inDays(60) }), NOW)).toEqual({ plan: "entreno", expiresAt: inDays(60), free: false });
+    expect(condoOffer(condo({ status: "activo", paid_plan: "entreno", paid_until: inDays(60) }), NOW)).toEqual({ plan: "entreno", expiresAt: inDays(60), free: false, card: false });
   });
   it("terminado o activo vencido: el enlace no da nada", () => {
     expect(condoOffer(condo({ status: "terminado" }), NOW)).toBeNull();
@@ -56,7 +56,7 @@ describe("qué da el enlace", () => {
 describe("vincular una cuenta al condominio", () => {
   const base = { condo: condo(), memberOf: null, hadCondoGrant: false, hasPaidPlan: false, now: NOW };
   it("cuenta nueva o existente sin plan pagado: se vincula con el mes gratis", () => {
-    expect(decideJoin(base)).toEqual({ kind: "join", plan: "completo", expiresAt: inDays(30), free: true });
+    expect(decideJoin(base)).toEqual({ kind: "join", plan: "completo", expiresAt: inDays(30), free: true, card: false });
   });
   it("un solo mes gratis por cuenta: volver a abrir el enlace no da otro", () => {
     expect(decideJoin({ ...base, memberOf: 7, hadCondoGrant: true })).toEqual({ kind: "ya_vinculado" });
@@ -130,5 +130,48 @@ describe("solicitud de reunión: cuántos condominios administran", () => {
     expect(a.ok && a.lead.portfolio).toBe(null);
     const b = parseLead({ ...f, portfolio: "  Sí, <b>4</b> condominios " + "x".repeat(60) });
     expect(b.ok && b.lead.portfolio).toBe(("Sí, 4 condominios " + "x".repeat(60)).slice(0, 40));
+  });
+});
+
+describe("0066: condominio gratis hasta una fecha, con tarjeta (Soho Paradisus)", () => {
+  const UNTIL = "2027-01-01T06:00:00.000Z";
+  const soho = (o: Partial<CondoRow> = {}) => condo({ code: "soho-paradisus", name: "Soho Paradisus", card_required: true, free_until: UNTIL, ...o });
+  const base = { condo: soho(), memberOf: null, hadCondoGrant: false, hasPaidPlan: false, now: NOW };
+  it("el acceso termina en la fecha fija, no 30 días desde que se activa, y pide tarjeta", () => {
+    expect(condoOffer(soho(), NOW)).toEqual({ plan: "completo", expiresAt: UNTIL, free: true, card: true });
+  });
+  it("después de la fecha el enlace ya no da nada", () => {
+    expect(condoOffer(soho(), new Date(UNTIL))).toBeNull();
+    expect(decideJoin({ ...base, now: new Date("2027-01-02T00:00:00Z") })).toEqual({ kind: "inactivo" });
+  });
+  it("sin tarjeta lista no se vincula: falta la tarjeta", () => {
+    expect(decideJoin(base)).toEqual({ kind: "falta_tarjeta" });
+    expect(decideJoin({ ...base, cardReady: false })).toEqual({ kind: "falta_tarjeta" });
+  });
+  it("con tarjeta y cobro programado se vincula hasta la fecha", () => {
+    expect(decideJoin({ ...base, cardReady: true })).toEqual({ kind: "join", plan: "completo", expiresAt: UNTIL, free: true, card: true });
+  });
+  it("las reglas de siempre van antes que la tarjeta", () => {
+    expect(decideJoin({ ...base, memberOf: 7 })).toEqual({ kind: "ya_vinculado" });
+    expect(decideJoin({ ...base, memberOf: 9 })).toEqual({ kind: "otro_condominio" });
+    expect(decideJoin({ ...base, hadCondoGrant: true })).toEqual({ kind: "ya_usado" });
+    expect(decideJoin({ ...base, hasPaidPlan: true })).toEqual({ kind: "plan_pagado" });
+  });
+  it("un condominio sin tarjeta sigue igual aunque la cuenta tenga tarjeta", () => {
+    expect(decideJoin({ ...base, condo: condo(), cardReady: true })).toEqual({ kind: "join", plan: "completo", expiresAt: inDays(30), free: true, card: false });
+  });
+  it("el último día gratis es el 31 de diciembre en Costa Rica y el mensaje lo dice", () => {
+    expect(new Date(lastFreeDay(UNTIL)).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" })).toBe("31 de diciembre");
+    const m = joinMessage("join", "Soho Paradisus", UNTIL);
+    expect(m.title).toBe("Listo: Banana Burn gratis hasta el 31 de diciembre");
+    expect(m.body).toContain("El 1 de enero se cobra el plan que elegiste");
+    expect(joinMessage("falta_tarjeta", "Soho Paradisus").body).toContain("Hoy no se cobra nada");
+  });
+  it("el mensaje de WhatsApp dice que es con tarjeta y sin cobro hasta enero", () => {
+    const w = condoWhatsapp({ name: "Soho Paradisus", code: "soho-paradisus", card_required: true, free_until: UNTIL });
+    expect(w).toContain("gratis con todo incluido hasta el 31 de diciembre");
+    expect(w).toContain("no se cobra nada hasta el 1 de enero");
+    expect(w).toContain("/c/soho-paradisus");
+    expect(w).not.toContain("No se necesita tarjeta");
   });
 });
