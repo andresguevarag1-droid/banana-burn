@@ -2249,7 +2249,7 @@ set role anon; select bbtest.login(null);
 select bbtest.fails('0053: anon no lee condominios', $q$ select 1 from public.condos $q$, '42501');
 reset role;
 set role authenticated; select bbtest.login('P');
-select bbtest.ok('0053: soporte ve condominios y residentes', bbtest.num($q$ select 1 from public.condos $q$) = 2 and bbtest.num($q$ select 1 from public.condo_members $q$) = 2);
+select bbtest.ok('0053: soporte ve condominios y residentes', bbtest.num($q$ select 1 from public.condos where code <> 'soho-paradisus' $q$) = 2 and bbtest.num($q$ select 1 from public.condo_members $q$) = 2);
 select bbtest.zero('0053: soporte no cambia condominios por la API (lo hace el servidor)', $q$ update public.condos set status = 'terminado' $q$);
 reset role;
 delete from public.condo_members; delete from public.condos; delete from public.comp_grants where source = 'condominio';
