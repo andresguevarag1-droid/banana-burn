@@ -23,7 +23,7 @@ export function CondoCard({ code, demo, freeDay, chargeDay }: { code: string; de
         choice={choice}
         demo={demo}
         condo={code}
-        submitLabel="Activar gratis con mi tarjeta"
+        submitLabel={`Seguir gratis hasta el ${freeDay}`}
         note={<>Hoy no se cobra nada. El {chargeDay} se cobra {money(price)} {period}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.</>}
         onSaved={() => { window.location.assign(`/c/${code}`); }}
       />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  condoCodeFromName, condoLapsed, lastFreeDay, condoLink, condoOffer, condoWhatsapp, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant,
+  condoCodeFromName, condoLapsed, lastFreeDay, CONDO_TRY_DAYS, condoLink, condoOffer, condoWhatsapp, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant,
   CONDO_FREE_DAYS, type CondoGrant, type CondoRow,
 } from "./condos";
 import { entitlementsFrom, type CompRow } from "./entitlements";
@@ -144,9 +144,11 @@ describe("0066: condominio gratis hasta una fecha, con tarjeta (Soho Paradisus)"
     expect(condoOffer(soho(), new Date(UNTIL))).toBeNull();
     expect(decideJoin({ ...base, now: new Date("2027-01-02T00:00:00Z") })).toEqual({ kind: "inactivo" });
   });
-  it("sin tarjeta lista no se vincula: falta la tarjeta", () => {
-    expect(decideJoin(base)).toEqual({ kind: "falta_tarjeta" });
-    expect(decideJoin({ ...base, cardReady: false })).toEqual({ kind: "falta_tarjeta" });
+  it("sin tarjeta entra igual a probar 7 días (nunca más allá del fin del gratis)", () => {
+    expect(decideJoin(base)).toEqual({ kind: "join", plan: "completo", expiresAt: inDays(CONDO_TRY_DAYS), free: true, card: true, pendingCard: true });
+    expect(decideJoin({ ...base, cardReady: false })).toMatchObject({ kind: "join", pendingCard: true });
+    const late = new Date("2026-12-29T12:00:00Z");
+    expect(decideJoin({ ...base, now: late })).toMatchObject({ kind: "join", expiresAt: UNTIL, pendingCard: true });
   });
   it("con tarjeta y cobro programado se vincula hasta la fecha", () => {
     expect(decideJoin({ ...base, cardReady: true })).toEqual({ kind: "join", plan: "completo", expiresAt: UNTIL, free: true, card: true });
@@ -165,11 +167,15 @@ describe("0066: condominio gratis hasta una fecha, con tarjeta (Soho Paradisus)"
     const m = joinMessage("join", "Soho Paradisus", UNTIL);
     expect(m.title).toBe("Listo: Banana Burn gratis hasta el 31 de diciembre");
     expect(m.body).toContain("El 1 de enero se cobra el plan que elegiste");
-    expect(joinMessage("falta_tarjeta", "Soho Paradisus").body).toContain("Hoy no se cobra nada");
+    const t = joinMessage("join", "Soho Paradisus", UNTIL, inDays(7));
+    expect(t.title).toBe("Listo: pruébalo gratis hasta el 1 de noviembre");
+    expect(t.body).toContain("sin tarjeta");
+    expect(t.body).toContain("sigues gratis hasta el 31 de diciembre");
   });
   it("el mensaje de WhatsApp dice que es con tarjeta y sin cobro hasta enero", () => {
     const w = condoWhatsapp({ name: "Soho Paradisus", code: "soho-paradisus", card_required: true, free_until: UNTIL });
-    expect(w).toContain("gratis con todo incluido hasta el 31 de diciembre");
+    expect(w).toContain("se prueba gratis, sin tarjeta");
+    expect(w).toContain("sigues gratis hasta el 31 de diciembre");
     expect(w).toContain("no se cobra nada hasta el 1 de enero");
     expect(w).toContain("/c/soho-paradisus");
     expect(w).not.toContain("No se necesita tarjeta");

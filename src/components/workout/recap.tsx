@@ -16,6 +16,7 @@ import { WeeklyNutritionUpsell } from "@/components/nutrition-upsell-weekly";
 import type { NutritionUpsellGoal } from "@/lib/plan-access";
 import { RecapNext } from "./recap-next";
 import { FirstWorkoutOffer } from "./first-workout-offer";
+import { CondoWorkoutOffer, type CondoNudge } from "./condo-offer";
 import { CoachPrompt } from "@/components/coach-prompt";
 import { TestimonialAsk } from "./testimonial-card";
 
@@ -33,7 +34,7 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ firstOffer, testimonial = false, nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null, coachPrompt = null }: {
+export function Recap({ condoNudge, firstOffer, testimonial = false, nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null, coachPrompt = null }: {
   /** Primer entreno (#198): la burbuja del coach con respuestas de un toque. `home`: entrenó en casa (sin máquinas). */
   coachPrompt?: { home: boolean } | null;
   /** Tercer entreno guardado y sin opinión todavía (#238): pide 1 a 5 estrellas con permiso para publicarla. */
@@ -41,6 +42,8 @@ export function Recap({ firstOffer, testimonial = false, nutritionUpsell, upcomi
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
   /** Id de la cuenta si este es su primer entreno guardado en la prueba sin tarjeta (#199): muestra la oferta del plan. */
   firstOffer?: string;
+  /** 0066: residente de un condominio con tarjeta que todavía prueba sin tarjeta. */
+  condoNudge?: CondoNudge;
   sex?: string | null;
   voice?: Voice;
   /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
@@ -172,8 +175,8 @@ export function Recap({ firstOffer, testimonial = false, nutritionUpsell, upcomi
           )}
           {saveMsg && <p className="mt-3 text-sm text-banana-ink">{saveMsg}</p>}
           {/* Una sola oferta a la vez: en el primer entreno, la del plan (debajo del logro). */}
-          {firstOffer && <FirstWorkoutOffer userId={firstOffer} />}
-          {!firstOffer && full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
+          {condoNudge ? <CondoWorkoutOffer nudge={condoNudge} /> : firstOffer && <FirstWorkoutOffer userId={firstOffer} />}
+          {!firstOffer && !condoNudge && full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
           {testimonial && <TestimonialAsk />}
           {!repeat && <RecapNext upcoming={upcoming} />}
 

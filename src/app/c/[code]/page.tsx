@@ -34,7 +34,7 @@ const PERKS: [PhosphorIcon, string, string][] = [
 
 const RESULTS = new Set<JoinDecision["kind"]>(["join", "inactivo", "ya_vinculado", "otro_condominio", "ya_usado", "plan_pagado"]);
 
-export default async function CondoLink({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ estado?: string }> }) {
+export default async function CondoLink({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ estado?: string; vista?: string }> }) {
   const code = normalizeCondoCode((await params).code);
   if (!code) notFound();
   const estadoRaw = (await searchParams).estado;
@@ -55,6 +55,8 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
     }
   }
   if (v?.demo && estado === "join") { member = true; grantUntil = new Date(Date.now() + 30 * 864e5).toISOString(); }
+  // Demo de la prueba sin tarjeta (0066): /c/con-tarjeta?vista=probando.
+  if (v?.demo && code === "con-tarjeta" && (await searchParams).vista === "probando") { member = true; grantUntil = new Date(Date.now() + 5 * 864e5).toISOString(); }
   const offer = condo ? condoOffer(condo) : null;
   const name = condo?.name ?? "tu condominio";
   // 0066: gratis hasta una fecha y solo con tarjeta. cardReady: ya tiene tarjeta activa y su cobro programado.
@@ -70,8 +72,10 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
   const cta = withCard ? `Activar gratis hasta el ${freeDay}` : offer?.free === false ? "Activar mi acceso" : "Activar mi mes gratis";
   const live = grantUntil && Date.parse(grantUntil) > Date.now();
 
-  // 0066: con tarjeta, la oferta es una página completa con Coach Banana y El Nuevo (card-landing.tsx).
-  const rich = view === "offer" && withCard;
+  // 0066: con tarjeta, la oferta es una página completa con Coach Banana y El Nuevo (card-landing.tsx). También para quien
+  // ya prueba sin tarjeta: le recuerda hasta cuándo prueba y le pide la tarjeta para seguir gratis hasta el fin.
+  const trying = member && withCard && !(grantUntil && until && Date.parse(grantUntil) >= Date.parse(until));
+  const rich = (view === "offer" && withCard) || trying;
   const wide = rich ? "max-w-5xl" : "max-w-3xl";
   if (rich) {
     return (
@@ -80,7 +84,8 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
           <div className={`mx-auto flex h-16 ${wide} items-center justify-between gap-3 px-4 sm:px-6`}><Logo href={`/c/${code}`} compact /></div>
         </header>
         <main id="contenido" className={`mx-auto ${wide} px-4 pb-16 pt-6 sm:px-6 sm:pt-10`}>
-          <CardCondoLanding code={code} name={name} freeDay={freeDay} chargeDay={chargeDay} viewer={v ? { email: v.email ?? null, demo: !!v.demo } : null} cardReady={!!cardReady} />
+          <CardCondoLanding code={code} name={name} freeDay={freeDay} chargeDay={chargeDay} viewer={v ? { email: v.email ?? null, demo: !!v.demo, onboarded: v.onboarded !== false } : null} cardReady={!!cardReady}
+            trying={trying ? { until: live ? day(lastFreeDay(grantUntil!)) : null } : null} />
         </main>
         <footer className="border-t border-line">
           <div className={`mx-auto flex ${wide} flex-col gap-3 px-4 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6`}>

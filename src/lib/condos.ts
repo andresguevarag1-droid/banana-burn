@@ -4,14 +4,17 @@
 //   - Activo: el condominio eligió un plan y lo paga fuera de la app; sus residentes tienen ese plan hasta paid_until.
 //   - Terminado: el enlace deja de servir y no se extiende el acceso de nadie (lo que ya tenían corre hasta su fecha).
 //   - Un mes gratis por cuenta y una cuenta en un solo condominio. Una cuenta con plan pagado no lo necesita.
-//   - Con tarjeta hasta una fecha (0066, piloto Soho Paradisus): gratis con todo incluido hasta free_until y solo con una
-//     tarjeta activa y su cobro programado; ese cobro pasa a free_until a precio normal.
+//   - Con tarjeta hasta una fecha (0066, piloto Soho Paradisus): primero se prueba SIN tarjeta (CONDO_TRY_DAYS con todo
+//     incluido, nunca más allá de free_until). Al dejar la tarjeta, el acceso sigue gratis hasta free_until y el primer
+//     cobro pasa a esa fecha a precio normal.
 import { SITE_URL } from "@/lib/env";
 import type { PlanId } from "@/lib/plans";
 
 export const CONDO_COOKIE = "bb_condo";
 export const CONDO_COOKIE_MAX_AGE = 30 * 86400;
 export const CONDO_FREE_DAYS = 30;
+/** 0066: días para probar sin tarjeta en un condominio con tarjeta. */
+export const CONDO_TRY_DAYS = 7;
 /** Aviso a los residentes antes de que termine su mes gratis (si el condominio todavía no eligió plan). */
 export const CONDO_NOTICE_DAYS = 3;
 
@@ -67,7 +70,7 @@ export function condoWhatsapp(c: { name: string; code: string; card_required?: b
       "",
       "Banana Burn es un entrenador personal en el celular: el plan de cada semana, la técnica de cada ejercicio y un coach que responde dudas a cualquier hora.",
       "",
-      `Para los residentes es gratis con todo incluido hasta el ${d(lastFreeDay(c.free_until))}. Solo se deja la tarjeta: no se cobra nada hasta el ${d(c.free_until)} y se cancela cuando quieras antes de esa fecha.`,
+      `Para los residentes se prueba gratis, sin tarjeta. Si te gusta, dejas tu tarjeta y sigues gratis hasta el ${d(lastFreeDay(c.free_until))}: no se cobra nada hasta el ${d(c.free_until)} y se cancela cuando quieras antes de esa fecha.`,
       "",
       `Actívalo aquí: ${condoLink(c.code)}`,
     ].join("\n");
@@ -85,6 +88,8 @@ export function condoWhatsapp(c: { name: string; code: string; card_required?: b
 
 /** Lo que da hoy el enlace del condominio a una cuenta nueva en él. null: el enlace no está activo. */
 export type CondoOffer = { plan: PlanId; expiresAt: string; free: boolean; card: boolean };
+/** Hasta cuándo prueba sin tarjeta: CONDO_TRY_DAYS desde ahora, nunca después del fin del acceso gratis. */
+export const condoTryUntil = (offerEnd: string, now = new Date()) => new Date(Math.min(now.getTime() + CONDO_TRY_DAYS * 864e5, Date.parse(offerEnd))).toISOString();
 
 /** Lo que da hoy el enlace del condominio a una cuenta nueva en él. null: el enlace no está activo. */
 export function condoOffer(c: Pick<CondoRow, "status" | "paid_plan" | "paid_until"> & Partial<Pick<CondoRow, "card_required" | "free_until">>, now = new Date()): CondoOffer | null {
@@ -101,8 +106,7 @@ export function condoOffer(c: Pick<CondoRow, "status" | "paid_plan" | "paid_unti
 }
 
 export type JoinDecision =
-  | ({ kind: "join" } & CondoOffer)
-  | { kind: "falta_tarjeta" } // 0066: el condominio pide tarjeta y la cuenta todavía no tiene una lista
+  | ({ kind: "join"; pendingCard?: boolean } & CondoOffer) // pendingCard (0066): prueba sin tarjeta hasta expiresAt
   | { kind: "inactivo" } // no existe, terminado o el acuerdo venció
   | { kind: "ya_vinculado" } // ya es residente de este condominio
   | { kind: "otro_condominio" } // ya es residente de otro condominio
@@ -118,7 +122,8 @@ export function decideJoin(i: { condo: (Pick<CondoRow, "id" | "status" | "paid_p
   if (i.memberOf != null) return { kind: "otro_condominio" };
   if (i.hadCondoGrant) return { kind: "ya_usado" };
   if (i.hasPaidPlan) return { kind: "plan_pagado" };
-  if (offer.card && !i.cardReady) return { kind: "falta_tarjeta" };
+  // 0066: sin tarjeta lista entra igual a probar unos días; con la tarjeta, el acceso llega hasta el fin del gratis.
+  if (offer.card && !i.cardReady) return { kind: "join", ...offer, expiresAt: condoTryUntil(offer.expiresAt, now), pendingCard: true };
   return { kind: "join", ...offer };
 }
 
@@ -149,11 +154,11 @@ export function endingNoticeDue(c: Pick<CondoRow, "status" | "paid_until">, g: C
 export const condoLapsed = (c: Pick<CondoRow, "status" | "paid_until">, now = new Date()) => c.status === "activo" && !!c.paid_until && Date.parse(c.paid_until) <= now.getTime();
 
 /** Texto para el residente según la decisión. */
-export function joinMessage(d: JoinDecision["kind"], name: string, freeUntil?: string | null): { title: string; body: string } {
+export function joinMessage(d: JoinDecision["kind"], name: string, freeUntil?: string | null, tryUntil?: string | null): { title: string; body: string } {
   const day = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
+  if (freeUntil && tryUntil && d === "join") return { title: `Listo: pruébalo gratis hasta el ${day(lastFreeDay(tryUntil))}`, body: `Tienes todo incluido, sin tarjeta. Si te gusta, deja tu tarjeta y sigues gratis hasta el ${day(lastFreeDay(freeUntil))}.` };
   if (freeUntil && d === "join") return { title: `Listo: Banana Burn gratis hasta el ${day(lastFreeDay(freeUntil))}`, body: `Tienes todo incluido, con entreno y nutrición. El ${day(freeUntil)} se cobra el plan que elegiste y te avisamos 2 días antes.` };
   switch (d) {
-    case "falta_tarjeta": return { title: "Falta tu tarjeta", body: `Para activar el regalo de ${name}, deja tu tarjeta lista. Hoy no se cobra nada.` };
     case "join": return { title: `Tu condominio ${name} te regala el primer mes`, body: "Ya tienes Banana Burn completo, con entreno y nutrición. Arma tu plan en 2 minutos." };
     case "ya_vinculado": return { title: `Ya eres parte de ${name}`, body: "Tu cuenta ya está vinculada a tu condominio. Sigue entrenando." };
     case "otro_condominio": return { title: "Tu cuenta ya está vinculada a otro condominio", body: "Cada cuenta puede pertenecer a un solo condominio. Si te mudaste, escríbenos a hola@bananaburn.app y lo revisamos." };
