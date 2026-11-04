@@ -14,13 +14,14 @@ import { isDemoMode } from "@/lib/env";
 import { condoOffer, joinMessage, lastFreeDay, normalizeCondoCode, type CondoRow, type JoinDecision } from "@/lib/condos";
 import { condoByCode, condoCardReady } from "@/lib/condos-server";
 import { CondoCard } from "./condo-card";
+import { CardCondoLanding } from "./card-landing";
 import { longDate } from "@/lib/email/templates";
 import { TECHNIQUE_COUNT } from "@/lib/exercise-frames";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: { absolute: "Tu mes gratis de Banana Burn" },
-  description: "Tu condominio te regala el primer mes de Banana Burn: tu entrenador personal en el celular.",
+  title: { absolute: "Banana Burn en tu condominio" },
+  description: "Tu entrenador personal en el celular, para los residentes de tu condominio.",
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
 };
 
@@ -68,6 +69,28 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
   const msg = joinMessage(view === "member" ? "join" : view === "result" ? estado! : "inactivo", name, condo?.card_required ? condo.free_until : null);
   const cta = withCard ? `Activar gratis hasta el ${freeDay}` : offer?.free === false ? "Activar mi acceso" : "Activar mi mes gratis";
   const live = grantUntil && Date.parse(grantUntil) > Date.now();
+
+  // 0066: con tarjeta, la oferta es una página completa con Coach Banana y El Nuevo (card-landing.tsx).
+  const rich = view === "offer" && withCard;
+  const wide = rich ? "max-w-5xl" : "max-w-3xl";
+  if (rich) {
+    return (
+      <div className="min-h-dvh bg-paper text-body">
+        <header className="border-b border-line/70 bg-paper">
+          <div className={`mx-auto flex h-16 ${wide} items-center justify-between gap-3 px-4 sm:px-6`}><Logo href={`/c/${code}`} compact /></div>
+        </header>
+        <main id="contenido" className={`mx-auto ${wide} px-4 pb-16 pt-6 sm:px-6 sm:pt-10`}>
+          <CardCondoLanding code={code} name={name} freeDay={freeDay} chargeDay={chargeDay} viewer={v ? { email: v.email ?? null, demo: !!v.demo } : null} cardReady={!!cardReady} />
+        </main>
+        <footer className="border-t border-line">
+          <div className={`mx-auto flex ${wide} flex-col gap-3 px-4 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6`}>
+            <p>Banana Burn es un producto de Atlas Resources SRL, Costa Rica.</p>
+            <p className="flex gap-4"><Link href="/privacidad" className="tap underline underline-offset-2">Privacidad</Link><Link href="/terminos" className="tap underline underline-offset-2">Términos</Link></p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-paper text-body">
