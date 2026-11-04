@@ -16,26 +16,22 @@ export const CONFIG = {
     {
       "id": "t2",
       "texto": "Coach Banana te dice qué hacer",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t3",
       "texto": "Con cuánto peso",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t4",
       "texto": "Y cuántas repeticiones",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t5",
       "texto": "Sabes cuánto te falta",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t6",
@@ -47,8 +43,7 @@ export const CONFIG = {
       "texto": "Hoy entrenas en casa",
       "tipo": "telefono",
       "captura": "C1",
-      "archivo": "public/landing/campana-9nov/c1-hoy-primer-dia.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c1-hoy-primer-dia.png"
     },
     {
       "id": "t8",

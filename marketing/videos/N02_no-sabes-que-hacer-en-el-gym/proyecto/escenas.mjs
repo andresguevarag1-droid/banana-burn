@@ -16,28 +16,24 @@ export const CONFIG = {
     {
       "id": "t2",
       "texto": "Coach Banana te dice el ejercicio",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t3",
       "texto": "Con cuánto peso",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t4",
       "texto": "Y cuántas repeticiones",
-      "tipo": "telefono",
-      "etiqueta": "Ejemplo"
+      "tipo": "telefono"
     },
     {
       "id": "t5",
       "texto": "Y cómo se hace",
       "tipo": "telefono",
       "captura": "C8",
-      "archivo": "public/landing/campana-9nov/c8-como-se-hace.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c8-como-se-hace.png"
     },
     {
       "id": "t6",
@@ -49,8 +45,7 @@ export const CONFIG = {
       "texto": "Un ejercicio por pantalla",
       "tipo": "telefono",
       "captura": "C6",
-      "archivo": "public/landing/campana-9nov/c6-guiado-gym.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c6-guiado-gym.png"
     },
     {
       "id": "cierre",

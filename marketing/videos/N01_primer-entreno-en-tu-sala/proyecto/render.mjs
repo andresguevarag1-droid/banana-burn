@@ -126,15 +126,26 @@ if (modo === 'check') {
       const k = e.id === 't1' ? 1 : ease(local/.3);
       ctx.globalAlpha = k; ctx.translate(0, (1-k)*32);
       if (e.tipo === 'telefono' || e.tipo === 'video') {
-        texto(ctx, e.texto, 300, 900, 76, C.ink, 190);
-        texto(ctx, e.etiqueta, 505, 900, 38, C.ink, 46);
-        box(ctx, 110, 620, 860, 900, 42, C.ink);
+        texto(ctx, e.texto, 270, 900, 70, C.ink, 190);
+        box(ctx, 110, 510, 860, 1040, 42, C.ink);
         if (e.texto === 'Sabes cuánto te falta') {
-          ctx.drawImage(original, 0, 110, 780, 105, 130, 970, 820, 110);
+          ctx.drawImage(original, 0, 110, 780, 105, 130, 950, 820, 110);
         } else {
           const medio = e.archivo ? medios.get(e.archivo) : captura;
           const imagen = Array.isArray(medio) ? medio[Math.min(medio.length - 1, Math.floor(local * FPS))] : medio;
-          contain(ctx, imagen, 130, 640, 820, 860);
+          // Ancho real de interfaz: 820 px (76 % del cuadro), sin deformar.
+          // Si es alta, recorrerla completa dentro del teléfono. Se mantienen
+          // el inicio y el final 0.35 s; C3 empieza por el botón del toque.
+          const ancho = 820, alto = 1000, x = 130, y = 530;
+          const escala = ancho / imagen.width;
+          const altura = imagen.height * escala;
+          const recorrido = Math.max(0, altura - alto);
+          const pausaInicial = e.tipo === 'video' ? 1.2 : .35;
+          const avance = Math.max(0, Math.min(1, (local - pausaInicial) / (e.fin - e.inicio - pausaInicial - .35)));
+          const posicion = e.tipo === 'video' ? 1 - avance : avance;
+          ctx.save(); ctx.beginPath(); ctx.rect(x, y, ancho, alto); ctx.clip();
+          ctx.drawImage(imagen, x, y + Math.max(0, (alto-altura)/2) - recorrido*posicion, ancho, altura);
+          ctx.restore();
         }
       } else {
         texto(ctx, e.texto, 620, 900, 100, C.ink, 500);
@@ -179,5 +190,18 @@ if (modo === 'check') {
       ctx.fillText(`${e.inicio}-${e.fin}s / ${cuenta(e.texto + (e.etiqueta ? ` ${e.etiqueta}` : ''))} palabras`, x, y+505);
     });
     writeFileSync(join(salida, CONFIG.slug+'_hoja-revision.png'), c.toBuffer('image/png'));
+    // Inicio, centro y final permiten revisar toda captura con recorrido.
+    const pantallas = linea('reel').filter(e => ['telefono', 'video'].includes(e.tipo));
+    const detalle = createCanvas(1080, pantallas.length*520), dc = detalle.getContext('2d');
+    dc.fillStyle = C.paper; dc.fillRect(0,0,detalle.width,detalle.height);
+    pantallas.forEach((e, fila) => {
+      [.3, (e.fin-e.inicio)/2, e.fin-e.inicio-.02].forEach((t, col) => {
+        const x = col*360+45, y = fila*520;
+        dc.drawImage(cuadro('reel', e.inicio+t), x, y, 270, 480);
+        dc.font = '600 18px Jakarta600'; dc.fillStyle = C.ink;
+        dc.fillText(`${e.id} / ${(e.inicio+t).toFixed(2)}s`, x, y+505);
+      });
+    });
+    writeFileSync(join(salida, CONFIG.slug+'_hoja-recorrido.png'), detalle.toBuffer('image/png'));
   }
 }

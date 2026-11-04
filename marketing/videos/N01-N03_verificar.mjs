@@ -8,7 +8,10 @@ for (const slug of readdirSync(base).filter(s => /^N0[123]_/.test(s))) {
   const proyecto = new URL(`${slug}/proyecto/`, base);
   const require = createRequire(new URL('render.mjs', proyecto));
   const ffmpeg = require('@ffmpeg-installer/ffmpeg').path;
-  const { versiones } = await import(new URL('escenas.mjs', proyecto));
+  const { versiones, CONFIG } = await import(new URL('escenas.mjs', proyecto));
+  for (const escena of CONFIG.escenas) {
+    assert.ok(!/demo|ejemplo/i.test(escena.etiqueta ?? ''), `${slug}: etiqueta pública no permitida`);
+  }
   const check = spawnSync(process.execPath, [new URL('render.mjs', proyecto).pathname, 'check'], { encoding: 'utf8' });
   assert.equal(check.status, 0, check.stderr);
   for (const [nombre, version] of Object.entries(versiones)) {

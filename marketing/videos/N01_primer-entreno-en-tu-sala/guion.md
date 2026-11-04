@@ -9,13 +9,13 @@ Render de revisión, no publicar. Sin audio; diseñado para verse sin sonido.
 | Tiempo | Texto | Visual |
 | --- | --- | --- |
 | 0 a 2 s | Tu primer entreno en casa: 12 minutos | Tipografía animada, sin escenas humanas |
-| 2 a 4 s | Sin equipo ni gym | Captura real demo `public/landing/campana-9nov/c1-hoy-primer-dia.png`, sin recortar |
-| 4 a 6.5 s | Un ejercicio por pantalla | Captura real demo `public/landing/campana-9nov/c2-guiado-casa.png`, sin recortar |
-| 6.5 a 8.5 s | Abre tu entreno | C2 real demo, sin recortar |
-| 8.5 a 10.5 s | Tocas Terminé la serie | Captura real demo `public/landing/campana-9nov/c3-termine-la-serie.mp4`, interfaz completa; se quita solo el margen gris |
-| 10.5 a 12.5 s | Descansas y sigues | Captura real demo `public/landing/campana-9nov/c4-descanso.png`, sin recortar |
+| 2 a 4 s | Sin equipo ni gym | Captura real `public/landing/campana-9nov/c1-hoy-primer-dia.png`, recorrido completo sin alterar nombres ni cifras |
+| 4 a 6.5 s | Un ejercicio por pantalla | Captura real `public/landing/campana-9nov/c2-guiado-casa.png`, recorrido completo sin alterar nombres ni cifras |
+| 6.5 a 8.5 s | Abre tu entreno | C2 real, recorrido completo sin alterar nombres ni cifras |
+| 8.5 a 10.5 s | Tocas Terminé la serie | Captura real `public/landing/campana-9nov/c3-termine-la-serie.mp4`, interfaz completa; se quita solo el margen gris |
+| 10.5 a 12.5 s | Descansas y sigues | Captura real `public/landing/campana-9nov/c4-descanso.png`, recorrido completo sin alterar nombres ni cifras |
 | 12.5 a 14.5 s | 12 minutos en tu sala | Tipografía animada, sin escenas humanas |
-| 14.5 a 17 s | Terminaste las series | Captura real demo `public/landing/campana-9nov/c5-resumen.png`, sin recortar |
+| 14.5 a 17 s | Terminaste las series | Captura real `public/landing/campana-9nov/c5-resumen.png`, recorrido completo sin alterar nombres ni cifras |
 | 17 a 20 s | Empieza 7 días gratis en bananaburn.app | Coach Banana señala, botón y logo |
 
 ## Versión de 15 segundos
@@ -41,3 +41,7 @@ No publicar. Pauta en pausa hasta 30 % de activación y aprobación de Andrés. 
 
 
 Pie sugerido: Regístrate y haz tu primer entreno hoy. Empieza 7 días gratis en bananaburn.app. #BananaBurn #PrimerEntreno #Entrenamiento #EntrenoEnCasa #Gym
+
+## Ajustes de ronda 3
+
+Sin etiquetas Demo ni Ejemplo en el arte. Interfaz a 820 px de ancho (76 % de 1080), dentro de x=60–1020. Las pantallas altas se recorren verticalmente, con pausas en los extremos, para mostrar todo sin reducir la letra ni alterar datos. C3 sostiene la zona del botón durante 1.2 s y luego recorre hacia arriba. Se conservan los tiempos y el cierre.

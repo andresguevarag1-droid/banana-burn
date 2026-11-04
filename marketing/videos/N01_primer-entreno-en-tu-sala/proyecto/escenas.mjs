@@ -12,22 +12,19 @@ export const CONFIG = {
       "texto": "Sin equipo ni gym",
       "tipo": "telefono",
       "captura": "C1",
-      "archivo": "public/landing/campana-9nov/c1-hoy-primer-dia.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c1-hoy-primer-dia.png"
     },
     {
       "id": "t3",
       "texto": "Un ejercicio por pantalla",
       "tipo": "telefono",
       "captura": "C2",
-      "archivo": "public/landing/campana-9nov/c2-guiado-casa.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c2-guiado-casa.png"
     },
     {
       "id": "t4",
       "texto": "Abre tu entreno",
       "tipo": "telefono",
-      "etiqueta": "Demo",
       "archivo": "public/landing/campana-9nov/c2-guiado-casa.png"
     },
     {
@@ -35,16 +32,14 @@ export const CONFIG = {
       "texto": "Tocas Terminé la serie",
       "tipo": "video",
       "captura": "C3",
-      "archivo": "public/landing/campana-9nov/c3-termine-la-serie.mp4",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c3-termine-la-serie.mp4"
     },
     {
       "id": "t6",
       "texto": "Descansas y sigues",
       "tipo": "telefono",
       "captura": "C4",
-      "archivo": "public/landing/campana-9nov/c4-descanso.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c4-descanso.png"
     },
     {
       "id": "t7",
@@ -56,8 +51,7 @@ export const CONFIG = {
       "texto": "Terminaste las series",
       "tipo": "telefono",
       "captura": "C5",
-      "archivo": "public/landing/campana-9nov/c5-resumen.png",
-      "etiqueta": "Demo"
+      "archivo": "public/landing/campana-9nov/c5-resumen.png"
     },
     {
       "id": "cierre",
