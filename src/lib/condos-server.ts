@@ -9,16 +9,51 @@ import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { hasLivePaidSubscription } from "@/lib/trial-billing";
+import { amountMinorFor } from "@/lib/trial";
+import type { Billing, PlanId } from "@/lib/plans";
 import { CONDO_COOKIE, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant, type CondoGrant, type CondoRow, type JoinDecision } from "@/lib/condos";
 import { errCode, logError } from "@/lib/log";
 
 const MISSING = new Set(["42P01", "PGRST205", "42703", "PGRST204"]);
-const CONDO_COLS = "id,code,name,status,free_starts_at,free_ends_at,paid_plan,paid_until";
+const BASE_COLS = "id,code,name,status,free_starts_at,free_ends_at,paid_plan,paid_until";
+// 0066 (card_required, free_until). Sin la migración se lee sin esas columnas y todo sigue como en 0053.
+const CONDO_COLS = `${BASE_COLS},card_required,free_until`;
+
+async function selectCondos<T>(run: (cols: string) => PromiseLike<{ data: T | null; error: { code?: string } | null }>): Promise<{ data: T | null; error: { code?: string } | null }> {
+  const r = await run(CONDO_COLS);
+  if (r.error && (r.error.code === "42703" || r.error.code === "PGRST204")) return run(BASE_COLS);
+  return r;
+}
 
 export async function condoByCode(db: SupabaseClient, code: string): Promise<CondoRow | null> {
-  const { data, error } = await db.from("condos").select(CONDO_COLS).eq("code", code).maybeSingle();
+  const { data, error } = await selectCondos<CondoRow>((cols) => db.from("condos").select(cols).eq("code", code).maybeSingle() as unknown as PromiseLike<{ data: CondoRow | null; error: { code?: string } | null }>);
   if (error) { if (!MISSING.has(error.code ?? "")) logError("condominios", "lookup_failed", { code: error.code }); return null; }
   return (data as CondoRow | null) ?? null;
+}
+
+/** 0066: ¿la cuenta tiene tarjeta activa y su primer cobro programado (lo que pide un condominio con tarjeta)? */
+export async function condoCardReady(db: SupabaseClient, userId: string): Promise<boolean> {
+  const [{ data: pm }, { data: ch }] = await Promise.all([
+    db.from("payment_methods").select("status").eq("user_id", userId).maybeSingle(),
+    db.from("trial_charges").select("status").eq("user_id", userId).maybeSingle(),
+  ]);
+  return (pm as { status?: string } | null)?.status === "active" && (ch as { status?: string } | null)?.status === "scheduled";
+}
+
+/**
+ * 0066: el primer cobro programado pasa a la fecha en que termina el acceso gratis del condominio, a precio normal (sin el
+ * 50 % del primer mes) y con el aviso de 2 días antes listo otra vez. moved_from guarda la fecha original (como 0029).
+ * Nunca adelanta un cobro ni toca uno que ya se está procesando (solo filas "scheduled" que caerían antes).
+ */
+export async function moveChargeToCondoEnd(db: SupabaseClient, userId: string, until: string, now = new Date()): Promise<boolean> {
+  const { data } = await db.from("trial_charges").select("id,plan,billing,charge_at,moved_from,status").eq("user_id", userId).maybeSingle();
+  const row = data as { id: number; plan: PlanId; billing: Billing; charge_at: string; moved_from?: string | null; status: string } | null;
+  if (!row || row.status !== "scheduled" || Date.parse(row.charge_at) >= Date.parse(until)) return false;
+  const { data: done } = await db.from("trial_charges").update({
+    moved_from: row.moved_from ?? row.charge_at, charge_at: until, next_attempt_at: until, reminder_sent_at: null,
+    promo: null, amount_minor: amountMinorFor(row.plan, row.billing), updated_at: now.toISOString(),
+  }).eq("id", row.id).eq("status", "scheduled").select("id");
+  return (done?.length ?? 0) > 0;
 }
 
 export type JoinResult = { kind: JoinDecision["kind"] | "sin_config"; condo: Pick<CondoRow, "name" | "code"> | null };
@@ -29,12 +64,13 @@ export async function joinCondo(userId: string, rawCode: string, now = new Date(
   const db = adminClient();
   if (!db) return { kind: "sin_config", condo: null };
   const condo = code ? await condoByCode(db, code) : null;
-  const [{ data: member }, { data: grants }, paid] = await Promise.all([
+  const [{ data: member }, { data: grants }, paid, cardReady] = await Promise.all([
     db.from("condo_members").select("condo_id").eq("user_id", userId).maybeSingle(),
     db.from("comp_grants").select("id").eq("user_id", userId).eq("source", "condominio").limit(1),
     hasLivePaidSubscription(db, userId).catch(() => false),
+    condo?.card_required ? condoCardReady(db, userId).catch(() => false) : Promise.resolve(false),
   ]);
-  const d = decideJoin({ condo, memberOf: (member as { condo_id: number } | null)?.condo_id ?? null, hadCondoGrant: (grants?.length ?? 0) > 0, hasPaidPlan: paid, now });
+  const d = decideJoin({ condo, memberOf: (member as { condo_id: number } | null)?.condo_id ?? null, hadCondoGrant: (grants?.length ?? 0) > 0, hasPaidPlan: paid, cardReady, now });
   const out = (kind: JoinResult["kind"]): JoinResult => ({ kind, condo: condo ? { name: condo.name, code: condo.code } : null });
   if (d.kind !== "join" || !condo) return out(d.kind);
 
@@ -55,9 +91,14 @@ export async function joinCondo(userId: string, rawCode: string, now = new Date(
     await db.from("comp_grants").delete().eq("id", (g as { id: number }).id);
     return out(mErr.code === "23505" ? "ya_vinculado" : "inactivo");
   }
-  // Un cobro programado de su prueba individual ya no aplica: el condominio le da el acceso y nadie le cobra al terminar.
-  await db.from("trial_charges").update({ status: "superseded", next_attempt_at: null, updated_at: at }).eq("user_id", userId).in("status", ["scheduled", "retry_scheduled"]);
-  const msg = joinMessage("join", condo.name);
+  if (d.card) {
+    // Con tarjeta (0066): el cobro sigue, pero pasa al final del acceso gratis y a precio normal.
+    await moveChargeToCondoEnd(db, userId, d.expiresAt, now);
+  } else {
+    // Un cobro programado de su prueba individual ya no aplica: el condominio le da el acceso y nadie le cobra al terminar.
+    await db.from("trial_charges").update({ status: "superseded", next_attempt_at: null, updated_at: at }).eq("user_id", userId).in("status", ["scheduled", "retry_scheduled"]);
+  }
+  const msg = joinMessage("join", condo.name, d.card ? d.expiresAt : null);
   const { notifyInApp } = await import("@/lib/email");
   await notifyInApp(userId, { kind: "condominio", title: msg.title, body: msg.body, url: "/app" }).catch(() => false);
   return out("join");
@@ -120,7 +161,8 @@ export async function syncCondoMembers(db: SupabaseClient, c: CondoRow, now = ne
         else { out.synced++; if (m.ending_notified_at) await db.from("condo_members").update({ ending_notified_at: null }).eq("id", m.id); }
         continue;
       }
-      if (endingNoticeDue(c, g, m.ending_notified_at, now)) {
+      // Con tarjeta (0066) no hay aviso de "termina tu mes gratis": el aviso del cobro (2 días antes) ya lo explica.
+      if (!c.card_required && endingNoticeDue(c, g, m.ending_notified_at, now)) {
         const { data: claimed } = await db.from("condo_members").update({ ending_notified_at: now.toISOString() }).eq("id", m.id).is("ending_notified_at", null).select("id");
         if (!claimed?.length) continue;
         const { sendCondoEndingEmail, notifyInApp } = await import("@/lib/email");
@@ -139,7 +181,7 @@ export async function sweepCondos(now = new Date(), opts: { deadline?: number } 
   const db = adminClient();
   if (!db) return out;
   const time = () => !opts.deadline || Date.now() < opts.deadline;
-  const { data: condos, error } = await db.from("condos").select(CONDO_COLS).in("status", ["mes_gratis", "activo"]).limit(1000);
+  const { data: condos, error } = await selectCondos<CondoRow[]>((cols) => db.from("condos").select(cols).in("status", ["mes_gratis", "activo"]).limit(1000) as unknown as PromiseLike<{ data: CondoRow[] | null; error: { code?: string } | null }>);
   if (error) { if (!MISSING.has(error.code ?? "")) out.errors++; return out; }
   for (const c of (condos as CondoRow[] | null) ?? []) {
     if (!time()) break;

@@ -45,7 +45,7 @@ function useProvider(skip: boolean) {
  * Tarjetas de fuera de Costa Rica (Tilopay, 0042): la persona guarda la tarjeta en la página segura de Tilopay y vuelve a
  * Mi plan. `beforeRedirect` deja guardado lo que haga falta antes de salir (la bienvenida guarda el plan).
  */
-export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect }: { choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean> }) {
+export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo }: { choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean>; condo?: string }) {
   const id = useId();
   const [c, setC] = useState<CardInput>({ holder: "", number: "", exp: "", cvv: "" });
   const [touched, setTouched] = useState(false);
@@ -124,7 +124,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       return setErr("No pudimos conectar con el procesador de pagos. Revisa tu conexión e intenta de nuevo.");
     }
     setBusy("guardar");
-    const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing });
+    const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing, ...(condo ? { condo } : {}) });
     setBusy(null);
     if (!saved.ok) return setErr(saved.error ?? "No pudimos guardar tu tarjeta. Intenta de nuevo.");
     setC({ holder: "", number: "", exp: "", cvv: "" });

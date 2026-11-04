@@ -181,7 +181,7 @@ const PM_ID = /^[A-Za-z0-9_-]{1,100}$/;
  * Guarda la tarjeta que el navegador creó en ONVO y programa (o reanuda, o cobra) el primer cobro.
  * `plan`/`billing` los valida el servidor; el monto sale de plans.ts (sin descuentos por nivel: esos son solo de programas Premium).
  */
-export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan: PlanId; billing: Billing }, now = new Date()): Promise<SaveCardResult> {
+export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan: PlanId; billing: Billing; condo?: string | null }, now = new Date()): Promise<SaveCardResult> {
   const db = admin();
   if (!PM_ID.test(input.paymentMethodId)) throw new BillingError("Tarjeta inválida.", 400);
   if (!priceIdFor(input.plan, input.billing)) throw new BillingError("Este plan aún no está disponible para pago.", 503);
@@ -209,7 +209,44 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
   const fpRaw = typeof raw.fingerprint === "string" ? raw.fingerprint : typeof raw.card?.fingerprint === "string" ? raw.card.fingerprint : null;
   const verified: VerifiedCard = { provider: "onvo", ...c, customerId, providerFingerprint: fpRaw };
   if (ctx.mode === "replace") return replaceCard(db, v, verified, ctx.subs, now);
-  return saveVerifiedCard(db, v, verified, { plan: input.plan, billing: input.billing }, ctx.row, ctx.plan, now);
+  return saveVerifiedCard(db, v, verified, { plan: input.plan, billing: input.billing, condo: input.condo ?? null }, ctx.row, ctx.plan, now);
+}
+
+/**
+ * 0066: la tarjeta se guarda desde el enlace de un condominio que pide tarjeta (/c/<código>). Si la cuenta puede recibir su
+ * acceso (enlace activo, sin otro condominio, sin acceso de condominio usado y sin plan pagado), devuelve la fecha en que
+ * termina el acceso gratis: el primer cobro se programa ese día a precio normal. null: se guarda como cualquier tarjeta.
+ */
+async function condoCardUntil(db: SupabaseClient, userId: string, rawCode: string | null | undefined, now: Date): Promise<{ code: string; until: string } | null> {
+  if (!rawCode) return null;
+  try {
+    const { normalizeCondoCode, decideJoin } = await import("@/lib/condos");
+    const { condoByCode } = await import("@/lib/condos-server");
+    const code = normalizeCondoCode(rawCode);
+    const condo = code ? await condoByCode(db, code) : null;
+    if (!code || !condo?.card_required) return null;
+    const [{ data: member }, { data: grants }, paid] = await Promise.all([
+      db.from("condo_members").select("condo_id").eq("user_id", userId).maybeSingle(),
+      db.from("comp_grants").select("id").eq("user_id", userId).eq("source", "condominio").limit(1),
+      hasLivePaidSubscription(db, userId).catch(() => false),
+    ]);
+    const d = decideJoin({ condo, memberOf: (member as { condo_id: number } | null)?.condo_id ?? null, hadCondoGrant: (grants?.length ?? 0) > 0, hasPaidPlan: paid, cardReady: true, now });
+    return d.kind === "join" && d.card ? { code, until: d.expiresAt } : null;
+  } catch (e) {
+    log("condominio con tarjeta: no se pudo revisar", { userId, error: errInfo(e) });
+    return null;
+  }
+}
+
+/** 0066: con la tarjeta y el cobro listos, vincula la cuenta al condominio (acceso gratis y cobro movido a su fecha). */
+async function joinCardCondo(userId: string, code: string, now: Date): Promise<boolean> {
+  try {
+    const { joinCondo } = await import("@/lib/condos-server");
+    return (await joinCondo(userId, code, now)).kind === "join";
+  } catch (e) {
+    log("condominio con tarjeta: no se pudo vincular", { userId, error: errInfo(e) });
+    return false;
+  }
 }
 
 export type VerifiedCard = { provider: PayProvider; customerId: string; paymentMethodId: string; brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null; providerFingerprint?: string | null };
@@ -309,13 +346,15 @@ export async function replaceCard(db: SupabaseClient, v: Viewer, c: VerifiedCard
  * Guarda una tarjeta ya verificada por el servidor (ONVO: leída con la llave secreta; Tilopay: token devuelto a nuestra
  * vuelta firmada) y programa, reanuda o cobra el primer cobro con las reglas de trial.ts.
  */
-export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: VerifiedCard, input: { plan: PlanId; billing: Billing }, rowIn: TrialChargeRow | null, plan: ReturnType<typeof onCardSaved>, now = new Date()): Promise<SaveCardResult> {
+export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: VerifiedCard, input: { plan: PlanId; billing: Billing; condo?: string | null }, rowIn: TrialChargeRow | null, plan: ReturnType<typeof onCardSaved>, now = new Date()): Promise<SaveCardResult> {
   let row = rowIn;
   const card = await storeCard(db, v, c, now);
+  // 0066: desde el enlace de un condominio con tarjeta, el primer cobro va al final del acceso gratis y a precio normal.
+  const condoHold = plan.do === "create" || plan.do === "keep" ? await condoCardUntil(db, v.id, input.condo, now) : null;
   // El monto lo pone el servidor: con el 50 % del primer mes solo si la fila ganó la promoción y el plan es mensual.
   // 0045: una vez por tarjeta, no por cuenta (la misma tarjeta en otra cuenta que ya la ganó o ya pagó no la vuelve a ganar).
   const fp = cardFingerprint(c);
-  const promo = plan.do === "create" ? promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp))) : (row?.promo ?? null);
+  const promo = condoHold ? null : plan.do === "create" ? promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp))) : (row?.promo ?? null);
   await recordCardFingerprint(db, v.id, fp, c.provider, promo !== null);
   const amount = firstChargeMinor(input.plan, input.billing, promo);
   const planFields = { plan: input.plan, billing: input.billing, amount_minor: amount };
@@ -324,9 +363,11 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
     // La prueba empieza con el alta (0043): guardar la tarjeta no la alarga.
     const { data: prof } = await db.from("profiles").select("created_at").eq("id", v.id).maybeSingle();
     const s = scheduleFor(plan.kind, now, undefined, undefined, (prof?.created_at as string | undefined) ?? null);
+    // Condominio con tarjeta: nace programado para el fin del acceso gratis (nunca se cobra ya, aunque la prueba terminara).
+    const held = condoHold && Date.parse(condoHold.until) > Date.parse(s.chargeAt) ? { charge_at: condoHold.until, next_attempt_at: condoHold.until, moved_from: s.chargeAt } : { charge_at: s.chargeAt, next_attempt_at: s.chargeAt };
     const ins = await db.from("trial_charges").insert({
       user_id: v.id, idem_key: idemKeyFor(v.id), kind: plan.kind, ...planFields, promo,
-      trial_started_at: s.trialStartedAt, trial_ends_at: s.trialEndsAt, charge_at: s.chargeAt, next_attempt_at: s.chargeAt, status: "scheduled", attempts: 0,
+      trial_started_at: s.trialStartedAt, trial_ends_at: s.trialEndsAt, ...held, status: "scheduled", attempts: 0,
     }).select(CHARGE_COLS).single();
     if (ins.error) {
       // Carrera (dos pestañas): la otra ya la creó. La clave única de 0026 impide una segunda prueba.
@@ -335,10 +376,19 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
       return { card, charge: chargeView(row, now), outcome: "sin_cambio" };
     }
     row = ins.data as TrialChargeRow;
+    if (condoHold) {
+      if (await joinCardCondo(v.id, condoHold.code, now)) {
+        log("cobro programado para el fin del acceso del condominio", { userId: v.id, chargeId: row.id, chargeAt: row.charge_at });
+      } else if ("moved_from" in held) {
+        // Sin vínculo no hay acceso gratis: el cobro vuelve a la fecha normal de su prueba.
+        await db.from("trial_charges").update({ charge_at: s.chargeAt, next_attempt_at: s.chargeAt, moved_from: null, updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled");
+      }
+      row = (await loadRow(db, v.id)) ?? row;
+    }
     // Tester (0029): el cobro pasa al final de su mes de tester antes de avisar la fecha.
     if (row.kind !== "inmediato" && (await testerHold(db, v.id))) row = (await loadRow(db, v.id)) ?? row;
     log("cobro programado", { userId: v.id, chargeId: row.id, kind: row.kind, chargeAt: row.charge_at, plan: row.plan, billing: row.billing });
-    if (row.kind === "inmediato") {
+    if (row.kind === "inmediato" && !(condoHold && Date.parse(row.charge_at) > now.getTime())) {
       const r = await attemptCharge(db, row, now);
       return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: r };
     }
@@ -354,6 +404,8 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
     if (canChangePlan(row, now) && (row.plan !== input.plan || row.billing !== input.billing)) {
       await db.from("trial_charges").update({ ...planFields, updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled");
     }
+    // Ya tenía el cobro programado: el condominio lo mueve a su fecha y a precio normal (moveChargeToCondoEnd).
+    if (condoHold && (await joinCardCondo(v.id, condoHold.code, now))) return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "programado" };
     return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "sin_cambio" };
   }
 
