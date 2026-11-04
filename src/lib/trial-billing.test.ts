@@ -480,4 +480,30 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, new Date("2027-01-02T12:00:00.000Z"));
     expect(f.tables.comp_grants).toHaveLength(0);
   });
+
+  it("probar primero: entra sin tarjeta por 7 días y, al dejar la tarjeta desde cualquier pantalla, sigue gratis hasta el 1 de enero", async () => {
+    const f = withCondo();
+    const { joinCondo } = await import("./condos-server");
+    expect((await joinCondo(NEW_USER, "soho-paradisus", T0)).kind).toBe("join");
+    expect(f.tables.comp_grants[0]).toMatchObject({ source: "condominio", expires_at: plus(T0, 7).toISOString() });
+    expect(f.tables.condo_members[0]).toMatchObject({ condo_id: 5, user_id: NEW_USER });
+    expect(f.tables.trial_charges).toHaveLength(0);
+    // Deja la tarjeta desde Mi plan (sin código): el condominio aplica igual.
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, plus(T0, 3));
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, promo: null, amount_minor: 1499 });
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+  });
+  it("probar primero: si deja la tarjeta después de que terminó su prueba, tampoco se cobra hoy", async () => {
+    const f = withCondo();
+    const { joinCondo } = await import("./condos-server");
+    await joinCondo(OLD_USER, "soho-paradisus", T0);
+    onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
+    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, plus(T0, 12));
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, amount_minor: 999 });
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
+  });
 });

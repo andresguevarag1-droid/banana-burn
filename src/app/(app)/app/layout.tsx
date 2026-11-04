@@ -25,7 +25,9 @@ import { GiftCelebration } from "@/components/gift-celebration";
 import { deliverPendingGifts, getUnseenGifts } from "@/lib/gifts-server";
 import { TesterCelebration } from "@/components/testers/tester-celebration";
 import { deliverTesterNotices, getMyTester } from "@/lib/testers-server";
-import { AddCardBanner, FailedBanner, ProcessingBanner, ScheduledBanner } from "@/components/card-banner";
+import { AddCardBanner, CondoCardBanner, FailedBanner, ProcessingBanner, ScheduledBanner } from "@/components/card-banner";
+import { pendingCardCondo } from "@/lib/condos-server";
+import { adminClient } from "@/lib/supabase/admin";
 import { bannerFor } from "@/lib/trial";
 import { demoCardState } from "@/lib/trial-demo";
 import { runDueForUser } from "@/lib/trial-billing";
@@ -92,6 +94,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Antes del primer entreno, ningún aviso de tarjeta o prueba arriba de Hoy: lo primero que ve es su entreno, no un cobro.
   // (Los avisos de cobro en curso, rechazado o programado sí se muestran: hay algo que atender.)
   const banner = firstRun && (banner0 === "beta-add" || banner0 === "beta" || banner0 === "trial") ? null : banner0;
+  // 0066: residente de un condominio con tarjeta sin tarjeta todavía. Su aviso va antes de los de prueba (no de un cobro
+  // en curso o rechazado). Antes del primer entreno, solo si ya se le terminó la prueba.
+  const adminDb = v.demo ? null : adminClient();
+  const condoPending = adminDb && !cs && banner !== "failed" && banner !== "processing" ? await pendingCardCondo(adminDb, v.id).catch(() => null) : null;
+  const condoBanner = condoPending && (!firstRun || !condoPending.tryUntil) ? condoPending : null;
   // Prueba terminada sin plan ni cobro (desde el día 8): aviso de recuperación, solo si no hay otro aviso arriba.
   const recovery = (!banner || banner === "none") && !cs && (await getRecoveryNotice(v, ent));
   return (
@@ -113,7 +120,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
       <main id="contenido" tabIndex={-1} className="block text-[17px] leading-relaxed mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.today === "terminado" ? "tu certificado te espera" : live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: liveCoach && liveCoach.id !== "banana" ? liveCoach.avatar : null }} />}
-        {banner === "beta-add" ? <AddCardBanner />
+        {condoBanner ? <CondoCardBanner condo={condoBanner} tz={v.tz} />
+          : banner === "beta-add" ? <AddCardBanner />
           : banner === "beta-scheduled" && charge ? <ScheduledBanner charge={charge} tz={v.tz} />
           : banner === "failed" && charge ? <FailedBanner charge={charge} tz={v.tz} />
           : banner === "processing" ? <ProcessingBanner />

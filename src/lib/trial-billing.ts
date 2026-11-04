@@ -213,15 +213,19 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
 }
 
 /**
- * 0066: la tarjeta se guarda desde el enlace de un condominio que pide tarjeta (/c/<código>). Si la cuenta puede recibir su
- * acceso (enlace activo, sin otro condominio, sin acceso de condominio usado y sin plan pagado), devuelve la fecha en que
- * termina el acceso gratis: el primer cobro se programa ese día a precio normal. null: se guarda como cualquier tarjeta.
+ * 0066: la tarjeta de un residente de un condominio con tarjeta. Aplica si ya prueba en él (desde cualquier pantalla) o si
+ * la guarda desde su enlace (/c/<código>) y puede recibir el acceso (enlace activo, sin otro condominio, sin acceso de
+ * condominio usado y sin plan pagado). Devuelve la fecha en que termina el acceso gratis: el primer cobro se programa ese
+ * día a precio normal. null: se guarda como cualquier tarjeta.
  */
 async function condoCardUntil(db: SupabaseClient, userId: string, rawCode: string | null | undefined, now: Date): Promise<{ code: string; until: string } | null> {
-  if (!rawCode) return null;
   try {
     const { normalizeCondoCode, decideJoin } = await import("@/lib/condos");
-    const { condoByCode } = await import("@/lib/condos-server");
+    const { condoByCode, pendingCardCondo } = await import("@/lib/condos-server");
+    // Ya prueba sin tarjeta en un condominio con tarjeta: deje la tarjeta donde la deje (Mi plan, la bienvenida, el enlace).
+    const pending = await pendingCardCondo(db, userId, now);
+    if (pending) return { code: pending.code, until: pending.freeUntil };
+    if (!rawCode) return null;
     const code = normalizeCondoCode(rawCode);
     const condo = code ? await condoByCode(db, code) : null;
     if (!code || !condo?.card_required) return null;

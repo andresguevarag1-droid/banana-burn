@@ -11,7 +11,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { hasLivePaidSubscription } from "@/lib/trial-billing";
 import { amountMinorFor } from "@/lib/trial";
 import type { Billing, PlanId } from "@/lib/plans";
-import { CONDO_COOKIE, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant, type CondoGrant, type CondoRow, type JoinDecision } from "@/lib/condos";
+import { CONDO_COOKIE, condoOffer, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant, type CondoGrant, type CondoRow, type JoinDecision } from "@/lib/condos";
 import { errCode, logError } from "@/lib/log";
 
 const MISSING = new Set(["42P01", "PGRST205", "42703", "PGRST204"]);
@@ -65,13 +65,18 @@ export async function joinCondo(userId: string, rawCode: string, now = new Date(
   if (!db) return { kind: "sin_config", condo: null };
   const condo = code ? await condoByCode(db, code) : null;
   const [{ data: member }, { data: grants }, paid, cardReady] = await Promise.all([
-    db.from("condo_members").select("condo_id").eq("user_id", userId).maybeSingle(),
+    db.from("condo_members").select("condo_id,grant_id").eq("user_id", userId).maybeSingle(),
     db.from("comp_grants").select("id").eq("user_id", userId).eq("source", "condominio").limit(1),
     hasLivePaidSubscription(db, userId).catch(() => false),
     condo?.card_required ? condoCardReady(db, userId).catch(() => false) : Promise.resolve(false),
   ]);
   const d = decideJoin({ condo, memberOf: (member as { condo_id: number } | null)?.condo_id ?? null, hadCondoGrant: (grants?.length ?? 0) > 0, hasPaidPlan: paid, cardReady, now });
   const out = (kind: JoinResult["kind"]): JoinResult => ({ kind, condo: condo ? { name: condo.name, code: condo.code } : null });
+  // 0066: ya prueba en este condominio y ahora tiene tarjeta: su acceso sigue gratis hasta el fin y el cobro pasa a esa fecha.
+  if (d.kind === "ya_vinculado" && condo?.card_required && cardReady) {
+    const up = await upgradeCardMember(db, userId, condo, (member as { grant_id: number | null } | null)?.grant_id ?? null, now);
+    return out(up ? "join" : "ya_vinculado");
+  }
   if (d.kind !== "join" || !condo) return out(d.kind);
 
   const at = now.toISOString();
@@ -91,17 +96,59 @@ export async function joinCondo(userId: string, rawCode: string, now = new Date(
     await db.from("comp_grants").delete().eq("id", (g as { id: number }).id);
     return out(mErr.code === "23505" ? "ya_vinculado" : "inactivo");
   }
-  if (d.card) {
+  if (d.card && d.pendingCard) {
+    // Prueba sin tarjeta (0066): no hay cobro que mover. Al dejar la tarjeta, upgradeCardMember extiende el acceso.
+  } else if (d.card) {
     // Con tarjeta (0066): el cobro sigue, pero pasa al final del acceso gratis y a precio normal.
     await moveChargeToCondoEnd(db, userId, d.expiresAt, now);
   } else {
     // Un cobro programado de su prueba individual ya no aplica: el condominio le da el acceso y nadie le cobra al terminar.
     await db.from("trial_charges").update({ status: "superseded", next_attempt_at: null, updated_at: at }).eq("user_id", userId).in("status", ["scheduled", "retry_scheduled"]);
   }
-  const msg = joinMessage("join", condo.name, d.card ? d.expiresAt : null);
+  const msg = joinMessage("join", condo.name, d.card ? (condo.free_until ?? d.expiresAt) : null, d.pendingCard ? d.expiresAt : null);
   const { notifyInApp } = await import("@/lib/email");
   await notifyInApp(userId, { kind: "condominio", title: msg.title, body: msg.body, url: "/app" }).catch(() => false);
   return out("join");
+}
+
+/**
+ * 0066: residente que probaba sin tarjeta y ya la dejó lista. Su cortesía del condominio llega hasta el fin del acceso
+ * gratis (se reactiva si había vencido) y el primer cobro pasa a esa fecha a precio normal. false: no había nada que extender.
+ */
+export async function upgradeCardMember(db: SupabaseClient, userId: string, condo: CondoRow, grantId: number | null, now = new Date()): Promise<boolean> {
+  const offer = condoOffer(condo, now);
+  if (!offer?.card || grantId == null) return false;
+  const { data: g } = await db.from("comp_grants").select("id,expires_at,revoked_at").eq("id", grantId).maybeSingle();
+  const grant = g as { id: number; expires_at: string; revoked_at: string | null } | null;
+  if (!grant || grant.revoked_at || Date.parse(grant.expires_at) >= Date.parse(offer.expiresAt)) return false;
+  const { error } = await db.from("comp_grants").update({ expires_at: offer.expiresAt }).eq("id", grant.id).is("revoked_at", null);
+  if (error) { logError("condominios", "upgrade_failed", { code: error.code }); return false; }
+  await moveChargeToCondoEnd(db, userId, offer.expiresAt, now);
+  const msg = joinMessage("join", condo.name, offer.expiresAt);
+  const { notifyInApp } = await import("@/lib/email");
+  await notifyInApp(userId, { kind: "condominio", title: msg.title, body: msg.body, url: "/app/suscripcion" }).catch(() => false);
+  return true;
+}
+
+export type PendingCardCondo = { code: string; name: string; freeUntil: string; tryUntil: string | null };
+
+/** 0066: ¿la cuenta prueba sin tarjeta en un condominio con tarjeta (o ya se le acabó la prueba) y todavía puede dejarla? */
+export async function pendingCardCondo(db: SupabaseClient, userId: string, now = new Date()): Promise<PendingCardCondo | null> {
+  const { data: m, error } = await db.from("condo_members").select("condo_id,grant_id").eq("user_id", userId).maybeSingle();
+  const member = m as { condo_id: number; grant_id: number | null } | null;
+  if (error || !member) return null;
+  const { data: c } = await selectCondos<CondoRow>((cols) => db.from("condos").select(cols).eq("id", member.condo_id).maybeSingle() as unknown as PromiseLike<{ data: CondoRow | null; error: { code?: string } | null }>);
+  const condo = c as CondoRow | null;
+  const offer = condo ? condoOffer(condo, now) : null;
+  if (!condo || !offer?.card) return null;
+  let tryUntil: string | null = null;
+  if (member.grant_id != null) {
+    const { data: g } = await db.from("comp_grants").select("expires_at,revoked_at").eq("id", member.grant_id).maybeSingle();
+    const grant = g as { expires_at: string; revoked_at: string | null } | null;
+    if (grant && !grant.revoked_at && Date.parse(grant.expires_at) >= Date.parse(offer.expiresAt)) return null; // ya tiene todo
+    tryUntil = grant && !grant.revoked_at && Date.parse(grant.expires_at) > now.getTime() ? grant.expires_at : null;
+  }
+  return { code: condo.code, name: condo.name, freeUntil: offer.expiresAt, tryUntil };
 }
 
 /** Al crear la cuenta: si llegó desde el enlace de un condominio (cookie de /c/<código>/activar), la vincula. */

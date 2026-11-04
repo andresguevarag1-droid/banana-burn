@@ -71,3 +71,28 @@ export function ProcessingBanner() {
     </aside>
   );
 }
+
+/**
+ * 0066: residente de un condominio con tarjeta (Soho Paradisus) que prueba sin tarjeta, o a quien ya se le terminó la
+ * prueba. Lo lleva al enlace del condominio para dejar la tarjeta y seguir gratis hasta el último día.
+ */
+export function CondoCardBanner({ condo, tz }: { condo: { code: string; name: string; freeUntil: string; tryUntil: string | null }; tz: string }) {
+  const last = (iso: string) => fmt(new Date(Date.parse(iso) - 1000).toISOString(), tz);
+  const freeDay = last(condo.freeUntil);
+  return (
+    <aside aria-label={`Regalo de ${condo.name}`} className="mb-5 rounded-2xl border border-banana bg-banana-soft text-sm">
+      <FunnelTracker view="card_banner_view" props={{ kind: "condominio" }} />
+      <div className="flex items-start gap-2.5 px-3.5 pt-2.5">
+        <CreditCard weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" aria-hidden />
+        <p className="min-w-0 flex-1 text-pretty text-ink">
+          {condo.tryUntil
+            ? <><b>{condo.name}: sigue gratis hasta el {freeDay}.</b> Tu prueba va hasta el {last(condo.tryUntil)}. Deja tu tarjeta y no se cobra nada hasta enero.</>
+            : <><b>Tu prueba terminó. Sigue gratis hasta el {freeDay}.</b> Es el regalo de {condo.name}: deja tu tarjeta y no se cobra nada hasta enero.</>}
+        </p>
+      </div>
+      <div className="px-3.5 pb-2 pl-11">
+        <Link href={`/c/${condo.code}#activar`} data-cta="condo-banner-tarjeta" className="tap inline-flex h-11 items-center gap-1 font-bold text-ink underline-offset-4 hover:underline">Seguir gratis<ArrowRight weight="bold" className="size-4" /></Link>
+      </div>
+    </aside>
+  );
+}
