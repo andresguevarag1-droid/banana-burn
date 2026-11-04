@@ -14,7 +14,7 @@ Render de revisión, no publicar. Sin audio; diseñado para verse sin sonido.
 | 6.5 a 8.5 s | Y cuántas repeticiones | Captura real C7, recorte sin alterar números, Ejemplo |
 | 8.5 a 10.5 s | Sabes cuánto te falta | Captura real C7, recorte sin alterar números, Ejemplo |
 | 10.5 a 12.5 s | Entras, entrenas y te vas | Tipografía animada, sin escenas humanas |
-| 12.5 a 14.5 s | Hoy entrenas en casa | pendiente de captura C1 |
+| 12.5 a 14.5 s | Hoy entrenas en casa | Captura real demo `public/landing/campana-9nov/c1-hoy-primer-dia.png`, sin recortar |
 | 14.5 a 17 s | US$9.99 al mes. Cancela cuando quieras | Tipografía animada, sin escenas humanas |
 | 17 a 20 s | Empieza 7 días gratis en bananaburn.app | Coach Banana señala, botón y logo |
 
@@ -22,14 +22,15 @@ Render de revisión, no publicar. Sin audio; diseñado para verse sin sonido.
 
 Escenas del principal (en orden): 1, 2, 3, 4, 7, 8, 9. Las primeras seis duran 2 s cada una; cierre de 3 s.
 
-## Fuentes y pendientes
+## Fuentes reales
+
+- Capturas demo completas del 3 nov: `public/landing/campana-9nov/LEEME.md`, sin alterar nombres ni cifras.
+
 
 - C7: `public/landing/entreno.png`, recorte x=0, y=870, 780×610 (progreso: y=110, 780×105); no se alteran cifras.
 - Coach: `marketing/videos/E03_todos-te-miran/assets/coach-banana-senala.png`, reutilizado sin redibujar.
 - Logo: `public/icons/logo.svg`. Fuentes Plus Jakarta Sans de `src/app/og/`.
-- Los bloques «Pendiente de captura» son avisos editoriales, no interfaces inventadas. Reemplazarlos antes de publicar.
 - Adaptación a motion graphics: no se fabrican escenas actuadas ni testimonios.
-- Capturas faltantes: C1. Véase la tabla C1-C8 en `marketing/anuncios/campana-9-noviembre.md`.
 
 ## Reproducir
 

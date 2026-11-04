@@ -34,8 +34,10 @@ export const CONFIG = {
     {
       "id": "t5",
       "texto": "Y cómo se hace",
-      "tipo": "pendiente",
-      "captura": "C8"
+      "tipo": "telefono",
+      "captura": "C8",
+      "archivo": "public/landing/campana-9nov/c8-como-se-hace.png",
+      "etiqueta": "Demo"
     },
     {
       "id": "t6",
@@ -45,8 +47,10 @@ export const CONFIG = {
     {
       "id": "t7",
       "texto": "Un ejercicio por pantalla",
-      "tipo": "pendiente",
-      "captura": "C6"
+      "tipo": "telefono",
+      "captura": "C6",
+      "archivo": "public/landing/campana-9nov/c6-guiado-gym.png",
+      "etiqueta": "Demo"
     },
     {
       "id": "cierre",

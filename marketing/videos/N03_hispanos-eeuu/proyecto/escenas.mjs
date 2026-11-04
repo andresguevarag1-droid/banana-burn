@@ -45,8 +45,10 @@ export const CONFIG = {
     {
       "id": "t7",
       "texto": "Hoy entrenas en casa",
-      "tipo": "pendiente",
-      "captura": "C1"
+      "tipo": "telefono",
+      "captura": "C1",
+      "archivo": "public/landing/campana-9nov/c1-hoy-primer-dia.png",
+      "etiqueta": "Demo"
     },
     {
       "id": "t8",

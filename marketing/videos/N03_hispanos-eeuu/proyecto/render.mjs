@@ -1,10 +1,11 @@
 // Motor local sin servicios externos. `check` no carga canvas ni produce medios.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
+import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 import { CONFIG, FPS, versiones, linea } from './escenas.mjs';
 const aqui = dirname(fileURLToPath(import.meta.url));
@@ -17,6 +18,8 @@ for (const nombre of Object.keys(versiones)) {
   assert.equal(escenas.length, nombre === 'reel' ? CONFIG.escenas.length : 7);
   assert.ok(nombre === 'reel' ? versiones[nombre].duracion >= 15 && versiones[nombre].duracion <= 25 : versiones[nombre].duracion === 15);
   for (const e of escenas) {
+    assert.notEqual(e.tipo, 'pendiente', 'No quedan capturas pendientes');
+    if (e.archivo) assert.ok(existsSync(join(repo, e.archivo)), e.archivo);
     assert.ok(cuenta(e.texto + (e.etiqueta ? ` ${e.etiqueta}` : '') + (e.tipo === 'pendiente' ? ` Pendiente de captura ${e.captura}` : '')) <= 8, `${e.id}: más de 8 palabras`);
     const d = e.fin - e.inicio;
     assert.ok(e.tipo === 'cierre' ? d === 3 : d >= 1.5 && d <= 2.5);
@@ -45,6 +48,23 @@ if (modo === 'check') {
     captura = recorte;
   }
   const original = await loadImage(readFileSync(join(repo, CONFIG.captura)));
+  const medios = new Map();
+  for (const e of CONFIG.escenas.filter(e => e.archivo)) {
+    if (medios.has(e.archivo)) continue;
+    if (e.tipo === 'video') {
+      // C3 graba un viewport 390×844 en un lienzo 780×1688; quitar solo el gris vacío.
+      const temporal = mkdtempSync(join(tmpdir(), 'bb-c3-'));
+      try {
+        const extraer = spawnSync(require('@ffmpeg-installer/ffmpeg').path,
+          ['-v', 'error', '-i', join(repo, e.archivo), '-vf', 'crop=390:844:0:0,fps=30', join(temporal, '%03d.png')]);
+        assert.equal(extraer.status, 0, extraer.stderr?.toString());
+        const frames = [];
+        for (const f of readdirSync(temporal).sort()) frames.push(await loadImage(readFileSync(join(temporal, f))));
+        assert.ok(frames.length >= 60, 'C3 debe cubrir la escena');
+        medios.set(e.archivo, frames);
+      } finally { rmSync(temporal, { recursive: true, force: true }); }
+    } else medios.set(e.archivo, await loadImage(readFileSync(join(repo, e.archivo))));
+  }
   const coach = await loadImage(readFileSync(pose));
   const logo = await loadImage(readFileSync(join(repo, 'public/icons/logo.svg')));
   const W = 1080, H = 1920;
@@ -105,18 +125,17 @@ if (modo === 'check') {
       // Gancho totalmente visible en el cuadro 0; otras entradas duran 300 ms.
       const k = e.id === 't1' ? 1 : ease(local/.3);
       ctx.globalAlpha = k; ctx.translate(0, (1-k)*32);
-      if (e.tipo === 'pendiente') {
-        texto(ctx, e.texto, 340, 880, 76, C.ink, 270);
-        box(ctx, 120, 740, 840, 440, 32, C.banana);
-        texto(ctx, 'Pendiente de captura', 850, 760, 54, C.ink, 160);
-        texto(ctx, e.captura, 1060, 760, 44, C.ink, 70);
-      } else if (e.tipo === 'telefono') {
+      if (e.tipo === 'telefono' || e.tipo === 'video') {
         texto(ctx, e.texto, 300, 900, 76, C.ink, 190);
         texto(ctx, e.etiqueta, 505, 900, 38, C.ink, 46);
         box(ctx, 110, 620, 860, 900, 42, C.ink);
         if (e.texto === 'Sabes cuánto te falta') {
           ctx.drawImage(original, 0, 110, 780, 105, 130, 970, 820, 110);
-        } else contain(ctx, captura, 130, 640, 820, 860);
+        } else {
+          const medio = e.archivo ? medios.get(e.archivo) : captura;
+          const imagen = Array.isArray(medio) ? medio[Math.min(medio.length - 1, Math.floor(local * FPS))] : medio;
+          contain(ctx, imagen, 130, 640, 820, 860);
+        }
       } else {
         texto(ctx, e.texto, 620, 900, 100, C.ink, 500);
         // Barra decorativa sin cifras: no es un contador de resultados.
