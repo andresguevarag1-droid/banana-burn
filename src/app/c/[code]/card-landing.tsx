@@ -16,7 +16,7 @@ const SCENE = {
   juntos: `${UGC}hf_20261030_053039_48320df7-cb6a-475f-b521-539b0a30f22c.png`,
   perdido: `${UGC}hf_20261104_011229_1be5f338-0165-4354-bc52-38f1e0b74418.png`,
   celular: `${UGC}hf_20261104_011228_680ad92e-7bd5-4140-b496-1f1a74875c42.png`,
-  sentadilla: `${UGC}hf_20261030_053040_1e656035-581b-411e-b2a1-de315f6ec163.png`,
+  sentadilla: `${UGC}hf_20261027_222601_4e6e31b5-8b3b-4141-a596-3551a09ebea7.png`,
   flex: `${UGC}hf_20261027_222623_baae04c2-c774-46a3-a330-60f9a66edea3.png`,
 };
 
@@ -31,11 +31,16 @@ function Scene({ src, alt, className = "", priority = false }: { src: string; al
   );
 }
 
-function Ticks({ items }: { items: string[] }) {
+function Ticks({ items, pain = false }: { items: string[]; pain?: boolean }) {
   return (
     <ul className="mt-5 space-y-3 text-[16px]">
       {items.map((t) => (
-        <li key={t} className="flex items-start gap-3"><span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3.5" /></span><span className="text-pretty">{t}</span></li>
+        <li key={t} className="flex items-start gap-3">
+          {pain
+            ? <span aria-hidden className="mt-2 size-2.5 shrink-0 rounded-full bg-ember" />
+            : <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3.5" /></span>}
+          <span className="text-pretty">{t}</span>
+        </li>
       ))}
     </ul>
   );
@@ -95,7 +100,7 @@ export function CardCondoLanding({ code, name, freeDay, chargeDay, viewer, cardR
           <p className="inline-flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-banana-ink"><Question weight="bold" className="size-4" />Te presentamos a El Nuevo</p>
           <h2 className={`${H2} mt-2`}>Tienes gimnasio en el condominio y no sabes por dónde empezar.</h2>
           <p className={LEAD}>Lo pagas en el mantenimiento, bajas un par de veces y no sabes qué máquina usar ni cuánto peso poner. Te pasa a ti y le pasaba a El Nuevo.</p>
-          <Ticks items={["Copias rutinas de videos que no son para ti", "No sabes si lo estás haciendo bien", "Vas una semana y lo dejas"]} />
+          <Ticks pain items={["Copias rutinas de videos que no son para ti", "No sabes si lo estás haciendo bien", "Vas una semana y lo dejas"]} />
         </div>
       </section>
 
