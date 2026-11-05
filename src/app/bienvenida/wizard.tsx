@@ -209,7 +209,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
       if (card) setSaved(card);
       // Una sola vez por cuenta: aquí, al guardar el plan (la pantalla final no lo repite).
       trackOnce("onboarding_done", { goal: full.goal, trial: Boolean(trialEnd) });
-      router.replace(demo ? "/app?primera=1" : "/app");
+      // Embudo (5 nov): la mitad llegaba a Hoy y no abría el entreno. Ahora se le pregunta "¿Entrenamos ahora?".
+      router.replace(demo ? "/app?primera=1" : "/app/primer-entreno");
       router.refresh();
     });
   }
