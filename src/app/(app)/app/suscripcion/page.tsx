@@ -15,6 +15,8 @@ import { CardPanel } from "./card-panel";
 import { PastDueCard } from "./past-due-card";
 import { betaDates } from "@/components/beta-notice";
 import { demoCardState } from "@/lib/trial-demo";
+import { pendingCardCondo } from "@/lib/condos-server";
+import { adminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Mi plan" };
 
@@ -56,6 +58,9 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   const ent: Entitlements = cs ? { ...real, charge: cs.charge, card: cs.card, cardStep: cs.cardStep, trial: cs.trial, locked: cs.locked, plan: "free", status: "none", access: cs.locked ? "none" : "trial", app: !cs.locked, nutrition: !cs.locked } : real;
   const charge = ent.charge ?? null;
   const cardStep = ent.cardStep ?? "none";
+  // 0066: residente de un condominio con tarjeta sin tarjeta todavía: su oferta es la del condominio, no el 50 % del primer mes.
+  const condoDb = v.demo ? null : adminClient();
+  const condoPending = condoDb ? await pendingCardCondo(condoDb, v.id).catch(() => null) : null;
   const payments = isOnvoConfigured() && !v.demo;
   const tlp = sp.tilopay && Object.hasOwn(TILOPAY_NOTICE, sp.tilopay) ? TILOPAY_NOTICE[sp.tilopay] : null;
   const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent(jar.get(INTENT_COOKIE)?.value);
@@ -111,7 +116,14 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       {tlp && (
         <p role="status" className={`rounded-2xl p-3 text-sm font-semibold text-pretty ${tlp.ok ? "bg-peel/10 text-ink" : "bg-bad/10 text-bad"}`}>{tlp.text}</p>
       )}
-      {(cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
+      {condoPending && (
+        <section className="rounded-2xl border-2 border-ink bg-banana-soft p-4 text-sm text-ink">
+          <p className="font-extrabold">{condoPending.name}: sigue gratis hasta el {fmtDay(new Date(Date.parse(condoPending.freeUntil) - 1000).toISOString())}.</p>
+          <p className="mt-1 text-pretty">Deja tu tarjeta desde el enlace de tu condominio. No se cobra nada hasta el {fmtDay(condoPending.freeUntil)}, y ese día se cobra el plan que elijas a precio normal (sin el 50 % del primer mes).</p>
+          <Link href={`/c/${condoPending.code}#activar`} className="btn-primary mt-3 h-12 w-full sm:w-auto">Seguir gratis</Link>
+        </section>
+      )}
+      {!condoPending && (cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
         <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null}
           initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />
       )}

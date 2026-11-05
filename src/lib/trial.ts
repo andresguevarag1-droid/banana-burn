@@ -179,7 +179,9 @@ export function isDue(row: Pick<TrialChargeRow, "status" | "next_attempt_at"> | 
 
 /** ¿Toca el aviso de "En 2 días se cobra tu plan"? Una sola vez, en los 2 días antes del cobro. */
 export function reminderDue(row: Pick<TrialChargeRow, "status" | "kind" | "charge_at" | "reminder_sent_at"> | null | undefined, now = new Date()): boolean {
-  if (!row || row.status !== "scheduled" || row.kind === "inmediato" || row.reminder_sent_at) return false;
+  // "inmediato" se cobra al guardar la tarjeta (charge_at = ahora), así que nunca cae en la ventana; si se aplazó (condominio
+  // con tarjeta, 0066), su aviso sale como el de cualquier cobro programado.
+  if (!row || row.status !== "scheduled" || row.reminder_sent_at) return false;
   const at = ms(row.charge_at);
   const t = now.getTime();
   return Number.isFinite(at) && t >= at - REMINDER_DAYS_BEFORE * DAY_MS && t < at;

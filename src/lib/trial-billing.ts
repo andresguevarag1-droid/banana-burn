@@ -43,7 +43,7 @@ import {
 } from "@/lib/onvo";
 import {
   REVIEW_AFTER_MS, REVIEW_PREFIX, STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, attemptKeyFor, canCancel, canChangePlan, chargeBusy, chargeMoved, chargeView,
-  firstChargeMinor, idemKeyFor, inReview, isDue, onCardSaved, promoApplies, promoFor, reminderDue, reminderLine, scheduleFor, type CardRow, type CardSavedPlan, type ChargeView, type TrialChargeRow,
+  MAX_ATTEMPTS, amountMinorFor, firstChargeMinor, idemKeyFor, inReview, isDue, onCardSaved, promoApplies, promoFor, reminderDue, reminderLine, scheduleFor, type CardRow, type CardSavedPlan, type ChargeView, type TrialChargeRow,
 } from "@/lib/trial";
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
 import { pushToUser } from "@/lib/push";
@@ -353,8 +353,10 @@ export async function replaceCard(db: SupabaseClient, v: Viewer, c: VerifiedCard
 export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: VerifiedCard, input: { plan: PlanId; billing: Billing; condo?: string | null }, rowIn: TrialChargeRow | null, plan: ReturnType<typeof onCardSaved>, now = new Date()): Promise<SaveCardResult> {
   let row = rowIn;
   const card = await storeCard(db, v, c, now);
-  // 0066: desde el enlace de un condominio con tarjeta, el primer cobro va al final del acceso gratis y a precio normal.
-  const condoHold = plan.do === "create" || plan.do === "keep" ? await condoCardUntil(db, v.id, input.condo, now) : null;
+  // 0066: residente de un condominio con tarjeta: el primer cobro va al final del acceso gratis y a precio normal, en
+  // cualquier caso (cuenta nueva, cobro programado, cancelado, rechazado o anulado). Nunca con Tilopay: su token viene del
+  // navegador sin verificar, y aquí daría acceso gratis hasta el fin sin una tarjeta real (auditoría del 4 nov).
+  const condoHold = plan.do !== "busy" && c.provider !== "tilopay" ? await condoCardUntil(db, v.id, input.condo, now) : null;
   // El monto lo pone el servidor: con el 50 % del primer mes solo si la fila ganó la promoción y el plan es mensual.
   // 0045: una vez por tarjeta, no por cuenta (la misma tarjeta en otra cuenta que ya la ganó o ya pagó no la vuelve a ganar).
   const fp = cardFingerprint(c);
@@ -384,8 +386,10 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
       if (await joinCardCondo(v.id, condoHold.code, now)) {
         log("cobro programado para el fin del acceso del condominio", { userId: v.id, chargeId: row.id, chargeAt: row.charge_at });
       } else if ("moved_from" in held) {
-        // Sin vínculo no hay acceso gratis: el cobro vuelve a la fecha normal de su prueba.
-        await db.from("trial_charges").update({ charge_at: s.chargeAt, next_attempt_at: s.chargeAt, moved_from: null, updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled");
+        // Sin vínculo no hay acceso gratis: el cobro vuelve a la fecha normal de su prueba, con su 50 % si le toca.
+        const back = promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp)));
+        await db.from("trial_charges").update({ charge_at: s.chargeAt, next_attempt_at: s.chargeAt, moved_from: null, promo: back, amount_minor: firstChargeMinor(input.plan, input.billing, back), updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled");
+        log("condominio con tarjeta: no se pudo vincular, cobro a su fecha normal", { userId: v.id, chargeId: row.id });
       }
       row = (await loadRow(db, v.id)) ?? row;
     }
@@ -410,6 +414,22 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
     }
     // Ya tenía el cobro programado: el condominio lo mueve a su fecha y a precio normal (moveChargeToCondoEnd).
     if (condoHold && (await joinCardCondo(v.id, condoHold.code, now))) return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "programado" };
+    return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "sin_cambio" };
+  }
+
+  // 0066: cancelado, rechazado o anulado, y residente de un condominio con tarjeta: no se reanuda ni se cobra ya. El cobro
+  // vuelve a programarse para el fin del acceso gratis, a precio normal, y el acceso del condominio llega hasta esa fecha.
+  if (condoHold && (plan.do === "resume" || plan.do === "charge_now" || plan.do === "card_only") && row.attempts < MAX_ATTEMPTS && ["canceled", "failed", "retry_scheduled", "superseded"].includes(row.status)) {
+    const { data: held } = await db.from("trial_charges").update({
+      ...planFields, promo: null, amount_minor: amountMinorFor(input.plan, input.billing),
+      status: "scheduled", charge_at: condoHold.until, next_attempt_at: condoHold.until, moved_from: row.charge_at,
+      canceled_at: null, reminder_sent_at: null, updated_at: now.toISOString(),
+    }).eq("id", row.id).eq("status", row.status).eq("attempts", row.attempts).select("id");
+    if (held?.length && (await joinCardCondo(v.id, condoHold.code, now))) {
+      log("cobro reprogramado para el fin del acceso del condominio", { userId: v.id, chargeId: row.id, from: row.status });
+      return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "programado" };
+    }
+    log("condominio con tarjeta: no se pudo reprogramar", { userId: v.id, chargeId: row.id, from: row.status, held: !!held?.length });
     return { card, charge: chargeView(await loadRow(db, v.id), now), outcome: "sin_cambio" };
   }
 
@@ -462,7 +482,10 @@ export async function cancelTrial(v: Viewer, keepCard: boolean, now = new Date()
   if (!done?.length) throw new BillingError("Ya estamos procesando tu cobro. Revisa en unos minutos.", 409);
   let cardKept = true;
   if (!keepCard) cardKept = !(await disconnectCard(db, v.id));
-  const accessUntil = row.status === "scheduled" && Date.parse(row.trial_ends_at) > now.getTime() ? row.trial_ends_at : null;
+  // 0066: residente de un condominio con tarjeta: sin cobro no hay extensión. Su acceso vuelve a su prueba del condominio.
+  const condoUntil = await (await import("@/lib/condos-server")).cutCardCondoGrant(db, v.id, now).catch(() => null);
+  const trialUntil = row.status === "scheduled" && Date.parse(row.trial_ends_at) > now.getTime() ? row.trial_ends_at : null;
+  const accessUntil = condoUntil && (!trialUntil || Date.parse(condoUntil) > Date.parse(trialUntil)) ? condoUntil : trialUntil;
   log("cobro cancelado antes de cobrar", { userId: v.id, chargeId: row.id, keepCard, cardKept });
   await sendChargeCanceled({ userId: v.id, chargeId: row.id, plan: planName(row.plan), accessUntil, cardKept }).catch(() => null);
   return { accessUntil, cardKept };
@@ -478,6 +501,9 @@ export async function resumeTrial(v: Viewer, now = new Date()): Promise<ChargeVi
   const { data } = await db.from("trial_charges").update({ status: "scheduled", next_attempt_at: row.charge_at, canceled_at: null, updated_at: now.toISOString() }).eq("id", row.id).eq("status", "canceled").select("id");
   if (!data?.length) throw new BillingError("No pudimos reactivar tu plan. Intenta de nuevo.", 409);
   log("cobro reanudado sin tarjeta nueva", { userId: v.id, chargeId: row.id });
+  // 0066: residente de un condominio con tarjeta: vuelve su extensión y el cobro pasa otra vez al fin del acceso gratis.
+  const pending = await (await import("@/lib/condos-server")).pendingCardCondo(db, v.id, now).catch(() => null);
+  if (pending) await joinCardCondo(v.id, pending.code, now);
   return chargeView(await loadRow(db, v.id), now);
 }
 
@@ -988,7 +1014,7 @@ export async function sweepTrialCharges(now = new Date(), opts: { deadline?: num
     return out;
   }
   const time = () => !opts.deadline || Date.now() < opts.deadline;
-  const limit = Math.min(opts.limit ?? 100, 500);
+  const limit = Math.min(opts.limit ?? 300, 500);
   const at = now.toISOString();
   try {
     const soon = new Date(now.getTime() + 2 * 864e5).toISOString();
