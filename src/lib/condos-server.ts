@@ -11,7 +11,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { hasLivePaidSubscription } from "@/lib/trial-billing";
 import { amountMinorFor } from "@/lib/trial";
 import type { Billing, PlanId } from "@/lib/plans";
-import { CONDO_COOKIE, condoOffer, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant, type CondoGrant, type CondoRow, type JoinDecision } from "@/lib/condos";
+import { CONDO_COOKIE, CONDO_TRY_DAYS, condoOffer, decideJoin, endingNoticeDue, joinMessage, normalizeCondoCode, syncGrant, type CondoGrant, type CondoRow, type JoinDecision } from "@/lib/condos";
 import { errCode, logError } from "@/lib/log";
 
 const MISSING = new Set(["42P01", "PGRST205", "42703", "PGRST204"]);
@@ -31,13 +31,15 @@ export async function condoByCode(db: SupabaseClient, code: string): Promise<Con
   return (data as CondoRow | null) ?? null;
 }
 
-/** 0066: ¿la cuenta tiene tarjeta activa y su primer cobro programado (lo que pide un condominio con tarjeta)? */
+/** 0066: ¿la cuenta tiene tarjeta activa de ONVO y su primer cobro programado (lo que pide un condominio con tarjeta)? */
 export async function condoCardReady(db: SupabaseClient, userId: string): Promise<boolean> {
   const [{ data: pm }, { data: ch }] = await Promise.all([
-    db.from("payment_methods").select("status").eq("user_id", userId).maybeSingle(),
+    db.from("payment_methods").select("status,provider").eq("user_id", userId).maybeSingle(),
     db.from("trial_charges").select("status").eq("user_id", userId).maybeSingle(),
   ]);
-  return (pm as { status?: string } | null)?.status === "active" && (ch as { status?: string } | null)?.status === "scheduled";
+  // Tilopay no cuenta: su token viene del navegador sin verificar y daría el acceso gratis sin una tarjeta real.
+  const card = pm as { status?: string; provider?: string | null } | null;
+  return card?.status === "active" && card.provider !== "tilopay" && (ch as { status?: string } | null)?.status === "scheduled";
 }
 
 /**
@@ -48,9 +50,11 @@ export async function condoCardReady(db: SupabaseClient, userId: string): Promis
 export async function moveChargeToCondoEnd(db: SupabaseClient, userId: string, until: string, now = new Date()): Promise<boolean> {
   const { data } = await db.from("trial_charges").select("id,plan,billing,charge_at,moved_from,status").eq("user_id", userId).maybeSingle();
   const row = data as { id: number; plan: PlanId; billing: Billing; charge_at: string; moved_from?: string | null; status: string } | null;
-  if (!row || row.status !== "scheduled" || Date.parse(row.charge_at) >= Date.parse(until)) return false;
+  if (!row || row.status !== "scheduled") return false;
+  // Precio normal siempre (aunque su fecha ya caiga después); la fecha solo se mueve si caería antes del fin del gratis.
+  const move = Date.parse(row.charge_at) < Date.parse(until);
   const { data: done } = await db.from("trial_charges").update({
-    moved_from: row.moved_from ?? row.charge_at, charge_at: until, next_attempt_at: until, reminder_sent_at: null,
+    ...(move ? { moved_from: row.moved_from ?? row.charge_at, charge_at: until, next_attempt_at: until, reminder_sent_at: null } : {}),
     promo: null, amount_minor: amountMinorFor(row.plan, row.billing), updated_at: now.toISOString(),
   }).eq("id", row.id).eq("status", "scheduled").select("id");
   return (done?.length ?? 0) > 0;
@@ -128,6 +132,27 @@ export async function upgradeCardMember(db: SupabaseClient, userId: string, cond
   const { notifyInApp } = await import("@/lib/email");
   await notifyInApp(userId, { kind: "condominio", title: msg.title, body: msg.body, url: "/app/suscripcion" }).catch(() => false);
   return true;
+}
+
+/**
+ * 0066: al cancelar el cobro, el residente de un condominio con tarjeta pierde la extensión: su acceso del condominio vuelve
+ * a su prueba (CONDO_TRY_DAYS desde que se unió), o termina hoy si ya pasó. Si deja la tarjeta otra vez, se extiende de nuevo.
+ * Devuelve hasta cuándo sigue su acceso (null: no aplicaba).
+ */
+export async function cutCardCondoGrant(db: SupabaseClient, userId: string, now = new Date()): Promise<string | null> {
+  const { data: m } = await db.from("condo_members").select("condo_id,grant_id").eq("user_id", userId).maybeSingle();
+  const member = m as { condo_id: number; grant_id: number | null } | null;
+  if (!member?.grant_id) return null;
+  const { data: c } = await selectCondos<CondoRow>((cols) => db.from("condos").select(cols).eq("id", member.condo_id).maybeSingle() as unknown as PromiseLike<{ data: CondoRow | null; error: { code?: string } | null }>);
+  if (!(c as CondoRow | null)?.card_required) return null;
+  const { data: g } = await db.from("comp_grants").select("id,starts_at,expires_at,revoked_at").eq("id", member.grant_id).maybeSingle();
+  const grant = g as { id: number; starts_at: string; expires_at: string; revoked_at: string | null } | null;
+  if (!grant || grant.revoked_at) return null;
+  const tryEnd = Date.parse(grant.starts_at) + CONDO_TRY_DAYS * 864e5;
+  const until = new Date(Math.max(now.getTime(), tryEnd)).toISOString();
+  if (Date.parse(grant.expires_at) <= Date.parse(until)) return Date.parse(grant.expires_at) > now.getTime() ? grant.expires_at : null;
+  await db.from("comp_grants").update({ expires_at: until }).eq("id", grant.id).is("revoked_at", null);
+  return Date.parse(until) > now.getTime() ? until : null;
 }
 
 export type PendingCardCondo = { code: string; name: string; freeUntil: string; tryUntil: string | null };

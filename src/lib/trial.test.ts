@@ -91,7 +91,10 @@ describe("qué día se cobra", () => {
     expect(reminderDue(r, plus(START, 7))).toBe(false);
     expect(reminderDue({ ...r, reminder_sent_at: plus(START, 5).toISOString() }, plus(START, 5.5))).toBe(false);
     expect(reminderDue({ ...r, status: "canceled" }, plus(START, 5.5))).toBe(false);
-    expect(reminderDue({ ...r, kind: "inmediato" }, plus(START, 5.5))).toBe(false);
+    // "inmediato" se cobra al guardar la tarjeta (charge_at = ese momento): nunca cae en la ventana del aviso.
+    expect(reminderDue({ ...r, kind: "inmediato", charge_at: plus(START, 5.5).toISOString() }, plus(START, 5.5))).toBe(false);
+    // Aplazado al fin del acceso de un condominio con tarjeta (0066): sí lleva su aviso 2 días antes.
+    expect(reminderDue({ ...r, kind: "inmediato" }, plus(START, 5.5))).toBe(true);
   });
   it("textos exactos", () => {
     expect(TRIAL_LINE).toBe("7 días gratis con todo incluido, sin tarjeta.");

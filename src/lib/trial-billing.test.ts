@@ -506,4 +506,53 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, amount_minor: 999 });
     expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
   });
+
+  // Auditoría del 4 nov: casos que no estaban cubiertos.
+  it("cancela y vuelve a dejar la tarjeta: el cobro vuelve al 1 de enero, no se cobra ya y el acceso se extiende", async () => {
+    const f = withCondo();
+    const { joinCondo } = await import("./condos-server");
+    await joinCondo(NEW_USER, "soho-paradisus", T0);
+    onvo.getPaymentMethod.mockResolvedValue(pm());
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, plus(T0, 2));
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
+    // Cancela: pierde la extensión y vuelve a su prueba del condominio (7 días desde que se unió).
+    const c = await tb.cancelTrial(viewer(NEW_USER), true, plus(T0, 3));
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: plus(T0, 7).toISOString() });
+    expect(c.accessUntil).toBe(plus(T0, 7).toISOString());
+    // Después de su prueba deja la tarjeta otra vez: ni cobro inmediato ni 50 %.
+    onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_2" }));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "entreno", billing: "mes" }, plus(T0, 12));
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, next_attempt_at: UNTIL, promo: null, amount_minor: 999 });
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
+  });
+  it("cobro rechazado de su prueba y luego se une y deja tarjeta: se reprograma al 1 de enero", async () => {
+    const f = withCondo();
+    scheduled(f, { status: "failed", attempts: 2, next_attempt_at: null } as Partial<TrialChargeRow>);
+    const { joinCondo } = await import("./condos-server");
+    await joinCondo(NEW_USER, "soho-paradisus", plus(T0, 10));
+    onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_9" }));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_9", plan: "completo", billing: "mes" }, plus(T0, 11));
+    expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
+    expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
+    expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, attempts: 2, promo: null, amount_minor: 1499 });
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
+  });
+  it("con cobro programado para después del 1 de enero, el 50 % se quita igual", async () => {
+    const f = withCondo();
+    scheduled(f, { plan: "entreno", amount_minor: 499, promo: "primer_mes_50", charge_at: "2027-01-03T12:00:00.000Z", next_attempt_at: "2027-01-03T12:00:00.000Z", trial_ends_at: "2027-01-03T12:00:00.000Z" } as Partial<TrialChargeRow>);
+    const { joinCondo } = await import("./condos-server");
+    await joinCondo(NEW_USER, "soho-paradisus", T0);
+    expect(charge(f)).toMatchObject({ charge_at: "2027-01-03T12:00:00.000Z", promo: null, amount_minor: 999 });
+  });
+  it("una tarjeta de Tilopay (sin verificar) no da la extensión hasta el 1 de enero", async () => {
+    const f = withCondo();
+    const { joinCondo } = await import("./condos-server");
+    await joinCondo(NEW_USER, "soho-paradisus", T0);
+    scheduled(f);
+    (f.tables.payment_methods[0] as Record<string, unknown>).provider = "tilopay";
+    expect((await joinCondo(NEW_USER, "soho-paradisus", plus(T0, 1))).kind).toBe("ya_vinculado");
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: plus(T0, 7).toISOString() });
+  });
 });
