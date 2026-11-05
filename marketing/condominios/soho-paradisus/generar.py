@@ -126,42 +126,68 @@ def art(story, scene, tmp):
     def text(s, x, y, size, color=INK, bold=False):
         cmds.append(f'font {quote(FONT if bold else BODY)} font-size {size} fill {color} stroke none text {x},{y} {quote(s)}')
 
-    top = 265 if story else 64
-    rect(0, 0, 1080, 1920 if story else 1528, BANANA)
-    text('SOHO PARADISUS', 64, top + 22, 22, bold=True)
-    text('El gimnasio', 60, top + 104, 76, bold=True)
-    text('del condominio,', 60, top + 188, 76, bold=True)
-    text('ahora con entrenador', 60, top + 264, 65, bold=True)
-    text('Tu rutina, la técnica y un coach en tu celular.', 64, top + 318, 27)
-    # Approved art only. A supplied official scene replaces the local Coach.
-    imgy = top + 346
-    run('convert', scene, '-auto-orient', '-resize', '410x370', tmp / 'scene.png')
-    cmds.append(f'image over 610,{imgy} 0,0 {quote(tmp / "scene.png")}')
-    text('Tu plan listo', 64, imgy + 98, 38, bold=True)
-    text('antes de bajar.', 64, imgy + 148, 38, bold=True)
-    text('En el gimnasio o en casa.', 64, imgy + 211, 27)
-    offer_y = 970 if story else 820
-    rect(48, offer_y, 984, 142, PAPER, 28)
-    text('Prueba 7 días sin tarjeta.', 74, offer_y + 48, 40, bold=True)
-    text('Deja tu tarjeta y sigue gratis hasta el 31 de diciembre.', 74, offer_y + 103, 28)
-    cta_y = offer_y + 190
-    rect(48, cta_y - 12, 984, 262, INK, 28)
-    cmds.append(f'image over 68,{cta_y+6} 225,225 {quote(OUT / "qr.png")}')
-    text('Regístrate y haz', 330, cta_y + 62, 43, PAPER, True)
-    text('tu primer entreno.', 330, cta_y + 116, 43, PAPER, True)
-    text('Escanea el QR para empezar.', 330, cta_y + 175, 25, PAPER)
-    text('bananaburn.app/c/soho-paradisus', 64, cta_y + 290, 27, bold=True)
-    foot = cta_y + 335
-    text('Al guardar tarjeta: primer cobro el 1 de enero de 2027.', 64, foot, 23)
-    text('Entreno $9.99/mes o Entreno + Nutrición $14.99/mes.', 64, foot + 34, 23)
-    text('IVA incluido. Aviso 2 días antes. Cancela cuando quieras.', 64, foot + 68, 23)
-    if not story:
-        text('Banana', 64, 1453, 33, bold=True)
-        text('Burn', 193, 1453, 33, '#8A5300', True)
-        text('Solo para residentes de Soho Paradisus.', 402, 1453, 25)
+    if story:
+        rect(0, 0, 1080, 1920, BANANA)
+        text('SOHO PARADISUS', 64, 282, 24, bold=True)
+        text('El gimnasio', 64, 380, 58, bold=True)
+        text('del condominio,', 64, 452, 58, bold=True)
+        text('ahora con', 64, 524, 58, bold=True)
+        text('entrenador', 64, 596, 58, bold=True)
+        run('convert', scene, '-auto-orient', '-resize', '460x490', tmp / 'scene.png')
+        cmds.append(f'image over 570,310 0,0 {quote(tmp / "scene.png")}')
+        text('Tu plan listo antes de bajar.', 64, 744, 34, bold=True)
+        text('En el gimnasio o en casa.', 64, 790, 29)
+        rect(48, 842, 984, 230, PAPER, 28)
+        text('Prueba 7 días sin tarjeta.', 74, 900, 44, bold=True)
+        text('Deja tu tarjeta y sigue gratis', 74, 964, 36)
+        text('hasta el 31 de diciembre.', 74, 1018, 36, bold=True)
+        rect(48, 1100, 984, 340, INK, 28)
+        cmds.append(f'image over 68,1120 300,300 {quote(OUT / "qr.png")}')
+        text('Regístrate y haz', 402, 1192, 40, PAPER, True)
+        text('tu primer entreno.', 402, 1246, 40, PAPER, True)
+        text('Escanea el QR', 402, 1320, 28, PAPER)
+        text('para empezar.', 402, 1362, 28, PAPER)
+        text('bananaburn.app/c/soho-paradisus', 64, 1476, 27, bold=True)
+        text('Al guardar tarjeta: primer cobro el 1 de enero de 2027.', 64, 1508, 23)
+        text('Entreno $9.99/mes o Entreno + Nutrición $14.99/mes.', 64, 1538, 23)
+        text('IVA incluido. Aviso 2 días antes. Cancela cuando quieras.', 64, 1568, 23)
     else:
-        # Keep footer at y <=1570, clear of Instagram controls.
-        assert foot + 68 <= 1570
+        top = 265 if story else 64
+        rect(0, 0, 1080, 1920 if story else 1528, BANANA)
+        text('SOHO PARADISUS', 64, top + 22, 22, bold=True)
+        text('El gimnasio', 60, top + 104, 76, bold=True)
+        text('del condominio,', 60, top + 188, 76, bold=True)
+        text('ahora con entrenador', 60, top + 264, 65, bold=True)
+        text('Tu rutina, la técnica y un coach en tu celular.', 64, top + 318, 27)
+        # Approved art only. A supplied official scene replaces the local Coach.
+        imgy = top + 346
+        run('convert', scene, '-auto-orient', '-resize', '410x370', tmp / 'scene.png')
+        cmds.append(f'image over 610,{imgy} 0,0 {quote(tmp / "scene.png")}')
+        text('Tu plan listo', 64, imgy + 98, 38, bold=True)
+        text('antes de bajar.', 64, imgy + 148, 38, bold=True)
+        text('En el gimnasio o en casa.', 64, imgy + 211, 27)
+        offer_y = 970 if story else 820
+        rect(48, offer_y, 984, 142, PAPER, 28)
+        text('Prueba 7 días sin tarjeta.', 74, offer_y + 48, 40, bold=True)
+        text('Deja tu tarjeta y sigue gratis hasta el 31 de diciembre.', 74, offer_y + 103, 28)
+        cta_y = offer_y + 190
+        rect(48, cta_y - 12, 984, 262, INK, 28)
+        cmds.append(f'image over 68,{cta_y+6} 225,225 {quote(OUT / "qr.png")}')
+        text('Regístrate y haz', 330, cta_y + 62, 43, PAPER, True)
+        text('tu primer entreno.', 330, cta_y + 116, 43, PAPER, True)
+        text('Escanea el QR para empezar.', 330, cta_y + 175, 25, PAPER)
+        text('bananaburn.app/c/soho-paradisus', 64, cta_y + 290, 27, bold=True)
+        foot = cta_y + 335
+        text('Al guardar tarjeta: primer cobro el 1 de enero de 2027.', 64, foot, 23)
+        text('Entreno $9.99/mes o Entreno + Nutrición $14.99/mes.', 64, foot + 34, 23)
+        text('IVA incluido. Aviso 2 días antes. Cancela cuando quieras.', 64, foot + 68, 23)
+        if not story:
+            text('Banana', 64, 1453, 33, bold=True)
+            text('Burn', 193, 1453, 33, '#8A5300', True)
+            text('Solo para residentes de Soho Paradisus.', 402, 1453, 25)
+        else:
+            # Keep footer at y <=1570, clear of Instagram controls.
+            assert foot + 68 <= 1570
     mvg = tmp / ('story.mvg' if story else 'poster.mvg')
     mvg.write_text('\n'.join(cmds), encoding='utf-8')
     dest = OUT / ('historia.png' if story else 'afiche-a4.png')

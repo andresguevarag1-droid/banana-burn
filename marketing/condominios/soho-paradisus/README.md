@@ -8,9 +8,11 @@ Solo revisión de Andrés. No se publicó ni envió nada. La oferta especial cor
 - `mensajes.txt`: corta de tres líneas, completa y seguimiento. La completa adapta la estructura de `condoWhatsapp` en `src/lib/condos.ts` a la voz de Andrés como vecino, agregando duración, precios y aviso. No cambia la función compartida.
 - `generar.py`: fuente reproducible sin dependencias descargadas; requiere Python 3 e ImageMagick con FreeType y WebP. Ejecutar desde la raíz con `python3 marketing/condominios/soho-paradisus/generar.py`.
 
-## Pendiente visual antes de usar
+## Revisión visual de la ronda 2
 
-Falta la escena oficial de Coach Banana con El Nuevo. El repositorio solo contiene al Coach de pie; las escenas de ambos en `src/app/c/[code]/card-landing.tsx` son URLs remotas. Sin internet no se descargaron ni se redibujaron personajes. Estos borradores usan el Coach local y no satisfacen todavía la composición con ambos personajes. Por buscar: copia local aprobada de la escena `SCENE.juntos`, `hf_20261030_053039_48320df7-cb6a-475f-b521-539b0a30f22c.png`. El generador admite `--escena /ruta/escena.png` para reemplazar al Coach en ambas piezas. Revisar la composición tras sustituirla.
+Se mantiene solo Coach Banana de pie, autorizado en la respuesta del 4 de noviembre. La historia amplía el personaje arriba, coloca la oferta en el centro y agranda el QR abajo. El texto queda entre y=263 e y=1568, fuera de los 250 px superiores y los 340 px inferiores. El espacio restante corresponde a la zona reservada para los controles de Instagram. El afiche no cambia.
+
+El mensaje corto usa el texto solicitado por Andrés, distribuido en tres líneas. La versión completa y el seguimiento se conservan.
 
 El libro de marca externo tampoco se consultó: se usaron los skills montados y los tokens locales. Revisar el QR con un teléfono en la prueba impresa antes de colocar el afiche, y desde otro dispositivo antes de subir la historia.
 

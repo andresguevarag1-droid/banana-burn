@@ -20,7 +20,7 @@ def read_matrix(name,origin,extent):
     return m
 
 ref=read_matrix('qr.png',(0,0),492)
-for name,origin,extent in [('historia.png',(68,1166),225),('afiche-a4.png',(68*2480/1080,1016*2480/1080),225*2480/1080)]:
+for name,origin,extent in [('historia.png',(68,1120),300),('afiche-a4.png',(68*2480/1080,1016*2480/1080),225*2480/1080)]:
     assert read_matrix(name,origin,extent)==ref, name
     print(name+': QR renderizado idéntico al original')
 
