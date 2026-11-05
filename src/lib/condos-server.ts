@@ -31,13 +31,15 @@ export async function condoByCode(db: SupabaseClient, code: string): Promise<Con
   return (data as CondoRow | null) ?? null;
 }
 
-/** 0066: ¿la cuenta tiene tarjeta activa y su primer cobro programado (lo que pide un condominio con tarjeta)? */
+/** 0066: ¿la cuenta tiene tarjeta activa de ONVO y su primer cobro programado (lo que pide un condominio con tarjeta)? */
 export async function condoCardReady(db: SupabaseClient, userId: string): Promise<boolean> {
   const [{ data: pm }, { data: ch }] = await Promise.all([
-    db.from("payment_methods").select("status").eq("user_id", userId).maybeSingle(),
+    db.from("payment_methods").select("status,provider").eq("user_id", userId).maybeSingle(),
     db.from("trial_charges").select("status").eq("user_id", userId).maybeSingle(),
   ]);
-  return (pm as { status?: string } | null)?.status === "active" && (ch as { status?: string } | null)?.status === "scheduled";
+  // Tilopay no cuenta: su token viene del navegador sin verificar y daría el acceso gratis sin una tarjeta real.
+  const card = pm as { status?: string; provider?: string | null } | null;
+  return card?.status === "active" && card.provider !== "tilopay" && (ch as { status?: string } | null)?.status === "scheduled";
 }
 
 /**

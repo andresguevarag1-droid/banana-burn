@@ -546,4 +546,13 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     await joinCondo(NEW_USER, "soho-paradisus", T0);
     expect(charge(f)).toMatchObject({ charge_at: "2027-01-03T12:00:00.000Z", promo: null, amount_minor: 999 });
   });
+  it("una tarjeta de Tilopay (sin verificar) no da la extensión hasta el 1 de enero", async () => {
+    const f = withCondo();
+    const { joinCondo } = await import("./condos-server");
+    await joinCondo(NEW_USER, "soho-paradisus", T0);
+    scheduled(f);
+    (f.tables.payment_methods[0] as Record<string, unknown>).provider = "tilopay";
+    expect((await joinCondo(NEW_USER, "soho-paradisus", plus(T0, 1))).kind).toBe("ya_vinculado");
+    expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: plus(T0, 7).toISOString() });
+  });
 });

@@ -116,14 +116,14 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       {tlp && (
         <p role="status" className={`rounded-2xl p-3 text-sm font-semibold text-pretty ${tlp.ok ? "bg-peel/10 text-ink" : "bg-bad/10 text-bad"}`}>{tlp.text}</p>
       )}
-      {condoPending && (
+      {condoPending && !charge && (
         <section className="rounded-2xl border-2 border-ink bg-banana-soft p-4 text-sm text-ink">
           <p className="font-extrabold">{condoPending.name}: sigue gratis hasta el {fmtDay(new Date(Date.parse(condoPending.freeUntil) - 1000).toISOString())}.</p>
           <p className="mt-1 text-pretty">Deja tu tarjeta desde el enlace de tu condominio. No se cobra nada hasta el {fmtDay(condoPending.freeUntil)}, y ese día se cobra el plan que elijas a precio normal (sin el 50 % del primer mes).</p>
           <Link href={`/c/${condoPending.code}#activar`} className="btn-primary mt-3 h-12 w-full sm:w-auto">Seguir gratis</Link>
         </section>
       )}
-      {!condoPending && (cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
+      {!(condoPending && !charge) && (cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
         <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null}
           initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />
       )}

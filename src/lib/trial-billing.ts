@@ -385,6 +385,12 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
     if (condoHold) {
       if (await joinCardCondo(v.id, condoHold.code, now)) {
         log("cobro programado para el fin del acceso del condominio", { userId: v.id, chargeId: row.id, chargeAt: row.charge_at });
+      } else if ("moved_from" in held && plan.kind === "inmediato") {
+        // Sin vínculo y con la prueba ya vencida: no se cobra ya (la persona esperaba seguir gratis). Se cancela y se avisa;
+        // al guardar la tarjeta otra vez se reprograma para el fin del acceso gratis.
+        await db.from("trial_charges").update({ status: "canceled", canceled_at: now.toISOString(), next_attempt_at: null, updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled");
+        log("condominio con tarjeta: no se pudo vincular; cobro cancelado sin cobrar", { userId: v.id, chargeId: row.id });
+        throw new BillingError("Tu tarjeta quedó guardada, pero no pudimos activar el regalo de tu condominio. Intenta de nuevo en unos minutos.", 503);
       } else if ("moved_from" in held) {
         // Sin vínculo no hay acceso gratis: el cobro vuelve a la fecha normal de su prueba, con su 50 % si le toca.
         const back = promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp)));
@@ -419,10 +425,11 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
 
   // 0066: cancelado, rechazado o anulado, y residente de un condominio con tarjeta: no se reanuda ni se cobra ya. El cobro
   // vuelve a programarse para el fin del acceso gratis, a precio normal, y el acceso del condominio llega hasta esa fecha.
-  if (condoHold && (plan.do === "resume" || plan.do === "charge_now" || plan.do === "card_only") && row.attempts < MAX_ATTEMPTS && ["canceled", "failed", "retry_scheduled", "superseded"].includes(row.status)) {
+  if (condoHold && (plan.do === "resume" || plan.do === "charge_now" || plan.do === "card_only") && row.attempts < MAX_ATTEMPTS && ["canceled", "failed", "retry_scheduled", "superseded"].includes(row.status)
+    && Date.parse(row.trial_ends_at) < Date.parse(condoHold.until)) {
     const { data: held } = await db.from("trial_charges").update({
       ...planFields, promo: null, amount_minor: amountMinorFor(input.plan, input.billing),
-      status: "scheduled", charge_at: condoHold.until, next_attempt_at: condoHold.until, moved_from: row.charge_at,
+      status: "scheduled", charge_at: condoHold.until, next_attempt_at: condoHold.until, moved_from: row.moved_from ?? row.charge_at,
       canceled_at: null, reminder_sent_at: null, updated_at: now.toISOString(),
     }).eq("id", row.id).eq("status", row.status).eq("attempts", row.attempts).select("id");
     if (held?.length && (await joinCardCondo(v.id, condoHold.code, now))) {

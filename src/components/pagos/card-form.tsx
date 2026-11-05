@@ -53,7 +53,8 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   const [err, setErr] = useState<string | null>(null);
   const errors: CardErrors = touched ? cardInputErrors(c) : {};
   const up = (p: Partial<CardInput>) => setC((x) => ({ ...x, ...p }));
-  const [pay, setProvider] = useProvider(demo);
+  // Condominio con tarjeta (0066): solo tarjetas verificadas con ONVO (el token de Tilopay no se puede verificar).
+  const [pay, setProvider] = useProvider(demo || !!condo);
   const tilopay = pay.available && pay.provider === "tilopay";
 
   async function goTilopay(e: React.FormEvent) {
