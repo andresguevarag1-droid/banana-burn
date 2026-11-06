@@ -6,6 +6,7 @@ import { COACHES, seasonCoachId } from "@/lib/coaches";
 import { usd } from "@/lib/challenges";
 import { SEASONS_T1, longDate } from "@/lib/seasons";
 import { StickyCta } from "../sticky-cta";
+import { cardRequiredNow } from "@/lib/card-required";
 import { PLANS } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
 import { Faq } from "../parts";
@@ -32,8 +33,9 @@ const FEATURES = [
   [Timer, "Técnica y marcas", "Skipping, carioca, saltos de tobillo y estiramientos con la animación de tu coach. Tus mejores 1, 5, 10 y 21 km."],
 ] as const;
 
-const faq = () => [
-  ["¿Qué incluye la prueba de 7 días?", "Puedes probar tu plan de entrenamiento sin tarjeta. La compra de la Temporada Running no está incluida: se paga aparte. Al terminar, eliges tu plan desde Mi plan."],
+// #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse (card = cardRequiredNow()): sin "sin tarjeta".
+const faq = (card = cardRequiredNow()) => [
+  ["¿Qué incluye la prueba de 7 días?", card ? "Puedes probar tu plan de entrenamiento con todo incluido. Dejas tu tarjeta al registrarte y hoy no se cobra nada. La compra de la Temporada Running no está incluida: se paga aparte. Al terminar se cobra el plan que elegiste, salvo que canceles antes desde Mi plan." : "Puedes probar tu plan de entrenamiento sin tarjeta. La compra de la Temporada Running no está incluida: se paga aparte. Al terminar, eliges tu plan desde Mi plan."],
   ["¿Sirve si ya tengo un plan de mi club o mi entrenador?", "Sí. Marcas \"Ya tengo plan de carrera\" y los días que haces series o tempo. Banana Burn solo arma tu fuerza, movilidad y técnica alrededor de esos días, sin chocar."],
   ["¿Necesito un reloj?", "No. Registras tus carreras con el GPS de tu teléfono, con la app abierta y la pantalla encendida. Tus recorridos son privados."],
   ["¿Cuánto cuesta?", `La Temporada Running cuesta ${usd(RUN.priceMinor)}, pago único, y se suma a tu plan o a tu prueba gratis. El plan anual incluye 1 temporada deportiva por año pagado. El GPS, tu historial y tus km de la semana vienen en todos los planes.`],
@@ -43,7 +45,8 @@ const faq = () => [
 ] as const;
 
 export default function RunningLanding() {
-  const FAQ = faq();
+  const card = cardRequiredNow();
+  const FAQ = faq(card);
   const coach = COACHES[seasonCoachId("running", "m")];
   return (
     <>
@@ -57,8 +60,9 @@ export default function RunningLanding() {
           <div data-sticky-anchor className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link href={SIGNUP} data-cta="running-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight aria-hidden className="size-5" /></Link>
           </div>
+          {card ? <p className="mt-2 text-sm text-ink">Hoy no se cobra nada. Cancelas cuando quieras.</p> : <>
           <p className="mt-2 text-sm text-ink">Sin tarjeta. Cancelas cuando quieras.</p>
-          <Link href={SIGNUP} data-cta="running-sin-tarjeta" className="tap flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
+          <Link href={SIGNUP} data-cta="running-sin-tarjeta" className="tap flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></>}
           <p className="mt-2 text-sm font-semibold text-ink">Temporada Running: {usd(RUN.priceMinor)} pago único. El anual incluye 1 temporada deportiva por año pagado.</p>
         </div>
         <div className="relative mx-auto flex w-full max-w-[480px] items-end justify-center gap-4">
@@ -135,11 +139,13 @@ export default function RunningLanding() {
         <div className="mt-8 rounded-3xl bg-banana p-6">
           <h2 className="text-2xl font-extrabold text-ink text-balance">Empieza con tu fuerza. Después elige tu temporada.</h2>
           <Link href={SIGNUP} data-cta="running-final" className="btn-primary mt-5 min-h-12">{TRIAL_CTA}<ArrowRight aria-hidden className="size-5" /></Link>
+          {card ? <p className="mt-3 text-sm text-ink">Hoy no se cobra nada. La prueba no incluye la compra de la temporada.</p> : <>
           <p className="mt-3 text-sm text-ink">Sin tarjeta. La prueba no incluye la compra de la temporada.</p>
-          <Link href={SIGNUP} className="tap flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
+          <Link href={SIGNUP} className="tap flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></>}
         </div>
       </section>
-      <StickyCta note="7 días gratis. Sin tarjeta."><div className="flex flex-col items-center"><Link href={SIGNUP} data-cta="running-sticky" className="btn-primary min-h-12 px-4 text-sm">{TRIAL_CTA}</Link><Link href={SIGNUP} className="flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div></StickyCta>
+      {card ? <StickyCta note="7 días gratis"><Link href={SIGNUP} data-cta="running-sticky" className="btn-primary min-h-12 px-4 text-sm">{TRIAL_CTA}</Link></StickyCta>
+        : <StickyCta note="7 días gratis. Sin tarjeta."><div className="flex flex-col items-center"><Link href={SIGNUP} data-cta="running-sticky" className="btn-primary min-h-12 px-4 text-sm">{TRIAL_CTA}</Link><Link href={SIGNUP} className="flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div></StickyCta>}
     </>
   );
 }

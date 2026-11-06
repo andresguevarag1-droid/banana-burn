@@ -8,6 +8,7 @@ import { SEASONS_T1, SPORTS, canEnroll, longDate, seasonStatus, type SportId } f
 import { Faq, Marker } from "../parts";
 import { faqJsonLd, ldScript, social } from "../seo";
 import { SIGNUP } from "../content";
+import { cardRequiredNow } from "@/lib/card-required";
 
 const TRIAL_CTA = "Empieza 7 días gratis";
 
@@ -54,6 +55,7 @@ const faq = () => {
 export default function TemporadasLanding() {
   const today = new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 10);
   const FAQ = faq();
+  const card = cardRequiredNow();
   const season = SEASONS_T1[0];
   const enrollmentOpen = canEnroll(season, today);
   return (
@@ -70,8 +72,10 @@ export default function TemporadasLanding() {
           <Link href={SIGNUP} data-cta="temporadas-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
           <a href="#deportes" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 hover:decoration-ink">Ver las temporadas</a>
         </div>
+        {/* #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse: sin "sin tarjeta". */}
+        {card ? <p className="mt-3 text-sm text-ink">Hoy no se cobra nada. Cancelas cuando quieras.</p> : <>
         <p className="mt-3 text-sm text-ink">Sin tarjeta. Cancelas cuando quieras.</p>
-        <Link href={SIGNUP} className="tap mt-1 inline-flex items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
+        <Link href={SIGNUP} className="tap mt-1 inline-flex items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></>}
         </div>
       </section>
 
@@ -142,8 +146,9 @@ export default function TemporadasLanding() {
         <div className="mt-8 rounded-3xl bg-banana p-6">
           <h2 className="text-2xl font-extrabold text-ink">Prueba tu plan antes de sumar una temporada</h2>
           <Link href={SIGNUP} data-cta="temporadas-final" className="btn-primary mt-5 min-h-12">{TRIAL_CTA} <ArrowRight aria-hidden className="size-5" /></Link>
+          {card ? <p className="mt-3 text-sm text-ink">Hoy no se cobra nada. Cancelas cuando quieras. La prueba no incluye la compra de una temporada.</p> : <>
           <p className="mt-3 text-sm text-ink">Sin tarjeta. Cancelas cuando quieras. La prueba no incluye la compra de una temporada.</p>
-          <Link href={SIGNUP} className="tap mt-1 inline-flex items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
+          <Link href={SIGNUP} className="tap mt-1 inline-flex items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></>}
         </div>
       </section>
     </>

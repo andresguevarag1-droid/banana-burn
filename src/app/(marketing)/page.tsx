@@ -18,6 +18,7 @@ import { HeroPlayer } from "./hero-player";
 import { appJsonLd, faqJsonLd, ldScript, orgJsonLd, social } from "./seo";
 import { FaqCta, FROM, SIGNUP, homeFaq } from "./content";
 import { offer } from "@/lib/offer";
+import { cardRequiredNow } from "@/lib/card-required";
 
 // Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
 export const revalidate = 3600;
@@ -58,7 +59,8 @@ const PILLARS: { n: string; t: string; d: string }[] = [
 ];
 
 /** Lo que hace la app, entendido en 5 segundos. */
-const HERO_TRUST = [`${TRIAL_DAYS} días gratis`, "Sin tarjeta", "Cancelas cuando quieras", "Te enseñamos desde cero"];
+/** #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse: sin "Sin tarjeta". Se calcula en cada render. */
+const heroTrust = (now = new Date()) => [`${TRIAL_DAYS} días gratis`, cardRequiredNow(now) ? "Hoy no se cobra nada" : "Sin tarjeta", "Cancelas cuando quieras", "Te enseñamos desde cero"];
 
 const STEPS: [string, string][] = [
   ["Cuéntanos de dónde vienes", "Tu peso, tu meta, cuántos días puedes entrenar y con qué equipo. Toma 2 minutos."],
@@ -110,7 +112,7 @@ export default function Landing() {
               <Link href={SIGNUP} data-cta="hero" className="pressable inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
             </div>
             <ul aria-label="Condiciones" className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-sm font-bold text-ink">
-              {HERO_TRUST.map((t) => <li key={t} className="flex items-center gap-1.5"><Check weight="bold" aria-hidden className="size-4 shrink-0" />{t}</li>)}
+              {heroTrust().map((t) => <li key={t} className="flex items-center gap-1.5"><Check weight="bold" aria-hidden className="size-4 shrink-0" />{t}</li>)}
             </ul>
             <p className="mt-3 text-sm text-ink/75">{o.from(FROM)} ¿Ya tienes cuenta? <Link href="/entrar" data-cta="hero-entrar" className="tap inline-flex font-bold text-ink underline underline-offset-4">Entrar</Link></p>
           </div>

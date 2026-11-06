@@ -11,8 +11,9 @@ import { ArrowRight, Barbell, Buildings, ChatCircle, Check, CheckCircle, ForkKni
 import { getViewer } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { isDemoMode } from "@/lib/env";
-import { condoOffer, joinMessage, lastFreeDay, normalizeCondoCode, type CondoRow, type JoinDecision } from "@/lib/condos";
-import { condoByCode, condoCardReady } from "@/lib/condos-server";
+import { cardRequiredDemo, cardRequiredFor, cardRequiredNow } from "@/lib/card-required";
+import { condoFreeEnd, condoOffer, joinMessage, lastFreeDay, normalizeCondoCode, type CondoRow, type JoinDecision } from "@/lib/condos";
+import { condoByCode, condoCardReady, createdAtOf } from "@/lib/condos-server";
 import { CondoCard } from "./condo-card";
 import { CardCondoLanding } from "./card-landing";
 import { longDate } from "@/lib/email/templates";
@@ -34,24 +35,30 @@ const PERKS: [PhosphorIcon, string, string][] = [
 
 const RESULTS = new Set<JoinDecision["kind"]>(["join", "inactivo", "ya_vinculado", "otro_condominio", "ya_usado", "plan_pagado"]);
 
-export default async function CondoLink({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ estado?: string; vista?: string }> }) {
+export default async function CondoLink({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ estado?: string; vista?: string; tarjeta?: string }> }) {
   const code = normalizeCondoCode((await params).code);
   if (!code) notFound();
   const estadoRaw = (await searchParams).estado;
   const estado = estadoRaw && RESULTS.has(estadoRaw as JoinDecision["kind"]) ? (estadoRaw as JoinDecision["kind"]) : null;
   const db = adminClient();
   const demo = !db && isDemoMode;
-  const condo: CondoRow | null = db ? await condoByCode(db, code)
+  const found: CondoRow | null = db ? await condoByCode(db, code)
     : demo ? { id: 0, code, name: "Condominio de ejemplo", status: "mes_gratis", free_ends_at: null, paid_plan: null, paid_until: null, ...(code === "con-tarjeta" ? { card_required: true, free_until: "2027-01-01T06:00:00.000Z" } : {}) } : null;
   const v = await getViewer().catch(() => null);
-  let member = false, grantUntil: string | null = null;
+  // #269: desde el 1 de enero de 2027 todos los condominios piden la tarjeta a las cuentas nuevas. Con sesión, según el alta
+  // de la cuenta; sin sesión, según la fecha de hoy (quien se registre hoy). Solo demo: ?tarjeta=obligatoria.
+  const createdAt = v && !v.demo && db ? await createdAtOf(db, v.id).catch(() => null) : null;
+  const cardRule = v && !v.demo ? cardRequiredFor(createdAt) : cardRequiredNow() || cardRequiredDemo(demo || !!v?.demo, (await searchParams).tarjeta);
+  const condo: CondoRow | null = found && cardRule && !found.card_required ? { ...found, card_required: true } : found;
+  let member = false, grantUntil: string | null = null, grantStart: string | null = null;
   if (v && !v.demo && db && condo) {
     const { data } = await db.from("condo_members").select("condo_id,grant_id").eq("user_id", v.id).maybeSingle();
     const m = data as { condo_id: number; grant_id: number | null } | null;
     member = m?.condo_id === condo.id;
     if (member && m?.grant_id) {
-      const { data: g } = await db.from("comp_grants").select("expires_at").eq("id", m.grant_id).maybeSingle();
+      const { data: g } = await db.from("comp_grants").select("starts_at,expires_at").eq("id", m.grant_id).maybeSingle();
       grantUntil = (g as { expires_at: string } | null)?.expires_at ?? null;
+      grantStart = (g as { starts_at?: string } | null)?.starts_at ?? null;
     }
   }
   if (v?.demo && estado === "join") { member = true; grantUntil = new Date(Date.now() + 30 * 864e5).toISOString(); }
@@ -61,14 +68,15 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
   const name = condo?.name ?? "tu condominio";
   // 0066: gratis hasta una fecha y solo con tarjeta. cardReady: ya tiene tarjeta activa y su cobro programado.
   const withCard = !!offer?.card;
-  const until = withCard ? offer!.expiresAt : null;
+  // Sin fecha fija (#269), el mes gratis de un residente cuenta desde que lo activó.
+  const until = withCard ? (member && grantStart ? condoFreeEnd(condo!, grantStart) : offer!.expiresAt) : null;
   const day = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
   const freeDay = until ? day(lastFreeDay(until)) : "";
   const chargeDay = until ? day(until) : "";
   const cardReady = withCard && v && !v.demo && db ? await condoCardReady(db, v.id).catch(() => false) : false;
   // Qué se muestra: vinculado (éxito), un resultado que no es éxito, la oferta o el enlace inactivo.
   const view: "member" | "result" | "offer" | "inactive" = member ? "member" : estado && estado !== "join" ? "result" : offer ? "offer" : "inactive";
-  const msg = joinMessage(view === "member" ? "join" : view === "result" ? estado! : "inactivo", name, condo?.card_required ? condo.free_until : null);
+  const msg = joinMessage(view === "member" ? "join" : view === "result" ? estado! : "inactivo", name, condo?.card_required ? (condo.free_until ?? until) : null);
   const cta = withCard ? `Activar gratis hasta el ${freeDay}` : offer?.free === false ? "Activar mi acceso" : "Activar mi mes gratis";
   const live = grantUntil && Date.parse(grantUntil) > Date.now();
 

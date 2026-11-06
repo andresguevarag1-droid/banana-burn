@@ -247,11 +247,26 @@ export type CardStep =
   /** Beta: cuenta sin tarjeta. Aviso para agregarla antes del fin de la beta (se cobra ese día, sin días extra). */
   | "beta"
   /** Muro: cuenta de la beta después del fin de la beta, o cobro rechazado. Agregar o cambiar la tarjeta cobra en ese momento. */
-  | "pay";
+  | "pay"
+  /** #269: cuenta creada desde CARD_REQUIRED_FROM, en sus 7 días y sin su cobro listo: deja la tarjeta para empezar. */
+  | "card";
 
-export function cardStepFor(i: { paidAccess: boolean; createdAt: string | null | undefined; row: Pick<TrialChargeRow, "status" | "trial_ends_at"> | null | undefined; now?: Date; betaEndsAt?: string }): CardStep {
+/**
+ * #269: ¿la cuenta tiene su cobro listo? Tarjeta activa y primer cobro programado. Si ya la dejó y cancela antes del fin de
+ * la prueba, sigue con acceso hasta ese día aunque pida quitar la tarjeta (lo que prometen Mi plan y los Términos), como en
+ * public._trial_live() (0026, 0067).
+ */
+export function cardTrialReady(row: Pick<TrialChargeRow, "status" | "trial_ends_at"> | null | undefined, card: Pick<CardRow, "status"> | null | undefined, now = new Date()): boolean {
+  if (!row || !card) return false;
+  if (row.status === "scheduled") return card.status === "active";
+  return row.status === "canceled" && now.getTime() < ms(row.trial_ends_at);
+}
+
+export function cardStepFor(i: { paidAccess: boolean; createdAt: string | null | undefined; row: Pick<TrialChargeRow, "status" | "trial_ends_at"> | null | undefined; now?: Date; betaEndsAt?: string; needsCard?: boolean }): CardStep {
   const now = i.now ?? new Date();
   if (i.paidAccess) return "none";
+  // #269: sin su cobro listo, la tarjeta durante sus 7 días; después, el muro (guardarla cobra en ese momento).
+  if (i.needsCard) return trialLive(i.createdAt, now, i.betaEndsAt) ? "card" : "pay";
   const row = i.row;
   if (!row) {
     if (!cardRequired(now, i.betaEndsAt)) return "beta";

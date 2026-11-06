@@ -15,6 +15,9 @@ import { PLANS } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { TECHNIQUE_COUNT } from "@/lib/exercise-frames";
 import { condoName } from "@/lib/condominios";
+import { CONDO_TRY_DAYS } from "@/lib/condos";
+import { cardRequiredDemo, cardRequiredNow } from "@/lib/card-required";
+import { isDemoMode } from "@/lib/env";
 import { Faq, Marker } from "../(marketing)/parts";
 import { LeadForm } from "./lead-form";
 
@@ -41,11 +44,17 @@ const FEATURES: [PhosphorIcon, string, string][] = [
   [House, "En el gimnasio del condominio o en casa", "El plan se arma con el equipo que hay: máquinas, mancuernas, bandas o sin equipo, en el apartamento."],
 ];
 
-const STEPS: [string, string][] = [
+// #269: desde el 1 de enero de 2027 las cuentas nuevas dejan la tarjeta para completar el mes gratis (prueban 7 días sin
+// ella, como en Soho Paradisus). Los textos se calculan al pedir la página (card = cardRequiredNow()).
+const steps = (card: boolean): [string, string][] => [
   ["Reunión virtual de 30 minutos", "Por videollamada te mostramos la app por dentro, te explicamos cómo se implementa y resolvemos las dudas de la administración o la junta directiva."],
   ["Activamos el condominio", "Creamos el acceso del condominio y te damos su enlace, un afiche A4 con código QR para el gimnasio y un mensaje listo para el grupo de residentes."],
-  ["Los residentes se registran", "Cada uno entra con el enlace del condominio desde su celular y tiene el primer mes gratis con entreno y nutrición para todos los residentes. Sus 30 días empiezan cuando activa el beneficio, sin tarjeta."],
-  ["Cada residente decide", "Al terminar el mes, cada residente decide si sigue y con qué plan, por su cuenta. La administración y el condominio no pagan nada."],
+  card
+    ? ["Los residentes se registran", `Cada uno entra con el enlace del condominio desde su celular y prueba ${CONDO_TRY_DAYS} días gratis sin tarjeta. Si le gusta, deja su tarjeta y sigue gratis hasta completar su primer mes con entreno y nutrición; sus 30 días empiezan cuando activa el beneficio.`]
+    : ["Los residentes se registran", "Cada uno entra con el enlace del condominio desde su celular y tiene el primer mes gratis con entreno y nutrición para todos los residentes. Sus 30 días empiezan cuando activa el beneficio, sin tarjeta."],
+  card
+    ? ["Cada residente decide", "Cada residente decide si sigue y con qué plan. A quien dejó su tarjeta se le cobra al terminar su mes, con aviso 2 días antes, y puede cancelar sin costo desde Mi plan antes de esa fecha. La administración y el condominio no pagan nada."]
+    : ["Cada residente decide", "Al terminar el mes, cada residente decide si sigue y con qué plan, por su cuenta. La administración y el condominio no pagan nada."],
 ];
 
 const ADMIN_BENEFITS: [PhosphorIcon, string, string][] = [
@@ -55,15 +64,19 @@ const ADMIN_BENEFITS: [PhosphorIcon, string, string][] = [
   [QrCode, "Arranque sencillo", "Te damos el enlace del condominio, un afiche con código QR para el gimnasio y un mensaje listo para el grupo de residentes."],
 ];
 
-const FAQ: [string, string][] = [
+const faq = (card: boolean): [string, string][] => [
   ["No tengo tiempo para implementarlo. ¿Qué me toca hacer?", "Banana Burn activa el condominio y prepara su enlace exclusivo, el afiche A4 con QR y el mensaje para residentes. Tu parte es compartir el mensaje y colocar el afiche; no cobras ni gestionas planes."],
   ["¿Y si la junta tiene que aprobarlo?", "Puedes invitarla a la reunión. Te dejamos una presentación corta y un resumen de una página para que revise la propuesta antes de decidir."],
   ["¿Y si ya tenemos entrenador?", "La app acompaña al residente con su plan y la técnica de cada ejercicio también los días y horas en que el entrenador no está."],
-  ["¿Tiene costo el primer mes?", "No. Durante el primer mes, todos los residentes que se registran con el enlace del condominio usan Banana Burn completo, con entreno y nutrición. No paga la administración ni pagan los residentes, y nadie necesita tarjeta."],
+  card
+    ? ["¿Tiene costo el primer mes?", `No. Todos los residentes que se registran con el enlace del condominio usan Banana Burn completo, con entreno y nutrición. Prueban ${CONDO_TRY_DAYS} días sin tarjeta y, para completar el mes gratis, dejan su tarjeta; ese día no se cobra nada. No paga la administración ni el condominio.`]
+    : ["¿Tiene costo el primer mes?", "No. Durante el primer mes, todos los residentes que se registran con el enlace del condominio usan Banana Burn completo, con entreno y nutrición. No paga la administración ni pagan los residentes, y nadie necesita tarjeta."],
   ["¿Quién paga después?", "Nadie de la administración. Al terminar el mes gratis, cada residente decide si sigue con un plan individual y lo paga por su cuenta. La administración y el condominio nunca pagan."],
   ["¿Qué necesitan los residentes?", "Solo su celular. Banana Burn es una LinkApp: se abre desde el navegador y se instala en la pantalla de inicio en segundos, sin tiendas de apps."],
   ["¿Sirve en el gimnasio del condominio y en casa?", "Sí. Al registrarse, cada residente indica con qué equipo cuenta y el plan se arma con eso: máquinas y pesas del gimnasio, mancuernas o bandas en casa, o sin equipo."],
-  ["¿Qué pasa después del mes gratis?", `Cada residente decide. Puede seguir con ${ENTRENO.name} o ${COMPLETO.name}, o dejar de usar la app. No hay ningún cobro automático: nadie deja tarjeta durante el mes gratis.`],
+  card
+    ? ["¿Qué pasa después del mes gratis?", `Cada residente decide. A quien dejó su tarjeta se le cobra ${ENTRENO.name} o ${COMPLETO.name}, el plan que eligió, al terminar su mes, con aviso 2 días antes; puede cancelar sin costo desde Mi plan antes de esa fecha.`]
+    : ["¿Qué pasa después del mes gratis?", `Cada residente decide. Puede seguir con ${ENTRENO.name} o ${COMPLETO.name}, o dejar de usar la app. No hay ningún cobro automático: nadie deja tarjeta durante el mes gratis.`],
   ["¿Hay contrato de permanencia?", "No pedimos permanencia, igual que en los planes normales. Los detalles del acuerdo con el condominio los dejamos por escrito en la reunión."],
   ["¿Qué pasa con los datos de los residentes?", "Los datos de cada residente son privados: su peso, sus entrenos y su comida solo los ve esa persona. La administración solo recibe cuántos residentes se registraron y cuántos entrenaron en la semana, nunca información personal."],
   ["¿Para qué edades sirve?", "Para personas adultas de cualquier nivel, desde quien nunca ha entrenado hasta quien ya va al gimnasio. Cada plan se ajusta a su nivel."],
@@ -84,6 +97,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 export default async function Condominios({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const condo = condoName(sp.c);
+  const card = cardRequiredNow() || cardRequiredDemo(isDemoMode, sp.tarjeta);
   return (
     <div className="min-h-dvh bg-paper text-body">
       <header className="sticky top-0 z-30 border-b border-line/70 bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
@@ -111,7 +125,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
                 <a href="#como-funciona" className="tap inline-flex h-12 items-center justify-center gap-1 px-2 font-bold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">Ver cómo funciona</a>
               </div>
               <ul className="mt-7 grid gap-2.5 text-[15px] font-semibold text-ink sm:grid-cols-2">
-                {["Primer mes gratis con entreno y nutrición, sin tarjeta", "Después, cada residente decide si sigue", "Sin costo para la administración ni el condominio", "En el gimnasio del condominio o en casa"].map((t) => (
+                {[card ? "Primer mes gratis con entreno y nutrición" : "Primer mes gratis con entreno y nutrición, sin tarjeta", "Después, cada residente decide si sigue", "Sin costo para la administración ni el condominio", "En el gimnasio del condominio o en casa"].map((t) => (
                   <li key={t} className="flex items-start gap-2"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-ink text-banana"><Check weight="bold" className="size-3" /></span>{t}</li>
                 ))}
               </ul>
@@ -127,7 +141,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
               <Eyebrow>Cómo funciona</Eyebrow>
               <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">Del primer correo a residentes entrenando, en 4 pasos.</h2>
               <ol className="mt-8 space-y-5">
-                {STEPS.map(([t, d], i) => (
+                {steps(card).map(([t, d], i) => (
                   <li key={t} className="flex gap-4">
                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ink text-base font-extrabold tabular-nums text-banana">{i + 1}</span>
                     <div><h3 className="text-lg font-extrabold text-ink">{t}</h3><p className="mt-0.5 text-pretty">{d}</p></div>
@@ -232,7 +246,7 @@ export default async function Condominios({ searchParams }: { searchParams: Prom
           </div>
         </section>
 
-        <Faq items={FAQ} id="preguntas" />
+        <Faq items={faq(card)} id="preguntas" />
 
         {/* Formulario */}
         <section id="reunion" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-20 pt-20 sm:px-6 sm:pt-24">

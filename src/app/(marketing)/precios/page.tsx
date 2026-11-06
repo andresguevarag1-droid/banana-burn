@@ -17,19 +17,21 @@ import type { Metadata } from "next";
 export const revalidate = 3600;
 
 const TITLE = `Precios: tu entrenador personal en el celular desde ${FROM} al mes`;
-/** Según la fecha (offer.ts): la prueba no pide tarjeta; la beta es gratis hasta el 7 de noviembre. */
-const description = () => `${offer().card ? `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido, sin tarjeta.` : `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido.`} Después, Entreno desde ${FROM} al mes, o súmale nutrición con comida latina de verdad. Cancela cuando quieras.`;
+/** Según la fecha (offer.ts): la prueba no pide tarjeta; la beta es gratis hasta el 7 de noviembre. #269: desde el 1 de enero
+ * de 2027 la tarjeta se deja al registrarse, así que ningún texto dice "sin tarjeta". */
+const description = () => `${offer().card && !offer().cardRequired ? `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido, sin tarjeta.` : `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido.`} Después, Entreno desde ${FROM} al mes, o súmale nutrición con comida latina de verdad. Cancela cuando quieras.`;
 const CTA = `Empieza ${TRIAL_DAYS} días gratis`;
 const ENTRENO = PLANS.find((p) => p.id === "entreno")!;
 const COMPLETO = PLANS.find((p) => p.id === "completo")!;
 
-function Start({ location }: { location: string }) {
+function Start({ location, card = false }: { location: string; card?: boolean }) {
+  if (card) return <div><Link href={SIGNUP} data-cta={`precios-${location}`} className="btn-primary min-h-12 w-full sm:w-auto">{CTA}<ArrowRight aria-hidden className="size-5" /></Link></div>;
   return <div><Link href={SIGNUP} data-cta={`precios-${location}`} className="btn-primary min-h-12 w-full sm:w-auto">{CTA}<ArrowRight aria-hidden className="size-5" /></Link><Link href={SIGNUP} data-cta={`precios-${location}-sin-tarjeta`} className="tap mt-1 flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div>;
 }
 
 export function generateMetadata(): Metadata {
   const d = description();
-  return { title: TITLE, description: d, ...social({ title: "Precios de Banana Burn", description: d, path: "/precios", og: { t: "Precios claros, 7 días gratis", s: offer().card ? "Entreno o Entreno + Nutrición, en dólares. Pruébalo sin tarjeta." : "Entreno o Entreno + Nutrición, en dólares, con todo incluido para probar.", v: "record" } }) };
+  return { title: TITLE, description: d, ...social({ title: "Precios de Banana Burn", description: d, path: "/precios", og: { t: "Precios claros, 7 días gratis", s: offer().cardRequired ? "Entreno o Entreno + Nutrición, en dólares, con todo incluido para probar." : offer().card ? "Entreno o Entreno + Nutrición, en dólares. Pruébalo sin tarjeta." : "Entreno o Entreno + Nutrición, en dólares, con todo incluido para probar.", v: "record" } }) };
 }
 
 export default function Precios() {
@@ -39,7 +41,11 @@ export default function Precios() {
     ["¿Puedo cambiar de plan?", "Sí, desde Mi plan. Si ya tienes una suscripción, el nuevo plan empieza cuando se confirma su pago y reemplaza al actual, sin prorrateo. Si cambias desde un anual, el tiempo restante no se reembolsa ni se descuenta; puedes cancelar la renovación y esperar a que termine tu año."],
     ...faq().filter(([q]) => q === "¿Cómo pago?"),
   ] as const;
-  const steps = [
+  const steps = o.cardRequired ? [
+    [`Prueba ${TRIAL_DAYS} días`, "Crea tu cuenta y deja tu tarjeta: hoy no se cobra nada. Prueba el entreno, la nutrición y Banana Shield antes de elegir qué necesitas."],
+    ["Te avisamos antes del cobro", `Te avisamos ${REMINDER_DAYS_BEFORE} días antes del cobro. El día ${TRIAL_DAYS + 1} se cobra tu plan, con tu primer mes mensual a mitad de precio.`],
+    ["Decide si sigues", "El cobro es automático salvo que canceles antes desde Mi plan. Si cancelas, no se cobra nada y tu progreso queda guardado."],
+  ] : [
     [`Prueba ${TRIAL_DAYS} días`, "Crea tu cuenta sin tarjeta. Prueba el entreno, la nutrición y Banana Shield antes de elegir qué necesitas."],
     ["Te avisamos antes del cobro", `Si guardas tu tarjeta, te avisamos ${REMINDER_DAYS_BEFORE} días antes del cobro programado. Guardarla es opcional; puedes continuar sin tarjeta.`],
     ["Decide si sigues", "Sin tarjeta guardada, eliges y pagas tu plan al terminar; tu progreso queda guardado. Con tarjeta guardada, el cobro es automático salvo que canceles antes desde Mi plan."],
@@ -50,10 +56,10 @@ export default function Precios() {
       <section id="hero" className="bg-banana">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 sm:py-12 md:grid-cols-[1fr_240px]">
           <div>
-            <p className="text-sm font-bold text-ink tabular-nums">{TRIAL_DAYS} días gratis, sin tarjeta</p>
+            <p className="text-sm font-bold text-ink tabular-nums">{TRIAL_DAYS} días gratis{o.cardRequired ? ", con todo incluido" : ", sin tarjeta"}</p>
             <h1 className="mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-ink text-balance sm:text-5xl">Gana fuerza con un plan que te guía cada día</h1>
             <p className="mt-4 max-w-xl text-body text-pretty">Tu rutina, tus cargas y tu progreso en un solo lugar. Prueba todo y decide si también quieres sumar nutrición.</p>
-            <div data-sticky-anchor className="mt-5"><Start location="hero" /></div>
+            <div data-sticky-anchor className="mt-5"><Start location="hero" card={o.cardRequired} /></div>
             <p className="mt-1 text-sm text-ink">Cancelas cuando quieras desde Mi plan.</p>
           </div>
           <Image src="/brand/mascota-sola.webp" alt="Coach Banana, tu guía de entrenamiento" width={240} height={300} sizes="240px" className="hidden h-[300px] w-[240px] object-contain md:block" />
@@ -87,11 +93,12 @@ export default function Precios() {
       <section data-sticky-hide className="bg-banana">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-ink text-balance">Tu próximo entreno empieza con una decisión sencilla</h2>
-          <p className="mt-3 text-body">Prueba {TRIAL_DAYS} días con todo incluido, sin tarjeta. Después eliges tu plan.</p>
-          <div className="mt-5"><Start location="final" /></div>
+          <p className="mt-3 text-body">{o.cardRequired ? <>Prueba {TRIAL_DAYS} días con todo incluido. Hoy no se cobra nada.</> : <>Prueba {TRIAL_DAYS} días con todo incluido, sin tarjeta. Después eliges tu plan.</>}</p>
+          <div className="mt-5"><Start location="final" card={o.cardRequired} /></div>
         </div>
       </section>
-      <StickyCta note="Sin tarjeta"><div className="flex flex-col items-center"><Link href={SIGNUP} data-cta="precios-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link><Link href={SIGNUP} data-cta="precios-sticky-sin-tarjeta" className="tap inline-flex min-h-11 items-center text-xs font-semibold text-ink underline">Continuar sin tarjeta</Link></div></StickyCta>
+      {o.cardRequired ? <StickyCta note="Hoy no se cobra nada"><Link href={SIGNUP} data-cta="precios-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link></StickyCta>
+        : <StickyCta note="Sin tarjeta"><div className="flex flex-col items-center"><Link href={SIGNUP} data-cta="precios-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link><Link href={SIGNUP} data-cta="precios-sticky-sin-tarjeta" className="tap inline-flex min-h-11 items-center text-xs font-semibold text-ink underline">Continuar sin tarjeta</Link></div></StickyCta>}
     </>
   );
 }

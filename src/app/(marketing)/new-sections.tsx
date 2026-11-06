@@ -11,7 +11,8 @@ import { Phone } from "@/components/phone";
 import { COACHES } from "@/lib/coaches";
 import { PROMO_PCT, promoPrice } from "@/lib/trial";
 import { PLANS } from "@/lib/plans";
-import { money } from "@/lib/copy";
+import { TRIAL_DAYS, money } from "@/lib/copy";
+import { cardRequiredNow } from "@/lib/card-required";
 import { SIGNUP } from "./content";
 import { SEASON_PRICE_MINOR, SPORTS, SPORT_IDS, T1_START, longDate } from "@/lib/seasons";
 
@@ -160,7 +161,7 @@ export function OfferBand() {
       <div className="grid items-center gap-8 rounded-[2.25rem] bg-banana p-7 sm:p-12 lg:grid-cols-[1.3fr_1fr]">
         <div>
           <h2 id="oferta-t" className="text-4xl sm:text-5xl font-extrabold tracking-[-0.03em] text-ink text-balance">Tu primer mes a mitad de precio.</h2>
-          <p className="mt-4 max-w-[56ch] text-lg leading-relaxed text-ink/85 text-pretty">Pruebas gratis, con o sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Ese día no se cobra nada y te avisamos 2 días antes.</p>
+          <p className="mt-4 max-w-[56ch] text-lg leading-relaxed text-ink/85 text-pretty">{cardRequiredNow() /* #269 */ ? <>Pruebas {TRIAL_DAYS} días gratis. Dejas tu tarjeta al registrarte y tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Hoy no se cobra nada y te avisamos 2 días antes.</> : <>Pruebas gratis, con o sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Ese día no se cobra nada y te avisamos 2 días antes.</>}</p>
           <dl className="mt-6 grid grid-cols-2 gap-3 max-w-md">
             {[[entreno.name, entreno.price.mes, promoPrice("entreno")], [completo.name, completo.price.mes, promoPrice("completo")]].map(([n, full, half]) => (
               <div key={String(n)} className="rounded-2xl bg-white/70 p-4">

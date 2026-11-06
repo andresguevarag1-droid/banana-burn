@@ -1,4 +1,5 @@
 import "server-only";
+import { cardRequiredFor } from "@/lib/card-required";
 // Tarjeta guardada y primer cobro programado (servidor, service_role). Reglas puras en trial.ts; tabla en 0026.
 //
 // Flujo:
@@ -221,20 +222,22 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
 async function condoCardUntil(db: SupabaseClient, userId: string, rawCode: string | null | undefined, now: Date): Promise<{ code: string; until: string } | null> {
   try {
     const { normalizeCondoCode, decideJoin } = await import("@/lib/condos");
-    const { condoByCode, pendingCardCondo } = await import("@/lib/condos-server");
+    const { condoByCode, createdAtOf, pendingCardCondo } = await import("@/lib/condos-server");
     // Ya prueba sin tarjeta en un condominio con tarjeta: deje la tarjeta donde la deje (Mi plan, la bienvenida, el enlace).
     const pending = await pendingCardCondo(db, userId, now);
     if (pending) return { code: pending.code, until: pending.freeUntil };
     if (!rawCode) return null;
     const code = normalizeCondoCode(rawCode);
     const condo = code ? await condoByCode(db, code) : null;
-    if (!code || !condo?.card_required) return null;
+    // #269: desde el 1 de enero de 2027 cualquier condominio pide la tarjeta a una cuenta nueva.
+    const createdAt = condo && !condo.card_required ? await createdAtOf(db, userId).catch(() => null) : null;
+    if (!code || !condo || !(condo.card_required || cardRequiredFor(createdAt))) return null;
     const [{ data: member }, { data: grants }, paid] = await Promise.all([
       db.from("condo_members").select("condo_id").eq("user_id", userId).maybeSingle(),
       db.from("comp_grants").select("id").eq("user_id", userId).eq("source", "condominio").limit(1),
       hasLivePaidSubscription(db, userId).catch(() => false),
     ]);
-    const d = decideJoin({ condo, memberOf: (member as { condo_id: number } | null)?.condo_id ?? null, hadCondoGrant: (grants?.length ?? 0) > 0, hasPaidPlan: paid, cardReady: true, now });
+    const d = decideJoin({ condo, memberOf: (member as { condo_id: number } | null)?.condo_id ?? null, hadCondoGrant: (grants?.length ?? 0) > 0, hasPaidPlan: paid, cardReady: true, createdAt, now });
     return d.kind === "join" && d.card ? { code, until: d.expiresAt } : null;
   } catch (e) {
     log("condominio con tarjeta: no se pudo revisar", { userId, error: errInfo(e) });

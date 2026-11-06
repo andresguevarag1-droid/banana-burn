@@ -86,7 +86,17 @@ function Choice({ on, onClick, icon, t, d }: { on: boolean; onClick: () => void;
 
 const SELECT = "input h-14 text-lg px-3";
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
+/**
+ * #269: el texto principal del paso de la tarjeta obligatoria. El mensual lleva el 50 % del primer mes; el anual va a precio
+ * normal (PROMO_TERMS). Sin fecha (no debería pasar): "al terminar tu prueba".
+ */
+export function requiredLine(chargeDay: string | null, c: PlanChoice): string {
+  const when = chargeDay ? `El ${chargeDay}` : "Al terminar tu prueba";
+  const charge = c.billing === "mes" ? `se cobra ${money2(promoPrice(c.plan))}, tu primer mes con 50 %` : `se cobran ${money2(PLANS.find((p) => p.id === c.plan)!.price.anual)} del plan anual`;
+  return `Hoy no se cobra nada. ${when} ${charge}. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.`;
+}
+
+export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, cardRequired = false, onboarded = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
   /** Solo demo: abrir en el paso de experiencia (?vista=lenguaje). */
   startOnVoice?: boolean;
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
@@ -95,6 +105,13 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
    * sin tarjeta guardada y sin plan pagado). "Seguir sin tarjeta" lo salta.
    */
   cardOffer?: boolean;
+  /**
+   * #269: cuenta creada desde el 1 de enero de 2027: el paso de la tarjeta es obligatorio y sin "seguir sin tarjeta". El plan
+   * se guarda al llegar a ese paso, así que si cierra la bienvenida ahí, al volver abre directo en la tarjeta.
+   */
+  cardRequired?: boolean;
+  /** #269: ya guardó su plan y solo le falta la tarjeta (vuelve a la bienvenida): abre en ese paso, sin volver atrás. */
+  onboarded?: boolean;
   /** Cuándo sería el primer cobro si deja la tarjeta lista: fin de la beta o fin de su prueba (alta + 7 días). */
   chargeAt?: string | null;
   /** ¿Están activos los pagos con ONVO? Sin ellos no se puede guardar la tarjeta. */
@@ -111,8 +128,11 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   nutrition?: boolean;
 }) {
   const router = useRouter();
-  const TOTAL = cardOffer ? STEPS + 1 : STEPS;
-  const [step, setStep] = useState(startOnCard && cardOffer ? STEPS : startOnVoice ? 3 : 0);
+  const cardStep = cardOffer || cardRequired;
+  const TOTAL = cardStep ? STEPS + 1 : STEPS;
+  const [step, setStep] = useState(startOnCard && cardStep ? STEPS : startOnVoice ? 3 : 0);
+  // #269: con la tarjeta obligatoria el plan se guarda antes de ese paso (o ya estaba guardado al volver).
+  const [profileSaved, setProfileSaved] = useState(onboarded);
   const [choice, setChoice] = useState<PlanChoice>(intent ?? { plan: "completo", billing: "mes" });
   const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
@@ -186,13 +206,25 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   ][step];
 
   // "Crear mi plan" lleva primero a la oferta de la tarjeta (opcional). El perfil se guarda al dejarla lista o al seguir sin
-  // tarjeta.
+  // tarjeta. #269: con la tarjeta obligatoria, el perfil se guarda antes de ese paso.
   function next() {
+    if (cardRequired && !saved) {
+      if (!full) return;
+      setErr(null);
+      start(async () => {
+        const r = await safeAction(completeOnboarding(full));
+        if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
+        setProfileSaved(true);
+        go(STEPS);
+      });
+      return;
+    }
     if (cardOffer && !saved) { go(STEPS); return; }
     finish();
   }
   /** Tarjeta de otro país (Tilopay): se guarda el plan antes de ir a la página segura; al volver, Mi plan muestra la prueba. */
   async function saveBeforeTilopay(): Promise<boolean> {
+    if (profileSaved) return true;
     if (!full) return false;
     setErr(null);
     const r = await safeAction(completeOnboarding(full));
@@ -201,14 +233,16 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   }
 
   function finish(card?: CardSaved) {
-    if (!full) return;
+    if (!full && !profileSaved) return;
     setErr(null);
     start(async () => {
-      const r = await safeAction(completeOnboarding(full));
-      if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
+      if (!profileSaved && full) {
+        const r = await safeAction(completeOnboarding(full));
+        if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
+      }
       if (card) setSaved(card);
-      // Una sola vez por cuenta: aquí, al guardar el plan (la pantalla final no lo repite).
-      trackOnce("onboarding_done", { goal: full.goal, trial: Boolean(trialEnd) });
+      // Una sola vez por cuenta: aquí, al terminar la bienvenida (la pantalla final no lo repite).
+      trackOnce("onboarding_done", { goal: full?.goal ?? o.goal, trial: Boolean(trialEnd) || cardRequired });
       // Embudo (5 nov): la mitad llegaba a Hoy y no abría el entreno. Ahora se le pregunta "¿Entrenamos ahora?".
       router.replace(demo ? "/app?primera=1" : "/app/primer-entreno");
       router.refresh();
@@ -261,7 +295,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     <main data-own-safe-top className="min-h-dvh bg-paper flex flex-col">
       <header className="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto max-w-md flex items-center justify-between h-12">
-          {step > 0 ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-11 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
+          {step > 0 && !(onboarded && step === STEPS) ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-11 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
           <span className="text-sm font-bold text-muted tabular-nums">{step + 1} de {TOTAL}</span>
         </div>
         <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-label="Progreso" aria-valuemin={1} aria-valuemax={TOTAL} aria-valuenow={step + 1}><div className="h-full w-full bg-ink rounded-full origin-left transition-transform duration-300 ease-[cubic-bezier(.23,1,.32,1)]" style={{ transform: `scaleX(${(step + 1) / TOTAL})` }} /></div>
@@ -397,7 +431,25 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
           </>)}
 
-          {step === STEPS && cardOffer && (<>
+          {step === STEPS && cardRequired && (<>
+            {/* #269: desde el 1 de enero de 2027 la tarjeta es obligatoria para empezar la prueba. Hoy no se cobra nada. */}
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Deja tu tarjeta para empezar tus {TRIAL_DAYS} días gratis</h1>
+              <p className="mt-2 text-muted text-pretty">Tienes todo incluido: entreno, Coach Banana, nutrición y Banana Shield.</p>
+            </div>
+            <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink text-pretty">{requiredLine(chargeDay, choice)}</p>
+            <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
+            {payments || demo ? (
+              <CardForm choice={choice} demo={demo} submitLabel={`Empezar mis ${TRIAL_DAYS} días gratis`} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} note={null} />
+            ) : (
+              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.</p>
+            )}
+            <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>
+            {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />Creando tu plan…</p>}
+            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
+          </>)}
+
+          {step === STEPS && cardOffer && !cardRequired && (<>
             {/* La tarjeta es opcional y se dice primero: muchas personas preguntaban si era obligatoria para usar la prueba. */}
             <div className="rounded-3xl bg-ink p-5 text-white">
               <p className="text-xl font-extrabold text-balance">La tarjeta es opcional</p>
@@ -437,8 +489,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
           {step < STEPS - 1 ? (
             <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>
           ) : step === STEPS - 1 ? (
-            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardOffer ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
-          ) : step === STEPS && cardOffer ? (
+            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardStep ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
+          ) : step === STEPS && cardOffer && !cardRequired ? (
             <>
               <button data-cta="bienvenida-sin-tarjeta" disabled={pending} onClick={() => finish()} className="btn-primary w-full h-14 text-base">Empezar gratis sin tarjeta <ArrowRight className="size-5" /></button>
               <p className="mt-1.5 text-center text-xs text-muted">Si quieres el 50 %, puedes dejar tu tarjeta después desde Mi plan.</p>

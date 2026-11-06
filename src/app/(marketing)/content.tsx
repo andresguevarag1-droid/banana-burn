@@ -36,7 +36,7 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   ["¿Cómo cancelo? ¿Hay reembolso?", o.faqCancel],
   ["¿Qué diferencia hay entre los planes?", `Entreno incluye tu rutina, el peso de cada serie, Coach Banana para tus dudas de entreno (hasta ${COACH_LIMITS.entreno.day} preguntas al día), tu progreso, agua, pasos y sueño, la comunidad, los retos gratis y los niveles. Entreno + Nutrición suma tus calorías y macros, el registro de comidas, las recetas, el ajuste semanal según tu peso, Banana Shield y Coach Banana también para tu comida (hasta ${COACH_LIMITS.completo.day} preguntas al día). Los retos Premium no vienen en ningún plan: se compran aparte con un pago único. El plan anual incluye 1 temporada deportiva gratis por cada año pagado.`],
   ["¿Cómo pago?", "Con tarjeta de crédito o débito, procesado por ONVO Pay (tarjetas de Costa Rica) o Tilopay (tarjetas de otros países). Los precios están en dólares (USD) y tu banco hace la conversión si tu tarjeta es en otra moneda."],
-  ["¿Hay descuento en el primer mes?", `Sí. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta ${PROMO_PCT} % menos: ${money(promoPrice("entreno"))} en Entreno y ${money(promoPrice("completo"))} en ${COMPLETO.name}. Ese día no se cobra nada, te avisamos 2 días antes y cancelas cuando quieras desde Mi plan. Es una vez por cuenta, si nunca pagaste un plan; el anual no tiene este descuento.`],
+  ["¿Hay descuento en el primer mes?", `Sí. ${o.cardRequired ? "Al dejar tu tarjeta en el registro" : "Si dejas tu tarjeta lista antes de tu primer cobro"}, tu primer mes del plan mensual cuesta ${PROMO_PCT} % menos: ${money(promoPrice("entreno"))} en Entreno y ${money(promoPrice("completo"))} en ${COMPLETO.name}. Ese día no se cobra nada, te avisamos 2 días antes y cancelas cuando quieras desde Mi plan. Es una vez por cuenta, si nunca pagaste un plan; el anual no tiene este descuento.`],
   ["¿Mis datos están seguros?", "Tus datos de salud son privados y solo tuyos. Puedes exportarlos o borrar tu cuenta cuando quieras. Los tratamos según nuestra Política de privacidad y la ley de protección de datos de Costa Rica, donde está la empresa."],
   ["¿Es en español de verdad?", "Sí. Banana Burn está en español latino desde el primer día y pensada para Latinoamérica: los ejercicios, el coach y las comidas. No es una app traducida."],
   ["¿Tengo que descargarla de una tienda?", "No. Banana Burn es una LinkApp: la abres en el navegador y la instalas en tu pantalla de inicio en 10 segundos, en iPhone o Android. En iPhone: Safari, Compartir, Agregar a inicio. En Android: Instalar app. Instalada te llegan los recordatorios de tu entreno."],
@@ -53,7 +53,8 @@ export const homeFaq = (now = new Date()) => {
     pick("Uso Ozempic o Mounjaro. ¿Es para mí?"),
     pick("¿Sirve si entreno en casa o sin equipo?"),
     ["¿Cuánto tiempo al día necesito?", "Tú eliges: sesiones de 15 a 60 minutos, de 3 a 6 días por semana. En los días apretados hay entrenos exprés de 10, 20 o 30 minutos sin equipo."] as const,
-    ["¿Me cobran algo hoy?", `No. Creas tu cuenta sin tarjeta y pruebas todo gratis. ${pick("¿Cómo funciona la prueba gratis?")[1]}`] as const,
+    // #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse (offer.ts).
+    ["¿Me cobran algo hoy?", `No. ${offer(now).cardRequired ? "Creas tu cuenta, dejas tu tarjeta y hoy no se cobra nada." : "Creas tu cuenta sin tarjeta y pruebas todo gratis."} ${pick("¿Cómo funciona la prueba gratis?")[1]}`] as const,
     pick("¿Hay descuento en el primer mes?"),
     pick("¿Cómo cancelo? ¿Hay reembolso?"),
     pick("¿Tengo que descargarla de una tienda?"),

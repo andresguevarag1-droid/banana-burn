@@ -8,16 +8,21 @@ import { TRIAL_DAYS, money } from "@/lib/copy";
 import { offer } from "@/lib/offer";
 import { Faq } from "../parts";
 import { StickyCta } from "../sticky-cta";
+import { cardRequiredNow } from "@/lib/card-required";
 import { faqJsonLd, ldScript, social } from "../seo";
 import { SIGNUP_GLP1 } from "../content";
 
 export const revalidate = 3600;
 const TITLE = "Banana Shield: fuerza para quienes bajan con GLP-1";
-const DESCRIPTION = "Fuerza, proteína y hábitos para ayudar a conservar músculo durante la pérdida de peso. Prueba Banana Shield 7 días gratis, sin tarjeta. No sustituye la indicación de tu médico.";
+/** #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse: sin "sin tarjeta". Se calcula en cada render. */
+const description = (card = cardRequiredNow()) => `Fuerza, proteína y hábitos para ayudar a conservar músculo durante la pérdida de peso. Prueba Banana Shield 7 días gratis${card ? "" : ", sin tarjeta"}. No sustituye la indicación de tu médico.`;
 const CTA = `Empieza ${TRIAL_DAYS} días gratis`;
 const MEDICAL = "No sustituye la indicación de tu médico.";
 const COMPLETO = PLANS.find((p) => p.id === "completo")!;
-export const metadata = { title: TITLE, description: DESCRIPTION, ...social({ title: TITLE, description: DESCRIPTION, path: "/glp1", og: { t: "Fuerza para cuidar el músculo", s: "Para quienes bajan con GLP-1. 7 días gratis, sin tarjeta. No sustituye la indicación de tu médico.", v: "edad" } }) };
+export function generateMetadata() {
+  const card = cardRequiredNow();
+  return { title: TITLE, description: description(card), ...social({ title: TITLE, description: description(card), path: "/glp1", og: { t: "Fuerza para cuidar el músculo", s: `Para quienes bajan con GLP-1. 7 días gratis${card ? "" : ", sin tarjeta"}. No sustituye la indicación de tu médico.`, v: "edad" } }) };
+}
 
 const PILLARS = [
   [Barbell, "Fuerza con una guía", "Rutinas según nivel, tiempo y equipo, animaciones de técnica y registro de cargas. La progresión usa los entrenos registrados para orientar la siguiente sesión."],
@@ -26,7 +31,8 @@ const PILLARS = [
   [ShieldCheck, "Seguimiento con contexto", "La guía combina peso, medidas y fuerza. La primera calificación requiere al menos dos mediciones y cuatro semanas de datos; es una estimación, no una medición clínica de músculo."],
 ] as const;
 
-function Start({ location }: { location: "hero" | "final" }) {
+function Start({ location, card = false }: { location: "hero" | "final"; card?: boolean }) {
+  if (card) return <div><Link href={SIGNUP_GLP1} data-cta={`glp1-${location}`} className="btn-primary min-h-12 w-full sm:w-auto">{CTA}<ArrowRight aria-hidden className="size-5" /></Link></div>;
   return <div><Link href={SIGNUP_GLP1} data-cta={`glp1-${location}`} className="btn-primary min-h-12 w-full sm:w-auto">{CTA}<ArrowRight aria-hidden className="size-5" /></Link><Link href={SIGNUP_GLP1} data-cta={`glp1-${location}`} className="tap mt-1 flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div>;
 }
 
@@ -37,7 +43,9 @@ export default function Glp1Landing() {
     ["¿La proteína y el entreno garantizan conservar músculo?", `No hay un resultado garantizado. La fuerza y una ingesta adecuada de proteína ayudan a cuidar la masa muscular; las necesidades y los resultados varían. ${MEDICAL}`],
     ["¿Sirve para empezar a entrenar?", "La rutina se adapta al nivel, al equipo y al tiempo disponible e incluye animaciones de técnica. La frecuencia y la intensidad deben ajustarse a las indicaciones del equipo médico."],
     ["¿Cuánto cuesta después de la prueba?", `Banana Shield está incluido en ${COMPLETO.name}: ${money(COMPLETO.price.anual)} al año o ${money(COMPLETO.price.mes)} al mes, en USD. El plan Entreno no incluye Banana Shield ni nutrición.`],
-    ["¿Hace falta guardar tarjeta?", `No. Puedes continuar sin tarjeta durante los ${TRIAL_DAYS} días gratis. Al terminar, eliges y pagas un plan para seguir; tu progreso queda guardado. Si guardas tarjeta, el cobro es automático salvo que canceles antes desde Mi plan.`],
+    o.cardRequired
+      ? ["¿Hace falta guardar tarjeta?", `Sí. Dejas tu tarjeta al registrarte y hoy no se cobra nada. Tienes ${TRIAL_DAYS} días gratis con todo incluido; te avisamos 2 días antes y el día ${TRIAL_DAYS + 1} se cobra tu plan, salvo que canceles antes desde Mi plan. Tu progreso queda guardado.`] as const
+      : ["¿Hace falta guardar tarjeta?", `No. Puedes continuar sin tarjeta durante los ${TRIAL_DAYS} días gratis. Al terminar, eliges y pagas un plan para seguir; tu progreso queda guardado. Si guardas tarjeta, el cobro es automático salvo que canceles antes desde Mi plan.`] as const,
     ["¿Reemplaza la atención médica?", `No damos indicaciones de dosis ni cambios en el tratamiento. Banana Shield ofrece entrenamiento y seguimiento de hábitos. ${MEDICAL}`],
   ] as const;
   return <>
@@ -48,8 +56,8 @@ export default function Glp1Landing() {
           <p className="text-sm font-bold text-ink">Para quienes bajan con GLP-1</p>
           <h1 className="mt-3 max-w-2xl text-[2rem] leading-[1.1] font-extrabold tracking-tight text-ink text-balance sm:text-5xl">Fuerza para cuidar el músculo mientras baja el peso</h1>
           <p className="mt-3 max-w-xl text-body text-pretty">Banana Shield reúne rutina, proteína y hábitos para ayudar a conservar músculo, con una guía cada día.</p>
-          <p className="mt-4 font-bold text-ink">{TRIAL_DAYS} días gratis, sin tarjeta</p>
-          <div data-sticky-anchor className="mt-3"><Start location="hero" /></div>
+          <p className="mt-4 font-bold text-ink">{TRIAL_DAYS} días gratis{o.cardRequired ? ", con todo incluido" : ", sin tarjeta"}</p>
+          <div data-sticky-anchor className="mt-3"><Start location="hero" card={o.cardRequired} /></div>
           <p className="text-sm text-ink">Cancelas cuando quieras desde Mi plan.</p>
           <p className="mt-2 text-sm font-semibold text-ink">{MEDICAL}</p>
         </div>
@@ -84,7 +92,7 @@ export default function Glp1Landing() {
       <p className="mt-3 text-body">Banana Shield está en {COMPLETO.name}. {o.pricingTrial}</p>
       <p className="mt-4 mb-8 rounded-2xl bg-banana-soft p-4 font-bold text-ink">Anual: {ANNUAL_SEASON_NOTE.toLowerCase()} por cada año pagado.</p>
       <Pricing recommended="completo" trialGuarantee={o.guarantee} trialLabel={CTA} />
-      <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="tap mt-3 flex min-h-11 items-center justify-center font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>
+      {!o.cardRequired && <Link href={SIGNUP_GLP1} data-cta="glp1-banda" className="tap mt-3 flex min-h-11 items-center justify-center font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link>}
       <p className="mt-3 text-sm font-semibold text-ink">{MEDICAL}</p>
     </section>
 
@@ -93,10 +101,11 @@ export default function Glp1Landing() {
       <div className="rounded-[2rem] bg-banana p-6 sm:p-12">
         <h2 className="text-3xl font-extrabold tracking-tight text-ink">Empieza con tu próxima sesión de fuerza</h2>
         <p className="mt-3 mb-5 text-body">Prueba la rutina, el registro de comidas y Banana Shield antes de elegir un plan.</p>
-        <Start location="final" />
+        <Start location="final" card={o.cardRequired} />
         <p className="mt-3 text-sm font-semibold text-ink">{MEDICAL}</p>
       </div>
     </section>
-    <StickyCta note="7 días gratis"><div className="flex flex-col items-center"><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div></StickyCta>
+    {o.cardRequired ? <StickyCta note="7 días gratis"><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link></StickyCta>
+      : <StickyCta note="7 días gratis"><div className="flex flex-col items-center"><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link><Link href={SIGNUP_GLP1} data-cta="glp1-sticky" className="flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></div></StickyCta>}
   </>;
 }
