@@ -12,6 +12,7 @@ import { LoginForm } from "./login-form";
 import { offer } from "@/lib/offer";
 import { requestPlatform } from "@/lib/platform-server";
 import { detectInstallEnv, inAppOpenIn } from "@/lib/install-env";
+import { CONDO_COOKIE, normalizeCondoCode } from "@/lib/condos";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
@@ -30,8 +31,13 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   // Con sesión abierta no rebotamos a la app: mostramos con qué cuenta estás y dejamos cambiarla.
   const v = isSupabaseConfigured ? await getViewer() : null;
   const blocked = !v && (await blockedSession().catch(() => false));
-  const invited = signup && !v && !!normalizeCode((await cookies()).get(REF_COOKIE)?.value);
-  const o = offer();
+  const jar = await cookies();
+  const invited = signup && !v && !!normalizeCode(jar.get(REF_COOKIE)?.value);
+  // Quien llega desde la página de su condominio (/c/<código>) tiene la oferta del condominio, no el 50 % del primer mes:
+  // en Soho Paradisus es gratis hasta el 31 dic y luego precio normal; en los demás, el mes gratis del condominio.
+  const condo = signup && !v && !!normalizeCondoCode(jar.get(CONDO_COOKIE)?.value);
+  const base = offer();
+  const o = condo ? { ...base, signupChecks: ["Beneficio de tu condominio", "Sin tarjeta"] as [string, string], signupLine: "Al crear tu cuenta se activa el beneficio de tu condominio." } : base;
   // Dentro de Instagram o Facebook: sin Google (lo bloquea ahí) y con el enlace para abrirla en Safari o Chrome.
   const openIn = inAppOpenIn(detectInstallEnv((await headers()).get("user-agent") ?? ""));
   return (
