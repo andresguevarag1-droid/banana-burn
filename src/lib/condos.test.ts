@@ -145,7 +145,7 @@ describe("0066: condominio gratis hasta una fecha, con tarjeta (Soho Paradisus)"
     expect(decideJoin({ ...base, now: new Date("2027-01-02T00:00:00Z") })).toEqual({ kind: "inactivo" });
   });
   it("sin tarjeta entra igual a probar 7 días (nunca más allá del fin del gratis)", () => {
-    expect(decideJoin(base)).toEqual({ kind: "join", plan: "completo", expiresAt: inDays(CONDO_TRY_DAYS), free: true, card: true, pendingCard: true });
+    expect(decideJoin(base)).toEqual({ kind: "join", plan: "completo", expiresAt: inDays(CONDO_TRY_DAYS), free: true, card: true, pendingCard: true, freeEnd: UNTIL });
     expect(decideJoin({ ...base, cardReady: false })).toMatchObject({ kind: "join", pendingCard: true });
     const late = new Date("2026-12-29T12:00:00Z");
     expect(decideJoin({ ...base, now: late })).toMatchObject({ kind: "join", expiresAt: UNTIL, pendingCard: true });

@@ -86,6 +86,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
     : null;
   const t = {
     trial: { title: PROMO_TITLE, sub: "Sigues con tu prueba gratis con o sin tarjeta. Si la dejas lista antes de que termine, tu primer mes cuesta la mitad.", btn: "Dejar mi tarjeta lista", note: offerNote },
+    card: { title: "Deja tu tarjeta para empezar tus 7 días gratis", sub: "Tienes todo incluido durante 7 días. Tu primer cobro llega cuando terminan.", btn: "Empezar mis 7 días gratis", note: chargeDay ? <>Hoy no se cobra nada. El {chargeDay} se cobra{promoNow ? <> <b>{firstPrice}</b>, tu primer mes con 50 %</> : <>n <b>{price}</b> del plan anual</>}. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.</> : null }, // #269
     beta: { title: PROMO_TITLE, sub: `Desde el ${betaFirstPaid} la app se paga; hasta ese día todo sigue gratis. Si dejas tu tarjeta lista ahora, tu primer mes cuesta la mitad y sigues sin cortes.`, btn: "Dejar mi tarjeta lista", note: offerNote },
     pay: failed
       ? { title: "Cambia tu tarjeta", sub: charge?.retryAt && charge.testerHold ? `No pudimos cobrar tu plan. Mientras seas tester no se te cobra: lo intentaremos una vez más el ${day(charge.retryAt)}, al terminar tu mes de tester.` : charge?.retryAt ? `No pudimos cobrar tu plan. Lo intentaremos una vez más el ${day(charge.retryAt)}, o cambia tu tarjeta para seguir hoy.` : "No pudimos cobrar tu plan con tu tarjeta. Cambia la tarjeta para seguir.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> }
@@ -95,7 +96,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
   return (
     <section ref={ref} id="tarjeta" aria-labelledby="tarjeta-titulo" className={`scroll-mt-24 rounded-[1.5rem] border-2 bg-white p-5 sm:p-6 space-y-4 ${failed ? "border-bad/40" : "border-ink"}`}>
       <div>
-        <h2 id="tarjeta-titulo" className="flex items-center gap-2 text-xl font-extrabold text-ink text-balance">{failed ? <WarningCircle weight="duotone" className="size-6 shrink-0 text-bad" /> : step === "trial" ? <Gift weight="duotone" className="size-6 shrink-0 text-banana-ink" /> : <CreditCard weight="duotone" className="size-6 shrink-0 text-banana-ink" />}{t.title}</h2>
+        <h2 id="tarjeta-titulo" className="flex items-center gap-2 text-xl font-extrabold text-ink text-balance">{failed ? <WarningCircle weight="duotone" className="size-6 shrink-0 text-bad" /> : step === "trial" || step === "card" ? <Gift weight="duotone" className="size-6 shrink-0 text-banana-ink" /> : <CreditCard weight="duotone" className="size-6 shrink-0 text-banana-ink" />}{t.title}</h2>
         <p className="mt-1 text-sm text-muted text-pretty">{t.sub}</p>
         {failed && card?.last4 && <p className="mt-2 text-sm text-body">Tarjeta actual: {cardText(card)}.</p>}
       </div>

@@ -5,7 +5,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { requireSection } from "@/lib/admin-auth";
 import { adminClient } from "@/lib/supabase/admin";
-import { condoLink } from "@/lib/condos";
+import { CONDO_TRY_DAYS, condoLink } from "@/lib/condos";
+import { cardRequiredNow } from "@/lib/card-required";
 import { condoQrSvg } from "@/lib/condo-qr";
 import { PageHeader } from "@/components/admin/ui";
 import { PrintButton } from "@/components/admin/print-button";
@@ -57,7 +58,8 @@ export default async function CondoPoster({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <div className="bg-ink px-[7%] py-[4%] text-[clamp(.75rem,2.5vw,1.25rem)] font-bold text-white">
-            30 días gratis con todo incluido. Sin tarjeta y sin cobros automáticos.
+            {/* #269: desde el 1 de enero de 2027 las cuentas nuevas dejan la tarjeta para completar el mes gratis. */}
+            {cardRequiredNow() ? `Pruébalo ${CONDO_TRY_DAYS} días gratis y completa tu mes gratis con tu tarjeta. Te avisamos antes del cobro.` : "30 días gratis con todo incluido. Sin tarjeta y sin cobros automáticos."}
           </div>
         </article>
       </div>

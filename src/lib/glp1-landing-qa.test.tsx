@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import Glp1Landing, { metadata } from "@/app/(marketing)/glp1/page";
+import Glp1Landing, { generateMetadata } from "@/app/(marketing)/glp1/page";
 import { BETA_ENDS_AT, PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { usd2 } from "@/lib/num";
@@ -26,7 +26,7 @@ describe("landing GLP-1 (QA #92)", () => {
     });
 
     it(`${label}: sin promesas de kilos, medicamentos ni preguntas sobre la condición`, () => {
-      const copy = `${text(render(now))} ${JSON.stringify(metadata)}`;
+      const copy = `${text(render(now))} ${JSON.stringify(generateMetadata())}`;
       expect(copy).not.toMatch(/semaglutida|tirzepatida|liraglutida|Rybelsus|\btu (tratamiento|medicamento)\b|\bsi usas\b|\busas GLP|\bbajar[aá]s \d|\d+\s?kg (menos|en)/i);
       expect(copy).not.toMatch(/\bIA\b|inteligencia artificial/);
       expect(copy).not.toMatch(/\p{Extended_Pictographic}/u);
@@ -57,9 +57,9 @@ describe("landing GLP-1 (QA #92)", () => {
   });
 
   it("conserva SEO: canónica, descripción y og con aviso médico", () => {
-    expect(metadata.alternates?.canonical).toBe("/glp1");
-    expect(metadata.description).toContain("No sustituye la indicación de tu médico.");
-    expect(decodeURIComponent(String((metadata.openGraph?.images as { url: string }[])[0].url)).replaceAll("+", " ")).toContain("No sustituye la indicación de tu médico.");
+    expect(generateMetadata().alternates?.canonical).toBe("/glp1");
+    expect(generateMetadata().description).toContain("No sustituye la indicación de tu médico.");
+    expect(decodeURIComponent(String((generateMetadata().openGraph?.images as { url: string }[])[0].url)).replaceAll("+", " ")).toContain("No sustituye la indicación de tu médico.");
   });
 
   it("el documento del embudo dice qué paso mueve, cómo se mide y por qué no agrega costo", () => {

@@ -46,8 +46,10 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   }
   const t = targets({ kg: o.weight, heightCm: o.heightCm, age: ageOn(o.dob), sex: o.sex, mode: o.goal === "grasa" ? "acelerada" : o.goal === "fuerza" ? "fuerza" : "recomp" });
   const today = planDay(new Date(todayFor(v).iso + "T12:00:00").getDay(), 0, scheduleFor(o.days), { equipment: o.equipment, level: o.level, minutes: o.minutes });
-  // Calorías y proteína en el correo solo si hoy tiene nutrición (Entreno + Nutrición, prueba o beta).
-  const nutrition = (await getEntitlements(v)).nutrition;
+  // Calorías y proteína en el correo solo si hoy tiene nutrición (Entreno + Nutrición, prueba o beta). #269: también si
+  // su prueba empieza al dejar la tarjeta, en el paso que sigue.
+  const ent = await getEntitlements(v);
+  const nutrition = ent.nutrition || ent.cardStep === "card";
   await sendPlanReadyEmail({ userId: v.id, trainDays: o.days, todayRoutine: today.name, ...(nutrition ? { kcal: t.kcal, protein: t.protein } : {}), minutes: o.minutes, goalWeight: o.goalWeight, goalDate: o.goalDate }).catch(() => {});
   return { ok: true };
 }

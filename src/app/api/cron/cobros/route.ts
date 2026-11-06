@@ -4,6 +4,8 @@ import { summarize } from "@/lib/cobros-simulacro";
 import { bearerOk } from "@/lib/security";
 import { beat, checkErrorRate } from "@/lib/monitor/server";
 import { cronFailed } from "@/lib/monitor/alerts";
+import { revalidatePath } from "next/cache";
+import { CARD_COPY_PATHS, cardSwitchDay } from "@/lib/card-required";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +35,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: errors === 0, dryRun: true, resumen: summarize(planned, now.toISOString()), cobros: planned }, { status: errors === 0 ? 200 : 500 });
   }
   const t0 = Date.now();
+  // #269: el 1 de enero de 2027 las páginas públicas se regeneran ya, sin esperar su hora de caché ("sin tarjeta" sale ese día).
+  if (cardSwitchDay()) for (const p of CARD_COPY_PATHS) { try { revalidatePath(p); } catch { /* la caché vence sola en 1 h */ } }
   const { cobros, primerMes, renovaciones } = await runCobros(new Date(), { t0 });
   const ok = cobros !== null;
   await beat("cron:cobros", ok, Date.now() - t0, { intentados: cobros?.attempted ?? 0, enviados: cobros?.sent ?? 0, errores: cobros?.errors ?? 0 }).catch(() => {});

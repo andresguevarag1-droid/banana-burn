@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import Glp1Landing, { metadata } from "@/app/(marketing)/glp1/page";
+import Glp1Landing, { generateMetadata } from "@/app/(marketing)/glp1/page";
 import { PLANS } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
 import { toMetaEvent } from "@/lib/meta-pixel";
@@ -8,7 +8,7 @@ import { toMetaEvent } from "@/lib/meta-pixel";
 describe("landing GLP-1", () => {
   it("presenta una oferta sin atribuir una condición ni garantizar resultados", () => {
     const html = renderToStaticMarkup(<Glp1Landing />);
-    const copy = `${html} ${JSON.stringify(metadata)}`;
+    const copy = `${html} ${JSON.stringify(generateMetadata())}`;
     expect(copy).not.toMatch(/Ozempic|Wegovy|Mounjaro|Zepbound|Saxenda|¿Usas|cada kilo|3 de cada 4/i);
     expect(html).toContain("Para quienes bajan con GLP-1");
     expect(html).toContain("1.2 a 1.6 g de proteína por kg al día");

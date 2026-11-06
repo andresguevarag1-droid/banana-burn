@@ -8,6 +8,8 @@
 //   - Cortesías vigentes (source 'cortesia') y staff = completo.
 //   - Regalos de meses (source 'regalo' o 'referido', 0025): respetan su plan y se apilan (empiezan al terminar lo que ya había).
 //   - Sin plan y sin prueba vigente: la app muestra el muro de planes (no se borra nada).
+//   - #269: las cuentas creadas desde CARD_REQUIRED_FROM (1 ene 2027) tienen la prueba solo con su cobro listo (tarjeta
+//     activa y cobro programado). Sin él quedan bloqueadas con cardStep "card": la app las lleva a dejar la tarjeta.
 // La base de datos repite la regla de acceso en public.has_app_access() (0013/0021) para el coach y la comunidad,
 // y la de nutrición en public.has_nutrition_access() (0022) para comidas, Mis comidas y Mis recetas.
 import "server-only";
@@ -19,7 +21,8 @@ import { BETA_ENDS_AT, type Billing, type PlanId } from "@/lib/plans";
 import { profilePlanFor } from "@/lib/onvo";
 import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
 import { bestLiveComp, compChainEnd, compPlan } from "@/lib/gifts";
-import { cardStepFor, chargeView, graceUntil, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
+import { cardRequiredFor } from "@/lib/card-required";
+import { cardStepFor, cardTrialReady, chargeView, graceUntil, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -166,7 +169,9 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   // Durante la beta nadie se bloquea. Después, cada cuenta nueva tiene 7 días desde el alta, con o sin tarjeta (0043).
   const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime();
   const ownEnd = trialEndFor(i.createdAt, betaEndsAt);
-  const ownTrial = !beta && trialLive(i.createdAt, now, betaEndsAt);
+  // #269: cuenta nueva desde el 1 de enero sin su cobro listo: no tiene la prueba hasta dejar la tarjeta.
+  const needsCard = !beta && cardRequiredFor(i.createdAt) && !cardTrialReady(tc, i.card, now);
+  const ownTrial = !beta && !needsCard && trialLive(i.createdAt, now, betaEndsAt);
   // Las cuentas de la beta siguen gratis 7 días después del lanzamiento (0045): durante la beta su acceso llega hasta ahí.
   const trialEnd = beta ? new Date(graceUntil(betaEndsAt)) : ownTrial && ownEnd ? new Date(ownEnd) : null;
   const live = !!trialEnd && trialEnd.getTime() > now.getTime();
@@ -174,7 +179,7 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const endedAt = trialEnd ?? (ownEnd ? new Date(ownEnd) : signedUpInBeta(i.createdAt, betaEndsAt) && Number.isFinite(betaEnd) ? new Date(betaEnd) : null);
   const charge = chargeView(tc, now);
   const card = i.card ? { brand: i.card.brand, last4: i.card.last4, expMonth: i.card.exp_month, expYear: i.card.exp_year, active: i.card.status === "active" } : null;
-  const cardStep = cardStepFor({ paidAccess: plan !== "free", createdAt: i.createdAt, row: tc, now, betaEndsAt });
+  const cardStep = cardStepFor({ paidAccess: plan !== "free", createdAt: i.createdAt, row: tc, now, betaEndsAt, needsCard });
   // La creación de la suscripción sobrevive a las renovaciones; el inicio del periodo no.
   // Si nació durante la prueba de la cuenta, contamos desde el final de esa prueba.
   const paidSince = cur ? Math.max(Date.parse(cur.created_at), ownEnd ? Date.parse(ownEnd) : 0) : NaN;

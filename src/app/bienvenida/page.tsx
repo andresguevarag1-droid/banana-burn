@@ -10,12 +10,13 @@ import type { Goal } from "./goal";
 import { BETA_GRACE_UNTIL, betaLive } from "@/lib/plans";
 import { isOnvoConfigured } from "@/lib/onvo";
 import { betaDates } from "@/components/beta-notice";
+import { cardRequiredDemo } from "@/lib/card-required";
 
 export const metadata = { title: "Bienvenida", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 
-export default async function Bienvenida({ searchParams }: { searchParams: Promise<{ vista?: string }> }) {
+export default async function Bienvenida({ searchParams }: { searchParams: Promise<{ vista?: string; tarjeta?: string }> }) {
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/bienvenida");
 
@@ -31,6 +32,10 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   // que el resto de la app (entitlements.ts). Con plan pagado o del equipo no hay prueba que mostrar.
   // 0043: si todavía no dejó su tarjeta (beta o prueba corriendo), al final se ofrece dejarla lista con 50 % el primer mes.
   let trialEndsAt: string | null = null, trialBeta = false, nutrition = true, cardOffer = false, chargeAt: string | null = null;
+  // #269: cuenta creada desde el 1 de enero de 2027 sin su cobro listo: la tarjeta es obligatoria para empezar la prueba.
+  // Solo demo: ?tarjeta=obligatoria lo muestra.
+  const params = await searchParams;
+  let cardRequired = false;
   if (v.demo) {
     // Demo igual que una cuenta real: la beta hasta su fin, o una cuenta nueva con sus 7 días.
     const beta = betaLive();
@@ -38,17 +43,21 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
     trialBeta = beta;
     cardOffer = true;
     chargeAt = trialEndsAt;
+    cardRequired = cardRequiredDemo(true, params.tarjeta);
   } else {
     const ent = await getEntitlements(v);
-    nutrition = ent.nutrition || ent.cardStep === "trial";
+    cardRequired = ent.cardStep === "card";
+    nutrition = ent.nutrition || ent.cardStep === "trial" || cardRequired;
     cardOffer = ent.cardStep === "trial" || ent.cardStep === "beta";
     if (ent.trial) { trialEndsAt = ent.trial.endsAt; trialBeta = Boolean(ent.trial.beta); }
-    chargeAt = cardOffer ? (ent.cardStep === "beta" ? BETA_GRACE_UNTIL : trialEndsAt) : null;
+    chargeAt = cardOffer ? (ent.cardStep === "beta" ? BETA_GRACE_UNTIL : trialEndsAt) : cardRequired ? ent.trialEndsAt ?? null : null;
   }
   // #254: la bienvenida ya no ofrece la tarjeta. Primero el primer entreno (el resumen muestra la oferta, #199) y la tarjeta
   // siempre está en Mi plan. El paso solo se abre en la demo con ?vista=tarjeta, para revisarlo.
   // Solo demo: ?vista=tarjeta abre directo el paso de la tarjeta (con datos de ejemplo) para revisarlo.
-  const vista = (await searchParams).vista;
+  const vista = params.vista;
+  // #269: si ya guardó su plan y cerró la bienvenida en la tarjeta, al volver abre directo en ese paso.
+  const resumeCard = cardRequired && !v.demo && v.onboarded;
   const startOnCard = v.demo && cardOffer && vista === "tarjeta";
   // Solo demo: ?vista=lenguaje abre el paso de experiencia para revisarlo ("Cómo te hablo" está en Perfil desde #255).
   const startOnVoice = v.demo && vista === "lenguaje";
@@ -56,7 +65,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
+      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} cardRequired={cardRequired} onboarded={resumeCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard || resumeCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
     </>
   );
 }

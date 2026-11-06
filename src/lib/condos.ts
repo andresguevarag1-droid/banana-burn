@@ -7,7 +7,11 @@
 //   - Con tarjeta hasta una fecha (0066, piloto Soho Paradisus): primero se prueba SIN tarjeta (CONDO_TRY_DAYS con todo
 //     incluido, nunca más allá de free_until). Al dejar la tarjeta, el acceso sigue gratis hasta free_until y el primer
 //     cobro pasa a esa fecha a precio normal.
+//   - #269: desde el 1 de enero de 2027 todos los condominios piden la tarjeta a las cuentas nuevas (condoForAccount), con el
+//     mismo flujo: primero se prueba sin tarjeta y la tarjeta extiende el acceso hasta el fin de su mes gratis (30 días desde
+//     que lo activó; free_until es solo de Soho Paradisus). El cobro llega ese día, a precio normal.
 import { SITE_URL } from "@/lib/env";
+import { cardRequiredFor, cardRequiredNow } from "@/lib/card-required";
 import type { PlanId } from "@/lib/plans";
 
 export const CONDO_COOKIE = "bb_condo";
@@ -33,6 +37,18 @@ export type CondoRow = {
   /** 0066: el acceso se da solo con tarjeta, y termina en free_until (fecha fija) en vez de 30 días desde que se activa. */
   card_required?: boolean | null; free_until?: string | null;
 };
+
+/**
+ * #269: el condominio como lo ve una cuenta. Una cuenta creada desde CARD_REQUIRED_FROM necesita la tarjeta en cualquier
+ * condominio; las de antes siguen con las reglas de su condominio.
+ */
+export function condoForAccount<T extends { card_required?: boolean | null }>(c: T, createdAt: string | null | undefined): T {
+  return !c.card_required && cardRequiredFor(createdAt) ? { ...c, card_required: true } : c;
+}
+
+/** Fin del mes gratis de un residente: free_until (fecha fija, Soho Paradisus) o CONDO_FREE_DAYS desde que lo activó. */
+export const condoFreeEnd = (c: Partial<Pick<CondoRow, "free_until">>, grantStartsAt: string) =>
+  c.free_until ? new Date(c.free_until).toISOString() : new Date(Date.parse(grantStartsAt) + CONDO_FREE_DAYS * 864e5).toISOString();
 
 /** Último día gratis para mostrar ("31 de diciembre"): free_until es la medianoche en que empieza el cobro. */
 export const lastFreeDay = (freeUntil: string) => new Date(Date.parse(freeUntil) - 1000).toISOString();
@@ -62,7 +78,7 @@ export function condoCodeFromName(name: string): string {
 export const condoLink = (code: string) => `${SITE_URL.replace(/\/$/, "")}/c/${code}`;
 
 /** Mensaje listo para pegar en el grupo de WhatsApp del condominio. Sin emojis (libro de marca). */
-export function condoWhatsapp(c: { name: string; code: string; card_required?: boolean | null; free_until?: string | null }): string {
+export function condoWhatsapp(c: { name: string; code: string; card_required?: boolean | null; free_until?: string | null }, now = new Date()): string {
   if (c.card_required && c.free_until) {
     const d = (iso: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" });
     return [
@@ -75,12 +91,15 @@ export function condoWhatsapp(c: { name: string; code: string; card_required?: b
       `Actívalo aquí: ${condoLink(c.code)}`,
     ].join("\n");
   }
+  // #269: desde el 1 de enero las cuentas nuevas dejan la tarjeta para seguir después de probar.
   return [
     `Hola, vecinos de ${c.name}.`,
     "",
     "El condominio se unió a Banana Burn: un entrenador personal en el celular para cada residente, con el plan de cada semana, la técnica de cada ejercicio y un coach que responde dudas a cualquier hora.",
     "",
-    "El primer mes es gratis para todos los residentes, con todo incluido. No se necesita tarjeta.",
+    cardRequiredNow(now)
+      ? `El primer mes es gratis para todos los residentes, con todo incluido. Lo pruebas ${CONDO_TRY_DAYS} días sin tarjeta; si te gusta, dejas tu tarjeta y sigues gratis hasta completar el mes. El cobro llega cuando termina, te avisamos 2 días antes y se cancela cuando quieras.`
+      : "El primer mes es gratis para todos los residentes, con todo incluido. No se necesita tarjeta.",
     "",
     `Actívalo aquí: ${condoLink(c.code)}`,
   ].join("\n");
@@ -106,7 +125,7 @@ export function condoOffer(c: Pick<CondoRow, "status" | "paid_plan" | "paid_unti
 }
 
 export type JoinDecision =
-  | ({ kind: "join"; pendingCard?: boolean } & CondoOffer) // pendingCard (0066): prueba sin tarjeta hasta expiresAt
+  | ({ kind: "join"; pendingCard?: boolean; freeEnd?: string } & CondoOffer) // pendingCard (0066): prueba sin tarjeta hasta expiresAt; freeEnd: fin del gratis con la tarjeta
   | { kind: "inactivo" } // no existe, terminado o el acuerdo venció
   | { kind: "ya_vinculado" } // ya es residente de este condominio
   | { kind: "otro_condominio" } // ya es residente de otro condominio
@@ -114,16 +133,18 @@ export type JoinDecision =
   | { kind: "plan_pagado" }; // ya paga su plan: no lo necesita
 
 /** ¿Qué pasa cuando una cuenta abre el enlace del condominio? Orden: enlace activo, vínculo, mes ya usado, plan pagado. */
-export function decideJoin(i: { condo: (Pick<CondoRow, "id" | "status" | "paid_plan" | "paid_until"> & Partial<Pick<CondoRow, "card_required" | "free_until">>) | null; memberOf: number | null; hadCondoGrant: boolean; hasPaidPlan: boolean; cardReady?: boolean; now?: Date }): JoinDecision {
+/** createdAt (#269): alta de la cuenta; desde CARD_REQUIRED_FROM todos los condominios le piden la tarjeta. */
+export function decideJoin(i: { condo: (Pick<CondoRow, "id" | "status" | "paid_plan" | "paid_until"> & Partial<Pick<CondoRow, "card_required" | "free_until">>) | null; memberOf: number | null; hadCondoGrant: boolean; hasPaidPlan: boolean; cardReady?: boolean; createdAt?: string | null; now?: Date }): JoinDecision {
   const now = i.now ?? new Date();
-  if (i.memberOf != null && i.condo && i.memberOf === i.condo.id) return { kind: "ya_vinculado" };
-  const offer = i.condo ? condoOffer(i.condo, now) : null;
+  const condo = i.condo ? condoForAccount(i.condo, i.createdAt) : null;
+  if (i.memberOf != null && condo && i.memberOf === condo.id) return { kind: "ya_vinculado" };
+  const offer = condo ? condoOffer(condo, now) : null;
   if (!offer) return { kind: "inactivo" };
   if (i.memberOf != null) return { kind: "otro_condominio" };
   if (i.hadCondoGrant) return { kind: "ya_usado" };
   if (i.hasPaidPlan) return { kind: "plan_pagado" };
   // 0066: sin tarjeta lista entra igual a probar unos días; con la tarjeta, el acceso llega hasta el fin del gratis.
-  if (offer.card && !i.cardReady) return { kind: "join", ...offer, expiresAt: condoTryUntil(offer.expiresAt, now), pendingCard: true };
+  if (offer.card && !i.cardReady) return { kind: "join", ...offer, expiresAt: condoTryUntil(offer.expiresAt, now), pendingCard: true, freeEnd: offer.expiresAt };
   return { kind: "join", ...offer };
 }
 
