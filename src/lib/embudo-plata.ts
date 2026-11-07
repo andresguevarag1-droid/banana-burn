@@ -124,8 +124,13 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
   const byEvent = new Map<string, Set<string>>(STEP_EVENTS.map((e) => [e, new Set<string>()]));
   for (const e of r.events ?? []) if (e.user_id) byEvent.get(e.name)?.add(e.user_id);
   const finished = r.finished && new Set(r.finished);
-  const method = r.methods && new Map(r.methods.map((m) => [m.user_id, m]));
-  const charge = r.charges && new Map(r.charges.map((c) => [c.user_id, c]));
+  // Una cuenta puede tener varios métodos (ONVO y Tilopay, o una tarjeta vieja inactiva): cuenta el activo.
+  const method = r.methods && new Map<string, NonNullable<FunnelRows["methods"]>[number]>();
+  for (const m of r.methods ?? []) if (m.status === "active" && !method!.has(m.user_id)) method!.set(m.user_id, m);
+  // Varios cobros por cuenta: basta con tener alguno; el pago es el primer 'succeeded' (las filas llegan por id).
+  const charged = r.charges && new Set(r.charges.map((c) => c.user_id));
+  const charge = r.charges && new Map<string, NonNullable<FunnelRows["charges"]>[number]>();
+  for (const c of r.charges ?? []) if (c.status === "succeeded" && !charge!.has(c.user_id)) charge!.set(c.user_id, c);
   const seen = now.getTime();
   const liveSub = r.subs && new Map(
     r.subs
@@ -139,12 +144,12 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
       const ev = (name: string) => (r.events ? byEvent.get(name)!.has(p.id) : null);
       const c = charge?.get(p.id);
       const m = method?.get(p.id);
-      const card = charge && method ? !!c || m?.status === "active" : null;
+      const card = charged && method ? charged.has(p.id) || !!m : null;
 
       let paid: boolean | null = null, net: number | null = null, estimated = false;
       if (charge && method && liveSub) {
         paid = false; net = 0;
-        if (c?.status === "succeeded") {
+        if (c) {
           const n = netUsd(c.amount_minor, m && isProcessor(m.provider) ? m.provider : "onvo", c.fee_minor);
           paid = true; net = n.net; estimated = n.estimated;
         } else {

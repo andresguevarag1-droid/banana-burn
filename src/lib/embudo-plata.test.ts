@@ -117,6 +117,32 @@ describe("cohortes por semana de registro", () => {
     expect(t[1].net).toBe(0);
   });
 
+  it("con varios cobros por cuenta cuenta el primero que se cobró, aunque después venga uno agendado", () => {
+    const r = sample();
+    r.charges = [
+      { user_id: id(1), status: "succeeded", amount_minor: 499 },
+      { user_id: id(1), status: "scheduled", amount_minor: 499 },
+      { user_id: id(2), status: "scheduled", amount_minor: 499 },
+    ];
+    const t = cohortTable(buildAccounts(r, NOW), weeks)[0];
+    expect(t.steps).toMatchObject({ card: 2, paid: 1 });
+    expect(t.net).toBe(3.85);
+  });
+
+  it("con un método inactivo y uno activo cuenta la tarjeta y usa el procesador del activo", () => {
+    const r = sample();
+    r.methods = [
+      { user_id: id(1), provider: "onvo", status: "inactive" },
+      { user_id: id(1), provider: "tilopay", status: "active" },
+      { user_id: id(3), provider: "onvo", status: "active" },
+      { user_id: id(3), provider: "onvo", status: "inactive" },
+    ];
+    const t = cohortTable(buildAccounts(r, NOW), weeks)[0];
+    expect(t.steps.card).toBe(3);
+    // $4.99 con Tilopay: 4.99 / 1.13 - (4.99 * 0.0425 + 0.35) = 3.85 (con ONVO sería 3.87).
+    expect(t.net).toBe(3.85);
+  });
+
   it("una fuente que falla deja sus columnas en sin dato, nunca en cero", () => {
     const t = cohortTable(buildAccounts({ ...sample(), events: null, methods: null }, NOW), weeks)[0];
     expect(t.registrados).toBe(3);
