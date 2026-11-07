@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
+import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { describe, expect, it } from "vitest";
 import {
   FIRST_TOUCH_COOKIE, attributionArgs, cleanFirstTouch, decodeFirstTouch, encodeFirstTouch, firstTouchCookie, firstTouchFrom, readCookie,
@@ -62,6 +63,16 @@ describe("cookie de primer contacto", () => {
     expect(firstTouchCookie(new URL(META), `${FIRST_TOUCH_COOKIE}=%7Bmal`, NOW)).not.toBeNull();
     const old = encodeFirstTouch({ utm_source: "meta", landing: "/", first_seen_at: "2026-09-01T00:00:00Z" })!;
     expect(firstTouchCookie(new URL(META), `${FIRST_TOUCH_COOKIE}=${old}`, NOW)).not.toBeNull();
+  });
+
+  it("en el servidor, cookies() ya decodifica: un \"%\" en la campaña llega a attributionArgs", () => {
+    const c = firstTouchCookie(new URL("https://bananaburn.app/?utm_source=meta&utm_campaign=Promo%2050%25"), "", NOW)!;
+    const raw = c.split(";")[0];
+    const fromNext = new RequestCookies(new Headers({ cookie: `otra=1; ${raw}` })).get(FIRST_TOUCH_COOKIE)?.value;
+    expect(fromNext).toBe(decodeURIComponent(raw.slice(FIRST_TOUCH_COOKIE.length + 1)));
+    const t = decodeFirstTouch(fromNext, NOW)!;
+    expect(attributionArgs("u1", t)).toMatchObject({ p_user: "u1", p_source: "meta", p_campaign: "Promo 50%", p_landing: "/" });
+    expect(decodeFirstTouch(readCookie(raw, FIRST_TOUCH_COOKIE), NOW)?.utm_campaign).toBe("Promo 50%");
   });
 
   it("sin utm ni fbclid no escribe nada", () => {

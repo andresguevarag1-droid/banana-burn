@@ -65,8 +65,13 @@ export function encodeFirstTouch(t: FirstTouch): string | null {
   return v.length <= MAX_COOKIE ? v : null;
 }
 
+/**
+ * Lee la cookie tal como llega: cruda desde document.cookie (codificada) o ya decodificada por cookies() de Next. Primero
+ * prueba JSON tal cual, porque decodificar dos veces rompe valores con "%" (p. ej. "Promo 50%").
+ */
 export function decodeFirstTouch(v: string | null | undefined, now = new Date()): FirstTouch | null {
   if (!v) return null;
+  try { return cleanFirstTouch(JSON.parse(v), now); } catch { /* codificada: sigue */ }
   try { return cleanFirstTouch(JSON.parse(decodeURIComponent(v)), now); } catch { return null; }
 }
 
