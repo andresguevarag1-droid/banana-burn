@@ -1,6 +1,8 @@
 import { AnnualUpsell } from "@/components/hoy/annual-upsell";
 import { demoCardState } from "@/lib/trial-demo";
 import { TrialCardNotice } from "@/components/trial-card-notice";
+import { HoyCardBanner } from "@/components/card-banner";
+import { hoyCardBanner } from "@/lib/card-ask";
 import Link from "next/link";
 import { FunnelTracker } from "@/components/analytics";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
@@ -132,6 +134,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
       {header}
       {hero}
+      <HoyCardBanner ent={noticeEnt} />
       <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
       <div id="hoy-continuar" className="scroll-mt-24" />
     </div>
@@ -166,9 +169,11 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <WeekLine week={g.week} sched={d.sched} todayIso={d.today.iso} streak={g.streak.days} todayDone={g.streak.todayDone} />
 
       {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
-      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" />
-      {/* Desde el primer entreno (#199): activar el plan sin esperar al final de la prueba. Si sale el aviso de tarjeta, ese manda. */}
-      {canActivatePlan(noticeEnt) && !trialCardNotice(noticeEnt) && (
+      {/* Días 1 a 6 sin tarjeta (#280): el banner con los días que quedan; el día 7, el aviso grande. */}
+      <HoyCardBanner ent={noticeEnt} />
+      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
+      {/* Desde el primer entreno (#199): activar el plan sin esperar al final de la prueba. Si sale un aviso de tarjeta, ese manda. */}
+      {canActivatePlan(noticeEnt) && !hoyCardBanner(noticeEnt) && !trialCardNotice(noticeEnt) && (
         <Link href={activateHref()} data-cta="hoy-activar-plan" className="card flex items-center gap-3 p-4">
           <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">Activar mi plan</span><span className="block text-sm text-muted">Sigue sin cortes al terminar tu prueba. Cancela cuando quieras.</span></span>
           <ArrowRight weight="bold" className="size-5 shrink-0 text-ink" />

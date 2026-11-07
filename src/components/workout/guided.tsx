@@ -100,8 +100,8 @@ export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin
   );
 }
 
-/** Descanso del modo guiado: la cuenta regresiva, lo que sigue y Saltar. Nada más. */
-export function GuidedRest({ left, total, next, onSkip }: { left: number; total: number; next: { name: string; line: string } | null; onSkip: () => void }) {
+/** Descanso del modo guiado: la cuenta regresiva, lo que sigue y Saltar. `extra`: una sola línea debajo (pedido de tarjeta, #280). */
+export function GuidedRest({ left, total, next, onSkip, extra }: { left: number; total: number; next: { name: string; line: string } | null; onSkip: () => void; extra?: React.ReactNode }) {
   const skip = useRef<HTMLButtonElement>(null);
   useEffect(() => { skip.current?.focus({ preventScroll: true }); }, []);
   return (
@@ -111,6 +111,7 @@ export function GuidedRest({ left, total, next, onSkip }: { left: number; total:
           <p className="text-2xl font-extrabold">Descansa</p>
           <CountRing left={left} total={total} size={220} />
           {next && <p className="max-w-full text-white/85"><span className="block text-sm font-bold uppercase tracking-wide text-banana">Sigue</span><span className="block text-lg font-extrabold text-white break-words">{next.name}</span><span className="block tabular-nums">{next.line}</span></p>}
+          {extra}
         </div>
       </div>
       <footer className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">

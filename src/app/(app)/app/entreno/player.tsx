@@ -29,6 +29,9 @@ import { SIDE_LABEL, advanceTimed, segLabel, pauseTimed, resumeTimed, segCue, sk
 import { TimedBar } from "@/components/workout/timed-bar";
 import { Recap } from "@/components/workout/recap";
 import { GuidedRest, GuidedSet, guidedLine } from "@/components/workout/guided";
+import { FirstSetCardLine, FirstSetCardSheet } from "@/components/workout/first-set-card-ask";
+import { firstSetAskKey } from "@/lib/card-ask";
+import { offerDismissKey } from "@/lib/first-workout-offer";
 import { CoachArtFill, CoachPic } from "@/components/coach-pic";
 import { ExerciseBrief } from "@/components/workout/brief";
 import { briefSteps, formatExerciseTask, leftText, planChips, plainMuscles, secondsLeft } from "@/components/workout/task";
@@ -85,13 +88,15 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ firstSession = false, firstOffer, condoNudge, askTestimonial = false, coachPrompt = null, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+export function Player({ firstSession = false, firstOffer, firstSetAsk = false, condoNudge, askTestimonial = false, coachPrompt = null, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
   /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
   intro?: string;
   /** Invitación autorizada en servidor, solo para el cierre guardado. */
   firstSession?: boolean;
   /** Primer entreno de una cuenta en prueba sin tarjeta (#199): id de la cuenta para la oferta del resumen. */
   firstOffer?: string;
+  /** Con firstOffer (#280): pedir la tarjeta en el descanso desde la primera serie hecha (pagos activos, sin condominio). */
+  firstSetAsk?: boolean;
   condoNudge?: import("@/components/workout/condo-offer").CondoNudge;
   /** Este es el tercer entreno de la cuenta y aún no deja su opinión (#238): el resumen guardado la pide. */
   askTestimonial?: boolean;
@@ -735,6 +740,20 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
     if (doneSets > prevDone.current && phase === "play") track("set_done", { template: tpl, n: doneSets, total: planTotal });
     prevDone.current = doneSets;
   }, [doneSets, phase, tpl, planTotal, guided]);
+  // Pedido de tarjeta tras la primera serie (#280): una línea en el descanso; "Cerrar" la oculta en este teléfono.
+  const [cardAsk, setCardAsk] = useState<"off" | "line" | "sheet">("off");
+  const cardAskChecked = useRef(false);
+  const cardAskSeen = useRef(false);
+  useEffect(() => {
+    if (cardAskChecked.current || !firstSetAsk || !firstOffer || doneSets < 1 || phase !== "play") return;
+    cardAskChecked.current = true;
+    try { if (!localStorage.getItem(firstSetAskKey(firstOffer)) && !localStorage.getItem(offerDismissKey(firstOffer))) setCardAsk("line"); } catch { /* sin almacenamiento: no se pide */ }
+  }, [firstSetAsk, firstOffer, doneSets, phase]);
+  const hideCardAsk = () => { try { localStorage.setItem(firstSetAskKey(firstOffer!), String(Date.now())); } catch { /* */ } setCardAsk("off"); };
+  const cardLine = cardAsk === "line" ? (
+    <FirstSetCardLine onClose={hideCardAsk} onOpen={() => { setRestOpen(false); setCardAsk("sheet"); }}
+      onSeen={() => { if (!cardAskSeen.current) { cardAskSeen.current = true; track("card_ask_view", { where: "primera-serie" }); } }} />
+  ) : null;
   // Abrió cómo se hace: si muchos lo abren y luego se van, la explicación no alcanza.
   useEffect(() => { if (sheet === "tech") track("help_open", { template: tpl, ex: idx + 1 }); }, [sheet]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1184,14 +1203,22 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
       )}
 
       {/* Descanso */}
-      {guidedNow && rest && <GuidedRest left={restLeft} total={rest.total} next={guidedNext} onSkip={cancelRest} />}
+      {guidedNow && rest && <GuidedRest left={restLeft} total={rest.total} next={guidedNext} onSkip={cancelRest} extra={cardLine} />}
       {!guidedNow && restP.mounted && shownRest && shownInfo && (
         <RestScreen left={rest ? restLeft : 0} total={shownRest.total} info={shownInfo} closing={restP.closing}
           minimizeLabel={ex.bw && !ex.load ? "Ajustar la serie" : "Ajustar pesos"}
           onEffort={(e) => restTarget.current && setEffort(restTarget.current.ex, restTarget.current.si, e)}
           onAdjust={(d) => setRest((r) => r && (d > 0 ? { end: r.end + d * 1000, total: r.total + d } : { ...r, end: r.end + d * 1000 }))}
           onSkip={cancelRest}
-          onMinimize={() => setRestOpen(false)} />
+          onMinimize={() => setRestOpen(false)} extra={cardLine} />
+      )}
+      {cardAsk === "sheet" && firstOffer && (
+        <FirstSetCardSheet onClose={() => setCardAsk("off")}
+          onSaved={(r) => {
+            // Con la tarjeta guardada no vuelve este pedido ni la oferta del cierre.
+            try { localStorage.setItem(firstSetAskKey(firstOffer), String(Date.now())); localStorage.setItem(offerDismissKey(firstOffer), String(Date.now())); } catch { /* */ }
+            track("card_saved", { step: "trial", demo: Boolean(r.demo), outcome: r.outcome ?? "demo", where: "primera-serie" });
+          }} />
       )}
       {!guidedNow && rest && !restOpen && <RestPill left={restLeft} onOpen={() => setRestOpen(true)} onSkip={cancelRest} />}
 

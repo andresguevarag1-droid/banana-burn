@@ -58,9 +58,10 @@ describe("secuencia de correos durante la prueba", () => {
 
   it("los botones llevan a páginas existentes de la app", () => {
     const routes = emails.map(({ text }) => text.match(/\*\*Ruta:\*\* `([^`]+)`/)?.[1]);
-    expect(routes).toEqual(["/app/entrenar", "/app/incluye", "/app/suscripcion"]);
+    // El día 6 lleva ?desde=dia6 (#280): solo mide el pedido de tarjeta en Mi plan.
+    expect(routes).toEqual(["/app/entrenar", "/app/incluye", "/app/suscripcion?desde=dia6"]);
     for (const route of routes) {
-      expect(existsSync(`src/app/(app)${route}/page.tsx`), route).toBe(true);
+      expect(existsSync(`src/app/(app)${route!.split("?")[0]}/page.tsx`), route).toBe(true);
     }
   });
 

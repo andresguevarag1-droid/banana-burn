@@ -706,7 +706,8 @@ export const TRIAL_SEQUENCE: Record<TrialStepDay, { subject: string; preheader: 
       "Estos son precios regulares en USD, con IVA incluido. El ahorro anual compara 12 meses a precio regular, sin promociones.",
       "En Mi plan puedes revisar tu elección y las condiciones que aplican a tu cuenta antes de confirmar cualquier cambio.",
     ],
-    cta: "Revisar mi plan", path: "/app/suscripcion", kind: "primary",
+    // ?desde=dia6 (#280): Mi plan cuenta el pedido del correo y lo guarda en card_saved.
+    cta: "Revisar mi plan", path: "/app/suscripcion?desde=dia6", kind: "primary",
   },
 };
 

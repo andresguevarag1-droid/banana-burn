@@ -12,6 +12,8 @@ export const FUNNEL_EVENTS = [
   "purchase_success",
   "onboarding_done",
   "card_banner_view",
+  // Cada pedido de tarjeta (#280): dónde se vio (CARD_ASK_WHERE). card_saved lleva el mismo `where` del pedido que funcionó.
+  "card_ask_view",
   "card_saved",
   "install_view",
   "install_click",
@@ -55,6 +57,9 @@ export type SignupMethod = (typeof SIGNUP_METHODS)[number];
 /** Motivo corto de un registro fallido (ver signupReason en src/app/(auth)/entrar/validate.ts). */
 export const SIGNUP_ERRORS = ["invalid_email", "weak_password", "email_taken", "rate_limit", "bad_code", "network", "oauth_blocked", "other"] as const;
 export type SignupErrorReason = (typeof SIGNUP_ERRORS)[number];
+/** Dónde se pide la tarjeta (#280). "dia6" es el correo del día 6: se cuenta al llegar a Mi plan desde su enlace. */
+export const CARD_ASK_WHERE = ["bienvenida", "hoy-banner", "primer-entreno", "primera-serie", "salida", "mi-plan", "muro", "dia6"] as const;
+export type CardAskWhere = (typeof CARD_ASK_WHERE)[number];
 /** Pasos de la bienvenida que cuentan en onboarding_step: 0 a 6 (la oferta de la tarjeta ya tiene card_banner_view). */
 export const ONBOARDING_STEPS = 7;
 
@@ -66,6 +71,7 @@ const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolea
   signup_view: { key: "inapp", ok: (v) => typeof v === "boolean" },
   signup_submit: { key: "method", ok: (v) => (SIGNUP_METHODS as readonly unknown[]).includes(v) },
   signup_error: { key: "reason", ok: (v) => (SIGNUP_ERRORS as readonly unknown[]).includes(v) },
+  card_ask_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
 };
 

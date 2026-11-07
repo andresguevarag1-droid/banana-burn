@@ -23,8 +23,9 @@ describe("Tarjeta de oferta del primer entreno", () => {
     expect(h).toContain("Cancela cuando quieras en 2 toques.");
     expect(h).toContain("Activar mi plan");
     expect(h).toContain("Ahora no");
-    expect(h).toContain('href="/app/suscripcion?plan=entreno&amp;pago=anual#tarjeta"');
+    expect(h).toContain('href="/app/suscripcion?plan=entreno&amp;pago=anual&amp;desde=primer-entreno#tarjeta"');
     expect(h).toContain('data-view="plan_wall_view" data-where="primer-entreno"');
+    expect(h).toContain('data-view="card_ask_view" data-where="primer-entreno"');
   });
 
   it("no usa el 'equivale a $5 al mes' (choca con el primer mes a $4.99)", () => {
@@ -32,7 +33,7 @@ describe("Tarjeta de oferta del primer entreno", () => {
   });
 
   it("con mensual elegido, el botón va al plan mensual", () => {
-    expect(html("mes")).toContain('href="/app/suscripcion?plan=entreno&amp;pago=mes#tarjeta"');
+    expect(html("mes")).toContain('href="/app/suscripcion?plan=entreno&amp;pago=mes&amp;desde=primer-entreno#tarjeta"');
   });
 });
 
@@ -58,7 +59,8 @@ describe("Oferta de salida (#227)", () => {
     expect(h).toContain(`${usd2(amountMinorFor("entreno", "mes") / 100)}/mes`);
     expect(h).toContain("$4.99");
     expect(h).toContain("IVA incluido");
-    expect(h).toContain('href="/app/suscripcion?plan=entreno&amp;pago=mes#tarjeta"');
+    expect(h).toContain('href="/app/suscripcion?plan=entreno&amp;pago=mes&amp;desde=salida#tarjeta"');
+    expect(h).toContain('data-view="card_ask_view" data-where="salida"');
     expect(h).toContain("No, gracias");
     expect(h).not.toMatch(/equivale/i);
   });
