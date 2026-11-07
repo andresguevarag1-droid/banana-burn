@@ -15,6 +15,7 @@ import { nfmt, usd2 } from "../num";
 import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving, type Billing, type PlanId } from "../plans";
 import { PROMO_PCT, planLine, promoPrice } from "../trial";
 import { intentPath } from "../checkout-intent";
+import type { TrialProgress } from "../recuperacion";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
@@ -966,47 +967,59 @@ export function activacion(d: { step: ActivationMailStep; home: boolean; unsubsc
   };
 }
 
-// ───────────── Recuperación al terminar la prueba sin plan (docs/emails/recuperacion-prueba.md) ─────────────
-// Días 8 y 14 desde el registro. La envía runReminders (notify-run.ts) en lugar de los demás correos de ese día.
+// ───────────── Recuperación al terminar la prueba sin plan (docs/emails/recuperacion.md) ─────────────
+// Días 8 y 10 desde el registro. La envía runReminders (notify-run.ts) en lugar de los demás correos de ese día.
 
-export type RecoveryDay = 8 | 14;
+export type RecoveryDay = 8 | 10;
 
-/** Copy de cada pieza, con los precios de PLANS. Sin descuentos: después de la prueba el alta va a precio normal (promoFor). */
+const plural = (n: number, one: string, many: string) => `${nfmt(n, 0)} ${n === 1 ? one : many}`;
+
+/**
+ * Primer párrafo del día 8. Con entrenos terminados, sus cifras reales (trialProgress en recuperacion.ts): las series y los kg
+ * solo aparecen si son mayores que cero. Sin entrenos, o si no se pudieron leer (`null`), habla de su plan, nunca de logros.
+ */
+export function recoveryProgressLine(p: TrialProgress | null, trainDays?: number | null): string {
+  if (p && p.workouts > 0) {
+    const extra = [p.sets > 0 && plural(p.sets, "serie", "series"), p.kg > 0 && `${nfmt(p.kg, 0)} kg levantados`].filter(Boolean) as string[];
+    return `En tu prueba guardaste ${plural(p.workouts, "entreno", "entrenos")}${extra.length ? `, con ${extra.join(" y ")}` : ""}. Todo eso sigue en tu cuenta.`;
+  }
+  const days = trainDays && trainDays >= 1 && trainDays <= 7 ? ` de ${plural(trainDays, "día", "días")} por semana` : "";
+  return `Tu plan${days} sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos.`;
+}
+
+/** Copy de cada pieza, con los precios de PLANS. El día 8 va después de recoveryProgressLine. Sin descuentos: después de la prueba el alta va a precio normal (promoFor). */
 export const RECOVERY_MAILS: Record<RecoveryDay, { subject: string; preheader: string; paragraphs: string[]; cta: string; path: string }> = {
   8: {
-    subject: "Tu historial sigue guardado",
-    preheader: "Conservas lo que registraste. Elige un plan para retomar.",
+    subject: "Tu progreso te espera",
+    preheader: "Tu prueba terminó. Elige tu plan y sigue donde quedaste.",
     paragraphs: [
-      "Tu prueba terminó, pero no tienes que empezar desde cero.",
-      "En tu cuenta siguen los entrenos, pesos y repeticiones que registraste, junto con tus registros de peso, medidas y fotos de progreso. Vuelve con la misma cuenta para conservar ese historial.",
-      `Para retomar el entrenamiento, elige ${ENTRENO.name} por ${usd2(ENTRENO.price.mes)} al mes o ${COMPLETO.name} por ${usd2(COMPLETO.price.mes)} al mes. Solo el segundo incluye el registro de comidas y tus calorías y macros. También puedes comparar las opciones anuales en Mi plan.`,
-      "Revisa el plan y el total antes de confirmar el pago. Precios en USD, con IVA incluido.",
+      `Para seguir, elige tu plan en Mi plan. El anual aparece primero: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.anual)} al año y ${COMPLETO.name}, ${usd2(COMPLETO.price.anual)} al año. Cada año pagado ${seasonLine}. Si prefieres mes a mes, ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.mes)} y ${COMPLETO.name}, ${usd2(COMPLETO.price.mes)}.`,
+      "Precios en USD, con IVA incluido. Revisa el plan y el total antes de confirmar el pago.",
     ],
     cta: "Elegir mi plan", path: "/app/suscripcion",
   },
-  14: {
-    subject: "Vuelve con un año de entreno",
-    preheader: "Compara el anual primero y retoma con tu historial guardado.",
+  10: {
+    subject: "Último correo sobre tu prueba",
+    preheader: "Tu cuenta sigue aquí cuando quieras volver.",
     paragraphs: [
-      "Tu historial sigue en tu cuenta: los entrenos, pesos, repeticiones, medidas y fotos que guardaste.",
-      `Si quieres volver, compara primero el anual: ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.anual)} al año y ${COMPLETO.name}, ${usd2(COMPLETO.price.anual)} al año. Cada año pagado ${seasonLine}. Solo ${COMPLETO.name} incluye comidas, calorías y macros.`,
-      `¿Prefieres pagar mes a mes? ${ENTRENO.name} cuesta ${usd2(ENTRENO.price.mes)} al mes y ${COMPLETO.name}, ${usd2(COMPLETO.price.mes)} al mes.`,
-      "Entra con la misma cuenta y elige cómo seguir. Precios en USD, con IVA incluido; el anual se paga completo, no en cuotas mensuales.",
+      "Este es el último correo que te enviamos sobre tu prueba.",
+      "Tu cuenta sigue abierta, con lo que guardaste. Cuando quieras seguir, elige tu plan en Mi plan: el anual aparece primero y también puedes pagar mes a mes. Precios en USD, con IVA incluido.",
     ],
-    cta: "Comparar mi plan anual", path: "/app/suscripcion",
+    cta: "Elegir mi plan", path: "/app/suscripcion",
   },
 };
 
 /** Un correo de recuperación. Lleva enlace de baja (scope "recordatorios": reemplaza a los avisos del día). */
-export function recuperacionPrueba(d: { day: RecoveryDay; unsubscribe: string }): Email {
+export function recuperacionPrueba(d: { day: RecoveryDay; unsubscribe: string; progress?: TrialProgress | null; trainDays?: number | null }): Email {
   const c = RECOVERY_MAILS[d.day];
+  const paragraphs = d.day === 8 ? [recoveryProgressLine(d.progress ?? null, d.trainDays), ...c.paragraphs] : c.paragraphs;
   const hero: Hero = { eyebrow: "Tu prueba terminó", title: esc(c.subject), lead: esc(c.preheader) };
-  const html = c.paragraphs.map((x) => p(esc(x))).join("") + small("<b>Coach Banana</b>") + button(c.cta, c.path);
+  const html = paragraphs.map((x) => p(esc(x))).join("") + small("<b>Coach Banana</b>") + button(c.cta, c.path);
   const reason = "Recibes este correo porque tu prueba de 7 días terminó sin elegir un plan y tienes activados los recordatorios de Banana Burn.";
   return {
     subject: c.subject, preheader: c.preheader,
     html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
-    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+    text: textLayout([c.subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
   };
 }
 

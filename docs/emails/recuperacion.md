@@ -1,22 +1,23 @@
 # Recuperación al terminar la prueba sin elegir plan
 
-Propuesta para aprobación de Andrés. Entrega de copy: no implementa avisos ni envíos, no publica, no toca campañas ni genera gasto. Mueve **prueba vencida → primer pago**, con el **anual** como primera opción el día 14. Objetivo: contribuir a 100 usuarios de pago activos con ingresos que cubran costos.
+Copy de los correos de recuperación (issue #275), ya implementados en `src/lib/recuperacion.ts` (reglas), `src/lib/email/templates.ts` (`recuperacionPrueba`) y `runReminders` en `src/lib/notify-run.ts` (envío). Mueve **prueba vencida → primer pago**, con el **anual** primero en el muro de planes. Objetivo: contribuir a 100 usuarios de pago activos con ingresos que cubran costos.
 
-## Correo día 8: tu historial sigue guardado
+## Correo día 8: tu progreso te espera
 
-**Asunto:** Tu historial sigue guardado
+**Asunto:** Tu progreso te espera
 
-**Vista previa:** Conservas lo que registraste. Elige un plan para retomar.
+**Vista previa:** Tu prueba terminó. Elige tu plan y sigue donde quedaste.
+
+**Primer párrafo (según la cuenta):**
+
+- Con entrenos terminados: «En tu prueba guardaste 3 entrenos, con 42 series y 3,150 kg levantados. Todo eso sigue en tu cuenta.» Las cifras salen de su cuenta (`trialProgress`): entrenos terminados sin contar descansos, las series hechas de esos entrenos y la suma de kg × repeticiones. Las series o los kg en cero no se nombran; con 1 entreno o 1 serie, en singular.
+- Sin entrenos terminados, o si no se pudieron leer: «Tu plan de 4 días por semana sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos.» Los días salen de `train_days`; sin ese dato, «Tu plan sigue listo en tu cuenta, …». Nunca se nombran logros que no existen.
 
 **Cuerpo:**
 
-Tu prueba terminó, pero no tienes que empezar desde cero.
+Para seguir, elige tu plan en Mi plan. El anual aparece primero: Entreno cuesta $59.99 al año y Entreno + Nutrición, $89.99 al año. Cada año pagado incluye una temporada deportiva gratis. Si prefieres mes a mes, Entreno cuesta $9.99 y Entreno + Nutrición, $14.99.
 
-En tu cuenta siguen los entrenos, pesos y repeticiones que registraste, junto con tus registros de peso, medidas y fotos de progreso. Vuelve con la misma cuenta para conservar ese historial.
-
-Para retomar el entrenamiento, elige Entreno por $9.99 al mes o Entreno + Nutrición por $14.99 al mes. Solo el segundo incluye el registro de comidas y tus calorías y macros. También puedes comparar las opciones anuales en Mi plan.
-
-Revisa el plan y el total antes de confirmar el pago. Precios en USD, con IVA incluido.
+Precios en USD, con IVA incluido. Revisa el plan y el total antes de confirmar el pago.
 
 Coach Banana
 
@@ -24,25 +25,21 @@ Coach Banana
 
 **Destino:** `/app/suscripcion` (https://bananaburn.app/app/suscripcion).
 
-## Correo día 14: vuelve, con el anual primero
+## Correo día 10: último aviso
 
-**Asunto:** Vuelve con un año de entreno
+**Asunto:** Último correo sobre tu prueba
 
-**Vista previa:** Compara el anual primero y retoma con tu historial guardado.
+**Vista previa:** Tu cuenta sigue aquí cuando quieras volver.
 
 **Cuerpo:**
 
-Tu historial sigue en tu cuenta: los entrenos, pesos, repeticiones, medidas y fotos que guardaste.
+Este es el último correo que te enviamos sobre tu prueba.
 
-Si quieres volver, compara primero el anual: Entreno cuesta $59.99 al año y Entreno + Nutrición, $89.99 al año. Cada año pagado incluye una temporada deportiva gratis. Solo Entreno + Nutrición incluye comidas, calorías y macros.
-
-¿Prefieres pagar mes a mes? Entreno cuesta $9.99 al mes y Entreno + Nutrición, $14.99 al mes.
-
-Entra con la misma cuenta y elige cómo seguir. Precios en USD, con IVA incluido; el anual se paga completo, no en cuotas mensuales.
+Tu cuenta sigue abierta, con lo que guardaste. Cuando quieras seguir, elige tu plan en Mi plan: el anual aparece primero y también puedes pagar mes a mes. Precios en USD, con IVA incluido.
 
 Coach Banana
 
-**Botón:** Comparar mi plan anual
+**Botón:** Elegir mi plan
 
 **Destino:** `/app/suscripcion` (https://bananaburn.app/app/suscripcion).
 
@@ -64,29 +61,29 @@ Propuesta: un aviso descartable al primer acceso elegible desde el día 8; no re
 
 ## Qué conserva y qué significa «historial guardado»
 
-El asunto del día 8 habla de los registros que conserva en su cuenta, no de una suscripción reservada o de acceso gratis. No afirmar que ya eligió un plan de pago. No prometer una rutina congelada, récords nuevos, rachas intactas ni datos que nunca registró. Usar siempre la misma cuenta; no garantizar conservación perpetua ni recuperación después de eliminarla.
+El correo del día 8 habla de los registros que conserva en su cuenta, no de una suscripción reservada o de acceso gratis. No afirmar que ya eligió un plan de pago. No prometer una rutina congelada, récords nuevos, rachas intactas ni datos que nunca registró. Usar siempre la misma cuenta; no garantizar conservación perpetua ni recuperación después de eliminarla.
 
 Fuentes revisadas: `src/lib/account-export.ts` enumera `workouts`, `workout_sets`, `weights`, `measurements`, `progress_photos`, `meals` y `daily_logs`; `src/lib/entitlements.ts` calcula el acceso por prueba/suscripción y puede bajar el perfil a `free`, sin borrar ese historial. Conservar comidas guardadas no significa tener acceso a nutrición con Entreno: para usarla al volver se necesita Entreno + Nutrición. Las piezas solo prometen registros existentes, sin afirmar que toda persona ya tiene fotos o entrenos.
 
 ## Fechas, audiencia y convivencia
 
-Día 8 significa 7 días completos desde el registro: coincide con el fin normal de la prueba. Día 14 significa 13 días completos desde el registro, no 14 días después del vencimiento. Usar `trialEndFor` de `src/lib/trial.ts` para validar el vencimiento; no enviar por una resta de fechas sin comprobar acceso.
+Día 8 significa 7 días completos desde el registro (168 h): coincide con el fin normal de la prueba. Día 10 significa 9 días completos desde el registro (216 h), no 10 días después del vencimiento. Cada pieza tiene su ventana de 24 h, como `src/lib/trial-sequence.ts`: si una corrida falla, no se manda después. Usar `trialEndFor` de `src/lib/trial.ts` para validar el vencimiento; no enviar por una resta de fechas sin comprobar acceso.
 
-Audiencia: prueba normal vencida, sin elección de plan, sin pagos previos y sin acceso pagado vigente. Excluir beta y su gracia, testers, cortesías y condominios con mes gratis. Excluir también cobros programados, en curso, por confirmar, fallidos o con reintento: requieren su comunicación específica de cobro, no una invitación genérica a elegir plan. Revalidar inmediatamente antes de cada envío o aviso; detener la secuencia tras el primer pago. No mandar piezas atrasadas en bloque.
+Audiencia: prueba normal vencida, sin elección de plan, sin pagos previos y sin acceso pagado vigente. Excluir beta y su gracia, staff, testers, cortesías, regalos y condominios con mes gratis. Excluir también las cuentas creadas desde el 1 de enero de 2027 (`cardRequiredFor` en `src/lib/card-required.ts`): sin tarjeta no tuvieron prueba. Excluir también cobros programados, en curso, por confirmar, fallidos o con reintento: requieren su comunicación específica de cobro, no una invitación genérica a elegir plan. Revalidar inmediatamente antes de cada envío o aviso; detener la secuencia tras el primer pago. No mandar piezas atrasadas en bloque.
 
 `reactivacion` en `src/lib/email/templates.ts` se activa a los 3 o 7 días de inactividad desde `src/lib/notify.ts`; propone una sesión corta o descanso y dirige a `/app/entreno` o `/app`. Esta secuencia se activa por vencimiento sin compra, aunque la persona siga entrando; su acción es elegir y pagar en Mi plan. Al implementarla, sustituir el correo `reactivacion` o recordatorio diario que coincida para ese destinatario y fecha; no sumar ambos. La supresión por audiencia vencida debe acordarse en la futura integración, pues no la implementa este documento. Conservar bienvenida, `pruebaIniciada`, `recordatorioCobro` y avisos transaccionales, con prioridad sobre el comercial. Complementa `docs/emails/secuencia-prueba.md`, que cubre los días 2, 4 y 6 durante la prueba.
 
-Respetar preferencias de correo y baja firmada del sistema existente; registrar una sola pieza por usuario e hito. Agregar el pie existente con motivo del correo y enlace de baja. Ninguna pieza ofrece descuento: `promoFor` en `src/lib/trial.ts` no concede el primer mes al 50 % a un alta de tarjeta posterior al fin de la prueba (`inmediato`). No prometer otra prueba ni cobro diferido.
+Respetar preferencias de correo y baja firmada del sistema existente; registrar una sola pieza por usuario e hito: `notification_log` con el día fijo `ONCE_DAY` y la llave de Resend `recuperacion_d8/<cuenta>` o `recuperacion_d10/<cuenta>` (`recoveryIdemKey`). Agregar el pie existente con motivo del correo y enlace de baja. Ninguna pieza ofrece descuento: `promoFor` en `src/lib/trial.ts` no concede el primer mes al 50 % a un alta de tarjeta posterior al fin de la prueba (`inmediato`). No prometer otra prueba ni cobro diferido.
 
-Maquetación futura: paper #FFF8E3, banana #FFD60A, ink #1B1505, Plus Jakarta Sans y botón principal ink; texto plano equivalente. Cada cuerpo tiene menos de 120 palabras. El enlace abre Mi plan; no preselecciona el anual ni cobra al hacer clic. «Anual primero» describe el orden editorial del día 14.
+Maquetación futura: paper #FFF8E3, banana #FFD60A, ink #1B1505, Plus Jakarta Sans y botón principal ink; texto plano equivalente. Cada cuerpo tiene menos de 120 palabras. El enlace abre Mi plan, el muro de planes de #234 con el anual seleccionado; no cobra al hacer clic. La oferta de salida del 50 % de ese cambio solo aparece durante la prueba (`promoFor` «prueba»), así que estos correos no la mencionan.
 
 ## Variantes A/B propuestas
 
-Mantener cuerpo, vista previa y botón idénticos. Día 8: A «Tu historial sigue guardado»; B «Retoma con tu historial guardado». Ambas variantes nombran el historial, sin sugerir una suscripción reservada. Día 14: A «Vuelve con un año de entreno»; B «Compara tu plan anual y vuelve». Apostaría por A por su invitación directa. Son alternativas a los dos correos, no envíos extra. Andrés debe aprobar cualquier prueba; asignar variante estable por usuario y decidir por pagos con ventana completa, no por aperturas.
+Mantener cuerpo, vista previa y botón idénticos. Día 8: A «Tu progreso te espera»; B «Tu historial sigue guardado». Ambas variantes nombran lo guardado, sin sugerir una suscripción reservada. Día 10: A «Último correo sobre tu prueba»; B «Tu plan sigue listo en tu cuenta». Apostaría por A por su invitación directa. Son alternativas a los dos correos, no envíos extra. Andrés debe aprobar cualquier prueba; asignar variante estable por usuario y decidir por pagos con ventana completa, no por aperturas.
 
 ## Medición: pagos por correo enviado
 
-Propuesta para una futura integración, todavía no instrumentada: guardar relación entre usuario, pieza (`recuperacion_d8` o `recuperacion_d14`), variante, fecha de envío e ID devuelto por Resend, con idempotencia por usuario/hito. No poner datos personales en URLs ni depender de UTMs: su persistencia actual requiere `?ref=`.
+Propuesta para una futura integración, todavía no instrumentada: guardar relación entre usuario, pieza (`recuperacion_d8` o `recuperacion_d10`), variante, fecha de envío e ID devuelto por Resend, con idempotencia por usuario/hito. No poner datos personales en URLs ni depender de UTMs: su persistencia actual requiere `?ref=`.
 
 Por cada pieza y variante, reportar semanalmente cohortes con **7 días completos desde cada envío**:
 

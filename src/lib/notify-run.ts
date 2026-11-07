@@ -20,7 +20,7 @@ import { entitlementsFrom, type CompRow, type SubscriptionRow } from "@/lib/enti
 import { kindFor, promoFor } from "@/lib/trial";
 import { betaEndDay, betaEndEligible, betaEndIdemKey, betaEndKind, betaEndStep } from "@/lib/beta-fin";
 import { firstPaymentDay, firstPaymentStep, isFirstPaymentStep, type FirstPaymentStep, type FirstPaymentSub } from "@/lib/primer-pago";
-import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, type RecoveryStep } from "@/lib/recuperacion";
+import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, trialProgress, type RecoveryStep, type TrialProgress } from "@/lib/recuperacion";
 import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
 import { todayIn } from "@/lib/today";
 import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
@@ -233,7 +233,7 @@ export async function trialSequenceFor(admin: SupabaseClient, users: Pick<Profil
 }
 
 /**
- * Recuperación al terminar la prueba sin plan (recuperacion.ts): qué correo (día 8 o 14) le toca hoy a cada cuenta del lote.
+ * Recuperación al terminar la prueba sin plan (recuperacion.ts): qué correo (día 8 o 10) le toca hoy a cada cuenta del lote.
  * En modo por hora, el día del correo es el día local cuya hora del recordatorio cae en la ventana de 24 horas (recoveryAt):
  * así todo ese día local queda sin otros correos, también antes de que abra la ventana o después de que cierre.
  * Solo consulta las cuentas con una ventana abierta. Si alguna lectura falla, nadie del lote lo recibe: sin esos datos podría
@@ -366,7 +366,7 @@ type Grouped = {
   stepBy: Map<string, TrialStep>;
   /** Pieza después del primer pago que le toca hoy (firstPaymentFor). */
   payBy: Map<string, FirstPaymentStep>;
-  /** Correo de recuperación (día 8 o 14) que toca hoy, en el día local (recoveryFor). */
+  /** Correo de recuperación (día 8 o 10) que toca hoy, en el día local (recoveryFor). */
   recoveryBy: Map<string, RecoveryStep>;
   /** Pieza del cierre de la Temporada 1 que toca hoy (seasonCloseFor). */
   seasonBy: Map<string, SeasonCloseDue>;
@@ -449,7 +449,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     if (stepSent) for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
     // Recuperación: en su día local no sale ningún otro correo, ni el semanal, a ninguna hora (antes o después de la pieza).
     // Solo si reclamarla falló siguen los demás (ese día no salió). Push y campanita siguen igual.
-    if (recovery && (!recoveryNow || await sendRecovery(admin, u.id, recoveryNow, getEmail, stats))) {
+    if (recovery && (!recoveryNow || await sendRecovery(admin, u, recoveryNow, getEmail, stats))) {
       for (const d of decisions) d.email = false;
     }
 
@@ -568,7 +568,8 @@ async function sendSeasonClose(admin: SupabaseClient, userId: string, step: Seas
 }
 
 /** Reclama y envía un correo de recuperación. false solo si reclamarlo falló; true si salió ahora o ya había salido. */
-async function sendRecovery(admin: SupabaseClient, userId: string, step: RecoveryStep, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+async function sendRecovery(admin: SupabaseClient, u: Profile, step: RecoveryStep, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const userId = u.id;
   const { data: claimed, error } = await admin.from("notification_log")
     .upsert({ user_id: userId, kind: step, local_day: ONCE_DAY, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
     .select("id");
@@ -577,11 +578,26 @@ async function sendRecovery(admin: SupabaseClient, userId: string, step: Recover
   const to = await getEmail();
   if (to) {
     const unsubscribe = unsubscribeUrl(userId, "recordatorios");
-    const r = await sendEmail(to, withLoginLinks(T.recuperacionPrueba({ day: recoveryDay(step), unsubscribe }), userId), { idempotencyKey: recoveryIdemKey(step, userId), unsubscribe, tags: { kind: step } });
+    const progress = step === "recuperacion_d8" ? await progressOf(admin, userId) : null;
+    const mail = T.recuperacionPrueba({ day: recoveryDay(step), unsubscribe, progress, trainDays: u.train_days });
+    const r = await sendEmail(to, withLoginLinks(mail, userId), { idempotencyKey: recoveryIdemKey(step, userId), unsubscribe, tags: { kind: step } });
     if (r.ok) stats.email++;
   }
   stats.sent[step] = (stats.sent[step] ?? 0) + 1;
   return true;
+}
+
+/**
+ * Entrenos, series y kg de la cuenta para el correo del día 8 (trialProgress). Si alguna lectura falla, null: el correo habla
+ * de su plan en lugar de inventar o dejar cifras a medias.
+ */
+async function progressOf(admin: SupabaseClient, userId: string): Promise<TrialProgress | null> {
+  const [wk, sets] = await Promise.all([
+    admin.from("workouts").select("id,template,finished_at").eq("user_id", userId).limit(1000),
+    admin.from("workout_sets").select("workout_id,kg,reps,done").eq("user_id", userId).limit(10000),
+  ]);
+  if (wk.error || sets.error) { logError("cron:recordatorios", "recovery_progress_failed", { code: (wk.error ?? sets.error)?.code }); return null; }
+  return trialProgress(wk.data ?? [], sets.data ?? []);
 }
 
 const channels = (d: Decision) => [d.inapp && "inapp", d.push && "push", d.email && "email"].filter(Boolean) as string[];
