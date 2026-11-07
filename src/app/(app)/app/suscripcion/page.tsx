@@ -17,6 +17,7 @@ import { betaDates } from "@/components/beta-notice";
 import { demoCardState } from "@/lib/trial-demo";
 import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
+import { askWhere } from "@/lib/card-ask";
 
 export const metadata = { title: "Mi plan" };
 
@@ -48,7 +49,7 @@ const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
 
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };
 
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
   const [real, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
@@ -124,7 +125,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         </section>
       )}
       {!(condoPending && !charge) && (cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
-        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null}
+        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null} where={askWhere(sp.desde) ?? "mi-plan"}
           initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />
       )}
 

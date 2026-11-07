@@ -4,6 +4,7 @@
 import { PLANS, annualSaving, type Billing, type PlanId } from "./plans";
 import { PROMO_ID, amountMinorFor, firstChargeMinor } from "./trial";
 import type { Entitlements } from "./entitlements";
+import type { CardAskWhere } from "@/app/api/track/event";
 
 /** Plan de la oferta: Entreno (el que se usa en el primer entreno). Su ahorro anual es $59.89 y su primer mes al 50 %, $4.99. */
 export const OFFER_PLAN: PlanId = "entreno";
@@ -13,8 +14,8 @@ export const offerDismissKey = (userId: string) => `bb.first-offer-dismiss.${use
 /** Clave de la oferta de salida (#227): se ve una sola vez por cuenta en este teléfono; /api/track repite el freno por cuenta. */
 export const exitOfferKey = (userId: string) => `bb.exit-offer.${userId}`;
 
-/** Mi plan con el plan y el periodo ya elegidos, directo al formulario de la tarjeta. */
-export const activateHref = (billing: Billing = "anual", plan: PlanId = OFFER_PLAN) => `/app/suscripcion?plan=${plan}&pago=${billing}#tarjeta`;
+/** Mi plan con el plan y el periodo ya elegidos, directo al formulario de la tarjeta. `desde`: el pedido (#280) para card_saved. */
+export const activateHref = (billing: Billing = "anual", plan: PlanId = OFFER_PLAN, desde?: CardAskWhere) => `/app/suscripcion?plan=${plan}&pago=${billing}${desde ? `&desde=${desde}` : ""}#tarjeta`;
 
 /**
  * ¿Le ofrecemos activar su plan? Solo en la prueba gratis, sin tarjeta guardada, sin cobro programado y sin haber pagado

@@ -1,5 +1,6 @@
 import { getEntitlements } from "@/lib/entitlements";
 import { canActivatePlan } from "@/lib/first-workout-offer";
+import { isOnvoConfigured } from "@/lib/onvo";
 import { betaLive } from "@/lib/plans";
 import { canUpsellNutrition } from "@/lib/plan-access";
 import { getViewer } from "@/lib/supabase/server";
@@ -157,6 +158,6 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const firstSession = !!firstPlan && !expres && dia == null;
   // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
   const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
-  return <Player firstSession={firstSession} firstOffer={firstOffer} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }

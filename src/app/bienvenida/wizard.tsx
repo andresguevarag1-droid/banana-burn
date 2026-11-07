@@ -21,6 +21,7 @@ import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
 import { voiceForLevel } from "@/lib/voice";
+import { cardOfferLabel } from "@/lib/card-ask";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -139,6 +140,8 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
   // Embudo del registro (#236): un onboarding_step al entrar a cada paso 0 a 6 (la oferta de la tarjeta no cuenta aquí).
   useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
+  // #280: el pedido de la tarjeta de la bienvenida (opcional u obligatorio) cuenta como card_ask_view "bienvenida".
+  useEffect(() => { if (step === STEPS && cardStep) track("card_ask_view", { where: "bienvenida" }); }, [step, cardStep]);
   const [o, setO] = useState<Draft>(() => ({
     name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
     days: 4, equipment: "gym", level: startOnCard ? "intermedio" : null, minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",
@@ -240,7 +243,10 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
         const r = await safeAction(completeOnboarding(full));
         if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
       }
-      if (card) setSaved(card);
+      if (card) {
+        setSaved(card);
+        track("card_saved", { step: cardRequired ? "card" : "trial", demo: Boolean(card.demo), outcome: card.outcome ?? "demo", where: "bienvenida" });
+      }
       // Una sola vez por cuenta: aquí, al terminar la bienvenida (la pantalla final no lo repite).
       trackOnce("onboarding_done", { goal: full?.goal ?? o.goal, trial: Boolean(trialEnd) || cardRequired });
       // Embudo (5 nov): la mitad llegaba a Hoy y no abría el entreno. Ahora se le pregunta "¿Entrenamos ahora?".
@@ -471,7 +477,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
             </ul>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel="Dejar mi tarjeta lista" onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
+              <CardForm choice={choice} demo={demo} submitLabel={cardOfferLabel(choice)} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
                 note={chargeDay ? (promoApplies("primer_mes_50", choice.billing) ? <>{promoChargeLine(chargeDay)} Monto: {money2(promoPrice(choice.plan))}; desde el segundo mes, {money2(PLANS.find((p) => p.id === choice.plan)!.price.mes)} al mes.</> : <>Hoy no te cobramos. El {chargeDay} se cobran {money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])} del plan anual, salvo que canceles antes desde Mi plan.</>) : null} />
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.</p>

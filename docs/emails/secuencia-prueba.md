@@ -70,7 +70,7 @@ Coach Banana
 
 **Botón:** Revisar mi plan
 
-**Ruta:** `/app/suscripcion` (https://bananaburn.app/app/suscripcion). Abre la pantalla actual; no preselecciona el anual ni ejecuta un pago.
+**Ruta:** `/app/suscripcion?desde=dia6` (https://bananaburn.app/app/suscripcion?desde=dia6). Abre la pantalla actual; no preselecciona el anual ni ejecuta un pago. `desde=dia6` solo mide el pedido de tarjeta (#280).
 
 Fuente de precios: `src/lib/plans.ts`, `PLANS`, `annualSaving` y `ANNUAL_SEASON_NOTE`. Cálculo: $9.99 × 12 − $59.99 = $59.89; $14.99 × 12 − $89.99 = $89.89. No comparar el anual con el primer mes promocional ni anunciar un equivalente mensual como monto a cobrar. Si cambian los precios, actualizar esta pieza antes de aprobarla.
 

@@ -50,9 +50,10 @@ export function ExitOfferCard({ onDismiss }: { onDismiss: () => void }) {
   const o = firstWorkoutOffer();
   return (
     <section aria-labelledby="exit-offer-title" className="mt-3 rounded-[1.5rem] border-2 border-ink bg-banana-soft p-4 text-left">
+      <FunnelTracker view="card_ask_view" props={{ where: "salida" }} />
       <h2 id="exit-offer-title" className="text-lg font-extrabold text-ink text-balance">Antes de irte: {PROMO_PCT}{"\u00a0"}% en tu primer mes si dejas tu tarjeta hoy</h2>
       <p className="mt-1 text-sm text-body text-pretty">{o.name}: tu primer mes a <b className="tabular-nums">{usd2(o.monthFirst)}</b>, después <b className="tabular-nums">{usd2(o.month)}/mes</b>. Hoy no te cobramos: se cobra al terminar tu prueba. Precios en USD, IVA incluido.</p>
-      <Link href={activateHref("mes")} data-cta="salida-guardar-tarjeta" className="btn-banana mt-3 h-13 w-full text-base font-extrabold">Dejar mi tarjeta</Link>
+      <Link href={activateHref("mes", undefined, "salida")} data-cta="salida-guardar-tarjeta" className="btn-banana mt-3 h-13 w-full text-base font-extrabold">Dejar mi tarjeta</Link>
       <p className="mt-2 text-center text-sm text-muted">Cancela cuando quieras en 2 toques.</p>
       <p className="text-center"><button type="button" onClick={onDismiss} data-cta="salida-no-gracias" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">No, gracias</button></p>
     </section>
@@ -69,6 +70,7 @@ export function OfferCard({ billing, onBilling, onDismiss }: { billing: Billing;
   return (
     <section aria-labelledby="first-offer-title" className="mt-3 rounded-[1.5rem] border-2 border-ink bg-white p-4 text-left">
       <FunnelTracker view="plan_wall_view" props={{ where: "primer-entreno" }} />
+      <FunnelTracker view="card_ask_view" props={{ where: "primer-entreno" }} />
       <h2 id="first-offer-title" className="flex items-center gap-2 text-lg font-extrabold text-ink text-balance">
         <span>Terminaste tu primer entreno <Banana weight="fill" aria-hidden className="inline size-5 align-[-3px] text-banana-ink" /> Sigue con tu plan</span>
       </h2>
@@ -89,7 +91,7 @@ export function OfferCard({ billing, onBilling, onDismiss }: { billing: Billing;
           );
         })}
       </fieldset>
-      <Link href={activateHref(billing)} data-cta={`primer-entreno-activar-${billing}`} className="btn-banana mt-3 h-13 w-full text-base font-extrabold">Activar mi plan</Link>
+      <Link href={activateHref(billing, undefined, "primer-entreno")} data-cta={`primer-entreno-activar-${billing}`} className="btn-banana mt-3 h-13 w-full text-base font-extrabold">Activar mi plan</Link>
       <p className="mt-2 text-center text-sm text-muted">Cancela cuando quieras en 2 toques.</p>
       <p className="text-center"><button type="button" onClick={onDismiss} data-cta="primer-entreno-ahora-no" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ahora no</button></p>
     </section>

@@ -29,6 +29,8 @@ import { AddCardBanner, CondoCardBanner, FailedBanner, ProcessingBanner, Schedul
 import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
 import { bannerFor } from "@/lib/trial";
+import { hoyCardBanner } from "@/lib/card-ask";
+import { HideOnPath } from "@/components/hide-on-path";
 import { demoCardState } from "@/lib/trial-demo";
 import { runDueForUser } from "@/lib/trial-billing";
 import { GuideProvider } from "@/components/guide/guide-provider";
@@ -101,6 +103,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const adminDb = v.demo ? null : adminClient();
   const condoPending = adminDb && !cs && banner !== "failed" && banner !== "processing" ? await pendingCardCondo(adminDb, v.id).catch(() => null) : null;
   const condoBanner = condoPending && (!firstRun || !condoPending.tryUntil) ? condoPending : null;
+  // #280: del día 1 al 6 sin tarjeta, Hoy tiene su banner con los días que quedan; ahí no se repite el aviso de la prueba.
+  const hoyAsk = !cs && Boolean(hoyCardBanner(ent));
   // Prueba terminada sin plan ni cobro (desde el día 8): aviso de recuperación, solo si no hay otro aviso arriba.
   const recovery = (!banner || banner === "none") && !cs && (await getRecoveryNotice(v, ent));
   return (
@@ -128,7 +132,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           : banner === "failed" && charge ? <FailedBanner charge={charge} tz={v.tz} />
           : banner === "processing" ? <ProcessingBanner />
           : banner === "beta" ? <BetaBanner />
-          : banner === "trial" && trial ? <TrialBanner daysLeft={trial.daysLeft} charge={charge && (charge.phase === "programado" || charge.phase === "cancelado") ? { amount: charge.amount, canceled: charge.phase === "cancelado" } : null} />
+          : banner === "trial" && trial ? <HideOnPath path={hoyAsk ? "/app" : ""}><TrialBanner daysLeft={trial.daysLeft} charge={charge && (charge.phase === "programado" || charge.phase === "cancelado") ? { amount: charge.amount, canceled: charge.phase === "cancelado" } : null} /></HideOnPath>
           : recovery ? <RecoveryNotice account={v.id} />
           : null}
         <PlanGate locked={locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null} cardStep={cardStep} chargePhase={charge?.phase ?? null}>{children}</PlanGate>

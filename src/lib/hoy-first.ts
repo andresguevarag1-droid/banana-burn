@@ -6,5 +6,8 @@ export function isFirstDay({ program, demo, primera, workouts, trainedToday }: {
   return !program && (demo ? primera === "1" : workouts === 0) && !trainedToday;
 }
 
-/** El aviso de tarjeta solo aparece el primer día si faltan 2 días o menos para el cobro (día 6 o 7 de la prueba). */
-export const FIRST_DAY_CARD_MIN_DAY = 6;
+/**
+ * El aviso grande de tarjeta (TrialCardNotice) en Hoy solo sale el día 7 de la prueba: del día 1 al 6 va el banner de
+ * Hoy (HoyCardBanner, #280), con o sin entrenos.
+ */
+export const FIRST_DAY_CARD_MIN_DAY = 7;

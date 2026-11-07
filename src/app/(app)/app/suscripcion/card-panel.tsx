@@ -6,6 +6,7 @@ import { FunnelTracker } from "@/components/analytics";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { PLANS } from "@/lib/plans";
+import type { CardAskWhere } from "@/lib/card-ask";
 import { money } from "@/lib/copy";
 import { PROMO_TERMS, PROMO_TITLE, planLine, promoChargeLine, promoPrice, type CardStep, type ChargeView } from "@/lib/trial";
 
@@ -28,10 +29,12 @@ async function prueba(body: Record<string, unknown>): Promise<{ ok?: boolean; er
  * Tarjeta guardada y primer cobro en Mi plan (#tarjeta): empezar la prueba, agregar la tarjeta en la beta, cambiarla después
  * de un rechazo, ver cuándo y cuánto se cobra, cambiar el plan y cancelar sin costo antes del cobro.
  */
-export function CardPanel({ step, charge, card, demo, payments, initial, tz, betaFirstPaid, trialEndsAt = null }: {
+export function CardPanel({ step, charge, card, demo, payments, initial, tz, betaFirstPaid, trialEndsAt = null, where = "mi-plan" }: {
   step: CardStep; charge: ChargeView | null; card: Card; demo: boolean; payments: boolean; initial: PlanChoice; tz: string; betaFirstPaid: string;
   /** Fin de su prueba de 7 días (para "trial"): ese día sería el primer cobro si deja la tarjeta lista. */
   trialEndsAt?: string | null;
+  /** Pedido que trajo aquí (?desde, #280): va en card_saved. Sin él es el de Mi plan. Solo Mi plan y el correo del día 6 cuentan aquí su card_ask_view; los demás, donde se mostraron. */
+  where?: CardAskWhere;
 }) {
   const router = useRouter();
   const [choice, setChoice] = useState<PlanChoice>(charge ? { plan: charge.plan, billing: charge.billing } : initial);
@@ -54,7 +57,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
     const charged = done.outcome === "enviado";
     return (
       <section ref={ref} id="tarjeta" aria-live="polite" className="scroll-mt-24 rounded-[1.5rem] border-2 border-peel/40 bg-peel/5 p-5 sm:p-6">
-        <FunnelTracker view="card_saved" props={{ step, demo, outcome: done.outcome ?? "demo" }} />
+        <FunnelTracker view="card_saved" props={{ step, demo, outcome: done.outcome ?? "demo", where }} />
         <p className="flex items-center gap-2 text-lg font-extrabold text-ink"><CheckCircle weight="duotone" className="size-6 text-peel" />{charged ? "Listo, estamos cobrando tu plan" : "Listo, tu tarjeta quedó guardada"}</p>
         <p className="mt-2 text-sm text-body text-pretty">
           {cardText(done.card)}.{" "}
@@ -95,6 +98,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
 
   return (
     <section ref={ref} id="tarjeta" aria-labelledby="tarjeta-titulo" className={`scroll-mt-24 rounded-[1.5rem] border-2 bg-white p-5 sm:p-6 space-y-4 ${failed ? "border-bad/40" : "border-ink"}`}>
+      {(where === "mi-plan" || where === "dia6") && <FunnelTracker view="card_ask_view" props={{ where }} />}
       <div>
         <h2 id="tarjeta-titulo" className="flex items-center gap-2 text-xl font-extrabold text-ink text-balance">{failed ? <WarningCircle weight="duotone" className="size-6 shrink-0 text-bad" /> : step === "trial" || step === "card" ? <Gift weight="duotone" className="size-6 shrink-0 text-banana-ink" /> : <CreditCard weight="duotone" className="size-6 shrink-0 text-banana-ink" />}{t.title}</h2>
         <p className="mt-1 text-sm text-muted text-pretty">{t.sub}</p>

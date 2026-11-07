@@ -44,8 +44,10 @@ export type RestInfo = {
  * luego una sola pregunta de un toque (¿cómo se sintió?), el reloj grande y lo que sigue.
  * Se puede minimizar para ajustar pesos mientras corre.
  */
-export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onSkip, onMinimize, minimizeLabel = "Ajustar pesos" }: {
+export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onSkip, onMinimize, minimizeLabel = "Ajustar pesos", extra }: {
   left: number; total: number; info: RestInfo; closing: boolean;
+  /** Una línea debajo de lo que sigue (pedido de tarjeta tras la primera serie, #280). */
+  extra?: React.ReactNode;
   /** "Ajustar pesos" o, sin carga (pilates, plancha), "Ajustar la serie". */
   minimizeLabel?: string;
   onEffort: (e: Effort) => void; onAdjust: (d: number) => void; onSkip: () => void; onMinimize: () => void;
@@ -115,6 +117,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             </div>
           )}
           {info.cheer && <p className="mt-2 text-center text-[14px] font-semibold text-white/75">{info.cheer}</p>}
+          {extra}
           <RestAlertOffer />
 
           {/* Recompensa */}
