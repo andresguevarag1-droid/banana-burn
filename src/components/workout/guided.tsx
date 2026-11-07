@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 // Primer entreno guiado (#226): un ejercicio por pantalla, la serie actual en una línea y un botón grande de Terminé la serie.
 // Sin lista de series, kilos obligatorios ni tarjeta previa: del Empezar de Hoy a la primera serie marcada hay 2 toques.
-import { Barbell, Check, Eye, Minus, Play, Plus, X } from "@/components/icons";
+import { ArrowsLeftRight, Barbell, Check, Eye, Minus, Play, Plus, X } from "@/components/icons";
 import { ExerciseMotion } from "@/components/exercise-motion";
 import { CoachArtFill } from "@/components/coach-pic";
 import { kgFmt } from "./logic";
@@ -21,7 +21,7 @@ export function guidedHint(timed: boolean, running: boolean) {
   return running ? "Sigue hasta que el reloj llegue a 0." : "Toca Empezar y sigue el reloj.";
 }
 
-export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin = 0, timer, onDone, onStart, onKg, onHow, onExit }: {
+export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin = 0, timer, onDone, onStart, onKg, onHow, onExit, onSwap }: {
   name: string; cue?: string | null; anim?: string; art?: string | null; line: string; exNo: number; exTotal: number;
   /** Peso sugerido (solo si el ejercicio usa peso): se puede ajustar, no es obligatorio. */
   kg?: number | null;
@@ -30,6 +30,8 @@ export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin
   /** Serie por tiempo: `null` sin empezar (el botón grande la inicia), o los segundos que quedan. */
   timer?: { left: number; label: string } | null;
   onDone: () => void; onStart?: () => void; onKg?: (d: number) => void; onHow: () => void; onExit: () => void;
+  /** Hay un ejercicio equivalente (#273): quien no reconoce la máquina o no tiene el equipo lo cambia sin salir. */
+  onSwap?: () => void;
 }) {
   const timed = timer !== undefined;
   const running = !!timer;
@@ -63,18 +65,24 @@ export function GuidedSet({ name, cue, anim, art, line, exNo, exTotal, kg, kgMin
             )}
           </button>
           <h1 className="mt-4 text-[clamp(26px,7.6vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink text-balance break-words">{name}</h1>
-          {cue && <p className="mt-1 text-[16px] leading-snug font-semibold text-body break-words">Clave: {cue.replace(/^./, (c) => c.toLowerCase())}</p>}
-          {/* Qué hacer antes de tocar (#252): sin pantalla previa ni toque extra, el botón dice que la serie ya se hizo. */}
-          <div className="mt-4 rounded-2xl bg-white border border-line/70 px-4 py-3">
+          {/* Qué hacer antes de tocar (#252): sin pantalla previa ni toque extra, el botón dice que la serie ya se hizo.
+              El peso sugerido va en la misma tarjeta (#273): a 375 px queda a la vista sin desplazarse. */}
+          <div className="mt-3 rounded-2xl bg-white border border-line/70 px-4 py-3">
             <p id="serie-guiada" className="text-xl font-extrabold text-ink tabular-nums">{line}</p>
-            <p className="mt-0.5 text-[15px] leading-snug font-semibold text-body">{guidedHint(timed, running)}</p>
+            {kg != null && onKg && (
+              <div className="mt-2 flex items-center gap-3">
+                <p className="flex-1 min-w-0 text-sm text-body"><span className="block text-xl font-extrabold text-ink tabular-nums">{kg > 0 ? `${kgFmt(kg)} kg` : "Sin peso"}</span>Sugerido. Ajústalo si quieres.</p>
+                <button type="button" onClick={() => onKg(-1)} disabled={kg <= kgMin} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-cream border border-line disabled:opacity-40" aria-label="Menos peso"><Minus weight="bold" className="size-5" /></button>
+                <button type="button" onClick={() => onKg(1)} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-cream border border-line" aria-label="Más peso"><Plus weight="bold" className="size-5" /></button>
+              </div>
+            )}
+            <p className="mt-1 text-[15px] leading-snug font-semibold text-body">{guidedHint(timed, running)}</p>
           </div>
-          {kg != null && onKg && (
-            <div className="mt-3 flex items-center gap-3 rounded-2xl bg-cream px-3 py-2">
-              <p className="flex-1 min-w-0 text-sm text-body"><span className="block font-bold text-ink tabular-nums">{kg > 0 ? `${kgFmt(kg)} kg` : "Sin peso"}</span>Sugerido. Ajústalo si quieres.</p>
-              <button type="button" onClick={() => onKg(-1)} disabled={kg <= kgMin} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line disabled:opacity-40" aria-label="Menos peso"><Minus weight="bold" className="size-5" /></button>
-              <button type="button" onClick={() => onKg(1)} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line" aria-label="Más peso"><Plus weight="bold" className="size-5" /></button>
-            </div>
+          {cue && <p className="mt-3 text-[16px] leading-snug font-semibold text-body break-words">Clave: {cue.replace(/^./, (c) => c.toLowerCase())}</p>}
+          {onSwap && !running && (
+            <button type="button" onClick={onSwap} className="tap pressable mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-white px-4 text-[15px] font-bold text-ink">
+              <ArrowsLeftRight weight="bold" className="size-5 shrink-0" aria-hidden />¿No conoces este equipo? Usa otro
+            </button>
           )}
         </div>
       </div>

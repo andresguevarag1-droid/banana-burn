@@ -20,6 +20,8 @@ export const FUNNEL_EVENTS = [
   // Entreno (0061): saber dónde se van, porque la fila de workouts solo existe al guardar.
   "hoy_view",
   "workout_open",
+  // Primer entreno (#273): vio el primer ejercicio y todavía no hizo la serie. Separa irse antes de verlo o después.
+  "workout_first_set_view",
   "workout_first_set",
   "workout_summary",
   "workout_saved",

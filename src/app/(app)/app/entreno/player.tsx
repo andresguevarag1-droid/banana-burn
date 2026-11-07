@@ -163,6 +163,8 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
   const [briefDone, setBriefDone] = useState<string[]>([]);
   /** Primera vez en el reproductor: la tarjeta del plan suma una línea de cómo funciona. */
   const [firstTime, setFirstTime] = useState(false);
+  /** Ya se leyó la sesión guardada en el teléfono (las series hechas que trae cuentan desde aquí). */
+  const [restored, setRestored] = useState(false);
   const [iv, setIv] = useState<Iv>({ phase: "ready", end: 0, total: 0, paused: null });
   const [prefs, setPrefs] = usePrefs();
   const loaded = useRef(false);
@@ -220,6 +222,7 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
       }
     }
     loaded.current = true;
+    setRestored(true);
     if (!started && !store.get(TOUR_KEY) && !isIntervalPlan(options.map((o) => o[0]))) setFirstTime(true);
   }, [key, options]); // eslint-disable-line react-hooks/exhaustive-deps -- preswap se aplica solo al cargar
   useEffect(() => {
@@ -463,7 +466,7 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
   function swap(to: number, confirmed = false) {
     if (to === choice[idx]) { setSheet(null); setSwapAsk(null); return; }
     if (!confirmed && here.some((r) => r.done)) { setSwapAsk(to); return; }
-    track("exercise_swap", { template: template.slice(0, 40), ex: idx + 1 });
+    track("exercise_swap", { template: template.slice(0, 40), ex: idx + 1, ...(guided ? { guided: true } : {}) });
     const nextRows = rows.map((r, i) => (i === idx ? rowsFor(options[idx][to]) : r));
     setChoice((c) => c.map((v, i) => (i === idx ? to : v)));
     setRows(nextRows);
@@ -717,6 +720,14 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
     document.addEventListener("visibilitychange", seen);
     return () => document.removeEventListener("visibilitychange", seen);
   }, [phase]);
+  // Vio el primer ejercicio sin series hechas (#273): con workout_open y workout_first_set dice si se va antes de verlo o
+  // después. Una vez por entreno abierto, cuando ya se restauró lo guardado y pasó el aviso de "ya lo hiciste hoy".
+  const viewedFirst = useRef(false);
+  useEffect(() => {
+    if (viewedFirst.current || !restored || gate || phase !== "play" || doneSets > 0 || !exercises.length) return;
+    viewedFirst.current = true;
+    track("workout_first_set_view", { first_session: firstSession, template: tpl, ...(guided ? { guided: true } : {}) });
+  }, [restored, gate, phase, doneSets, exercises.length, firstSession, tpl, guided]);
   const prevDone = useRef(doneSets);
   useEffect(() => {
     if (prevDone.current === 0 && doneSets > 0 && phase === "play") track("workout_first_set", { first_session: firstSession, template: tpl, total: planTotal, ...(guided ? { guided: true } : {}) });
@@ -966,7 +977,8 @@ export function Player({ firstSession = false, firstOffer, condoNudge, askTestim
         <div className="contents" inert={!!rest}>
           <GuidedSet name={ex.name} cue={ex.tech?.cues[0]} anim={ex.tech?.anim || undefined} art={ex.art} line={lineOf(idx, activeSet)} exNo={idx + 1} exTotal={exercises.length}
             kg={needsLoad(ex) ? num(here[activeSet].kg) : null} onKg={(d) => step(activeSet, "kg", d, guidedMinKg)} kgMin={guidedMinKg} timer={guidedTimer}
-            onStart={startTimed} onDone={() => { if (timerOn) setWork(null); complete(activeSet); }} onHow={() => setSheet("tech")} onExit={() => setSheet("exit")} />
+            onStart={startTimed} onDone={() => { if (timerOn) setWork(null); complete(activeSet); }} onHow={() => setSheet("tech")} onExit={() => setSheet("exit")}
+            onSwap={alts > 0 && (needsLoad(ex) || choice[idx] > 0) ? () => { setSwapAsk(null); setSheet("swap"); } : undefined} />
         </div>
       ) : (
       <div className="contents" inert={!!rest && restOpen}>
