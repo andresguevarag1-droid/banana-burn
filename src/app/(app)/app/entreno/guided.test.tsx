@@ -125,6 +125,37 @@ describe("primer entreno guiado (#226)", () => {
     expect(html).toContain("overflow-x-hidden");
   });
 
+  it("a 375 px el peso sugerido va en la tarjeta de la serie, antes de la clave (#273)", () => {
+    const html = render("gym", true);
+    const at = (t: string) => html.indexOf(t);
+    expect(at("Sugerido. Ajústalo")).toBeGreaterThan(at('id="serie-guiada"'));
+    expect(at("Sugerido. Ajústalo")).toBeLessThan(at("Clave:"));
+    // El movimiento sigue arriba de todo y el nombre, debajo.
+    expect(at("Ver cómo se hace")).toBeLessThan(at("<h1"));
+  });
+
+  it("si no reconoce el equipo, lo cambia por uno equivalente sin salir del guiado (#273)", () => {
+    const props = { name: "Jalón al pecho", line: "Serie 1 de 2 · 10 repeticiones", exNo: 1, exTotal: 3, onDone: () => {}, onHow: () => {}, onExit: () => {} };
+    const swap = renderToStaticMarkup(<GuidedSet {...props} kg={15} onKg={() => {}} onSwap={() => {}} />);
+    expect(swap).toContain("¿No conoces este equipo? Usa otro");
+    // Sigue habiendo un solo botón grande.
+    expect(mainButtons(swap)).toHaveLength(1);
+    expect(renderToStaticMarkup(<GuidedSet {...props} />)).not.toContain("No conoces este equipo");
+    // Con el reloj corriendo no distrae.
+    expect(renderToStaticMarkup(<GuidedSet {...props} timer={{ left: 10, label: "seg" }} onSwap={() => {}} />)).not.toContain("No conoces este equipo");
+    // El reproductor lo ofrece solo con equipo (o si ya cambió) y abre la misma lista de Cambiar ejercicio.
+    const src = readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8");
+    expect(src).toContain('onSwap={alts > 0 && (needsLoad(ex) || choice[idx] > 0) ? () => { setSwapAsk(null); setSheet("swap"); } : undefined}');
+  });
+
+  it("workout_first_set_view: vio el primer ejercicio antes de hacer la serie, una vez (#273)", async () => {
+    const { cleanEvent } = await import("@/app/api/track/event");
+    expect(cleanEvent({ name: "workout_first_set_view", props: { first_session: true, template: "pushA", guided: true } })).toEqual({ name: "workout_first_set_view", props: { first_session: true, template: "pushA", guided: true } });
+    const src = readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8");
+    expect(src).toMatch(/if \(viewedFirst\.current \|\| !restored \|\| gate \|\| phase !== "play" \|\| doneSets > 0 \|\| !exercises\.length\) return;/);
+    expect(src).toContain('track("workout_first_set_view", { first_session: firstSession, template: tpl, ...(guided ? { guided: true } : {}) });');
+  });
+
   it("workout_first_set y workout_leave siguen igual, con guided: true", () => {
     const src = readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8");
     expect(src).toMatch(/track\("workout_first_set", \{ first_session: firstSession, template: tpl, total: planTotal, \.\.\.\(guided \? \{ guided: true \} : \{\}\) \}\)/);
