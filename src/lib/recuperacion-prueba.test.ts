@@ -4,7 +4,7 @@ import { ANNUAL_SEASON_NOTE, PLANS } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
 import { EXPORT_BY_USER } from "@/lib/account-export";
 
-const doc = readFileSync("docs/emails/recuperacion-prueba.md", "utf8");
+const doc = readFileSync("docs/emails/recuperacion.md", "utf8");
 const pieces = doc.split(/^## /m).slice(1, 4);
 const bodies = pieces.map((piece) => piece.match(/\*\*Cuerpo:\*\*\s*([\s\S]*?)\s*\*\*Botón:\*\*/)?.[1] ?? "");
 const amounts = (text: string) => text.match(/\$[\d,]+\.\d{2}/g) ?? [];
@@ -13,13 +13,15 @@ const monthly = [price("entreno").mes, price("completo").mes];
 const annual = [price("entreno").anual, price("completo").anual];
 
 describe("recuperación de prueba: copy respaldado por el producto", () => {
-  it("incluye asunto y vista previa y presenta el anual antes del mensual el día 14", () => {
+  it("incluye asunto de menos de 45 caracteres y vista previa, y presenta el anual antes del mensual el día 8", () => {
     for (const piece of pieces) {
       expect(piece).toMatch(/\*\*Asunto(?: \/ título)?:\*\* \S/);
       expect(piece).toMatch(/\*\*Vista previa(?: \/ apoyo)?:\*\* \S/);
+      expect(piece.match(/\*\*Asunto[^*]*:\*\* (.+)/)![1].length).toBeLessThan(45);
     }
-    expect(pieces[0]).toContain("Tu historial sigue guardado");
-    expect(bodies[1].indexOf(usd2(annual[0]))).toBeLessThan(bodies[1].indexOf(usd2(monthly[0])));
+    expect(pieces[0]).toContain("Tu progreso te espera");
+    expect(bodies[0].indexOf(usd2(annual[0]))).toBeLessThan(bodies[0].indexOf(usd2(monthly[0])));
+    expect(bodies[1]).toContain("el anual aparece primero");
   });
 
   it("limita la continuidad al historial existente de la misma cuenta", () => {
@@ -27,7 +29,8 @@ describe("recuperación de prueba: copy respaldado por el producto", () => {
       expect(EXPORT_BY_USER).toContain(table);
       expect(doc).toContain(`\`${table}\``);
     }
-    for (const body of bodies) expect(body).toMatch(/registraste|guardaste/);
+    for (const body of bodies.slice(1)) expect(body).toMatch(/registraste|guardaste/);
+    expect(pieces[0]).toContain("En tu prueba guardaste");
     expect(doc).toContain("Usar siempre la misma cuenta");
     expect(doc).toContain("no garantizar conservación perpetua");
     expect(doc).toContain("no de una suscripción reservada o de acceso gratis");
@@ -45,8 +48,8 @@ describe("recuperación de prueba: copy respaldado por el producto", () => {
   });
 
   it("compara todos los precios de los correos con PLANS y usd2", () => {
-    expect(amounts(bodies[0])).toEqual(monthly.map(usd2));
-    expect(amounts(bodies[1])).toEqual([...annual, ...monthly].map(usd2));
+    expect(amounts(bodies[0])).toEqual([...annual, ...monthly].map(usd2));
+    expect(amounts(bodies[1])).toEqual([]);
     expect(amounts(bodies[2])).toEqual([]);
   });
 
@@ -66,7 +69,7 @@ describe("recuperación de prueba: copy respaldado por el producto", () => {
     expect(ANNUAL_SEASON_NOTE).toBe("Incluye 1 temporada deportiva gratis");
     const plansSource = readFileSync("src/lib/plans.ts", "utf8");
     expect(plansSource).toContain("cada año pagado incluye una temporada deportiva gratis");
-    expect(bodies[1]).toContain("Cada año pagado incluye una temporada deportiva gratis.");
+    expect(bodies[0]).toContain("Cada año pagado incluye una temporada deportiva gratis.");
     const pricingCopy = readFileSync("src/components/trial-card-notice.tsx", "utf8");
     expect(pricingCopy).toContain("IVA incluido.");
     for (const body of bodies.slice(0, 2)) expect(body).toContain("IVA incluido");

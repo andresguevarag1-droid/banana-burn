@@ -1,11 +1,11 @@
-// Recuperación al terminar la prueba sin plan (días 8 y 14) dentro de runReminders: a quién le llega y a quién no, que no se
+// Recuperación al terminar la prueba sin plan (días 8 y 10) dentro de runReminders: a quién le llega y a quién no, que no se
 // repita y que ese día no salga ningún otro correo.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Row = Record<string, unknown>;
 let tables: Record<string, Row[]> = {};
 let failing = new Set<string>();
-const sent: { to: string; subject: string; key?: string; kind?: string }[] = [];
+const sent: { to: string; subject: string; text: string; key?: string; kind?: string }[] = [];
 
 /** Base en memoria: lo justo de PostgREST que usa notify-run (select, in, eq, gte, is, order, range, upsert, insert). */
 function query(name: string) {
@@ -44,8 +44,8 @@ vi.mock("@/lib/supabase/server", () => ({ STAFF: ["coach", "support", "admin", "
 vi.mock("@/lib/push", () => ({ sendPush: async () => 0 }));
 vi.mock("@/lib/email/send", () => ({
   unsubscribeUrl: (u: string, s: string) => `https://bananaburn.app/api/email/baja?u=${u}&s=${s}`,
-  sendEmail: async (to: string, msg: { subject: string }, o: { idempotencyKey?: string; tags?: { kind?: string } }) => {
-    sent.push({ to, subject: msg.subject, key: o.idempotencyKey, kind: o.tags?.kind });
+  sendEmail: async (to: string, msg: { subject: string; text: string }, o: { idempotencyKey?: string; tags?: { kind?: string } }) => {
+    sent.push({ to, subject: msg.subject, text: msg.text, key: o.idempotencyKey, kind: o.tags?.kind });
     return { ok: true };
   },
 }));
@@ -54,8 +54,8 @@ const { runReminders } = await import("./notify-run");
 
 const SIGNUP = "2026-11-02T12:00:00.000Z";
 const DAY8 = new Date("2026-11-09T13:00:00.000Z"); // lunes (resumen semanal), 7 días y 1 hora después del registro
-const DAY14 = new Date("2026-11-15T13:00:00.000Z"); // 13 días y 1 hora después
-const DAY10 = new Date("2026-11-11T13:00:00.000Z");
+const DAY9 = new Date("2026-11-10T13:00:00.000Z");
+const DAY10 = new Date("2026-11-11T13:00:00.000Z"); // 9 días y 1 hora después
 const uid = (n: number) => `${String(n).padStart(8, "0")}-0000-4000-8000-000000000000`;
 const profile = (n: number, over: Row = {}): Row => ({ id: uid(n), onboarded: true, created_at: SIGNUP, full_name: `Persona ${n}`, train_days: 6, equipment: "gym", timezone: "America/Costa_Rica", plan: "free", role: "free", ...over });
 const kinds = (n: number) => sent.filter((s) => s.to.startsWith(uid(n).slice(0, 8))).map((s) => s.kind);
@@ -71,21 +71,57 @@ describe("recuperación de la prueba en runReminders", () => {
     tables.profiles = [profile(1)];
     const stats = await runReminders(DAY8, "daily");
     expect(kinds(1)).toEqual(["recuperacion_d8"]);
-    expect(sent[0]).toMatchObject({ subject: "Tu historial sigue guardado", key: `recuperacion_d8/${uid(1)}` });
+    expect(sent[0]).toMatchObject({ subject: "Tu progreso te espera", key: `recuperacion_d8/${uid(1)}` });
     expect(stats.sent).toMatchObject({ recuperacion_d8: 1, semanal: 1, recordatorio: 1 });
     // Los avisos del día siguen en la campanita, sin correo.
     expect(tables.notifications?.map((n) => n.kind).sort()).toEqual(["recordatorio", "semanal"]);
     expect(tables.notification_log.filter((r) => r.kind !== "recuperacion_d8").every((r) => !(r.channels as string[]).includes("email"))).toBe(true);
   });
 
-  it("el día 14 llega el correo del anual; entre medio, nada de recuperación", async () => {
+  it("el día 10 llega el último aviso; entre medio, nada de recuperación", async () => {
     tables.profiles = [profile(1)];
-    await runReminders(DAY10, "daily");
+    await runReminders(DAY9, "daily");
     expect(kinds(1)).toEqual(["recordatorio"]);
     sent.length = 0;
-    await runReminders(DAY14, "daily");
-    expect(kinds(1)).toEqual(["recuperacion_d14"]);
-    expect(sent[0]).toMatchObject({ subject: "Vuelve con un año de entreno", key: `recuperacion_d14/${uid(1)}` });
+    await runReminders(DAY10, "daily");
+    expect(kinds(1)).toEqual(["recuperacion_d10"]);
+    expect(sent[0]).toMatchObject({ subject: "Último correo sobre tu prueba", key: `recuperacion_d10/${uid(1)}` });
+    await runReminders(new Date(DAY10.getTime() + 3600_000), "daily");
+    expect(kinds(1)).toEqual(["recuperacion_d10"]);
+  });
+
+  it("el día 8 cuenta los entrenos, series y kg reales de la cuenta; sin entrenos, su plan", async () => {
+    tables.profiles = [profile(1), profile(2, { train_days: 4 })];
+    tables.workouts = [
+      { id: "w1", user_id: uid(1), day: "2026-11-03", template: "pierna", finished_at: "2026-11-03T13:00:00.000Z" },
+      { id: "w2", user_id: uid(1), day: "2026-11-05", template: "torso", finished_at: "2026-11-05T13:00:00.000Z" },
+    ];
+    tables.workout_sets = [
+      { workout_id: "w1", user_id: uid(1), kg: 50, reps: 10, done: true },
+      { workout_id: "w1", user_id: uid(1), kg: 50, reps: 10, done: true },
+      { workout_id: "w2", user_id: uid(1), kg: 20, reps: 12, done: true },
+    ];
+    await runReminders(DAY8, "daily");
+    const of = (n: number) => sent.find((x) => x.kind === "recuperacion_d8" && x.to.startsWith(uid(n).slice(0, 8)))!.text;
+    expect(of(1)).toContain("En tu prueba guardaste 2 entrenos, con 3 series y 1,240 kg levantados.");
+    expect(of(2)).toContain("Tu plan de 4 días por semana sigue listo en tu cuenta");
+    expect(of(2)).not.toContain("guardaste");
+  });
+
+  it("si no se pueden leer las series, el día 8 sale igual, hablando del plan y sin cifras", async () => {
+    tables.profiles = [profile(1)];
+    tables.workouts = [{ id: "w1", user_id: uid(1), day: "2026-11-03", template: "pierna", finished_at: "2026-11-03T13:00:00.000Z" }];
+    failing.add("workout_sets");
+    await runReminders(DAY8, "daily");
+    expect(kinds(1)).toEqual(["recuperacion_d8"]);
+    expect(sent[0].text).toContain("Tu plan de 6 días por semana sigue listo en tu cuenta");
+    expect(sent[0].text).not.toMatch(/guardaste \d/);
+  });
+
+  it("no llega a una cuenta creada desde el 1 de enero de 2027 (tarjeta obligatoria: no tuvo prueba)", async () => {
+    tables.profiles = [profile(1, { created_at: "2027-01-02T12:00:00.000Z" })];
+    for (const at of ["2027-01-09T13:00:00.000Z", "2027-01-11T13:00:00.000Z"]) await runReminders(new Date(at), "daily");
+    expect(sent.filter((x) => x.kind?.startsWith("recuperacion"))).toEqual([]);
   });
 
   it("no se repite: una sola vez por cuenta y correo, aunque el cron corra otra vez", async () => {
