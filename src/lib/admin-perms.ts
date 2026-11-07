@@ -87,7 +87,7 @@ export function can(role: Role | null | undefined, cap: Capability): boolean {
   return !!role && MATRIX[cap].includes(role);
 }
 
-export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud" | "referidores" | "condominios" | "avisos" | "testimonios";
+export type Section = "resumen" | "usuarios" | "soporte" | "pagos" | "contenido" | "retos" | "comunidad" | "verificaciones" | "auditoria" | "salud" | "referidores" | "condominios" | "avisos" | "testimonios" | "embudo";
 
 /** Una sección es visible si el rol tiene al menos una de sus capacidades. */
 export const SECTION_CAPS: Record<Section, Capability[]> = {
@@ -105,6 +105,7 @@ export const SECTION_CAPS: Record<Section, Capability[]> = {
   condominios: ["leads.b2b"],
   avisos: ["alerts.manage"],
   testimonios: ["testimonials.manage"],
+  embudo: ["metrics.revenue"],
 };
 
 export function canSee(role: Role | null | undefined, section: Section): boolean {

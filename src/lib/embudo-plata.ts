@@ -1,0 +1,213 @@
+// Embudo de plata por semana de registro (#279): registro > Hoy > entreno > primera serie > primer entreno > tarjeta > pago
+// > ingreso neto. Reglas puras, sin base ni red: embudo-plata-server.ts lee las filas y esto las cuenta.
+// Si una fuente no se pudo leer llega como null y sus celdas salen "sin dato": nunca se cuenta como cero.
+import { STAFF_ROLES } from "@/lib/admin-perms";
+import { cardRequiredFor } from "@/lib/card-required";
+import { PLANS } from "@/lib/plans";
+import type { Role } from "@/lib/supabase/server";
+
+/** Semanas que muestra la tabla (y el tope de lo que se lee). */
+export const WEEKS = 8;
+/** IVA de Costa Rica, incluido en el precio. */
+export const IVA = 0.13;
+/** Comisiones confirmadas por Andrés el 31 oct 2026 (las mismas de docs/metas/rentabilidad-semanal.sql). */
+export const FEES = { onvo: { pct: 0.039, fixed: 0.35 }, tilopay: { pct: 0.0425, fixed: 0.35 } } as const;
+export type Processor = keyof typeof FEES;
+
+export type Origin = "anuncio" | "condominio" | "organico";
+export const ORIGIN_LABEL: Record<Origin, string> = { anuncio: "Anuncio", condominio: "Condominio", organico: "Orgánico" };
+/** Cuentas antes o desde el 1 de enero de 2027 (tarjeta obligatoria, cardRequiredFor). */
+export type CardEra = "antes" | "desde";
+export const CARD_ERA_LABEL: Record<CardEra, string> = { antes: "Antes del 1 ene 2027", desde: "Desde el 1 ene 2027" };
+/** Valor del filtro de país para cuentas sin país. */
+export const NO_COUNTRY = "sin";
+
+/** Pasos del embudo después del registro, en orden. Los cuatro primeros son eventos de funnel_events. */
+export const STEPS = [
+  { key: "hoy", label: "Vieron Hoy", event: "hoy_view" },
+  { key: "open", label: "Abrieron el entreno", event: "workout_open" },
+  { key: "firstView", label: "Vieron el primer ejercicio", event: "workout_first_set_view" },
+  { key: "firstSet", label: "Hicieron la primera serie", event: "workout_first_set" },
+  { key: "finished", label: "Terminaron su primer entreno" },
+  { key: "card", label: "Dejaron tarjeta" },
+  { key: "paid", label: "Pagaron" },
+] as const;
+export type StepKey = (typeof STEPS)[number]["key"];
+export const STEP_EVENTS = STEPS.flatMap((s) => ("event" in s ? [s.event] : []));
+
+export type Week = { key: string; start: string; end: string };
+
+const DAY = 86400_000;
+/** Costa Rica: UTC-6 todo el año. */
+const CR_OFFSET = 6 * 3600_000;
+
+/** Lunes (YYYY-MM-DD) de la semana de Costa Rica en que cae `iso`. */
+export function weekKey(iso: string | Date): string {
+  const cr = new Date(new Date(iso).getTime() - CR_OFFSET);
+  const back = (cr.getUTCDay() + 6) % 7;
+  return new Date(Date.UTC(cr.getUTCFullYear(), cr.getUTCMonth(), cr.getUTCDate() - back)).toISOString().slice(0, 10);
+}
+
+/** Las últimas `n` semanas de lunes a domingo en Costa Rica, la actual primero. start y end en UTC, [start, end). */
+export function crWeeks(now = new Date(), n = WEEKS): Week[] {
+  const monday = Date.parse(`${weekKey(now)}T00:00:00Z`) + CR_OFFSET;
+  return Array.from({ length: n }, (_, i) => {
+    const start = monday - i * 7 * DAY;
+    return { key: new Date(start - CR_OFFSET).toISOString().slice(0, 10), start: new Date(start).toISOString(), end: new Date(start + 7 * DAY).toISOString() };
+  });
+}
+
+/** Neto de un cobro en USD: el cobro sin IVA menos la comisión. Sin comisión guardada se calcula con la tarifa (estimada). */
+export function netUsd(amountMinor: number, processor: Processor, feeMinor?: number | null): { gross: number; net: number; estimated: boolean } {
+  const gross = amountMinor / 100;
+  const estimated = feeMinor == null;
+  const fee = estimated ? gross * FEES[processor].pct + FEES[processor].fixed : feeMinor / 100;
+  return { gross, net: Math.round((gross / (1 + IVA) - fee) * 100) / 100, estimated };
+}
+
+/** % sobre los registrados con un decimal. Sin registrados o sin dato: null. */
+export const pctOf = (n: number | null, total: number | null) => (n == null || !total ? null : Math.round((n / total) * 1000) / 10);
+
+/** ¿El registro trae marca de anuncio? (utm de campaña o fbclid guardados). */
+export function isAdUtm(utm: unknown): boolean {
+  if (!utm || typeof utm !== "object" || Array.isArray(utm)) return false;
+  const u = utm as Record<string, unknown>;
+  return ["utm_source", "utm_medium", "utm_campaign", "fbclid"].some((k) => typeof u[k] === "string" && (u[k] as string).trim() !== "");
+}
+
+export type FunnelRows = {
+  /** Cuentas creadas en las semanas que se miden (cualquier rol: aquí se quita al staff). */
+  profiles: { id: string; created_at: string; role: Role | string | null; country: string | null }[];
+  /** Cuentas que fueron tester alguna vez (tester_grants). Se quitan del embudo. */
+  testers: string[];
+  /** Residentes de un condominio (condo_members). */
+  condo: string[] | null;
+  /** utm guardado al registrarse (affiliate_referrals.utm). */
+  utm: { user_id: string; utm: unknown }[] | null;
+  /** Eventos de STEP_EVENTS de esas cuentas. */
+  events: { user_id: string | null; name: string }[] | null;
+  /** Cuentas con un entreno terminado (workouts.finished_at). */
+  finished: string[] | null;
+  charges: { user_id: string; status: string; amount_minor: number; fee_minor?: number | null }[] | null;
+  methods: { user_id: string; provider: string; status: string }[] | null;
+  subs: { user_id: string; provider: string; status: string; plan: string | null; billing: string | null; current_period_end: string | null; cancel_at_period_end: boolean | null }[] | null;
+};
+
+export type Account = {
+  week: string;
+  country: string | null;
+  origin: Origin | null;
+  era: CardEra;
+  steps: Record<StepKey, boolean | null>;
+  /** Neto del primer pago (0 si no pagó). null: sin dato. */
+  net: number | null;
+  estimated: boolean;
+};
+
+const PROCESSORS = Object.keys(FEES) as Processor[];
+const isProcessor = (p: string): p is Processor => (PROCESSORS as string[]).includes(p);
+const listPrice = (plan: string | null, billing: string | null) => {
+  const p = PLANS.find((x) => x.id === plan);
+  return p && (billing === "mes" || billing === "anual") ? Math.round(p.price[billing] * 100) : null;
+};
+
+/**
+ * Una fila por cuenta, sin datos personales. Pago como en rentabilidad-semanal.sql: el cobro de la prueba con status
+ * 'succeeded' (procesador de la tarjeta guardada, ONVO si no hay); si no, una suscripción ONVO/Tilopay vigente y pagada,
+ * al precio de lista.
+ */
+export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
+  const testers = new Set(r.testers);
+  const staff = new Set<string>(STAFF_ROLES);
+  const condo = r.condo && new Set(r.condo);
+  const ads = r.utm && new Set(r.utm.filter((u) => isAdUtm(u.utm)).map((u) => u.user_id));
+  const byEvent = new Map<string, Set<string>>(STEP_EVENTS.map((e) => [e, new Set<string>()]));
+  for (const e of r.events ?? []) if (e.user_id) byEvent.get(e.name)?.add(e.user_id);
+  const finished = r.finished && new Set(r.finished);
+  const method = r.methods && new Map(r.methods.map((m) => [m.user_id, m]));
+  const charge = r.charges && new Map(r.charges.map((c) => [c.user_id, c]));
+  const seen = now.getTime();
+  const liveSub = r.subs && new Map(
+    r.subs
+      .filter((s) => isProcessor(s.provider) && (s.status === "active" || (s.status === "canceled" && s.cancel_at_period_end)) && s.current_period_end != null && Date.parse(s.current_period_end) > seen)
+      .map((s) => [s.user_id, s]),
+  );
+
+  return r.profiles
+    .filter((p) => !testers.has(p.id) && !(p.role && staff.has(p.role)))
+    .map((p): Account => {
+      const ev = (name: string) => (r.events ? byEvent.get(name)!.has(p.id) : null);
+      const c = charge?.get(p.id);
+      const m = method?.get(p.id);
+      const card = charge && method ? !!c || m?.status === "active" : null;
+
+      let paid: boolean | null = null, net: number | null = null, estimated = false;
+      if (charge && method && liveSub) {
+        paid = false; net = 0;
+        if (c?.status === "succeeded") {
+          const n = netUsd(c.amount_minor, m && isProcessor(m.provider) ? m.provider : "onvo", c.fee_minor);
+          paid = true; net = n.net; estimated = n.estimated;
+        } else {
+          const s = liveSub.get(p.id);
+          const price = s ? listPrice(s.plan, s.billing) : null;
+          if (s) paid = true;
+          if (s && price != null) { const n = netUsd(price, s.provider as Processor); net = n.net; estimated = n.estimated; }
+          else if (s) net = null; // pagó, pero sin plan conocido no hay monto: sin dato.
+        }
+      }
+      return {
+        week: weekKey(p.created_at),
+        country: p.country?.trim() ? p.country.trim().toUpperCase() : null,
+        origin: condo && ads ? (condo.has(p.id) ? "condominio" : ads.has(p.id) ? "anuncio" : "organico") : null,
+        era: cardRequiredFor(p.created_at) ? "desde" : "antes",
+        steps: { hoy: ev("hoy_view"), open: ev("workout_open"), firstView: ev("workout_first_set_view"), firstSet: ev("workout_first_set"), finished: finished ? finished.has(p.id) : null, card, paid },
+        net,
+        estimated,
+      };
+    });
+}
+
+export type Filters = { country?: string; origin?: Origin; era?: CardEra };
+
+/** Cuentas que pasan los filtros. null si un filtro no se puede aplicar porque falta su fuente (el origen). */
+export function applyFilters(accounts: Account[], f: Filters): Account[] | null {
+  if (f.origin && accounts.some((a) => a.origin === null)) return null;
+  return accounts.filter((a) =>
+    (!f.country || (f.country === NO_COUNTRY ? a.country === null : a.country === f.country)) &&
+    (!f.origin || a.origin === f.origin) &&
+    (!f.era || a.era === f.era));
+}
+
+export type CohortRow = {
+  week: string;
+  registrados: number;
+  steps: Record<StepKey, number | null>;
+  net: number | null;
+  /** Algún neto de la fila usa la comisión calculada con la tarifa. */
+  estimated: boolean;
+};
+
+const sumOrNull = (xs: (boolean | null)[]) => (xs.some((x) => x === null) ? null : xs.filter(Boolean).length);
+
+/** Una fila por semana (en el orden de `weeks`). Un paso con alguna cuenta sin dato sale null. */
+export function cohortTable(accounts: Account[], weeks: Week[]): CohortRow[] {
+  return weeks.map((w) => {
+    const rows = accounts.filter((a) => a.week === w.key);
+    const steps = Object.fromEntries(STEPS.map((s) => [s.key, sumOrNull(rows.map((a) => a.steps[s.key]))])) as Record<StepKey, number | null>;
+    const net = rows.some((a) => a.net === null) ? null : Math.round(rows.reduce((t, a) => t + (a.net ?? 0), 0) * 100) / 100;
+    return { week: w.key, registrados: rows.length, steps, net, estimated: rows.some((a) => a.estimated) };
+  });
+}
+
+/** Ingreso neto menos anuncios. Sin alguno de los dos: null. */
+export const netAfterAds = (net: number | null, adsUsd: number | null) => (net == null || adsUsd == null ? null : Math.round((net - adsUsd) * 100) / 100);
+
+/** Países presentes en las cuentas (para el filtro), ordenados. */
+export const countriesOf = (accounts: Account[]) => [...new Set(accounts.map((a) => a.country).filter((c): c is string => !!c))].sort();
+
+/** Monto en USD escrito a mano ("120", "120.50", "1,200.5") a centavos. null si no es un monto válido. */
+export function parseUsd(raw: string): number | null {
+  const s = raw.trim().replace(/^\$/, "").replace(/,/g, "");
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(s)) return null;
+  return Math.round(Number(s) * 100);
+}

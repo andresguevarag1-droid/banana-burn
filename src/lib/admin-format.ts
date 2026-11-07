@@ -39,6 +39,7 @@ export const ACTION_LABEL: Record<string, string> = {
   "user.gift": "Meses regalados",
   "user.tester_grant": "Tester de la beta asignado",
   "user.tester_revoke": "Tester de la beta quitado",
+  "embudo.gasto_anuncios": "Gasto en anuncios de la semana",
   "feedback.status": "Reporte de la app actualizado",
   "support.reply": "Soporte: respuesta a la persona",
   "support.note": "Soporte: nota interna",
@@ -94,7 +95,7 @@ export const ACTION_LABEL: Record<string, string> = {
   "badge.set": "Insignia cambiada a mano",
   "xp.adjust": "XP ajustado",
 };
-const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación", identity: "Verificación", season: "Temporadas", badge: "Insignias", xp: "XP" };
+const GROUP_LABEL: Record<string, string> = { referral: "Referidos", user: "Usuarios", food: "Alimentos", exercise: "Ejercicios", challenge: "Retos", announcement: "Anuncios", report: "Moderación", identity: "Verificación", season: "Temporadas", badge: "Insignias", xp: "XP", embudo: "Embudo" };
 export const actionLabel = (a: string) => ACTION_LABEL[a] ?? a.replace(/[._]/g, " ");
 export const actionGroupLabel = (prefix: string) => GROUP_LABEL[prefix] ?? prefix;
 
