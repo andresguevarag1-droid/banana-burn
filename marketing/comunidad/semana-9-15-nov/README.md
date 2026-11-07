@@ -8,9 +8,9 @@
 - [Carruseles y pies](carruseles.md): 3 carruseles de 5 láminas 1080 × 1350, con textos alternativos. PNG finales en `carruseles/`.
 - [Banco de respuestas](respuestas.md): comentarios cortos y mensajes privados listos para revisión.
 - `revision/`: guías visuales con zona segura y rectángulo de sticker. No subir estas guías. Usar el PNG limpio y añadir el sticker nativo.
-- `contenido.json` y `generar.mjs`: originales editables. Dependencias de generación fuera del repositorio: `npm install --no-save --prefix /tmp/resvg @resvg/resvg-js sharp@0.33`; luego `node marketing/comunidad/semana-9-15-nov/generar.mjs` desde la raíz.
+- `contenido.json` y `generar.mjs`: originales editables. Para regenerar todo, corre `node marketing/comunidad/semana-9-15-nov/generar.mjs` desde la raíz (usa Playwright, que ya está en el repo).
 
-Historias: dejar libres y=0–249 y y=1570–1919. Texto dentro de x=90–990. Stickers: x=90, y=1160, ancho=900, alto=270. No rasterizar encuestas: se agregan en Instagram/Facebook. Las guías marcan el espacio, las fichas dicen pregunta, opciones y respuesta correcta. Revisar el ajuste real del sticker al cargarlo. Sin capturas, cifras de usuarios ni testimonios. Solo se usa el recurso oficial disponible de Coach Banana; Coach Platanita y El Nuevo son personajes permitidos, sin recrear sus imágenes ni inventar poses.
+Historias: dejar libres y=0–249 y y=1570–1919. Texto dentro de x=90–990. Stickers: x=90, y=1160, ancho=900, alto=270. No rasterizar encuestas: se agregan en Instagram/Facebook. Las guías marcan el espacio, las fichas dicen pregunta, opciones y respuesta correcta. Revisar el ajuste real del sticker al cargarlo. **Arte v2 (7 nov):** cada pieza lleva a Coach Banana en grande, con el recurso oficial `public/brand/mascota-sola.webp`, y las piezas sin sticker muestran una captura real de la app dentro de un celular (`public/landing/campana-9nov`, sin cambiar números ni textos). Colores por tipo de historia: encuesta en paper, quiz en banana, caja en ink y enlace en banana con el botón bananaburn.app. Carruseles: portada banana con Coach, láminas paper con la captura y cierre ink con la llamada. Sin cifras de usuarios ni testimonios.
 
 ## Calendario propuesto
 
