@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { describe, expect, it } from "vitest";
 import {
-  applyFilters, buildAccounts, cohortTable, countriesOf, crWeeks, isAdUtm, netAfterAds, netUsd, parseUsd, pctOf, weekKey, type FunnelRows,
+  adsOf, applyFilters, buildAccounts, campaignsOf, cohortTable, countriesOf, crWeeks, isAdUtm, netAfterAds, netUsd, parseUsd, pctOf, weekKey, type FunnelRows,
 } from "@/lib/embudo-plata";
 
 const NOW = new Date("2026-11-07T18:00:00Z"); // sábado 7 nov, 12:00 en Costa Rica
@@ -76,6 +76,7 @@ const sample = (): FunnelRows => ({
   testers: [id(6)],
   condo: [id(2)],
   utm: [{ user_id: id(1), utm: { utm_source: "facebook", utm_campaign: "nov" } }],
+  signup: [],
   events: [
     ...[1, 2, 3, 5, 6].map((n) => ({ user_id: id(n), name: "hoy_view" })),
     { user_id: id(1), name: "hoy_view" },
@@ -169,6 +170,42 @@ describe("cohortes por semana de registro", () => {
     expect(a.every((x) => x.origin === null)).toBe(true);
     expect(applyFilters(a, { origin: "anuncio" })).toBeNull();
     expect(applyFilters(a, { country: "CR" })!.length).toBe(2);
+  });
+});
+
+describe("primer contacto en el embudo (#283)", () => {
+  const signup = (user: number, campaign: string | null, content: string | null, fbclid: string | null = null) =>
+    ({ user_id: id(user), utm_source: campaign ? "meta" : null, utm_medium: campaign ? "paid" : null, utm_campaign: campaign, utm_content: content, fbclid });
+
+  it("una cuenta con utm o fbclid en signup_attribution es Anuncio, aunque no venga de un referidor", () => {
+    const a = buildAccounts({ ...sample(), utm: [], signup: [signup(3, null, null, "IwAR0abc"), signup(4, "Primer entreno", "Video 12 min")] }, NOW);
+    expect(applyFilters(a, { origin: "anuncio" })!.length).toBe(2);
+    expect(applyFilters(a, { origin: "organico" })!.length).toBe(1);
+    // El condominio manda sobre el anuncio.
+    const c = buildAccounts({ ...sample(), signup: [signup(2, "Primer entreno", "Video 12 min")] }, NOW);
+    expect(applyFilters(c, { origin: "condominio" })!.length).toBe(1);
+  });
+
+  it("una fila sin utm de campaña ni fbclid no marca anuncio", () => {
+    const a = buildAccounts({ ...sample(), signup: [{ ...signup(3, null, null), utm_content: "algo" }] }, NOW);
+    expect(applyFilters(a, { origin: "organico" })!.length).toBe(2);
+  });
+
+  it("filtra por campaña y anuncio, con solo los valores que existen", () => {
+    const a = buildAccounts({ ...sample(), signup: [signup(1, "Primer entreno", "Video 12 min"), signup(3, "Primer entreno", "Carrusel"), signup(4, "Temporada 1", "Video 12 min")] }, NOW);
+    expect(campaignsOf(a)).toEqual(["Primer entreno", "Temporada 1"]);
+    expect(adsOf(a)).toEqual(["Carrusel", "Video 12 min"]);
+    expect(adsOf(a, "Temporada 1")).toEqual(["Video 12 min"]);
+    expect(applyFilters(a, { campaign: "Primer entreno" })!.length).toBe(2);
+    expect(applyFilters(a, { campaign: "Primer entreno", ad: "Carrusel" })!.map((x) => x.country)).toEqual([null]);
+    expect(applyFilters(a, { ad: "Video 12 min", country: "CR" })!.length).toBe(1);
+  });
+
+  it("sin signup_attribution (falló la lectura) el origen y la campaña quedan sin dato", () => {
+    const a = buildAccounts({ ...sample(), signup: null }, NOW);
+    expect(a.every((x) => x.origin === null)).toBe(true);
+    expect(applyFilters(a, { campaign: "Primer entreno" })).toBeNull();
+    expect(applyFilters(a, { era: "antes" })!.length).toBe(4);
   });
 });
 
