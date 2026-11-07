@@ -1,0 +1,579 @@
+{
+  "stories": [
+    {
+      "id": "09-01",
+      "day": "09",
+      "theme": "¿Cuánto peso usar?",
+      "title": "¿Con cuánto peso empiezas?",
+      "body": "No necesitas copiar el peso de otra persona.",
+      "kind": "encuesta",
+      "question": "¿Ya sabes qué peso elegir?",
+      "options": [
+        "Sí",
+        "Todavía no"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "09-02",
+      "day": "09",
+      "theme": "¿Cuánto peso usar?",
+      "title": "Empieza con control",
+      "body": "Prueba una carga ligera y cuida la técnica.",
+      "kind": "quiz",
+      "question": "¿Qué va primero?",
+      "options": [
+        "La técnica",
+        "Levantar más"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "09-03",
+      "day": "09",
+      "theme": "¿Cuánto peso usar?",
+      "title": "Si pierdes la técnica, baja",
+      "body": "El peso debe dejarte completar el movimiento con control.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "09-04",
+      "day": "09",
+      "theme": "¿Cuánto peso usar?",
+      "title": "Tu primera sesión puede ser en casa",
+      "body": "Elige la opción de 12 min sin equipo en Hoy.",
+      "kind": "caja",
+      "question": "¿Qué te frena para empezar?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "09-05",
+      "day": "09",
+      "theme": "¿Cuánto peso usar?",
+      "title": "Haz tu primer entreno hoy",
+      "body": "Regístrate. Tienes 7 días gratis. En casa: 12 min.",
+      "kind": "enlace",
+      "question": "Tu primer entreno hoy",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "10-01",
+      "day": "10",
+      "theme": "Tu primer entreno en casa",
+      "title": "¿Tienes 12 minutos hoy?",
+      "body": "Puedes empezar en casa, sin equipo.",
+      "kind": "encuesta",
+      "question": "¿Dónde empezarías hoy?",
+      "options": [
+        "En casa",
+        "En el gym"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "10-02",
+      "day": "10",
+      "theme": "Tu primer entreno en casa",
+      "title": "No necesitas comprar equipo",
+      "body": "Para empezar en casa puedes usar el peso de tu cuerpo.",
+      "kind": "quiz",
+      "question": "¿Necesitas mancuernas para empezar en casa?",
+      "options": [
+        "No",
+        "Sí"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "10-03",
+      "day": "10",
+      "theme": "Tu primer entreno en casa",
+      "title": "Abre Hoy y elige tu entreno",
+      "body": "Si elegiste gym y hoy no puedes ir, busca la opción en casa.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "10-04",
+      "day": "10",
+      "theme": "Tu primer entreno en casa",
+      "title": "Mira cómo se hace",
+      "body": "Cada ejercicio tiene una guía. Ve a tu ritmo.",
+      "kind": "caja",
+      "question": "¿Qué movimiento te cuesta entender?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "10-05",
+      "day": "10",
+      "theme": "Tu primer entreno en casa",
+      "title": "Tu primer entreno empieza hoy",
+      "body": "Regístrate y prueba 7 días gratis. En casa: 12 min.",
+      "kind": "enlace",
+      "question": "Empezar 7 días gratis",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "11-01",
+      "day": "11",
+      "theme": "¿Necesito ir al gym?",
+      "title": "¿Necesitas ir al gym?",
+      "body": "Puedes empezar a entrenar en casa.",
+      "kind": "encuesta",
+      "question": "¿Qué te queda más fácil?",
+      "options": [
+        "Casa",
+        "Gym"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "11-02",
+      "day": "11",
+      "theme": "¿Necesito ir al gym?",
+      "title": "El equipo no es el primer paso",
+      "body": "El primer paso es elegir dónde puedes entrenar hoy.",
+      "kind": "quiz",
+      "question": "¿Puedes empezar sin máquinas?",
+      "options": [
+        "Sí",
+        "No"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "11-03",
+      "day": "11",
+      "theme": "¿Necesito ir al gym?",
+      "title": "¿Hoy entrenas en el gym?",
+      "body": "Indica el equipo disponible. Tu rutina se adapta a él.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "11-04",
+      "day": "11",
+      "theme": "¿Necesito ir al gym?",
+      "title": "¿Hoy te quedas en casa?",
+      "body": "Tienes una opción de 12 min sin equipo en Hoy.",
+      "kind": "caja",
+      "question": "¿Qué te impide entrenar hoy?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "11-05",
+      "day": "11",
+      "theme": "¿Necesito ir al gym?",
+      "title": "Empieza donde estás",
+      "body": "Regístrate y haz tu primer entreno hoy. 7 días gratis.",
+      "kind": "enlace",
+      "question": "Tu primer entreno hoy",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "12-01",
+      "day": "12",
+      "theme": "Entrenar en español",
+      "title": "Entrena en español",
+      "body": "Desde Estados Unidos, empieza con lo que tienes.",
+      "kind": "encuesta",
+      "question": "¿Prefieres las instrucciones en español?",
+      "options": [
+        "Sí",
+        "Me da igual"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "12-02",
+      "day": "12",
+      "theme": "Entrenar en español",
+      "title": "Sin equipo también cuenta",
+      "body": "Puedes hacer tu primer entreno de 12 min en casa.",
+      "kind": "quiz",
+      "question": "¿Necesitas un gym para empezar?",
+      "options": [
+        "No",
+        "Sí"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "12-03",
+      "day": "12",
+      "theme": "Entrenar en español",
+      "title": "Elige tu nivel y tu equipo",
+      "body": "Banana Burn organiza tu rutina con esa información.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "12-04",
+      "day": "12",
+      "theme": "Entrenar en español",
+      "title": "Pregunta en español",
+      "body": "No necesitas conocer todos los nombres de los ejercicios.",
+      "kind": "caja",
+      "question": "¿Qué duda tienes antes de empezar?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "12-05",
+      "day": "12",
+      "theme": "Entrenar en español",
+      "title": "Hoy puedes hacer el primero",
+      "body": "Regístrate en bananaburn.app. Prueba 7 días gratis.",
+      "kind": "enlace",
+      "question": "Empezar en español",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "13-01",
+      "day": "13",
+      "theme": "Peso y técnica",
+      "title": "¿Más peso siempre es mejor?",
+      "body": "La técnica te ayuda a decidir.",
+      "kind": "encuesta",
+      "question": "¿Sientes que pierdes el control?",
+      "options": [
+        "A veces",
+        "No"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "13-02",
+      "day": "13",
+      "theme": "Peso y técnica",
+      "title": "Completa con control",
+      "body": "Si necesitas impulso para moverlo, prueba menos peso.",
+      "kind": "quiz",
+      "question": "Si pierdes la técnica, ¿qué haces?",
+      "options": [
+        "Bajo el peso",
+        "Subo el peso"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "13-03",
+      "day": "13",
+      "theme": "Peso y técnica",
+      "title": "No compitas con otra carga",
+      "body": "Tu punto de partida depende de tu nivel.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "13-04",
+      "day": "13",
+      "theme": "Peso y técnica",
+      "title": "Primero resuelve tu duda",
+      "body": "No necesitas saberlo todo para empezar.",
+      "kind": "caja",
+      "question": "¿Qué quieres saber sobre el peso?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "13-05",
+      "day": "13",
+      "theme": "Peso y técnica",
+      "title": "Ponlo en práctica hoy",
+      "body": "7 días gratis. Tu primer entreno en casa toma 12 min.",
+      "kind": "enlace",
+      "question": "Tu primer entreno hoy",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "14-01",
+      "day": "14",
+      "theme": "Tu primer entreno en el gym",
+      "title": "¿Hoy sí vas al gym?",
+      "body": "Empieza con el equipo que tienes disponible.",
+      "kind": "encuesta",
+      "question": "¿Ya tienes un plan para hoy?",
+      "options": [
+        "Sí",
+        "Todavía no"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "14-02",
+      "day": "14",
+      "theme": "Tu primer entreno en el gym",
+      "title": "Una rutina para tu nivel",
+      "body": "Indica si estás empezando y qué equipo puedes usar.",
+      "kind": "quiz",
+      "question": "¿Debes copiar la rutina de otra persona?",
+      "options": [
+        "No",
+        "Sí"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "14-03",
+      "day": "14",
+      "theme": "Tu primer entreno en el gym",
+      "title": "En el gym, sin adivinar",
+      "body": "Sigue los ejercicios y consulta cómo se hacen.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "14-04",
+      "day": "14",
+      "theme": "Tu primer entreno en el gym",
+      "title": "¿Cambió tu plan de hoy?",
+      "body": "Si no vas al gym, elige 12 min en casa en Hoy.",
+      "kind": "caja",
+      "question": "¿Qué te cuesta al entrar al gym?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "14-05",
+      "day": "14",
+      "theme": "Tu primer entreno en el gym",
+      "title": "Haz el primero hoy",
+      "body": "Regístrate y prueba 7 días gratis. También puedes empezar en casa.",
+      "kind": "enlace",
+      "question": "Tu primer entreno hoy",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "15-01",
+      "day": "15",
+      "theme": "Cierra la semana empezando",
+      "title": "¿Ya hiciste tu primer entreno?",
+      "body": "Todavía puedes empezar hoy.",
+      "kind": "encuesta",
+      "question": "¿Cómo vas?",
+      "options": [
+        "Ya empecé",
+        "Empiezo hoy"
+      ],
+      "audience": "General",
+      "time": "08:00"
+    },
+    {
+      "id": "15-02",
+      "day": "15",
+      "theme": "Cierra la semana empezando",
+      "title": "12 minutos en casa",
+      "body": "Un primer paso concreto para esta noche.",
+      "kind": "quiz",
+      "question": "¿Qué puedes elegir si no vas al gym?",
+      "options": [
+        "Entrenar en casa",
+        "Esperar al lunes"
+      ],
+      "audience": "General",
+      "time": "13:00"
+    },
+    {
+      "id": "15-03",
+      "day": "15",
+      "theme": "Cierra la semana empezando",
+      "title": "Termina y guarda tu sesión",
+      "body": "Al acabar, guarda tu entreno para registrar lo que hiciste.",
+      "kind": "ninguno",
+      "question": "",
+      "options": [],
+      "audience": "General",
+      "time": "18:00"
+    },
+    {
+      "id": "15-04",
+      "day": "15",
+      "theme": "Cierra la semana empezando",
+      "title": "¿Qué te ayudó a empezar?",
+      "body": "Cuéntanos qué duda pudiste resolver esta semana.",
+      "kind": "caja",
+      "question": "¿Qué tema quieres ver la próxima semana?",
+      "options": [],
+      "audience": "General",
+      "time": "20:30"
+    },
+    {
+      "id": "15-05",
+      "day": "15",
+      "theme": "Cierra la semana empezando",
+      "title": "Tu primer entreno puede ser hoy",
+      "body": "Regístrate. Prueba 7 días gratis. En casa: 12 min.",
+      "kind": "enlace",
+      "question": "Tu primer entreno hoy",
+      "options": [],
+      "audience": "General",
+      "time": "21:30"
+    },
+    {
+      "id": "11-01-cr",
+      "day": "11",
+      "theme": "Condominios Costa Rica",
+      "title": "¿Tienes gym en tu condominio?",
+      "body": "En Costa Rica, empieza con el equipo que ya tienes cerca.",
+      "kind": "encuesta",
+      "question": "¿Usas el gym de tu condominio?",
+      "options": [
+        "Sí",
+        "Todavía no"
+      ],
+      "audience": "Solo Costa Rica",
+      "time": "08:00"
+    },
+    {
+      "id": "14-01-cr",
+      "day": "14",
+      "theme": "Condominios Costa Rica",
+      "title": "El gym de tu condominio cuenta",
+      "body": "En Costa Rica, indica el equipo disponible y empieza a tu nivel.",
+      "kind": "caja",
+      "question": "¿Qué te frena para usarlo?",
+      "options": [],
+      "audience": "Solo Costa Rica",
+      "time": "08:00"
+    }
+  ],
+  "carousels": [
+    {
+      "id": "latam",
+      "day": "09",
+      "title": "¿Cuánto peso usar?",
+      "slides": [
+        [
+          "¿Cuánto peso usar?",
+          "Empieza con control, no con el peso de otra persona."
+        ],
+        [
+          "Prueba una carga ligera",
+          "Completa el movimiento sin impulso y con buena técnica."
+        ],
+        [
+          "Si pierdes el control, baja",
+          "La carga debe permitirte hacer el ejercicio con control."
+        ],
+        [
+          "¿No tienes pesas?",
+          "Tu primer entreno en casa puede ser sin equipo y de 12 min."
+        ],
+        [
+          "Haz tu primer entreno hoy",
+          "Regístrate en bananaburn.app. Prueba 7 días gratis."
+        ]
+      ],
+      "caption": "¿Llegaste por el Reel de cuánto peso usar? Empieza por la técnica y elige una carga que puedas controlar. Regístrate y haz tu primer entreno hoy en bananaburn.app: 7 días gratis y una opción de 12 min en casa. #BananaBurn #EntrenarEnCasa #EntrenamientoDeFuerza #TecnicaDeEjercicio #PrimerEntreno"
+    },
+    {
+      "id": "cr",
+      "day": "11",
+      "title": "Tu gym del condominio",
+      "slides": [
+        [
+          "Tu gym del condominio",
+          "Costa Rica: empieza con lo que ya tienes cerca."
+        ],
+        [
+          "No necesitas conocer cada máquina",
+          "Indica tu nivel y el equipo disponible para organizar tu rutina."
+        ],
+        [
+          "Empieza a tu ritmo",
+          "Consulta cómo se hace cada ejercicio. Prioriza la técnica."
+        ],
+        [
+          "¿Tu condominio es aliado?",
+          "Si se suma al programa en Costa Rica, todos los residentes reciben su primer mes gratis. Activa con su enlace exclusivo."
+        ],
+        [
+          "Haz tu primer entreno hoy",
+          "Sin convenio, tienes 7 días gratis en bananaburn.app. Si hoy no vas al gym: 12 min en casa."
+        ]
+      ],
+      "caption": "¿Llegaste por el Reel del gym del condominio? En Costa Rica puedes empezar con el equipo que tienes cerca. Regístrate en bananaburn.app y prueba 7 días gratis. Si tu condominio se suma al programa, todos sus residentes reciben el primer mes gratis con su enlace exclusivo; después cada persona decide si sigue y paga su plan. La administración nunca paga. #BananaBurn #CondominiosCostaRica #GymDelCondominio #EntrenamientoDeFuerza #PrimerEntreno"
+    },
+    {
+      "id": "usa",
+      "day": "13",
+      "title": "Entrenar en español",
+      "slides": [
+        [
+          "Entrenar en español",
+          "En Estados Unidos, empieza con lo que tienes."
+        ],
+        [
+          "¿En casa o en el gym?",
+          "Indica tu nivel y el equipo que puedes usar."
+        ],
+        [
+          "Sigue la guía en español",
+          "Consulta cómo se hace cada ejercicio antes de empezar."
+        ],
+        [
+          "Tu primera sesión en casa",
+          "12 min sin equipo. Si elegiste gym, busca esta opción en Hoy."
+        ],
+        [
+          "Haz tu primer entreno hoy",
+          "Regístrate en bananaburn.app. Prueba 7 días gratis."
+        ]
+      ],
+      "caption": "¿Vives en Estados Unidos y quieres entrenar en español? Empieza con lo que tienes, en casa o en el gym. Regístrate y haz tu primer entreno hoy en bananaburn.app. Tienes 7 días gratis y una opción en casa de 12 min. Los planes se muestran en USD; revisa las opciones de pago disponibles en la app para continuar. #BananaBurn #EntrenarEnEspanol #HispanosEnEstadosUnidos #EntrenarEnCasa #PrimerEntreno"
+    }
+  ]
+}
