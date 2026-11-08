@@ -968,6 +968,34 @@ export function activacion(d: { step: ActivationMailStep; home: boolean; unsubsc
   };
 }
 
+// ───────────── Segundo entreno (#286, docs/emails/segundo-entreno.md) ─────────────
+// De 48 a 72 h después del primer entreno terminado, si no hizo otro. Lo envía runReminders (notify-run.ts).
+
+export const SECOND_WORKOUT_MAIL = {
+  subject: "Tu segundo entreno está listo",
+  preheader: "Ya hiciste el primero. El segundo se hace igual, paso a paso.",
+  paragraphs: [
+    "Hace dos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.",
+    "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.",
+    "Tu plan funciona entrenando varias veces por semana: el segundo entreno es el que lo pone en marcha.",
+  ],
+  cta: "Empezar mi segundo entreno",
+  path: "/app/entreno",
+};
+
+/** El correo del segundo entreno. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function segundoEntreno(d: { unsubscribe: string }): Email {
+  const c = SECOND_WORKOUT_MAIL;
+  const hero: Hero = { eyebrow: "Tu segundo entreno", title: esc(c.subject), lead: esc(c.preheader), mascot: true };
+  const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(c.cta, c.path, "banana");
+  const reason = "Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.";
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+  };
+}
+
 // ───────────── Recuperación al terminar la prueba sin plan (docs/emails/recuperacion.md) ─────────────
 // Días 8 y 10 desde el registro. La envía runReminders (notify-run.ts) en lugar de los demás correos de ese día.
 

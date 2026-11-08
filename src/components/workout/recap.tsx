@@ -34,7 +34,7 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ condoNudge, firstOffer, testimonial = false, nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null, coachPrompt = null }: {
+export function Recap({ firstRemind = null, condoNudge, firstOffer, testimonial = false, nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null, coachPrompt = null }: {
   /** Primer entreno (#198): la burbuja del coach con respuestas de un toque. `home`: entrenó en casa (sin máquinas). */
   coachPrompt?: { home: boolean } | null;
   /** Tercer entreno guardado y sin opinión todavía (#238): pide 1 a 5 estrellas con permiso para publicarla. */
@@ -48,6 +48,8 @@ export function Recap({ condoNudge, firstOffer, testimonial = false, nutritionUp
   voice?: Voice;
   /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
   next?: { name: string; line: string }[];
+  /** Primer entreno (#286): el próximo día en una línea; true si puede pedir "Recuérdame ese día" (sin hora elegida). */
+  firstRemind?: boolean | null;
   /** Próximo entreno de la rutina ("mañana", "el jueves") con su nombre. */
   upcoming?: { when: string; name: string } | null;
   /** Coach del programa (Coach Platanita) que firma el feedback; sin ella, Coach Banana. */
@@ -178,7 +180,7 @@ export function Recap({ condoNudge, firstOffer, testimonial = false, nutritionUp
           {condoNudge ? <CondoWorkoutOffer nudge={condoNudge} /> : firstOffer && <FirstWorkoutOffer userId={firstOffer} />}
           {!firstOffer && !condoNudge && full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
           {testimonial && <TestimonialAsk />}
-          {!repeat && <RecapNext upcoming={upcoming} />}
+          {!repeat && <RecapNext upcoming={upcoming} firstRemind={firstRemind} />}
 
           <div className="mt-3 card p-4 text-left" aria-live="polite">
             <p className="flex items-center gap-1.5 text-sm font-bold text-ink">{coach ? <CoachPic src={coach.avatar} size={24} className="size-6 rounded-lg object-cover" iconClassName="size-4" /> : <Monkey className="size-5 text-banana-ink" />}{coach?.name ?? "Coach Banana"}</p>

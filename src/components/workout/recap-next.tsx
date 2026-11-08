@@ -6,13 +6,16 @@ import { CalendarCheck, CaretRight, DeviceMobile } from "@/components/icons";
 import { PushWhenReady } from "@/components/install/push-when-ready";
 import { useInstall } from "@/components/install/use-install";
 import { pushNeedsInstall } from "@/lib/install-env";
+import { RecapNextDay } from "./recap-next-day";
 
-export function RecapNext({ upcoming }: { upcoming: { when: string; name: string } | null }) {
+/** `firstRemind`: cierre del primer entreno (#286); true si todavía no eligió la hora del recordatorio. */
+export function RecapNext({ upcoming, firstRemind = null }: { upcoming: { when: string; name: string } | null; firstRemind?: boolean | null }) {
   const { env } = useInstall();
   const install = !!env && env !== "standalone" && env !== "desktop" && (pushNeedsInstall(env) || env === "android-inapp");
   return (
     <div className="mt-3 space-y-3 text-left">
-      {upcoming && (
+      {upcoming && firstRemind !== null && <RecapNextDay when={upcoming.when} remind={firstRemind} />}
+      {upcoming && firstRemind === null && (
         <div className="card flex items-center gap-3 p-4">
           <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-banana-soft text-banana-ink"><CalendarCheck weight="duotone" className="size-6" /></span>
           <p className="min-w-0"><span className="block text-sm font-bold text-muted first-letter:uppercase">Tu próximo entreno es {upcoming.when}</span><span className="block font-extrabold text-ink">{upcoming.name}</span></p>

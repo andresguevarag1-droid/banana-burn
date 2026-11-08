@@ -24,6 +24,7 @@ import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, trialProgre
 import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
 import { todayIn } from "@/lib/today";
 import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
+import { SECOND_KIND, SECOND_WINDOW, TRIAL_DAYS, secondIdemKey, secondWorkoutEmailDue } from "@/lib/segundo-entreno";
 import { ACTIVATION_KINDS, ACTIVATION_MAX_HOURS, activationDue, activationIdemKey, activationKind, emailedToday, isActivationKind, type LogEntry } from "@/lib/activacion-correos";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
@@ -71,6 +72,9 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   // Activación (#225): antes de los avisos del día, para que la pieza reemplace al recordatorio del primer entreno.
   try { await sendActivationEmails(admin, now, mode, stats, late); }
   catch (e) { stats.errors++; logError("cron:activacion", "run_failed", { kind: errCode(e) }); }
+  // Segundo entreno (#286): de 48 a 72 h después del primero, también antes de los avisos del día (reemplaza al recordatorio).
+  try { await sendSecondWorkoutEmails(admin, now, stats, late); }
+  catch (e) { stats.errors++; logError("cron:segundo-entreno", "run_failed", { kind: errCode(e) }); }
   // Checkout abandonado (#237): 1 hora después de abrir el pago sin pagar.
   try { await sendAbandonedCheckoutEmails(admin, now, stats, late); }
   catch (e) { stats.errors++; logError("cron:checkout-abandonado", "run_failed", { kind: errCode(e) }); }
@@ -430,7 +434,8 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const seasonDue = season && !userLogs.some((l) => l.kind === season.step) ? season : null;
     // Activación (#225): si hoy salió una pieza, ese día no sale otro correo de rutina ni la pieza de la prueba (cede ante
     // A1 y A2, docs/emails/activacion.md). Push y campanita siguen igual.
-    const activationToday = todayLogs.some((l) => isActivationKind(l.kind) && l.channels?.includes("email"));
+    // Lo mismo con el correo del segundo entreno (#286).
+    const activationToday = todayLogs.some((l) => (isActivationKind(l.kind) || l.kind === SECOND_KIND) && l.channels?.includes("email"));
     if (activationToday) for (const d of decisions) d.email = false;
     const trialStep = activationToday ? null : step;
     if (!decisions.length && !trialStep && !recoveryNow && !payDue && !seasonDue) return;
@@ -788,6 +793,90 @@ export async function sendActivationEmails(admin: SupabaseClient, now: Date, mod
       } catch (e) { stats.errors++; logError("cron:activacion", "user_failed", { kind: errCode(e) }); }
     });
     if (stats.partial || profiles.length < PAGE) break;
+  }
+}
+
+// ───────────── Segundo entreno (#286) ─────────────
+
+const HOUR_MS = 36e5;
+
+/**
+ * "Tu segundo entreno está listo" (segundo-entreno.ts) a quien terminó su primer entreno hace 48 a 72 h y no terminó otro,
+ * dentro de su prueba de 7 días y con las exclusiones de la secuencia de la prueba. Se reclama en notification_log (kind
+ * segundo_entreno, local_day = día local del envío) antes de enviarse: una vez por cuenta. Se omite (sin reclamar) si hoy ya
+ * recibió otro correo. Si Resend lo rechaza, se libera el turno. Si falla una lectura, el lote se salta. Exportada para pruebas.
+ */
+export async function sendSecondWorkoutEmails(admin: SupabaseClient, now: Date, stats: RunStats, late: () => boolean = () => false) {
+  if (late()) { stats.partial = true; return; }
+  const at = (h: number) => new Date(now.getTime() - h * HOUR_MS).toISOString();
+  // Cuentas con un entreno terminado dentro de la ventana; las que tienen otro se descartan abajo.
+  const recent = await allPages((a, b) => admin.from("workouts").select("user_id,finished_at").gte("finished_at", at(SECOND_WINDOW[1])).order("id").range(a, b));
+  if (recent.error) { stats.ok = false; stats.errors++; logError("cron:segundo-entreno", "workouts_query_failed", { code: recent.error.code }); return; }
+  const all = [...new Set((recent.data as { user_id: string; finished_at: string }[]).filter((r) => Date.parse(r.finished_at) < now.getTime() - SECOND_WINDOW[0] * HOUR_MS).map((r) => r.user_id))];
+  const utcToday = now.toISOString().slice(0, 10);
+  const trialStart = at(TRIAL_DAYS * 24);
+  for (let i = 0; i < all.length; i += CHUNK) {
+    if (late()) { stats.partial = true; break; }
+    const ids = all.slice(i, i + CHUNK);
+    const [profiles, prefs, done, subs, comps, testers, charges, sent, dated, once] = await Promise.all([
+      allPages((a, b) => admin.from("profiles").select("id,created_at,timezone,plan,role").in("id", ids).gte("created_at", trialStart).order("id").range(a, b)),
+      allPages((a, b) => admin.from("notification_prefs").select("*").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("workouts").select("user_id,finished_at").in("user_id", ids).gte("finished_at", trialStart).order("id").range(a, b)),
+      allPages((a, b) => admin.from("subscriptions").select("user_id,status").in("user_id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("comp_grants").select("user_id,revoked_at").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("tester_grants").select("user_id,revoked_at").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("trial_charges").select("user_id,status,kind,charge_at,reminder_sent_at").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("notification_log").select("user_id").in("user_id", ids).eq("kind", SECOND_KIND).order("id").range(a, b)),
+      // Correos con fecha de hoy y únicos (ONCE_DAY) que salieron hoy, para no mandar dos el mismo día.
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,channels,created_at").in("user_id", ids).gte("local_day", isoMinus(utcToday, 1)).order("id").range(a, b)),
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,channels,created_at").in("user_id", ids).eq("local_day", ONCE_DAY).gte("created_at", isoMinus(utcToday, 1) + "T00:00:00Z").order("id").range(a, b)),
+    ]);
+    const failed = [profiles, prefs, done, subs, comps, testers, charges, sent, dated, once].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:segundo-entreno", "query_failed", { code: failed.error?.code }); continue; }
+    type P = { id: string; created_at: string | null; timezone: string | null; plan: string | null; role: string | null };
+    const prefsOf = new Map<string, Prefs>();
+    for (const p of profiles.data as P[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
+    for (const r of prefs.data as Record<string, unknown>[]) if (prefsOf.has(r.user_id as string)) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
+    const has = (rows: unknown[], ok: (r: Record<string, unknown>) => boolean = () => true) => new Set((rows as Record<string, unknown>[]).filter(ok).map((r) => r.user_id as string));
+    const paid = has(subs.data, (r) => r.status !== "incomplete");
+    const comp = has(comps.data, (r) => !r.revoked_at);
+    const tester = has(testers.data, (r) => !r.revoked_at);
+    const already = has(sent.data);
+    const chargeBy = new Map((charges.data as (TrialSequenceCharge & { user_id: string })[]).map((r) => [r.user_id, r]));
+    const finishedBy = new Map<string, string[]>();
+    for (const r of done.data as { user_id: string; finished_at: string }[]) finishedBy.set(r.user_id, [...(finishedBy.get(r.user_id) ?? []), r.finished_at]);
+    const logsBy = new Map<string, LogEntry[]>();
+    for (const r of [...dated.data, ...once.data] as (LogEntry & { user_id: string })[]) logsBy.set(r.user_id, [...(logsBy.get(r.user_id) ?? []), r]);
+
+    // Sin perfil en la prueba (cuenta borrada o de más de 7 días) no se manda nada.
+    await forEachLimit(profiles.data as P[], USER_CONCURRENCY, async (p) => {
+      if (late()) { stats.partial = true; return; }
+      try {
+        const pr = prefsOf.get(p.id)!;
+        const due = secondWorkoutEmailDue({
+          createdAt: p.created_at, now, emailReminders: pr.email_reminders !== false, profilePlan: p.plan, staff: STAFF.includes(p.role as (typeof STAFF)[number]),
+          paid: paid.has(p.id), comp: comp.has(p.id), tester: tester.has(p.id), charge: chargeBy.get(p.id) ?? null,
+          finished: finishedBy.get(p.id) ?? [], timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end, sent: already.has(p.id),
+        });
+        if (!due) return;
+        if (emailedToday(logsBy.get(p.id) ?? [], now, pr.timezone)) { stats.sent[`${SECOND_KIND}_omitido`] = (stats.sent[`${SECOND_KIND}_omitido`] ?? 0) + 1; return; }
+        const day = localClock(now, pr.timezone).iso;
+        const { data: claimed, error: claimErr } = await admin.from("notification_log")
+          .upsert({ user_id: p.id, kind: SECOND_KIND, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .select("id");
+        if (claimErr) { stats.errors++; return; }
+        if (!claimed?.length) return;
+        const { data: u } = await admin.auth.admin.getUserById(p.id);
+        const to = u.user?.email;
+        if (!to) return;
+        const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
+        const r = await sendEmail(to, withLoginLinks(T.segundoEntreno({ unsubscribe }), p.id), { idempotencyKey: secondIdemKey(p.id), unsubscribe, tags: { kind: SECOND_KIND } });
+        if (r.ok) stats.email++;
+        // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (como la activación).
+        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", SECOND_KIND).eq("local_day", day).then(() => null, () => null); return; }
+        stats.sent[SECOND_KIND] = (stats.sent[SECOND_KIND] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:segundo-entreno", "user_failed", { kind: errCode(e) }); }
+    });
   }
 }
 

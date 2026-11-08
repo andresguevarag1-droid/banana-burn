@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { describe, expect, it } from "vitest";
 import {
-  adsOf, applyFilters, buildAccounts, campaignsOf, cohortTable, countriesOf, crWeeks, isAdUtm, netAfterAds, netUsd, parseUsd, pctOf, weekKey, type FunnelRows,
+  STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cohortTable, countriesOf, crWeeks, isAdUtm, netAfterAds, netUsd, parseUsd, pctOf, secondWorkoutUsers, weekKey, type FunnelRows,
 } from "@/lib/embudo-plata";
 
 const NOW = new Date("2026-11-07T18:00:00Z"); // sábado 7 nov, 12:00 en Costa Rica
@@ -84,6 +84,7 @@ const sample = (): FunnelRows => ({
     { user_id: null, name: "workout_open" },
   ],
   finished: [id(1), id(2), id(5)],
+  second: [id(1)],
   charges: [
     { user_id: id(1), status: "succeeded", amount_minor: 499 },
     { user_id: id(2), status: "scheduled", amount_minor: 499 },
@@ -95,6 +96,30 @@ const sample = (): FunnelRows => ({
   ],
 });
 
+describe("segundo entreno (#286)", () => {
+  it("la columna va justo después del primer entreno", () => {
+    const keys = STEPS.map((s) => s.key);
+    expect(keys.indexOf("second")).toBe(keys.indexOf("finished") + 1);
+    expect(STEPS.find((s) => s.key === "second")!.label).toBe("Segundo entreno");
+  });
+
+  it("cuenta 2 o más entrenos terminados dentro de los primeros 7 días desde el registro", () => {
+    const profiles = [
+      { id: id(1), created_at: "2026-11-01T15:00:00Z" },
+      { id: id(2), created_at: "2026-11-01T15:00:00Z" },
+      { id: id(3), created_at: "2026-11-01T15:00:00Z" },
+      { id: id(4), created_at: "2026-11-01T15:00:00Z" },
+    ];
+    const w = (n: number, finished_at: string | null) => ({ user_id: id(n), finished_at });
+    expect(secondWorkoutUsers(profiles, [
+      w(1, "2026-11-01T20:00:00Z"), w(1, "2026-11-03T20:00:00Z"), // dos en la prueba
+      w(2, "2026-11-01T20:00:00Z"), w(2, "2026-11-08T15:00:00Z"), // el segundo justo a los 7 días: fuera
+      w(3, "2026-11-02T20:00:00Z"), w(3, null), // uno sin terminar
+      w(4, "2026-11-02T10:00:00Z"), w(4, "2026-11-02T20:00:00Z"), w(4, "2026-11-04T20:00:00Z"), // tres
+    ])).toEqual([id(1), id(4)]);
+  });
+});
+
 describe("cohortes por semana de registro", () => {
   const weeks = crWeeks(NOW);
 
@@ -102,7 +127,7 @@ describe("cohortes por semana de registro", () => {
     const t = cohortTable(buildAccounts(sample(), NOW), weeks);
     expect(t[0]).toEqual({
       week: "2026-11-02", registrados: 3,
-      steps: { hoy: 3, open: 2, firstView: 2, firstSet: 2, finished: 2, card: 2, paid: 1 },
+      steps: { hoy: 3, open: 2, firstView: 2, firstSet: 2, finished: 2, second: 1, card: 2, paid: 1 },
       net: 3.85, estimated: true,
     });
     // Pago en el muro de planes: precio de lista $9.99 con ONVO.
@@ -145,9 +170,9 @@ describe("cohortes por semana de registro", () => {
   });
 
   it("una fuente que falla deja sus columnas en sin dato, nunca en cero", () => {
-    const t = cohortTable(buildAccounts({ ...sample(), events: null, methods: null }, NOW), weeks)[0];
+    const t = cohortTable(buildAccounts({ ...sample(), events: null, methods: null, second: null }, NOW), weeks)[0];
     expect(t.registrados).toBe(3);
-    expect(t.steps).toEqual({ hoy: null, open: null, firstView: null, firstSet: null, finished: 2, card: null, paid: null });
+    expect(t.steps).toEqual({ hoy: null, open: null, firstView: null, firstSet: null, finished: 2, second: null, card: null, paid: null });
     expect(t.net).toBeNull();
   });
 

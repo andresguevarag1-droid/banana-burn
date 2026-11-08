@@ -22,6 +22,8 @@ import { modeNote, programTempoNote, rxNote } from "@/lib/voice";
 import { inCoachPromptWindow } from "@/lib/coach-prompt";
 import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
+import { getNotificationPrefs } from "@/app/actions/notifications";
+import { DEFAULT_PREFS } from "@/lib/notify";
 
 export const metadata = { title: "Entreno" };
 
@@ -145,9 +147,11 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const title = plan.name;
   const doneToday = options.length > 0 && doneTemplates.includes(template);
   // Cierre del entreno: el próximo de la rutina (sin programa: el programa ya muestra su semana en Hoy).
+  const firstSession = !!firstPlan && !expres && dia == null;
   let upcoming: { when: string; name: string } | null = null;
   if (!prog && !expres && plan.tpl) {
-    const from = plan.dow ?? d.today.dow;
+    // El primer entreno guarda el día fijo de la primera sesión del calendario: el próximo se cuenta desde hoy.
+    const from = firstSession ? d.today.dow : plan.dow ?? d.today.dow;
     const nd = nextTrainingDow(d.engineSched, from);
     if (nd != null) {
       const ahead = ((nd - d.today.dow + 7) % 7) || 7;
@@ -155,9 +159,11 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
       upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
     }
   }
-  const firstSession = !!firstPlan && !expres && dia == null;
+  // Cierre del primer entreno (#286): el próximo día y, si sigue con la hora por defecto, "Recuérdame ese día".
+  const prefs = firstSession && upcoming ? await getNotificationPrefs().catch(() => null) : null;
+  const firstRemind = firstSession && upcoming ? prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time : null;
   // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
   const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
-  return <Player firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player firstRemind={firstRemind} firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }

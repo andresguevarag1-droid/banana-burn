@@ -88,7 +88,7 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ firstSession = false, firstOffer, firstSetAsk = false, condoNudge, askTestimonial = false, coachPrompt = null, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+export function Player({ firstRemind = null, firstSession = false, firstOffer, firstSetAsk = false, condoNudge, askTestimonial = false, coachPrompt = null, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
   /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
   intro?: string;
   /** Invitación autorizada en servidor, solo para el cierre guardado. */
@@ -107,6 +107,8 @@ export function Player({ firstSession = false, firstOffer, firstSetAsk = false, 
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
   /** Próximo entreno de la rutina para el cierre ("Tu próximo entreno es el jueves"). */
   upcoming?: { when: string; name: string } | null;
+  /** Primer entreno (#286): true si al cerrar puede pedir "Recuérdame ese día"; false, solo el día; null, el cierre de siempre. */
+  firstRemind?: boolean | null;
   /** Campo de lastre en los ejercicios con el peso corporal. Un programa de equipo fijo (pilates, dominadas) no lo usa. */
   ballast?: boolean;
   /** Coach del programa activo (Coach Platanita): presenta el entreno y firma el feedback. Sin ella, Coach Banana. */
@@ -788,7 +790,7 @@ export function Player({ firstSession = false, firstOffer, firstSetAsk = false, 
 
   if (phase === "saved") {
     const fresh = !!saved?.ok && !saved.demo && !saved.already;
-    return <Recap condoNudge={fresh && !saved?.repeat ? condoNudge : undefined} firstOffer={fresh && !saved?.repeat ? firstOffer : undefined} testimonial={showsTestimonialCard({ asked: askTestimonial, fresh })} nutritionUpsell={fresh ? nutritionUpsell : undefined} upcoming={upcoming} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
+    return <Recap firstRemind={firstRemind} condoNudge={fresh && !saved?.repeat ? condoNudge : undefined} firstOffer={fresh && !saved?.repeat ? firstOffer : undefined} testimonial={showsTestimonialCard({ asked: askTestimonial, fresh })} nutritionUpsell={fresh ? nutritionUpsell : undefined} upcoming={upcoming} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
       done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} coachPrompt={saved?.ok && !saved.already ? coachPrompt : null} />;
   }
 

@@ -13,3 +13,11 @@ export const isTrainSlot = (v: unknown): v is TrainSlot => TRAIN_SLOTS.some((s) 
 
 /** Hora local 'HH:MM' del recordatorio para la franja: una hora antes del inicio (la mañana, a las 6). */
 export const reminderTimeFor = (slot: TrainSlot): string => TRAIN_SLOTS.find((s) => s.id === slot)!.reminder;
+
+/** Franja de una hora local (0 a 23), para recordar el próximo entreno a la misma hora en que entrenó hoy (#286). */
+export function slotAt(hour: number): TrainSlot {
+  if (hour >= 4 && hour < 11) return "manana";
+  if (hour >= 11 && hour < 16) return "mediodia";
+  if (hour >= 16 && hour < 19) return "tarde";
+  return "noche";
+}

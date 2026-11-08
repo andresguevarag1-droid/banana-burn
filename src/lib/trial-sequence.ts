@@ -56,16 +56,24 @@ export function chargeReminderToday(row: TrialSequenceCharge | null, now = new D
   return Number.isFinite(sent) && now.getTime() - sent < DAY_MS;
 }
 
+/**
+ * ¿La cuenta recibe hoy correos de la prueba? Las exclusiones de la secuencia, sin mirar la ventana de cada pieza: también
+ * las usa el correo del segundo entreno (segundo-entreno.ts).
+ */
+export function inTrialAudience(i: TrialSequenceInput): boolean {
+  const now = i.now ?? new Date();
+  if (signedUpInBeta(i.createdAt, i.betaEndsAt) || !i.emailReminders) return false;
+  if (i.staff || i.paid || i.comp || i.tester) return false;
+  if (i.profilePlan === "entreno" || i.profilePlan === "completo" || i.profilePlan === "pro") return false;
+  if (i.charge) {
+    if (i.charge.status !== "scheduled") return false;
+    if (chargeReminderToday(i.charge, now)) return false;
+  }
+  return true;
+}
+
 /** Pieza que le toca a la cuenta ahora, o null. */
 export function trialSequenceStep(i: TrialSequenceInput): TrialStep | null {
-  const now = i.now ?? new Date();
-  const step = trialStepAt(i.createdAt, now, i.betaEndsAt);
-  if (!step || !i.emailReminders) return null;
-  if (i.staff || i.paid || i.comp || i.tester) return null;
-  if (i.profilePlan === "entreno" || i.profilePlan === "completo" || i.profilePlan === "pro") return null;
-  if (i.charge) {
-    if (i.charge.status !== "scheduled") return null;
-    if (chargeReminderToday(i.charge, now)) return null;
-  }
-  return step;
+  const step = trialStepAt(i.createdAt, i.now ?? new Date(), i.betaEndsAt);
+  return step && inTrialAudience(i) ? step : null;
 }
