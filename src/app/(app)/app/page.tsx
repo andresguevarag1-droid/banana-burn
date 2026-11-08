@@ -61,6 +61,7 @@ import { FirstPartialCard } from "@/components/hoy/first-partial-card";
 import { ReminderPrompt } from "@/components/hoy/reminder-prompt";
 import { getNotificationPrefs } from "@/app/actions/notifications";
 import { DEFAULT_PREFS } from "@/lib/notify";
+import { registrationDay, weekCount, weekMonday, weeklyGoal, weeklyStreak } from "@/lib/meta-semanal";
 
 export const metadata = { title: "Hoy" };
 
@@ -144,6 +145,10 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
     </div>
   );
   const kgLost = a.startWeight - a.currentWeight;
+  // Meta semanal (#288): los días de la bienvenida (máximo 3 en la prueba), de lunes a domingo en su zona horaria.
+  const regDay = registrationDay(a.createdAt, v.tz);
+  const monday = weekMonday(d.today.iso);
+  const goalOf = (mon: string) => weeklyGoal({ trainDays: a.trainDays, regDay, monday: mon });
   // Primeros pasos: lo acompaña Coach Platanita si el perfil es de mujer o el programa es suyo; si no, Coach Banana.
   const guideCoach = coach.id !== "banana" ? coach : a.sex === "f" ? COACHES.platanita : null;
   const recap = await weekRecapFor(v, d.today, a.trainDays, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[]).catch(() => null);
@@ -169,8 +174,8 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
         : hero}
 
-      {/* 2. Cómo vas, en una línea. */}
-      <WeekLine week={g.week} sched={d.sched} todayIso={d.today.iso} streak={g.streak.days} todayDone={g.streak.todayDone} />
+      {/* 2. La meta de la semana al frente (#288), con la racha semanal; la diaria, secundaria. */}
+      <WeekLine count={weekCount(g.trainedDays, d.today.iso)} goal={goalOf(monday)} monday={monday} weekStreak={weeklyStreak(g.trainedDays, d.today.iso, goalOf, regDay)} streak={g.streak.days} todayDone={g.streak.todayDone} />
 
       {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
       {/* Días 1 a 6 sin tarjeta (#280): el banner con los días que quedan; el día 7, el aviso grande. */}

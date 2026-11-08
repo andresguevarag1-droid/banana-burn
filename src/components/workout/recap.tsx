@@ -15,6 +15,7 @@ import { GoldBanana } from "./ui";
 import { WeeklyNutritionUpsell } from "@/components/nutrition-upsell-weekly";
 import type { NutritionUpsellGoal } from "@/lib/plan-access";
 import { RecapNext } from "./recap-next";
+import type { WeekPlan } from "./recap-next-day";
 import { FirstWorkoutOffer } from "./first-workout-offer";
 import { CondoWorkoutOffer, type CondoNudge } from "./condo-offer";
 import { CoachPrompt } from "@/components/coach-prompt";
@@ -34,7 +35,7 @@ function useCountUp(to: number, ms = 800) {
   return v;
 }
 
-export function Recap({ firstRemind = null, condoNudge, firstOffer, testimonial = false, nutritionUpsell, upcoming = null, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null, coachPrompt = null }: {
+export function Recap({ week = null, progress = [], condoNudge, firstOffer, testimonial = false, nutritionUpsell, next = [], sex = null, title, icon, xpBefore, xp, rushed, streak, seconds, done, total, unit = "series", volume, perWorkout = 0, prs, bananas, repeat = false, saveMsg, feedback, voice = DEFAULT_VOICE, coach = null, coachPrompt = null }: {
   /** Primer entreno (#198): la burbuja del coach con respuestas de un toque. `home`: entrenó en casa (sin máquinas). */
   coachPrompt?: { home: boolean } | null;
   /** Tercer entreno guardado y sin opinión todavía (#238): pide 1 a 5 estrellas con permiso para publicarla. */
@@ -48,10 +49,10 @@ export function Recap({ firstRemind = null, condoNudge, firstOffer, testimonial 
   voice?: Voice;
   /** Lo que la app hará la próxima vez con cada ejercicio (así se ve al coach ajustando el plan). */
   next?: { name: string; line: string }[];
-  /** Primer entreno (#286): el próximo día en una línea; true si puede pedir "Recuérdame ese día" (sin hora elegida). */
-  firstRemind?: boolean | null;
-  /** Próximo entreno de la rutina ("mañana", "el jueves") con su nombre. */
-  upcoming?: { when: string; name: string } | null;
+  /** Plan de la semana (#288): la meta semanal y los próximos días sugeridos, con "Recuérdame esos días" si no tiene hora. */
+  week?: WeekPlan | null;
+  /** Lo que cambió en cada ejercicio repetido desde la vez pasada (#288, progressLines). */
+  progress?: { name: string; line: string; up: boolean }[];
   /** Coach del programa (Coach Platanita) que firma el feedback; sin ella, Coach Banana. */
   coach?: { name: string; avatar: string } | null;
   title: string; icon: string; xpBefore: number; xp: number; rushed: boolean; streak: number; seconds: number; done: number; total: number; unit?: string; volume: number;
@@ -142,6 +143,12 @@ export function Recap({ firstRemind = null, condoNudge, firstOffer, testimonial 
               </div>
               {volume > 0 && <p className="mt-2 text-sm text-muted">{t(voice, { basico: "Sumando todas tus repeticiones, levantaste", intermedio: "Moviste", tecnico: "Volumen total (kg × reps):" })} <span className="font-bold text-ink tabular-nums">{volumeText(volume)}</span>{t(voice, { basico: " en total.", intermedio: " en total.", tecnico: "." })}</p>}
             </div>
+            {progress.length > 0 && (
+              <div className="border-t border-line p-4">
+                <p className="text-sm font-bold text-ink">Desde la vez pasada</p>
+                <ul className="mt-2 space-y-1.5">{progress.map((p) => <li key={p.name} className="text-sm tabular-nums"><span className="font-bold text-ink">{p.name}:</span> <span className={p.up ? "font-semibold text-ink" : "text-body"}>{p.line}</span></li>)}</ul>
+              </div>
+            )}
             {next.length > 0 && (
               <div className="border-t border-line p-4">
                 <p className="text-sm font-bold text-ink">Lo que cambia la próxima vez</p>
@@ -180,7 +187,7 @@ export function Recap({ firstRemind = null, condoNudge, firstOffer, testimonial 
           {condoNudge ? <CondoWorkoutOffer nudge={condoNudge} /> : firstOffer && <FirstWorkoutOffer userId={firstOffer} />}
           {!firstOffer && !condoNudge && full && !repeat && nutritionUpsell && <WeeklyNutritionUpsell {...nutritionUpsell} />}
           {testimonial && <TestimonialAsk />}
-          {!repeat && <RecapNext upcoming={upcoming} firstRemind={firstRemind} />}
+          {!repeat && <RecapNext week={week} />}
 
           <div className="mt-3 card p-4 text-left" aria-live="polite">
             <p className="flex items-center gap-1.5 text-sm font-bold text-ink">{coach ? <CoachPic src={coach.avatar} size={24} className="size-6 rounded-lg object-cover" iconClassName="size-4" /> : <Monkey className="size-5 text-banana-ink" />}{coach?.name ?? "Coach Banana"}</p>

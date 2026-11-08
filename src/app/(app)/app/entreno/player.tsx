@@ -47,6 +47,8 @@ import { clearFirstPartial, markFirstPartial } from "@/lib/first-partial";
 import { showsTestimonialCard } from "@/lib/testimonials";
 import { hookLine } from "@/lib/engine";
 import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice } from "@/lib/voice";
+import { progressLine } from "@/lib/meta-semanal";
+import type { WeekPlan } from "@/components/workout/recap-next-day";
 
 export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null; /** Tempo del programa ("3-1-1"): se explica en simple durante la serie. */ tempo?: string };
 /** `sex`: nombres de nivel para ella ("Mona fuerte"). */
@@ -88,7 +90,7 @@ const rowsFor = (e: PlayerExercise): Row[] => {
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
 
-export function Player({ firstRemind = null, firstSession = false, firstOffer, firstSetAsk = false, condoNudge, askTestimonial = false, coachPrompt = null, variant, nutritionUpsell, upcoming = null, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
+export function Player({ week = null, firstSession = false, firstOffer, firstSetAsk = false, condoNudge, askTestimonial = false, coachPrompt = null, variant, nutritionUpsell, template, title, icon, cardio, options, dateKey, mode = "normal", doneToday = false, repeat = false, gam, preswap, voice = DEFAULT_VOICE, hook, mins, coach = null, ballast = true, intro: introText }: {
   /** Presentación propia de la sesión (la coach del programa); manda sobre el gancho del motor. */
   intro?: string;
   /** Invitación autorizada en servidor, solo para el cierre guardado. */
@@ -105,10 +107,8 @@ export function Player({ firstRemind = null, firstSession = false, firstOffer, f
   /** Variante del entreno para el embudo ("casa-primero": el primer entreno en casa de quien tiene gym). */
   variant?: string;
   nutritionUpsell?: { account: string; goal: NutritionUpsellGoal };
-  /** Próximo entreno de la rutina para el cierre ("Tu próximo entreno es el jueves"). */
-  upcoming?: { when: string; name: string } | null;
-  /** Primer entreno (#286): true si al cerrar puede pedir "Recuérdame ese día"; false, solo el día; null, el cierre de siempre. */
-  firstRemind?: boolean | null;
+  /** Plan de la semana para el cierre (#288): la meta semanal con este entreno y los próximos días sugeridos. */
+  week?: WeekPlan | null;
   /** Campo de lastre en los ejercicios con el peso corporal. Un programa de equipo fijo (pilates, dominadas) no lo usa. */
   ballast?: boolean;
   /** Coach del programa activo (Coach Platanita): presenta el entreno y firma el feedback. Sin ella, Coach Banana. */
@@ -569,6 +569,11 @@ export function Player({ firstRemind = null, firstSession = false, firstOffer, f
     const line = nextTimeLine(prescribe(e.id, e.cfg, e.lastSets?.length ? [e.lastSets, sets] : [sets]), e.cfg.lo);
     return line ? [{ name: e.name, line }] : [];
   }).slice(0, 4), [exercises, rows]);
+  // Progreso entre entrenos (#288): cada ejercicio repetido, la mejor serie de la vez pasada y la de hoy (workout_sets).
+  const progress = useMemo(() => exercises.flatMap((e, i) => {
+    const p = progressLine(e.lastSets, rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps) })), e.cfg.unit);
+    return p ? [{ name: e.name, ...p }] : [];
+  }).slice(0, 6), [exercises, rows]);
   const summary = useMemo(() => ({ vol: volumeOf(rows), ...(noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed })) }), [rows, doneSets, planTotal, prs.length, elapsed, noXp]);
   const prNames = prs.map((p) => p.name);
   const outId = outboxId({ template, startedAt });
@@ -790,7 +795,7 @@ export function Player({ firstRemind = null, firstSession = false, firstOffer, f
 
   if (phase === "saved") {
     const fresh = !!saved?.ok && !saved.demo && !saved.already;
-    return <Recap firstRemind={firstRemind} condoNudge={fresh && !saved?.repeat ? condoNudge : undefined} firstOffer={fresh && !saved?.repeat ? firstOffer : undefined} testimonial={showsTestimonialCard({ asked: askTestimonial, fresh })} nutritionUpsell={fresh ? nutritionUpsell : undefined} upcoming={upcoming} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
+    return <Recap week={week} progress={progress} condoNudge={fresh && !saved?.repeat ? condoNudge : undefined} firstOffer={fresh && !saved?.repeat ? firstOffer : undefined} testimonial={showsTestimonialCard({ asked: askTestimonial, fresh })} nutritionUpsell={fresh ? nutritionUpsell : undefined} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
       done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} coachPrompt={saved?.ok && !saved.already ? coachPrompt : null} />;
   }
 

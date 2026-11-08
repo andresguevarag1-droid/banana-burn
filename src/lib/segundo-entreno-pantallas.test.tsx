@@ -7,7 +7,8 @@ import { planDay, scheduleFor } from "@/lib/engine";
 
 vi.mock("@/app/actions/notifications", () => ({ saveNotificationPrefs: async () => ({ ok: true }) }));
 const { WorkoutHero, secondStreakLine } = await import("@/components/hoy/workout-hero");
-const { RecapNextDay } = await import("@/components/workout/recap-next-day");
+vi.mock("@/components/workout/workout.module.css", () => ({ default: {} }));
+const { RecapWeekPlan } = await import("@/components/workout/recap-next-day");
 
 const plan = planDay(1, 0, scheduleFor(3), { equipment: "gym", level: "principiante", sex: "m" });
 const hero = (second: { streak: number } | null, trainedToday = false) => renderToStaticMarkup(
@@ -43,17 +44,29 @@ describe("Hoy: Tu segundo entreno", () => {
   });
 });
 
-describe("cierre del primer entreno", () => {
-  it("una línea con el día y, sin recordatorio, el botón", () => {
-    const html = renderToStaticMarkup(<RecapNextDay when="el miércoles" remind />);
-    expect(html).toContain("Tu próximo entreno: el miércoles");
-    expect(html).toContain("Recuérdame ese día");
+describe("cierre del entreno: el plan de la semana (#288, antes el próximo día de #286)", () => {
+  const plan = { count: 1, goal: 3, week: "esta" as const, days: "martes y jueves", n: 2, remind: true };
+  it("la meta con este entreno, los próximos días y, sin recordatorio, el botón", () => {
+    const html = renderToStaticMarkup(<RecapWeekPlan plan={plan} />);
+    expect(html).toContain("Esta semana: 1 de 3 entrenos");
+    expect(html).toContain("Tus próximos entrenos");
+    expect(html).toContain("martes y jueves");
+    expect(html).toContain("Recuérdame esos días");
   });
 
-  it("si ya tiene recordatorio, solo el día", () => {
-    const html = renderToStaticMarkup(<RecapNextDay when="mañana" remind={false} />);
-    expect(html).toContain("Tu próximo entreno: mañana");
+  it("si ya tiene recordatorio, solo los días; con un día, en singular", () => {
+    const html = renderToStaticMarkup(<RecapWeekPlan plan={{ ...plan, remind: false }} />);
+    expect(html).toContain("martes y jueves");
     expect(html).not.toContain("Recuérdame");
+    const one = renderToStaticMarkup(<RecapWeekPlan plan={{ ...plan, count: 2, days: "jueves", n: 1 }} />);
+    expect(one).toContain("Tu próximo entreno");
+    expect(one).toContain("Recuérdame ese día");
+  });
+
+  it("con la meta cumplida, la semana que viene", () => {
+    const html = renderToStaticMarkup(<RecapWeekPlan plan={{ ...plan, count: 3, week: "proxima", days: "lunes, miércoles y viernes", n: 3, remind: false }} />);
+    expect(html).toContain("Cumpliste tu meta de la semana: 3 de 3");
+    expect(html).toContain("La próxima semana");
   });
 
   it("guarda con reminder_time y REMINDER_PROMPT_KEY, como /app/primer-entreno", () => {

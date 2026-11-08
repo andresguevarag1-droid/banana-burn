@@ -4,6 +4,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
+import { TRIAL_HABIT } from "@/lib/meta-semanal";
 import { STEP_EVENTS, secondWorkoutUsers, type FunnelRows, type SignupRow, type Week } from "@/lib/embudo-plata";
 
 const PAGE = 1000;
@@ -67,7 +68,8 @@ export async function loadFunnelRows(db: SupabaseClient, weeks: Week[]): Promise
   ]);
   const finished = workouts && [...new Set(workouts.map((r) => r.user_id))];
   const second = workouts && secondWorkoutUsers(profiles, workouts);
-  return { profiles, testers, condo, utm, signup, events, finished, second, charges, methods, subs };
+  const third = workouts && secondWorkoutUsers(profiles, workouts, TRIAL_HABIT);
+  return { profiles, testers, condo, utm, signup, events, finished, second, third, charges, methods, subs };
 }
 
 /** Gasto en anuncios por semana (lunes → USD). null si la tabla no se pudo leer (por ejemplo, sin 0068). */

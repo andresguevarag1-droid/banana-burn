@@ -18,7 +18,7 @@ type Params = { semana?: string; pais?: string; origen?: string; tarjeta?: strin
 function demoRows(weeks: Week[]): FunnelRows {
   const profiles: FunnelRows["profiles"] = [];
   const events: NonNullable<FunnelRows["events"]> = [];
-  const finished: string[] = [], second: string[] = [], charges: NonNullable<FunnelRows["charges"]> = [], condo: string[] = [];
+  const finished: string[] = [], second: string[] = [], third: string[] = [], charges: NonNullable<FunnelRows["charges"]> = [], condo: string[] = [];
   const signup: NonNullable<FunnelRows["signup"]> = [];
   weeks.forEach((w, wi) => {
     for (let i = 0; i < 14 - wi; i++) {
@@ -33,10 +33,11 @@ function demoRows(weeks: Week[]): FunnelRows {
       if (reach < 4) events.push({ user_id: id, name: "workout_first_set" });
       if (reach < 3) finished.push(id);
       if (reach < 2) second.push(id);
+      if (reach < 1) third.push(id);
       if (reach < 2 && wi > 0) charges.push({ user_id: id, status: reach === 0 ? "succeeded" : "scheduled", amount_minor: 499 });
     }
   });
-  return { profiles, testers: [], condo, utm: [], signup, events, finished, second, charges, methods: [], subs: [] };
+  return { profiles, testers: [], condo, utm: [], signup, events, finished, second, third, charges, methods: [], subs: [] };
 }
 
 const ORIGINS = Object.keys(ORIGIN_LABEL) as Origin[];
@@ -85,7 +86,7 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
   const adNames = accounts ? adsOf(accounts, filters.campaign) : [];
   const originMissing = accounts?.some((a) => a.origin === null) ?? false;
   const estimated = table?.some((r) => r.estimated) ?? false;
-  const unknownSources = rows ? (["events", "finished", "second", "charges", "methods", "subs"] as const).filter((k) => rows[k] === null).length : 0;
+  const unknownSources = rows ? (["events", "finished", "second", "third", "charges", "methods", "subs"] as const).filter((k) => rows[k] === null).length : 0;
 
   return (
     <div className="space-y-6">
