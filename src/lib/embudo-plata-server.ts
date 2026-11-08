@@ -4,7 +4,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
-import { STEP_EVENTS, type FunnelRows, type SignupRow, type Week } from "@/lib/embudo-plata";
+import { STEP_EVENTS, secondWorkoutUsers, type FunnelRows, type SignupRow, type Week } from "@/lib/embudo-plata";
 
 const PAGE = 1000;
 /** Tope de filas por fuente: con más, la cifra estaría incompleta, así que la fuente sale "sin dato". */
@@ -51,21 +51,23 @@ export async function loadFunnelRows(db: SupabaseClient, weeks: Week[]): Promise
   const testers = await orNull(byUsers<{ user_id: string }>(ids, (c, f, t) => db.from("tester_grants").select("user_id").in("user_id", c).order("id").range(f, t)).then(ids1<string[]>));
   if (!testers) return null;
 
-  const [condo, utm, signup, events, finished, charges, methods, subs] = await Promise.all([
+  const [condo, utm, signup, events, workouts, charges, methods, subs] = await Promise.all([
     orNull(byUsers<{ user_id: string }>(ids, (c, f, t) => db.from("condo_members").select("user_id").in("user_id", c).order("id").range(f, t)).then(ids1<string[]>)),
     orNull(byUsers<{ user_id: string; utm: unknown }>(ids, (c, f, t) => db.from("affiliate_referrals").select("user_id,utm").in("user_id", c).order("user_id").range(f, t))),
     orNull(byUsers<SignupRow>(ids, (c, f, t) =>
       db.from("signup_attribution").select("user_id,utm_source,utm_medium,utm_campaign,utm_content,fbclid").in("user_id", c).order("user_id").range(f, t))),
     orNull(byUsers<{ user_id: string; name: string }>(ids, (c, f, t) =>
       db.from("funnel_events").select("user_id,name").in("user_id", c).in("name", STEP_EVENTS).gte("created_at", start).order("id").range(f, t))),
-    orNull(byUsers<{ user_id: string }>(ids, (c, f, t) => db.from("workouts").select("user_id").in("user_id", c).not("finished_at", "is", null).order("id").range(f, t))
-      .then((rows) => [...new Set(rows.map((r) => r.user_id))])),
+    orNull(byUsers<{ user_id: string; finished_at: string | null }>(ids, (c, f, t) =>
+      db.from("workouts").select("user_id,finished_at").in("user_id", c).not("finished_at", "is", null).order("id").range(f, t))),
     orNull(byUsers<NonNullable<FunnelRows["charges"]>[number]>(ids, (c, f, t) => db.from("trial_charges").select("user_id,status,amount_minor").in("user_id", c).order("id").range(f, t))),
     orNull(byUsers<NonNullable<FunnelRows["methods"]>[number]>(ids, (c, f, t) => db.from("payment_methods").select("user_id,provider,status").in("user_id", c).order("user_id").range(f, t))),
     orNull(byUsers<NonNullable<FunnelRows["subs"]>[number]>(ids, (c, f, t) =>
       db.from("subscriptions").select("user_id,provider,status,plan,billing,current_period_end,cancel_at_period_end").in("user_id", c).order("id").range(f, t))),
   ]);
-  return { profiles, testers, condo, utm, signup, events, finished, charges, methods, subs };
+  const finished = workouts && [...new Set(workouts.map((r) => r.user_id))];
+  const second = workouts && secondWorkoutUsers(profiles, workouts);
+  return { profiles, testers, condo, utm, signup, events, finished, second, charges, methods, subs };
 }
 
 /** Gasto en anuncios por semana (lunes → USD). null si la tabla no se pudo leer (por ejemplo, sin 0068). */

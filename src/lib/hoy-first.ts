@@ -11,3 +11,11 @@ export function isFirstDay({ program, demo, primera, workouts, trainedToday }: {
  * Hoy (HoyCardBanner, #280), con o sin entrenos.
  */
 export const FIRST_DAY_CARD_MIN_DAY = 7;
+
+/**
+ * Segundo entreno (#286): desde el día siguiente al primer entreno y mientras lleve uno solo, la tarjeta del entreno del
+ * día se presenta como "Tu segundo entreno" (sin programa activo; el día del primer entreno, Hoy sigue igual).
+ */
+export function isSecondDay({ program, workouts, trainedToday }: { program: boolean; workouts: number; trainedToday: boolean }) {
+  return !program && workouts === 1 && !trainedToday;
+}

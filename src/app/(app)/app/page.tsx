@@ -7,7 +7,7 @@ import Link from "next/link";
 import { FunnelTracker } from "@/components/analytics";
 import { ArrowRight, BananaFlame, BananaTrophy, CaretRight, Monkey, Pause, Scales } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
-import { dashboard, firstSessionPlan, getAthlete } from "@/lib/athlete";
+import { dashboard, firstSessionPlan, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getDaily, prefetchDaily, greetingAt } from "@/lib/daily";
 import { getMeals, sumMeals } from "@/lib/meals";
 import { getEntitlements } from "@/lib/entitlements";
@@ -54,7 +54,7 @@ import { HowToButton, PageTour } from "@/components/primeros-pasos/page-tour";
 import { WeekRecap } from "@/components/primeros-pasos/week-recap";
 import { LoMejor } from "@/components/primeros-pasos/lo-mejor";
 import { weekRecapFor } from "@/lib/week-recap-server";
-import { FIRST_DAY_CARD_MIN_DAY, isFirstDay } from "@/lib/hoy-first";
+import { FIRST_DAY_CARD_MIN_DAY, isFirstDay, isSecondDay } from "@/lib/hoy-first";
 import { CoachPrompt } from "@/components/coach-prompt";
 import { inCoachPromptWindow, showHoyCoachPrompt } from "@/lib/coach-prompt";
 import { FirstPartialCard } from "@/components/hoy/first-partial-card";
@@ -101,11 +101,15 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?primera=1 muestra este estado.
   const first = isFirstDay({ program: !!d.program, demo: v.demo, primera: sp.primera, workouts: learnState.workouts, trainedToday: g.trainedToday });
   const firstPlan = first ? firstSessionPlan(d, 0) : null;
+  // Segundo entreno (#286): desde el día siguiente al primero, la misma tarjeta como "Tu segundo entreno". En un día de
+  // descanso, la próxima sesión (la misma que adelanta /app/entreno).
+  const second = isSecondDay({ program: !!d.program, workouts: learnState.workouts, trainedToday: g.trainedToday });
+  const secondPlan = second && !isTrainingDay(plan) ? nextSessionPlan(d) : null;
   // Con gym, el primer entreno también en casa y sin equipo; si el registro terminó de noche, esa opción va primero.
   const homePlan = firstPlan && offersHomeFirst(a.equipment) ? firstSessionPlan(d, 0, true) : null;
   const home = homePlan ? { mins: homePlan.mins ?? 12, first: homeFirstAt(a.registeredAt ? localHour(new Date(a.registeredAt), v.tz) : v.demo ? localHour(new Date(), v.tz) : null) } : undefined;
   const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
-  const mins = (firstPlan ?? plan).mins ?? (training || firstPlan ? 55 : 0);
+  const mins = (firstPlan ?? secondPlan ?? plan).mins ?? (training || firstPlan || secondPlan ? 55 : 0);
   // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
   const lastTime = training && !first && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
   const header = (
@@ -125,7 +129,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       </div>
     </header>
   );
-  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} home={home} plan={firstPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} second={second ? { streak: g.streak.days } : null} home={home} plan={firstPlan ?? secondPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
     readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>;
   // Primer día (sin ningún entreno guardado): solo el saludo y el primer entreno, sin tours, avisos ni tarjetas que lo
   // distraigan. El aviso de tarjeta sí sale si faltan 2 días o menos para el cobro. Desde el primer entreno, Hoy completo.

@@ -10,12 +10,17 @@ import { hookLine, isTrainingDay, type PlannedDay } from "@/lib/engine";
 import { poseForTag } from "@/lib/coach-poses";
 import { dayTag, sessionBenefit, setsLegend, t, type Voice } from "@/lib/voice";
 
+/** Racha real en la tarjeta del segundo entreno (#286). */
+export const secondStreakLine = (n: number) => (n > 0 ? `Racha de ${n} ${n === 1 ? "día" : "días"}. Con este entreno sube a ${n + 1}.` : "Con este entreno empiezas tu racha.");
+
 type Mini = Pick<PlannedDay, "name" | "icon" | "tpl" | "key">;
 
-export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false, home }: {
+export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false, second = null, home }: {
   plan: PlannedDay; voice: Voice; mins: number; trainedToday: boolean; deload: boolean; dayName: string; yesterday: Mini; tomorrow: Mini;
   /** Nunca ha entrenado: el entreno se presenta como "Tu primer entreno" (en un día de descanso, la próxima sesión adelantada). */
   first?: boolean;
+  /** Lleva un solo entreno, de otro día (#286): "Tu segundo entreno" con la racha real (en un día de descanso, la próxima sesión). */
+  second?: { streak: number } | null;
   /** Primer entreno con gym o mixto: la opción en casa sin equipo, sus minutos y si va primero (registro de noche). */
   home?: { mins: number; first: boolean };
   /** "La última vez hiciste..." con números reales del historial, o null. */
@@ -29,6 +34,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
   const legend = setsLegend(voice);
   const tomorrowTraining = isTrainingDay(tomorrow);
   const firstView = first && !trainedToday;
+  const secondView = !!second && !trainedToday;
 
   if (!training) {
     return (
@@ -51,13 +57,14 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
               los dos botones (gym y casa) se vean sin desplazar en 375 × 667. */}
           <div className={`relative ${firstView ? "pr-20 sm:pr-28" : "pr-28 sm:pr-36"}`}>
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-bold text-ink/80">
-              <span className="first-letter:uppercase">{firstView ? plan.name : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
+              <span className="first-letter:uppercase">{firstView || secondView ? plan.name : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
               {deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />{t(voice, { basico: "Semana suave", intermedio: "Semana de descarga", tecnico: "Descarga" })}</span>}
             </p>
-            <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{firstView ? "Tu primer entreno" : plan.name}</h2>
+            <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{firstView ? "Tu primer entreno" : secondView ? "Tu segundo entreno" : plan.name}</h2>
             <span aria-hidden className={`pointer-events-none absolute -right-3 -top-4 block select-none ${firstView ? "size-24 sm:size-32" : "size-32 sm:size-40"}`}>
               <SafeImage src={poseForTag(plan.tag)} alt="" fill sizes="160px" priority className="object-contain drop-shadow-[0_8px_14px_rgb(27_21_5/.25)]" fallbackClassName="object-contain" />
             </span>
+            {secondView && <p className="relative mt-2 flex items-center gap-1.5 text-sm font-bold text-ink tabular-nums"><BananaFlame weight="fill" className="size-4 shrink-0 text-ember-ink" aria-hidden />{secondStreakLine(second!.streak)}</p>}
             {benefit && !trainedToday && !first && <p className="relative mt-3 -mr-28 sm:mr-0 max-w-[52ch] text-[15px] font-semibold leading-snug text-ink text-pretty">{benefit}</p>}
           </div>
 
