@@ -75,6 +75,8 @@ export function isAdUtm(utm: unknown): boolean {
   return ["utm_source", "utm_medium", "utm_campaign", "fbclid"].some((k) => typeof u[k] === "string" && (u[k] as string).trim() !== "");
 }
 
+export type SignupRow = { user_id: string; utm_source: string | null; utm_medium: string | null; utm_campaign: string | null; utm_content: string | null; fbclid: string | null };
+
 export type FunnelRows = {
   /** Cuentas creadas en las semanas que se miden (cualquier rol: aquí se quita al staff). */
   profiles: { id: string; created_at: string; role: Role | string | null; country: string | null }[];
@@ -82,8 +84,10 @@ export type FunnelRows = {
   testers: string[];
   /** Residentes de un condominio (condo_members). */
   condo: string[] | null;
-  /** utm guardado al registrarse (affiliate_referrals.utm). */
+  /** utm guardado al registrarse por un enlace de referidor (affiliate_referrals.utm). */
   utm: { user_id: string; utm: unknown }[] | null;
+  /** Primer contacto guardado al registrarse (signup_attribution, 0069): utm o fbclid de cualquier página. */
+  signup: SignupRow[] | null;
   /** Eventos de STEP_EVENTS de esas cuentas. */
   events: { user_id: string | null; name: string }[] | null;
   /** Cuentas con un entreno terminado (workouts.finished_at). */
@@ -97,6 +101,9 @@ export type Account = {
   week: string;
   country: string | null;
   origin: Origin | null;
+  /** utm_campaign y utm_content del primer contacto (null si no hay). */
+  campaign: string | null;
+  ad: string | null;
   era: CardEra;
   steps: Record<StepKey, boolean | null>;
   /** Neto del primer pago (0 si no pagó). null: sin dato. */
@@ -120,7 +127,8 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
   const testers = new Set(r.testers);
   const staff = new Set<string>(STAFF_ROLES);
   const condo = r.condo && new Set(r.condo);
-  const ads = r.utm && new Set(r.utm.filter((u) => isAdUtm(u.utm)).map((u) => u.user_id));
+  const ads = r.utm && r.signup && new Set([...r.utm.filter((u) => isAdUtm(u.utm)), ...r.signup.filter(isAdUtm)].map((u) => u.user_id));
+  const signup = new Map((r.signup ?? []).map((s) => [s.user_id, s]));
   const byEvent = new Map<string, Set<string>>(STEP_EVENTS.map((e) => [e, new Set<string>()]));
   for (const e of r.events ?? []) if (e.user_id) byEvent.get(e.name)?.add(e.user_id);
   const finished = r.finished && new Set(r.finished);
@@ -144,6 +152,7 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
       const ev = (name: string) => (r.events ? byEvent.get(name)!.has(p.id) : null);
       const c = charge?.get(p.id);
       const m = method?.get(p.id);
+      const a = signup.get(p.id);
       const card = charged && method ? charged.has(p.id) || !!m : null;
 
       let paid: boolean | null = null, net: number | null = null, estimated = false;
@@ -164,6 +173,8 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
         week: weekKey(p.created_at),
         country: p.country?.trim() ? p.country.trim().toUpperCase() : null,
         origin: condo && ads ? (condo.has(p.id) ? "condominio" : ads.has(p.id) ? "anuncio" : "organico") : null,
+        campaign: a?.utm_campaign?.trim() || null,
+        ad: a?.utm_content?.trim() || null,
         era: cardRequiredFor(p.created_at) ? "desde" : "antes",
         steps: { hoy: ev("hoy_view"), open: ev("workout_open"), firstView: ev("workout_first_set_view"), firstSet: ev("workout_first_set"), finished: finished ? finished.has(p.id) : null, card, paid },
         net,
@@ -172,14 +183,16 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
     });
 }
 
-export type Filters = { country?: string; origin?: Origin; era?: CardEra };
+export type Filters = { country?: string; origin?: Origin; era?: CardEra; campaign?: string; ad?: string };
 
-/** Cuentas que pasan los filtros. null si un filtro no se puede aplicar porque falta su fuente (el origen). */
+/** Cuentas que pasan los filtros. null si un filtro no se puede aplicar porque falta su fuente (el origen y la campaña). */
 export function applyFilters(accounts: Account[], f: Filters): Account[] | null {
-  if (f.origin && accounts.some((a) => a.origin === null)) return null;
+  if ((f.origin || f.campaign || f.ad) && accounts.some((a) => a.origin === null)) return null;
   return accounts.filter((a) =>
     (!f.country || (f.country === NO_COUNTRY ? a.country === null : a.country === f.country)) &&
     (!f.origin || a.origin === f.origin) &&
+    (!f.campaign || a.campaign === f.campaign) &&
+    (!f.ad || a.ad === f.ad) &&
     (!f.era || a.era === f.era));
 }
 
@@ -209,6 +222,13 @@ export const netAfterAds = (net: number | null, adsUsd: number | null) => (net =
 
 /** Países presentes en las cuentas (para el filtro), ordenados. */
 export const countriesOf = (accounts: Account[]) => [...new Set(accounts.map((a) => a.country).filter((c): c is string => !!c))].sort();
+
+/** Campañas presentes en las cuentas (para el filtro), ordenadas. */
+export const campaignsOf = (accounts: Account[]) => [...new Set(accounts.map((a) => a.campaign).filter((c): c is string => !!c))].sort();
+
+/** Anuncios (utm_content) presentes, solo los de `campaign` si se eligió una, ordenados. */
+export const adsOf = (accounts: Account[], campaign?: string) =>
+  [...new Set(accounts.filter((a) => !campaign || a.campaign === campaign).map((a) => a.ad).filter((c): c is string => !!c))].sort();
 
 /** Monto en USD escrito a mano ("120", "120.50", "1,200.5") a centavos. null si no es un monto válido. */
 export function parseUsd(raw: string): number | null {

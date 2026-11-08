@@ -3,7 +3,7 @@ import { ActionForm, Submit } from "@/components/admin/action-form";
 import { DemoNotice, Field, FilterBar, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDay, fmtNum, fmtPct, fw, inputSm, money, panel, tr } from "@/components/admin/ui";
 import { COUNTRY_NAME } from "@/lib/countries";
 import {
-  CARD_ERA_LABEL, NO_COUNTRY, ORIGIN_LABEL, STEPS, applyFilters, buildAccounts, cohortTable, countriesOf, crWeeks, netAfterAds, pctOf,
+  CARD_ERA_LABEL, NO_COUNTRY, ORIGIN_LABEL, STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cohortTable, countriesOf, crWeeks, netAfterAds, pctOf,
   type CardEra, type CohortRow, type Filters, type FunnelRows, type Origin, type Week,
 } from "@/lib/embudo-plata";
 import { getFunnel } from "@/lib/embudo-plata-server";
@@ -12,18 +12,20 @@ import { saveAdSpend } from "./actions";
 export const metadata = { title: "Embudo" };
 export const dynamic = "force-dynamic";
 
-type Params = { semana?: string; pais?: string; origen?: string; tarjeta?: string };
+type Params = { semana?: string; pais?: string; origen?: string; tarjeta?: string; campana?: string; anuncio?: string };
 
 /** Modo demo: cuentas inventadas y marcadas como demo, para revisar la pantalla sin base. */
 function demoRows(weeks: Week[]): FunnelRows {
   const profiles: FunnelRows["profiles"] = [];
   const events: NonNullable<FunnelRows["events"]> = [];
   const finished: string[] = [], charges: NonNullable<FunnelRows["charges"]> = [], condo: string[] = [];
+  const signup: NonNullable<FunnelRows["signup"]> = [];
   weeks.forEach((w, wi) => {
     for (let i = 0; i < 14 - wi; i++) {
       const id = `00000000-0000-4000-8000-${String(wi * 100 + i).padStart(12, "0")}`;
       profiles.push({ id, created_at: new Date(Date.parse(w.start) + (i % 7) * 86400_000 + 3600_000).toISOString(), role: "free", country: i % 5 === 0 ? "CO" : "CR" });
       if (i % 4 === 0) condo.push(id);
+      else if (i % 3 === 0) signup.push({ user_id: id, utm_source: "meta", utm_medium: "paid", utm_campaign: "Demo noviembre", utm_content: i % 2 ? "Demo video" : "Demo carrusel", fbclid: null });
       const reach = i % 10;
       if (reach < 8) events.push({ user_id: id, name: "hoy_view" });
       if (reach < 6) events.push({ user_id: id, name: "workout_open" });
@@ -33,7 +35,7 @@ function demoRows(weeks: Week[]): FunnelRows {
       if (reach < 2 && wi > 0) charges.push({ user_id: id, status: reach === 0 ? "succeeded" : "scheduled", amount_minor: 499 });
     }
   });
-  return { profiles, testers: [], condo, utm: [], events, finished, charges, methods: [], subs: [] };
+  return { profiles, testers: [], condo, utm: [], signup, events, finished, charges, methods: [], subs: [] };
 }
 
 const ORIGINS = Object.keys(ORIGIN_LABEL) as Origin[];
@@ -63,8 +65,10 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
     country: q.pais || undefined,
     origin: ORIGINS.includes(q.origen as Origin) ? (q.origen as Origin) : undefined,
     era: ERAS.includes(q.tarjeta as CardEra) ? (q.tarjeta as CardEra) : undefined,
+    campaign: q.campana || undefined,
+    ad: q.anuncio || undefined,
   };
-  const filtered = Boolean(filters.country || filters.origin || filters.era || q.semana);
+  const filtered = Boolean(filters.country || filters.origin || filters.era || filters.campaign || filters.ad || q.semana);
 
   const { rows, spend } = v.demo ? { rows: demoRows(weeks), spend: new Map([[weeks[1].key, 40]]) } : await getFunnel(weeks);
   const accounts = rows ? buildAccounts(rows) : null;
@@ -75,6 +79,9 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
   const ads = spend?.get(week.key) ?? null;
   const result = netAfterAds(current?.net ?? null, ads);
   const countries = accounts ? countriesOf(accounts) : [];
+  // Solo los valores que existen en las 8 semanas.
+  const campaigns = accounts ? campaignsOf(accounts) : [];
+  const adNames = accounts ? adsOf(accounts, filters.campaign) : [];
   const originMissing = accounts?.some((a) => a.origin === null) ?? false;
   const estimated = table?.some((r) => r.estimated) ?? false;
   const unknownSources = rows ? (["events", "finished", "charges", "methods", "subs"] as const).filter((k) => rows[k] === null).length : 0;
@@ -85,7 +92,7 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
       {v.demo && <DemoNotice what="el embudo" />}
       {!v.demo && !rows && <Notice tone="warn" title="Sin dato">No se pudieron leer las cuentas nuevas o los testers. Revisa la conexión con la base (SUPABASE_SERVICE_ROLE_KEY en Vercel, la revisa Andrés).</Notice>}
       {unknownSources > 0 && <Notice tone="warn" title="Algunas fuentes no respondieron">Las columnas que dependen de ellas dicen &quot;Sin dato&quot;. Recarga en un momento.</Notice>}
-      {originMissing && <Notice tone="warn" title="Sin origen">No se pudieron leer condominios o anuncios: el filtro de origen no está disponible.</Notice>}
+      {originMissing && <Notice tone="warn" title="Sin origen">No se pudieron leer condominios o anuncios: los filtros de origen, campaña y anuncio no están disponibles.</Notice>}
 
       <FilterBar label="Filtros del embudo" filtered={filtered} clearHref="/admin/embudo">
         <Field label="Semana" htmlFor="e-sem" className={fw.select}>
@@ -102,6 +109,18 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
           <select id="e-origen" name="origen" defaultValue={filters.origin ?? ""} className={inputSm} disabled={originMissing}>
             <option value="">Todos</option>
             {ORIGINS.map((o) => <option key={o} value={o}>{ORIGIN_LABEL[o]}</option>)}
+          </select>
+        </Field>
+        <Field label="Campaña" htmlFor="e-campana" className={fw.select}>
+          <select id="e-campana" name="campana" defaultValue={filters.campaign ?? ""} className={inputSm} disabled={originMissing}>
+            <option value="">Todas</option>
+            {campaigns.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Anuncio" htmlFor="e-anuncio" className={fw.select}>
+          <select id="e-anuncio" name="anuncio" defaultValue={filters.ad ?? ""} className={inputSm} disabled={originMissing}>
+            <option value="">Todos</option>
+            {adNames.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </Field>
         <Field label="Cuentas" htmlFor="e-tarjeta" className={fw.select}>
@@ -157,7 +176,8 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
           </Table>
         )}
         <p className="text-xs text-muted text-pretty">
-          Origen: condominio si la cuenta está en un condominio; anuncio si el registro guardó utm o fbclid (hoy solo se guarda en los enlaces de referidores); si no, orgánico.
+          Origen: condominio si la cuenta está en un condominio; anuncio si la primera visita traía utm o fbclid (o el enlace de referidor los traía); si no, orgánico.
+          Campaña y anuncio: utm_campaign y utm_content de la primera visita (docs/metas/atribucion.md).
           País: el del perfil. {estimated && "La comisión no se guarda con el cobro: se calcula con la tarifa y se marca como estimada."}
         </p>
       </section>
