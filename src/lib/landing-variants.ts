@@ -10,7 +10,7 @@ const CASA = { shot: "/landing/campana-9nov/c2-guiado-casa.png", alt: "Pantalla 
 /** Variantes del hero por anuncio de Meta (utm_content). Solo capturas reales de public/landing/campana-9nov. */
 export const HERO_VARIANTS = {
   reel_cuanto_peso: { title: "¿No sabes cuánto peso usar?", sub: "Banana Burn te dice el peso, las series y las repeticiones de cada ejercicio, y cuándo subir.", ...GYM },
-  reel_gym_condominio: { title: "Tu gym del condominio, con entrenador", sub: "Coach Banana te dice qué hacer con las máquinas que tienes.", ...GYM },
+  reel_condominio: { title: "Tu gym del condominio, con entrenador", sub: "Coach Banana te dice qué hacer con las máquinas que tienes.", ...GYM },
   reel_casa_gym_parque: { title: "Entrena donde estés", sub: "En casa, en el gym o en el parque: 12 minutos para empezar.", ...CASA },
   reel_nadie_te_mira: { title: "Nadie te mira, nadie te juzga", sub: "Tu primer entreno es corto y Coach Banana te dice cada paso.", ...CASA },
 } as const satisfies Record<string, HeroVariant>;

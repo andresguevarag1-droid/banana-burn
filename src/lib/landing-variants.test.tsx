@@ -26,9 +26,9 @@ describe("elección de la variante", () => {
     for (const v of [undefined, null, "", "Reel_cuanto_peso", "reel_cuanto_peso ", "toString", "__proto__", "Video 12 min casa"]) expect(heroVariantFor(v)).toBeNull();
   });
   it("las cuatro del anuncio, con la captura de la tabla", () => {
-    expect(HERO_VARIANT_KEYS).toEqual(["reel_cuanto_peso", "reel_gym_condominio", "reel_casa_gym_parque", "reel_nadie_te_mira"]);
+    expect(HERO_VARIANT_KEYS).toEqual(["reel_cuanto_peso", "reel_condominio", "reel_casa_gym_parque", "reel_nadie_te_mira"]);
     const shot = (k: keyof typeof HERO_VARIANTS) => HERO_VARIANTS[k].shot.split("/").pop();
-    expect([shot("reel_cuanto_peso"), shot("reel_gym_condominio")]).toEqual(["c6-guiado-gym.png", "c6-guiado-gym.png"]);
+    expect([shot("reel_cuanto_peso"), shot("reel_condominio")]).toEqual(["c6-guiado-gym.png", "c6-guiado-gym.png"]);
     expect([shot("reel_casa_gym_parque"), shot("reel_nadie_te_mira")]).toEqual(["c2-guiado-casa.png", "c2-guiado-casa.png"]);
     // Solo capturas reales de la campaña, que existen en public/.
     for (const v of Object.values(HERO_VARIANTS)) {
