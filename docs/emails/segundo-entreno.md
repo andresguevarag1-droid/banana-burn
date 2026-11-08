@@ -22,7 +22,7 @@ Copy del correo de #286. Lo envía `sendSecondWorkoutEmails` (`src/lib/notify-ru
 
 **Cuerpo:**
 
-Hace dos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.
+Hace unos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.
 
 Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.
 

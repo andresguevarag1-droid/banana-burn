@@ -975,7 +975,7 @@ export const SECOND_WORKOUT_MAIL = {
   subject: "Tu segundo entreno está listo",
   preheader: "Ya hiciste el primero. El segundo se hace igual, paso a paso.",
   paragraphs: [
-    "Hace dos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.",
+    "Hace unos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.",
     "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.",
     "Tu plan funciona entrenando varias veces por semana: el segundo entreno es el que lo pone en marcha.",
   ],
