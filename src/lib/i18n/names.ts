@@ -24,3 +24,9 @@ export function countryName(code: string, es: string, locale: Locale): string {
 
 /** Nombre del plan para mostrar: "Entreno" es "Training" en inglés. El id y los precios no cambian. */
 export const planName = (es: string, locale: Locale) => translate(locale, es);
+
+/** Nombre de una rutina del motor: los fijos van por diccionario; "Exprés 10 min" se arma con sus minutos. */
+export function routineName(name: string, locale: Locale): string {
+  const m = /^Exprés (\d+) min$/.exec(name);
+  return m ? translate(locale, "Exprés {m} min", { m: m[1] }) : translate(locale, name);
+}
