@@ -17,10 +17,13 @@ export const GAIN_MAX = 0.005; // más de 0.5 % suele ser grasa
 
 const minHealthy = (heightCm: number) => Math.ceil(18.5 * (heightCm / 100) ** 2);
 
-/** Error de la meta para el objetivo elegido, o null si es válida. */
-export function goalError({ goal, weight, goalWeight, heightCm }: { goal: Goal; weight: number; goalWeight: number; heightCm: number }): string | null {
+/**
+ * Error de la meta para el objetivo elegido, o null si es válida. #287: `minLabel` escribe el peso mínimo en la unidad de
+ * la persona ("62 kg" por defecto, o "137 lb" en inglés).
+ */
+export function goalError({ goal, weight, goalWeight, heightCm }: { goal: Goal; weight: number; goalWeight: number; heightCm: number }, minLabel = (kg: number) => `${kg} kg`): string | null {
   if (!(weight > 0) || !(goalWeight > 0) || !(heightCm > 0)) return "Completa tu peso, tu meta y tu estatura.";
-  if (goalWeight / (heightCm / 100) ** 2 < 18.5) return `Esa meta queda por debajo de un peso saludable para tu estatura (mínimo ${minHealthy(heightCm)} kg).`;
+  if (goalWeight / (heightCm / 100) ** 2 < 18.5) return `Esa meta queda por debajo de un peso saludable para tu estatura (mínimo ${minLabel(minHealthy(heightCm))}).`;
   if (goal === "grasa" && goalWeight > weight) return "Para bajar grasa tu meta debe ser menor o igual a tu peso actual. Si quieres subir de peso, elige Ganar fuerza.";
   if (goal === "recomp" && goalWeight > weight * (1 + RECOMP_UP)) return "En recomposición tu peso se mantiene más o menos igual. Si quieres subir de peso, elige Ganar fuerza.";
   return null;

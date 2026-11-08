@@ -14,6 +14,7 @@ import { CopyLink } from "@/components/install/install-helper";
 import { afterSocialSignIn, confirmAndCheck, signUpConfirmed } from "./actions";
 import { signupError, signupReason } from "./validate";
 import { track } from "@/components/analytics";
+import { useT } from "@/lib/i18n/client";
 
 type Step = "email" | "code" | "reset";
 /** Cuenta bloqueada desde el panel (0056): Supabase responde "User is banned". */
@@ -65,6 +66,7 @@ function AppleLogo() {
 export function LoginForm({ configured, googleEnabled = false, signupChecks = ["7 días gratis", "Todo incluido"], platform = "web", openIn = null }: { configured: boolean; googleEnabled?: boolean; signupChecks?: [string, string]; platform?: AppPlatform; openIn?: "Safari" | "Chrome" | null }) {
   const params = useSearchParams();
   const router = useRouter();
+  const t = useT();
   const isSignup = params.get("modo") === "registro";
   const next = safeNext(params.get("next"), "/app");
   const programa = params.get("programa");
@@ -110,9 +112,9 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     return (
       <div className="space-y-5">
         <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">Modo demo</h1>
-        <p className="text-muted">Estamos abriendo cuentas por invitación muy pronto. Mientras tanto, explora Banana Burn completa con datos de ejemplo.</p>
-        <Link href="/app" className="btn-primary w-full">Explorar Banana Burn</Link>
+        <h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("Modo demo")}</h1>
+        <p className="text-muted">{t("Estamos abriendo cuentas por invitación muy pronto. Mientras tanto, explora Banana Burn completa con datos de ejemplo.")}</p>
+        <Link href="/app" className="btn-primary w-full">{t("Explorar Banana Burn")}</Link>
       </div>
     );
   }
@@ -146,7 +148,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
       const secs = Number(error.message.match(/after (\d+) seconds/)?.[1] ?? 0);
       if (secs) setWait(secs);
       if (counted) track("signup_error", { reason: rate ? "rate_limit" : signupReason(error.message) });
-      return setErr(rate ? `Ya te enviamos un correo hace poco. ${secs ? `Puedes pedir otro en ${secs} segundos.` : "Espera unos minutos antes de pedir otro."} Revisa también Correo no deseado.` : "No pudimos enviar el correo. Revisa que la dirección esté bien e intenta de nuevo.");
+      return setErr(rate ? `${t("Ya te enviamos un correo hace poco.")} ${secs ? t("Puedes pedir otro en {secs} segundos.", { secs }) : t("Espera unos minutos antes de pedir otro.")} ${t("Revisa también Correo no deseado.")}` : "No pudimos enviar el correo. Revisa que la dirección esté bien e intenta de nuevo.");
     }
     setWait(60);
     setStep("code");
@@ -206,7 +208,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     if (error) return setErr("No pudimos enviar el correo. Revisa que la dirección esté bien e intenta de nuevo.");
     setWait(60);
     // Mismo mensaje exista o no la cuenta: no revelamos qué correos están registrados.
-    setInfo(`Si hay una cuenta con ${email.trim()}, te llegará un enlace para crear una contraseña nueva. Revisa también Correo no deseado.`);
+    setInfo(t("Si hay una cuenta con {email}, te llegará un enlace para crear una contraseña nueva. Revisa también Correo no deseado.", { email: email.trim() }));
   }
 
   async function google() {
@@ -227,7 +229,7 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     const { signInNative } = await import("@/lib/native/auth");
     const r = await signInNative(provider);
     if (!r.ok) {
-      if (!r.canceled) return fail(`No pudimos entrar con ${provider === "apple" ? "Apple" : "Google"}. Intenta de nuevo o usa tu correo.`, "oauth_blocked");
+      if (!r.canceled) return fail(t("No pudimos entrar con {provider}. Intenta de nuevo o usa tu correo.", { provider: provider === "apple" ? "Apple" : "Google" }), "oauth_blocked");
       setBusy(false);
       return;
     }
@@ -241,90 +243,90 @@ export function LoginForm({ configured, googleEnabled = false, signupChecks = ["
     <div className="animate-rise">
       {step === "email" && (
         <>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{isSignup ? "Crea tu cuenta gratis" : "Qué bueno verte"}</h1>
-          <p className="mt-2 text-muted text-pretty">{isSignup ? `Solo necesitas tu correo. Después respondes 7 preguntas rápidas y tienes ${TRIAL_DAYS} días gratis con todo incluido.` : "Entra para ver qué te toca hoy."}</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{isSignup ? t("Crea tu cuenta gratis") : t("Qué bueno verte")}</h1>
+          <p className="mt-2 text-muted text-pretty">{isSignup ? t("Solo necesitas tu correo. Después respondes 7 preguntas rápidas y tienes {n} días gratis con todo incluido.", { n: TRIAL_DAYS }) : t("Entra para ver qué te toca hoy.")}</p>
           {isSignup && chosen && intent && (
             <p className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl bg-cream px-4 py-3 text-sm text-body">
-              <span>Elegiste <b className="text-ink">{chosen.name}</b>, {intent.billing === "anual" ? "pago anual" : "pago mensual"}. Lo activas cuando termine tu prueba.</span>
-              <Link href="/precios" className="tap font-semibold text-ink underline underline-offset-2">Cambiar</Link>
+              <span>{t("Elegiste")} <b className="text-ink">{t(chosen.name)}</b>, {intent.billing === "anual" ? t("pago anual") : t("pago mensual")}. {t("Lo activas cuando termine tu prueba.")}</span>
+              <Link href="/precios" className="tap font-semibold text-ink underline underline-offset-2">{t("Cambiar")}</Link>
             </p>
           )}
           {social.google || social.apple ? (<>
             <div className="mt-8 space-y-3">
-              {social.apple && <button type="button" onClick={() => nativeSocial("apple")} disabled={busy} data-cta={isSignup ? "registro-apple" : "entrar-apple"} className="btn w-full h-13 bg-black text-white"><AppleLogo />Continuar con Apple</button>}
-              {social.google && <button type="button" onClick={native ? () => nativeSocial("google") : google} disabled={busy} data-cta={isSignup ? "registro-google" : "entrar-google"} className="btn-ghost w-full h-13"><GoogleG />Continuar con Google</button>}
+              {social.apple && <button type="button" onClick={() => nativeSocial("apple")} disabled={busy} data-cta={isSignup ? "registro-apple" : "entrar-apple"} className="btn w-full h-13 bg-black text-white"><AppleLogo />{t("Continuar con Apple")}</button>}
+              {social.google && <button type="button" onClick={native ? () => nativeSocial("google") : google} disabled={busy} data-cta={isSignup ? "registro-google" : "entrar-google"} className="btn-ghost w-full h-13"><GoogleG />{t("Continuar con Google")}</button>}
             </div>
-            <div className="my-6 flex items-center gap-3 text-xs font-semibold text-faint"><span className="h-px flex-1 bg-line" />o con tu correo<span className="h-px flex-1 bg-line" /></div>
+            <div className="my-6 flex items-center gap-3 text-xs font-semibold text-faint"><span className="h-px flex-1 bg-line" />{t("o con tu correo")}<span className="h-px flex-1 bg-line" /></div>
           </>) : <div className="mt-8" />}
           <form onSubmit={method === "password" ? withPassword : sendCode} className="space-y-3">
-            <label className="block text-sm font-semibold text-ink" htmlFor="email">Correo electrónico</label>
-            <input id="email" type="email" required autoComplete="email" inputMode="email" placeholder="tucorreo@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="input h-13" />
+            <label className="block text-sm font-semibold text-ink" htmlFor="email">{t("Correo electrónico")}</label>
+            <input id="email" type="email" required autoComplete="email" inputMode="email" placeholder={t("tucorreo@gmail.com")} value={email} onChange={(e) => setEmail(e.target.value)} className="input h-13" />
             {method === "password" && (<>
               <div className="flex items-end justify-between pt-1">
-                <label className="block text-sm font-semibold text-ink" htmlFor="password">Contraseña</label>
-                {!isSignup && <button type="button" onClick={() => { setStep("reset"); setErr(null); setInfo(null); }} className="tap text-sm font-semibold text-muted underline-offset-4 transition-colors duration-150 hover:text-ink hover:underline">¿Olvidaste tu contraseña?</button>}
+                <label className="block text-sm font-semibold text-ink" htmlFor="password">{t("Contraseña")}</label>
+                {!isSignup && <button type="button" onClick={() => { setStep("reset"); setErr(null); setInfo(null); }} className="tap text-sm font-semibold text-muted underline-offset-4 transition-colors duration-150 hover:text-ink hover:underline">{t("¿Olvidaste tu contraseña?")}</button>}
               </div>
               <div className="relative">
                 <input id="password" type={show ? "text" : "password"} required minLength={isSignup ? 8 : 1} autoComplete={isSignup ? "new-password" : "current-password"} value={password} onChange={(e) => setPassword(e.target.value)} className="input h-13 pr-14" aria-describedby={isSignup ? "pw-hint" : undefined} />
-                <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-1 top-1/2 -translate-y-1/2 grid place-items-center size-11 rounded-full text-muted hover:text-ink" aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}>{show ? <EyeSlash weight="bold" className="size-5" /> : <Eye weight="bold" className="size-5" />}</button>
+                <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-1 top-1/2 -translate-y-1/2 grid place-items-center size-11 rounded-full text-muted hover:text-ink" aria-label={show ? t("Ocultar contraseña") : t("Mostrar contraseña")}>{show ? <EyeSlash weight="bold" className="size-5" /> : <Eye weight="bold" className="size-5" />}</button>
               </div>
-              {isSignup && <p id="pw-hint" className="text-xs text-muted">Mínimo 8 caracteres.</p>}
+              {isSignup && <p id="pw-hint" className="text-xs text-muted">{t("Mínimo 8 caracteres.")}</p>}
             </>)}
-            <button disabled={busy || !email || (method === "password" && !password)} data-cta={isSignup ? `registro-${method}` : `entrar-${method}`} className="btn-primary w-full h-13">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : method === "password" ? <Lock weight="duotone" className="size-5" /> : <Envelope weight="duotone" className="size-5" />}{method === "password" ? (isSignup ? "Empezar mi prueba gratis" : "Entrar") : "Enviarme un código"}</button>
+            <button disabled={busy || !email || (method === "password" && !password)} data-cta={isSignup ? `registro-${method}` : `entrar-${method}`} className="btn-primary w-full h-13">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : method === "password" ? <Lock weight="duotone" className="size-5" /> : <Envelope weight="duotone" className="size-5" />}{method === "password" ? (isSignup ? t("Empezar mi prueba gratis") : t("Entrar")) : t("Enviarme un código")}</button>
             {isSignup && (
               <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-1 text-xs font-semibold text-muted">
-                {signupChecks.map((t) => <li key={t} className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />{t}</li>)}
-                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />Tu plan en 2 minutos</li>
+                {signupChecks.map((s) => <li key={s} className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />{s}</li>)}
+                <li className="inline-flex items-center gap-1"><Check weight="bold" aria-hidden className="size-3.5 text-peel" />{t("Tu plan en 2 minutos")}</li>
               </ul>
             )}
           </form>
-          <button type="button" onClick={() => { setMethod(method === "password" ? "code" : "password"); setErr(null); setInfo(null); }} className="tap mt-3 w-full text-sm font-semibold text-muted underline-offset-4 hover:text-ink hover:underline">{method === "password" ? "Prefiero recibir un código por correo" : "Prefiero usar contraseña"}</button>
+          <button type="button" onClick={() => { setMethod(method === "password" ? "code" : "password"); setErr(null); setInfo(null); }} className="tap mt-3 w-full text-sm font-semibold text-muted underline-offset-4 hover:text-ink hover:underline">{method === "password" ? t("Prefiero recibir un código por correo") : t("Prefiero usar contraseña")}</button>
           {googleElsewhere && (
             <div className="mt-2 text-center">
-              <button type="button" onClick={() => setOpenHelp((o) => !o)} aria-expanded={openHelp} data-cta={isSignup ? "registro-google-fuera" : "entrar-google-fuera"} className="tap text-xs font-semibold text-muted underline underline-offset-4 hover:text-ink">¿Prefieres Google? Ábrelo en {openIn}</button>
+              <button type="button" onClick={() => setOpenHelp((o) => !o)} aria-expanded={openHelp} data-cta={isSignup ? "registro-google-fuera" : "entrar-google-fuera"} className="tap text-xs font-semibold text-muted underline underline-offset-4 hover:text-ink">{t("¿Prefieres Google? Ábrelo en {browser}", { browser: openIn ?? "" })}</button>
               {openHelp && (
                 <div className="mt-2 rounded-2xl bg-cream p-3 text-left">
-                  <p className="text-sm text-body">Google no deja entrar desde esta app. Copia el enlace y pégalo en {openIn}.</p>
+                  <p className="text-sm text-body">{t("Google no deja entrar desde esta app. Copia el enlace y pégalo en {browser}.", { browser: openIn ?? "" })}</p>
                   <CopyLink path={`/entrar${params.toString() ? `?${params.toString()}` : ""}`} where={isSignup ? "registro" : "entrar"} />
                 </div>
               )}
             </div>
           )}
-          {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{info}</p>}
+          {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{t(info)}</p>}
           <p className="mt-6 text-sm text-muted text-center">
-            {isSignup ? <>¿Ya tienes cuenta? <Link href="/entrar" className="tap font-semibold text-ink underline">Entrar</Link></> : <>¿Nuevo aquí? <Link href="/entrar?modo=registro" className="tap font-semibold text-ink underline">Prueba gratis {TRIAL_DAYS} días</Link></>}
+            {isSignup ? <>{t("¿Ya tienes cuenta?")} <Link href="/entrar" className="tap font-semibold text-ink underline">{t("Entrar")}</Link></> : <>{t("¿Nuevo aquí?")} <Link href="/entrar?modo=registro" className="tap font-semibold text-ink underline">{t("Prueba gratis {n} días", { n: TRIAL_DAYS })}</Link></>}
           </p>
         </>
       )}
 
       {step === "code" && (
         <>
-          <button type="button" onClick={backToEmail} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Cambiar correo</button>
-          <h1 className="mt-4 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink"><Envelope weight="duotone" className="size-8 text-banana-ink" />Revisa tu correo</h1>
-          <p className="mt-2 text-muted">Te enviamos un código a <b className="text-ink">{email}</b>. Escríbelo aquí o toca el enlace del correo.</p>
-          <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">¿No llega en un minuto? Busca en <b>Correo no deseado</b> o <b>Promociones</b>; Hotmail y Outlook a veces lo mandan ahí. El remitente es Banana Burn.</p>
+          <button type="button" onClick={backToEmail} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />{t("Cambiar correo")}</button>
+          <h1 className="mt-4 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink"><Envelope weight="duotone" className="size-8 text-banana-ink" />{t("Revisa tu correo")}</h1>
+          <p className="mt-2 text-muted">{t("Te enviamos un código a")} <b className="text-ink">{email}</b>. {t("Escríbelo aquí o toca el enlace del correo.")}</p>
+          <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">{t("¿No llega en un minuto? Busca en")} <b>{t("Correo no deseado")}</b> {t("o")} <b>{t("Promociones")}</b>{t("; Hotmail y Outlook a veces lo mandan ahí. El remitente es Banana Burn.")}</p>
           <form onSubmit={verify} className="mt-8 space-y-3">
-            <input autoFocus required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,10}" maxLength={10} placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="input h-16 text-center text-3xl font-extrabold tracking-[.5em]" aria-label="Código" />
-            <button disabled={busy || code.length < 6} className="btn-primary w-full h-13">{busy && <CircleNotch weight="bold" className="size-5 animate-spin" />}Entrar</button>
+            <input autoFocus required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,10}" maxLength={10} placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="input h-16 text-center text-3xl font-extrabold tracking-[.5em]" aria-label={t("Código")} />
+            <button disabled={busy || code.length < 6} className="btn-primary w-full h-13">{busy && <CircleNotch weight="bold" className="size-5 animate-spin" />}{t("Entrar")}</button>
           </form>
-          <button type="button" onClick={sendCode} disabled={busy || wait > 0} className="tap mt-4 w-full text-sm font-semibold text-muted tabular-nums transition-colors duration-150 hover:text-ink disabled:opacity-60">{wait > 0 ? `Reenviar código en ${wait} s` : "Reenviar código"}</button>
+          <button type="button" onClick={sendCode} disabled={busy || wait > 0} className="tap mt-4 w-full text-sm font-semibold text-muted tabular-nums transition-colors duration-150 hover:text-ink disabled:opacity-60">{wait > 0 ? t("Reenviar código en {s} s", { s: wait }) : t("Reenviar código")}</button>
         </>
       )}
 
       {step === "reset" && (
         <>
-          <button type="button" onClick={backToEmail} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver</button>
-          <h1 className="mt-4 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink text-balance"><Lock weight="duotone" className="size-8 shrink-0 text-banana-ink" />Recupera tu cuenta</h1>
-          <p className="mt-2 text-muted text-pretty">Escribe tu correo y te mandamos un enlace para crear una contraseña nueva.</p>
+          <button type="button" onClick={backToEmail} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />{t("Volver")}</button>
+          <h1 className="mt-4 flex items-center gap-3 text-3xl font-extrabold tracking-tight text-ink text-balance"><Lock weight="duotone" className="size-8 shrink-0 text-banana-ink" />{t("Recupera tu cuenta")}</h1>
+          <p className="mt-2 text-muted text-pretty">{t("Escribe tu correo y te mandamos un enlace para crear una contraseña nueva.")}</p>
           <form onSubmit={sendReset} className="mt-8 space-y-3">
-            <label className="block text-sm font-semibold text-ink" htmlFor="reset-email">Correo electrónico</label>
-            <input id="reset-email" type="email" required autoComplete="email" inputMode="email" placeholder="tucorreo@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="input h-13" />
-            <button disabled={busy || !email || wait > 0} className="btn-primary w-full h-13 tabular-nums">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : <Envelope weight="duotone" className="size-5" />}{wait > 0 ? `Reenviar en ${wait} s` : "Enviarme el enlace"}</button>
+            <label className="block text-sm font-semibold text-ink" htmlFor="reset-email">{t("Correo electrónico")}</label>
+            <input id="reset-email" type="email" required autoComplete="email" inputMode="email" placeholder={t("tucorreo@gmail.com")} value={email} onChange={(e) => setEmail(e.target.value)} className="input h-13" />
+            <button disabled={busy || !email || wait > 0} className="btn-primary w-full h-13 tabular-nums">{busy ? <CircleNotch weight="bold" className="size-5 animate-spin" /> : <Envelope weight="duotone" className="size-5" />}{wait > 0 ? t("Reenviar en {s} s", { s: wait }) : t("Enviarme el enlace")}</button>
           </form>
-          {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{info}</p>}
+          {info && <p role="status" className="mt-4 rounded-2xl bg-peel/10 p-3 text-sm font-semibold text-peel">{t(info)}</p>}
         </>
       )}
-      {err && <p role="alert" className="mt-4 rounded-2xl bg-bad/10 text-bad text-sm font-semibold p-3">{err}</p>}
+      {err && <p role="alert" className="mt-4 rounded-2xl bg-bad/10 text-bad text-sm font-semibold p-3">{t(err)}</p>}
     </div>
   );
 }

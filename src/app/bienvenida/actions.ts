@@ -8,10 +8,12 @@ import { goalError } from "./goal";
 import { getEntitlements } from "@/lib/entitlements";
 import { cookies } from "next/headers";
 import { isVoice, type Voice } from "@/lib/voice";
+import { UNITS_COOKIE } from "@/lib/i18n/server";
 import { DEMO_VOICE_COOKIE } from "@/lib/voice-server";
 import { limitError } from "@/lib/security/limits";
+import { isLocale, isUnits, type Locale, type Units } from "@/lib/i18n/locale";
 
-export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string; /** "Cómo te hablo" (0035): sale del nivel; se cambia después en Perfil (#255). */ voice?: Voice };
+export type Onboard = { name: string; goal: "grasa" | "recomp" | "fuerza"; sex: "m" | "f"; dob: string; heightCm: number; weight: number; goalWeight: number; goalDate: string; days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; level: "principiante" | "intermedio" | "avanzado"; minutes: number; consent: boolean; glp1: boolean; glp1Med: "semaglutida" | "tirzepatida" | "liraglutida" | "otro"; glp1Dow: number | null; country?: string; /** "Cómo te hablo" (0035): sale del nivel; se cambia después en Perfil (#255). */ voice?: Voice; /** #287: idioma de la bienvenida y unidades elegidas (0070). */ locale?: Locale; units?: Units };
 
 export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; error?: string }> {
   const v = await getViewer();
@@ -23,6 +25,7 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   if (!valid) return { ok: false, error: goalError({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, heightCm: o.heightCm }) ?? "Revisa los datos ingresados." };
   if (v.demo) {
     if (isVoice(o.voice)) (await cookies()).set(DEMO_VOICE_COOKIE, o.voice, { path: "/", sameSite: "lax", maxAge: 3600 });
+    if (isUnits(o.units)) (await cookies()).set(UNITS_COOKIE, o.units, { path: "/", sameSite: "lax", maxAge: 3600 });
     return { ok: true };
   }
   const sb = await createClient();
@@ -34,6 +37,8 @@ export async function completeOnboarding(o: Onboard): Promise<{ ok: boolean; err
   if (p.error) return { ok: false, error: "No se pudo guardar tu perfil." };
   // Aparte: si 0035 todavía no corrió, el registro queda en intermedio y la bienvenida sigue sin error.
   if (isVoice(o.voice)) await sb.from("profiles").update({ lenguaje: o.voice }).eq("id", v.id).then(() => null, () => null);
+  // #287: idioma y unidades, aparte por la misma razón (sin 0070 la bienvenida sigue sin error y todo queda en español).
+  if (isLocale(o.locale) || isUnits(o.units)) await sb.from("profiles").update({ ...(isLocale(o.locale) ? { locale: o.locale } : {}), ...(isUnits(o.units) ? { units: o.units } : {}) }).eq("id", v.id).then(() => null, () => null);
   // #255: la hora del recordatorio ya no se pregunta aquí; Hoy la pide después del primer entreno (ReminderPrompt).
   await sb.from("goals").update({ active: false }).eq("user_id", v.id).eq("active", true);
   const g = await sb.from("goals").insert({ user_id: v.id, start_weight: o.weight, goal_weight: o.goalWeight, goal_date: o.goalDate, mode: o.goal === "grasa" ? "acelerada" : o.goal === "fuerza" ? "fuerza" : "recomp" });

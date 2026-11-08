@@ -109,7 +109,7 @@ describe("bienvenida", () => {
     expect(cardOfferLabel({ plan: "completo", billing: "mes" })).toBe("Dejar mi tarjeta: $7.49 tu primer mes, en lugar de $14.99");
     expect(cardOfferLabel({ plan: "entreno", billing: "anual" })).toBe("Dejar mi tarjeta lista");
     const w = read("src/app/bienvenida/wizard.tsx");
-    expect(w).toContain("submitLabel={cardOfferLabel(choice)}");
+    expect(w).toContain("submitLabel={cardOfferLabel(choice, t)}");
     expect(w).toContain("Empezar gratis sin tarjeta");
     expect(w).toContain('track("card_ask_view", { where: "bienvenida" })');
   });

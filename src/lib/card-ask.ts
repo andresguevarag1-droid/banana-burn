@@ -4,6 +4,8 @@ import { CARD_ASK_WHERE, type CardAskWhere } from "@/app/api/track/event";
 import { DAY_MS, firstChargeMinor, PROMO_ID, amountMinorFor, promoApplies, promoPrice } from "./trial";
 import { PLANS, type Billing, type PlanId } from "./plans";
 import { usd2 } from "./num";
+import { translate, type T } from "./i18n/t";
+import { DEFAULT_LOCALE } from "./i18n/locale";
 import type { Entitlements } from "./entitlements";
 
 export type { CardAskWhere };
@@ -41,7 +43,7 @@ export function hoyCardBanner(ent: Pick<Entitlements, "access" | "trial" | "card
 export const firstSetAskKey = (userId: string) => `bb.first-set-card.${userId}`;
 
 /** Botón de la tarjeta opcional en la bienvenida (#280): el beneficio en dólares ("$4.99 tu primer mes, en lugar de $9.99"). */
-export function cardOfferLabel(c: { plan: PlanId; billing: Billing }): string {
-  if (!promoApplies(PROMO_ID, c.billing)) return "Dejar mi tarjeta lista";
-  return `Dejar mi tarjeta: ${usd2(promoPrice(c.plan))} tu primer mes, en lugar de ${usd2(PLANS.find((p) => p.id === c.plan)!.price.mes)}`;
+export function cardOfferLabel(c: { plan: PlanId; billing: Billing }, t: T = (s, v) => translate(DEFAULT_LOCALE, s, v)): string {
+  if (!promoApplies(PROMO_ID, c.billing)) return t("Dejar mi tarjeta lista");
+  return t("Dejar mi tarjeta: {price} tu primer mes, en lugar de {full}", { price: usd2(promoPrice(c.plan)), full: usd2(PLANS.find((p) => p.id === c.plan)!.price.mes) });
 }
