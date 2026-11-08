@@ -1,8 +1,11 @@
 // Eventos del embudo (sin terceros). Lo que llega del navegador se valida aquí antes de registrarse.
+import { LANDING_VARIANTS } from "@/lib/landing-variants";
 
 /** Eventos permitidos. Cualquier otro nombre se descarta. */
 export const FUNNEL_EVENTS = [
   "page_view",
+  // Portada (#285): qué hero vio, "general" o el utm_content del anuncio (LANDING_VARIANTS).
+  "landing_variant_view",
   "cta_click",
   "trial_banner_view",
   "plan_wall_view",
@@ -71,6 +74,7 @@ const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolea
   signup_view: { key: "inapp", ok: (v) => typeof v === "boolean" },
   signup_submit: { key: "method", ok: (v) => (SIGNUP_METHODS as readonly unknown[]).includes(v) },
   signup_error: { key: "reason", ok: (v) => (SIGNUP_ERRORS as readonly unknown[]).includes(v) },
+  landing_variant_view: { key: "variant", ok: (v) => (LANDING_VARIANTS as readonly unknown[]).includes(v) },
   card_ask_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
 };

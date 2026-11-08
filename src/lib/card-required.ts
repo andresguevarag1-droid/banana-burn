@@ -8,6 +8,8 @@
 //     en cada render, y las páginas públicas se regeneran cada hora (revalidate = 3600).
 // Solo demo: ?tarjeta=obligatoria lo activa para revisarlo (cardRequiredDemo).
 
+import { HERO_VARIANT_KEYS, variantPath } from "./landing-variants";
+
 /** Medianoche de Costa Rica (UTC-6) del 1 de enero de 2027. Misma fecha que public._card_required_from() (0067). */
 export const CARD_REQUIRED_FROM = "2027-01-01T06:00:00.000Z";
 
@@ -23,7 +25,7 @@ export const cardRequiredNow = (now = new Date(), from = CARD_REQUIRED_FROM) => 
  * Páginas públicas en caché (ISR, 1 h) con textos que cambian ese día. El cron de cobros de las 00:20 de Costa Rica las
  * regenera el día del cambio (cardSwitchDay), para que nadie vea "sin tarjeta" una hora más.
  */
-export const CARD_COPY_PATHS = ["/", "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt"] as const;
+export const CARD_COPY_PATHS = ["/", ...HERO_VARIANT_KEYS.map(variantPath), "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt"] as const;
 
 /** ¿Es el primer día de la tarjeta obligatoria? (las 24 h desde CARD_REQUIRED_FROM). */
 export const cardSwitchDay = (now = new Date(), from = CARD_REQUIRED_FROM) => now.getTime() >= Date.parse(from) && now.getTime() < Date.parse(from) + 864e5;

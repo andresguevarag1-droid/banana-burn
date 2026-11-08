@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import { publicEnvProblems } from "./src/lib/security/public-env";
 import { cleanUrl } from "./src/lib/env";
+import { variantRewrite } from "./src/lib/landing-variants";
 
 // Una llave secreta en una variable NEXT_PUBLIC_ terminaría en el JavaScript del navegador: el build se detiene.
 const envProblems = publicEnvProblems(process.env);
@@ -87,6 +88,10 @@ const nextConfig: NextConfig = {
     // Ilustraciones de técnica del mono (Higgsfield). Se sirven optimizadas desde /_next/image.
     remotePatterns: [{ protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net", pathname: "/user_3KlOTMXim7g88SAyF4A03SG6JZ6/**" }],
     minimumCacheTTL: 2678400,
+  },
+  // Portada según el anuncio (#285): /?utm_content=<variante conocida> sirve /anuncio/<variante> (estática) sin cambiar la dirección.
+  async rewrites() {
+    return { beforeFiles: [variantRewrite()], afterFiles: [], fallback: [] };
   },
   async headers() {
     return [

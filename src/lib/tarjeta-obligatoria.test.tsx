@@ -60,7 +60,7 @@ describe("el interruptor por fecha (card-required.ts)", () => {
     expect(cardSwitchDay(new Date(DEC31_2359))).toBe(false);
     expect(cardSwitchDay(new Date("2027-01-01T06:20:00Z"))).toBe(true);
     expect(cardSwitchDay(new Date("2027-01-02T06:20:00Z"))).toBe(false);
-    expect([...CARD_COPY_PATHS]).toEqual(["/", "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt"]);
+    expect([...CARD_COPY_PATHS]).toEqual(["/", "/anuncio/reel_cuanto_peso", "/anuncio/reel_gym_condominio", "/anuncio/reel_casa_gym_parque", "/anuncio/reel_nadie_te_mira", "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt"]);
     expect(readFileSync("src/app/api/cron/cobros/route.ts", "utf8")).toContain("if (cardSwitchDay()) for (const p of CARD_COPY_PATHS)");
     expect(readFileSync("vercel.json", "utf8")).toContain('"schedule": "20 6 * * *"');
   });
