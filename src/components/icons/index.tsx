@@ -15,6 +15,6 @@ export {
   Carrot, Cookie, Leaf, Coffee, Pill, Syringe, Smiley, SmileyMeh, SmileySad, Star, Eye, EyeSlash, PencilSimple, DotsThree, Link, Export,
   ArrowSquareOut, ArrowUUpLeft, CookingPot, Flask, OrangeSlice, Bed, Books, Confetti, FlagCheckered, PersonArmsSpread, PersonSimpleWalk, PushPin, TreePalm, List,
   Sneaker, SneakerMove, Mountains, Gauge, Trophy, Vibrate, Fire, Path,
-  HandCoins, Wallet, Crown, MapPin, Stop, WifiSlash, CloudArrowUp, ArrowsClockwise, Bug, ChatCircleText, Compass, IdentificationCard, UploadSimple, Circle, Lifebuoy, ImageSquare, Paperclip, Headset, NotePencil, Hourglass, Buildings, SwimmingPool, QrCode, WhatsappLogo, UsersThree,
+  HandCoins, Wallet, Crown, MapPin, Stop, WifiSlash, CloudArrowUp, ArrowsClockwise, Bug, ChatCircleText, Translate, Compass, IdentificationCard, UploadSimple, Circle, Lifebuoy, ImageSquare, Paperclip, Headset, NotePencil, Hourglass, Buildings, SwimmingPool, QrCode, WhatsappLogo, UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
 export type { Icon as PhosphorIcon, IconWeight } from "@phosphor-icons/react";

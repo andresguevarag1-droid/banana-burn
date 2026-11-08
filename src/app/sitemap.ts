@@ -5,6 +5,9 @@ import { SITE_URL } from "@/lib/env";
 const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: "weekly" | "monthly" | "yearly" }[] = [
   { path: "/", priority: 1, changeFrequency: "weekly" },
   { path: "/precios", priority: 0.9, changeFrequency: "monthly" },
+  // #287: portada y precios en inglés.
+  { path: "/en", priority: 0.7, changeFrequency: "weekly" },
+  { path: "/en/pricing", priority: 0.6, changeFrequency: "monthly" },
   { path: "/glp1", priority: 0.9, changeFrequency: "monthly" },
   { path: "/temporadas", priority: 0.8, changeFrequency: "weekly" },
   { path: "/running", priority: 0.8, changeFrequency: "weekly" },

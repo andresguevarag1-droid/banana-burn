@@ -8,6 +8,8 @@ import { cookies } from "next/headers";
 import { isVoice } from "@/lib/voice";
 import { DEMO_VOICE_COOKIE } from "@/lib/voice-server";
 import { limitError } from "@/lib/security/limits";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, isLocale, isUnits } from "@/lib/i18n/locale";
+import { UNITS_COOKIE } from "@/lib/i18n/server";
 
 export async function updateTraining(input: { days: number; equipment: "gym" | "casa" | "mixto" | "ninguno"; mode: "acelerada" | "recomp" | "fuerza"; level: "principiante" | "intermedio" | "avanzado"; minutes: number | null }) {
   const v = await getViewer();
@@ -114,5 +116,29 @@ export async function setNewPassword(password: string): Promise<{ ok: boolean; d
   const sb = await createClient();
   const { error } = await sb.auth.updateUser({ password: pw });
   if (error) return { ok: false, error: /reauth|recent/i.test(error.message) ? "Por seguridad, abre de nuevo el enlace del correo y escribe tu contraseña." : /weak|pwned|leaked/i.test(error.message) ? "Esa contraseña es muy débil o aparece en filtraciones. Prueba otra." : /same/i.test(error.message) ? "Elige una contraseña distinta de la anterior." : "No pudimos cambiar la contraseña. Intenta de nuevo." };
+  return { ok: true };
+}
+
+/**
+ * #287: idioma de la app y de los correos, y unidades (kg y cm o lb y ft/in). Se guarda en el perfil (0070) y en la
+ * cookie del idioma, para que /entrar y la portada lo respeten al salir. En demo, solo cookies.
+ */
+export async function updateLanguage(input: { locale?: unknown; units?: unknown }): Promise<{ ok: boolean; demo?: boolean; error?: string }> {
+  const v = await getViewer();
+  if (!v) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  { const lim = v.demo ? null : await limitError("cuenta:perfil", v.id); if (lim) return { ok: false, error: lim }; }
+  const locale = isLocale(input?.locale) ? input.locale : null;
+  const units = isUnits(input?.units) ? input.units : null;
+  if (!locale && !units) return { ok: false, error: "Elige una de las opciones." };
+  const jar = await cookies();
+  if (locale) jar.set(LOCALE_COOKIE, locale, { path: "/", sameSite: "lax", maxAge: LOCALE_COOKIE_MAX_AGE });
+  if (v.demo) {
+    if (units) jar.set(UNITS_COOKIE, units, { path: "/", sameSite: "lax", maxAge: 3600 });
+    return { ok: true, demo: true };
+  }
+  const sb = await createClient();
+  const { error } = await sb.from("profiles").update({ ...(locale ? { locale } : {}), ...(units ? { units } : {}) }).eq("id", v.id);
+  if (error) return { ok: false, error: "No se pudo guardar. Intenta de nuevo." };
+  revalidatePath("/app", "layout");
   return { ok: true };
 }
