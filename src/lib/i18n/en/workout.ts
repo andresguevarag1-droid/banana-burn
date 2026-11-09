@@ -1,5 +1,8 @@
 // en-US: el reproductor del entreno, el Recap y "¿Entrenamos ahora?" (#300).
 import type { ExerciseId } from "@/lib/engine/data";
+import { PLAYER } from "./workout-player";
+import { RECAP } from "./workout-recap";
+import { SCREENS } from "./workout-screens";
 
 /** Nombre en inglés de cada ejercicio del motor, por su slug (EX en src/lib/engine/data.ts). Si se agrega uno a EX sin su nombre aquí, tsc avisa. */
 export const EXERCISE_NAMES: Record<ExerciseId, string> = {
@@ -66,4 +69,4 @@ const CORE: Record<string, string> = {
   "Primer lado listo. Cambia de lado: {secs} segundos": "First side done. Switch sides: {secs} seconds", "{side}: {secs} segundos": "{side}: {secs} seconds",
 };
 
-export const WORKOUT: Record<string, string> = { ...CORE };
+export const WORKOUT: Record<string, string> = { ...CORE, ...SCREENS, ...RECAP, ...PLAYER };
