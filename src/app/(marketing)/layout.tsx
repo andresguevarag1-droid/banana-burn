@@ -6,6 +6,7 @@ import { FunnelTracker } from "@/components/analytics";
 import { SITE_URL } from "@/lib/env";
 import { ogImage } from "./seo";
 import { GLP1 } from "@/lib/copy";
+import { LocaleCookie } from "@/components/locale-cookie";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -46,6 +47,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       </header>
       <main>{children}</main>
       <FunnelTracker view="page_view" perPath />
+      <LocaleCookie locale="es-419" />
       <footer className="mt-24 border-t border-line">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <Logo />
@@ -56,6 +58,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <Link className={LINK} href="/privacidad">Privacidad</Link>
             <Link className={LINK} href="/terminos">Términos</Link>
             <a className={LINK} href="mailto:hola@bananaburn.app">hola@bananaburn.app</a>
+            {/* #287: selector de idioma. */}
+            <Link className={LINK} href="/en" hrefLang="en-US" lang="en-US" data-cta="idioma-en">English</Link>
           </nav>
         </div>
         <p className="mx-auto max-w-6xl px-4 sm:px-6 pb-10 text-xs text-muted text-pretty">© {new Date().getFullYear()} Atlas Resources SRL. Banana Burn, hecho en Costa Rica para toda Latinoamérica. No sustituye consejo médico. LinkApp es una marca registrada en Costa Rica, usada con permiso.</p>

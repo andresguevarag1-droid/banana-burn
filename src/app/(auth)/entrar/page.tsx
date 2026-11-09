@@ -13,6 +13,10 @@ import { offer } from "@/lib/offer";
 import { requestPlatform } from "@/lib/platform-server";
 import { detectInstallEnv, inAppOpenIn } from "@/lib/install-env";
 import { CONDO_COOKIE, normalizeCondoCode } from "@/lib/condos";
+import { getLocale } from "@/lib/i18n/server";
+import { offerFor } from "@/lib/i18n/offer";
+import { tr } from "@/lib/i18n/t";
+import { LocaleProvider } from "@/lib/i18n/client";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
@@ -36,8 +40,11 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   // Quien llega desde la página de su condominio (/c/<código>) tiene la oferta del condominio, no el 50 % del primer mes:
   // en Soho Paradisus es gratis hasta el 31 dic y luego precio normal; en los demás, el mes gratis del condominio.
   const condo = signup && !v && !!normalizeCondoCode(jar.get(CONDO_COOKIE)?.value);
-  const base = offer();
-  const o = condo ? { ...base, signupChecks: ["Beneficio de tu condominio", "Sin tarjeta"] as [string, string], signupLine: "Al crear tu cuenta se activa el beneficio de tu condominio." } : base;
+  // #287: idioma de la cuenta, de la última página pública (/en) o del navegador; sin nada de eso, español.
+  const locale = await getLocale();
+  const t = tr(locale);
+  const base = locale === "es-419" ? offer() : offerFor(locale);
+  const o = condo ? { ...base, signupChecks: [t("Beneficio de tu condominio"), t("Sin tarjeta")] as [string, string], signupLine: t("Al crear tu cuenta se activa el beneficio de tu condominio.") } : base;
   // Dentro de Instagram o Facebook: sin Google (lo bloquea ahí) y con el enlace para abrirla en Safari o Chrome.
   const openIn = inAppOpenIn(detectInstallEnv((await headers()).get("user-agent") ?? ""));
   return (
@@ -52,48 +59,48 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
             {blocked ? (
               <div className="animate-rise">
                 <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
-                <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Tu cuenta está pausada</h1>
-                <p className="mt-2 text-muted text-pretty">Por ahora no puedes entrar con esta cuenta. Escríbenos a <a href="mailto:hola@bananaburn.app" className="font-semibold text-ink underline underline-offset-2">hola@bananaburn.app</a> y te ayudamos a resolverlo.</p>
+                <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{t("Tu cuenta está pausada")}</h1>
+                <p className="mt-2 text-muted text-pretty">{t("Por ahora no puedes entrar con esta cuenta. Escríbenos a")} <a href="mailto:hola@bananaburn.app" className="font-semibold text-ink underline underline-offset-2">hola@bananaburn.app</a> {t("y te ayudamos a resolverlo.")}</p>
                 <form action="/auth/salir" method="post" className="mt-8">
                   <input type="hidden" name="next" value="/entrar" />
-                  <button className="btn-ghost w-full h-13"><SignOut weight="bold" className="size-5" />Entrar con otra cuenta</button>
+                  <button className="btn-ghost w-full h-13"><SignOut weight="bold" className="size-5" />{t("Entrar con otra cuenta")}</button>
                 </form>
               </div>
             ) : v ? (
               <div className="animate-rise">
                 <span className="grid place-items-center size-16 rounded-2xl bg-banana-soft text-banana-ink"><MonkeyBanana className="size-10" /></span>
-                <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">Ya tienes la sesión abierta</h1>
-                <p className="mt-2 text-muted">Entraste como <b className="text-ink break-all">{v.email}</b>.</p>
-                <Link href={v.onboarded ? "/app" : "/bienvenida"} className="btn-primary w-full h-13 mt-8">{v.onboarded ? "Ir a mi cuenta" : "Terminar de crear mi plan"}<ArrowRight className="size-5" /></Link>
+                <h1 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">{t("Ya tienes la sesión abierta")}</h1>
+                <p className="mt-2 text-muted">{t("Entraste como")} <b className="text-ink break-all">{v.email}</b>.</p>
+                <Link href={v.onboarded ? "/app" : "/bienvenida"} className="btn-primary w-full h-13 mt-8">{v.onboarded ? t("Ir a mi cuenta") : t("Terminar de crear mi plan")}<ArrowRight className="size-5" /></Link>
                 <form action="/auth/salir" method="post" className="mt-3">
                   <input type="hidden" name="next" value="/entrar" />
-                  <button className="btn-ghost w-full h-13"><SignOut weight="bold" className="size-5" />Entrar con otra cuenta</button>
+                  <button className="btn-ghost w-full h-13"><SignOut weight="bold" className="size-5" />{t("Entrar con otra cuenta")}</button>
                 </form>
               </div>
             ) : (
               <>
-                {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />Llegaste con una invitación. Crea tu cuenta y entrena gratis {TRIAL_DAYS} días.</p>}
-                <Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} openIn={openIn} /></Suspense>
+                {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />{t("Llegaste con una invitación. Crea tu cuenta y entrena gratis {n} días.", { n: TRIAL_DAYS })}</p>}
+                <LocaleProvider locale={locale}><Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} openIn={openIn} /></Suspense></LocaleProvider>
               </>
             )}
           </div>
         </main>
-        <footer className="text-xs text-muted text-center text-pretty">Al continuar aceptas los <Link href="/terminos" className="tap underline underline-offset-2 hover:text-ink">Términos</Link> y la <Link href="/privacidad" className="tap underline underline-offset-2 hover:text-ink">Política de privacidad</Link>.</footer>
+        <footer className="text-xs text-muted text-center text-pretty">{t("Al continuar aceptas los")} <Link href="/terminos" className="tap underline underline-offset-2 hover:text-ink">{t("Términos")}</Link> {t("y la")} <Link href="/privacidad" className="tap underline underline-offset-2 hover:text-ink">{t("Política de privacidad")}</Link>.</footer>
       </div>
       <aside className="hidden lg:flex relative overflow-hidden bg-banana p-14 flex-col justify-end">
         <Banana weight="fill" className="absolute -top-20 -right-20 size-[420px] text-ink opacity-10 rotate-12 select-none" />
         {signup ? (
           <div className="relative max-w-md">
-            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight text-balance">Tu prueba de {TRIAL_DAYS} días trae todo incluido.</p>
+            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight text-balance">{t("Tu prueba de {n} días trae todo incluido.", { n: TRIAL_DAYS })}</p>
             <ul className="mt-8 space-y-3 text-lg font-semibold text-ink">
-              {TRIAL_INCLUDES.map((t) => <li key={t} className="flex gap-3"><Check weight="bold" aria-hidden className="mt-1 size-5 shrink-0" />{t}</li>)}
+              {TRIAL_INCLUDES.map((s) => <li key={s} className="flex gap-3"><Check weight="bold" aria-hidden className="mt-1 size-5 shrink-0" />{t(s)}</li>)}
             </ul>
             <p className="mt-8 flex items-center gap-2 font-semibold text-ink/70 text-pretty"><Monkey className="size-6 shrink-0" />{o.signupLine}</p>
           </div>
         ) : (
           <blockquote className="relative max-w-md">
-            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight">“Hoy toca Piernas de acero y pecho firme. Ayer descansaste. Tu sentadilla sube 2.5 kg.”</p>
-            <p className="mt-6 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />Coach Banana, cada mañana</p>
+            <p className="text-4xl font-extrabold tracking-tight text-ink leading-tight">{t("“Hoy toca Piernas de acero y pecho firme. Ayer descansaste. Tu sentadilla sube 2.5 kg.”")}</p>
+            <p className="mt-6 flex items-center gap-2 font-semibold text-ink/70"><Monkey className="size-6" />{t("Coach Banana, cada mañana")}</p>
           </blockquote>
         )}
       </aside>

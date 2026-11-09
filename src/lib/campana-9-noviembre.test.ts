@@ -83,7 +83,8 @@ describe("anuncios de la campaña del 9 de noviembre", () => {
     expect(doc).toContain('botón "Empezar mi entreno"');
     for (const s of ["Sugerido. Ajústalo si quieres.", "Descansa", "Sigue", "Terminé la serie", "Ver cómo se hace"]) expect(guided).toContain(s);
     expect(recap).toContain('"Entreno completado"');
-    for (const s of ['t="Gimnasio"', 't="Sin equipo"', 't="En casa con mancuernas"']) expect(wizard).toContain(s);
+    // #287: los textos pasan por t() (la frase en español sigue en el código).
+    for (const s of ['t={t("Gimnasio")}', 't={t("Sin equipo")}', 't={t("En casa con mancuernas")}']) expect(wizard).toContain(s);
     expect(existsSync("public/landing/entreno.png")).toBe(true);
     expect(existsSync("public/brand/mascota-sola.webp")).toBe(true);
     expect(existsSync("src/lib/pay-provider.ts") && readFileSync("src/lib/pay-provider.ts", "utf8")).toContain("export function providerFor");

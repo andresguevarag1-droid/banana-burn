@@ -11,6 +11,8 @@ import { BETA_GRACE_UNTIL, betaLive } from "@/lib/plans";
 import { isOnvoConfigured } from "@/lib/onvo";
 import { betaDates } from "@/components/beta-notice";
 import { cardRequiredDemo } from "@/lib/card-required";
+import { getPrefs } from "@/lib/i18n/server";
+import { LocaleProvider } from "@/lib/i18n/client";
 
 export const metadata = { title: "Bienvenida", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -61,11 +63,13 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   const startOnCard = v.demo && cardOffer && vista === "tarjeta";
   // Solo demo: ?vista=lenguaje abre el paso de experiencia para revisarlo ("Cómo te hablo" está en Perfil desde #255).
   const startOnVoice = v.demo && vista === "lenguaje";
+  // #287: idioma de la cuenta (o el de /en y el navegador); las unidades guardadas solo si ya terminó la bienvenida.
+  const prefs = await getPrefs();
 
   return (
     <>
       <TzSync current={v.tz} />
-      <Wizard name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} cardRequired={cardRequired} onboarded={resumeCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard || resumeCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} />
+      <LocaleProvider locale={prefs.locale} units={prefs.units}><Wizard locale={prefs.locale} units={v.onboarded ? prefs.units : null} name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} cardRequired={cardRequired} onboarded={resumeCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard || resumeCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} /></LocaleProvider>
     </>
   );
 }

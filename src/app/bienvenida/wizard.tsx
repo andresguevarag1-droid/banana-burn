@@ -5,7 +5,7 @@ import { ONBOARDING_STEPS } from "@/app/api/track/event";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning } from "@/components/icons";
-import { ageOn, DAY_NAMES, planWeek, scheduleFor, targets } from "@/lib/engine";
+import { ageOn, planWeek, scheduleFor, targets } from "@/lib/engine";
 import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
 import { Confetti } from "@/components/confetti";
@@ -22,12 +22,15 @@ import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoP
 import { money as money2 } from "@/lib/copy";
 import { voiceForLevel } from "@/lib/voice";
 import { cardOfferLabel } from "@/lib/card-ask";
+import { tr, type T } from "@/lib/i18n/t";
+import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "@/lib/i18n/locale";
+import { cmToFtIn, fmtNumber, fmtWeight, ftInToCm, kgToLb, lbToKg } from "@/lib/i18n/format";
+import { countryName, dayName, monthNames, planName } from "@/lib/i18n/names";
 
 const STEPS = 7;
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 /** Fecha local del teléfono (no UTC: en Costa Rica después de las 6 p. m. el día UTC ya es mañana). */
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const COMPLETO = PLANS.find((p) => p.nutrition)!;
 const GOAL_ICON: Record<Goal, React.ReactNode> = { grasa: <BananaFlame />, recomp: <Scales weight="duotone" />, fuerza: <Barbell weight="duotone" /> };
@@ -41,7 +44,7 @@ type Dob = { d: number | null; m: number | null; y: number | null };
  * Número grande que se puede escribir (teclado decimal) o ajustar con − y +.
  * Vacío muestra un valor de referencia atenuado; − o + parten de ese valor.
  */
-function Num({ id, label, value, onChange, step, unit, min, max, d = 1, hint }: { id: string; label: string; value: number | null; onChange: (n: number) => void; step: number; unit: string; min: number; max: number; d?: number; hint: number }) {
+function Num({ id, label, value, onChange, step, unit, min, max, d = 1, hint, less = "Menos", more = "Más" }: { id: string; label: string; value: number | null; onChange: (n: number) => void; step: number; unit: string; min: number; max: number; d?: number; hint: number; less?: string; more?: string }) {
   const fmt = (n: number) => (d ? nf(n, d) : String(Math.round(n)));
   const [text, setText] = useState(value == null ? "" : fmt(value));
   const [editing, setEditing] = useState(false);
@@ -52,7 +55,7 @@ function Num({ id, label, value, onChange, step, unit, min, max, d = 1, hint }: 
   const bump = (dir: 1 | -1) => { onChange(clamp((value ?? hint) + dir * step)); try { navigator.vibrate?.(8); } catch { /* sin vibración */ } };
   return (
     <div className={`flex items-center rounded-3xl bg-white border h-20 transition-[border-color,box-shadow] duration-150 focus-within:border-ink focus-within:ring-4 focus-within:ring-banana/40 ${value == null ? "border-dashed border-ink/30" : "border-line"}`}>
-      <button type="button" onClick={() => bump(-1)} className="pressable grid place-items-center w-16 h-full rounded-l-3xl text-muted active:text-ink active:bg-cream" aria-label={`Menos ${nf(step, step % 1 ? 1 : 0)} ${unit}`}><Minus weight="bold" className="size-6" /></button>
+      <button type="button" onClick={() => bump(-1)} className="pressable grid place-items-center w-16 h-full rounded-l-3xl text-muted active:text-ink active:bg-cream" aria-label={`${less} ${nf(step, step % 1 ? 1 : 0)} ${unit}`}><Minus weight="bold" className="size-6" /></button>
       <label htmlFor={id} className="flex-1 min-w-0 h-full flex items-center justify-center gap-1 cursor-text">
         <input
           id={id} inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label={label}
@@ -70,7 +73,7 @@ function Num({ id, label, value, onChange, step, unit, min, max, d = 1, hint }: 
         />
         <span className="text-lg text-faint">{unit}</span>
       </label>
-      <button type="button" onClick={() => bump(1)} className="pressable grid place-items-center w-16 h-full rounded-r-3xl text-muted active:text-ink active:bg-cream" aria-label={`Más ${nf(step, step % 1 ? 1 : 0)} ${unit}`}><Plus weight="bold" className="size-6" /></button>
+      <button type="button" onClick={() => bump(1)} className="pressable grid place-items-center w-16 h-full rounded-r-3xl text-muted active:text-ink active:bg-cream" aria-label={`${more} ${nf(step, step % 1 ? 1 : 0)} ${unit}`}><Plus weight="bold" className="size-6" /></button>
     </div>
   );
 }
@@ -91,15 +94,18 @@ const SELECT = "input h-14 text-lg px-3";
  * #269: el texto principal del paso de la tarjeta obligatoria. El mensual lleva el 50 % del primer mes; el anual va a precio
  * normal (PROMO_TERMS). Sin fecha (no debería pasar): "al terminar tu prueba".
  */
-export function requiredLine(chargeDay: string | null, c: PlanChoice): string {
-  const when = chargeDay ? `El ${chargeDay}` : "Al terminar tu prueba";
-  const charge = c.billing === "mes" ? `se cobra ${money2(promoPrice(c.plan))}, tu primer mes con 50 %` : `se cobran ${money2(PLANS.find((p) => p.id === c.plan)!.price.anual)} del plan anual`;
-  return `Hoy no se cobra nada. ${when} ${charge}. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.`;
+export function requiredLine(chargeDay: string | null, c: PlanChoice, t: T = tr(DEFAULT_LOCALE)): string {
+  const when = chargeDay ? t("El {day}", { day: chargeDay }) : t("Al terminar tu prueba");
+  const charge = c.billing === "mes" ? t("se cobra {price}, tu primer mes con 50 %", { price: money2(promoPrice(c.plan)) }) : t("se cobran {price} del plan anual", { price: money2(PLANS.find((p) => p.id === c.plan)!.price.anual) });
+  return `${t("Hoy no se cobra nada.")} ${when} ${charge}. ${t("Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.")}`;
 }
 
-export function Wizard({ name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, cardRequired = false, onboarded = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
+export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, cardRequired = false, onboarded = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
   /** Solo demo: abrir en el paso de experiencia (?vista=lenguaje). */
   startOnVoice?: boolean;
+  /** #287: idioma de la bienvenida (se guarda en el perfil) y unidades guardadas, si ya las eligió. */
+  locale?: Locale;
+  units?: Units | null;
   name: string; demo: boolean; initialGoal: Goal | null; glp1: boolean; country: string | null; intent: CheckoutIntent | null; trialEndsAt: string | null;
   /**
    * 0043: paso opcional al final para dejar la tarjeta lista y pagar 50 % menos el primer mes (beta o prueba de 7 días,
@@ -129,6 +135,12 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   nutrition?: boolean;
 }) {
   const router = useRouter();
+  const t = tr(locale);
+  const dateLocale = locale;
+  // #287: kg y cm o lb y ft/in. Se elige aquí; los datos siempre se guardan en kg y cm.
+  const [units, setUnits] = useState<Units>(initialUnits ?? defaultUnits(locale));
+  const imperial = units === "imperial";
+  const wlabel = (kg: number, d = 1) => fmtWeight(kg, units, locale, imperial ? 0 : d);
   const cardStep = cardOffer || cardRequired;
   const TOTAL = cardStep ? STEPS + 1 : STEPS;
   const [step, setStep] = useState(startOnCard && cardStep ? STEPS : startOnVoice ? 3 : 0);
@@ -178,10 +190,10 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
   });
 
   const full: Onboard | null = o.sex && dobIso && o.heightCm != null && o.weight != null && o.goalWeight != null && o.goalDate && o.level
-    ? { ...o, sex: o.sex, dob: dobIso, heightCm: o.heightCm, weight: o.weight, goalWeight: o.goalWeight, level: o.level, voice: voiceForLevel(o.level) }
+    ? { ...o, sex: o.sex, dob: dobIso, heightCm: o.heightCm, weight: o.weight, goalWeight: o.goalWeight, level: o.level, voice: voiceForLevel(o.level), locale, units }
     : null;
   // Metas del resumen final (cálculo barato: no hace falta memorizarlo).
-  const t = (() => {
+  const tg = (() => {
     if (!full) return null;
     const a = ageOn(full.dob);
     const base = targets({ kg: full.weight, heightCm: full.heightCm, age: a, sex: full.sex, mode: full.goal === "grasa" ? "acelerada" : full.goal === "fuerza" ? "fuerza" : "recomp" });
@@ -190,15 +202,17 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     return { ...base, kcal: g.kcal, protein: g.protein };
   })();
 
-  const goalErr = o.weight != null && o.goalWeight != null && o.heightCm != null ? goalError({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, heightCm: o.heightCm }) : null;
+  let minGoal = "";
+  const goalErrRaw = o.weight != null && o.goalWeight != null && o.heightCm != null ? goalError({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, heightCm: o.heightCm }, (kg) => { minGoal = fmtWeight(kg, units, locale, 0); return "{min}"; }) : null;
+  const goalErr = goalErrRaw && t(goalErrRaw, { min: minGoal });
   const pace = o.weight != null && o.goalWeight != null && o.goalDate && !goalErr ? paceFor({ goal: o.goal, weight: o.weight, goalWeight: o.goalWeight, goalDate: o.goalDate }) : null;
   const sug = o.weight != null && o.goalWeight != null ? suggestDate(o.weight, o.goalWeight) : null;
   const parqYes = parq.some(Boolean);
   const week = planWeek(0, scheduleFor(o.days), { equipment: o.equipment, level: o.level ?? "intermedio", minutes: o.minutes });
   // En la beta el fin llega a medianoche del día siguiente: se muestra el último día con acceso (igual que el aviso de la tarjeta).
-  const trialEnd = trialBeta && betaLastFree ? betaLastFree : trialEndsAt ? new Date(trialEndsAt).toLocaleDateString("es-419", { day: "numeric", month: "long" }) : null;
+  const trialEnd = trialBeta && betaLastFree ? betaLastFree : trialEndsAt ? new Date(trialEndsAt).toLocaleDateString(dateLocale, { day: "numeric", month: "long" }) : null;
   const intentPlan = intent ? PLANS.find((p) => p.id === intent.plan) : null;
-  const chargeDay = offerChargeAt ? new Date(offerChargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" }) : null;
+  const chargeDay = offerChargeAt ? new Date(offerChargeAt).toLocaleDateString(dateLocale, { day: "numeric", month: "long", timeZone: "America/Costa_Rica" }) : null;
 
   const canNext = [
     true,
@@ -216,7 +230,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
       setErr(null);
       start(async () => {
         const r = await safeAction(completeOnboarding(full));
-        if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
+        if (!r.ok) return setErr(t(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo."));
         setProfileSaved(true);
         go(STEPS);
       });
@@ -231,7 +245,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     if (!full) return false;
     setErr(null);
     const r = await safeAction(completeOnboarding(full));
-    if (!r.ok) { setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo."); return false; }
+    if (!r.ok) { setErr(t(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.")); return false; }
     return true;
   }
 
@@ -241,7 +255,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     start(async () => {
       if (!profileSaved && full) {
         const r = await safeAction(completeOnboarding(full));
-        if (!r.ok) return setErr(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo.");
+        if (!r.ok) return setErr(t(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo."));
       }
       if (card) {
         setSaved(card);
@@ -255,7 +269,7 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     });
   }
 
-  if (step === TOTAL && full && t) {
+  if (step === TOTAL && full && tg) {
     const chargeAt = saved?.charge?.chargeAt ?? (saved ? offerChargeAt ?? new Date(Date.now() + 7 * DAY_MS).toISOString() : null);
     const savedPromo = saved?.charge ? saved.charge.promo : choice.billing === "mes";
     const savedAmount = saved?.charge?.amount ?? (savedPromo ? promoPrice(choice.plan) : PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]);
@@ -267,28 +281,28 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
         <Confetti />
         <div className="max-w-md w-full animate-rise">
           <span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink"><MonkeyBanana className="size-16" /></span>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-ink text-balance">¡Tu plan está listo, {full.name.trim().split(" ")[0]}!</h1>
-          <p className="mt-2 text-muted text-pretty">{nutrition ? "Calculado para ti. Se ajusta solo cada semana con tu peso real." : "Calculado para ti. Tus cargas suben solas cuando dominas el rango."}</p>
+          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-ink text-balance">{t("¡Tu plan está listo, {name}!", { name: full.name.trim().split(" ")[0] })}</h1>
+          <p className="mt-2 text-muted text-pretty">{nutrition ? t("Calculado para ti. Se ajusta solo cada semana con tu peso real.") : t("Calculado para ti. Tus cargas suben solas cuando dominas el rango.")}</p>
           {saved && chargeAt ? (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              Tu tarjeta quedó lista. Hoy no te cobramos. El {new Date(chargeAt).toLocaleDateString("es-419", { day: "numeric", month: "long" })} se cobran {money2(savedAmount)}{savedPromo ? ", tu primer mes con 50 % de descuento" : ""}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.
+              {t(savedPromo ? "Tu tarjeta quedó lista. Hoy no te cobramos. El {day} se cobran {price}, tu primer mes con 50 % de descuento, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes." : "Tu tarjeta quedó lista. Hoy no te cobramos. El {day} se cobran {price}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.", { day: new Date(chargeAt).toLocaleDateString(dateLocale, { day: "numeric", month: "long" }), price: money2(savedAmount) })}
             </p>
           ) : trialEnd && (
             <p className="mt-5 rounded-2xl bg-peel/10 px-4 py-3 text-sm font-semibold text-ink text-pretty">
-              {trialBeta ? `Eres de los primeros en Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : `Tu prueba gratis de ${TRIAL_DAYS} días ya empezó: tienes todo incluido hasta el ${trialEnd}, sin tarjeta.`}
+              {trialBeta ? `Eres de los primeros en Banana Burn: tienes todo incluido gratis hasta el ${trialEnd}. Todavía no guardaste una tarjeta, así que no hay cobros${betaFirstPaid ? `; desde el ${betaFirstPaid} la app se paga y te avisaremos antes` : ""}.` : t("Tu prueba gratis de {n} días ya empezó: tienes todo incluido hasta el {day}, sin tarjeta.", { n: TRIAL_DAYS, day: trialEnd })}
             </p>
           )}
           <div className="mt-6 grid grid-cols-2 gap-3 text-left">
-            {([...(nutrition ? [[<BananaFlame key="k" className="size-5 text-ember-ink" />, t.kcal.toLocaleString("es-419"), "kcal al día"], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${t.protein} g`, "proteína al día"]] as const : [[<Timer key="m" weight="duotone" className="size-5 text-ember-ink" />, `${full.minutes} min`, "por sesión"], [<PersonSimpleRun key="l" weight="duotone" className="size-5 text-banana-ink" />, full.level.charAt(0).toUpperCase() + full.level.slice(1), "tu nivel"]] as const), [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, `${full.days} días`, "por semana"], [<Target key="g" weight="duotone" className="size-5 text-peel" />, `${nf(full.goalWeight)} kg`, new Date(full.goalDate + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
+            {([...(nutrition ? [[<BananaFlame key="k" className="size-5 text-ember-ink" />, tg.kcal.toLocaleString("es-419"), t("kcal al día")], [<Egg key="p" weight="duotone" className="size-5 text-banana-ink" />, `${tg.protein} g`, t("proteína al día")]] as const : [[<Timer key="m" weight="duotone" className="size-5 text-ember-ink" />, `${full.minutes} min`, t("por sesión")], [<PersonSimpleRun key="l" weight="duotone" className="size-5 text-banana-ink" />, t(full.level.charAt(0).toUpperCase() + full.level.slice(1)), t("tu nivel")]] as const), [<Barbell key="d" weight="duotone" className="size-5 text-banana-ink" />, t("{n} días", { n: full.days }), t("por semana")], [<Target key="g" weight="duotone" className="size-5 text-peel" />, wlabel(full.goalWeight), new Date(full.goalDate + "T12:00:00").toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "numeric" })]] as const).map(([e, v, l], i) => (
               <div key={l} className="card p-4 transition-[opacity,translate] duration-300 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:translate-y-2" style={{ transitionDelay: `${150 + i * 60}ms` }}><span className="grid place-items-center size-9 rounded-xl bg-cream">{e}</span><p className="mt-1 text-2xl font-extrabold text-ink tabular-nums">{v}</p><p className="text-xs font-semibold text-muted">{l}</p></div>
             ))}
           </div>
-          {demo && <p className="mt-4 text-sm text-banana-ink">Modo demo: no se guardó nada.</p>}
+          {demo && <p className="mt-4 text-sm text-banana-ink">{t("Modo demo: no se guardó nada.")}</p>}
           <FunnelTracker />
-          <button data-cta="bienvenida-hoy" onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">Ver mi primer entreno <ArrowRight className="size-5" /></button>
+          <button data-cta="bienvenida-hoy" onClick={() => { router.replace("/app"); router.refresh(); }} className="btn-primary w-full h-14 mt-8 text-base">{t("Ver mi primer entreno")} <ArrowRight className="size-5" /></button>
           {intent && intentPlan && !saved && (
             <button data-cta="bienvenida-activar" onClick={() => router.replace(intentPath(intent))} className="tap mt-4 w-full text-sm font-semibold text-muted underline underline-offset-4 transition-colors duration-150 hover:text-ink">
-              {trialEnd ? `¿Ya te decidiste? Activa ${intentPlan.name} desde hoy` : `Activar ${intentPlan.name}`}
+              {trialEnd ? t("¿Ya te decidiste? Activa {plan} desde hoy", { plan: planName(intentPlan.name, locale) }) : t("Activar {plan}", { plan: planName(intentPlan.name, locale) })}
             </button>
           )}
         </div>
@@ -301,190 +315,204 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
     <main data-own-safe-top className="min-h-dvh bg-paper flex flex-col">
       <header className="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto max-w-md flex items-center justify-between h-12">
-          {step > 0 && !(onboarded && step === STEPS) ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-11 rounded-full bg-white border border-line" aria-label="Atrás"><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
-          <span className="text-sm font-bold text-muted tabular-nums">{step + 1} de {TOTAL}</span>
+          {step > 0 && !(onboarded && step === STEPS) ? <button onClick={() => go(step - 1)} className="pressable grid place-items-center size-11 rounded-full bg-white border border-line" aria-label={t("Atrás")}><ArrowLeft weight="bold" className="size-5" /></button> : <Logo small />}
+          <span className="text-sm font-bold text-muted tabular-nums">{t("{n} de {total}", { n: step + 1, total: TOTAL })}</span>
         </div>
-        <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-label="Progreso" aria-valuemin={1} aria-valuemax={TOTAL} aria-valuenow={step + 1}><div className="h-full w-full bg-ink rounded-full origin-left transition-transform duration-300 ease-[cubic-bezier(.23,1,.32,1)]" style={{ transform: `scaleX(${(step + 1) / TOTAL})` }} /></div>
+        <div className="mx-auto max-w-md mt-2 h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-label={t("Progreso")} aria-valuemin={1} aria-valuemax={TOTAL} aria-valuenow={step + 1}><div className="h-full w-full bg-ink rounded-full origin-left transition-transform duration-300 ease-[cubic-bezier(.23,1,.32,1)]" style={{ transform: `scaleX(${(step + 1) / TOTAL})` }} /></div>
       </header>
 
       <section key={step} className={`flex-1 px-5 py-8 transition-[opacity,translate] duration-250 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 ${dir > 0 ? "starting:translate-x-6" : "starting:-translate-x-6"} motion-reduce:starting:translate-x-0`}>
         <div className="mx-auto max-w-md space-y-6">
           {step === 0 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Qué quieres lograr?</h1><p className="mt-2 text-muted">Tu plan de entreno y comida cambia según tu meta.</p></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("¿Qué quieres lograr?")}</h1><p className="mt-2 text-muted">{t("Tu plan de entreno y comida cambia según tu meta.")}</p></div>
             <div className="space-y-3">
-              {GOALS.map((g) => <Choice key={g.id} on={o.goal === g.id} onClick={() => up({ goal: g.id })} icon={GOAL_ICON[g.id]} t={g.t} d={g.d} />)}
+              {GOALS.map((g) => <Choice key={g.id} on={o.goal === g.id} onClick={() => up({ goal: g.id })} icon={GOAL_ICON[g.id]} t={t(g.t)} d={t(g.d)} />)}
             </div>
             <div className={`rounded-3xl border-2 p-4 ${o.glp1 ? "border-ink bg-white" : "border-dashed border-line"}`}>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={o.glp1} onChange={(e) => up({ glp1: e.target.checked })} className="size-5 shrink-0 accent-ink" />
-                <span><span className="flex items-center gap-1.5 font-extrabold text-ink"><Syringe weight="duotone" className="size-5 text-banana-ink" />Estoy en tratamiento con GLP&#8209;1</span><span className="block text-sm text-muted">Ozempic, Wegovy, Mounjaro, Zepbound o Saxenda, recetado por tu médico</span></span>
+                <span><span className="flex items-center gap-1.5 font-extrabold text-ink"><Syringe weight="duotone" className="size-5 text-banana-ink" />{t("Estoy en tratamiento con GLP‑1")}</span><span className="block text-sm text-muted">{t("Ozempic, Wegovy, Mounjaro, Zepbound o Saxenda, recetado por tu médico")}</span></span>
               </label>
               {o.glp1 && (
                 <div className="mt-4 space-y-3 transition-[opacity,translate] duration-200 ease-[cubic-bezier(.23,1,.32,1)] starting:opacity-0 starting:-translate-y-1">
-                  <p className="text-sm text-body text-pretty"><b>Banana Shield</b> ajusta tu plan: más proteína, fuerza como prioridad y modo suave en días de náusea, para que pierdas grasa y no músculo. Está incluido en {COMPLETO.name}{trialEnd ? `; en tu prueba gratis lo tienes hasta el ${trialEnd}` : ""}.{!nutrition ? " Tu plan actual, Entreno, no lo incluye." : intent?.plan === "entreno" ? " El plan que elegiste, Entreno, no lo incluye después de la prueba." : ""}</p>
-                  <label className="block"><span className="text-sm font-bold text-ink">Medicamento</span>
+                  <p className="text-sm text-body text-pretty"><b>Banana Shield</b> {t("ajusta tu plan: más proteína, fuerza como prioridad y modo suave en días de náusea, para que pierdas grasa y no músculo.")} {t("Está incluido en {plan}", { plan: planName(COMPLETO.name, locale) })}{trialEnd ? t("; en tu prueba gratis lo tienes hasta el {day}", { day: trialEnd }) : ""}.{!nutrition ? ` ${t("Tu plan actual, Entreno, no lo incluye.")}` : intent?.plan === "entreno" ? ` ${t("El plan que elegiste, Entreno, no lo incluye después de la prueba.")}` : ""}</p>
+                  <label className="block"><span className="text-sm font-bold text-ink">{t("Medicamento")}</span>
                     <select value={o.glp1Med} onChange={(e) => up({ glp1Med: e.target.value as Onboard["glp1Med"] })} className="input h-12 mt-1">{MEDS.map((m) => <option key={m.id} value={m.id}>{m.n} ({m.ex})</option>)}</select></label>
-                  <label className="block"><span className="text-sm font-bold text-ink">Día de inyección</span>
+                  <label className="block"><span className="text-sm font-bold text-ink">{t("Día de inyección")}</span>
                     <select value={o.glp1Dow ?? -1} onChange={(e) => up({ glp1Dow: Number(e.target.value) < 0 ? null : Number(e.target.value) })} className="input h-12 mt-1">
-                      <option value={-1}>No es semanal (diario u oral)</option>{[1, 2, 3, 4, 5, 6, 0].map((d) => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}</select></label>
+                      <option value={-1}>{t("No es semanal (diario u oral)")}</option>{[1, 2, 3, 4, 5, 6, 0].map((d) => <option key={d} value={d}>{dayName(d, locale)}</option>)}</select></label>
                 </div>
               )}
             </div>
           </>)}
 
           {step === 1 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Cuéntame de ti</h1><p className="mt-2 text-muted">Con esto estimamos cuánta energía gastas al día.</p></div>
-            <label className="block"><span className="text-sm font-bold text-ink">¿Cómo te llamas?</span><input value={o.name} onChange={(e) => up({ name: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="given-name" /></label>
-            <div role="group" aria-labelledby="sexo"><span id="sexo" className="text-sm font-bold text-ink">Sexo biológico</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["m", "Hombre"], ["f", "Mujer"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => up({ sex: k })} className={`pressable h-14 rounded-2xl border-2 font-bold transition-[background-color,border-color,color,transform] ${o.sex === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.sex === k}>{l}</button>)}</div></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("Cuéntame de ti")}</h1><p className="mt-2 text-muted">{t("Con esto estimamos cuánta energía gastas al día.")}</p></div>
+            <label className="block"><span className="text-sm font-bold text-ink">{t("¿Cómo te llamas?")}</span><input value={o.name} onChange={(e) => up({ name: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="given-name" /></label>
+            <div role="group" aria-labelledby="sexo"><span id="sexo" className="text-sm font-bold text-ink">{t("Sexo biológico")}</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["m", "Hombre"], ["f", "Mujer"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => up({ sex: k })} className={`pressable h-14 rounded-2xl border-2 font-bold transition-[background-color,border-color,color,transform] ${o.sex === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.sex === k}>{t(l)}</button>)}</div></div>
             <fieldset>
-              <legend className="text-sm font-bold text-ink">Fecha de nacimiento</legend>
+              <legend className="text-sm font-bold text-ink">{t("Fecha de nacimiento")}</legend>
               <div className="mt-1.5 grid grid-cols-[1fr_1.6fr_1.2fr] gap-2">
-                <select aria-label="Día" value={dob.d ?? ""} onChange={(e) => setDobPart({ d: Number(e.target.value) || null })} className={SELECT} autoComplete="bday-day">
-                  <option value="" disabled>Día</option>{Array.from({ length: daysInMonth }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+                <select aria-label={t("Día")} value={dob.d ?? ""} onChange={(e) => setDobPart({ d: Number(e.target.value) || null })} className={SELECT} autoComplete="bday-day">
+                  <option value="" disabled>{t("Día")}</option>{Array.from({ length: daysInMonth }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
                 </select>
-                <select aria-label="Mes" value={dob.m ?? ""} onChange={(e) => setDobPart({ m: Number(e.target.value) || null })} className={SELECT} autoComplete="bday-month">
-                  <option value="" disabled>Mes</option>{MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                <select aria-label={t("Mes")} value={dob.m ?? ""} onChange={(e) => setDobPart({ m: Number(e.target.value) || null })} className={SELECT} autoComplete="bday-month">
+                  <option value="" disabled>{t("Mes")}</option>{monthNames(locale).map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                 </select>
-                <select aria-label="Año" value={dob.y ?? ""} onChange={(e) => setDobPart({ y: Number(e.target.value) || null })} className={SELECT} autoComplete="bday-year">
-                  <option value="" disabled>Año</option>{Array.from({ length: 73 }, (_, i) => thisYear - 18 - i).map((y) => <option key={y} value={y}>{y}</option>)}
+                <select aria-label={t("Año")} value={dob.y ?? ""} onChange={(e) => setDobPart({ y: Number(e.target.value) || null })} className={SELECT} autoComplete="bday-year">
+                  <option value="" disabled>{t("Año")}</option>{Array.from({ length: 73 }, (_, i) => thisYear - 18 - i).map((y) => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
-              {age != null && <span className={`mt-1 block text-xs ${age < 18 ? "font-semibold text-bad" : "text-muted"}`} role={age < 18 ? "alert" : undefined}>{age < 18 ? "Banana Burn es para personas mayores de 18 años." : `${age} años`}</span>}
+              {age != null && <span className={`mt-1 block text-xs ${age < 18 ? "font-semibold text-bad" : "text-muted"}`} role={age < 18 ? "alert" : undefined}>{age < 18 ? t("Banana Burn es para personas mayores de 18 años.") : t("{n} años", { n: age })}</span>}
             </fieldset>
-            <label className="block"><span className="text-sm font-bold text-ink">¿Dónde vives?</span><select value={o.country ?? ""} onChange={(e) => up({ country: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="country"><option value="" disabled>Elige tu país</option>{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select><span className="mt-1 block text-xs text-muted">Para tu horario, tus recordatorios y comidas de tu país.</span></label>
-            <div><label htmlFor="estatura" className="text-sm font-bold text-ink">Estatura</label><div className="mt-1.5"><Num id="estatura" label="Estatura en centímetros" value={o.heightCm} onChange={(n) => up({ heightCm: n })} step={1} unit="cm" min={130} max={220} d={0} hint={170} /></div>
-              <p className="mt-1.5 text-xs text-muted">Toca el número para escribirlo, o ajusta con − y +.</p></div>
+            <label className="block"><span className="text-sm font-bold text-ink">{t("¿Dónde vives?")}</span><select value={o.country ?? ""} onChange={(e) => up({ country: e.target.value })} className="input mt-1.5 h-14 text-lg" autoComplete="country"><option value="" disabled>{t("Elige tu país")}</option>{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{countryName(c, n, locale)}</option>)}</select><span className="mt-1 block text-xs text-muted">{t("Para tu horario, tus recordatorios y comidas de tu país.")}</span></label>
+            <div role="group" aria-labelledby="unidades"><span id="unidades" className="text-sm font-bold text-ink">{t("Unidades")}</span><div className="mt-1.5 grid grid-cols-2 gap-2">{([["metric", "kg y cm"], ["imperial", "lb y ft/in"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setUnits(k)} className={`pressable h-12 rounded-2xl border-2 font-bold transition-[background-color,border-color,color,transform] ${units === k ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={units === k}>{t(l)}</button>)}</div></div>
+            {imperial ? (
+              <fieldset><legend className="text-sm font-bold text-ink">{t("Estatura")}</legend>
+                <div className="mt-1.5 grid grid-cols-2 gap-2">
+                  <select aria-label={t("Pies")} value={o.heightCm != null ? cmToFtIn(o.heightCm).ft : ""} onChange={(e) => { const ft = Number(e.target.value); if (ft) up({ heightCm: ftInToCm(ft, o.heightCm != null ? cmToFtIn(o.heightCm).in : 0) }); }} className={SELECT}>
+                    <option value="" disabled>ft</option>{[4, 5, 6, 7].map((ft) => <option key={ft} value={ft}>{ft} ft</option>)}
+                  </select>
+                  <select aria-label={t("Pulgadas")} value={o.heightCm != null ? cmToFtIn(o.heightCm).in : ""} onChange={(e) => up({ heightCm: ftInToCm(o.heightCm != null ? cmToFtIn(o.heightCm).ft : 5, Number(e.target.value)) })} className={SELECT}>
+                    <option value="" disabled>in</option>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>{i} in</option>)}
+                  </select>
+                </div>
+              </fieldset>
+            ) : (
+            <div><label htmlFor="estatura" className="text-sm font-bold text-ink">{t("Estatura")}</label><div className="mt-1.5"><Num id="estatura" label={t("Estatura en centímetros")} value={o.heightCm} onChange={(n) => up({ heightCm: n })} step={1} unit="cm" min={130} max={220} d={0} hint={170} less={t("Menos")} more={t("Más")} /></div>
+              <p className="mt-1.5 text-xs text-muted">{t("Toca el número para escribirlo, o ajusta con − y +.")}</p></div>
+            )}
           </>)}
 
           {step === 2 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Tu punto de partida</h1><p className="mt-2 text-muted">Pésate en la mañana si puedes. Si no, un aproximado sirve.</p></div>
-            <div><label htmlFor="peso" className="text-sm font-bold text-ink">Peso actual</label><div className="mt-1.5"><Num id="peso" label="Peso actual en kilos" value={o.weight} onChange={(n) => up({ weight: n })} step={0.5} unit="kg" min={40} max={250} hint={75} /></div></div>
-            <div><label htmlFor="meta" className="text-sm font-bold text-ink">Peso meta</label><div className="mt-1.5"><Num id="meta" label="Peso meta en kilos" value={o.goalWeight} onChange={(n) => up({ goalWeight: n })} step={0.5} unit="kg" min={40} max={250} hint={o.weight ?? 75} /></div>
-              <p className="mt-1.5 text-xs text-muted">{o.goal === "fuerza" ? "Puede ser igual o mayor a tu peso actual." : o.goal === "recomp" ? "En recomposición suele quedar cerca de tu peso actual." : "Toca el número para escribirlo, o ajusta con − y +."}</p></div>
-            <label className="block"><span className="text-sm font-bold text-ink">¿Para cuándo?</span><input type="date" value={o.goalDate} min={iso(new Date())} disabled={o.weight == null || o.goalWeight == null} onChange={(e) => { setTouchedDate(true); up({ goalDate: e.target.value }); }} className="input mt-1.5 h-14 text-lg disabled:opacity-60" /></label>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("Tu punto de partida")}</h1><p className="mt-2 text-muted">{t("Pésate en la mañana si puedes. Si no, un aproximado sirve.")}</p></div>
+            <div><label htmlFor="peso" className="text-sm font-bold text-ink">{t("Peso actual")}</label><div className="mt-1.5">{imperial ? <Num id="peso" label={t("Peso actual en libras")} value={o.weight != null ? Math.round(kgToLb(o.weight)) : null} onChange={(n) => up({ weight: Math.round(lbToKg(n) * 10) / 10 })} step={1} unit="lb" min={90} max={550} d={0} hint={165} less={t("Menos")} more={t("Más")} /> : <Num id="peso" label={t("Peso actual en kilos")} value={o.weight} onChange={(n) => up({ weight: n })} step={0.5} unit="kg" min={40} max={250} hint={75} less={t("Menos")} more={t("Más")} />}</div></div>
+            <div><label htmlFor="meta" className="text-sm font-bold text-ink">{t("Peso meta")}</label><div className="mt-1.5">{imperial ? <Num id="meta" label={t("Peso meta en libras")} value={o.goalWeight != null ? Math.round(kgToLb(o.goalWeight)) : null} onChange={(n) => up({ goalWeight: Math.round(lbToKg(n) * 10) / 10 })} step={1} unit="lb" min={90} max={550} d={0} hint={o.weight != null ? Math.round(kgToLb(o.weight)) : 165} less={t("Menos")} more={t("Más")} /> : <Num id="meta" label={t("Peso meta en kilos")} value={o.goalWeight} onChange={(n) => up({ goalWeight: n })} step={0.5} unit="kg" min={40} max={250} hint={o.weight ?? 75} less={t("Menos")} more={t("Más")} />}</div>
+              <p className="mt-1.5 text-xs text-muted">{t(o.goal === "fuerza" ? "Puede ser igual o mayor a tu peso actual." : o.goal === "recomp" ? "En recomposición suele quedar cerca de tu peso actual." : "Toca el número para escribirlo, o ajusta con − y +.")}</p></div>
+            <label className="block"><span className="text-sm font-bold text-ink">{t("¿Para cuándo?")}</span><input type="date" value={o.goalDate} min={iso(new Date())} disabled={o.weight == null || o.goalWeight == null} onChange={(e) => { setTouchedDate(true); up({ goalDate: e.target.value }); }} className="input mt-1.5 h-14 text-lg disabled:opacity-60" /></label>
             {goalErr ? <p role="alert" className="rounded-3xl bg-bad/10 p-4 text-sm font-semibold text-bad">{goalErr}</p> : pace && (
               <div className={`rounded-3xl p-4 ${pace.tooFast ? "bg-ember/10" : "bg-peel/10"}`}>
-                <p className={`flex items-center gap-1.5 font-extrabold ${pace.tooFast ? "text-ember-ink" : "text-peel"}`}>{pace.tooFast ? <Warning weight="duotone" className="size-5 shrink-0" /> : <CheckCircle weight="duotone" className="size-5 shrink-0" />}{pace.title}{pace.direction !== "mantiene" && `: ${nf(pace.kgPerWeek, 2)} kg por semana`}</p>
-                <p className="mt-1 text-sm text-body">{pace.body}{pace.tooFast && sug ? ` Te recomiendo el ${new Date(sug.date + "T12:00:00").toLocaleDateString("es-419", { day: "numeric", month: "long" })}.` : ""}</p>
-                {pace.tooFast && sug && <button type="button" onClick={() => { setTouchedDate(false); up({ goalDate: sug.date }); }} className="mt-3 chip h-8 bg-white text-ink">Usar fecha recomendada</button>}
+                <p className={`flex items-center gap-1.5 font-extrabold ${pace.tooFast ? "text-ember-ink" : "text-peel"}`}>{pace.tooFast ? <Warning weight="duotone" className="size-5 shrink-0" /> : <CheckCircle weight="duotone" className="size-5 shrink-0" />}{t(pace.title)}{pace.direction !== "mantiene" && (imperial ? t(": {n} lb por semana", { n: fmtNumber(kgToLb(pace.kgPerWeek), locale, 1, 1) }) : `: ${nf(pace.kgPerWeek, 2)} kg por semana`)}</p>
+                <p className="mt-1 text-sm text-body">{t(pace.body)}{pace.tooFast && sug ? ` ${t("Te recomiendo el {day}.", { day: new Date(sug.date + "T12:00:00").toLocaleDateString(dateLocale, { day: "numeric", month: "long" }) })}` : ""}</p>
+                {pace.tooFast && sug && <button type="button" onClick={() => { setTouchedDate(false); up({ goalDate: sug.date }); }} className="mt-3 chip h-8 bg-white text-ink">{t("Usar fecha recomendada")}</button>}
               </div>
             )}
           </>)}
 
           {step === 3 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuánta experiencia tienes?</h1><p className="mt-2 text-muted">Ajustamos ejercicios, series y descansos a tu nivel.</p></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("¿Cuánta experiencia tienes?")}</h1><p className="mt-2 text-muted">{t("Ajustamos ejercicios, series y descansos a tu nivel.")}</p></div>
             <div className="space-y-3">
-              <Choice on={o.level === "principiante"} onClick={() => up({ level: "principiante" })} icon={<BrandIcon name="plant" />} t="Principiante" d="Nunca o casi nunca he entrenado con pesas. Te lo explicamos paso a paso." />
-              <Choice on={o.level === "intermedio"} onClick={() => up({ level: "intermedio" })} icon={<Banana />} t="Intermedio" d="Entreno hace meses y conozco los básicos" />
-              <Choice on={o.level === "avanzado"} onClick={() => up({ level: "avanzado" })} icon={<Gorilla />} t="Avanzado" d="Más de 2 años entrenando en serio" />
+              <Choice on={o.level === "principiante"} onClick={() => up({ level: "principiante" })} icon={<BrandIcon name="plant" />} t={t("Principiante")} d={t("Nunca o casi nunca he entrenado con pesas. Te lo explicamos paso a paso.")} />
+              <Choice on={o.level === "intermedio"} onClick={() => up({ level: "intermedio" })} icon={<Banana />} t={t("Intermedio")} d={t("Entreno hace meses y conozco los básicos")} />
+              <Choice on={o.level === "avanzado"} onClick={() => up({ level: "avanzado" })} icon={<Gorilla />} t={t("Avanzado")} d={t("Más de 2 años entrenando en serio")} />
             </div>
           </>)}
 
           {step === 4 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Cuántos días puedes entrenar?</h1><p className="mt-2 text-muted">Sé realista: es mejor 4 días siempre que 6 a veces.</p></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("¿Cuántos días puedes entrenar?")}</h1><p className="mt-2 text-muted">{t("Sé realista: es mejor 4 días siempre que 6 a veces.")}</p></div>
             <div className="grid grid-cols-4 gap-2">{[3, 4, 5, 6].map((n) => <button key={n} type="button" onClick={() => up({ days: n })} className={`pressable h-20 rounded-3xl border-2 text-3xl font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.days === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.days === n}>{n}</button>)}</div>
-            <div><p className="text-sm font-bold text-ink mb-2">¿Cuánto tiempo por sesión?</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`pressable h-14 rounded-2xl border-2 font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.minutes === n}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
-              <p className="mt-2 text-xs text-muted">¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.</p></div>
+            <div><p className="text-sm font-bold text-ink mb-2">{t("¿Cuánto tiempo por sesión?")}</p><div className="grid grid-cols-5 gap-2">{[15, 20, 30, 45, 60].map((n) => <button key={n} type="button" onClick={() => up({ minutes: n })} className={`pressable h-14 rounded-2xl border-2 font-extrabold tabular-nums transition-[background-color,border-color,color,transform] ${o.minutes === n ? "border-ink bg-banana text-ink" : "border-line bg-white text-muted"}`} aria-pressed={o.minutes === n}>{n}<span className="text-xs font-bold"> min</span></button>)}</div>
+              <p className="mt-2 text-xs text-muted">{t("¿Un día sin tiempo? Siempre tendrás entrenos exprés de 10 minutos.")}</p></div>
             <div className="card p-4">
-              <p className="text-sm font-bold text-ink mb-2">Así se vería tu semana</p>
-              <ul className="space-y-1.5">{week.map((d) => <li key={d.dow} className="flex items-center justify-between text-sm"><span className="w-20 font-semibold text-muted capitalize">{DAY_NAMES[d.dow]}</span><span className={`flex-1 flex items-center gap-2 font-bold ${d.tpl ? "text-ink" : "text-faint"}`}><BrandIcon name={d.icon} className="size-4 shrink-0" />{d.name}</span>{d.tpl && <span className="text-xs text-muted tabular-nums">~{d.mins} min</span>}</li>)}</ul>
+              <p className="text-sm font-bold text-ink mb-2">{t("Así se vería tu semana")}</p>
+              <ul className="space-y-1.5">{week.map((d) => <li key={d.dow} className="flex items-center justify-between text-sm"><span className="w-20 font-semibold text-muted capitalize">{dayName(d.dow, locale)}</span><span className={`flex-1 flex items-center gap-2 font-bold ${d.tpl ? "text-ink" : "text-faint"}`}><BrandIcon name={d.icon} className="size-4 shrink-0" />{t(d.name)}</span>{d.tpl && <span className="text-xs text-muted tabular-nums">~{d.mins} min</span>}</li>)}</ul>
             </div>
           </>)}
 
           {step === 5 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">¿Dónde entrenas?</h1><p className="mt-2 text-muted">Elegimos los ejercicios según tu equipo.</p></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("¿Dónde entrenas?")}</h1><p className="mt-2 text-muted">{t("Elegimos los ejercicios según tu equipo.")}</p></div>
             <div className="space-y-3">
-              <Choice on={o.equipment === "gym"} onClick={() => up({ equipment: "gym" })} icon={<Barbell weight="duotone" />} t="Gimnasio" d="Barras, mancuernas, poleas y máquinas" />
-              <Choice on={o.equipment === "mixto"} onClick={() => up({ equipment: "mixto" })} icon={<ArrowsLeftRight weight="duotone" />} t="Gym y casa" d="A veces voy, a veces entreno en casa" />
-              <Choice on={o.equipment === "casa"} onClick={() => up({ equipment: "casa" })} icon={<House weight="duotone" />} t="En casa con mancuernas" d="Un par de mancuernas o bandas" />
-              <Choice on={o.equipment === "ninguno"} onClick={() => up({ equipment: "ninguno" })} icon={<PersonSimpleRun weight="duotone" />} t="Sin equipo" d="Solo tu cuerpo y un espacio de 2 × 2 m" />
+              <Choice on={o.equipment === "gym"} onClick={() => up({ equipment: "gym" })} icon={<Barbell weight="duotone" />} t={t("Gimnasio")} d={t("Barras, mancuernas, poleas y máquinas")} />
+              <Choice on={o.equipment === "mixto"} onClick={() => up({ equipment: "mixto" })} icon={<ArrowsLeftRight weight="duotone" />} t={t("Gym y casa")} d={t("A veces voy, a veces entreno en casa")} />
+              <Choice on={o.equipment === "casa"} onClick={() => up({ equipment: "casa" })} icon={<House weight="duotone" />} t={t("En casa con mancuernas")} d={t("Un par de mancuernas o bandas")} />
+              <Choice on={o.equipment === "ninguno"} onClick={() => up({ equipment: "ninguno" })} icon={<PersonSimpleRun weight="duotone" />} t={t("Sin equipo")} d={t(imperial ? "Solo tu cuerpo y un espacio de 6 × 6 ft" : "Solo tu cuerpo y un espacio de 2 × 2 m")} />
             </div>
           </>)}
 
           {step === 6 && (<>
-            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">Un último detalle</h1><p className="mt-2 text-muted">Tus datos de salud son tuyos y solo los usamos para personalizar tu plan.</p></div>
+            <div><h1 className="text-3xl font-extrabold tracking-tight text-ink">{t("Un último detalle")}</h1><p className="mt-2 text-muted">{t("Tus datos de salud son tuyos y solo los usamos para personalizar tu plan.")}</p></div>
             <div className="card p-5 space-y-2 text-sm text-body">
               {["Cifrados y privados: nadie más ve tu peso ni tus fotos.", "Puedes exportarlos o borrar tu cuenta cuando quieras.", "Nunca vendemos tus datos."].map((x) => (
-                <p key={x} className="flex items-start gap-2"><CheckCircle weight="duotone" className="size-5 shrink-0 text-peel" />{x}</p>
+                <p key={x} className="flex items-start gap-2"><CheckCircle weight="duotone" className="size-5 shrink-0 text-peel" />{t(x)}</p>
               ))}
             </div>
             <fieldset className="card p-5">
-              <legend className="sr-only">Antes de empezar</legend>
-              <p className="text-sm font-bold text-ink">Antes de empezar, ¿alguna aplica a ti?</p>
+              <legend className="sr-only">{t("Antes de empezar")}</legend>
+              <p className="text-sm font-bold text-ink">{t("Antes de empezar, ¿alguna aplica a ti?")}</p>
               <ul className="mt-3 space-y-2">
                 {["Un médico me dijo que tengo una condición del corazón o presión alta no controlada", "Siento dolor de pecho, mareo o me desmayo al hacer ejercicio", "Tengo una lesión o dolor en articulaciones o espalda que empeora al moverme", o.sex === "f" ? "Estoy embarazada o di a luz hace menos de 6 meses" : "Tomo medicamentos para el corazón o la presión"].map((q, i) => (
-                  <li key={i}><label className="flex gap-3 items-start text-sm text-body cursor-pointer"><input type="checkbox" checked={parq[i]} onChange={(e) => setParq((p) => p.map((x, j) => (j === i ? e.target.checked : x)))} className="mt-0.5 size-5 shrink-0 accent-ink" />{q}</label></li>
+                  <li key={i}><label className="flex gap-3 items-start text-sm text-body cursor-pointer"><input type="checkbox" checked={parq[i]} onChange={(e) => setParq((p) => p.map((x, j) => (j === i ? e.target.checked : x)))} className="mt-0.5 size-5 shrink-0 accent-ink" />{t(q)}</label></li>
                 ))}
               </ul>
               {parqYes && (
                 <div className="mt-4 rounded-2xl bg-ember/10 p-3 text-sm text-body">
-                  <p className="font-bold text-ember-ink">Habla con tu médico antes de empezar.</p>
-                  <p className="mt-1">No es un no: es para que entrenes con seguridad. Cuando te dé el visto bueno, arrancamos en nivel principiante y con modo suave.</p>
-                  <label className="mt-2 flex gap-3 items-start font-semibold text-ink cursor-pointer"><input type="checkbox" checked={medOk} onChange={(e) => { setMedOk(e.target.checked); if (e.target.checked) up({ level: "principiante" }); }} className="mt-0.5 size-5 shrink-0 accent-ink" />Mi médico me autorizó a hacer ejercicio</label>
+                  <p className="font-bold text-ember-ink">{t("Habla con tu médico antes de empezar.")}</p>
+                  <p className="mt-1">{t("No es un no: es para que entrenes con seguridad. Cuando te dé el visto bueno, arrancamos en nivel principiante y con modo suave.")}</p>
+                  <label className="mt-2 flex gap-3 items-start font-semibold text-ink cursor-pointer"><input type="checkbox" checked={medOk} onChange={(e) => { setMedOk(e.target.checked); if (e.target.checked) up({ level: "principiante" }); }} className="mt-0.5 size-5 shrink-0 accent-ink" />{t("Mi médico me autorizó a hacer ejercicio")}</label>
                 </div>
               )}
             </fieldset>
             <div className="rounded-3xl bg-white border-2 border-line p-4 has-[:checked]:border-ink">
               <label className="flex gap-3 items-start cursor-pointer">
                 <input type="checkbox" checked={o.consent} onChange={(e) => up({ consent: e.target.checked })} className="mt-1 size-5 shrink-0 accent-ink" aria-describedby="consent-ley" />
-                <span className="text-sm text-body">Autorizo a Banana Burn a procesar mis datos de salud (peso, medidas, alimentación) para personalizar mi plan.</span>
+                <span className="text-sm text-body">{t("Autorizo a Banana Burn a procesar mis datos de salud (peso, medidas, alimentación) para personalizar mi plan.")}</span>
               </label>
               <p id="consent-ley" className="mt-2 pl-8 text-xs text-muted text-pretty">
-                Según la Ley 8968 de Costa Rica, donde está la empresa. Lee la{" "}
-                <Link href="/privacidad#sensibles" target="_blank" rel="noopener" className="tap font-semibold text-ink underline underline-offset-2">Política de privacidad</Link> (se abre en otra pestaña).
+                {t("Según la Ley 8968 de Costa Rica, donde está la empresa. Lee la")}{" "}
+                <Link href="/privacidad#sensibles" target="_blank" rel="noopener" className="tap font-semibold text-ink underline underline-offset-2">{t("Política de privacidad")}</Link> {t("(se abre en otra pestaña).")}
               </p>
             </div>
-            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
+            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{t(err)}</p>}
           </>)}
 
           {step === STEPS && cardRequired && (<>
             {/* #269: desde el 1 de enero de 2027 la tarjeta es obligatoria para empezar la prueba. Hoy no se cobra nada. */}
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">Deja tu tarjeta para empezar tus {TRIAL_DAYS} días gratis</h1>
-              <p className="mt-2 text-muted text-pretty">Tienes todo incluido: entreno, Coach Banana, nutrición y Banana Shield.</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">{t("Deja tu tarjeta para empezar tus {n} días gratis", { n: TRIAL_DAYS })}</h1>
+              <p className="mt-2 text-muted text-pretty">{t("Tienes todo incluido: entreno, Coach Banana, nutrición y Banana Shield.")}</p>
             </div>
-            <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink text-pretty">{requiredLine(chargeDay, choice)}</p>
+            <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink text-pretty">{requiredLine(chargeDay, choice, t)}</p>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel={`Empezar mis ${TRIAL_DAYS} días gratis`} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} note={null} />
+              <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} note={null} />
             ) : (
-              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.</p>
+              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.")}</p>
             )}
-            <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>
-            {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />Creando tu plan…</p>}
-            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
+            <p className="text-xs text-muted text-pretty">{t(PROMO_TERMS)}</p>
+            {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />{t("Creando tu plan…")}</p>}
+            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{t(err)}</p>}
           </>)}
 
           {step === STEPS && cardOffer && !cardRequired && (<>
             {/* La tarjeta es opcional y se dice primero: muchas personas preguntaban si era obligatoria para usar la prueba. */}
             <div className="rounded-3xl bg-ink p-5 text-white">
-              <p className="text-xl font-extrabold text-balance">La tarjeta es opcional</p>
-              <p className="mt-1 text-sm text-white/80 text-pretty">{trialBeta && betaLastFree ? `Puedes usar todo gratis hasta el ${betaLastFree} sin dejar ninguna tarjeta.` : `Tus ${TRIAL_DAYS} días gratis funcionan igual sin tarjeta.`} No te pedimos nada para empezar.</p>
-              <button type="button" data-cta="bienvenida-sin-tarjeta-arriba" disabled={pending} onClick={() => finish()} className="btn-banana mt-4 w-full h-14 text-base">Empezar gratis sin tarjeta <ArrowRight className="size-5" /></button>
+              <p className="text-xl font-extrabold text-balance">{t("La tarjeta es opcional")}</p>
+              <p className="mt-1 text-sm text-white/80 text-pretty">{trialBeta && betaLastFree ? `Puedes usar todo gratis hasta el ${betaLastFree} sin dejar ninguna tarjeta.` : t("Tus {n} días gratis funcionan igual sin tarjeta.", { n: TRIAL_DAYS })} {t("No te pedimos nada para empezar.")}</p>
+              <button type="button" data-cta="bienvenida-sin-tarjeta-arriba" disabled={pending} onClick={() => finish()} className="btn-banana mt-4 w-full h-14 text-base">{t("Empezar gratis sin tarjeta")} <ArrowRight className="size-5" /></button>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-muted">Opcional</p>
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink text-balance">{PROMO_TITLE}</h1>
-              <p className="mt-2 text-muted text-pretty">{trialBeta && betaLastFree ? `Tienes todo incluido gratis hasta el ${betaLastFree}, con o sin tarjeta.` : `Tus ${TRIAL_DAYS} días gratis ya empezaron, con o sin tarjeta.`} Si la dejas lista hoy, tu primer mes cuesta la mitad.</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">{t("Opcional")}</p>
+              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink text-balance">{t(PROMO_TITLE)}</h1>
+              <p className="mt-2 text-muted text-pretty">{trialBeta && betaLastFree ? `Tienes todo incluido gratis hasta el ${betaLastFree}, con o sin tarjeta.` : t("Tus {n} días gratis ya empezaron, con o sin tarjeta.", { n: TRIAL_DAYS })} {t("Si la dejas lista hoy, tu primer mes cuesta la mitad.")}</p>
             </div>
             <ul className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink space-y-1.5">
               {[
-                "Hoy no te cobramos",
-                chargeDay ? `El ${chargeDay} se cobra tu primer mes con 50 % de descuento` : "Al terminar tu prueba se cobra tu primer mes con 50 % de descuento",
-                "Te avisamos 2 días antes",
-                "Cancela cuando quieras desde Mi plan",
+                t("Hoy no te cobramos"),
+                chargeDay ? t("El {day} se cobra tu primer mes con 50 % de descuento", { day: chargeDay }) : t("Al terminar tu prueba se cobra tu primer mes con 50 % de descuento"),
+                t("Te avisamos 2 días antes"),
+                t("Cancela cuando quieras desde Mi plan"),
               ].map((l) => <li key={l} className="flex items-start gap-2"><Check weight="bold" aria-hidden className="mt-0.5 size-4 shrink-0" /><span className="text-pretty">{l}</span></li>)}
             </ul>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel={cardOfferLabel(choice)} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
-                note={chargeDay ? (promoApplies("primer_mes_50", choice.billing) ? <>{promoChargeLine(chargeDay)} Monto: {money2(promoPrice(choice.plan))}; desde el segundo mes, {money2(PLANS.find((p) => p.id === choice.plan)!.price.mes)} al mes.</> : <>Hoy no te cobramos. El {chargeDay} se cobran {money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing])} del plan anual, salvo que canceles antes desde Mi plan.</>) : null} />
+              <CardForm choice={choice} demo={demo} submitLabel={cardOfferLabel(choice, t)} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
+                note={chargeDay ? (promoApplies("primer_mes_50", choice.billing) ? <>{t(promoChargeLine("{day}"), { day: chargeDay })} {t("Monto: {price}; desde el segundo mes, {full} al mes.", { price: money2(promoPrice(choice.plan)), full: money2(PLANS.find((p) => p.id === choice.plan)!.price.mes) })}</> : <>{t("Hoy no te cobramos. El {day} se cobran {price} del plan anual, salvo que canceles antes desde Mi plan.", { day: chargeDay, price: money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]) })}</>) : null} />
             ) : (
-              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.</p>
+              <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.")}</p>
             )}
-            <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>
-            {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />Creando tu plan…</p>}
-            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{err}</p>}
+            <p className="text-xs text-muted text-pretty">{t(PROMO_TERMS)}</p>
+            {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />{t("Creando tu plan…")}</p>}
+            {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{t(err)}</p>}
           </>)}
         </div>
       </section>
@@ -493,13 +521,13 @@ export function Wizard({ name: initialName, demo, initialGoal, glp1, country, in
       <footer className="sticky bottom-0 z-10 border-t border-line/60 bg-paper/95 px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur">
         <div className="mx-auto max-w-md">
           {step < STEPS - 1 ? (
-            <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">Continuar <ArrowRight className="size-5" /></button>
+            <button disabled={!canNext} onClick={() => go(step + 1)} className="btn-primary w-full h-14 text-base">{t("Continuar")} <ArrowRight className="size-5" /></button>
           ) : step === STEPS - 1 ? (
-            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />Calculando tu plan…</> : <>{cardStep ? "Continuar" : "Crear mi plan"} <ArrowRight className="size-5" /></>}</button>
+            <button disabled={!canNext || pending} onClick={next} className="btn-banana w-full h-14 text-base">{pending ? <><CircleNotch weight="bold" className="size-5 animate-spin" />{t("Calculando tu plan…")}</> : <>{cardStep ? t("Continuar") : t("Crear mi plan")} <ArrowRight className="size-5" /></>}</button>
           ) : step === STEPS && cardOffer && !cardRequired ? (
             <>
-              <button data-cta="bienvenida-sin-tarjeta" disabled={pending} onClick={() => finish()} className="btn-primary w-full h-14 text-base">Empezar gratis sin tarjeta <ArrowRight className="size-5" /></button>
-              <p className="mt-1.5 text-center text-xs text-muted">Si quieres el 50 %, puedes dejar tu tarjeta después desde Mi plan.</p>
+              <button data-cta="bienvenida-sin-tarjeta" disabled={pending} onClick={() => finish()} className="btn-primary w-full h-14 text-base">{t("Empezar gratis sin tarjeta")} <ArrowRight className="size-5" /></button>
+              <p className="mt-1.5 text-center text-xs text-muted">{t("Si quieres el 50 %, puedes dejar tu tarjeta después desde Mi plan.")}</p>
             </>
           ) : null}
         </div>

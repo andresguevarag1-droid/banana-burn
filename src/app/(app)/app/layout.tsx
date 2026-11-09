@@ -46,6 +46,9 @@ import { ThemeRoot } from "@/components/theme/theme-root";
 import { getSex } from "@/lib/athlete";
 import { RecoveryNotice } from "@/components/recovery-notice";
 import { getRecoveryNotice } from "@/lib/recuperacion-server";
+import { getPrefs } from "@/lib/i18n/server";
+import { LocaleProvider } from "@/lib/i18n/client";
+import { tr } from "@/lib/i18n/t";
 
 export const dynamic = "force-dynamic";
 
@@ -107,12 +110,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const hoyAsk = !cs && Boolean(hoyCardBanner(ent));
   // Prueba terminada sin plan ni cobro (desde el día 8): aviso de recuperación, solo si no hay otro aviso arriba.
   const recovery = (!banner || banner === "none") && !cs && (await getRecoveryNotice(v, ent));
+  // #287: idioma y unidades de la cuenta para toda la app (lo que no está traducido sigue en español).
+  const prefs = await getPrefs();
+  const t = tr(prefs.locale);
   return (
+    <LocaleProvider locale={prefs.locale} units={prefs.units}>
     <div data-theme={theme ?? undefined} className={theme ? "lg:pl-64 min-h-dvh bg-paper bg-[radial-gradient(110%_420px_at_50%_0%,var(--color-plat-soft),transparent)] bg-no-repeat" : "lg:pl-64"} style={live && !theme ? ({ "--program": COVER_ACCENT[live.c.cover] } as React.CSSProperties) : undefined}>
       <ThemeRoot theme={theme} />
       {/* Programa activo: la app toma su color en una franja arriba (y en la cinta y los hábitos). */}
       {live && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-[var(--program)]" />}
-      <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">Saltar al contenido</a>
+      <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-full focus:bg-ink focus:text-white focus:px-4 focus:py-2">{t("Saltar al contenido")}</a>
       {v.demo && <DemoBanner />}
       <AppNav affiliate={affiliate} name={v.name} staff={STAFF.includes(v.role)} nutrition={ent.nutrition} program={live ? { slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? null } : null} coachName={liveCoach && liveCoach.id !== "banana" ? liveCoach.name : null} news={{ latestId: news.latestId, unseen: news.unseenIds.length > 0, persisted: newsState.persisted }} />
       <InstallBeacon />
@@ -139,5 +146,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </main>
       </GuideProvider>
     </div>
+    </LocaleProvider>
   );
 }

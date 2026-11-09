@@ -12,7 +12,7 @@ import { coachOf } from "@/lib/coaches";
 import { getDaily, prefetchDaily } from "@/lib/daily";
 import { PLANS } from "@/lib/plans";
 import { TrainingSettings, DataControls } from "./settings";
-import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, DeviceMobile, Heart, Heartbeat, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, User, Users, type PhosphorIcon } from "@/components/icons";
+import { ArrowRight, BananaFlame, Barbell, ChatCircleText, Compass, DeviceMobile, Heart, Heartbeat, LevelIcon, Lifebuoy, Lock, ShieldCheck, Sparkle, Target, Translate, User, Users, type PhosphorIcon } from "@/components/icons";
 import { perksAt } from "@/lib/gamify";
 import { FRAME_RING } from "@/components/levels/level-badge";
 import { getMyPower, getMyVerification } from "@/lib/profile-power-server";
@@ -26,6 +26,9 @@ import { TesterBadge } from "@/components/testers/tester-badge";
 import { getMyTester } from "@/lib/testers-server";
 import { OpenGuideButton } from "@/components/guide/open-guide";
 import { VoiceSettings } from "./voice-settings";
+import { LanguageSettings } from "./language-settings";
+import { getPrefs } from "@/lib/i18n/server";
+import { tr } from "@/lib/i18n/t";
 import { getVoice } from "@/lib/voice-server";
 import { nfmt } from "@/lib/num";
 import { requestNativeAgent } from "@/lib/platform-server";
@@ -42,6 +45,7 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   const sp = await searchParams;
+  const lang = await getPrefs();
   // En paralelo: el perfil público, el plan, los avisos y las medallas no dependen del atleta.
   const profileRow = v.demo ? Promise.resolve(null) : createClient().then((sb) => sb.from("profiles").select("username,bio,visibility,share_workouts").eq("id", v.id).maybeSingle()).then((r) => r.data);
   const [a, data, ent, prefs, power, verif, tester, voice] = await Promise.all([getAthlete(v), profileRow, getEntitlements(v), getNotificationPrefs().catch(() => null), getMyPower(v), getMyVerification(v).catch(() => null), getMyTester(v, v.demo ? sp.tester : null).catch(() => null), getVoice(v)]);
@@ -152,6 +156,13 @@ export default async function Perfil({ searchParams }: { searchParams: Promise<{
         <H icon={ChatCircleText}>Cómo te hablo</H>
         <p className="mt-1 mb-4 text-sm text-muted">{coachOf(a.program?.meta.experience).name} te explica el entreno con estas palabras. Las series, las repeticiones y los pesos son los mismos en las tres.</p>
         <VoiceSettings voice={voice} />
+      </section>
+
+      {/* #287: idioma y unidades. El título va en los dos idiomas para que cualquiera lo encuentre. */}
+      <section id="idioma" className="card p-5 scroll-mt-6">
+        <H icon={Translate}>Idioma · Language</H>
+        <p className="mt-1 mb-4 text-sm text-muted">{tr(lang.locale)("La app y tus correos, en el idioma que elijas. Tus pesos se guardan igual en cualquier unidad.")}</p>
+        <LanguageSettings locale={lang.locale} units={lang.units} />
       </section>
 
       <section id="glp1" className="card p-5 scroll-mt-6">

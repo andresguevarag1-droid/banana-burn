@@ -5,6 +5,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env
 import { safeNext } from "@/lib/security/redirect";
 import { PRIVATE_NO_STORE, WALL_PATH, gateAction, needsAccessCheck } from "@/lib/access-gate";
 import { burstLimiter, clientIpFrom } from "@/lib/security/ip";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from "@/lib/i18n/locale";
 
 /** Estado de ejemplo de la tarjeta en modo demo (solo sin Supabase). */
 const DEMO_CARD_COOKIE = "bb_demo_tarjeta";
@@ -42,7 +43,20 @@ function noStore(res: NextResponse) {
   return res;
 }
 
+/**
+ * #287: ?idioma=en|es en /entrar (los botones de la portada en inglés lo llevan) deja el idioma en la cookie, ya en esta
+ * misma petición: así el registro sale en inglés aunque el botón se toque antes de que cargue el JavaScript.
+ */
 export async function middleware(req: NextRequest) {
+  const lang = req.nextUrl.pathname === "/entrar" ? req.nextUrl.searchParams.get("idioma") : null;
+  const locale = lang === "en" ? "en-US" : lang === "es" ? "es-419" : null;
+  if (locale) req.cookies.set(LOCALE_COOKIE, locale);
+  const res = await handle(req);
+  if (locale) res.cookies.set(LOCALE_COOKIE, locale, { path: "/", sameSite: "lax", maxAge: LOCALE_COOKIE_MAX_AGE });
+  return res;
+}
+
+async function handle(req: NextRequest) {
   const p0 = req.nextUrl.pathname;
   if (BURST_MAX > 0 && !EXEMPT.test(p0)) {
     const r = burst(clientIpFrom(req.headers));
@@ -63,7 +77,7 @@ export async function middleware(req: NextRequest) {
       const val = req.nextUrl.searchParams.get(param);
       if (val && ok.test(val)) { req.cookies.set(cookie, val); demo.push([cookie, val]); }
     }
-    const res = voice || demo.length ? NextResponse.next({ request: req }) : NextResponse.next();
+    const res = voice || demo.length || req.nextUrl.searchParams.has("idioma") ? NextResponse.next({ request: req }) : NextResponse.next();
     const d = req.nextUrl.searchParams.get("demo");
     if (d && /^[a-z]{3,12}$/.test(d)) res.cookies.set(DEMO_CARD_COOKIE, d, { path: "/", sameSite: "lax", maxAge: 3600 });
     if (voice) res.cookies.set(DEMO_VOICE_COOKIE, voice, { path: "/", sameSite: "lax", maxAge: 3600 });
