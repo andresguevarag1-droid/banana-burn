@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { localeFromAcceptLanguage, localeFromPath, resolveLocale, defaultUnits } from "./locale";
-import { cmToFtIn, fmtHeight, fmtMoney, fmtNumber, fmtWeight, ftInToCm, kgToLb, lbToKg, loadIn } from "./format";
+import { cmToFtIn, fmtHeight, fmtMoney, fmtNumber, fmtWeight, ftInToCm, kgToLb, kgToPlateLb, lbInputToKg, lbToKg, loadIn, workoutLoad, workoutLoadToKg } from "./format";
+import { exerciseName } from "./names";
 import { hasTranslation, tr, translate } from "./t";
 import { offerFor } from "./offer";
 import { offer } from "@/lib/offer";
@@ -66,6 +67,47 @@ describe("formatos (#287)", () => {
     expect(ftInToCm(5, 9)).toBe(175.3);
     expect(fmtHeight(175, "imperial", "en-US")).toBe("5 ft 9 in");
     expect(fmtHeight(175, "metric", "es-419")).toBe("175 cm");
+  });
+});
+
+describe("cargas del entreno en libras de 2.5 en 2.5 (#295)", () => {
+  it("kg del plan a libras redondeadas al disco de 2.5 lb", () => {
+    expect(kgToPlateLb(20)).toBe(45);
+    expect(kgToPlateLb(22.5)).toBe(50);
+    expect(kgToPlateLb(10)).toBe(22.5);
+    expect(kgToPlateLb(0)).toBe(0);
+    for (const kg of [2, 5, 12.5, 37.5, 60, 101.25]) expect(kgToPlateLb(kg) % 2.5).toBe(0);
+  });
+  it("lo que escribe la persona en libras se guarda en kg con dos decimales y vuelve igual", () => {
+    expect(lbInputToKg(45)).toBe(20.41);
+    expect(kgToPlateLb(lbInputToKg(45))).toBe(45);
+    for (const lb of [2.5, 25, 47.5, 135, 225, 317.5]) expect(kgToPlateLb(lbInputToKg(lb))).toBe(lb);
+  });
+  it("workoutLoad y workoutLoadToKg: en imperial convierten, en métrico pasan igual", () => {
+    expect(workoutLoad(20, "imperial")).toBe(45);
+    expect(workoutLoad(22.5, "imperial")).toBe(50);
+    expect(workoutLoadToKg(45, "imperial")).toBe(20.41);
+    expect(workoutLoad(workoutLoadToKg(45, "imperial"), "imperial")).toBe(45);
+    for (const kg of [0, 2.5, 20, 22.5, 61.25]) {
+      expect(workoutLoad(kg, "metric")).toBe(kg);
+      expect(workoutLoadToKg(kg, "metric")).toBe(kg);
+    }
+  });
+});
+
+describe("nombres de ejercicios (#295)", () => {
+  it("en español devuelve el nombre en español tal cual, aunque el id exista", () => {
+    expect(exerciseName("squat", "Sentadilla trasera", "es-419")).toBe("Sentadilla trasera");
+    expect(exerciseName(null, "Lo que sea", "es-419")).toBe("Lo que sea");
+  });
+  it("en inglés, un id conocido da su nombre por id", () => {
+    expect(exerciseName("squat", "Sentadilla trasera", "en-US")).toBe("Back squat");
+    expect(exerciseName("pushup", "otro texto", "en-US")).toBe("Push-ups");
+  });
+  it("un id desconocido (programas y retos) busca su nombre en español en el diccionario", () => {
+    expect(exerciseName("reto-x", "Sentadilla trasera", "en-US")).toBe("Back squat");
+    expect(exerciseName(undefined, "Plancha", "en-US")).toBe(translate("en-US", "Plancha"));
+    expect(exerciseName("reto-x", "Ejercicio sin traducir", "en-US")).toBe("Ejercicio sin traducir");
   });
 });
 
