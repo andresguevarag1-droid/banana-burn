@@ -85,6 +85,7 @@ const sample = (): FunnelRows => ({
   ],
   finished: [id(1), id(2), id(5)],
   second: [id(1)],
+  third: [id(1)],
   charges: [
     { user_id: id(1), status: "succeeded", amount_minor: 499 },
     { user_id: id(2), status: "scheduled", amount_minor: 499 },
@@ -120,6 +121,26 @@ describe("segundo entreno (#286)", () => {
   });
 });
 
+describe("3 entrenos en la prueba (#288)", () => {
+  it("la columna va después del segundo entreno y antes de la tarjeta", () => {
+    const keys = STEPS.map((s) => s.key);
+    expect(keys.indexOf("third")).toBe(keys.indexOf("second") + 1);
+    expect(keys.indexOf("card")).toBe(keys.indexOf("third") + 1);
+    expect(STEPS.find((s) => s.key === "third")!.label).toBe("3 entrenos en la prueba");
+  });
+
+  it("cuenta 3 o más entrenos terminados dentro de los primeros 7 días", () => {
+    const profiles = [{ id: id(1), created_at: "2026-11-01T15:00:00Z" }, { id: id(2), created_at: "2026-11-01T15:00:00Z" }];
+    const w = (n: number, finished_at: string | null) => ({ user_id: id(n), finished_at });
+    const rows = [
+      w(1, "2026-11-01T20:00:00Z"), w(1, "2026-11-03T20:00:00Z"), w(1, "2026-11-05T20:00:00Z"),
+      w(2, "2026-11-01T20:00:00Z"), w(2, "2026-11-03T20:00:00Z"), w(2, "2026-11-09T20:00:00Z"), // el tercero, fuera de la prueba
+    ];
+    expect(secondWorkoutUsers(profiles, rows, 3)).toEqual([id(1)]);
+    expect(secondWorkoutUsers(profiles, rows)).toEqual([id(1), id(2)]);
+  });
+});
+
 describe("cohortes por semana de registro", () => {
   const weeks = crWeeks(NOW);
 
@@ -127,7 +148,7 @@ describe("cohortes por semana de registro", () => {
     const t = cohortTable(buildAccounts(sample(), NOW), weeks);
     expect(t[0]).toEqual({
       week: "2026-11-02", registrados: 3,
-      steps: { hoy: 3, open: 2, firstView: 2, firstSet: 2, finished: 2, second: 1, card: 2, paid: 1 },
+      steps: { hoy: 3, open: 2, firstView: 2, firstSet: 2, finished: 2, second: 1, third: 1, card: 2, paid: 1 },
       net: 3.85, estimated: true,
     });
     // Pago en el muro de planes: precio de lista $9.99 con ONVO.
@@ -170,9 +191,9 @@ describe("cohortes por semana de registro", () => {
   });
 
   it("una fuente que falla deja sus columnas en sin dato, nunca en cero", () => {
-    const t = cohortTable(buildAccounts({ ...sample(), events: null, methods: null, second: null }, NOW), weeks)[0];
+    const t = cohortTable(buildAccounts({ ...sample(), events: null, methods: null, second: null, third: null }, NOW), weeks)[0];
     expect(t.registrados).toBe(3);
-    expect(t.steps).toEqual({ hoy: null, open: null, firstView: null, firstSet: null, finished: 2, second: null, card: null, paid: null });
+    expect(t.steps).toEqual({ hoy: null, open: null, firstView: null, firstSet: null, finished: 2, second: null, third: null, card: null, paid: null });
     expect(t.net).toBeNull();
   });
 

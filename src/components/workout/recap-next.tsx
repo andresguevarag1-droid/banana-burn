@@ -2,25 +2,19 @@
 // Cierre del entreno: cuándo es el próximo y, en el momento de más ganas, que no se le pase. Avisos si el navegador los
 // permite ya; si no (iPhone sin instalar, navegador de Instagram o Facebook), instalar la LinkApp, que es lo que los habilita.
 import Link from "next/link";
-import { CalendarCheck, CaretRight, DeviceMobile } from "@/components/icons";
+import { CaretRight, DeviceMobile } from "@/components/icons";
 import { PushWhenReady } from "@/components/install/push-when-ready";
 import { useInstall } from "@/components/install/use-install";
 import { pushNeedsInstall } from "@/lib/install-env";
-import { RecapNextDay } from "./recap-next-day";
+import { RecapWeekPlan, type WeekPlan } from "./recap-next-day";
 
-/** `firstRemind`: cierre del primer entreno (#286); true si todavía no eligió la hora del recordatorio. */
-export function RecapNext({ upcoming, firstRemind = null }: { upcoming: { when: string; name: string } | null; firstRemind?: boolean | null }) {
+/** `week`: el plan de la semana (#288), con la meta y los próximos días (sin programa; el programa muestra su semana en Hoy). */
+export function RecapNext({ week = null }: { week?: WeekPlan | null }) {
   const { env } = useInstall();
   const install = !!env && env !== "standalone" && env !== "desktop" && (pushNeedsInstall(env) || env === "android-inapp");
   return (
     <div className="mt-3 space-y-3 text-left">
-      {upcoming && firstRemind !== null && <RecapNextDay when={upcoming.when} remind={firstRemind} />}
-      {upcoming && firstRemind === null && (
-        <div className="card flex items-center gap-3 p-4">
-          <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-banana-soft text-banana-ink"><CalendarCheck weight="duotone" className="size-6" /></span>
-          <p className="min-w-0"><span className="block text-sm font-bold text-muted first-letter:uppercase">Tu próximo entreno es {upcoming.when}</span><span className="block font-extrabold text-ink">{upcoming.name}</span></p>
-        </div>
-      )}
+      {week && <RecapWeekPlan plan={week} />}
       {install ? (
         <Link href="/app/instalar" className="card flex items-center gap-3 p-4">
           <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-ink text-banana"><DeviceMobile weight="duotone" className="size-6" /></span>

@@ -37,6 +37,7 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
       log: { water: 5, steps: 4820, sleep: 7.5, protein: 0, kcal: 0 } as DailyLog,
       xp, level: levelOf(xp, await getSex(v)), streak, workoutsTotal: nW, trainedToday: false, weighedToday: false,
       week: weekDays(today).map((d) => ({ d, active: days.has(d), trained: trainedD.has(d) })),
+      trainedDays: [...trainedD],
       badges: badges({ workouts: nW, streak: streak.days, prs: DEMO_PRS, weighIns: demoWeighIns(today), lostKg: startWeight - currentWeight }),
     };
   }
@@ -49,6 +50,8 @@ export async function getDaily(v: Viewer, startWeight: number, currentWeight: nu
     trainedToday: (wk ?? []).some((w) => w.day === today),
     weighedToday: (ws ?? []).some((w) => w.day === today),
     week: weekDays(today).map((d) => ({ d, active: active.has(d), trained: (wk ?? []).some((w) => w.day === d) })),
+    /** Días locales con un entreno guardado en los últimos 90 días (meta y racha semanal, #288). */
+    trainedDays: [...new Set((wk ?? []).map((w) => w.day as string))],
     badges: badges({ workouts: workoutsTotal ?? 0, streak: streak.days, prs: prs ?? 0, weighIns: weighIns ?? 0, lostKg: startWeight - currentWeight, tester: (testerGrants ?? 0) > 0 }),
   };
 }

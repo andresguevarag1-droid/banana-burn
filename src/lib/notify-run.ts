@@ -7,7 +7,7 @@ import { errCode, logError } from "@/lib/log";
 import { EX, nextTrainingDow, offersHomeFirst, planDay, planWeek, scheduleFor, weeklyTrend, type Equipment } from "@/lib/engine";
 import { parseVoice, type Voice } from "@/lib/voice";
 import { streakOf } from "@/lib/gamify";
-import { DEFAULT_PREFS, ONCE_DAY, copyFor, cronModeFrom, daysBetween, decide, inQuietHours, isHHMM, isRelevantHour, liftFact, liftLine, localClock, toMinutes, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
+import { DEFAULT_PREFS, MAX_PUSHES_PER_DAY, ONCE_DAY, copyFor, cronModeFrom, daysBetween, decide, inQuietHours, isHHMM, isRelevantHour, liftFact, liftLine, localClock, toMinutes, type Decision, type Kind, type LiftFact, type Prefs } from "@/lib/notify";
 import { sendPush, type NativeToken, type PushSub } from "@/lib/push";
 import { sendEmail, unsubscribeUrl } from "@/lib/email/send";
 import { withLoginLinks } from "@/lib/email/login-link";
@@ -25,6 +25,7 @@ import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, season
 import { todayIn } from "@/lib/today";
 import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
 import { SECOND_KIND, SECOND_WINDOW, TRIAL_DAYS, secondIdemKey, secondWorkoutEmailDue } from "@/lib/segundo-entreno";
+import { WEEKLY_KIND, registrationDay, weekCount, weekMonday, weeklyGoal, weeklyIdemKey, weeklyNudgeCopy, weeklyNudgeDue } from "@/lib/meta-semanal";
 import { ACTIVATION_KINDS, ACTIVATION_MAX_HOURS, activationDue, activationIdemKey, activationKind, emailedToday, isActivationKind, type LogEntry } from "@/lib/activacion-correos";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
@@ -160,7 +161,8 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
     allPages((a, b) => admin.from("workouts").select("user_id,day").in("user_id", ids).gte("day", since).order("id").range(a, b)),
     allPages((a, b) => admin.from("daily_logs").select("user_id,day").in("user_id", ids).gte("day", since).order("user_id").order("day").range(a, b)),
     allPages((a, b) => admin.from("weights").select("user_id,day,kg").in("user_id", ids).gte("day", isoMinus(utcToday, 21)).order("user_id").order("day").range(a, b)),
-    allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,pushes,channels").in("user_id", ids).gte("local_day", isoMinus(utcToday, 2)).order("id").range(a, b)),
+    // 8 días: la meta semanal (#288) mira si su recordatorio ya salió desde el lunes local.
+    allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,pushes,channels").in("user_id", ids).gte("local_day", isoMinus(utcToday, 8)).order("id").range(a, b)),
     allPages((a, b) => admin.from("push_subscriptions").select("user_id,endpoint,p256dh,auth").in("user_id", ids).order("endpoint").range(a, b)),
     // Meta activa: personaliza los correos ("te faltan X kg"). Si falla, los correos salen sin la tarjeta de meta.
     allPages((a, b) => admin.from("goals").select("user_id,start_weight,goal_weight,goal_date").in("user_id", ids).eq("active", true).order("id").range(a, b)),
@@ -438,7 +440,13 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const activationToday = todayLogs.some((l) => (isActivationKind(l.kind) || l.kind === SECOND_KIND) && l.channels?.includes("email"));
     if (activationToday) for (const d of decisions) d.email = false;
     const trialStep = activationToday ? null : step;
-    if (!decisions.length && !trialStep && !recoveryNow && !payDue && !seasonDue) return;
+    // Meta semanal (#288): a la hora del recordatorio, el día en que todavía llega a su meta pero va atrás; una vez por
+    // semana. No sale con una pieza de activación hoy ni el día de la reactivación (ese mensaje ya le habla).
+    const monday = weekMonday(c.iso);
+    const weekGoal = weeklyGoal({ trainDays: u.train_days, regDay: registrationDay(u.created_at, prefs.timezone), monday });
+    const nudge = atReminderHour(now, prefs, mode) && !activationToday && !decisions.some((d) => d.kind === "reactivacion_3" || d.kind === "reactivacion_7")
+      && weeklyNudgeDue({ today: c.iso, goal: weekGoal, days: workouts, sentThisWeek: userLogs.some((l) => l.kind === WEEKLY_KIND && l.local_day >= monday) });
+    if (!decisions.length && !trialStep && !recoveryNow && !payDue && !seasonDue && !nudge) return;
 
     let email: string | null | undefined;
     const getEmail = async () => {
@@ -481,6 +489,21 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     }
     if (seasonSent || seasonSentToday) for (const d of decisions) d.email = false;
 
+    // Meta semanal: reemplaza al recordatorio de rutina de hoy (correo y push). El correo cede ante cualquier otro de hoy.
+    if (nudge) {
+      const otherEmail = stepSent || !!recovery || paySent || paySentToday || seasonSent || seasonSentToday || todayLogs.some((l) => l.channels?.includes("email")) || decisions.some((d) => d.kind === "semanal" && d.email);
+      const pushesToday = todayLogs.reduce((a, l) => a + (l.pushes ?? 0), 0);
+      const push = prefs.push_reminders && userSubs.length + userPhones.length > 0 && !inQuietHours(c, prefs.quiet_start, prefs.quiet_end) && pushesToday < MAX_PUSHES_PER_DAY;
+      const mail = prefs.email_reminders && !otherEmail;
+      const nextDow = today.tpl === null ? nextTrainingDow(sched, c.dow) : null;
+      const session = nextDow == null ? today : planDay(nextDow, 0, sched, { equipment: eq, sex: u.sex });
+      if ((push || mail) && await sendWeeklyNudge(admin, u.id, { day: c.iso, monday, count: weekCount(workouts, c.iso), goal: weekGoal, mins: session.mins ?? null, push, mail }, { web: userSubs, native: userPhones }, getEmail, stats)) {
+        const i = decisions.findIndex((d) => d.kind === "recordatorio");
+        if (i >= 0) decisions.splice(i, 1);
+        if (mail) for (const d of decisions) d.email = false;
+      }
+    }
+
     for (const d of decisions) {
       // Reclamar el envío: si otra corrida ya lo hizo hoy, no se repite.
       const { data: claimed, error } = await admin.from("notification_log")
@@ -506,6 +529,32 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       stats.sent[d.kind] = (stats.sent[d.kind] ?? 0) + 1;
     }
   }
+}
+
+/**
+ * Reclama y envía el recordatorio de la meta semanal (#288): push y correo según `push` y `mail`. Se reclama en
+ * notification_log (kind meta_semanal, día local) antes de enviarse. Si el correo no sale, el push sí cuenta: el turno de la
+ * semana queda usado. true si se reclamó en esta corrida.
+ */
+async function sendWeeklyNudge(admin: SupabaseClient, userId: string, x: { day: string; monday: string; count: number; goal: number; mins: number | null; push: boolean; mail: boolean },
+  devices: { web: PushSub[]; native: NativeToken[] }, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const { data: claimed, error } = await admin.from("notification_log")
+    .upsert({ user_id: userId, kind: WEEKLY_KIND, local_day: x.day, channels: [...(x.push ? ["push"] : []), ...(x.mail ? ["email"] : [])], pushes: x.push ? 1 : 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+    .select("id");
+  if (error) { stats.errors++; return false; }
+  if (!claimed?.length) return false;
+  const copy = weeklyNudgeCopy(x.count, x.goal, x.mins);
+  if (x.push) stats.push += await sendPush(admin, devices, { ...copy, url: "/app/entreno", tag: WEEKLY_KIND });
+  if (x.mail) {
+    const to = await getEmail();
+    if (to) {
+      const unsubscribe = unsubscribeUrl(userId, "recordatorios");
+      const r = await sendEmail(to, withLoginLinks(T.metaSemanal({ count: x.count, goal: x.goal, mins: x.mins, unsubscribe }), userId), { idempotencyKey: weeklyIdemKey(userId, x.monday), unsubscribe, tags: { kind: WEEKLY_KIND } });
+      if (r.ok) stats.email++;
+    }
+  }
+  stats.sent[WEEKLY_KIND] = (stats.sent[WEEKLY_KIND] ?? 0) + 1;
+  return true;
 }
 
 /** Correos del día que la pieza de la prueba reemplaza (el resumen semanal no: es otro aviso que la persona eligió). */

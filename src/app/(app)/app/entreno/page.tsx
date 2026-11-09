@@ -7,7 +7,7 @@ import { getViewer } from "@/lib/supabase/server";
 import { dashboard, firstSessionPlan, getAthlete, nextSessionPlan } from "@/lib/athlete";
 import { getHistory } from "@/lib/history";
 import { getDaily, prefetchDaily } from "@/lib/daily";
-import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, nextTrainingDow, offersHomeFirst, planDay, prescribe, DAY_NAMES, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
+import { ALTS, BARBELL, EX, HOME, PER_SIDE, SLOTS, e1rm, expressDay, forEquipment, isTrainingDay, offersHomeFirst, planDay, prescribe, type ExerciseId, type PlannedDay, type Prescription, type SlotCfg } from "@/lib/engine";
 import { TECH } from "@/lib/engine/technique";
 import { MUSCLE, animFor, es as esLib, getLibEx, incFor, libraryAlternatives, similar, type LibEx } from "@/lib/library";
 import { plannedFromSession } from "@/lib/programs";
@@ -15,6 +15,7 @@ import { coachArt, coachOf } from "@/lib/coaches";
 import { exInfo } from "@/lib/programs-server";
 import { cap, loadKindOf } from "@/components/workout/logic";
 import { Player, type PlayerExercise } from "./player";
+import type { WeekPlan } from "@/components/workout/recap-next-day";
 import { hasSavedWorkout, templatesDoneToday, testimonialState } from "./done-today";
 import { asksTestimonial } from "@/lib/testimonials";
 import { getVoice } from "@/lib/voice-server";
@@ -24,6 +25,7 @@ import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
 import { getNotificationPrefs } from "@/app/actions/notifications";
 import { DEFAULT_PREFS } from "@/lib/notify";
+import { dayList, registrationDay, suggestDays, weekCount, weekMonday, weeklyGoal } from "@/lib/meta-semanal";
 
 export const metadata = { title: "Entreno" };
 
@@ -146,24 +148,19 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const template = plan.key ?? plan.tpl ?? (expres ? `expres${expres}` : "descanso");
   const title = plan.name;
   const doneToday = options.length > 0 && doneTemplates.includes(template);
-  // Cierre del entreno: el próximo de la rutina (sin programa: el programa ya muestra su semana en Hoy).
   const firstSession = !!firstPlan && !expres && dia == null;
-  let upcoming: { when: string; name: string } | null = null;
-  if (!prog && !expres && plan.tpl) {
-    // El primer entreno guarda el día fijo de la primera sesión del calendario: el próximo se cuenta desde hoy.
-    const from = firstSession ? d.today.dow : plan.dow ?? d.today.dow;
-    const nd = nextTrainingDow(d.engineSched, from);
-    if (nd != null) {
-      const ahead = ((nd - d.today.dow + 7) % 7) || 7;
-      const np = planDay(nd, d.week, d.engineSched, d.opts);
-      upcoming = { when: ahead === 1 ? "mañana" : `el ${DAY_NAMES[nd]}`, name: np.name };
-    }
+  // Cierre del entreno (#286, #288): sin programa (el programa ya muestra su semana en Hoy), la meta semanal contando este
+  // entreno y los próximos días sugeridos según su plan. Si sigue con la hora por defecto, "Recuérdame esos días".
+  let week: WeekPlan | null = null;
+  if (!prog) {
+    const goal = weeklyGoal({ trainDays: a.trainDays, regDay: registrationDay(a.createdAt, v.tz), monday: weekMonday(d.today.iso) });
+    const count = weekCount(g.trainedDays, d.today.iso) + (g.trainedToday ? 0 : 1);
+    const next = suggestDays(d.engineSched, d.today.iso, count, goal);
+    const prefs = next.dows.length ? await getNotificationPrefs().catch(() => null) : null;
+    week = { count, goal, week: next.week, days: dayList(next.dows), n: next.dows.length, remind: prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time };
   }
-  // Cierre del primer entreno (#286): el próximo día y, si sigue con la hora por defecto, "Recuérdame ese día".
-  const prefs = firstSession && upcoming ? await getNotificationPrefs().catch(() => null) : null;
-  const firstRemind = firstSession && upcoming ? prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time : null;
   // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
   const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
-  return <Player firstRemind={firstRemind} firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} upcoming={upcoming} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+  return <Player week={week} firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
     doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
 }

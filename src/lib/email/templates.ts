@@ -996,6 +996,38 @@ export function segundoEntreno(d: { unsubscribe: string }): Email {
   };
 }
 
+// ───────────── Meta semanal (#288, docs/emails/meta-semanal.md) ─────────────
+// El día en que todavía llega a su meta de la semana pero va atrás, una vez por semana. Lo envía runReminders (notify-run.ts).
+
+export const WEEKLY_GOAL_MAIL = {
+  subject: "Todavía llegas a tu meta de la semana",
+  cta: "Empezar mi entreno de hoy",
+  path: "/app/entreno",
+  /** Texto del correo con las cifras reales de la semana. `mins`: minutos de la sesión de hoy, si se saben. */
+  text: (count: number, goal: number, mins: number | null) => ({
+    preheader: `Llevas ${count} de ${goal} entrenos.${mins ? ` Hoy son ${mins} minutos.` : ""}`,
+    paragraphs: [
+      `Esta semana llevas ${count} de ${goal} entrenos. Todavía te alcanzan los días para cumplir tu meta.`,
+      `${mins ? `El de hoy son ${mins} minutos. ` : ""}Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.`,
+      "Si hoy no puedes, no pasa nada: descansar también es parte del plan.",
+    ],
+  }),
+};
+
+/** El recordatorio de la meta semanal. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function metaSemanal(d: { count: number; goal: number; mins: number | null; unsubscribe: string }): Email {
+  const c = WEEKLY_GOAL_MAIL;
+  const { preheader, paragraphs } = c.text(d.count, d.goal, d.mins);
+  const hero: Hero = { eyebrow: "Tu meta de la semana", title: esc(c.subject), lead: esc(preheader), mascot: true };
+  const html = paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(c.cta, c.path, "banana");
+  const reason = "Recibes este correo porque entrenas con Banana Burn y tienes activados los recordatorios.";
+  return {
+    subject: c.subject, preheader,
+    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
+    text: textLayout([c.subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+  };
+}
+
 // ───────────── Recuperación al terminar la prueba sin plan (docs/emails/recuperacion.md) ─────────────
 // Días 8 y 10 desde el registro. La envía runReminders (notify-run.ts) en lugar de los demás correos de ese día.
 

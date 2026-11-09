@@ -31,6 +31,9 @@ export const FUNNEL_EVENTS = [
   "workout_summary",
   "workout_saved",
   "workout_leave",
+  // Hábito semanal (#288): Hoy mostró la meta de la semana ("1 de 3 entrenos") y la cumplió (una vez por semana).
+  "weekly_goal_view",
+  "weekly_goal_done",
   // Dentro del entreno (sin datos personales): empezar el ejercicio, cada serie, saltar descanso, cambiar, ver cómo se hace.
   "brief_start",
   "set_done",

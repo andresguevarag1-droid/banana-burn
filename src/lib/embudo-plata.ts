@@ -1,4 +1,4 @@
-// Embudo de plata por semana de registro (#279): registro > Hoy > entreno > primera serie > primer entreno > segundo entreno > tarjeta > pago
+// Embudo de plata por semana de registro (#279): registro > Hoy > entreno > primera serie > primer entreno > segundo entreno > 3 entrenos > tarjeta > pago
 // > ingreso neto. Reglas puras, sin base ni red: embudo-plata-server.ts lee las filas y esto las cuenta.
 // Si una fuente no se pudo leer llega como null y sus celdas salen "sin dato": nunca se cuenta como cero.
 import { STAFF_ROLES } from "@/lib/admin-perms";
@@ -31,6 +31,7 @@ export const STEPS = [
   { key: "firstSet", label: "Hicieron la primera serie", event: "workout_first_set" },
   { key: "finished", label: "Terminaron su primer entreno" },
   { key: "second", label: "Segundo entreno" },
+  { key: "third", label: "3 entrenos en la prueba" },
   { key: "card", label: "Dejaron tarjeta" },
   { key: "paid", label: "Pagaron" },
 ] as const;
@@ -96,16 +97,18 @@ export type FunnelRows = {
   finished: string[] | null;
   /** Cuentas con 2 o más entrenos terminados en sus primeros 7 días (#286, secondWorkoutUsers). */
   second: string[] | null;
+  /** Cuentas con 3 o más entrenos terminados en sus primeros 7 días (#288, el hábito semanal). */
+  third: string[] | null;
   charges: { user_id: string; status: string; amount_minor: number; fee_minor?: number | null }[] | null;
   methods: { user_id: string; provider: string; status: string }[] | null;
   subs: { user_id: string; provider: string; status: string; plan: string | null; billing: string | null; current_period_end: string | null; cancel_at_period_end: boolean | null }[] | null;
 };
 
-/** Cuentas con 2 o más workouts con finished_at dentro de sus primeros 7 días desde el registro (#286). */
-export function secondWorkoutUsers(profiles: { id: string; created_at: string }[], workouts: { user_id: string; finished_at: string | null }[]): string[] {
+/** Cuentas con `min` o más workouts con finished_at dentro de sus primeros 7 días desde el registro (#286: 2; #288: 3). */
+export function secondWorkoutUsers(profiles: { id: string; created_at: string }[], workouts: { user_id: string; finished_at: string | null }[], min = 2): string[] {
   const by = new Map<string, (string | null)[]>();
   for (const w of workouts) by.set(w.user_id, [...(by.get(w.user_id) ?? []), w.finished_at]);
-  return profiles.filter((p) => finishedInTrial(p.created_at, by.get(p.id) ?? []) >= 2).map((p) => p.id);
+  return profiles.filter((p) => finishedInTrial(p.created_at, by.get(p.id) ?? []) >= min).map((p) => p.id);
 }
 
 export type Account = {
@@ -144,6 +147,7 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
   for (const e of r.events ?? []) if (e.user_id) byEvent.get(e.name)?.add(e.user_id);
   const finished = r.finished && new Set(r.finished);
   const second = r.second && new Set(r.second);
+  const third = r.third && new Set(r.third);
   // Una cuenta puede tener varios métodos (ONVO y Tilopay, o una tarjeta vieja inactiva): cuenta el activo.
   const method = r.methods && new Map<string, NonNullable<FunnelRows["methods"]>[number]>();
   for (const m of r.methods ?? []) if (m.status === "active" && !method!.has(m.user_id)) method!.set(m.user_id, m);
@@ -188,7 +192,7 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
         campaign: a?.utm_campaign?.trim() || null,
         ad: a?.utm_content?.trim() || null,
         era: cardRequiredFor(p.created_at) ? "desde" : "antes",
-        steps: { hoy: ev("hoy_view"), open: ev("workout_open"), firstView: ev("workout_first_set_view"), firstSet: ev("workout_first_set"), finished: finished ? finished.has(p.id) : null, second: second ? second.has(p.id) : null, card, paid },
+        steps: { hoy: ev("hoy_view"), open: ev("workout_open"), firstView: ev("workout_first_set_view"), firstSet: ev("workout_first_set"), finished: finished ? finished.has(p.id) : null, second: second ? second.has(p.id) : null, third: third ? third.has(p.id) : null, card, paid },
         net,
         estimated,
       };
