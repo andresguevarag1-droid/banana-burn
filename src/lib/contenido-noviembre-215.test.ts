@@ -122,8 +122,6 @@ describe("Planes de anuncios en pausa", () => {
     "marketing/estrategia/meta-ads-noviembre.md",
     "marketing/estrategia/variantes-ab-noviembre.md",
     "marketing/ads/boost-organico.md",
-    "docs/metas/campana-conversion-noviembre.md",
-    "docs/metas/campanas-9-noviembre-ficha.md",
     "marketing/anuncios/cuanto-peso-cr-co.md",
   ])("%s lleva el aviso arriba y no se borró", (p) => {
     const lines = read(p).split("\n");
@@ -131,4 +129,16 @@ describe("Planes de anuncios en pausa", () => {
     expect(lines[2].startsWith(`> ${AVISO}`)).toBe(true);
     expect(lines.length).toBeGreaterThan(20);
   });
+
+  // Andrés decidió el 9 nov que la campaña del 9 de noviembre manda (#294): estos dos planes llevan arriba que está activa.
+  it.each(["docs/metas/campana-conversion-noviembre.md", "docs/metas/campanas-9-noviembre-ficha.md"])(
+    "%s dice arriba que la campaña está activa por decisión de Andrés",
+    (p) => {
+      const lines = read(p).split("\n");
+      expect(lines[0]).toMatch(/^# /);
+      expect(lines[2].startsWith("> **ACTIVA por decisión de Andrés (9 nov 2026")).toBe(true);
+      expect(read(p)).not.toContain(AVISO);
+      expect(lines.length).toBeGreaterThan(20);
+    },
+  );
 });
