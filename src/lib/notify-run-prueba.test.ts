@@ -130,3 +130,14 @@ describe("secuencia de la prueba en runReminders", () => {
     expect(kinds(1)).toEqual(["prueba_d2"]);
   });
 });
+
+describe("idioma de la cuenta (#301)", () => {
+  it("la pieza sale en el idioma de profiles.locale: inglés con en-US, español sin idioma", async () => {
+    tables.profiles = [profile(1, { locale: "en-US" }), profile(2), profile(3, { locale: "es-419" })];
+    await runReminders(DAY2, "daily");
+    const subject = (n: number) => sent.find((s) => s.kind === "prueba_d2" && s.to.startsWith(uid(n).slice(0, 8)))?.subject;
+    expect(subject(1)).toBe("Your first result starts with logging");
+    expect(subject(2)).toBe("Tu primer resultado empieza por registrar");
+    expect(subject(3)).toBe("Tu primer resultado empieza por registrar");
+  });
+});

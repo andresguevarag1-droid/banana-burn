@@ -16,6 +16,9 @@ import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving, type Billing
 import { PROMO_PCT, planLine, promoPrice } from "../trial";
 import { intentPath } from "../checkout-intent";
 import type { TrialProgress } from "../recuperacion";
+import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "../i18n/locale";
+import { kgToLb } from "../i18n/format";
+import { tr, type T as Translate } from "../i18n/t";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
 
@@ -166,17 +169,19 @@ function heroBlock(h: Hero, site: string) {
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="vertical-align:${h.mascot ? "middle" : "top"};padding-bottom:${h.mascot ? "22px" : "0"};">${text}</td>${art}</tr></table></td></tr>`;
 }
 
-type LayoutOpts = { preheader: string; hero: Hero; body: string; reason: string; coach?: string; unsubscribe?: string; site?: string };
+/** `locale`: idioma del pie y de `<html lang>` (#301). Sin él, español; el texto del correo lo traduce cada plantilla. */
+type LayoutOpts = { preheader: string; hero: Hero; body: string; reason: string; coach?: string; unsubscribe?: string; site?: string; locale?: Locale };
 
 function layout(o: LayoutOpts) {
   const site = o.site ?? SITE_URL;
+  const t = tr(o.locale ?? DEFAULT_LOCALE);
   const a = (label: string, href: string) => `<a href="${esc(abs(href, site))}" style="color:${C.muted};text-decoration:underline;">${label}</a>`;
   const gap = "&nbsp;&nbsp;&nbsp;";
-  const links = `${a("Abrir la app", "/app")}${gap}${a("Mi progreso", "/app/progreso")}${gap}${a("Ayuda", `mailto:${SUPPORT}`)}`;
+  const links = `${a(t("Abrir la app"), "/app")}${gap}${a(t("Mi progreso"), "/app/progreso")}${gap}${a(t("Ayuda"), `mailto:${SUPPORT}`)}`;
   const reason = o.unsubscribe
-    ? `${esc(o.reason)}<br>${a("Dejar de recibir estos correos", o.unsubscribe)}${gap}${a("Ajustar avisos", "/app/perfil#notificaciones")}`
+    ? `${esc(o.reason)}<br>${a(t("Dejar de recibir estos correos"), o.unsubscribe)}${gap}${a(t("Ajustar avisos"), "/app/perfil#notificaciones")}`
     : esc(o.reason);
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><meta name="x-apple-disable-message-reformatting"><title>Banana Burn</title>
+  return `<!doctype html><html lang="${o.locale === "en-US" ? "en" : "es"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><meta name="x-apple-disable-message-reformatting"><title>Banana Burn</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"></head>
 <body style="margin:0;padding:0;background:${C.paper};font-family:${FONT};-webkit-text-size-adjust:100%;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(o.preheader)}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>
@@ -186,16 +191,17 @@ function layout(o: LayoutOpts) {
 ${heroBlock(o.hero, site)}
 <tr><td style="padding:26px 24px 24px;">${o.body}${o.coach ? coachNote(o.coach, site, !o.hero.mascot) : ""}</td></tr>
 </table>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"><tr><td style="padding:20px 12px 0;font-size:12px;line-height:20px;color:${C.faint};text-align:center;">${links}<br>${reason}<br>Banana Burn, tu entrenador personal en el celular. Atlas Resources SRL.</td></tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"><tr><td style="padding:20px 12px 0;font-size:12px;line-height:20px;color:${C.faint};text-align:center;">${links}<br>${reason}<br>${t("Banana Burn, tu entrenador personal en el celular.")} Atlas Resources SRL.</td></tr></table>
 </td></tr></table></body></html>`;
 }
 
-function textLayout(lines: string[], unsubscribe?: string, reason?: string, coach?: string) {
+function textLayout(lines: string[], unsubscribe?: string, reason?: string, coach?: string, locale: Locale = DEFAULT_LOCALE) {
+  const t = tr(locale);
   const out = [...lines];
   if (coach) out.push("", `"${coach.replace(/<[^>]+>/g, "")}"`, "Coach Banana");
-  out.push("", "-- ", "Banana Burn, tu entrenador personal en el celular", `Ayuda: ${SUPPORT}`);
+  out.push("", "-- ", t("Banana Burn, tu entrenador personal en el celular"), t("Ayuda: {email}", { email: SUPPORT }));
   if (reason) out.push(reason);
-  if (unsubscribe) out.push(`Dejar de recibir estos correos: ${unsubscribe}`);
+  if (unsubscribe) out.push(t("Dejar de recibir estos correos: {url}", { url: unsubscribe }));
   return out.filter((l, i, a) => !(l === "" && a[i - 1] === "")).join("\n");
 }
 
@@ -664,6 +670,11 @@ export function reactivacion(d: { name: string; days: 3 | 7; routine: string; tr
   };
 }
 
+/** Copy de una pieza en el idioma de la cuenta (#301): asunto, vista previa, párrafos y botón por src/lib/i18n/en/email.ts. */
+function localized<C extends { subject: string; preheader: string; paragraphs: string[]; cta: string }>(c: C, t: Translate): C {
+  return { ...c, subject: t(c.subject), preheader: t(c.preheader), paragraphs: c.paragraphs.map((x) => t(x)), cta: t(c.cta) };
+}
+
 // ───────────── Secuencia de la prueba de 7 días (docs/emails/secuencia-prueba.md) ─────────────
 // Días 2, 4 y 6 desde el registro. La envía runReminders (notify-run.ts) en lugar del recordatorio de ese día.
 
@@ -712,17 +723,18 @@ export const TRIAL_SEQUENCE: Record<TrialStepDay, { subject: string; preheader: 
 };
 
 /** Una pieza de la secuencia de la prueba. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string }): Email {
-  const c = TRIAL_SEQUENCE[d.day];
+export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE;
+  const c = localized(TRIAL_SEQUENCE[d.day], tr(locale));
   const body = c.paragraphs.slice(0, -1);
   const coach = esc(c.paragraphs.at(-1));
-  const hero: Hero = { eyebrow: "Tu prueba de 7 días", title: esc(c.subject), lead: esc(c.preheader) };
+  const hero: Hero = { eyebrow: tr(locale)("Tu prueba de 7 días"), title: esc(c.subject), lead: esc(c.preheader) };
   const html = body.map((x) => p(esc(x))).join("") + button(c.cta, c.path, c.kind);
-  const reason = "Recibes este correo porque estás en tu prueba de 7 días y tienes activados los recordatorios de Banana Burn.";
+  const reason = tr(locale)("Recibes este correo porque estás en tu prueba de 7 días y tienes activados los recordatorios de Banana Burn.");
   return {
     subject: c.subject, preheader: c.preheader,
-    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, coach }),
-    text: textLayout([c.subject, "", ...body.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, coach),
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, coach, locale }),
+    text: textLayout([c.subject, "", ...body.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, coach, locale),
   };
 }
 
@@ -955,16 +967,17 @@ export const ACTIVATION_MAILS: Record<ActivationMailStep, { subject: string; pre
 export const activationPath = (home: boolean) => (home ? "/app/entreno?casa=1" : "/app/entreno");
 
 /** Una pieza de activación. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function activacion(d: { step: ActivationMailStep; home: boolean; unsubscribe: string }): Email {
-  const c = ACTIVATION_MAILS[d.step];
-  const cta = "Empezar mi entreno", path = activationPath(d.home);
-  const hero: Hero = { eyebrow: "Tu primer entreno", title: esc(c.subject), lead: esc(c.preheader), mascot: true };
+export function activacion(d: { step: ActivationMailStep; home: boolean; unsubscribe: string; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const c = localized({ ...ACTIVATION_MAILS[d.step], cta: "Empezar mi entreno" }, t);
+  const cta = c.cta, path = activationPath(d.home);
+  const hero: Hero = { eyebrow: t("Tu primer entreno"), title: esc(c.subject), lead: esc(c.preheader), mascot: true };
   const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
-  const reason = "Recibes este correo porque creaste tu cuenta en Banana Burn y tienes activados los recordatorios.";
+  const reason = t("Recibes este correo porque creaste tu cuenta en Banana Burn y tienes activados los recordatorios.");
   return {
     subject: c.subject, preheader: c.preheader,
-    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
-    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason),
+    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason, undefined, locale),
   };
 }
 
@@ -984,15 +997,16 @@ export const SECOND_WORKOUT_MAIL = {
 };
 
 /** El correo del segundo entreno. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function segundoEntreno(d: { unsubscribe: string }): Email {
-  const c = SECOND_WORKOUT_MAIL;
-  const hero: Hero = { eyebrow: "Tu segundo entreno", title: esc(c.subject), lead: esc(c.preheader), mascot: true };
+export function segundoEntreno(d: { unsubscribe: string; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const c = localized(SECOND_WORKOUT_MAIL, t);
+  const hero: Hero = { eyebrow: t("Tu segundo entreno"), title: esc(c.subject), lead: esc(c.preheader), mascot: true };
   const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(c.cta, c.path, "banana");
-  const reason = "Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.";
+  const reason = t("Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.");
   return {
     subject: c.subject, preheader: c.preheader,
-    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
-    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, undefined, locale),
   };
 }
 
@@ -1003,28 +1017,29 @@ export const WEEKLY_GOAL_MAIL = {
   subject: "Todavía llegas a tu meta de la semana",
   cta: "Empezar mi entreno de hoy",
   path: "/app/entreno",
-  /** Texto del correo con las cifras reales de la semana. `mins`: minutos de la sesión de hoy, si se saben. */
-  text: (count: number, goal: number, mins: number | null) => ({
-    preheader: `Llevas ${count} de ${goal} entrenos.${mins ? ` Hoy son ${mins} minutos.` : ""}`,
+  /** Texto del correo con las cifras reales de la semana. `mins`: minutos de la sesión de hoy, si se saben. `t`: idioma (#301). */
+  text: (count: number, goal: number, mins: number | null, t: Translate = tr(DEFAULT_LOCALE)) => ({
+    preheader: t("Llevas {count} de {goal} entrenos.", { count, goal }) + (mins ? t(" Hoy son {mins} minutos.", { mins }) : ""),
     paragraphs: [
-      `Esta semana llevas ${count} de ${goal} entrenos. Todavía te alcanzan los días para cumplir tu meta.`,
-      `${mins ? `El de hoy son ${mins} minutos. ` : ""}Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.`,
-      "Si hoy no puedes, no pasa nada: descansar también es parte del plan.",
+      t("Esta semana llevas {count} de {goal} entrenos. Todavía te alcanzan los días para cumplir tu meta.", { count, goal }),
+      (mins ? t("El de hoy son {mins} minutos. ", { mins }) : "") + t("Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar."),
+      t("Si hoy no puedes, no pasa nada: descansar también es parte del plan."),
     ],
   }),
 };
 
 /** El recordatorio de la meta semanal. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function metaSemanal(d: { count: number; goal: number; mins: number | null; unsubscribe: string }): Email {
-  const c = WEEKLY_GOAL_MAIL;
-  const { preheader, paragraphs } = c.text(d.count, d.goal, d.mins);
-  const hero: Hero = { eyebrow: "Tu meta de la semana", title: esc(c.subject), lead: esc(preheader), mascot: true };
+export function metaSemanal(d: { count: number; goal: number; mins: number | null; unsubscribe: string; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const c = { ...WEEKLY_GOAL_MAIL, subject: t(WEEKLY_GOAL_MAIL.subject), cta: t(WEEKLY_GOAL_MAIL.cta) };
+  const { preheader, paragraphs } = c.text(d.count, d.goal, d.mins, t);
+  const hero: Hero = { eyebrow: t("Tu meta de la semana"), title: esc(c.subject), lead: esc(preheader), mascot: true };
   const html = paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(c.cta, c.path, "banana");
-  const reason = "Recibes este correo porque entrenas con Banana Burn y tienes activados los recordatorios.";
+  const reason = t("Recibes este correo porque entrenas con Banana Burn y tienes activados los recordatorios.");
   return {
     subject: c.subject, preheader,
-    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe }),
-    text: textLayout([c.subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([c.subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, undefined, locale),
   };
 }
 
@@ -1033,19 +1048,26 @@ export function metaSemanal(d: { count: number; goal: number; mins: number | nul
 
 export type RecoveryDay = 8 | 10;
 
-const plural = (n: number, one: string, many: string) => `${nfmt(n, 0)} ${n === 1 ? one : many}`;
+/** "1 entreno" o "3 entrenos": las dos formas son claves del diccionario ("{n} entreno", "{n} entrenos"). */
+const plural = (t: Translate, n: number, one: string, many: string) => t(n === 1 ? one : many, { n: nfmt(n, 0) });
+
+/** Total levantado en la unidad de la cuenta: kg tal cual; en lb, redondeado a 2.5 lb (#301). */
+const liftedTotal = (kgTotal: number, units: Units) =>
+  units === "imperial" ? `${nfmt(Math.round(kgToLb(kgTotal) / 2.5) * 2.5, 1)} lb` : `${nfmt(kgTotal, 0)} kg`;
 
 /**
  * Primer párrafo del día 8. Con entrenos terminados, sus cifras reales (trialProgress en recuperacion.ts): las series y los kg
  * solo aparecen si son mayores que cero. Sin entrenos, o si no se pudieron leer (`null`), habla de su plan, nunca de logros.
  */
-export function recoveryProgressLine(p: TrialProgress | null, trainDays?: number | null): string {
+export function recoveryProgressLine(p: TrialProgress | null, trainDays?: number | null, locale: Locale = DEFAULT_LOCALE, units: Units = "metric"): string {
+  const t = tr(locale);
   if (p && p.workouts > 0) {
-    const extra = [p.sets > 0 && plural(p.sets, "serie", "series"), p.kg > 0 && `${nfmt(p.kg, 0)} kg levantados`].filter(Boolean) as string[];
-    return `En tu prueba guardaste ${plural(p.workouts, "entreno", "entrenos")}${extra.length ? `, con ${extra.join(" y ")}` : ""}. Todo eso sigue en tu cuenta.`;
+    const extra = [p.sets > 0 && plural(t, p.sets, "{n} serie", "{n} series"), p.kg > 0 && t("{total} levantados", { total: liftedTotal(p.kg, units) })].filter(Boolean) as string[];
+    const workouts = plural(t, p.workouts, "{n} entreno", "{n} entrenos");
+    return t("En tu prueba guardaste {workouts}{extra}. Todo eso sigue en tu cuenta.", { workouts, extra: extra.length ? t(", con {items}", { items: extra.join(t(" y ")) }) : "" });
   }
-  const days = trainDays && trainDays >= 1 && trainDays <= 7 ? ` de ${plural(trainDays, "día", "días")} por semana` : "";
-  return `Tu plan${days} sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos.`;
+  const days = trainDays && trainDays >= 1 && trainDays <= 7 ? t(" de {days} por semana", { days: plural(t, trainDays, "{n} día", "{n} días") }) : "";
+  return t("Tu plan{days} sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos.", { days });
 }
 
 /** Copy de cada pieza, con los precios de PLANS. El día 8 va después de recoveryProgressLine. Sin descuentos: después de la prueba el alta va a precio normal (promoFor). */
@@ -1071,16 +1093,19 @@ export const RECOVERY_MAILS: Record<RecoveryDay, { subject: string; preheader: s
 };
 
 /** Un correo de recuperación. Lleva enlace de baja (scope "recordatorios": reemplaza a los avisos del día). */
-export function recuperacionPrueba(d: { day: RecoveryDay; unsubscribe: string; progress?: TrialProgress | null; trainDays?: number | null }): Email {
-  const c = RECOVERY_MAILS[d.day];
-  const paragraphs = d.day === 8 ? [recoveryProgressLine(d.progress ?? null, d.trainDays), ...c.paragraphs] : c.paragraphs;
-  const hero: Hero = { eyebrow: "Tu prueba terminó", title: esc(c.subject), lead: esc(c.preheader) };
+/** `units`: en qué se muestran los kg del día 8; sin dato, los del idioma (lb en inglés, #301). */
+export function recuperacionPrueba(d: { day: RecoveryDay; unsubscribe: string; progress?: TrialProgress | null; trainDays?: number | null; locale?: Locale; units?: Units | null }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const c = localized(RECOVERY_MAILS[d.day], t);
+  const units = d.units ?? defaultUnits(locale);
+  const paragraphs = d.day === 8 ? [recoveryProgressLine(d.progress ?? null, d.trainDays, locale, units), ...c.paragraphs] : c.paragraphs;
+  const hero: Hero = { eyebrow: t("Tu prueba terminó"), title: esc(c.subject), lead: esc(c.preheader) };
   const html = paragraphs.map((x) => p(esc(x))).join("") + small("<b>Coach Banana</b>") + button(c.cta, c.path);
-  const reason = "Recibes este correo porque tu prueba de 7 días terminó sin elegir un plan y tienes activados los recordatorios de Banana Burn.";
+  const reason = t("Recibes este correo porque tu prueba de 7 días terminó sin elegir un plan y tienes activados los recordatorios de Banana Burn.");
   return {
     subject: c.subject, preheader: c.preheader,
-    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
-    text: textLayout([c.subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason),
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, locale }),
+    text: textLayout([c.subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, undefined, locale),
   };
 }
 
