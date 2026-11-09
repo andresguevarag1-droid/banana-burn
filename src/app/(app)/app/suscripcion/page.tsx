@@ -18,6 +18,7 @@ import { demoCardState } from "@/lib/trial-demo";
 import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
 import { askWhere } from "@/lib/card-ask";
+import { TilopayNotice } from "./tilopay-notice";
 
 export const metadata = { title: "Mi plan" };
 
@@ -49,7 +50,7 @@ const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
 
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };
 
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string; motivo?: string; para?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
   const [real, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
@@ -114,9 +115,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       {ent.locked && cardStep !== "trial" && charge?.phase !== "procesando" && charge?.phase !== "reintento" && charge?.phase !== "fallido" && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
       <TrialCardNotice ent={ent} tz={v.tz} screen="suscripcion" />
-      {tlp && (
-        <p role="status" className={`rounded-2xl p-3 text-sm font-semibold text-pretty ${tlp.ok ? "bg-peel/10 text-ink" : "bg-bad/10 text-bad"}`}>{tlp.text}</p>
-      )}
+      {tlp && <TilopayNotice notice={tlp} motivo={sp.motivo} para={sp.para} plan={sp.plan} pago={sp.pago} demo={v.demo} />}
       {condoPending && !charge && (
         <section className="rounded-2xl border-2 border-ink bg-banana-soft p-4 text-sm text-ink">
           <p className="font-extrabold">{condoPending.name}: sigue gratis hasta el {fmtDay(new Date(Date.parse(condoPending.freeUntil) - 1000).toISOString())}.</p>

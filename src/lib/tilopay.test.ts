@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   __setTilopayFetch, amountText, apiToken, chargeSavedCard, checkoutOrderNumber, consultOrder, createTokenizeUrl, isTilopayConfigured,
-  readCharge, readConsult, readReturn, renewalOrderNumber, signState, splitName, tilopayMode, tilopayOfferedTo, trialOrderNumber, verifyState,
+  readCharge, readConsult, readReturn, renewalOrderNumber, signState, splitName, splitReturn, tilopayMode, tilopayOfferedTo, trialOrderNumber, verifyState,
 } from "./tilopay";
 import { RENEWAL_MAX_ATTEMPTS, renewalNext } from "./tilopay-renewal";
 
@@ -118,9 +118,16 @@ describe("cliente REST (fetch simulado)", () => {
 
   it("consulta que no se entiende = unknown", async () => {
     replies.push(json(200, { access_token: "t", expires_in: 86400 }), json(200, { algo: "raro" }));
-    expect(await consultOrder("o1")).toEqual({ state: "unknown" });
+    expect(await consultOrder("o1")).toMatchObject({ state: "unknown", why: "sin_orden" });
     replies.push(json(500, {}));
-    expect(await consultOrder("o1")).toEqual({ state: "unknown" });
+    expect(await consultOrder("o1")).toEqual({ state: "unknown", why: "tilopay_500" });
+  });
+
+  it("consulta: manda merchantId como en la documentación de Tilopay (#296)", async () => {
+    replies.push(json(200, { access_token: "t", expires_in: 86400 }), json(200, { type: "200", response: [{ orderNumber: "o1", code: "1", response: "Transacción aprobada", amount: "89.99", currency: "USD", card: "411111XXXXXX1111" }] }));
+    const r = await consultOrder("o1");
+    expect(r).toEqual({ state: "approved", amountMinor: 8999, currency: "USD", token: null });
+    expect(calls.at(-1)?.body).toMatchObject({ orderNumber: "o1", merchantId: "" });
   });
 });
 
@@ -134,9 +141,32 @@ describe("lecturas puras", () => {
 
   it("readConsult acepta formas razonables y exige la misma orden", () => {
     expect(readConsult({ response: [{ orderNumber: "o1", code: "1", amount: "9.99", currency: "usd", crd: "tok_abcdefgh" }] }, "o1")).toEqual({ state: "approved", amountMinor: 999, currency: "USD", token: "tok_abcdefgh" });
-    expect(readConsult({ response: { order: "o1", estado: "rechazada" } }, "o1")).toEqual({ state: "declined" });
-    expect(readConsult({ response: [{ orderNumber: "otra", code: "1" }] }, "o1")).toEqual({ state: "unknown" });
-    expect(readConsult({ orderNumber: "o1", code: "pendiente" }, "o1")).toEqual({ state: "unknown" });
+    expect(readConsult({ response: { order: "o1", estado: "rechazada" } }, "o1")).toEqual({ state: "declined", code: "rechazada" });
+    expect(readConsult({ response: [{ orderNumber: "otra", code: "1" }] }, "o1")).toMatchObject({ state: "unknown" });
+    expect(readConsult({ orderNumber: "o1", code: "pendiente" }, "o1")).toMatchObject({ state: "unknown" });
+    // Cualquier código numérico distinto de "1" es un rechazo del banco, con su código para el motivo.
+    expect(readConsult({ response: [{ orderNumber: "o1", code: "51" }] }, "o1")).toEqual({ state: "declined", code: "51" });
+    // `card` en la consulta son dígitos de la tarjeta: nunca se toman como token.
+    expect(readConsult({ response: [{ orderNumber: "o1", code: "1", card: "411111XXXXXX1111" }] }, "o1")).toMatchObject({ token: null });
+  });
+
+  it("splitReturn: si Tilopay agrega sus parámetros con otro \"?\", el estado y el código se separan (#296)", () => {
+    const glued = splitReturn(new URLSearchParams("s=abc.def?code=2&description=Denegada&order=bbc-1"));
+    expect(glued.state).toBe("abc.def");
+    expect(glued.params.get("code")).toBe("2");
+    expect(glued.params.get("order")).toBe("bbc-1");
+    expect(glued.params.has("s")).toBe(false);
+    const clean = splitReturn(new URLSearchParams("s=abc.def&code=1"));
+    expect(clean).toMatchObject({ state: "abc.def" });
+    expect(clean.params.get("code")).toBe("1");
+    expect(splitReturn(new URLSearchParams("code=1")).state).toBeNull();
+  });
+
+  it("una vuelta con el código pegado al estado sigue siendo válida", () => {
+    const tok = signState({ u: "u1", p: "pago", plan: "completo", billing: "anual", n: "n", o: "bbc-1" }, Date.now(), ENV as unknown as NodeJS.ProcessEnv);
+    const { state } = splitReturn(new URLSearchParams(`s=${tok}?code=1`));
+    expect(verifyState(state, Date.now(), ENV as unknown as NodeJS.ProcessEnv)).toMatchObject({ u: "u1", o: "bbc-1" });
+    expect(verifyState(`${tok}?code=1`, Date.now(), ENV as unknown as NodeJS.ProcessEnv)).toBeNull();
   });
 
   it("readReturn: el token puede venir con varios nombres; datos raros se descartan", () => {

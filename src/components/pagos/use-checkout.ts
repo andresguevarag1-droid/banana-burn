@@ -6,11 +6,12 @@ import type { Billing, PlanId } from "@/lib/plans";
 export function useCheckout() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  async function start(plan: PlanId, billing: Billing) {
+  /** `provider`: reintentar con el mismo procesador del pago que no se completó (#296). Sin él, decide el servidor. */
+  async function start(plan: PlanId, billing: Billing, provider?: "onvo" | "tilopay") {
     setBusy(`${plan}.${billing}`);
     setError(null);
     try {
-      const r = await fetch("/api/pagos/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, billing }) });
+      const r = await fetch("/api/pagos/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(provider ? { plan, billing, provider } : { plan, billing }) });
       const j = (await r.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
       if (r.status === 401) { window.location.href = `/entrar?next=${encodeURIComponent(`/app/suscripcion?plan=${plan}&pago=${billing}`)}`; return; }
       if (j.ok && j.url) { window.location.assign(j.url); return; }

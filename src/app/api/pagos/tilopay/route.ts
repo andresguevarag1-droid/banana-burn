@@ -4,11 +4,12 @@ import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
-import { tilopayOfferedTo } from "@/lib/tilopay";
+import { TilopayError, tilopayOfferedTo } from "@/lib/tilopay";
 import { providerFor } from "@/lib/pay-provider";
 import { startTilopayCard } from "@/lib/tilopay-billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { dbRateLimit } from "@/lib/security/db-rate-limit";
+import { recordPaymentFailed } from "@/lib/pago-fallo-server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
     logError("pagos", "tilopay_start_failed", { kind: errCode(e) });
+    await recordPaymentFailed(adminClient(), { userId: v.id, provider: "tilopay", stage: "tarjeta", code: e instanceof TilopayError ? `tilopay_${e.status}` : errCode(e), plan: pb.plan, billing: pb.billing });
     return NextResponse.json({ ok: false, error: "No pudimos abrir la página de pago. Intenta de nuevo en un momento." }, { status: 502 });
   }
 }

@@ -6,9 +6,10 @@ import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError, startCheckout } from "@/lib/billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { dbRateLimit } from "@/lib/security/db-rate-limit";
-import { tilopayOfferedTo } from "@/lib/tilopay";
+import { TilopayError, tilopayOfferedTo } from "@/lib/tilopay";
 import { providerFor } from "@/lib/pay-provider";
 import { startTilopayCheckout } from "@/lib/tilopay-billing";
+import { recordPaymentFailed } from "@/lib/pago-fallo-server";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, url });
   } catch (e) {
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
-    logError("pagos", "checkout_failed", { kind: errCode(e) });
+    logError("pagos", "checkout_failed", { kind: errCode(e), provider });
+    // No se pudo abrir la página de pago (ONVO o Tilopay no respondió): queda el motivo (#296).
+    await recordPaymentFailed(adminClient(), { userId: v.id, provider, stage: "checkout", code: e instanceof TilopayError ? `tilopay_${e.status}` : errCode(e), plan: pb.plan, billing: pb.billing });
     return NextResponse.json({ ok: false, error: "No pudimos iniciar el pago. Intenta de nuevo en un momento." }, { status: 502 });
   }
 }
