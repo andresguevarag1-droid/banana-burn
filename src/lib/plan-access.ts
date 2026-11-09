@@ -39,7 +39,8 @@ export function challengeNeedsNutrition(c: { verify: string }): boolean {
  * Consejo del coach en Hoy. Con nutrición puede hablar de gramos de proteína (la meta es suya);
  * sin nutrición solo da principios generales, sin números de comida.
  */
-export function hoyTip(x: { dow: number; training: boolean; proteinLeft: number; trained: boolean; nutrition: boolean }): string {
+/** `t`: el traductor de Hoy (#299); solo hace falta para la frase con números, las demás se traducen tal cual. */
+export function hoyTip(x: { dow: number; training: boolean; proteinLeft: number; trained: boolean; nutrition: boolean }, t: (es: string, vars?: Record<string, number>) => string = (s, vars) => s.replace(/\{(\w+)\}/g, (m, k: string) => String(vars?.[k] ?? m))): string {
   const { dow, training, proteinLeft, trained, nutrition } = x;
   if (!nutrition) {
     if (trained) return "Ya entrenaste. Come algo con proteína en las próximas horas y duerme de 7 a 9 horas: ahí se construye el músculo.";
@@ -47,7 +48,7 @@ export function hoyTip(x: { dow: number; training: boolean; proteinLeft: number;
     if (dow === 5) return "Viernes: termina la semana fuerte. Controla la bajada en cada rep y anota tus cargas.";
     return "Tempo 3-1-1 en cada rep. Bajar lento es donde se construye el músculo.";
   }
-  if (trained) return proteinLeft > 30 ? `Ya entrenaste. Ahora cierra la proteína: te faltan unos ${Math.round(proteinLeft)} g (pechuga, atún, yogur griego o huevos).` : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
+  if (trained) return proteinLeft > 30 ? t("Ya entrenaste. Ahora cierra la proteína: te faltan unos {g} g (pechuga, atún, yogur griego o huevos).", { g: Math.round(proteinLeft) }) : "Ya entrenaste y vas bien con la proteína. Duerme 7 a 9 horas: ahí se construye el músculo.";
   if (!training) return "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo.";
   if (proteinLeft > 100) return "Come tus carbos de 60 a 90 min antes de entrenar: avena con banana, arroz con huevo o pan integral con yogur griego.";
   if (dow === 5) return "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el fin de semana hay salida, máximo 2 tragos.";

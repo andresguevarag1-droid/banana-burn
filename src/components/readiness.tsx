@@ -4,6 +4,8 @@ import Link from "next/link";
 import { BananaFlame, Play, Banana, Bed, House, Syringe } from "@/components/icons";
 import { useDailySave } from "@/components/use-daily-save";
 import { DEFAULT_VOICE, readinessEffects, readinessTips, t, type Voice } from "@/lib/voice";
+import { useLocale, useT } from "@/lib/i18n/client";
+import { DEFAULT_LOCALE } from "@/lib/i18n/locale";
 
 const OPTS = [
   { v: 1, I: Bed, t: "Cansado", tip: "Modo suave: una serie menos por ejercicio y 3 reps en reserva. Entrenar suave también suma a tu racha.", q: "?modo=suave" },
@@ -20,6 +22,10 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
   const key = `bb.ready.${dateKey}`;
   const [v, setV] = useState(initial);
   const daily = useDailySave();
+  const tx = useT();
+  // Los botones del primer día se citan tal cual en la campaña (campana-9-noviembre.test.ts): el español queda escrito
+  // en el JSX y el inglés (#299) va en su propia rama.
+  const es = useLocale() === DEFAULT_LOCALE;
   useEffect(() => { if (demo) try { const s = Number(localStorage.getItem(key)); if (s) setV(s); } catch { /* */ } }, [demo, key]);
   const pick = (n: number) => {
     const prev = v;
@@ -32,9 +38,13 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
       <Link key="gym" href={`/app/entreno${demo ? "?primera=1" : ""}`} className={`${home?.first ? "btn-ghost" : "btn-primary"} flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center`}>
         <Play weight="fill" className="size-6 shrink-0" aria-hidden />
         {/* Con la opción en casa, los dos botones se distinguen por dónde: cortos, para que ambos quepan sin desplazar. */}
-        {home
-          ? <span>Empezar mi entreno<span className="mt-1 block text-sm font-semibold">Unos {mins} min</span></span>
-          : <span>Empezar mi primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>}
+        {!es
+          ? home
+            ? <span>{tx("Empezar mi entreno")}<span className="mt-1 block text-sm font-semibold">{tx("Unos {n} min", { n: mins })}</span></span>
+            : <span>{tx("Empezar mi primer entreno ({n} min)", { n: mins })}<span className="mt-1 block text-sm font-semibold">{tx("Duración estimada a tu ritmo")}</span></span>
+          : home
+            ? <span>Empezar mi entreno<span className="mt-1 block text-sm font-semibold">Unos {mins} min</span></span>
+            : <span>Empezar mi primer entreno ({mins} min)<span className="mt-1 block text-sm font-semibold">Duración estimada a tu ritmo</span></span>}
       </Link>
     );
     if (!home) return gym;
@@ -42,7 +52,9 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
     const casa = (
       <Link key="casa" href={`/app/entreno?casa=1${demo ? "&primera=1" : ""}`} className={`${home.first ? "btn-primary" : "btn-ghost"} flex w-full min-h-16 h-auto px-5 py-3 text-lg font-extrabold text-center`}>
         <House weight="fill" className="size-6 shrink-0" aria-hidden />
-        <span>Empezar en casa<span className="mt-1 block text-sm font-semibold">Sin equipo, unos {home.mins} min</span></span>
+        {es
+          ? <span>Empezar en casa<span className="mt-1 block text-sm font-semibold">Sin equipo, unos {home.mins} min</span></span>
+          : <span>{tx("Empezar en casa")}<span className="mt-1 block text-sm font-semibold">{tx("Sin equipo, unos {n} min", { n: home.mins })}</span></span>}
       </Link>
     );
     return <div className="flex flex-col gap-2.5">{home.first ? [casa, gym] : [gym, casa]}</div>;
@@ -56,22 +68,22 @@ export function Readiness({ initial, dateKey, demo, mins, suggestSoft = false, v
       {/* Lo primero: el botón grande para empezar. Cómo te sientes es opcional y ajusta el entreno. */}
       <Link href={`/app/entreno${sel?.q ?? ""}${demo && first ? `${sel?.q ? "&" : "?"}primera=1` : ""}`} className="btn-primary flex w-full min-h-16 h-auto py-3 px-5 text-lg leading-tight font-extrabold text-center shadow-lift">
         <Play weight="fill" className="size-6 shrink-0" aria-hidden />
-        <span className="min-w-0 text-balance">{first ? `Empezar mi primer entreno (${sel?.v === 1 ? Math.round(mins * 0.75) : mins} min)` : sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy"}</span>
-        {!first && <span className="sr-only">, unos {sel?.v === 1 ? Math.round(mins * 0.75) : mins} minutos</span>}
+        <span className="min-w-0 text-balance">{first ? tx("Empezar mi primer entreno ({n} min)", { n: sel?.v === 1 ? Math.round(mins * 0.75) : mins }) : tx(sel?.v === 1 ? "Empezar en modo suave" : "Empezar entrenamiento de hoy")}</span>
+        {!first && <span className="sr-only">{tx(", unos {n} minutos", { n: sel?.v === 1 ? Math.round(mins * 0.75) : mins })}</span>}
       </Link>
-      <p className="mt-4 text-sm font-bold text-ink/80">¿Cómo te sientes hoy? <span className="font-semibold text-ink/70">Opcional</span></p>
-      <p className="text-xs font-semibold text-ink/75">{t(voice, { basico: `Elige y ${coachName} ajusta tu entreno a cómo llegas hoy.`, intermedio: "Ajusto el entreno a tu energía de hoy.", tecnico: "Autorregulación del día." })}</p>
-      {suggestSoft && !v && <p className="mt-1 flex gap-1.5 text-xs font-semibold text-ink/75"><Syringe weight="duotone" className="size-4 shrink-0" />Cerca de tu inyección: si hay náusea o poca energía, elige “{she ? "Cansada" : "Cansado"}” para el modo suave.</p>}
+      <p className="mt-4 text-sm font-bold text-ink/80">{tx("¿Cómo te sientes hoy?")} <span className="font-semibold text-ink/70">{tx("Opcional")}</span></p>
+      <p className="text-xs font-semibold text-ink/75">{tx(t(voice, { basico: "Elige y {coach} ajusta tu entreno a cómo llegas hoy.", intermedio: "Ajusto el entreno a tu energía de hoy.", tecnico: "Autorregulación del día." }), { coach: coachName })}</p>
+      {suggestSoft && !v && <p className="mt-1 flex gap-1.5 text-xs font-semibold text-ink/75"><Syringe weight="duotone" className="size-4 shrink-0" />{tx("Cerca de tu inyección: si hay náusea o poca energía, elige “{opt}” para el modo suave.", { opt: tx(she ? "Cansada" : "Cansado") })}</p>}
       <div className="mt-2 grid grid-cols-3 gap-2">
         {OPTS.map((o) => (
           <button key={o.v} onClick={() => pick(o.v)} className={`pressable flex flex-col items-center justify-center gap-0.5 min-h-[4.5rem] rounded-2xl px-1 py-2 text-center ${v === o.v ? "bg-ink text-white shadow-lift" : "bg-white/75 text-ink"}`} aria-pressed={v === o.v}>
             {/* En móvil el ícono va arriba: así "Con todo" no se parte en dos líneas junto a los otros dos. */}
-            <span className="inline-flex flex-col items-center gap-1 text-sm font-bold sm:flex-row sm:gap-1.5"><span className={`grid place-items-center size-7 shrink-0 rounded-lg ${v === o.v ? "bg-white/10 text-banana" : o.v === 3 ? "bg-ember/10 text-ember-ink" : "bg-banana-soft text-banana-ink"}`}><o.I weight={v === o.v ? "fill" : "duotone"} className="size-4" /></span>{o.v === 1 && she ? "Cansada" : o.t}</span>
-            <span className={`text-[11px] font-semibold leading-tight ${v === o.v ? "text-white/80" : "text-ink/75"}`}>{effects[o.v - 1]}</span>
+            <span className="inline-flex flex-col items-center gap-1 text-sm font-bold sm:flex-row sm:gap-1.5"><span className={`grid place-items-center size-7 shrink-0 rounded-lg ${v === o.v ? "bg-white/10 text-banana" : o.v === 3 ? "bg-ember/10 text-ember-ink" : "bg-banana-soft text-banana-ink"}`}><o.I weight={v === o.v ? "fill" : "duotone"} className="size-4" /></span>{tx(o.v === 1 && she ? "Cansada" : o.t)}</span>
+            <span className={`text-[11px] font-semibold leading-tight ${v === o.v ? "text-white/80" : "text-ink/75"}`}>{tx(effects[o.v - 1])}</span>
           </button>
         ))}
       </div>
-      {sel && <p className="mt-2.5 text-[13px] font-semibold text-ink/80 animate-enter">{tips[sel.v - 1] ?? sel.tip}</p>}
+      {sel && <p className="mt-2.5 text-[13px] font-semibold text-ink/80 animate-enter">{tx(tips[sel.v - 1] ?? sel.tip)}</p>}
     </div>
   );
 }

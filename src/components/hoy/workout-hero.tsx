@@ -8,14 +8,36 @@ import { Readiness } from "@/components/readiness";
 import { ExerciseTiles } from "@/components/hoy/exercise-tiles";
 import { hookLine, isTrainingDay, type PlannedDay } from "@/lib/engine";
 import { poseForTag } from "@/lib/coach-poses";
-import { dayTag, sessionBenefit, setsLegend, t, type Voice } from "@/lib/voice";
+import { dayTag, sessionBenefit, setsLegend, t, type RxType, type Voice } from "@/lib/voice";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
+import { tr, translate } from "@/lib/i18n/t";
+import { fmtNumber, roundLb } from "@/lib/i18n/format";
+import type { Units } from "@/lib/i18n/locale";
 
 /** Racha real en la tarjeta del segundo entreno (#286). */
-export const secondStreakLine = (n: number) => (n > 0 ? `Racha de ${n} ${n === 1 ? "día" : "días"}. Con este entreno sube a ${n + 1}.` : "Con este entreno empiezas tu racha.");
+export const secondStreakLine = (n: number, locale: Locale = DEFAULT_LOCALE) =>
+  n > 0 ? tr(locale)(n === 1 ? "Racha de {n} día. Con este entreno sube a {m}." : "Racha de {n} días. Con este entreno sube a {m}.", { n, m: n + 1 }) : tr(locale)("Con este entreno empiezas tu racha.");
+
+/** lastTimeLine (voice.ts) en inglés (#299): la carga en lb redondeada a 2.5 si usa libras, o en kg. */
+export const lastTimeLineEn = (units: Units) => (v: Voice, o: { name: string; lastKg: number; lastReps: number; kg: number | null; reps: number; type: RxType }) => {
+  const load = (kg: number) => (units === "imperial" ? `${fmtNumber(roundLb(kg), "en-US")} lb` : `${fmtNumber(kg, "en-US")} kg`);
+  const name = translate("en-US", o.name);
+  const last = `${load(o.lastKg)} × ${o.lastReps}`;
+  const goal = o.type === "up" && o.kg != null ? { basico: `today try ${load(o.kg)}`, intermedio: `today it's ${load(o.kg)}`, tecnico: `today you go up to ${load(o.kg)}` }
+    : o.type === "reset" && o.kg != null ? { basico: `today you drop to ${load(o.kg)} to build back up`, intermedio: `today you reset to ${load(o.kg)}`, tecnico: `reset to ${load(o.kg)}` }
+    : o.type === "deload" && o.kg != null ? { basico: `today you go lighter, with ${load(o.kg)}`, intermedio: `today you deload with ${load(o.kg)}`, tecnico: `deload at ${load(o.kg)}` }
+    : o.type === "hold" ? { basico: "today repeat it and make it cleaner", intermedio: "today you lock in the same weight", tecnico: "today you consolidate" }
+    : { basico: `today try ${o.reps} reps`, intermedio: `today aim for ${o.reps} reps`, tecnico: `today's target is ${o.reps} reps` };
+  return t(v, {
+    basico: `Last time you did ${name[0].toLowerCase()}${name.slice(1)} with ${last}: ${goal.basico}.`,
+    intermedio: `Last time: ${name}, ${last}. ${goal.intermedio[0].toUpperCase()}${goal.intermedio.slice(1)}.`,
+    tecnico: `${name}: ${last} last session, ${goal.tecnico}.`,
+  });
+};
 
 type Mini = Pick<PlannedDay, "name" | "icon" | "tpl" | "key">;
 
-export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false, second = null, home }: {
+export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, yesterday, tomorrow, lastTime, readiness, first = false, second = null, home, locale = DEFAULT_LOCALE }: {
   plan: PlannedDay; voice: Voice; mins: number; trainedToday: boolean; deload: boolean; dayName: string; yesterday: Mini; tomorrow: Mini;
   /** Nunca ha entrenado: el entreno se presenta como "Tu primer entreno" (en un día de descanso, la próxima sesión adelantada). */
   first?: boolean;
@@ -26,11 +48,14 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
   /** "La última vez hiciste..." con números reales del historial, o null. */
   lastTime: string | null;
   readiness: { initial: number; dateKey: string; demo: boolean; suggestSoft: boolean; she?: boolean };
+  /** Idioma de Hoy (#299). Los textos del motor y de la voz salen en español y se traducen aquí. */
+  locale?: Locale;
 }) {
+  const tx = tr(locale);
   const training = isTrainingDay(plan);
   const sets = plan.exercises.reduce((a, e) => a + e.cfg.sets, 0);
   const benefit = sessionBenefit(voice, plan.tpl);
-  const hook = hookLine(plan.hook, null);
+  const hook = hookLine(plan.hook && tx(plan.hook), null);
   const legend = setsLegend(voice);
   const tomorrowTraining = isTrainingDay(tomorrow);
   const firstView = first && !trainedToday;
@@ -41,10 +66,10 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
       <section aria-labelledby="hoy-entreno" className="card relative overflow-hidden p-5 sm:p-6">
         <div className="flex items-center gap-3.5">
           <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-banana-soft text-banana-ink"><TreePalm weight="duotone" className="size-8" /></span>
-          <div className="min-w-0"><p className="text-sm font-semibold text-muted first-letter:uppercase">Hoy {dayName}</p><h2 id="hoy-entreno" className="text-[26px] font-extrabold leading-tight tracking-tight text-ink">{plan.name}</h2></div>
+          <div className="min-w-0"><p className="text-sm font-semibold text-muted first-letter:uppercase">{tx("Hoy {day}", { day: dayName })}</p><h2 id="hoy-entreno" className="text-[26px] font-extrabold leading-tight tracking-tight text-ink">{tx(plan.name)}</h2></div>
         </div>
-        <p className="mt-3 flex items-start gap-2 text-body"><PersonSimpleWalk weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" /><span>{plan.cardio}. {t(voice, { basico: "Hoy tu músculo se recupera y crece: descansar también es parte del plan.", intermedio: "Tu músculo crece hoy.", tecnico: "Recuperación activa: el músculo se adapta en el descanso." })}</span></p>
-        {tomorrowTraining && <p className="mt-3 rounded-2xl bg-cream px-3 py-2.5 text-sm text-ink"><b>Mañana te espera:</b> {tomorrow.name}</p>}
+        <p className="mt-3 flex items-start gap-2 text-body"><PersonSimpleWalk weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana-ink" /><span>{tx(plan.cardio ?? "")}. {tx(t(voice, { basico: "Hoy tu músculo se recupera y crece: descansar también es parte del plan.", intermedio: "Tu músculo crece hoy.", tecnico: "Recuperación activa: el músculo se adapta en el descanso." }))}</span></p>
+        {tomorrowTraining && <p className="mt-3 rounded-2xl bg-cream px-3 py-2.5 text-sm text-ink"><b>{tx("Mañana te espera:")}</b> {tx(tomorrow.name)}</p>}
       </section>
     );
   }
@@ -57,23 +82,23 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
               los dos botones (gym y casa) se vean sin desplazar en 375 × 667. */}
           <div className={`relative ${firstView ? "pr-20 sm:pr-28" : "pr-28 sm:pr-36"}`}>
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-bold text-ink/80">
-              <span className="first-letter:uppercase">{firstView || secondView ? plan.name : `Hoy ${dayName}, ${dayTag(voice, plan.tag)}`}</span>
-              {deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />{t(voice, { basico: "Semana suave", intermedio: "Semana de descarga", tecnico: "Descarga" })}</span>}
+              <span className="first-letter:uppercase">{firstView || secondView ? tx(plan.name) : tx("Hoy {day}, {tag}", { day: dayName, tag: tx(dayTag(voice, plan.tag)) })}</span>
+              {deload && <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-2 py-0.5 text-xs font-bold text-ink"><TreePalm weight="duotone" className="size-3.5" />{tx(t(voice, { basico: "Semana suave", intermedio: "Semana de descarga", tecnico: "Descarga" }))}</span>}
             </p>
-            <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{firstView ? "Tu primer entreno" : secondView ? "Tu segundo entreno" : plan.name}</h2>
+            <h2 id="hoy-entreno" className="mt-1 text-[30px] font-extrabold leading-[1.02] tracking-tight text-ink text-balance sm:text-[36px]">{firstView ? tx("Tu primer entreno") : secondView ? tx("Tu segundo entreno") : tx(plan.name)}</h2>
             <span aria-hidden className={`pointer-events-none absolute -right-3 -top-4 block select-none ${firstView ? "size-24 sm:size-32" : "size-32 sm:size-40"}`}>
               <SafeImage src={poseForTag(plan.tag)} alt="" fill sizes="160px" priority className="object-contain drop-shadow-[0_8px_14px_rgb(27_21_5/.25)]" fallbackClassName="object-contain" />
             </span>
-            {secondView && <p className="relative mt-2 flex items-center gap-1.5 text-sm font-bold text-ink tabular-nums"><BananaFlame weight="fill" className="size-4 shrink-0 text-ember-ink" aria-hidden />{secondStreakLine(second!.streak)}</p>}
-            {benefit && !trainedToday && !first && <p className="relative mt-3 -mr-28 sm:mr-0 max-w-[52ch] text-[15px] font-semibold leading-snug text-ink text-pretty">{benefit}</p>}
+            {secondView && <p className="relative mt-2 flex items-center gap-1.5 text-sm font-bold text-ink tabular-nums"><BananaFlame weight="fill" className="size-4 shrink-0 text-ember-ink" aria-hidden />{secondStreakLine(second!.streak, locale)}</p>}
+            {benefit && !trainedToday && !first && <p className="relative mt-3 -mr-28 sm:mr-0 max-w-[52ch] text-[15px] font-semibold leading-snug text-ink text-pretty">{tx(benefit)}</p>}
           </div>
 
           {/* Números reales del día (el primer entreno va directo al botón, que ya dice los minutos: que se vea sin desplazar) */}
-          {!first && <ul className="relative mt-4 grid grid-cols-3 gap-2" aria-label="Resumen del entreno">
+          {!first && <ul className="relative mt-4 grid grid-cols-3 gap-2" aria-label={tx("Resumen del entreno")}>
             {[
-              { I: Timer, big: `${mins}`, small: t(voice, { basico: "minutos", intermedio: "min", tecnico: "min aprox." }) },
-              { I: Barbell, big: `${plan.exercises.length}`, small: "ejercicios" },
-              { I: BananaFlame, big: `${sets}`, small: t(voice, { basico: "series (tandas)", intermedio: "series", tecnico: "series totales" }) },
+              { I: Timer, big: `${mins}`, small: tx(t(voice, { basico: "minutos", intermedio: "min", tecnico: "min aprox." })) },
+              { I: Barbell, big: `${plan.exercises.length}`, small: tx("ejercicios") },
+              { I: BananaFlame, big: `${sets}`, small: tx(t(voice, { basico: "series (tandas)", intermedio: "series", tecnico: "series totales" })) },
             ].map(({ I, big, small }) => (
               <li key={small} className="flex flex-col items-start rounded-2xl bg-white/70 px-3 py-2.5">
                 <I weight="duotone" className="size-5 text-ink/80" aria-hidden />
@@ -85,7 +110,7 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
 
           {/* Lo más importante, arriba: empezar (o que ya está hecho). */}
           {trainedToday ? (
-            <p className="relative mt-4 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." })}</p>
+            <p className="relative mt-4 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />{tx(t(voice, { basico: "Entreno de hoy listo. Ahora descansa y come bien: así crece el músculo.", intermedio: "Entreno de hoy completado. Descansa y come bien.", tecnico: "Sesión completada. Prioriza proteína y sueño para la recuperación." }))}</p>
           ) : (
             <div className="relative mt-4"><Readiness first={first} home={first ? home : undefined} voice={voice} she={readiness.she} suggestSoft={readiness.suggestSoft} initial={readiness.initial} dateKey={readiness.dateKey} demo={readiness.demo} mins={mins} /></div>
           )}
@@ -107,20 +132,20 @@ export function WorkoutHero({ plan, voice, mins, trainedToday, deload, dayName, 
 
         <div className="min-w-0">
           <div className="mt-5 flex items-baseline justify-between gap-2 lg:mt-0">
-            <h3 className="text-base font-extrabold text-ink">{t(voice, { basico: "Lo que vas a hacer", intermedio: "Tus ejercicios de hoy", tecnico: "Sesión" })}</h3>
-            <span className="text-xs font-semibold text-ink/70 lg:hidden">{t(voice, { basico: "Desliza para ver todos", intermedio: "Desliza", tecnico: "Desliza" })}</span>
+            <h3 className="text-base font-extrabold text-ink">{tx(t(voice, { basico: "Lo que vas a hacer", intermedio: "Tus ejercicios de hoy", tecnico: "Sesión" }))}</h3>
+            <span className="text-xs font-semibold text-ink/70 lg:hidden">{tx(t(voice, { basico: "Desliza para ver todos", intermedio: "Desliza", tecnico: "Desliza" }))}</span>
           </div>
-          <div className="mt-2"><ExerciseTiles exercises={plan.exercises} voice={voice} /></div>
-          {legend && !trainedToday && <p className="mt-2 text-xs font-semibold text-ink/75">{legend}</p>}
-          {plan.cardio && <p className="mt-2 flex items-start gap-1.5 text-sm font-semibold text-ink/80"><PersonSimpleWalk weight="duotone" className="mt-0.5 size-4 shrink-0" aria-hidden />{t(voice, { basico: "Y al final: ", intermedio: "Al final: ", tecnico: "Cierre: " })}{plan.cardio}</p>}
+          <div className="mt-2"><ExerciseTiles exercises={plan.exercises} voice={voice} locale={locale} /></div>
+          {legend && !trainedToday && <p className="mt-2 text-xs font-semibold text-ink/75">{tx(legend)}</p>}
+          {plan.cardio && <p className="mt-2 flex items-start gap-1.5 text-sm font-semibold text-ink/80"><PersonSimpleWalk weight="duotone" className="mt-0.5 size-4 shrink-0" aria-hidden />{tx(t(voice, { basico: "Y al final: ", intermedio: "Al final: ", tecnico: "Cierre: " }))}{tx(plan.cardio ?? "")}</p>}
         </div>
       </div>
 
 
       {/* Ayer y mañana, en palabras */}
       <div hidden={first} className="relative mt-4 grid gap-2 sm:grid-cols-2">
-        <p className="flex items-center gap-2 rounded-2xl bg-white/55 px-3 py-2 text-sm text-ink"><BrandIcon name={yesterday.icon} className="size-5 shrink-0 text-ink/80" aria-hidden /><span className="min-w-0"><span className="block text-xs font-bold text-ink/70">{isTrainingDay(yesterday) ? "Ayer tocó" : "Ayer"}</span><span className="block truncate font-bold">{yesterday.name}</span></span></p>
-        <p className="flex items-center gap-2 rounded-2xl bg-white/55 px-3 py-2 text-sm text-ink"><BrandIcon name={tomorrow.icon} className="size-5 shrink-0 text-ink/80" aria-hidden /><span className="min-w-0"><span className="block text-xs font-bold text-ink/70">{tomorrowTraining ? "Mañana te espera" : "Mañana descansas"}</span><span className="block truncate font-bold">{tomorrow.name}</span></span></p>
+        <p className="flex items-center gap-2 rounded-2xl bg-white/55 px-3 py-2 text-sm text-ink"><BrandIcon name={yesterday.icon} className="size-5 shrink-0 text-ink/80" aria-hidden /><span className="min-w-0"><span className="block text-xs font-bold text-ink/70">{tx(isTrainingDay(yesterday) ? "Ayer tocó" : "Ayer")}</span><span className="block truncate font-bold">{tx(yesterday.name)}</span></span></p>
+        <p className="flex items-center gap-2 rounded-2xl bg-white/55 px-3 py-2 text-sm text-ink"><BrandIcon name={tomorrow.icon} className="size-5 shrink-0 text-ink/80" aria-hidden /><span className="min-w-0"><span className="block text-xs font-bold text-ink/70">{tx(tomorrowTraining ? "Mañana te espera" : "Mañana descansas")}</span><span className="block truncate font-bold">{tx(tomorrow.name)}</span></span></p>
       </div>
     </section>
   );

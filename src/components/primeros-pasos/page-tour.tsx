@@ -7,6 +7,7 @@ import { Tour, type TourStep } from "@/components/workout/tour";
 import { useGuide } from "@/components/guide/guide-provider";
 import { TOUR_KEYS, shouldAutoTour, type TourId } from "@/lib/primeros-pasos";
 import { useLearnKeys } from "./learn-store";
+import { useT } from "@/lib/i18n/client";
 
 const REPLAY = "bb:como-se-usa";
 
@@ -42,10 +43,11 @@ export function PageTour({ tour, steps, serverKeys, finalLabel = "Entendido" }: 
 
 /** Botón "¿Cómo se usa?" para repetir el recorrido de la pantalla. */
 export function HowToButton({ tour, className = "" }: { tour: TourId; className?: string }) {
+  const t = useT();
   return (
     <button type="button" onClick={() => { try { window.dispatchEvent(new CustomEvent(REPLAY, { detail: tour })); } catch { /* */ } }}
       className={`tap inline-flex min-h-11 items-center gap-1.5 rounded-full px-1 text-sm font-bold text-muted hover:text-ink ${className}`}>
-      <Question weight="bold" className="size-4" />¿Cómo se usa?
+      <Question weight="bold" className="size-4" />{t("¿Cómo se usa?")}
     </button>
   );
 }
