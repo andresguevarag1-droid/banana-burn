@@ -11,6 +11,8 @@ import { sheetFor } from "@/lib/exercise-frames";
 import { DS_ID, animFor, getLibEx } from "@/lib/library";
 import { setsReps, t, type Voice, muscleText } from "@/lib/voice";
 import type { SlotCfg } from "@/lib/engine";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
+import { tr } from "@/lib/i18n/t";
 
 export type TileExercise = { id: string; name: string; muscle: string; cfg: Pick<SlotCfg, "sets" | "lo" | "hi" | "unit" | "perSide"> };
 
@@ -25,10 +27,19 @@ export function techniqueHref(e: Pick<TileExercise, "id" | "name">) {
   return DS_ID[e.id] ? `/app/ejercicios/${DS_ID[e.id]}` : `/app/ejercicios?q=${encodeURIComponent(e.name)}`;
 }
 
+/** "3 sets of 8 to 12" (básico) o "3×8-12" en inglés: setsReps arma la frase en español. */
+function setsRepsEn(v: Voice, sets: number, lo: number, hi: number, unit?: string, perSide = false) {
+  const side = perSide && unit === "s" ? " per side" : "";
+  if (v === "basico") return `${sets} ${sets === 1 ? "set" : "sets"} of ${lo === hi ? lo : `${lo} to ${hi}`}${unit === "s" ? " seconds" : unit === "m" ? " meters" : ""}${side}`;
+  return `${sets}×${lo === hi ? lo : `${lo}-${hi}`}${unit === "s" ? " s" : unit === "m" ? " m" : ""}${side}`;
+}
+
 /** `art`: ilustración del coach del programa haciendo cada ejercicio (Coach Platanita); manda sobre la animación. */
-export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", art }: { exercises: TileExercise[]; voice: Voice; label?: string; art?: Record<string, string> }) {
+export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", art, locale = DEFAULT_LOCALE }: { exercises: TileExercise[]; voice: Voice; label?: string; art?: Record<string, string>; locale?: Locale }) {
+  const tx = tr(locale);
+  const es = locale === DEFAULT_LOCALE;
   return (
-    <ol aria-label={label} className="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-5 px-5 pb-1 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-3">
+    <ol aria-label={tx(label)} className="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-5 px-5 pb-1 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-3">
       {exercises.map((e, i) => {
         const anim = animOf(e.id);
         const sheet = anim ? sheetFor(anim) : null;
@@ -43,10 +54,10 @@ export function ExerciseTiles({ exercises, voice, label = "Ejercicios de hoy", a
                 <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-ink text-xs font-extrabold text-banana tabular-nums">{i + 1}</span>
               </span>
               <span className="flex flex-1 flex-col p-3">
-                <span className="line-clamp-3 text-[15px] font-extrabold leading-tight text-ink">{e.name}</span>
-                <span className="mt-1 text-sm font-bold text-ink tabular-nums">{setsReps(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide)}{voice !== "basico" && !e.cfg.unit ? " reps" : ""}</span>
-                {e.muscle && <span className="mt-0.5 text-xs font-semibold text-ink/70">{t(voice, { basico: "Trabaja: ", intermedio: "", tecnico: "" })}{muscleText(voice, e.muscle.toLowerCase())}</span>}
-                <span className="mt-auto pt-2 text-xs font-bold text-ink/70 underline decoration-ink/25 underline-offset-2 group-hover:decoration-ink">{t(voice, { basico: "Ver cómo se hace", intermedio: "Ver técnica", tecnico: "Técnica" })}</span>
+                <span className="line-clamp-3 text-[15px] font-extrabold leading-tight text-ink">{tx(e.name)}</span>
+                <span className="mt-1 text-sm font-bold text-ink tabular-nums">{(es ? setsReps : setsRepsEn)(voice, e.cfg.sets, e.cfg.lo, e.cfg.hi, e.cfg.unit, e.cfg.perSide)}{voice !== "basico" && !e.cfg.unit ? " reps" : ""}</span>
+                {e.muscle && <span className="mt-0.5 text-xs font-semibold text-ink/70">{es ? <>{t(voice, { basico: "Trabaja: ", intermedio: "", tecnico: "" })}{muscleText(voice, e.muscle.toLowerCase())}</> : <>{voice === "basico" ? "Works: " : ""}{tx(e.muscle)}</>}</span>}
+                <span className="mt-auto pt-2 text-xs font-bold text-ink/70 underline decoration-ink/25 underline-offset-2 group-hover:decoration-ink">{tx(t(voice, { basico: "Ver cómo se hace", intermedio: "Ver técnica", tecnico: "Técnica" }))}</span>
               </span>
             </Link>
           </li>

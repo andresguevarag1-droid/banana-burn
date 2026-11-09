@@ -14,9 +14,9 @@ import { getEntitlements } from "@/lib/entitlements";
 import { activateHref, canActivatePlan } from "@/lib/first-workout-offer";
 import { trialCardNotice } from "@/lib/trial-card-notice";
 import { hoyTip } from "@/lib/plan-access";
-import { DAY_NAMES, EX, homeFirstAt, isTrainingDay, offersHomeFirst, prescribe, type SlotCfg } from "@/lib/engine";
+import { EX, homeFirstAt, isTrainingDay, offersHomeFirst, prescribe, type SlotCfg } from "@/lib/engine";
 import { getHistory } from "@/lib/history";
-import { WorkoutHero } from "@/components/hoy/workout-hero";
+import { WorkoutHero, lastTimeLineEn } from "@/components/hoy/workout-hero";
 import type { Viewer } from "@/lib/supabase/server";
 import { getVoice } from "@/lib/voice-server";
 import { lastTimeLine, type Voice } from "@/lib/voice";
@@ -62,8 +62,15 @@ import { ReminderPrompt } from "@/components/hoy/reminder-prompt";
 import { getNotificationPrefs } from "@/app/actions/notifications";
 import { DEFAULT_PREFS } from "@/lib/notify";
 import { registrationDay, weekCount, weekMonday, weeklyGoal, weeklyStreak } from "@/lib/meta-semanal";
+import { getPrefs } from "@/lib/i18n/server";
+import { tr } from "@/lib/i18n/t";
+import { dayName } from "@/lib/i18n/names";
+import { kgToLb } from "@/lib/i18n/format";
+import { DEFAULT_LOCALE, type Locale, type Units } from "@/lib/i18n/locale";
 
-export const metadata = { title: "Hoy" };
+export async function generateMetadata() {
+  return { title: tr((await getPrefs()).locale)("Hoy") };
+}
 
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -74,7 +81,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?tester=demo (recién asignado), activo, pronto o fin muestran la experiencia de tester de ejemplo.
   const demoTester = v.demo ? sp.tester ?? null : null;
   // Lo independiente va en paralelo; solo el registro del día espera al atleta y los retos esperan al registro.
-  const [a, meals, ent, xs, tester, voice, learnState, prefs] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v), getNotificationPrefs().catch(() => null)]);
+  const [a, meals, ent, xs, tester, voice, learnState, prefs, { locale, units }] = await Promise.all([getAthlete(v), getMeals(v), getEntitlements(v), getXpSummary(v), getMyTester(v, demoTester).catch(() => null), getVoice(v), getLearnState(v), getNotificationPrefs().catch(() => null), getPrefs()]);
+  // Idioma de Hoy (#299): el español es el texto fuente; tx lo traduce con src/lib/i18n/en/today.ts.
+  const tx = tr(locale);
   const noticeDemo = v.demo && sp.demo ? demoCardState(sp.demo) : null;
   const noticeEnt = noticeDemo ? { ...ent, ...noticeDemo, access: "trial" as const } : ent;
   const d = dashboard(a);
@@ -109,28 +118,28 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Con gym, el primer entreno también en casa y sin equipo; si el registro terminó de noche, esa opción va primero.
   const homePlan = firstPlan && offersHomeFirst(a.equipment) ? firstSessionPlan(d, 0, true) : null;
   const home = homePlan ? { mins: homePlan.mins ?? 12, first: homeFirstAt(a.registeredAt ? localHour(new Date(a.registeredAt), v.tz) : v.demo ? localHour(new Date(), v.tz) : null) } : undefined;
-  const dateLabel = d.today.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
+  const dateLabel = d.today.date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
   const mins = (firstPlan ?? secondPlan ?? plan).mins ?? (training || firstPlan || secondPlan ? 55 : 0);
   // "La última vez hiciste...": el primer ejercicio con peso de hoy que ya tiene historial, con la indicación del motor.
-  const lastTime = training && !first && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload) : null;
+  const lastTime = training && !first && !g.trainedToday ? await lastTimeFor(v, voice, (plan.program?.exercises ?? plan.exercises) as { id: string; name: string; cfg: SlotCfg }[], d.deload, locale, units) : null;
   const header = (
     <header className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-muted first-letter:uppercase">{dateLabel}</p>
-        <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{greetingAt(v.tz)}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
+        <h1 className="text-[28px] sm:text-4xl font-extrabold tracking-tight text-ink leading-tight">{tx(greetingAt(v.tz))}{a.name.trim() ? `, ${a.name.trim().split(/\s+/)[0]}` : ""}</h1>
         {!first && <HowToButton tour="hoy" className="-ml-1" />}
       </div>
       <div className="shrink-0 flex items-center gap-2">
         <NotificationBell className="lg:hidden" />
-        <Link href="/app/progreso#logros" className={`pressable flex items-center gap-1.5 h-12 rounded-2xl border px-3 ${g.streak.todayDone ? "bg-banana border-banana hover:brightness-95" : "bg-white border-line hover:border-ink/25"}`} aria-label={`Racha de ${g.streak.days} días${g.streak.todayDone ? "" : ", aún sin registrar hoy"}`}>
+        <Link href="/app/progreso#logros" className={`pressable flex items-center gap-1.5 h-12 rounded-2xl border px-3 ${g.streak.todayDone ? "bg-banana border-banana hover:brightness-95" : "bg-white border-line hover:border-ink/25"}`} aria-label={tx(g.streak.todayDone ? "Racha de {n} días" : "Racha de {n} días, aún sin registrar hoy", { n: g.streak.days })}>
           <BananaFlame weight={g.streak.todayDone ? "fill" : "duotone"} className={`size-6 ${g.streak.todayDone ? "text-ink" : "text-banana-ink"}`} />
           <span className="text-lg font-extrabold text-ink tabular-nums leading-none">{g.streak.days}</span>
         </Link>
-        <Link href="/app/perfil" className="pressable lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink hover:brightness-95" aria-label="Mi perfil">{a.name[0]?.toUpperCase()}</Link>
+        <Link href="/app/perfil" className="pressable lg:hidden grid place-items-center size-12 rounded-2xl bg-banana text-lg font-extrabold text-ink hover:brightness-95" aria-label={tx("Mi perfil")}>{a.name[0]?.toUpperCase()}</Link>
       </div>
     </header>
   );
-  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} second={second ? { streak: g.streak.days } : null} home={home} plan={firstPlan ?? secondPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={DAY_NAMES[d.today.dow]} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime}
+  const hero = <div data-tour="hoy-entreno"><WorkoutHero first={first} second={second ? { streak: g.streak.days } : null} home={home} plan={firstPlan ?? secondPlan ?? plan} voice={voice} mins={mins} trainedToday={g.trainedToday} deload={d.deload} dayName={dayName(d.today.dow, locale)} yesterday={d.yesterday} tomorrow={d.tomorrow} lastTime={lastTime} locale={locale}
     readiness={{ initial: g.log.energy ?? 0, dateKey: d.today.iso, demo: v.demo, she: a.sex === "f", suggestSoft: d.glp1?.phase === "inyeccion" || d.glp1?.phase === "post" }} /></div>;
   // Primer día (sin ningún entreno guardado): solo el saludo y el primer entreno, sin tours, avisos ni tarjetas que lo
   // distraigan. El aviso de tarjeta sí sale si faltan 2 días o menos para el cobro. Desde el primer entreno, Hoy completo.
@@ -139,12 +148,15 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       <FunnelTracker view="hoy_view" props={{ first, trained_today: g.trainedToday }} />
       {header}
       {hero}
-      <HoyCardBanner ent={noticeEnt} />
-      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
+      <HoyCardBanner ent={noticeEnt} locale={locale} />
+      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} locale={locale} />
       <div id="hoy-continuar" className="scroll-mt-24" />
     </div>
   );
   const kgLost = a.startWeight - a.currentWeight;
+  // Peso guardado en kg; con units=imperial se muestra en lb.
+  const w = (kg: number) => (units === "imperial" ? kgToLb(kg) : kg);
+  const lb = units === "imperial";
   // Meta semanal (#288): los días de la bienvenida (máximo 3 en la prueba), de lunes a domingo en su zona horaria.
   const regDay = registrationDay(a.createdAt, v.tz);
   const monday = weekMonday(d.today.iso);
@@ -155,9 +167,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   // Demo: ?primera=2 muestra la burbuja del coach del día siguiente.
   const coachPrompt = v.demo ? sp.primera === "2" : showHoyCoachPrompt({ workouts: learnState.workouts, trainedToday: g.trainedToday, coachMessages: learnState.coachMessages, registeredAt: a.createdAt, now: new Date(), demo: false });
   const tourSteps = [
-    { target: "hoy-entreno", title: "Este es tu entrenamiento de hoy", body: "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar." },
-    { target: "hoy-pasos", title: "Tus primeros pasos", body: "Esta lista te enseña el resto de la app, un paso a la vez." },
-    { target: "hoy-coach", title: `${guideCoach?.name ?? "Coach Banana"}, tu entrenador 24/7`, body: "Pregúntale lo que quieras de tu entreno. Te responde con tu plan en mente." },
+    { target: "hoy-entreno", title: tx("Este es tu entrenamiento de hoy"), body: tx("Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar.") },
+    { target: "hoy-pasos", title: tx("Tus primeros pasos"), body: tx("Esta lista te enseña el resto de la app, un paso a la vez.") },
+    { target: "hoy-coach", title: tx("{coach}, tu entrenador 24/7", { coach: guideCoach?.name ?? "Coach Banana" }), body: tx("Pregúntale lo que quieras de tu entreno. Te responde con tu plan en mente.") },
   ];
 
   return (
@@ -175,21 +187,21 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         : hero}
 
       {/* 2. La meta de la semana al frente (#288), con la racha semanal; la diaria, secundaria. */}
-      <WeekLine count={weekCount(g.trainedDays, d.today.iso)} goal={goalOf(monday)} monday={monday} weekStreak={weeklyStreak(g.trainedDays, d.today.iso, goalOf, regDay)} streak={g.streak.days} todayDone={g.streak.todayDone} />
+      <WeekLine count={weekCount(g.trainedDays, d.today.iso)} goal={goalOf(monday)} monday={monday} weekStreak={weeklyStreak(g.trainedDays, d.today.iso, goalOf, regDay)} streak={g.streak.days} todayDone={g.streak.todayDone} locale={locale} />
 
       {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
       {/* Días 1 a 6 sin tarjeta (#280): el banner con los días que quedan; el día 7, el aviso grande. */}
-      <HoyCardBanner ent={noticeEnt} />
-      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} />
+      <HoyCardBanner ent={noticeEnt} locale={locale} />
+      <TrialCardNotice ent={noticeEnt} tz={v.tz} screen="hoy" minDay={FIRST_DAY_CARD_MIN_DAY} locale={locale} />
       {/* Desde el primer entreno (#199): activar el plan sin esperar al final de la prueba. Si sale un aviso de tarjeta, ese manda. */}
       {canActivatePlan(noticeEnt) && !hoyCardBanner(noticeEnt) && !trialCardNotice(noticeEnt) && (
         <Link href={activateHref()} data-cta="hoy-activar-plan" className="card flex items-center gap-3 p-4">
-          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">Activar mi plan</span><span className="block text-sm text-muted">Sigue sin cortes al terminar tu prueba. Cancela cuando quieras.</span></span>
+          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{tx("Activar mi plan")}</span><span className="block text-sm text-muted">{tx("Sigue sin cortes al terminar tu prueba. Cancela cuando quieras.")}</span></span>
           <ArrowRight weight="bold" className="size-5 shrink-0 text-ink" />
         </Link>
       )}
       <div id="hoy-continuar" className="scroll-mt-24" />
-      <PromptQueue>
+      <PromptQueue locale={locale}>
         {/* El coach se presenta (#198): el día después del primer entreno, si hoy no entrena, primero en la fila. */}
         {coachPrompt && <CoachPrompt where="hoy" home={a.equipment === "casa" || a.equipment === "ninguno"} coach={coach.id === "banana" ? null : coach} />}
         {/* #255: la hora del recordatorio, desde el primer entreno guardado y solo si sigue en la hora por defecto. */}
@@ -197,7 +209,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         {paused && (
           <Link href={`/app/retos/${paused.slug}`} className="card flex items-center gap-3 p-4">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-cream text-ink"><Pause weight="duotone" className="size-5" /></span>
-            <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{paused.title} está en pausa</span><span className="block text-sm text-muted">{paused.at}. Mientras tanto entrenas tu rutina normal; reanúdalo cuando quieras.</span></span>
+            <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{tx("{title} está en pausa", { title: paused.title })}</span><span className="block text-sm text-muted">{tx("{at}. Mientras tanto entrenas tu rutina normal; reanúdalo cuando quieras.", { at: tx(paused.at.tpl, paused.at.vars) })}</span></span>
             <CaretRight weight="bold" className="size-5 shrink-0 text-faint" />
           </Link>
         )}
@@ -226,13 +238,13 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       {/* Semana y retos */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <div data-tour="hoy-semana"><WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} nutrition={ent.nutrition} /></div>
+        <div data-tour="hoy-semana"><WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} nutrition={ent.nutrition} locale={locale} /></div>
         <section>
-          <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">Tus retos</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{ch.active.length ? "Tienda de retos" : "Explorar retos"} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
+          <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">{tx("Tus retos")}</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{tx(ch.active.length ? "Tienda de retos" : "Explorar retos")} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
           {ch.active.length ? (
             <div className="grid gap-3">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
           ) : (
-            <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Elige tu próximo reto</span><span className="block text-sm text-muted">Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
+            <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">{tx("Elige tu próximo reto")}</span><span className="block text-sm text-muted">{tx("Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.")}</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
           )}
         </section>
 
@@ -240,24 +252,24 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Peso y meta */}
-        <section id="peso" className="card p-5 flex flex-col scroll-mt-6" aria-label="Peso y meta">
+        <section id="peso" className="card p-5 flex flex-col scroll-mt-6" aria-label={tx("Peso y meta")}>
           <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 rounded-lg bg-banana-soft text-banana-ink"><Scales weight="duotone" className="size-5" /></span>{g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?"}</p>
-            <Link href="/app/progreso" className="tap inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink">Ver curva <ArrowRight weight="bold" className="size-3.5" /></Link>
+            <p className="flex items-center gap-2 font-bold text-ink"><span className="grid place-items-center size-8 rounded-lg bg-banana-soft text-banana-ink"><Scales weight="duotone" className="size-5" /></span>{tx(g.weighedToday ? "Peso de hoy" : "¿Ya te pesaste?")}</p>
+            <Link href="/app/progreso" className="tap inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink">{tx("Ver curva")} <ArrowRight weight="bold" className="size-3.5" /></Link>
           </div>
-          <p className="mt-1 text-xs text-muted">Al despertar, después del baño, antes de comer.</p>
+          <p className="mt-1 text-xs text-muted">{tx("Al despertar, después del baño, antes de comer.")}</p>
           <div className="mt-3"><WeighIn last={a.currentWeight} /></div>
           <div className="mt-4 pt-4 border-t border-line grid grid-cols-3 text-center">
-            <div><p className="text-lg font-extrabold tabular-nums text-ink">{kgLost >= 0.05 ? `−${nf(kgLost)}` : kgLost <= -0.05 ? `+${nf(-kgLost)}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{kgLost <= -0.05 ? "kg desde el inicio" : "kg perdidos"}</p></div>
-            <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(d.toGo)}</p><p className="text-[11px] font-semibold text-muted">kg a la meta</p></div>
-            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.goalPassed ? "0" : d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">{d.goalPassed ? "fecha meta vencida" : d.daysLeft === 1 ? "día" : "días"}</p></div>
+            <div><p className="text-lg font-extrabold tabular-nums text-ink">{kgLost >= 0.05 ? `−${nf(w(kgLost))}` : kgLost <= -0.05 ? `+${nf(w(-kgLost))}` : nf(0)}</p><p className="text-[11px] font-semibold text-muted">{tx(kgLost <= -0.05 ? (lb ? "lb desde el inicio" : "kg desde el inicio") : lb ? "lb perdidas" : "kg perdidos")}</p></div>
+            <div><p className="text-lg font-extrabold text-ink tabular-nums">{nf(w(d.toGo))}</p><p className="text-[11px] font-semibold text-muted">{tx(lb ? "lb a la meta" : "kg a la meta")}</p></div>
+            <div><p className="text-lg font-extrabold text-ink tabular-nums">{d.goalPassed ? "0" : d.daysLeft}</p><p className="text-[11px] font-semibold text-muted">{tx(d.goalPassed ? "fecha meta vencida" : d.daysLeft === 1 ? "día" : "días")}</p></div>
           </div>
         </section>
       {/* Coach */}
         <Link href="/app/coach" data-tour="hoy-coach" className="card p-4 flex gap-3 items-center self-start">
         {coach.id === "banana" ? <span className="grid place-items-center size-12 shrink-0 rounded-2xl bg-ink text-banana"><Monkey className="size-7" /></span>
           : <CoachPic src={coach.avatar} size={48} className="size-12 shrink-0 rounded-2xl object-cover" />}
-        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">{coach.name}</p><p className="text-[15px] text-ink leading-snug">{d.program && training && !g.trainedToday ? "Pregúntame antes de empezar: cómo se hace un ejercicio, qué hacer si algo te molesta o qué comer después." : hoyTip({ dow: d.today.dow, training, proteinLeft: t.protein - g.log.protein - eaten.protein, trained: g.trainedToday, nutrition: ent.nutrition })}</p></div>
+        <div className="flex-1 min-w-0"><p className="text-xs font-bold text-muted">{coach.name}</p><p className="text-[15px] text-ink leading-snug">{tx(d.program && training && !g.trainedToday ? "Pregúntame antes de empezar: cómo se hace un ejercicio, qué hacer si algo te molesta o qué comer después." : hoyTip({ dow: d.today.dow, training, proteinLeft: t.protein - g.log.protein - eaten.protein, trained: g.trainedToday, nutrition: ent.nutrition }, tx))}</p></div>
         <CaretRight weight="bold" className="size-5 text-faint shrink-0" />
       </Link>
       </div>
@@ -269,17 +281,17 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
 }
 
 /** Programa en pausa (el más reciente) con el punto en que quedó: "Vas en el día 10 de 30". */
-async function pausedProgram(v: Viewer): Promise<{ slug: string; title: string; at: string } | null> {
+async function pausedProgram(v: Viewer): Promise<{ slug: string; title: string; at: { tpl: string; vars: Record<string, number> } } | null> {
   try {
     const st = (await getProgramStates(v)).find((s) => s.status === "pausado");
     const p = st ? await loadProgram(v, st) : null;
     if (!p) return null;
-    return { slug: p.c.id, title: p.c.title, at: p.run.byDays ? `Quedaste en el día ${Math.min(p.run.days, p.run.effectiveDay + 1)} de ${p.run.days}` : `Quedaste en la semana ${p.run.week} de ${p.run.weeks}` };
+    return { slug: p.c.id, title: p.c.title, at: p.run.byDays ? { tpl: "Quedaste en el día {n} de {total}", vars: { n: Math.min(p.run.days, p.run.effectiveDay + 1), total: p.run.days } } : { tpl: "Quedaste en la semana {n} de {total}", vars: { n: p.run.week, total: p.run.weeks } } };
   } catch { return null; }
 }
 
 /** Lo que hizo la última vez en el primer ejercicio con peso de hoy y lo que toca ahora (mismos números que el reproductor). */
-async function lastTimeFor(v: Viewer, voice: Voice, exs: { id: string; name: string; cfg: SlotCfg }[], deload: boolean): Promise<string | null> {
+async function lastTimeFor(v: Viewer, voice: Voice, exs: { id: string; name: string; cfg: SlotCfg }[], deload: boolean, locale: Locale, units: Units): Promise<string | null> {
   const weighted = exs.filter((e) => (EX[e.id as keyof typeof EX]?.inc ?? 0) > 0).slice(0, 4);
   if (!weighted.length) return null;
   try {
@@ -291,7 +303,7 @@ async function lastTimeFor(v: Viewer, voice: Voice, exs: { id: string; name: str
       const top = last.reduce((a, b) => ((b.kg ?? 0) > (a.kg ?? 0) || ((b.kg ?? 0) === (a.kg ?? 0) && b.reps > a.reps) ? b : a));
       if (!top.kg) continue;
       const rx = prescribe(e.id, e.cfg, h, { deload });
-      return lastTimeLine(voice, { name: e.name, lastKg: top.kg, lastReps: top.reps, kg: rx.kg, reps: rx.reps[0] ?? e.cfg.lo, type: rx.type });
+      return (locale === DEFAULT_LOCALE ? lastTimeLine : lastTimeLineEn(units))(voice, { name: e.name, lastKg: top.kg, lastReps: top.reps, kg: rx.kg, reps: rx.reps[0] ?? e.cfg.lo, type: rx.type });
     }
   } catch { /* sin historial: sin la línea */ }
   return null;

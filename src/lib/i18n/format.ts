@@ -29,6 +29,8 @@ export function fmtWeight(kg: number, units: Units, locale: Locale, decimals = 1
 
 /** Peso de una serie (kg del plan) en la unidad de la persona. En libras se redondea a la libra: así son las pesas en EE. UU. */
 export const loadIn = (kg: number, units: Units) => (units === "imperial" ? Math.round(kgToLb(kg)) : kg);
+/** Carga en libras redondeada a 2.5 lb (Hoy, #299): 60 kg → 132.5. */
+export const roundLb = (kg: number) => Math.round(kgToLb(kg) / 2.5) * 2.5;
 export const weightUnit = (units: Units) => (units === "imperial" ? "lb" : "kg");
 
 /** Estatura guardada en cm: "175 cm" o "5 ft 9 in". */
