@@ -22,7 +22,7 @@ export const wFmt = (kg: number, L: Lang) => `${wNum(kg, L)} ${wUnit(L)}`;
 /** Volumen total: "1.2 t" / "850 kg" en kg; en lb, libras con miles ("2,645 lb"). */
 export function volFmt(kg: number, L: Lang) {
   if (L.units === "metric") return kg >= 1000 ? `${n2(Math.round(kg / 100) / 10)} t` : `${n2(kg)} kg`;
-  return `${Math.round(kg * 2.2046226218).toLocaleString("en-US")} lb`;
+  return `${n2(Math.round(kg * 2.2046226218))} lb`;
 }
 
 /** Lo que muestra el campo de peso de una serie (la fila guarda kg como texto). */

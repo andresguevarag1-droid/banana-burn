@@ -1,5 +1,6 @@
 "use client";
 // Tarjeta para historias (1080×1920) dibujada en el teléfono con canvas: sin servidor, funciona sin conexión.
+import { ES_LANG, type Lang } from "./lang";
 
 export type StoryData = {
   title: string; status: string; date: Date; time: string; sets: string; setsLabel: string; volume: string; xp: string;
@@ -49,7 +50,7 @@ function fit(c: CanvasRenderingContext2D, text: string, weight: number, size: nu
   return s;
 }
 
-export async function drawStory(d: StoryData): Promise<Blob> {
+export async function drawStory(d: StoryData, L: Lang = ES_LANG): Promise<Blob> {
   const W = 1080, H = 1920, M = 88;
   const cv = document.createElement("canvas");
   cv.width = W; cv.height = H;
@@ -68,7 +69,7 @@ export async function drawStory(d: StoryData): Promise<Blob> {
   c.fillStyle = INK; c.font = `800 52px ${FONT}`; c.fillText("Banana Burn", M + 140, 172);
 
   // Fecha y título (el título se achica si es largo para que el resto quepa siempre)
-  const date = d.date.toLocaleDateString("es-419", { weekday: "long", day: "numeric", month: "long" });
+  const date = d.date.toLocaleDateString(L.locale, { weekday: "long", day: "numeric", month: "long" });
   c.font = `700 40px ${FONT}`; c.fillStyle = "rgba(27,21,5,.72)";
   c.fillText(date[0].toUpperCase() + date.slice(1), M, 330);
   c.font = `800 44px ${FONT}`; c.fillStyle = INK; c.fillText(d.status, M, 396);
@@ -81,7 +82,7 @@ export async function drawStory(d: StoryData): Promise<Blob> {
   // Panel de estadísticas
   const top = y, ph = 520;
   round(c, M - 8, top, W - (M - 8) * 2, ph, 64); c.fillStyle = INK; c.fill();
-  const stats: [string, string][] = [[d.time, "Tiempo"], [d.sets, d.setsLabel], [d.volume, "Volumen"], [d.xp, "XP ganados"]];
+  const stats: [string, string][] = [[d.time, L.t("Tiempo")], [d.sets, d.setsLabel], [d.volume, L.t("Volumen")], [d.xp, L.t("XP ganados")]];
   const cw = (W - M * 2) / 2;
   stats.forEach(([v, l], i) => {
     const x = M + 56 + (i % 2) * cw, sy = top + 170 + Math.floor(i / 2) * 250;
@@ -95,7 +96,7 @@ export async function drawStory(d: StoryData): Promise<Blob> {
   // Racha
   icon(c, M, y, 96, flame);
   c.fillStyle = INK; c.font = `800 60px ${FONT}`;
-  c.fillText(d.streak === 1 ? "1 día de racha" : `${d.streak} días de racha`, M + 120, y + 72);
+  c.fillText(d.streak === 1 ? L.t("1 día de racha") : L.t("{n} días de racha", { n: d.streak }), M + 120, y + 72);
   y += 140;
 
   // Bananas del día, con el texto al lado
@@ -105,14 +106,14 @@ export async function drawStory(d: StoryData): Promise<Blob> {
     c.save(); if (!got) c.globalAlpha = 0.28; icon(c, M + i * (bw + gap), y, bw, banana(got ? PAPER : BANANA, INK)); c.restore();
   }
   c.font = `700 36px ${FONT}`; c.fillStyle = "rgba(27,21,5,.78)";
-  const bl = `${d.bananas.got} de ${d.bananas.total} ejercicios`;
+  const bl = L.t("{got} de {total} ejercicios", { got: d.bananas.got, total: d.bananas.total });
   const bx = M + n * (bw + gap) + 16;
   if (bx + c.measureText(bl).width < W - M) c.fillText(bl, bx, y + 52); else c.fillText(bl, M, y + bw + 48);
   y += bw + (bx + c.measureText(bl).width < W - M ? 48 : 96);
 
   // Récords
   if (d.prs.length && y + 96 < H - 190) {
-    const t = d.prs.length === 1 ? `Récord personal en ${d.prs[0]}` : `${d.prs.length} récords personales`;
+    const t = d.prs.length === 1 ? L.t("Récord personal en {name}", { name: d.prs[0] }) : L.t("{n} récords personales", { n: d.prs.length });
     c.font = `800 42px ${FONT}`;
     const tw = Math.min(W - M * 2, c.measureText(t).width + 80);
     round(c, M, y, tw, 92, 46); c.fillStyle = PAPER; c.fill();
@@ -124,17 +125,17 @@ export async function drawStory(d: StoryData): Promise<Blob> {
   c.fillStyle = INK; c.font = `800 38px ${FONT}`;
   c.fillText(d.level, M, H - 104);
   c.fillStyle = "rgba(27,21,5,.72)"; c.font = `700 32px ${FONT}`;
-  c.fillText("Entreno guiado por Banana Burn", M, H - 56);
+  c.fillText(L.t("Entreno guiado por Banana Burn"), M, H - 56);
 
   return new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error("png"))), "image/png"));
 }
 
 /** Comparte con la hoja nativa si se puede enviar archivos; si no, descarga el PNG. */
-export async function shareStory(blob: Blob, title: string): Promise<"shared" | "downloaded" | "cancelled"> {
+export async function shareStory(blob: Blob, title: string, L: Lang = ES_LANG): Promise<"shared" | "downloaded" | "cancelled"> {
   const file = new File([blob], "banana-burn-entreno.png", { type: "image/png" });
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
   if (nav.share && nav.canShare?.({ files: [file] })) {
-    try { await nav.share({ files: [file], title, text: `${title} en Banana Burn` }); return "shared"; }
+    try { await nav.share({ files: [file], title, text: L.t("{title} en Banana Burn", { title }) }); return "shared"; }
     catch (e) { if ((e as DOMException)?.name === "AbortError") return "cancelled"; }
   }
   downloadBlob(blob);

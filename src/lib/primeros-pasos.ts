@@ -4,6 +4,7 @@
 //
 // Reglas de los textos (libro de marca): español neutro de tú, frases cortas, una idea por frase, sin emojis, sin rayas
 // largas, sin cadenas con "·", sin hablar de inteligencia artificial, números en es-419.
+import { ES_LANG, wFmt, type Lang } from "@/components/workout/lang";
 
 /** Claves guardadas (formato de la base: ^[a-z0-9-]{1,24}$, máximo 64 por persona). */
 export const LEARN_KEY = /^[a-z0-9-]{1,24}$/;
@@ -102,13 +103,13 @@ export function addKey(keys: readonly string[], k: string): string[] {
 }
 
 /** Lo que la app hará la próxima vez con un ejercicio, en una frase simple (sale de prescribe()). Null si no aplica. */
-export function nextTimeLine(rx: { type: string; kg: number | null; reps: number[] }, lo: number): string | null {
-  const kg = rx.kg != null ? rx.kg.toLocaleString("es-419", { maximumFractionDigits: 2 }) : null;
+export function nextTimeLine(rx: { type: string; kg: number | null; reps: number[] }, lo: number, L: Lang = ES_LANG): string | null {
+  const w = rx.kg != null ? wFmt(rx.kg, L) : null;
   switch (rx.type) {
-    case "up": return kg ? `Sube a ${kg} kg y vuelve a ${lo} repeticiones.` : `Busca ${rx.reps[0]} repeticiones.`;
-    case "reps": return "Mismo peso, una repetición más por serie.";
-    case "hold": return "Mismo peso y repeticiones, con técnica más limpia.";
-    case "reset": return kg ? `Baja a ${kg} kg para retomar con buena técnica.` : null;
+    case "up": return w ? L.t("Sube a {w} y vuelve a {lo} repeticiones.", { w, lo }) : L.t("Busca {n} repeticiones.", { n: rx.reps[0] });
+    case "reps": return L.t("Mismo peso, una repetición más por serie.");
+    case "hold": return L.t("Mismo peso y repeticiones, con técnica más limpia.");
+    case "reset": return w ? L.t("Baja a {w} para retomar con buena técnica.", { w }) : null;
     default: return null;
   }
 }

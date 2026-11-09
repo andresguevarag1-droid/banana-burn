@@ -11,6 +11,10 @@
 //
 // Embudo: se mide con weekly_goal_view y weekly_goal_done en funnel_events y la columna "3 entrenos en la prueba" de
 // /admin/embudo.
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
+import { dayName } from "@/lib/i18n/names";
+import { translate } from "@/lib/i18n/t";
+import { ES_LANG, wFmt, type Lang } from "@/components/workout/lang";
 import { localClock } from "./notify";
 
 /** Tipo en notification_log y en las etiquetas de Resend. */
@@ -85,9 +89,9 @@ export function weeklyStreak(days: Iterable<string>, today: string, goalOf: (mon
 export const weeklyStreakLine = (n: number) => `${n} ${n === 1 ? "semana" : "semanas"} cumpliendo tu meta`;
 
 /** "martes", "martes y jueves", "lunes, miércoles y viernes". `dows`: 0 domingo a 6 sábado. */
-export function dayList(dows: number[]): string {
-  const names = dows.map((d) => DAY_ES[((d % 7) + 7) % 7]);
-  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} y ${names.at(-1)}`;
+export function dayList(dows: number[], locale: Locale = DEFAULT_LOCALE): string {
+  const names = dows.map((d) => { const i = ((d % 7) + 7) % 7; return locale === DEFAULT_LOCALE ? DAY_ES[i] : dayName(i, locale); });
+  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")}${translate(locale, " y ")}${names.at(-1)}`;
 }
 
 /**
@@ -139,18 +143,17 @@ export function weeklyNudgeCopy(count: number, goal: number, mins: number | null
 type Set1 = { kg: number | null; reps: number };
 /** La mejor serie: más peso y, con el mismo peso, más repeticiones (o segundos). */
 const topSet = (sets: Set1[]) => sets.reduce((a, b) => ((b.kg ?? 0) > (a.kg ?? 0) || ((b.kg ?? 0) === (a.kg ?? 0) && b.reps > a.reps) ? b : a));
-const kgTxt = (n: number) => n.toLocaleString("es-419", { maximumFractionDigits: 2 });
-const setTxt = (s: Set1, unit?: string) => (s.kg ? `${kgTxt(s.kg)} kg × ${s.reps}` : unit === "s" ? `${s.reps} s` : unit === "m" ? `${s.reps} m` : `${s.reps} ${s.reps === 1 ? "repetición" : "repeticiones"}`);
+const setTxt = (s: Set1, unit: string | undefined, L: Lang) => (s.kg ? `${wFmt(s.kg, L)} × ${s.reps}` : unit === "s" ? `${s.reps} s` : unit === "m" ? `${s.reps} m` : `${s.reps} ${L.t(s.reps === 1 ? "repetición" : "repeticiones")}`);
 
 /**
  * Qué cambió en un ejercicio repetido desde la vez pasada, con la mejor serie de cada vez (datos de workout_sets):
  * "La vez pasada: 6 kg × 10. Hoy: 6 kg × 12." `up`: subió el peso o, con el mismo peso, las repeticiones. Sin una de las
  * dos sesiones, null.
  */
-export function progressLine(last: Set1[] | null | undefined, today: Set1[], unit?: string): { line: string; up: boolean } | null {
+export function progressLine(last: Set1[] | null | undefined, today: Set1[], unit?: string, L: Lang = ES_LANG): { line: string; up: boolean } | null {
   const prev = (last ?? []).filter((s) => s.reps > 0), now = today.filter((s) => s.reps > 0);
   if (!prev.length || !now.length) return null;
   const a = topSet(prev), b = topSet(now);
   const up = (b.kg ?? 0) > (a.kg ?? 0) || ((b.kg ?? 0) === (a.kg ?? 0) && b.reps > a.reps);
-  return { line: `La vez pasada: ${setTxt(a, unit)}. Hoy: ${setTxt(b, unit)}.`, up };
+  return { line: L.t("La vez pasada: {a}. Hoy: {b}.", { a: setTxt(a, unit, L), b: setTxt(b, unit, L) }), up };
 }
