@@ -31,6 +31,17 @@ export function fmtWeight(kg: number, units: Units, locale: Locale, decimals = 1
 export const loadIn = (kg: number, units: Units) => (units === "imperial" ? Math.round(kgToLb(kg)) : kg);
 export const weightUnit = (units: Units) => (units === "imperial" ? "lb" : "kg");
 
+/** El disco más chico en un gimnasio de EE. UU.: las cargas del entreno en libras van de 2.5 en 2.5 (#295). */
+export const LB_PLATE = 2.5;
+/** Carga del plan (kg) en libras para el entreno: 20 kg → 45 lb, 22.5 kg → 50 lb. */
+export const kgToPlateLb = (kg: number) => Math.round(kgToLb(kg) / LB_PLATE) * LB_PLATE;
+/** Lo que escribe la persona en libras, a kg para guardar (con dos decimales): 45 lb → 20.41 kg. Vuelve a 45 lb al mostrarlo. */
+export const lbInputToKg = (lb: number) => Math.round(lbToKg(lb) * 100) / 100;
+/** Carga del entreno en la unidad de la persona: kg tal cual o libras de 2.5 en 2.5. */
+export const workoutLoad = (kg: number, units: Units) => (units === "imperial" ? kgToPlateLb(kg) : kg);
+/** Lo que escribió la persona (en su unidad) a kg para guardar. */
+export const workoutLoadToKg = (v: number, units: Units) => (units === "imperial" ? lbInputToKg(v) : v);
+
 /** Estatura guardada en cm: "175 cm" o "5 ft 9 in". */
 export function fmtHeight(cm: number, units: Units, locale: Locale) {
   if (units === "metric") return `${fmtNumber(cm, locale, 0)} cm`;
