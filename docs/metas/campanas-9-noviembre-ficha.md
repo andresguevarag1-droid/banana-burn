@@ -1,6 +1,6 @@
 # Ficha de lanzamiento: campañas del 9 de noviembre (Costa Rica y Colombia)
 
-> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** Esta ficha no se usa en Ads Manager hasta que se cumpla la condición de activación y Andrés lo apruebe por escrito. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215).
+> **ACTIVA por decisión de Andrés (9 nov 2026, 12:57 a. m.):** «Traer registros está bien porque en 7 días pagan». Reemplaza el aviso de pausa hasta 30 % de activación (#215). Estado en Meta: «BB | Registro web | Por país | desde 9 nov», Colombia + Guatemala US$5.50 al día y Costa Rica US$2.50 al día hasta el 20 nov a las 11:59 p. m.; Estados Unidos (solo español) US$2 al día hasta el 15 nov. Anuncios: Cuánto peso, Gym del condominio y Casa gym parque; el relevo «Copiar al de al lado» queda en pausa. Tope de noviembre: US$200. Para saber si se paga sola hace falta que los cobros lleguen al píxel como `Subscribe` (#293).
 
 La configuración exacta para que, **si Andrés aprueba el lunes 9 de noviembre**, la campaña de [campana-conversion-noviembre.md](campana-conversion-noviembre.md) se cree en Ads Manager en pocos minutos y **quede en pausa** hasta que él la encienda. Es una ficha, no un gasto: **nada se crea ni se activa en Meta** con este documento, no se publica ni se envía nada y no cambia código.
 

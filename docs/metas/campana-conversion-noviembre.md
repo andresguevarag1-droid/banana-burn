@@ -1,6 +1,6 @@
 # Campaña de conversión desde el 9 de noviembre (propuesta)
 
-> **EN PAUSA por decisión del dueño: $0 en anuncios hasta llegar al 30 % de activación.** La campaña del 9 de noviembre no se crea aunque la semana del 2 al 8 cumpla la regla de rentabilidad. Antes de reactivarla, la condición pasa a ser la activación: % de registrados que terminan su primer entreno (`workout_saved`) en 72 h. Activación = % de registrados que terminan su primer entreno en 72 h (hoy ~3 %, 1 nov 2026). El plan se conserva sin borrar (#215).
+> **ACTIVA por decisión de Andrés (9 nov 2026, 12:57 a. m.):** «Traer registros está bien porque en 7 días pagan». Reemplaza el aviso de pausa hasta 30 % de activación (#215). Estado en Meta: «BB | Registro web | Por país | desde 9 nov», Colombia + Guatemala US$5.50 al día y Costa Rica US$2.50 al día hasta el 20 nov a las 11:59 p. m.; Estados Unidos (solo español) US$2 al día hasta el 15 nov. Anuncios: Cuánto peso, Gym del condominio y Casa gym parque; el relevo «Copiar al de al lado» queda en pausa. Tope de noviembre: US$200. Para saber si se paga sola hace falta que los cobros lleguen al píxel como `Subscribe` (#293).
 
 Propuesta de Martín para Andrés: reactivar anuncios de conversión en **Costa Rica y Colombia, cada país en su propio conjunto de anuncios**, **solo si** los cobros de la semana del 2 al 8 de noviembre cumplen la regla de [rentabilidad-semanal.md](rentabilidad-semanal.md).
 
