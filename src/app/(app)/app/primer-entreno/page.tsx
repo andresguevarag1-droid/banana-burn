@@ -2,9 +2,13 @@
 // bienvenida ya no van a Hoy: se les pregunta "¿Entrenamos ahora?". Sí en casa, sí en el gym, o "ahora no" con la hora del
 // recordatorio, para que nadie se vaya sin decidir.
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n/server";
 import { NowOrLater } from "./now-or-later";
 
-export const metadata: Metadata = { title: "Tu primer entreno" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("Tu primer entreno") };
+}
 
 export default function PrimerEntreno() {
   return <NowOrLater />;
