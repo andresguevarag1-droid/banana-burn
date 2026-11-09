@@ -26,6 +26,7 @@ import { todayIn } from "@/lib/today";
 import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
 import { SECOND_KIND, SECOND_WINDOW, TRIAL_DAYS, secondIdemKey, secondWorkoutEmailDue } from "@/lib/segundo-entreno";
 import { WEEKLY_KIND, registrationDay, weekCount, weekMonday, weeklyGoal, weeklyIdemKey, weeklyNudgeCopy, weeklyNudgeDue } from "@/lib/meta-semanal";
+import { DEFAULT_LOCALE, isLocale, isUnits, type Locale, type Units } from "@/lib/i18n/locale";
 import { ACTIVATION_KINDS, ACTIVATION_MAX_HOURS, activationDue, activationIdemKey, activationKind, emailedToday, isActivationKind, type LogEntry } from "@/lib/activacion-correos";
 
 // 200 por página: la lista de ids va en la URL (`in.(...)`) y con 1000 UUID pasaría de ~37 KB, más de lo que aceptan los proxies.
@@ -33,8 +34,26 @@ const PAGE = 200;
 const CHUNK = 100;
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-type Profile = { id: string; created_at?: string | null; full_name: string | null; sex?: string | null; train_days: number | null; equipment: string | null; timezone: string | null; /** "Cómo te hablo" (0035); sin la columna, intermedio. */ lenguaje?: string | null };
+type Profile = { id: string; created_at?: string | null; full_name: string | null; sex?: string | null; train_days: number | null; equipment: string | null; timezone: string | null; /** "Cómo te hablo" (0035); sin la columna, intermedio. */ lenguaje?: string | null } & Partial<Lang>;
 export type RunStats = { ok: boolean; skipped?: string; mode: "hourly" | "daily"; scanned: number; candidates: number; sent: Record<string, number>; push: number; email: number; errors: number; /** Se cortó por tiempo: la próxima corrida sigue (los envíos ya hechos no se repiten). */ partial?: boolean };
+
+/** Idioma de los correos (profiles.locale, 0070) y unidades de los pesos (profiles.units; null = las del idioma). */
+type Lang = { locale: Locale; units: Units | null };
+
+/**
+ * Idioma y unidades de cada cuenta para sus correos (#301). Lectura aparte y tolerante: si falla (o 0070 no corrió), todas
+ * las cuentas reciben el correo en español, como antes, y el envío no se detiene. Exportada para pruebas.
+ */
+export async function languagesOf(admin: SupabaseClient, ids: string[]): Promise<Map<string, Lang>> {
+  const out = new Map<string, Lang>();
+  if (!ids.length) return out;
+  try {
+    const r = await allPages((a, b) => admin.from("profiles").select("id,locale,units").in("id", ids).order("id").range(a, b));
+    if (r.error) { logError("cron:recordatorios", "locale_query_failed", { code: r.error.code }); return out; }
+    for (const p of r.data as { id: string; locale: unknown; units: unknown }[]) out.set(p.id, { locale: isLocale(p.locale) ? p.locale : DEFAULT_LOCALE, units: isUnits(p.units) ? p.units : null });
+  } catch (e) { logError("cron:recordatorios", "locale_query_failed", { kind: errCode(e) }); }
+  return out;
+}
 
 const isoMinus = (iso: string, n: number) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
 
@@ -189,10 +208,11 @@ async function processChunk(admin: SupabaseClient, users: Profile[], prefsOf: Ma
   const [stepBy, recoveryBy] = await Promise.all([trialSequenceFor(admin, users, prefsOf, now), recoveryFor(admin, users, prefsOf, now, mode)]);
   const payBy = await firstPaymentFor(admin, users, prefsOf, now, mode);
   const seasonBy = await seasonCloseFor(admin, users, prefsOf, now, mode);
+  const langBy = await languagesOf(admin, ids);
 
   // Varias personas a la vez (cada una espera push, correo y la base): con miles de cuentas, de una en una no alcanzaba
   // el tiempo de la función. Cada envío se reclama antes en notification_log, así que el orden no importa.
-  await forEachLimit(users, USER_CONCURRENCY, async (u) => {
+  await forEachLimit(users.map((u) => ({ ...u, ...langBy.get(u.id) })), USER_CONCURRENCY, async (u) => {
     // Un usuario con datos raros (o un fallo puntual de push/correo) no detiene al resto del lote.
     try { await processUser(admin, u, prefsOf, now, mode, stats, { wkBy, dlBy, wsBy, logBy, subBy, phoneBy, goalBy, stepBy, recoveryBy, payBy, seasonBy }); }
     catch (e) { stats.errors++; logError("cron:recordatorios", "user_failed", { kind: errCode(e) }); }
@@ -458,7 +478,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const goal = goalFor(goalBy.get(u.id), wsBy.get(u.id) ?? []);
 
     // La pieza reemplaza el correo del recordatorio (o la reactivación) de ese día; push y campanita siguen igual.
-    const stepSent = !!trialStep && await sendTrialStep(admin, u.id, trialStep, getEmail, stats);
+    const stepSent = !!trialStep && await sendTrialStep(admin, u, trialStep, getEmail, stats);
     if (stepSent) for (const d of decisions) if (REPLACED_BY_STEP.has(d.kind)) d.email = false;
     // Recuperación: en su día local no sale ningún otro correo, ni el semanal, a ninguna hora (antes o después de la pieza).
     // Solo si reclamarla falló siguen los demás (ese día no salió). Push y campanita siguen igual.
@@ -497,7 +517,7 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
       const mail = prefs.email_reminders && !otherEmail;
       const nextDow = today.tpl === null ? nextTrainingDow(sched, c.dow) : null;
       const session = nextDow == null ? today : planDay(nextDow, 0, sched, { equipment: eq, sex: u.sex });
-      if ((push || mail) && await sendWeeklyNudge(admin, u.id, { day: c.iso, monday, count: weekCount(workouts, c.iso), goal: weekGoal, mins: session.mins ?? null, push, mail }, { web: userSubs, native: userPhones }, getEmail, stats)) {
+      if ((push || mail) && await sendWeeklyNudge(admin, u, { day: c.iso, monday, count: weekCount(workouts, c.iso), goal: weekGoal, mins: session.mins ?? null, push, mail }, { web: userSubs, native: userPhones }, getEmail, stats)) {
         const i = decisions.findIndex((d) => d.kind === "recordatorio");
         if (i >= 0) decisions.splice(i, 1);
         if (mail) for (const d of decisions) d.email = false;
@@ -536,8 +556,9 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
  * notification_log (kind meta_semanal, día local) antes de enviarse. Si el correo no sale, el push sí cuenta: el turno de la
  * semana queda usado. true si se reclamó en esta corrida.
  */
-async function sendWeeklyNudge(admin: SupabaseClient, userId: string, x: { day: string; monday: string; count: number; goal: number; mins: number | null; push: boolean; mail: boolean },
+async function sendWeeklyNudge(admin: SupabaseClient, u: Profile, x: { day: string; monday: string; count: number; goal: number; mins: number | null; push: boolean; mail: boolean },
   devices: { web: PushSub[]; native: NativeToken[] }, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const userId = u.id;
   const { data: claimed, error } = await admin.from("notification_log")
     .upsert({ user_id: userId, kind: WEEKLY_KIND, local_day: x.day, channels: [...(x.push ? ["push"] : []), ...(x.mail ? ["email"] : [])], pushes: x.push ? 1 : 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
     .select("id");
@@ -549,7 +570,7 @@ async function sendWeeklyNudge(admin: SupabaseClient, userId: string, x: { day: 
     const to = await getEmail();
     if (to) {
       const unsubscribe = unsubscribeUrl(userId, "recordatorios");
-      const r = await sendEmail(to, withLoginLinks(T.metaSemanal({ count: x.count, goal: x.goal, mins: x.mins, unsubscribe }), userId), { idempotencyKey: weeklyIdemKey(userId, x.monday), unsubscribe, tags: { kind: WEEKLY_KIND } });
+      const r = await sendEmail(to, withLoginLinks(T.metaSemanal({ count: x.count, goal: x.goal, mins: x.mins, unsubscribe, locale: u.locale }), userId), { idempotencyKey: weeklyIdemKey(userId, x.monday), unsubscribe, tags: { kind: WEEKLY_KIND } });
       if (r.ok) stats.email++;
     }
   }
@@ -561,7 +582,8 @@ async function sendWeeklyNudge(admin: SupabaseClient, userId: string, x: { day: 
 const REPLACED_BY_STEP = new Set<Kind>(["recordatorio", "reactivacion_3", "reactivacion_7", "racha"]);
 
 /** Reclama y envía una pieza de la secuencia. true si se reclamó en esta corrida (aunque el correo fallara). */
-async function sendTrialStep(admin: SupabaseClient, userId: string, step: TrialStep, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+async function sendTrialStep(admin: SupabaseClient, u: Profile, step: TrialStep, getEmail: () => Promise<string | null>, stats: RunStats): Promise<boolean> {
+  const userId = u.id;
   const { data: claimed, error } = await admin.from("notification_log")
     .upsert({ user_id: userId, kind: step, local_day: ONCE_DAY, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
     .select("id");
@@ -570,7 +592,7 @@ async function sendTrialStep(admin: SupabaseClient, userId: string, step: TrialS
   const to = await getEmail();
   if (to) {
     const unsubscribe = unsubscribeUrl(userId, "recordatorios");
-    const r = await sendEmail(to, withLoginLinks(T.secuenciaPrueba({ day: stepDay(step), unsubscribe }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
+    const r = await sendEmail(to, withLoginLinks(T.secuenciaPrueba({ day: stepDay(step), unsubscribe, locale: u.locale }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
     if (r.ok) stats.email++;
   }
   stats.sent[step] = (stats.sent[step] ?? 0) + 1;
@@ -633,7 +655,7 @@ async function sendRecovery(admin: SupabaseClient, u: Profile, step: RecoverySte
   if (to) {
     const unsubscribe = unsubscribeUrl(userId, "recordatorios");
     const progress = step === "recuperacion_d8" ? await progressOf(admin, userId) : null;
-    const mail = T.recuperacionPrueba({ day: recoveryDay(step), unsubscribe, progress, trainDays: u.train_days });
+    const mail = T.recuperacionPrueba({ day: recoveryDay(step), unsubscribe, progress, trainDays: u.train_days, locale: u.locale, units: u.units });
     const r = await sendEmail(to, withLoginLinks(mail, userId), { idempotencyKey: recoveryIdemKey(step, userId), unsubscribe, tags: { kind: step } });
     if (r.ok) stats.email++;
   }
@@ -802,6 +824,7 @@ export async function sendActivationEmails(admin: SupabaseClient, now: Date, mod
     const failed = [prefs, trained, dated, once].find((r) => r.error);
     if (failed) { stats.ok = false; stats.errors++; logError("cron:activacion", "query_failed", { code: failed.error?.code }); if (profiles.length < PAGE) break; continue; }
     const prefsOf = new Map<string, Prefs>();
+    const langBy = await languagesOf(admin, ids);
     for (const p of profiles) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
     for (const r of prefs.data as Record<string, unknown>[]) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
     const withWorkout = new Set((trained.data as { user_id: string }[]).map((r) => r.user_id));
@@ -833,7 +856,7 @@ export async function sendActivationEmails(admin: SupabaseClient, now: Date, mod
         if (!to) return;
         const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
         // Misma regla que el fin de la beta (#207/#209): con gym o mixto, el botón abre el primer entreno en casa.
-        const msg = T.activacion({ step, home: offersHomeFirst((p.equipment ?? "gym") as Equipment), unsubscribe });
+        const msg = T.activacion({ step, home: offersHomeFirst((p.equipment ?? "gym") as Equipment), unsubscribe, locale: langBy.get(p.id)?.locale });
         const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: activationIdemKey(step, p.id), unsubscribe, tags: { kind } });
         if (r.ok) stats.email++;
         // Si Resend la rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (como el fin de la beta).
@@ -884,6 +907,7 @@ export async function sendSecondWorkoutEmails(admin: SupabaseClient, now: Date, 
     if (failed) { stats.ok = false; stats.errors++; logError("cron:segundo-entreno", "query_failed", { code: failed.error?.code }); continue; }
     type P = { id: string; created_at: string | null; timezone: string | null; plan: string | null; role: string | null };
     const prefsOf = new Map<string, Prefs>();
+    const langBy = await languagesOf(admin, (profiles.data as P[]).map((p) => p.id));
     for (const p of profiles.data as P[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
     for (const r of prefs.data as Record<string, unknown>[]) if (prefsOf.has(r.user_id as string)) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
     const has = (rows: unknown[], ok: (r: Record<string, unknown>) => boolean = () => true) => new Set((rows as Record<string, unknown>[]).filter(ok).map((r) => r.user_id as string));
@@ -919,7 +943,7 @@ export async function sendSecondWorkoutEmails(admin: SupabaseClient, now: Date, 
         const to = u.user?.email;
         if (!to) return;
         const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
-        const r = await sendEmail(to, withLoginLinks(T.segundoEntreno({ unsubscribe }), p.id), { idempotencyKey: secondIdemKey(p.id), unsubscribe, tags: { kind: SECOND_KIND } });
+        const r = await sendEmail(to, withLoginLinks(T.segundoEntreno({ unsubscribe, locale: langBy.get(p.id)?.locale }), p.id), { idempotencyKey: secondIdemKey(p.id), unsubscribe, tags: { kind: SECOND_KIND } });
         if (r.ok) stats.email++;
         // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (como la activación).
         else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", SECOND_KIND).eq("local_day", day).then(() => null, () => null); return; }

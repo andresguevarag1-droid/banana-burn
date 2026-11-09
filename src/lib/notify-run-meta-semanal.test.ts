@@ -148,3 +148,14 @@ describe("copy del recordatorio", () => {
     expect(`${mail.subject} ${x.paragraphs.join(" ")}`).not.toMatch(/!|—/);
   });
 });
+
+describe("idioma de la cuenta (#301)", () => {
+  it("el correo sale en inglés si profiles.locale es en-US", async () => {
+    setup();
+    tables.profiles = [profile(1, { locale: "en-US" })];
+    await runReminders(day("2026-11-12"), "daily");
+    expect(sent[0].subject).toBe("You can still hit your weekly goal");
+    expect(sent[0].text).toContain("This week you've done 0 of 3 workouts.");
+    expect(sent[0].html).toContain('<html lang="en">');
+  });
+});

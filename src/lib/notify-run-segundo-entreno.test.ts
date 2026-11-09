@@ -134,3 +134,13 @@ describe("correo del segundo entreno en runReminders", () => {
     expect(seconds(1).length).toBe(1);
   });
 });
+
+describe("idioma de la cuenta (#301)", () => {
+  it("sale en el idioma de profiles.locale", async () => {
+    tables.profiles = [profile(1, { locale: "en-US" }), profile(2)];
+    tables.workouts = [workout(1), workout(2)];
+    await runReminders(THU, "daily");
+    expect(seconds(1).map((s) => s.subject)).toEqual(["Your second workout is ready"]);
+    expect(seconds(2).map((s) => s.subject)).toEqual(["Tu segundo entreno está listo"]);
+  });
+});

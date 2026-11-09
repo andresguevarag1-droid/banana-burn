@@ -196,3 +196,21 @@ describe("recuperación de la prueba en runReminders", () => {
     expect(kinds(1)).toEqual(["recuperacion_d8"]);
   });
 });
+
+describe("idioma de la cuenta (#301)", () => {
+  it("días 8 y 10 en el idioma de profiles.locale; en inglés los kg salen en lb si units es imperial", async () => {
+    tables.profiles = [profile(1, { locale: "en-US", units: "imperial" }), profile(2, { locale: "en-US", units: "metric" }), profile(3)];
+    tables.workouts = [1, 2, 3].map((n) => ({ id: `w${n}`, user_id: uid(n), day: "2026-11-03", template: "pierna", finished_at: "2026-11-03T13:00:00.000Z" }));
+    tables.workout_sets = [1, 2, 3].map((n) => ({ workout_id: `w${n}`, user_id: uid(n), kg: 50, reps: 10, done: true }));
+    await runReminders(DAY8, "daily");
+    const of = (n: number, kind: string) => sent.find((x) => x.kind === kind && x.to.startsWith(uid(n).slice(0, 8)))!;
+    expect(of(1, "recuperacion_d8").subject).toBe("Your progress is waiting");
+    // 500 kg = 1,102.3 lb, redondeado a 2.5 lb.
+    expect(of(1, "recuperacion_d8").text).toContain("During your trial you saved 1 workout, with 1 set and 1,102.5 lb lifted.");
+    expect(of(2, "recuperacion_d8").text).toContain("with 1 set and 500 kg lifted.");
+    expect(of(3, "recuperacion_d8").text).toContain("En tu prueba guardaste 1 entreno, con 1 serie y 500 kg levantados.");
+    await runReminders(DAY10, "daily");
+    expect(of(1, "recuperacion_d10").subject).toBe("Last email about your trial");
+    expect(of(3, "recuperacion_d10").subject).toBe("Último correo sobre tu prueba");
+  });
+});

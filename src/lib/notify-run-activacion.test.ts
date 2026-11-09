@@ -207,3 +207,13 @@ describe("correos de activación en runReminders (cada hora)", () => {
     expect(stats.sent).toMatchObject({ activacion_1: 1, recordatorio: 1 });
   });
 });
+
+describe("idioma de la cuenta (#301)", () => {
+  it("A0, A1 y A2 salen en el idioma de profiles.locale", async () => {
+    tables.profiles = [profile(1, { locale: "en-US" }), profile(2)];
+    for (const t of [DAY0, DAY1, DAY3]) await runReminders(t, "daily");
+    const subjects = (n: number) => mails(n).filter((m) => m.kind?.startsWith("activacion_")).map((m) => m.subject);
+    expect(subjects(1)).toEqual(["Your first workout: 12 minutes at home", "Starting is the hard part", "You can still start today"]);
+    expect(subjects(2)).toEqual(["Tu primer entreno: 12 minutos en casa", "Lo difícil es empezar", "Hoy también puedes empezar"]);
+  });
+});
