@@ -2,6 +2,7 @@
 import { DAY_NAMES } from "@/lib/engine/data";
 import { DEFAULT_LOCALE, type Locale } from "./locale";
 import { translate } from "./t";
+import { EXERCISE_NAMES } from "./en/workout";
 
 const EN_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -29,4 +30,16 @@ export const planName = (es: string, locale: Locale) => translate(locale, es);
 export function routineName(name: string, locale: Locale): string {
   const m = /^Exprés (\d+) min$/.exec(name);
   return m ? translate(locale, "Exprés {m} min", { m: m[1] }) : translate(locale, name);
+}
+
+/**
+ * Nombre de un ejercicio para mostrar (#300). Los del motor van por slug (EXERCISE_NAMES); los de la biblioteca
+ * ("ds:0001") traen su nombre original en inglés (`en`). El slug nunca cambia: solo el nombre en pantalla.
+ */
+export function exerciseName(id: string, es: string, locale: Locale, en?: string | null): string {
+  if (locale === DEFAULT_LOCALE) return es;
+  const named = (EXERCISE_NAMES as Record<string, string>)[id];
+  if (named) return named;
+  if (en) return en[0].toUpperCase() + en.slice(1);
+  return translate(locale, es);
 }

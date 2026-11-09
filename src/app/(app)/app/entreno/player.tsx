@@ -50,7 +50,7 @@ import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice
 import { progressLine } from "@/lib/meta-semanal";
 import type { WeekPlan } from "@/components/workout/recap-next-day";
 
-export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null; /** Tempo del programa ("3-1-1"): se explica en simple durante la serie. */ tempo?: string };
+export type PlayerExercise = { id: string; name: string; /** Nombre original en inglés (ejercicios de la biblioteca); los del motor van por slug. */ en?: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null; /** Tempo del programa ("3-1-1"): se explica en simple durante la serie. */ tempo?: string };
 /** `sex`: nombres de nivel para ella ("Mona fuerte"). */
 export type Gam = { xp: number; streak: number; todayDone: boolean; sex?: string | null };
 type Mode = "normal" | "suave" | "fuerte";

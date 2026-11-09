@@ -5,6 +5,9 @@
 // hacer la serie, no el doble de trabajo registrado.
 
 /** Pausa para cambiar de lado (darse vuelta en la colchoneta). */
+import { DEFAULT_LOCALE } from "@/lib/i18n/locale";
+import { tr, type T } from "@/lib/i18n/t";
+
 export const SWITCH_SECONDS = 5;
 
 export type SegKind = "prep" | "work" | "switch";
@@ -14,6 +17,8 @@ export type Seg = { kind: SegKind; secs: number; side?: 1 | 2 };
 export type TimedRun = { segs: Seg[]; i: number; end: number; paused: number | null };
 
 export const SIDE_LABEL = { 1: "Lado derecho", 2: "Lado izquierdo" } as const;
+/** Traductor opcional (#300): sin él, español. */
+const ES_T = tr(DEFAULT_LOCALE);
 
 /** Tramos de una serie de `secs` segundos: [prep, trabajo] o, por lado, [prep, lado 1, cambio, lado 2]. */
 export function timedSegments(secs: number, perSide: boolean, prep = 0): Seg[] {
@@ -62,7 +67,7 @@ export function timedView(run: TimedRun, now: number) {
   return { seg, left, frac, perSide, sides, paused: run.paused != null, last: run.i === run.segs.length - 1 };
 }
 
-/** Nombre corto del tramo (pantalla y lector de pantalla). */
+/** Nombre corto del tramo (pantalla y lector de pantalla). En español: en inglés se pasa por t(). */
 export function segLabel(s: Seg) {
   if (s.kind === "prep") return "Prepárate";
   if (s.kind === "switch") return "Cambia de lado";
@@ -70,15 +75,15 @@ export function segLabel(s: Seg) {
 }
 
 /** Texto del botón de saltar según el tramo. */
-export function skipLabel(s: Seg, last: boolean) {
-  if (s.kind === "prep") return "Saltar la preparación";
-  if (s.kind === "switch") return "Saltar el cambio de lado";
-  return last ? "Terminar la serie" : "Terminar este lado";
+export function skipLabel(s: Seg, last: boolean, t: T = ES_T) {
+  if (s.kind === "prep") return t("Saltar la preparación");
+  if (s.kind === "switch") return t("Saltar el cambio de lado");
+  return t(last ? "Terminar la serie" : "Terminar este lado");
 }
 
 /** Voz y aviso accesible al empezar un tramo de una serie por lado. Null si no hay nada que decir. */
-export function segCue(s: Seg): { say: string; live: string } | null {
-  if (s.kind === "switch") return { say: "Cambia de lado.", live: `Primer lado listo. Cambia de lado: ${s.secs} segundos` };
-  if (s.kind === "work" && s.side) return { say: `${SIDE_LABEL[s.side]}. Ya.`, live: `${SIDE_LABEL[s.side]}: ${s.secs} segundos` };
+export function segCue(s: Seg, t: T = ES_T): { say: string; live: string } | null {
+  if (s.kind === "switch") return { say: t("Cambia de lado."), live: t("Primer lado listo. Cambia de lado: {secs} segundos", { secs: s.secs }) };
+  if (s.kind === "work" && s.side) return { say: `${t(SIDE_LABEL[s.side])}. ${t("Ya.")}`, live: t("{side}: {secs} segundos", { side: t(SIDE_LABEL[s.side]), secs: s.secs }) };
   return null;
 }

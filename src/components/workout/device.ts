@@ -76,13 +76,22 @@ export const sfx = {
 /* ---------- Voz del coach (Web Speech) ---------- */
 export const canSpeak = () => typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
 let voice: SpeechSynthesisVoice | null | undefined;
+/** Idioma de la voz (#300): en inglés, una voz de EE. UU. El reproductor lo fija al abrir. */
+let english = false;
+export function setSpeechEnglish(on: boolean) {
+  if (on !== english) { english = on; voice = undefined; }
+}
 function pickVoice() {
   if (voice !== undefined) return voice;
   try {
     const all = window.speechSynthesis.getVoices();
     if (!all.length) return null; // aún cargando: se reintenta en la próxima frase
-    const pref = ["es-419", "es-MX", "es-US"];
     const norm = (v: SpeechSynthesisVoice) => v.lang.replace("_", "-").toLowerCase();
+    if (english) {
+      voice = all.find((v) => norm(v) === "en-us") ?? all.find((v) => norm(v).startsWith("en")) ?? null;
+      return voice;
+    }
+    const pref = ["es-419", "es-MX", "es-US"];
     // Español neutro latinoamericano primero; cualquier otra voz latina después; España solo si no hay otra
     voice = pref.map((l) => all.find((v) => norm(v) === l.toLowerCase())).find(Boolean)
       ?? all.find((v) => norm(v).startsWith("es-") && norm(v) !== "es-es") ?? all.find((v) => norm(v).startsWith("es")) ?? null;
@@ -97,7 +106,7 @@ export function say(text: string, o: { interrupt?: boolean; rate?: number } = {}
     const u = new SpeechSynthesisUtterance(text);
     const v = pickVoice();
     if (v) u.voice = v;
-    u.lang = v?.lang ?? "es-MX";
+    u.lang = v?.lang ?? (english ? "en-US" : "es-MX");
     u.rate = o.rate ?? 1.05;
     s.speak(u);
   } catch { /* */ }

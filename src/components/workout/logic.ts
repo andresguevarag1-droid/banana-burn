@@ -2,6 +2,7 @@
 import { MIN_SET_SECONDS, workoutXp } from "@/lib/gamify";
 import { BARBELL } from "@/lib/engine/data";
 import { SWITCH_SECONDS } from "./sides";
+import { ES_LANG, volFmt, wFmt, type Lang } from "./lang";
 
 export type Effort = "f" | "j" | "l";
 /** Una serie en pantalla. `eff` es opcional para leer sesiones guardadas antes de que existiera. */
@@ -12,7 +13,7 @@ export const kgFmt = (n: number) => n.toLocaleString("es-419", { maximumFraction
 export const e1 = (kg: number, r: number) => kg * (1 + r / 30);
 export const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 export const clock = (s: number) => { const t = Math.max(0, Math.floor(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
-export const unitLbl = (u?: string) => (u === "s" ? "seg" : u === "m" ? "m" : "reps");
+export const unitLbl = (u?: string, L: Lang = ES_LANG) => (u === "s" ? L.t("seg") : u === "m" ? "m" : "reps");
 
 /** "2 min", "90 s", "2,5 min": para hablar de descansos en texto corrido. */
 export function restLabel(sec: number) {
@@ -128,11 +129,11 @@ export function nextPending(rows: Row[][], from: number): Target {
 export const isLastSet = (rows: Row[][], ex: number) => rows[ex].filter((r) => !r.done).length === 1;
 
 /** "10 kg × 8 reps", "PC × 12 reps", "40 seg", "35 seg por lado" (por tiempo y por lado: el valor es de un lado). */
-export function targetText(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean; perSide?: boolean }) {
-  const u = unitLbl(o.unit) + (o.unit === "s" && o.perSide ? " por lado" : "");
+export function targetText(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean; perSide?: boolean }, L: Lang = ES_LANG) {
+  const u = unitLbl(o.unit, L) + (o.unit === "s" && o.perSide ? L.t(" por lado") : "");
   const kg = num(r.kg);
   if (o.unit === "s" && o.bw) return `${r.reps} ${u}`;
-  if (kg > 0) return `${kgFmt(kg)} kg × ${r.reps} ${u}`;
+  if (kg > 0) return `${wFmt(kg, L)} × ${r.reps} ${u}`;
   return o.bw ? `${r.reps} ${u}` : `${r.reps} ${u}`;
 }
 
@@ -140,12 +141,13 @@ export function targetText(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: 
  * La meta de la serie en una frase que se entiende sin saber de gimnasio: "10 repeticiones con 20 kg",
  * "30 segundos por lado". Con peso corporal y lastre, el peso se dice como extra.
  */
-export function plainTarget(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean; perSide?: boolean }) {
+export function plainTarget(r: Pick<Row, "kg" | "reps">, o: { unit?: string; bw: boolean; perSide?: boolean }, L: Lang = ES_LANG) {
+  const { t } = L;
   const n = num(r.reps), kg = num(r.kg);
-  const what = o.unit === "s" ? `${n} ${n === 1 ? "segundo" : "segundos"}${o.perSide ? " por lado" : ""}`
-    : o.unit === "m" ? `${n} metros`
-    : `${n} ${n === 1 ? "repetición" : "repeticiones"}`;
-  if (kg > 0 && !(o.unit === "s" && o.bw)) return `${what} con ${kgFmt(kg)} kg${o.bw ? " extra" : ""}`;
+  const what = o.unit === "s" ? `${n} ${n === 1 ? t("segundo") : t("segundos")}${o.perSide ? t(" por lado") : ""}`
+    : o.unit === "m" ? `${n} ${t("metros")}`
+    : `${n} ${n === 1 ? t("repetición") : t("repeticiones")}`;
+  if (kg > 0 && !(o.unit === "s" && o.bw)) return t(o.bw ? "{what} con {w} extra" : "{what} con {w}", { what, w: wFmt(kg, L) });
   return what;
 }
 
@@ -166,13 +168,14 @@ export function warmupFor(o: { kg: number; barbell: boolean; bw: boolean; unit?:
   if (o.kg >= 8) return [{ kg: Math.max(1, Math.round(o.kg / 2)), reps: 10 }];
   return null;
 }
-export function warmupText(w: Warm, barbell = true) {
+export function warmupText(w: Warm, barbell = true, L: Lang = ES_LANG) {
   const bar = barbell ? w.filter((s) => s.kg === 20) : [];
   const rest = w.filter((s) => !bar.includes(s));
   const out: string[] = [];
-  if (bar.length) out.push(`${bar.length === 1 ? "1 serie" : `${bar.length} series`} con la barra sola (${bar.map((s) => s.reps).join(" y ")} reps)`);
-  rest.forEach((s) => out.push(`1 de ${s.reps} con ${kgFmt(s.kg ?? 0)} kg`));
-  const t = out.length > 1 ? `${out.slice(0, -1).join(", ")} y ${out.at(-1)}` : out[0];
+  const and = L.t(" y ");
+  if (bar.length) out.push(L.t(bar.length === 1 ? "1 serie con la barra sola ({reps} reps)" : "{n} series con la barra sola ({reps} reps)", { n: bar.length, reps: bar.map((s) => s.reps).join(and) }));
+  rest.forEach((s) => out.push(L.t("1 de {reps} con {w}", { reps: s.reps, w: wFmt(s.kg ?? 0, L) })));
+  const t = out.length > 1 ? `${out.slice(0, -1).join(", ")}${and}${out.at(-1)}` : out[0];
   return `${t[0].toUpperCase()}${t.slice(1)}.`;
 }
 
@@ -181,7 +184,7 @@ const STRETCH: Record<string, string> = {
   pecho: "pecho", hombro: "hombros", espalda: "espalda", dorsal: "espalda", tríceps: "tríceps", bíceps: "bíceps", core: "cadera", abdom: "cadera", cuerpo: "cadera",
 };
 /** Estiramientos sugeridos según los músculos del día (máximo 3, sin repetir). */
-export function cooldownFor(muscles: string[]) {
+export function cooldownFor(muscles: string[], L: Lang = ES_LANG) {
   const out: string[] = [];
   for (const m of muscles) {
     const k = Object.keys(STRETCH).find((s) => m.toLowerCase().includes(s));
@@ -189,8 +192,9 @@ export function cooldownFor(muscles: string[]) {
     if (v && !out.includes(v)) out.push(v);
     if (out.length === 3) break;
   }
-  const list = out.length ? out : ["piernas", "pecho", "espalda"];
-  return { walk: 3, stretches: list, text: `3 min de caminata suave y 30 s de estiramiento para ${list.length > 1 ? `${list.slice(0, -1).join(", ")} y ${list.at(-1)}` : list[0]}.` };
+  const list = (out.length ? out : ["piernas", "pecho", "espalda"]).map((m) => L.t(m));
+  const and = L.t(" y ");
+  return { walk: 3, stretches: list, text: L.t("3 min de caminata suave y 30 s de estiramiento para {list}.", { list: list.length > 1 ? `${list.slice(0, -1).join(", ")}${and}${list.at(-1)}` : list[0] }) };
 }
 
 /* ---------- Volumen y formato ---------- */
@@ -199,18 +203,19 @@ export function volumeOf(rows: Row[][]) {
   rows.forEach((r) => r.forEach((s) => { if (s.done) v += num(s.kg) * num(s.reps); }));
   return Math.round(v);
 }
-export const volumeText = (v: number) => (v >= 1000 ? `${kgFmt(Math.round(v / 100) / 10)} t` : `${kgFmt(v)} kg`);
+export const volumeText = (v: number, L: Lang = ES_LANG) => volFmt(v, L);
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /* ---------- Voz del coach ---------- */
-export function speechFor(kind: "exercise" | "rest" | "go" | "last" | "done" | "work" | "count", o: { name?: string; sets?: number; target?: string; cue?: string; rest?: number; set?: number; n?: number } = {}) {
+export function speechFor(kind: "exercise" | "rest" | "go" | "last" | "done" | "work" | "count", o: { name?: string; sets?: number; target?: string; cue?: string; rest?: number; set?: number; n?: number } = {}, L: Lang = ES_LANG) {
+  const { t } = L;
   switch (kind) {
-    case "exercise": return `${o.name}. ${o.sets} series${o.target ? `, ${o.target.replace("×", "por").replace("kg", "kilos")}` : ""}.${o.cue ? ` Clave: ${o.cue}.` : ""}`;
-    case "rest": return `Descanso. ${restLabel(o.rest ?? 60).replace("min", "minutos").replace(" s", " segundos")}.`;
-    case "go": return `Vamos. Serie ${o.set} de ${o.sets}.`;
-    case "last": return "Última serie: déjalo todo.";
-    case "work": return `${o.name}. Ya.`;
-    case "done": return "Entreno completado. Bien hecho.";
+    case "exercise": return `${o.name}. ${t("{n} series", { n: o.sets ?? 0 })}${o.target ? `, ${o.target.replace("×", t("por")).replace("kg", "kilos").replace("lb", "pounds")}` : ""}.${o.cue ? ` ${t("Clave: {cue}.", { cue: o.cue })}` : ""}`;
+    case "rest": return `${t("Descanso.")} ${restLabel(o.rest ?? 60).replace("min", t("minutos")).replace(" s", ` ${t("segundos")}`)}.`;
+    case "go": return t("Vamos. Serie {set} de {sets}.", { set: o.set ?? 1, sets: o.sets ?? 1 });
+    case "last": return t("Última serie: déjalo todo.");
+    case "work": return `${o.name}. ${t("Ya.")}`;
+    case "done": return t("Entreno completado. Bien hecho.");
     case "count": return String(o.n);
   }
 }

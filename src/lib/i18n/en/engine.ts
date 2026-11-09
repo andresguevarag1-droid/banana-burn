@@ -1,22 +1,7 @@
-// en-US: nombres de ejercicios, músculos y rutinas del motor (src/lib/engine). Los ejercicios van por id: si se agrega
-// uno nuevo a EX sin su nombre en inglés, tsc avisa.
+// en-US: nombres de ejercicios, músculos y rutinas del motor (src/lib/engine). Los nombres de los ejercicios viven por
+// slug en ./workout.ts (EXERCISE_NAMES); aquí se suman también por su nombre en español.
 import { EX, TPL, type ExerciseId, type TemplateId } from "@/lib/engine/data";
-
-const EXERCISES: Record<ExerciseId, string> = {
-  squat: "Back squat", frontsquat: "Front squat", goblet: "Goblet squat", bench: "Bench press", closebench: "Close-grip bench press",
-  incline: "Incline dumbbell press", ohp: "Standing overhead press", dbpress: "Dumbbell shoulder press", dips: "Parallel bar dips",
-  dipsw: "Weighted dips", deadlift: "Deadlift", rdl: "Romanian deadlift", pullup: "Pull-ups", chinup: "Neutral-grip pull-ups",
-  row: "Barbell row", lat: "Lat pulldown", dbrow: "Dumbbell row", curl: "Barbell curl", hammer: "Hammer curl", curlp: "Pause curl",
-  lateral: "Lateral raises", lateralc: "Cable lateral raise", laterall: "Lean-away lateral raise", facepull: "Face pull",
-  facepullp: "Pause face pull", reardelt: "Dumbbell rear delt fly", pushup: "Push-ups", pushupd: "Diamond push-ups",
-  pushupe: "Feet-elevated push-ups", plank: "Plank", planktap: "Plank shoulder taps", plankrkc: "RKC plank",
-  kneeraise: "Hanging knee raise", legraise: "Hanging leg raise", twistraise: "Hanging knee raise with twist", carry: "Farmer's carry",
-  suitcase: "Suitcase carry (one hand)", carryp: "Pause carry", floorpress: "Dumbbell floor press", dbrdl: "Dumbbell Romanian deadlift",
-  invrow: "Inverted row (table or low bar)", bandpull: "Band pulldown", legraisef: "Lying leg raise", bicycle: "Bicycle crunch",
-  bwsquat: "Bodyweight squat", bulgarian: "Bulgarian split squat", pikepush: "Pike push-up", slrdl: "Single-leg deadlift",
-  glutebridge: "Glute bridge", towelcurl: "Isometric towel curl", ytw: "Prone Y-T-W", bearcrawl: "Bear crawl",
-  jumpsquat: "Jump squat", burpee: "Burpees", mountain: "Mountain climbers", lunge: "Alternating lunges", jacks: "Jumping jacks",
-};
+import { EXERCISE_NAMES as EXERCISES } from "./workout";
 
 const MUSCLES: Record<string, string> = {
   Piernas: "Legs", Pecho: "Chest", "Tríceps": "Triceps", Hombros: "Shoulders", Espalda: "Back", Femorales: "Hamstrings",
