@@ -6,6 +6,7 @@ import { EFFORTS, clock, type Effort } from "./logic";
 import { CountRing, GoldBanana, LevelMeter } from "./ui";
 import { useDarkStatusBar } from "./device";
 import { RestAlertOffer } from "./rest-alert-offer";
+import { useLang } from "./use-lang";
 import css from "./workout.module.css";
 
 export type RestInfo = {
@@ -44,14 +45,15 @@ export type RestInfo = {
  * luego una sola pregunta de un toque (¿cómo se sintió?), el reloj grande y lo que sigue.
  * Se puede minimizar para ajustar pesos mientras corre.
  */
-export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onSkip, onMinimize, minimizeLabel = "Ajustar pesos", extra }: {
+export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onSkip, onMinimize, minimizeLabel, extra }: {
   left: number; total: number; info: RestInfo; closing: boolean;
   /** Una línea debajo de lo que sigue (pedido de tarjeta tras la primera serie, #280). */
   extra?: React.ReactNode;
-  /** "Ajustar pesos" o, sin carga (pilates, plancha), "Ajustar la serie". */
+  /** "Ajustar pesos" (por defecto) o, sin carga (pilates, plancha), "Ajustar la serie". */
   minimizeLabel?: string;
   onEffort: (e: Effort) => void; onAdjust: (d: number) => void; onSkip: () => void; onMinimize: () => void;
 }) {
+  const { t } = useLang();
   const go = useRef<HTMLButtonElement>(null);
   useDarkStatusBar(true);
   const min = useRef(onMinimize);
@@ -76,14 +78,14 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
     };
   }, []);
   return (
-    <div role="dialog" aria-modal="true" aria-label="Descanso" data-closing={closing || undefined}
+    <div role="dialog" aria-modal="true" aria-label={t("Descanso")} data-closing={closing || undefined}
       className={`${css.rest} fixed inset-0 z-[60] flex flex-col bg-ink text-white`}>
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto flex min-h-full max-w-md flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-bold text-white/70">Descanso</p>
+            <p className="text-sm font-bold text-white/70">{t("Descanso")}</p>
             <button type="button" onClick={onMinimize} className="tap pressable inline-flex items-center gap-1.5 h-11 px-3.5 rounded-full bg-white/10 text-sm font-bold hover:bg-white/20">
-              <CaretDown weight="bold" className="size-4" />{minimizeLabel}
+              <CaretDown weight="bold" className="size-4" />{minimizeLabel ?? t("Ajustar pesos")}
             </button>
           </div>
 
@@ -92,12 +94,12 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
           <div className="flex flex-col items-center pt-2">
             <div className="-my-6 scale-[.82] land:-my-14 land:scale-[.6] [@media(min-height:740px)]:my-0 [@media(min-height:740px)]:scale-100">
               <CountRing left={left} total={total} size={288} stroke={15}>
-                <span className="mt-1 block text-sm font-bold text-white/60">de {clock(total)}</span>
+                <span className="mt-1 block text-sm font-bold text-white/60">{t("de {n}", { n: clock(total) })}</span>
               </CountRing>
             </div>
             <div className="mt-3 flex gap-3">
-              <button type="button" onClick={() => onAdjust(-15)} className="pressable h-12 px-5 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Quitar 15 segundos">−15 s</button>
-              <button type="button" onClick={() => onAdjust(15)} className="pressable h-12 px-5 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label="Sumar 15 segundos">+15 s</button>
+              <button type="button" onClick={() => onAdjust(-15)} className="pressable h-12 px-5 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label={t("Quitar 15 segundos")}>−15 s</button>
+              <button type="button" onClick={() => onAdjust(15)} className="pressable h-12 px-5 shrink-0 rounded-full bg-white/10 text-base font-extrabold hover:bg-white/20" aria-label={t("Sumar 15 segundos")}>+15 s</button>
             </div>
           </div>
 
@@ -110,7 +112,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
                 <span className="grid place-items-center size-16 shrink-0 rounded-2xl bg-white/10 text-2xl font-extrabold tabular-nums">{info.next.title.match(/\d+/)?.[0] ?? <FlagCheckered weight="fill" className="size-7 text-banana" />}</span>
               )}
               <div className="min-w-0">
-                <p className="text-[13px] font-extrabold uppercase tracking-[.1em] text-banana">{info.next.isNew ? "Siguiente ejercicio" : "Siguiente"}</p>
+                <p className="text-[13px] font-extrabold uppercase tracking-[.1em] text-banana">{t(info.next.isNew ? "Siguiente ejercicio" : "Siguiente")}</p>
                 <p className="text-lg font-extrabold leading-tight">{info.next.title}</p>
                 <p className="text-[15px] font-bold text-white/80 tabular-nums">{info.next.detail}</p>
               </div>
@@ -134,12 +136,12 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
             )}
             {info.levelUp && (
               <span className={`${css.collect} inline-flex items-center gap-1.5 h-9 pl-2 pr-3.5 rounded-full bg-banana text-ink text-sm font-extrabold`}>
-                <LevelIcon idx={info.levelUp.idx} className="size-5 text-ink!" />Nivel {info.levelUp.idx}: {info.levelUp.n}
+                <LevelIcon idx={info.levelUp.idx} className="size-5 text-ink!" />{t("Nivel {idx}: {n}", { idx: info.levelUp.idx, n: info.levelUp.n })}
               </span>
             )}
             {info.finished && (
               <span className="inline-flex items-center gap-1.5 h-9 pl-2 pr-3.5 rounded-full bg-white/10 text-sm font-extrabold tabular-nums">
-                <GoldBanana className="size-6" pop />Banana {info.bananas.got} de {info.bananas.total}
+                <GoldBanana className="size-6" pop />{t("Banana {got} de {total}", info.bananas)}
               </span>
             )}
           </div>
@@ -150,30 +152,30 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
           )}
           {info.rushed && (
             <p className="mt-2 mx-auto flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-2 text-[13px] font-bold text-white/85">
-              <Timer weight="bold" className="size-4 shrink-0" />Ritmo muy rápido: esta serie no suma XP
+              <Timer weight="bold" className="size-4 shrink-0" />{t("Ritmo muy rápido: esta serie no suma XP")}
             </p>
           )}
-          {info.tip === "xp" && <p className="mt-2 text-center text-[13px] font-semibold text-white/70">Cada serie suma 10 XP y terminar todo el entreno, 30 más.</p>}
-          {info.tip === "combo" && <p className="mt-2 text-center text-[13px] font-semibold text-white/70">Combo: sube con cada serie que haces sin pasarte del descanso. Si te demoras mucho, vuelve a x1.</p>}
+          {info.tip === "xp" && <p className="mt-2 text-center text-[13px] font-semibold text-white/70">{t("Cada serie suma 10 XP y terminar todo el entreno, 30 más.")}</p>}
+          {info.tip === "combo" && <p className="mt-2 text-center text-[13px] font-semibold text-white/70">{t("Combo: sube con cada serie que haces sin pasarte del descanso. Si te demoras mucho, vuelve a x1.")}</p>}
           {info.pr && (
             <div className={`${css.shine} ${css.collect} mt-3 flex items-center gap-3 rounded-[1.5rem] bg-banana p-3.5 text-ink`}>
               <BananaTrophy weight="fill" className="size-9 shrink-0" />
-              <div className="min-w-0"><p className="font-extrabold leading-tight">Récord personal</p><p className="text-sm font-semibold text-ink/80 truncate">{info.pr}: tu mejor serie hasta hoy</p></div>
+              <div className="min-w-0"><p className="font-extrabold leading-tight">{t("Récord personal")}</p><p className="text-sm font-semibold text-ink/80 truncate">{t("{pr}: tu mejor serie hasta hoy", { pr: info.pr })}</p></div>
             </div>
           )}
 
           {/* Esfuerzo: una pregunta, un toque */}
           {info.setNo != null && (
             <fieldset className="mt-4">
-              <legend className="w-full text-center text-[15px] font-bold">¿Cómo se sintió la serie {info.setNo}?</legend>
+              <legend className="w-full text-center text-[15px] font-bold">{t("¿Cómo se sintió la serie {n}?", { n: info.setNo })}</legend>
               <div className="mt-2.5 grid grid-cols-3 gap-2">
                 {EFFORTS.map((e) => {
                   const on = info.effort === e.id;
                   return (
                     <button key={e.id} type="button" onClick={() => onEffort(e.id)} aria-pressed={on}
                       className={`pressable flex flex-col items-center justify-center gap-0.5 h-16 rounded-2xl px-1 text-center ${on ? "bg-banana text-ink" : "bg-white/10 text-white hover:bg-white/15"}`}>
-                      <span className="inline-flex items-center gap-1 text-[15px] font-extrabold">{on && <Check weight="bold" className="size-4" />}{e.label}</span>
-                      <span className={`text-[11px] font-semibold leading-tight ${on ? "text-ink/75" : "text-white/60"}`}>{info.hints?.[e.id] ?? e.hint}</span>
+                      <span className="inline-flex items-center gap-1 text-[15px] font-extrabold">{on && <Check weight="bold" className="size-4" />}{t(e.label)}</span>
+                      <span className={`text-[11px] font-semibold leading-tight ${on ? "text-ink/75" : "text-white/60"}`}>{info.hints?.[e.id] ?? t(e.hint)}</span>
                     </button>
                   );
                 })}
@@ -192,7 +194,7 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
         </div>
       </div>
       <div className="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <button ref={go} type="button" onClick={onSkip} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold">Listo, vamos</button>
+        <button ref={go} type="button" onClick={onSkip} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold">{t("Listo, vamos")}</button>
       </div>
     </div>
   );
@@ -200,15 +202,16 @@ export function RestScreen({ left, total, info, closing, onEffort, onAdjust, onS
 
 /** Descanso minimizado: el reloj sigue visible abajo mientras ajustas la siguiente serie. */
 export function RestPill({ left, onOpen, onSkip }: { left: number; onOpen: () => void; onSkip: () => void }) {
+  const { t } = useLang();
   return (
     <div className="fixed inset-x-0 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-[55] px-4 pointer-events-none">
       <div className={`${css.phase} pointer-events-auto mx-auto flex max-w-md items-center gap-2 rounded-full bg-ink p-1.5 pl-2 text-white shadow-lift`}>
-        <button type="button" onClick={onOpen} className="pressable flex flex-1 items-center gap-2.5 rounded-full pl-2 pr-3 h-11 text-left hover:bg-white/10" aria-label={`Descanso, quedan ${Math.ceil(left)} segundos. Abrir`}>
+        <button type="button" onClick={onOpen} className="pressable flex flex-1 items-center gap-2.5 rounded-full pl-2 pr-3 h-11 text-left hover:bg-white/10" aria-label={t("Descanso, quedan {n} segundos. Abrir", { n: Math.ceil(left) })}>
           <CaretDown weight="bold" className="size-4 rotate-180 text-white/70" />
-          <span className="text-sm font-bold text-white/70">Descanso</span>
+          <span className="text-sm font-bold text-white/70">{t("Descanso")}</span>
           <span className="ml-auto text-xl font-extrabold tabular-nums">{clock(left)}</span>
         </button>
-        <button type="button" onClick={onSkip} className="pressable h-11 px-4 rounded-full bg-banana text-ink text-sm font-extrabold hover:brightness-95">Saltar</button>
+        <button type="button" onClick={onSkip} className="pressable h-11 px-4 rounded-full bg-banana text-ink text-sm font-extrabold hover:brightness-95">{t("Saltar")}</button>
       </div>
     </div>
   );

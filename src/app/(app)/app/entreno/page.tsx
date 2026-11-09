@@ -26,6 +26,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { getNotificationPrefs } from "@/app/actions/notifications";
 import { DEFAULT_PREFS } from "@/lib/notify";
 import { dayList, registrationDay, suggestDays, weekCount, weekMonday, weeklyGoal } from "@/lib/meta-semanal";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata = { title: "Entreno" };
 
@@ -43,7 +44,9 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   // 0066: residente de un condominio con tarjeta sin tarjeta todavía: al terminar, su regalo en vez de la oferta normal.
   const adminDb = v.demo ? null : adminClient();
   const pend = adminDb ? await pendingCardCondo(adminDb, v.id).catch(() => null) : null;
-  const condoNudge = pend ? { code: pend.code, name: pend.name, freeDay: new Date(Date.parse(pend.freeUntil) - 1000).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: "America/Costa_Rica" }) } : undefined;
+  // Idioma del cierre (#300): la fecha del regalo y los días sugeridos, en el idioma de la persona.
+  const locale = await getLocale();
+  const condoNudge = pend ? { code: pend.code, name: pend.name, freeDay: new Date(Date.parse(pend.freeUntil) - 1000).toLocaleDateString(locale, { day: "numeric", month: "long", timeZone: "America/Costa_Rica" }) } : undefined;
   // Opinión con permiso para publicarla (#238): al guardar el tercer entreno de la cuenta, una sola vez.
   const askTestimonial = asksTestimonial({ ...opinion, demo: v.demo });
   const nutritionUpsell = canUpsellNutrition(ent, betaLive()) ? { account: v.id, goal: a.glp1.on || a.goalWeight < a.currentWeight ? "protein" as const : "strength" as const } : undefined;
@@ -116,7 +119,7 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   const buildLib = (x: LibEx, s: (typeof slots)[number]): PlayerExercise => {
     const id = `ds:${x.id}`, h = hist[id] ?? [], inc = incFor(x.eq);
     const best = Math.max(0, ...h.flat().map((r) => (r.kg ? e1rm(r.kg, r.reps) : 0)));
-    return { id, name: x.n, muscle: s.muscle || cap(esLib(MUSCLE, x.t)), cfg: s.cfg, bw: inc === 0, barbell: x.eq === "barbell" || x.eq === "olympic barbell", load: loadKindOf(id, { inc, eq: x.eq }),
+    return { id, name: x.n, en: x.en, muscle: s.muscle || cap(esLib(MUSCLE, x.t)), cfg: s.cfg, bw: inc === 0, barbell: x.eq === "barbell" || x.eq === "olympic barbell", load: loadKindOf(id, { inc, eq: x.eq }),
       rx: mode(withProgramNote(voiced(prescribe(id, s.cfg, h, { deload: d.deload, inc }), s.cfg, inc), s)), best, lastSets: h.at(-1) ?? null, ...(s.tempo ? { tempo: s.tempo } : {}),
       tech: { anim: animFor(x) ?? "", mus: cap([x.t, ...x.m2].map((m) => esLib(MUSCLE, m)).join(", ")), how: x.s, cues: [], err: [], mono: "" } };
   };
@@ -157,7 +160,7 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
     const count = weekCount(g.trainedDays, d.today.iso) + (g.trainedToday ? 0 : 1);
     const next = suggestDays(d.engineSched, d.today.iso, count, goal);
     const prefs = next.dows.length ? await getNotificationPrefs().catch(() => null) : null;
-    week = { count, goal, week: next.week, days: dayList(next.dows), n: next.dows.length, remind: prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time };
+    week = { count, goal, week: next.week, days: dayList(next.dows, locale), n: next.dows.length, remind: prefs?.prefs.reminder_time === DEFAULT_PREFS.reminder_time };
   }
   // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
   const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;

@@ -33,6 +33,13 @@ export const loadIn = (kg: number, units: Units) => (units === "imperial" ? Math
 export const roundLb = (kg: number) => Math.round(kgToLb(kg) / 2.5) * 2.5;
 export const weightUnit = (units: Units) => (units === "imperial" ? "lb" : "kg");
 
+/** Redondeo de discos y mancuernas en EE. UU.: a 2.5 lb. */
+export const snapLb = (lb: number) => Math.round(lb / 2.5) * 2.5;
+/** Peso guardado en kg tal como se muestra en el entreno: igual en kg; en libras, redondeado a 2.5 lb. */
+export const loadShown = (kg: number, units: Units) => (units === "imperial" ? snapLb(kgToLb(kg)) : kg);
+/** Lo que la persona escribe en su unidad, a kg para guardar. Las libras se redondean a 2.5 lb (3 decimales en kg). */
+export const loadKg = (v: number, units: Units) => (units === "imperial" ? Math.round(lbToKg(snapLb(v)) * 1000) / 1000 : v);
+
 /** Estatura guardada en cm: "175 cm" o "5 ft 9 in". */
 export function fmtHeight(cm: number, units: Units, locale: Locale) {
   if (units === "metric") return `${fmtNumber(cm, locale, 0)} cm`;

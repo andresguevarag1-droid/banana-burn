@@ -1,7 +1,8 @@
 // Motivación dentro del entreno: meta de nivel, hitos, bono por terminar y datos del descanso.
 // Lógica pura (sin React ni navegador). Usa las mismas reglas de XP que el servidor (gamify.workoutXp).
 import { FULL_BONUS, MIN_SET_SECONDS, levelOf, workoutXp } from "@/lib/gamify";
-import { e1, kgFmt, num, plural, volumeText, type Row } from "./logic";
+import { e1, num, volumeText, type Row } from "./logic";
+import { ES_LANG, wFmt, wNum, type Lang } from "./lang";
 
 /** `totalSets` es el plan (para el bono); `doable` las series que quedan en pantalla (menos si pasó a modo exprés). */
 type XpState = { doneSets: number; totalSets: number; prs: number; seconds: number; doable?: number };
@@ -48,16 +49,17 @@ export function levelGoal(base: number, o: XpState, sex?: string | null): LevelG
 }
 
 /** "Te faltan 80 XP para Plátano macho: 3 series más". */
-export function levelGoalText(g: LevelGoal, unit = "series") {
+export function levelGoalText(g: LevelGoal, unit = "series", L: Lang = ES_LANG) {
+  const { t } = L;
   const { level } = g;
-  if (!level.next) return `Nivel máximo: ${level.n}`;
-  const head = `Te faltan ${level.toNext} XP para ${level.next.n}`;
+  if (!level.next) return t("Nivel máximo: {n}", { n: t(level.n) });
+  const head = t("Te faltan {xp} XP para {n}", { xp: level.toNext, n: t(level.next.n) });
   if (g.sets != null) {
     const one = unit === "series" ? "serie" : "intervalo";
-    if (g.needsBonus) return `${head}: termina ${g.sets === 1 ? `la última ${one}` : `las ${g.sets} ${unit} que quedan`} y el bono te sube`;
-    return `${head}: ${g.sets === 1 ? `1 ${one} más` : `${g.sets} ${unit} más`}`;
+    if (g.needsBonus) return `${head}: ${g.sets === 1 ? t(`termina la última ${one} y el bono te sube`) : t("termina las {n} {unit} que quedan y el bono te sube", { n: g.sets, unit: t(unit) })}`;
+    return `${head}: ${g.sets === 1 ? t(`1 ${one} más`) : t("{n} {unit} más", { n: g.sets, unit: t(unit) })}`;
   }
-  return g.finishXp > 0 ? `${head}. Terminar hoy suma +${g.finishXp} XP` : head;
+  return g.finishXp > 0 ? `${head}. ${t("Terminar hoy suma +{xp} XP", { xp: g.finishXp })}` : head;
 }
 
 /* ---------- Hitos ---------- */
@@ -136,29 +138,35 @@ export type FactInput = {
 };
 
 /** Datos motivadores con números reales del usuario. Se rota uno por descanso. */
-export function restFacts(o: FactInput): string[] {
+export function restFacts(o: FactInput, L: Lang = ES_LANG): string[] {
+  const { t } = L;
   const out: string[] = [];
   const n = o.next;
+  const vol = (v: number) => volumeText(v, L);
+  const days = (d: number) => t(d === 1 ? "{n} día" : "{n} días", { n: d });
   if (n && n.kg && n.best > 0) {
     const kg = kgToBeat(n.best, n.reps, n.step);
-    if (kg) out.push(`Con ${kgFmt(kg)} kg × ${n.reps} superas tu récord en ${n.name}.`);
+    if (kg) out.push(t("Con {w} × {reps} superas tu récord en {name}.", { w: wFmt(kg, L), reps: n.reps, name: n.name }));
   }
   if (n?.last?.length) {
-    const sets = n.last.map((x) => (x.kg ? `${kgFmt(x.kg)} × ${x.reps}` : String(x.reps))).join(", ");
-    out.push(`La última vez en ${n.name} hiciste ${sets}. Hoy toca igualarlo o superarlo.`);
+    const sets = n.last.map((x) => (x.kg ? `${wNum(x.kg, L)} × ${x.reps}` : String(x.reps))).join(", ");
+    out.push(t("La última vez en {name} hiciste {sets}. Hoy toca igualarlo o superarlo.", { name: n.name, sets }));
   }
   if (o.volLast > 0 && o.volToday > 0) {
     out.push(o.volToday >= o.volLast
-      ? `Ya moviste ${volumeText(o.volToday)}, más que los ${volumeText(o.volLast)} de la última vez con estos ejercicios.`
-      : `Llevas ${volumeText(o.volToday)} de los ${volumeText(o.volLast)} que moviste la última vez con estos ejercicios.`);
+      ? t("Ya moviste {today}, más que los {last} de la última vez con estos ejercicios.", { today: vol(o.volToday), last: vol(o.volLast) })
+      : t("Llevas {today} de los {last} que moviste la última vez con estos ejercicios.", { today: vol(o.volToday), last: vol(o.volLast) }));
   }
-  else if (o.volTotal && o.doneSets) out.push(`Hoy llevas ${plural(o.doneSets, "serie", "series")} y ${volumeText(o.volTotal)} movidos.`);
+  else if (o.volTotal && o.doneSets) out.push(t(o.doneSets === 1 ? "Hoy llevas {n} serie y {vol} movidos." : "Hoy llevas {n} series y {vol} movidos.", { n: o.doneSets, vol: vol(o.volTotal) }));
   if (o.streakShown) { /* la racha ya está en pantalla */ }
-  else if (o.todayDone && o.streak > 0) out.push(`Tu racha de ${plural(o.streak, "día", "días")} ya está a salvo hoy.`);
-  else if (o.streak > 0) out.push(`Guardar este entreno lleva tu racha a ${plural(o.streak + 1, "día", "días")}.`);
-  else out.push("Guardar este entreno empieza tu racha.");
-  if (o.finish && o.finish.left > 0 && o.finish.xp > 0) out.push(`Terminar ${o.finish.left === 1 ? "la serie que queda" : `las ${o.finish.left} ${o.unit ?? "series"} que quedan`} vale +${o.finish.xp} XP${o.finish.bonus ? `, con el bono de +${o.finish.bonus}` : ""}.`);
-  if (o.goal?.level.next) out.push(`${levelGoalText(o.goal, o.unit)}.`);
+  else if (o.todayDone && o.streak > 0) out.push(t("Tu racha de {days} ya está a salvo hoy.", { days: days(o.streak) }));
+  else if (o.streak > 0) out.push(t("Guardar este entreno lleva tu racha a {days}.", { days: days(o.streak + 1) }));
+  else out.push(t("Guardar este entreno empieza tu racha."));
+  if (o.finish && o.finish.left > 0 && o.finish.xp > 0) {
+    const what = o.finish.left === 1 ? t("Terminar la serie que queda") : t("Terminar las {n} {unit} que quedan", { n: o.finish.left, unit: t(o.unit ?? "series") });
+    out.push(`${what} ${t("vale +{xp} XP", { xp: o.finish.xp })}${o.finish.bonus ? t(", con el bono de +{bonus}", { bonus: o.finish.bonus }) : ""}.`);
+  }
+  if (o.goal?.level.next) out.push(`${levelGoalText(o.goal, o.unit, L)}.`);
   return out;
 }
 

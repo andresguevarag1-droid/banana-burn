@@ -15,9 +15,11 @@ import { RichTip } from "@/components/rich-tip";
 import { Sheet as BottomSheet, SheetTitle } from "@/components/sheet";
 import { Toast } from "@/components/toast";
 import { usePresence, useSticky } from "@/components/use-presence";
-import { buzz, canSpeak, hush, say, sfx, store, unlockAudio, useHiddenAlarm, useNow, usePrefs, useWakeLock } from "@/components/workout/device";
+import { buzz, canSpeak, hush, say, setSpeechEnglish, sfx, store, unlockAudio, useHiddenAlarm, useNow, usePrefs, useWakeLock } from "@/components/workout/device";
+import { useLang } from "@/components/workout/use-lang";
+import { ES_LANG, exName, isEs, lbPlatesPerSide, snapKg, stepKg, wFmt, type Lang } from "@/components/workout/lang";
 import {
-  EFFORTS, FUN_LABELS, PREP_SECONDS, advanceIntervals, beatsBest, bump, cap, clock, comboState, cooldownFor, effortOf, effortPatch, isIntervalPlan, isRushed, kgFmt, liveXp,
+  EFFORTS, FUN_LABELS, PREP_SECONDS, advanceIntervals, beatsBest, bump, cap, clock, comboState, cooldownFor, effortOf, effortPatch, isIntervalPlan, isRushed, liveXp,
   loadsFor, nextCombo, nextPending, num, prsOf, readSaved, restLabel, rirOf, setXpGain, speechFor, stepFor, targetText, unitLbl, volumeOf, warmupFor, warmupText,
   type Effort, type IvClock, type LoadKind, type Row,
 } from "@/components/workout/logic";
@@ -50,7 +52,7 @@ import { DEFAULT_VOICE, effortHints, rxBadge, strengthCue, tempoText, type Voice
 import { progressLine } from "@/lib/meta-semanal";
 import type { WeekPlan } from "@/components/workout/recap-next-day";
 
-export type PlayerExercise = { id: string; name: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null; /** Tempo del programa ("3-1-1"): se explica en simple durante la serie. */ tempo?: string };
+export type PlayerExercise = { id: string; name: string; /** Nombre original en inglés (ejercicios de la biblioteca); los del motor van por slug. */ en?: string; muscle: string; cfg: SlotCfg; tech: Technique | null; /** Ilustración del coach del programa (Coach Platanita) haciendo el ejercicio. */ art?: string | null; bw: boolean; barbell: boolean; load: LoadKind | null; rx: Prescription; best: number; lastSets: SetLog[] | null; /** Tempo del programa ("3-1-1"): se explica en simple durante la serie. */ tempo?: string };
 /** `sex`: nombres de nivel para ella ("Mona fuerte"). */
 export type Gam = { xp: number; streak: number; todayDone: boolean; sex?: string | null };
 type Mode = "normal" | "suave" | "fuerte";
@@ -83,9 +85,10 @@ const TIP_XP = "bb.tip.xp.v1";
 
 /** ¿Este ejercicio necesita un peso para poder marcar la serie? */
 const needsLoad = (e: PlayerExercise) => !e.bw && e.load != null;
-/** Series iniciales. En calibración se precarga un peso de partida razonable para el equipo. */
-const rowsFor = (e: PlayerExercise): Row[] => {
-  const start = e.rx.kg != null ? String(e.rx.kg) : needsLoad(e) ? String(loadsFor(e.load)?.start ?? "") : "";
+/** Series iniciales. En calibración se precarga un peso de partida razonable para el equipo. En lb, al disco más cercano. */
+const rowsFor = (e: PlayerExercise, L: Lang = ES_LANG): Row[] => {
+  const kg = e.rx.kg ?? (needsLoad(e) ? loadsFor(e.load)?.start : undefined);
+  const start = kg != null ? String(snapKg(kg, L)) : "";
   return Array.from({ length: e.rx.sets }, (_, i) => ({ kg: start, reps: String(e.rx.reps[i] ?? e.cfg.lo), done: false, easy: false }));
 };
 const cleared = (s: Row): Row => ({ kg: s.kg, reps: s.reps, done: false, easy: false });
@@ -125,9 +128,13 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   // La variante en casa tiene otros ejercicios: su avance va aparte del de la misma plantilla en el gym.
   const key = `bb.session.v2.${dateKey}.${template}${variant ? `.${variant}` : ""}`;
   const router = useRouter();
+  const L = useLang();
+  const { t } = L;
+  const nm = (e: PlayerExercise) => exName(e, L);
+  useEffect(() => { setSpeechEnglish(!isEs(L)); }, [L]);
   const [choice, setChoice] = useState<number[]>(() => options.map(() => 0));
   const exercises = useMemo(() => options.map((o, i) => o[choice[i]] ?? o[0]), [options, choice]);
-  const [rows, setRows] = useState<Row[][]>(() => options.map((o) => rowsFor(o[0])));
+  const [rows, setRows] = useState<Row[][]>(() => options.map((o) => rowsFor(o[0], L)));
   const [idx, setIdx] = useState(0);
   const [startedAt, setStartedAt] = useState<string>(() => new Date().toISOString());
   const [sessMode, setSessMode] = useState<Mode>(mode);
@@ -217,15 +224,15 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     } else if (s && savedChoice) {
       // Abierta pero sin series: se respetan los cambios de ejercicio, y las series salen del modo de hoy.
       setChoice(savedChoice);
-      setRows(options.map((o, i) => rowsFor(o[savedChoice[i]] ?? o[0])));
+      setRows(options.map((o, i) => rowsFor(o[savedChoice[i]] ?? o[0], L)));
     }
     // Cambio pedido desde la biblioteca: se aplica si ese ejercicio aún no tiene series hechas.
     if (preswap && options[preswap.slot]?.[preswap.option]) {
-      const base = started && s ? s.rows : options.map((o, i) => rowsFor(o[savedChoice?.[i] ?? 0] ?? o[0]));
+      const base = started && s ? s.rows : options.map((o, i) => rowsFor(o[savedChoice?.[i] ?? 0] ?? o[0], L));
       if (!base[preswap.slot]?.some((r) => r.done)) {
         setChoice((c) => c.map((v, i) => (i === preswap.slot ? preswap.option : v)));
-        setRows(base.map((r, i) => (i === preswap.slot ? rowsFor(options[preswap.slot][preswap.option]) : r)));
-        setToast({ t: `Cambiado a ${options[preswap.slot][preswap.option].name}`, kind: "swap" });
+        setRows(base.map((r, i) => (i === preswap.slot ? rowsFor(options[preswap.slot][preswap.option], L) : r)));
+        setToast({ t: t("Cambiado a {name}", { name: nm(options[preswap.slot][preswap.option]) }), kind: "swap" });
       }
     }
     loaded.current = true;
@@ -254,6 +261,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   const goal: LevelGoal | null = noXp ? null : levelGoal(gam.xp, xpState(doneSets, elapsed), gam.sex);
   const streakNext = gam.todayDone ? gam.streak : gam.streak + 1;
   const bananas = { got: rows.filter((r) => r.length && r.every((s) => s.done)).length, total: rows.length };
+  // `setWord` en español es la clave de levelGoalText y del Recap; en pantalla va por t().
   const setWord = interval ? "intervalos" : "series";
   const hints = effortHints(voice);
 
@@ -263,7 +271,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   const announce = (t: string) => setLive(t);
 
   // Presenta cada ejercicio al llegar a él (solo con la voz encendida)
-  const introFor = useCallback((e: PlayerExercise, r: Row | undefined) => speechFor("exercise", { name: e.name, sets: e.rx.sets, target: r ? targetText(r, { unit: e.cfg.unit, bw: e.bw, perSide: e.cfg.perSide }) : undefined, cue: e.tech?.cues[0] }), []);
+  const introFor = useCallback((e: PlayerExercise, r: Row | undefined) => speechFor("exercise", { name: exName(e, L), sets: e.rx.sets, target: r ? targetText(r, { unit: e.cfg.unit, bw: e.bw, perSide: e.cfg.perSide }, L) : undefined, cue: e.tech?.cues[0] }, L), [L]);
   const spokeFor = useRef<string | null>(null);
   useEffect(() => {
     if (phase !== "play" || gate || interval || !prefs.voice || !ex) return;
@@ -301,9 +309,9 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       if (t) {
         const e = exercises[t.ex];
         const lastOne = rows.flat().filter((r) => !r.done).length === 1;
-        const msg = lastOne ? speechFor("last") : t.ex !== idx || t.si === 0 ? introFor(e, rows[t.ex][t.si]) : speechFor("go", { set: t.si + 1, sets: rows[t.ex].length });
+        const msg = lastOne ? speechFor("last", {}, L) : t.ex !== idx || t.si === 0 ? introFor(e, rows[t.ex][t.si]) : speechFor("go", { set: t.si + 1, sets: rows[t.ex].length }, L);
         speak(msg, true);
-        announce(`Descanso terminado. ${lastOne ? "Última serie" : `Serie ${t.si + 1} de ${rows[t.ex].length}`}`);
+        announce(`${L.t("Descanso terminado.")} ${lastOne ? L.t("Última serie") : L.t("Serie {n} de {of}", { n: t.si + 1, of: rows[t.ex].length })}`);
       }
       return;
     }
@@ -312,7 +320,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       tickRef.current = whole;
       if (prev == null || prev - whole > 1) return; // al volver de otra app no recita la cuenta atrasada
       if (whole <= 3 && whole >= 1) { if (prefs.voice) say(String(whole), { interrupt: true, rate: 1.15 }); else ping("tick"); buzz(40); }
-      if (whole === 10) announce("Quedan 10 segundos de descanso");
+      if (whole === 10) announce(t("Quedan 10 segundos de descanso"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rest, restLeft]);
@@ -329,7 +337,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       setWork({ ...work, run: res.run });
       sideTick.current = null;
       // Al volver de otra app con varios tramos pasados, solo se avisa el actual.
-      const cue = segCue(res.run.segs[res.entered[res.entered.length - 1]]);
+      const cue = segCue(res.run.segs[res.entered[res.entered.length - 1]], t);
       if (cue) { ping("go"); buzz(res.run.segs[res.run.i].kind === "switch" ? [200, 100, 200] : 60); speak(cue.say, true); announce(cue.live); }
       return;
     }
@@ -348,12 +356,15 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   const setRowsAt = (ei: number, si: number, patch: Partial<Row>) => setRows((all) => all.map((r, i) => (i !== ei ? r : r.map((s, j) => (j === si ? { ...s, ...patch } : s)))));
   const step = (si: number, field: "kg" | "reps", d: number, min = 0) => {
     const cur = num(here[si][field]);
-    const next = Math.max(min, bump(cur, d * stepFor(field, { unit: ex.cfg.unit, barbell: ex.barbell, cur })));
+    const by = stepFor(field, { unit: ex.cfg.unit, barbell: ex.barbell, cur });
+    const next = Math.max(min, bump(cur, d * by));
+    // El peso sube y baja en la unidad que se ve (en lb, 5 con barra y 2.5 sin barra); se guarda en kg.
+    const v = field === "kg" ? stepKg(cur, d, { barbell: ex.barbell, kgStep: by }, L, min) : next;
     // al cambiar kg de una serie pendiente, propaga a las siguientes pendientes
-    setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j === si || (field === "kg" && j > si && !s.done) ? { ...s, [field]: String(next) } : s)))));
+    setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j === si || (field === "kg" && j > si && !s.done) ? { ...s, [field]: String(v) } : s)))));
   };
   const change = (si: number, field: "kg" | "reps", v: string) => setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j === si || (field === "kg" && j > si && !s.done && s.kg === here[si].kg) ? { ...s, [field]: v } : s)))));
-  const pickKg = (si: number, kg: number) => { setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j >= si && !s.done ? { ...s, kg: String(kg) } : s))))); buzz(10); };
+  const pickKg = (si: number, kg: number) => { const v = String(snapKg(kg, L)); setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j >= si && !s.done ? { ...s, kg: v } : s))))); buzz(10); };
   const copy = (si: number, kg: string, reps: string) => { setRows((all) => all.map((r, i) => (i !== idx ? r : r.map((s, j) => (j === si ? { ...s, kg, reps } : j > si && !s.done ? { ...s, kg } : s))))); buzz(10); };
   const setEffort = (ei: number, si: number, e: Effort) => { setRowsAt(ei, si, effortPatch(e)); setRestInfo((r) => (r && restTarget.current?.ex === ei && restTarget.current.si === si ? { ...r, effort: e } : r)); buzz(12); };
   const cancelRest = () => { if (rest) track("rest_skip", { template: template.slice(0, 40), done: doneSets }); setRest(null); setRestInfo(null); restTarget.current = null; hush(); };
@@ -366,7 +377,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     setCombo(cs.combo); setLastAt(cs.lastAt); setBestCombo(cs.best);
     if (rest && restTarget.current?.ex === idx && restTarget.current.si === si) cancelRest();
     buzz(10);
-    announce(`Serie ${si + 1} desmarcada`);
+    announce(t("Serie {n} desmarcada", { n: si + 1 }));
   }
 
   /** Marca una serie como hecha: XP (si el ritmo es real), combo, récord, banana y descanso. */
@@ -402,10 +413,10 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     const target = nextPending(nextRows, idx);
     if (!target) {
       // Última serie del día: directo al cierre (ahí se pregunta cómo se sintió)
-      if (lvUp) setToast({ t: `Subiste a ${lvUp.n}`, kind: "level", idx: lvUp.idx });
-      else if (isPr && !rushed) setToast({ t: `Récord en ${ex.name}`, kind: "pr" });
-      speak(lvUp ? `${speechFor("done")} Subiste a ${lvUp.n}.` : speechFor("done"), true);
-      announce(lvUp ? `Entreno completado. Subiste a ${lvUp.n}` : "Entreno completado");
+      if (lvUp) setToast({ t: L.t("Subiste a {n}", { n: L.t(lvUp.n) }), kind: "level", idx: lvUp.idx });
+      else if (isPr && !rushed) setToast({ t: L.t("Récord en {name}", { name: nm(ex) }), kind: "pr" });
+      speak(lvUp ? `${speechFor("done", {}, L)} ${L.t("Subiste a {n}.", { n: L.t(lvUp.n) })}` : speechFor("done", {}, L), true);
+      announce(lvUp ? L.t("Entreno completado. Subiste a {n}", { n: L.t(lvUp.n) }) : L.t("Entreno completado"));
       setTimeout(() => toSummary(ex.cfg.unit ? null : { ex: idx, si }), 900);
       return;
     }
@@ -419,49 +430,51 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     const tipCombo = c >= 2 && !store.get(TIP_COMBO);
     if (tipXp) store.set(TIP_XP, 1);
     if (tipCombo) store.set(TIP_COMBO, 1);
-    setToast(lvUp ? { t: `Logro: subiste a ${lvUp.n}`, kind: "level", idx: lvUp.idx } : null);
+    setToast(lvUp ? { t: L.t("Logro: subiste a {n}", { n: L.t(lvUp.n) }), kind: "level", idx: lvUp.idx } : null);
     // Motivación del descanso: meta de nivel, lo que vale terminar y un dato real que rota
     const after = { doneSets: doneSets + 1, totalSets: planTotal, doable: totalSets, prs: prs.length + (isPr && !rushed ? 1 : 0), seconds };
     const g = noXp ? null : levelGoal(gam.xp, after, gam.sex);
     const fin = noXp ? null : finishValue(after);
     const nextRow = nextRows[target.ex][target.si];
     const facts = restFacts({
-      next: { name: tex.name, best: tex.best, reps: num(nextRow.reps), step: stepFor("kg", { unit: tex.cfg.unit, barbell: tex.barbell, cur: num(nextRow.kg) }), kg: !tex.bw && !tex.cfg.unit && num(nextRow.kg) > 0,
+      next: { name: nm(tex), best: tex.best, reps: num(nextRow.reps), step: stepFor("kg", { unit: tex.cfg.unit, barbell: tex.barbell, cur: num(nextRow.kg) }), kg: !tex.bw && !tex.cfg.unit && num(nextRow.kg) > 0,
         last: isNew || target.si === 0 ? tex.lastSets : null },
       volToday: volumeWithHistory(nextRows, exercises.map((e) => !!e.lastSets?.length)), volLast: lastVolume(exercises.map((e) => e.lastSets)),
       doneSets: doneSets + 1, volTotal: volumeOf(nextRows), streak: gam.streak, todayDone: gam.todayDone, streakShown: !noXp,
-    });
+    }, L);
     const fact = pickFact(facts, restCount.current++);
+    const days = L.t(streakNext === 1 ? "{n} día" : "{n} días", { n: streakNext });
     const finishLine = fin && fin.left > 0
-      ? `Terminar completo vale +${fin.xp} XP${fin.bonus ? ` (bono de +${fin.bonus} incluido)` : ""} y tu racha ${gam.todayDone ? `de ${streakNext} ${streakNext === 1 ? "día" : "días"} ya está a salvo` : `sube a ${streakNext} ${streakNext === 1 ? "día" : "días"}`}.`
+      ? `${L.t("Terminar completo vale +{xp} XP", { xp: fin.xp })}${fin.bonus ? L.t(" (bono de +{bonus} incluido)", { bonus: fin.bonus }) : ""}${L.t(gam.todayDone ? " y tu racha de {days} ya está a salvo." : " y tu racha sube a {days}.", { days })}`
       : null;
-    const msText = ms.show ? MILESTONES[ms.show].text : null;
+    const msText = ms.show ? L.t(MILESTONES[ms.show].text) : null;
     setRestInfo({
-      levelUp: lvUp ? { idx: lvUp.idx, n: lvUp.n } : null, milestone: msText, fact, finish: finishLine,
-      goal: g ? { idx: g.level.idx, progress: g.level.progress, text: levelGoalText(g, setWord) } : null,
-      setNo: ex.cfg.unit === "s" ? null : si + 1, effort: null, hints, xp, xpKey: t, combo: c, pr: isPr && !rushed ? ex.name : null,
+      levelUp: lvUp ? { idx: lvUp.idx, n: L.t(lvUp.n) } : null, milestone: msText, fact, finish: finishLine,
+      goal: g ? { idx: g.level.idx, progress: g.level.progress, text: levelGoalText(g, setWord, L) } : null,
+      setNo: ex.cfg.unit === "s" ? null : si + 1, effort: null, hints, xp, xpKey: t, combo: c, pr: isPr && !rushed ? nm(ex) : null,
       rushed: rushed && !noXp, tip: tipCombo ? "combo" : tipXp ? "xp" : null,
-      finished: finishedEx ? ex.name : null, bananas: { got: nextRows.filter((r) => r.every((s) => s.done)).length, total: nextRows.length },
+      finished: finishedEx ? nm(ex) : null, bananas: { got: nextRows.filter((r) => r.every((s) => s.done)).length, total: nextRows.length },
       next: (() => {
         const nr = nextRows[target.ex];
-        const tk = formatExerciseTask({ unit: tex.cfg.unit, reps: nr[target.si].reps, kg: nr[target.si].kg, lo: tex.cfg.lo, hi: tex.cfg.hi, bw: tex.bw, perSide: !!tex.cfg.perSide, calibration: tex.rx.type === "cal", setNo: target.si + 1, sets: nr.length });
-        const what = `${tk.line}${tk.load?.startsWith("con") ? ` ${tk.load}` : ""}`;
+        const tk = formatExerciseTask({ unit: tex.cfg.unit, reps: nr[target.si].reps, kg: nr[target.si].kg, lo: tex.cfg.lo, hi: tex.cfg.hi, bw: tex.bw, perSide: !!tex.cfg.perSide, calibration: tex.rx.type === "cal", setNo: target.si + 1, sets: nr.length }, L);
+        const withKg = !!tk.load && num(nr[target.si].kg) > 0 && !(tex.cfg.unit === "s" && tex.bw);
+        const what = `${tk.line}${withKg ? ` ${tk.load}` : ""}`;
         return {
-          title: isNew ? tex.name : pendingLeft === 1 ? "Última serie" : `Serie ${target.si + 1} de ${nr.length}`,
-          detail: isNew ? `${nr.length} ${nr.length === 1 ? "serie" : "series"} de ${what}` : what,
+          title: isNew ? nm(tex) : pendingLeft === 1 ? L.t("Última serie") : L.t("Serie {n} de {of}", { n: target.si + 1, of: nr.length }),
+          detail: isNew ? L.t(nr.length === 1 ? "{n} serie de {what}" : "{n} series de {what}", { n: nr.length, what }) : what,
           anim: tex.tech?.anim || undefined, isNew, last: pendingLeft === 1,
         };
       })(),
-      cheer: REST_CHEERS[(restCount.current - 1 + REST_CHEERS.length) % REST_CHEERS.length],
+      cheer: L.t(REST_CHEERS[(restCount.current - 1 + REST_CHEERS.length) % REST_CHEERS.length]),
     });
     restTarget.current = { ex: idx, si };
     setRest({ end: t + ex.cfg.rest * 1000, total: ex.cfg.rest });
     setRestOpen(true);
     tickRef.current = null;
     // El hito se dice antes del descanso; la "última serie" la dice el coach al terminar el descanso.
-    const msSay = ms.show && ms.show !== "last" ? `${MILESTONES[ms.show].say} ` : "";
-    speak(`${lvUp ? `Subiste a ${lvUp.n}. ` : ""}${msSay}${speechFor("rest", { rest: ex.cfg.rest })}`, true);
-    announce(`Serie ${si + 1} hecha${xp ? `, más ${xp} XP` : ""}.${lvUp ? ` Subiste a ${lvUp.n}.` : ""}${msText ? ` ${msText}.` : ""} Descanso de ${restLabel(ex.cfg.rest)}`);
+    const msSay = ms.show && ms.show !== "last" ? `${L.t(MILESTONES[ms.show].say)} ` : "";
+    speak(`${lvUp ? `${L.t("Subiste a {n}.", { n: L.t(lvUp.n) })} ` : ""}${msSay}${speechFor("rest", { rest: ex.cfg.rest }, L)}`, true);
+    announce(`${L.t("Serie {n} hecha", { n: si + 1 })}${xp ? L.t(", más {xp} XP", { xp }) : ""}.${lvUp ? ` ${L.t("Subiste a {n}.", { n: L.t(lvUp.n) })}` : ""}${msText ? ` ${msText}.` : ""} ${L.t("Descanso de {rest}", { rest: restLabel(ex.cfg.rest) })}`);
   }
 
   function toggle(si: number) {
@@ -474,7 +487,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     if (to === choice[idx]) { setSheet(null); setSwapAsk(null); return; }
     if (!confirmed && here.some((r) => r.done)) { setSwapAsk(to); return; }
     track("exercise_swap", { template: template.slice(0, 40), ex: idx + 1, ...(guided ? { guided: true } : {}) });
-    const nextRows = rows.map((r, i) => (i === idx ? rowsFor(options[idx][to]) : r));
+    const nextRows = rows.map((r, i) => (i === idx ? rowsFor(options[idx][to], L) : r));
     setChoice((c) => c.map((v, i) => (i === idx ? to : v)));
     setRows(nextRows);
     const cs = comboState(nextRows);
@@ -482,7 +495,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     if (restTarget.current?.ex === idx) cancelRest();
     if (work?.ex === idx) setWork(null);
     setSheet(null); setSwapAsk(null);
-    setToast({ t: `Cambiado a ${options[idx][to].name}`, kind: "swap" });
+    setToast({ t: t("Cambiado a {name}", { name: nm(options[idx][to]) }), kind: "swap" });
     spokeFor.current = null;
   }
 
@@ -499,7 +512,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     const t = nextPending(express, idx);
     if (!t) { toSummary(); return; }
     setIdx(t.ex); spokeFor.current = null;
-    setToast({ t: `Modo exprés: ${saved === 1 ? "queda 1 serie" : `quedan ${saved} series`}`, kind: "express" });
+    setToast({ t: L.t(saved === 1 ? "Modo exprés: queda 1 serie" : "Modo exprés: quedan {n} series", { n: saved }), kind: "express" });
   }
 
   /* ---------- Modo intervalos (exprés) ---------- */
@@ -530,33 +543,33 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     }
     setIdx(res.idx);
     ping("go"); buzz([200, 100, 200]);
-    if (res.finished) { speak(speechFor("done"), true); announce("Entreno completado"); setIv({ phase: "ready", end: 0, total: 0, paused: null }); setTimeout(() => toSummary(), 600); return; }
+    if (res.finished) { speak(speechFor("done", {}, L), true); announce(t("Entreno completado")); setIv({ phase: "ready", end: 0, total: 0, paused: null }); setTimeout(() => toSummary(), 600); return; }
     setIv({ ...res.iv, paused: null });
     if (res.iv.phase === "work") {
-      const name = exercises[res.idx].name;
-      const side = res.iv.side ? SIDE_LABEL[res.iv.side] : null;
-      speak(side ? `${res.iv.side === 1 ? `${name}. ` : ""}${side}. Ya.` : speechFor("work", { name }), true);
-      announce(`Trabaja: ${name}${side ? `, ${side.toLowerCase()}` : ""}, ${res.iv.total} segundos`);
+      const name = nm(exercises[res.idx]);
+      const side = res.iv.side ? t(SIDE_LABEL[res.iv.side]) : null;
+      speak(side ? `${res.iv.side === 1 ? `${name}. ` : ""}${side}. ${t("Ya.")}` : speechFor("work", { name }, L), true);
+      announce(t("Trabaja: {name}{side}, {secs} segundos", { name, side: side ? `, ${side.toLowerCase()}` : "", secs: res.iv.total }));
     } else if (res.iv.phase === "switch") {
-      speak("Cambia de lado.", true);
-      announce(`Cambia de lado: ${res.iv.total} segundos`);
+      speak(t("Cambia de lado."), true);
+      announce(t("Cambia de lado: {secs} segundos", { secs: res.iv.total }));
     } else {
       const nx = nextPending(nextRows, res.idx);
-      const name = nx ? exercises[nx.ex].name : "";
-      speak(`Descansa. Sigue ${name}.`, true);
-      announce(`Descansa ${res.iv.total} segundos. Sigue ${name}`);
+      const name = nx ? nm(exercises[nx.ex]) : "";
+      speak(t("Descansa. Sigue {name}.", { name }), true);
+      announce(t("Descansa {secs} segundos. Sigue {name}", { secs: res.iv.total, name }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interval, phase, iv, ivLeft]);
 
   /* ---------- Avisos con la pestaña oculta ---------- */
-  const ivNextName = ivTarget ? exercises[ivTarget.ex]?.name ?? "" : "";
+  const ivNextName = ivTarget && exercises[ivTarget.ex] ? nm(exercises[ivTarget.ex]) : "";
   const alarm = interval
-    ? (iv.phase === "prep" || iv.phase === "rest" || iv.phase === "switch") && iv.paused == null ? { at: iv.end, t: iv.phase === "switch" ? "Cambia de lado" : "A trabajar", b: ivNextName } : { at: null, t: "", b: "" }
-    : rest ? { at: rest.end, t: "Descanso terminado", b: ivNextName ? `Sigue: ${ivNextName}` : "Vuelve a Banana Burn para seguir" }
+    ? (iv.phase === "prep" || iv.phase === "rest" || iv.phase === "switch") && iv.paused == null ? { at: iv.end, t: t(iv.phase === "switch" ? "Cambia de lado" : "A trabajar"), b: ivNextName } : { at: null, t: "", b: "" }
+    : rest ? { at: rest.end, t: t("Descanso terminado"), b: ivNextName ? t("Sigue: {name}", { name: ivNextName }) : t("Vuelve a Banana Burn para seguir") }
     : work && work.run.paused == null ? (() => {
       const nx = work.run.segs[work.run.i + 1];
-      return { at: work.run.end, t: !nx ? "Serie terminada" : nx.kind === "switch" ? "Cambia de lado" : nx.side ? SIDE_LABEL[nx.side] : "A trabajar", b: !nx ? "Vuelve a Banana Burn para seguir" : nx.kind === "switch" ? "Sigue con el lado izquierdo" : "Vuelve a Banana Burn para seguir" };
+      return { at: work.run.end, t: t(!nx ? "Serie terminada" : nx.kind === "switch" ? "Cambia de lado" : nx.side ? SIDE_LABEL[nx.side] : "A trabajar"), b: t(!nx ? "Vuelve a Banana Burn para seguir" : nx.kind === "switch" ? "Sigue con el lado izquierdo" : "Vuelve a Banana Burn para seguir") };
     })() : { at: null, t: "", b: "" };
   useHiddenAlarm(phase === "play" ? alarm.at : null, alarm.t, alarm.b);
 
@@ -566,16 +579,18 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     if (e.id.startsWith("ds:") || e.cfg.unit) return [];
     const sets = rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps), rir: rirOf(s) }));
     if (!sets.length) return [];
-    const line = nextTimeLine(prescribe(e.id, e.cfg, e.lastSets?.length ? [e.lastSets, sets] : [sets]), e.cfg.lo);
-    return line ? [{ name: e.name, line }] : [];
-  }).slice(0, 4), [exercises, rows]);
+    const line = nextTimeLine(prescribe(e.id, e.cfg, e.lastSets?.length ? [e.lastSets, sets] : [sets]), e.cfg.lo, L);
+    return line ? [{ name: exName(e, L), line }] : [];
+  }).slice(0, 4), [exercises, rows, L]);
   // Progreso entre entrenos (#288): cada ejercicio repetido, la mejor serie de la vez pasada y la de hoy (workout_sets).
   const progress = useMemo(() => exercises.flatMap((e, i) => {
-    const p = progressLine(e.lastSets, rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps) })), e.cfg.unit);
-    return p ? [{ name: e.name, ...p }] : [];
-  }).slice(0, 6), [exercises, rows]);
+    const p = progressLine(e.lastSets, rows[i].filter((s) => s.done).map((s) => ({ kg: s.kg ? num(s.kg) : null, reps: num(s.reps) })), e.cfg.unit, L);
+    return p ? [{ name: exName(e, L), ...p }] : [];
+  }).slice(0, 6), [exercises, rows, L]);
   const summary = useMemo(() => ({ vol: volumeOf(rows), ...(noXp ? { xp: 0, prs: 0, rushed: false } : liveXp({ doneSets, totalSets: planTotal, prs: prs.length, seconds: elapsed })) }), [rows, doneSets, planTotal, prs.length, elapsed, noXp]);
   const prNames = prs.map((p) => p.name);
+  /** Los récords llegan con el nombre en español (servidor): en pantalla, en el idioma de la persona. */
+  const prName = (n: string) => { const e = exercises.find((x) => x.name === n); return e ? nm(e) : n; };
   const outId = outboxId({ template, startedAt });
   const sending = useRef(false);
   const savedOnce = useRef(false);
@@ -586,13 +601,13 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   /** Primer entreno completo (#253): se guardó solo al llegar al resumen y las preguntas opcionales van después. */
   const early = useRef(false);
   function onSaved(res: SaveResult) {
-    if (!res.ok) { setQueued(false); setSaveMsg(res.error ?? "No pudimos guardar. Intenta de nuevo."); return; }
+    if (!res.ok) { setQueued(false); setSaveMsg(res.error ? t(res.error) : t("No pudimos guardar. Intenta de nuevo.")); return; }
     if (savedOnce.current) return;
     savedOnce.current = true;
     setQueued(false);
     store.del(key);
     setSaved(res);
-    setSaveMsg(res.demo ? "Modo demo: este entreno no se guardó en la nube." : null);
+    setSaveMsg(res.demo ? t("Modo demo: este entreno no se guardó en la nube.") : null);
     if (!early.current) setPhase("saved");
     if (!res.already) track("workout_saved", { first_session: firstSession, template: template.slice(0, 40), done: doneSets, total: planTotal, ...(variant ? { variant } : {}), ...(partialRef.current ? { partial: true } : {}) });
     learn("pp-entreno"); // Primeros pasos: primer entrenamiento hecho.
@@ -604,7 +619,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     fetch("/api/coach/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(20_000), body: JSON.stringify({
       title, done: doneSets, total: planTotal, prs: res.prNames ?? prNames, volume: summary.vol,
       mins: Math.round(elapsed / 60), fun: fun ?? 0, easy: rows.flat().filter((r) => effortOf(r) === "f").length, streak: gam.todayDone ? gam.streak : gam.streak + 1,
-    }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino."));
+    }) }).then((r) => r.json()).then((j) => setFeedback(j.text || null)).catch(() => setFeedback(t("Buen trabajo hoy. Cuando vuelva la conexión te dejo un análisis más fino.")));
   }
   /** Del resumen ya guardado a la celebración: anota las respuestas opcionales y pide el comentario del coach con ellas. */
   function celebrate() {
@@ -632,8 +647,8 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       if (res === null) {
         setQueued(true);
         setSaveMsg(typeof navigator !== "undefined" && !navigator.onLine
-          ? "Sin señal. Tu entreno quedó guardado en este teléfono y se sube solo cuando vuelva la conexión."
-          : "No pudimos conectar. Tu entreno quedó guardado en este teléfono: lo intentamos de nuevo solo, o toca Reintentar.");
+          ? t("Sin señal. Tu entreno quedó guardado en este teléfono y se sube solo cuando vuelva la conexión.")
+          : t("No pudimos conectar. Tu entreno quedó guardado en este teléfono: lo intentamos de nuevo solo, o toca Reintentar."));
         return;
       }
       onSaved(res);
@@ -769,7 +784,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     return (
       <Shell>
         <div className="flex-1 grid place-items-center text-center px-6">
-          <div><span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink"><TreePalm weight="duotone" className="size-14" /></span><h1 className="mt-4 text-3xl font-extrabold text-ink">Hoy toca descanso activo</h1><p className="mt-2 text-muted">{cardio}</p><Link href="/app" className="btn-primary mt-6">Volver a Hoy</Link></div>
+          <div><span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-banana-soft text-banana-ink"><TreePalm weight="duotone" className="size-14" /></span><h1 className="mt-4 text-3xl font-extrabold text-ink">{t("Hoy toca descanso activo")}</h1><p className="mt-2 text-muted">{cardio}</p><Link href="/app" className="btn-primary mt-6">{t("Volver a Hoy")}</Link></div>
         </div>
       </Shell>
     );
@@ -781,11 +796,11 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
         <div className="flex-1 grid place-items-center px-6 animate-enter">
           <div className="max-w-sm text-center">
             <span className="mx-auto grid place-items-center size-24 rounded-[2rem] bg-peel/15 text-peel"><CalendarCheck weight="duotone" className="size-14" /></span>
-            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink">Ya hiciste {title} hoy</h1>
-            <p className="mt-2 text-body">Buen trabajo. El músculo crece mientras descansas. Si igual quieres repetirlo, queda en tu historial pero no suma XP.</p>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink">{t("Ya hiciste {title} hoy", { title })}</h1>
+            <p className="mt-2 text-body">{t("Buen trabajo. El músculo crece mientras descansas. Si igual quieres repetirlo, queda en tu historial pero no suma XP.")}</p>
             <div className="mt-6 space-y-2">
-              <Link href="/app" className="btn-primary w-full h-13">Volver a Hoy</Link>
-              <button type="button" onClick={() => setGate(false)} className="btn-ghost w-full h-13"><Repeat weight="bold" className="size-5" />Repetir (no suma XP)</button>
+              <Link href="/app" className="btn-primary w-full h-13">{t("Volver a Hoy")}</Link>
+              <button type="button" onClick={() => setGate(false)} className="btn-ghost w-full h-13"><Repeat weight="bold" className="size-5" />{t("Repetir (no suma XP)")}</button>
             </div>
           </div>
         </div>
@@ -796,11 +811,11 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   if (phase === "saved") {
     const fresh = !!saved?.ok && !saved.demo && !saved.already;
     return <Recap week={week} progress={progress} condoNudge={fresh && !saved?.repeat ? condoNudge : undefined} firstOffer={fresh && !saved?.repeat ? firstOffer : undefined} testimonial={showsTestimonialCard({ asked: askTestimonial, fresh })} nutritionUpsell={fresh ? nutritionUpsell : undefined} next={nextTime} sex={gam.sex} title={title} icon={icon} xpBefore={gam.xp} xp={saved?.xp ?? summary.xp} rushed={summary.rushed} streak={gam.todayDone ? gam.streak : gam.streak + 1} seconds={elapsed}
-      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : saved?.prNames ?? prNames} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} coachPrompt={saved?.ok && !saved.already ? coachPrompt : null} />;
+      done={doneSets} total={planTotal} unit={setWord} volume={summary.vol} perWorkout={planTotal * SET_XP + FULL_BONUS} prs={summary.rushed ? [] : (saved?.prNames ?? prNames).map(prName)} bananas={bananas} repeat={noXp || !!saved?.repeat} saveMsg={saveMsg} feedback={feedback} voice={voice} coach={coach} coachPrompt={saved?.ok && !saved.already ? coachPrompt : null} />;
   }
 
   if (phase === "summary") {
-    const cool = cooldownFor(exercises.map((e) => e.muscle));
+    const cool = cooldownFor(exercises.map((e) => e.muscle), L);
     const empty = doneSets === 0;
     const lastSet = askLast;
     const last = lastSet ? rows[lastSet.ex]?.[lastSet.si] : null;
@@ -810,29 +825,29 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     const cooldown = (
       <div className="mt-3 flex gap-3 rounded-[1.5rem] bg-white border border-line/70 p-4">
         <PersonSimpleWalk weight="duotone" className="size-6 shrink-0 text-banana-ink" />
-        <div><p className="font-bold text-ink">Para cerrar</p><p className="text-sm text-body">{cardio ? `${cardio}. Luego ` : ""}{cardio ? cool.text[0].toLowerCase() + cool.text.slice(1) : cool.text}</p></div>
+        <div><p className="font-bold text-ink">{t("Para cerrar")}</p><p className="text-sm text-body">{cardio ? `${cardio}. ${t("Luego")} ` : ""}{cardio ? cool.text[0].toLowerCase() + cool.text.slice(1) : cool.text}</p></div>
       </div>
     );
     return (
       <Shell>
         <div className="flex-1 overflow-y-auto px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6 animate-enter">
           <div className="mx-auto max-w-md">
-            {!firstDone && <button onClick={backToPlay} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver al entreno</button>}
+            {!firstDone && <button onClick={backToPlay} className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />{t("Volver al entreno")}</button>}
             <h1 aria-live="polite" className="mt-3 text-3xl font-extrabold tracking-tight text-ink">
-              {empty ? "Aún no empiezas" : firstDone ? (confirmed && !saved?.demo ? "Guardamos tu primer entreno" : confirmed || retry ? "Terminaste las series" : "Guardando tu primer entreno…") : doneSets === totalSets ? "Lo lograste" : "¿Terminamos?"}
+              {t(empty ? "Aún no empiezas" : firstDone ? (confirmed && !saved?.demo ? "Guardamos tu primer entreno" : confirmed || retry ? "Terminaste las series" : "Guardando tu primer entreno…") : doneSets === totalSets ? "Lo lograste" : "¿Terminamos?")}
             </h1>
-            <p className="text-muted tabular-nums">{doneSets} de {totalSets} {setWord} en {clock(elapsed)}{plan ? ` (modo exprés, plan de ${plan})` : ""}</p>
+            <p className="text-muted tabular-nums">{t("{done} de {total} {unit} en {time}", { done: doneSets, total: totalSets, unit: t(setWord), time: clock(elapsed) })}{plan ? t(" (modo exprés, plan de {n})", { n: plan }) : ""}</p>
             {empty ? (
-              <p className="mt-4 rounded-2xl bg-cream p-4 text-[15px] text-body">Todavía no marcas {interval ? "ningún intervalo" : "ninguna serie"}, así que no hay nada que guardar. Vuelve al entreno o sal sin guardar.</p>
+              <p className="mt-4 rounded-2xl bg-cream p-4 text-[15px] text-body">{t(interval ? "Todavía no marcas ningún intervalo, así que no hay nada que guardar. Vuelve al entreno o sal sin guardar." : "Todavía no marcas ninguna serie, así que no hay nada que guardar. Vuelve al entreno o sal sin guardar.")}</p>
             ) : firstDone && !confirmed ? (
               cooldown
             ) : (
               <>
                 <dl className="mt-4 grid grid-cols-3 gap-2">
                   {[
-                    { big: `+${summary.xp}`, small: noXp ? "XP (repetición)" : "XP", icon: <BananaCoin className="size-5 text-banana-ink" /> },
-                    { big: `${bananas.got}/${bananas.total}`, small: "bananas", icon: <Banana weight="duotone" className="size-5 text-banana-ink" /> },
-                    { big: bestCombo > 1 ? `x${bestCombo}` : "x1", small: "mejor combo", icon: <Lightning weight="duotone" className="size-5 text-ember-ink" /> },
+                    { big: `+${summary.xp}`, small: noXp ? t("XP (repetición)") : "XP", icon: <BananaCoin className="size-5 text-banana-ink" /> },
+                    { big: `${bananas.got}/${bananas.total}`, small: t("bananas"), icon: <Banana weight="duotone" className="size-5 text-banana-ink" /> },
+                    { big: bestCombo > 1 ? `x${bestCombo}` : "x1", small: t("mejor combo"), icon: <Lightning weight="duotone" className="size-5 text-ember-ink" /> },
                   ].map((s) => (
                     <div key={s.small} className="flex flex-col items-center rounded-2xl bg-white border border-line/70 py-3">
                       <span aria-hidden>{s.icon}</span>
@@ -841,21 +856,21 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                     </div>
                   ))}
                 </dl>
-                {noXp && <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">Ya habías hecho este entreno hoy: esta repetición queda en tu historial, pero no suma XP.</p>}
-                {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">Te faltan {totalSets - doneSets} {setWord}. Puedes terminar igual; {coach?.name ?? "Coach Banana"} lo toma en cuenta.</p>}
+                {noXp && <p className="mt-3 rounded-2xl bg-cream p-3 text-sm text-body">{t("Ya habías hecho este entreno hoy: esta repetición queda en tu historial, pero no suma XP.")}</p>}
+                {doneSets < totalSets && <p className="mt-3 rounded-2xl bg-banana-soft/60 p-3 text-sm font-semibold text-banana-ink">{t("Te faltan {n} {unit}. Puedes terminar igual; {coach} lo toma en cuenta.", { n: totalSets - doneSets, unit: t(setWord), coach: coach?.name ?? "Coach Banana" })}</p>}
                 {last && lastSet && (
                   <fieldset className="mt-3 card p-5">
-                    <legend className="sr-only">Esfuerzo de la última serie</legend>
-                    <p className="font-bold text-ink">¿Cómo se sintió la última serie?</p>
-                    <p className="text-sm text-muted">{exercises[lastSet.ex].name}, {targetText(last, { unit: exercises[lastSet.ex].cfg.unit, bw: exercises[lastSet.ex].bw, perSide: exercises[lastSet.ex].cfg.perSide })}. {firstDone ? "Opcional. " : ""}Con esto ajusto el peso de la próxima vez.</p>
+                    <legend className="sr-only">{t("Esfuerzo de la última serie")}</legend>
+                    <p className="font-bold text-ink">{t("¿Cómo se sintió la última serie?")}</p>
+                    <p className="text-sm text-muted">{nm(exercises[lastSet.ex])}, {targetText(last, { unit: exercises[lastSet.ex].cfg.unit, bw: exercises[lastSet.ex].bw, perSide: exercises[lastSet.ex].cfg.perSide }, L)}. {firstDone ? `${t("Opcional.")} ` : ""}{t("Con esto ajusto el peso de la próxima vez.")}</p>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       {EFFORTS.map((e) => {
                         const on = effortOf(last) === e.id;
                         return (
                           <button key={e.id} type="button" onClick={() => setEffort(lastSet.ex, lastSet.si, e.id)} aria-pressed={on}
                             className={`pressable flex flex-col items-center justify-center gap-0.5 min-h-16 rounded-2xl px-1 text-center ${on ? "bg-ink text-white" : "bg-cream text-ink hover:bg-banana-soft"}`}>
-                            <span className="inline-flex items-center gap-1 text-[15px] font-extrabold">{on && <Check weight="bold" className="size-4" />}{e.label}</span>
-                            <span className={`text-[11px] font-semibold leading-tight ${on ? "text-white/75" : "text-muted"}`}>{hints[e.id]}</span>
+                            <span className="inline-flex items-center gap-1 text-[15px] font-extrabold">{on && <Check weight="bold" className="size-4" />}{t(e.label)}</span>
+                            <span className={`text-[11px] font-semibold leading-tight ${on ? "text-white/75" : "text-muted"}`}>{t(hints[e.id])}</span>
                           </button>
                         );
                       })}
@@ -864,9 +879,9 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                 )}
                 {cooldown}
                 <fieldset className="mt-3 card p-5">
-                  <legend className="sr-only">Diversión del entreno</legend>
-                  <p className="font-bold text-ink">¿Qué tan divertido estuvo?</p>
-                  <p className="text-sm text-muted">Opcional. Si se pone aburrido, metemos más variedad y retos.</p>
+                  <legend className="sr-only">{t("Diversión del entreno")}</legend>
+                  <p className="font-bold text-ink">{t("¿Qué tan divertido estuvo?")}</p>
+                  <p className="text-sm text-muted">{t("Opcional. Si se pone aburrido, metemos más variedad y retos.")}</p>
                   <div className="mt-4 grid grid-cols-5 gap-1.5">
                     {FUN.map((F, i) => {
                       const on = fun === i + 1;
@@ -874,7 +889,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                         <button key={i} type="button" onClick={() => { setFun(on ? null : i + 1); buzz(15); }} aria-pressed={on}
                           className={`pressable flex flex-col items-center justify-center gap-1 min-h-[72px] rounded-2xl px-0.5 ${on ? "bg-banana text-ink shadow-soft" : "bg-cream text-ink/70 hover:bg-banana-soft"}`}>
                           <F weight={on ? "fill" : "duotone"} className="size-7" />
-                          <span className="text-[11px] font-bold leading-tight text-center">{FUN_LABELS[i]}</span>
+                          <span className="text-[11px] font-bold leading-tight text-center">{t(FUN_LABELS[i])}</span>
                         </button>
                       );
                     })}
@@ -887,25 +902,25 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
         <footer className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line bg-white/95">
           {empty ? (
             <div className="mx-auto flex max-w-md gap-2">
-              <button onClick={leave} className="btn-ghost flex-1 h-16 text-base">Salir sin guardar</button>
-              <button onClick={backToPlay} className="btn-banana flex-1 h-16 text-base font-extrabold">Volver al entreno</button>
+              <button onClick={leave} className="btn-ghost flex-1 h-16 text-base">{t("Salir sin guardar")}</button>
+              <button onClick={backToPlay} className="btn-banana flex-1 h-16 text-base font-extrabold">{t("Volver al entreno")}</button>
             </div>
           ) : firstDone ? (
             <>
             {saveMsg && <p role="alert" className={`mx-auto mb-2 max-w-md text-sm font-semibold text-pretty ${queued || confirmed ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
             {confirmed ? (
-              <button onClick={celebrate} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold">Continuar</button>
+              <button onClick={celebrate} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold">{t("Continuar")}</button>
             ) : (
-              <button onClick={() => save()} disabled={!retry} aria-busy={!retry} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{retry ? "Reintentar ahora" : "Guardando…"}</button>
+              <button onClick={() => save()} disabled={!retry} aria-busy={!retry} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{t(retry ? "Reintentar ahora" : "Guardando…")}</button>
             )}
-            {queued && !confirmed && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">Salir: se sube solo al volver la señal</Link>}
+            {queued && !confirmed && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">{t("Salir: se sube solo al volver la señal")}</Link>}
             </>
           ) : (
             <>
             {/* Junto al botón (no al final del resumen): quien toca Guardar ve de inmediato qué pasó. */}
             {saveMsg && <p role="alert" className={`mx-auto mb-2 max-w-md text-sm font-semibold text-pretty ${queued ? "text-ink" : "text-bad"}`}>{saveMsg}</p>}
-            <button onClick={() => save()} disabled={pending} aria-busy={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{pending ? "Guardando…" : queued ? "Reintentar ahora" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno"}</button>
-            {queued && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">Salir: se sube solo al volver la señal</Link>}
+            <button onClick={() => save()} disabled={pending} aria-busy={pending} className="btn-banana mx-auto flex w-full max-w-md h-16 text-lg font-extrabold disabled:opacity-80">{t(pending ? "Guardando…" : queued ? "Reintentar ahora" : doneSets === totalSets ? "Guardar y celebrar" : "Guardar entreno")}</button>
+            {queued && <Link href="/app" className="btn-ghost mx-auto mt-2 flex w-full max-w-md h-12">{t("Salir: se sube solo al volver la señal")}</Link>}
             </>
           )}
         </footer>
@@ -914,11 +929,11 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   }
 
   // Cuánto falta para terminar (trabajo de cada serie pendiente más los descansos entre ellas).
-  const leftLine = leftText(secondsLeft(rows, exercises.map((e) => ({ unit: e.cfg.unit, rest: e.cfg.rest, perSide: e.cfg.perSide, hi: e.cfg.hi })), rest ? restLeft : 0));
+  const leftLine = leftText(secondsLeft(rows, exercises.map((e) => ({ unit: e.cfg.unit, rest: e.cfg.rest, perSide: e.cfg.perSide, hi: e.cfg.hi })), rest ? restLeft : 0), L);
 
   /* ---------- Exprés ---------- */
   if (interval) {
-    const exAt = (i: number, si: number) => ({ name: exercises[i].name, anim: exercises[i].tech?.anim || undefined, setNo: si + 1, sets: rows[i].length, exNo: i + 1, exTotal: exercises.length });
+    const exAt = (i: number, si: number) => ({ name: nm(exercises[i]), anim: exercises[i].tech?.anim || undefined, setNo: si + 1, sets: rows[i].length, exNo: i + 1, exTotal: exercises.length });
     const cur = ivTarget ? exAt(ivTarget.ex, ivTarget.si) : null;
     const after = ivTarget ? nextPending(rows.map((r, i) => (i !== ivTarget.ex ? r : r.map((s, j) => (j === ivTarget.si ? { ...s, done: true } : s)))), ivTarget.ex) : null;
     // En descanso y preparación, "lo que sigue" es la serie pendiente actual
@@ -926,47 +941,48 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     return (
       <>
         <IntervalScreen title={title} phase={iv.phase} side={iv.side} left={iv.phase === "ready" ? 0 : ivLeft} total={iv.total} paused={iv.paused != null} cur={cur} next={nextShown}
-          plan={exercises.map((e, i) => ({ name: e.name, anim: e.tech?.anim || undefined, sets: rows[i].length, done: rows[i].filter((s) => s.done).length, perSide: !!e.cfg.perSide }))}
+          plan={exercises.map((e, i) => ({ name: nm(e), anim: e.tech?.anim || undefined, sets: rows[i].length, done: rows[i].filter((s) => s.done).length, perSide: !!e.cfg.perSide }))}
           done={doneSets} all={totalSets} elapsed={elapsed} workSec={exercises[0].cfg.hi} restSec={exercises[0].cfg.rest} leftLine={leftLine}
-          onStart={() => { unlockAudio(); tickRef.current = null; setIv({ phase: "prep", end: Date.now() + 5000, total: 5, paused: null }); speak(`Prepárate. Empiezas con ${exercises[ivTarget?.ex ?? 0].name}.`, true); }}
-          onPause={() => { setIv((v) => ({ ...v, paused: Math.max(0, v.end - Date.now()) })); hush(); announce("En pausa"); }}
+          onStart={() => { unlockAudio(); tickRef.current = null; setIv({ phase: "prep", end: Date.now() + 5000, total: 5, paused: null }); speak(t("Prepárate. Empiezas con {name}.", { name: nm(exercises[ivTarget?.ex ?? 0]) }), true); }}
+          onPause={() => { setIv((v) => ({ ...v, paused: Math.max(0, v.end - Date.now()) })); hush(); announce(t("En pausa")); }}
           onResume={() => { tickRef.current = null; setIv((v) => ({ ...v, end: Date.now() + (v.paused ?? 0), paused: null })); }}
           onSkip={() => setIv((v) => (v.paused != null ? v : { ...v, end: Date.now() }))}
           onExit={() => { setIv((v) => (v.phase === "ready" || v.paused != null ? v : { ...v, paused: Math.max(0, v.end - Date.now()) })); setSheet("exit"); }}
           onFinish={() => toSummary()} />
         <p aria-live="polite" className="sr-only">{live}</p>
-        <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={() => toSummary()} goal={goal} keeps={firstSession} />
+        <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={() => toSummary()} goal={goal} keeps={firstSession} L={L} />
       </>
     );
   }
 
   /* ---------- Reproductor ---------- */
   const [, badgeCls, BadgeIcon] = RX_BADGE[ex.rx.type];
-  const badge = rxBadge(voice, ex.rx.type, ex.cfg.unit);
+  const badge = t(rxBadge(voice, ex.rx.type, ex.cfg.unit));
   const intro = introText ?? hookLine(hook, mins);
-  const unit = unitLbl(ex.cfg.unit);
+  const unit = unitLbl(ex.cfg.unit, L);
   const allDoneHere = here.every((r) => r.done);
-  const plates = ex.barbell && activeSet >= 0 ? platesPerSide(num(here[activeSet].kg)) : null;
+  // Discos por lado: en lb, sobre una barra de 45 lb.
+  const plates = ex.barbell && activeSet >= 0 ? (L.units === "imperial" ? lbPlatesPerSide : platesPerSide)(num(here[activeSet].kg)) : null;
   const alts = options[idx].length - 1;
   const timed = ex.cfg.unit === "s";
-  const warmIdx = exercises.findIndex((e) => warmupFor({ kg: num(rowsFor(e)[0]?.kg), barbell: e.barbell, bw: e.bw, unit: e.cfg.unit }));
+  const warmIdx = exercises.findIndex((e) => warmupFor({ kg: num(rowsFor(e, L)[0]?.kg), barbell: e.barbell, bw: e.bw, unit: e.cfg.unit }));
   const warm = !warmDone && idx === warmIdx && !here.some((r) => r.done) ? warmupFor({ kg: num(here[0]?.kg), barbell: ex.barbell, bw: ex.bw, unit: ex.cfg.unit }) : null;
   const focus = prefs.view === "focus";
   const nextEx = nextPending(rows.map((r, i) => (i === idx ? r.map((s) => ({ ...s, done: true })) : r)), idx);
   const timerOn = !!work && work.si === activeSet && work.ex === idx;
   const perSide = timed && !!ex.cfg.perSide;
-  const sideWord = perSide ? " por lado" : "";
+  const sideWord = perSide ? t(" por lado") : "";
   const startTimed = () => {
     unlockAudio(); const n = num(here[activeSet].reps) || ex.cfg.hi;
     // La cuenta regresiva se pinta sobre el movimiento: se sube a la vista aunque la persona haya bajado.
     document.querySelector<HTMLElement>('[data-tour="tech"]')?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     setWork({ run: startTimed0(timedSegments(n, perSide, PREP_SECONDS), Date.now()), si: activeSet, ex: idx }); buzz(20);
-    speak(perSide ? `${n} segundos por lado. Prepárate: empiezas con el ${SIDE_LABEL[1].toLowerCase()}.` : `${n} segundos. Prepárate.`, true);
-    if (perSide) announce(`${n} segundos por lado. Empiezas con el ${SIDE_LABEL[1].toLowerCase()}`);
+    speak(t(perSide ? "{n} segundos por lado. Prepárate: empiezas con el lado derecho." : "{n} segundos. Prepárate.", { n }), true);
+    if (perSide) announce(t("{n} segundos por lado. Empiezas con el lado derecho", { n }));
   };
   const timerCtl = {
-    onPause: () => { setWork((w) => w && { ...w, run: pauseTimed(w.run, Date.now()) }); hush(); announce("En pausa"); },
-    onResume: () => { setWork((w) => w && { ...w, run: resumeTimed(w.run, Date.now()) }); announce("Sigue"); },
+    onPause: () => { setWork((w) => w && { ...w, run: pauseTimed(w.run, Date.now()) }); hush(); announce(t("En pausa")); },
+    onResume: () => { setWork((w) => w && { ...w, run: resumeTimed(w.run, Date.now()) }); announce(isEs(L) ? "Sigue" : "Resumed"); },
     onSkip: () => setWork((w) => w && { ...w, run: skipTimed(w.run, Date.now()) }),
     onStop: () => { setWork(null); hush(); },
   };
@@ -976,7 +992,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   // Qué hacer ahora, en palabras simples y sin huecos ("12 repeticiones", "con 20 kg", "30 segundos por lado").
   const isCal = ex.rx.type === "cal";
   const curRow = activeSet >= 0 ? here[activeSet] : undefined;
-  const task = formatExerciseTask({ unit: ex.cfg.unit, reps: curRow?.reps ?? "", kg: curRow?.kg ?? "", lo: ex.cfg.lo, hi: ex.cfg.hi, bw: ex.bw, needsKg: missingKg, perSide: !!ex.cfg.perSide, calibration: isCal, setNo: activeSet + 1, sets: here.length, side: perSide ? 1 : undefined });
+  const task = formatExerciseTask({ unit: ex.cfg.unit, reps: curRow?.reps ?? "", kg: curRow?.kg ?? "", lo: ex.cfg.lo, hi: ex.cfg.hi, bw: ex.bw, needsKg: missingKg, perSide: !!ex.cfg.perSide, calibration: isCal, setNo: activeSet + 1, sets: here.length, side: perSide ? 1 : undefined }, L);
   const tempoCue = ex.tempo ? cap(tempoText(voice, ex.tempo)) : null;
   // Tarjeta "Tu plan en este ejercicio": antes de la primera serie de cada ejercicio, una vez. Se cierra con Empezar.
   const exKey = `${idx}:${ex.id}`;
@@ -987,21 +1003,21 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
     if (firstTime) { store.set(TOUR_KEY, 1); setFirstTime(false); }
     unlockAudio();
     if (timed && !missingKg) { startTimed(); return; }
-    document.querySelector('[aria-label="Ejercicio y series"]')?.scrollTo({ top: 0 });
+    document.querySelector(`[aria-label="${t("Ejercicio y series")}"]`)?.scrollTo({ top: 0 });
     announce(task.say);
   };
   // Guiado: sin tarjeta previa, calentamiento ni lista de series. La serie se marca con los valores sugeridos.
   const guidedNow = guided && activeSet >= 0;
   // Un ejercicio con carga nunca baja a 0 kg en el guiado: esa serie alimentaría la receta del segundo entreno.
   const guidedMinKg = stepFor("kg", { unit: ex.cfg.unit, barbell: ex.barbell, cur: 0 });
-  const guidedTimer = timed ? (timerOn && tp ? { left: tp.left, label: tp.paused ? "En pausa" : segLabel(tp.seg) } : null) : undefined;
-  const lineOf = (ei: number, si: number) => { const e = exercises[ei], r = rows[ei]; return guidedLine({ setNo: si + 1, sets: r.length, reps: r[si].reps, unit: e.cfg.unit, lo: e.cfg.lo, hi: e.cfg.hi, perSide: e.cfg.perSide }); };
-  const guidedNext = guidedNow && rest ? (() => { const t = nextPending(rows, idx); return t ? { name: exercises[t.ex].name, line: lineOf(t.ex, t.si) } : null; })() : null;
+  const guidedTimer = timed ? (timerOn && tp ? { left: tp.left, label: t(tp.paused ? "En pausa" : segLabel(tp.seg)) } : null) : undefined;
+  const lineOf = (ei: number, si: number) => { const e = exercises[ei], r = rows[ei]; return guidedLine({ setNo: si + 1, sets: r.length, reps: r[si].reps, unit: e.cfg.unit, lo: e.cfg.lo, hi: e.cfg.hi, perSide: e.cfg.perSide }, L); };
+  const guidedNext = guidedNow && rest ? (() => { const n = nextPending(rows, idx); return n ? { name: nm(exercises[n.ex]), line: lineOf(n.ex, n.si) } : null; })() : null;
   return (
     <Shell>
       {guidedNow ? (
         <div className="contents" inert={!!rest}>
-          <GuidedSet name={ex.name} cue={ex.tech?.cues[0]} anim={ex.tech?.anim || undefined} art={ex.art} line={lineOf(idx, activeSet)} exNo={idx + 1} exTotal={exercises.length}
+          <GuidedSet name={nm(ex)} cue={ex.tech?.cues[0]} anim={ex.tech?.anim || undefined} art={ex.art} line={lineOf(idx, activeSet)} exNo={idx + 1} exTotal={exercises.length}
             kg={needsLoad(ex) ? num(here[activeSet].kg) : null} onKg={(d) => step(activeSet, "kg", d, guidedMinKg)} kgMin={guidedMinKg} timer={guidedTimer}
             onStart={startTimed} onDone={() => { if (timerOn) setWork(null); complete(activeSet); }} onHow={() => setSheet("tech")} onExit={() => setSheet("exit")}
             onSwap={alts > 0 && (needsLoad(ex) || choice[idx] > 0) ? () => { setSwapAsk(null); setSheet("swap"); } : undefined} />
@@ -1011,16 +1027,16 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       {/* Encabezado delgado: salir, qué entreno es, el tiempo total (secundario), sonido y avance. */}
       <header data-tour-anchor className="px-4 pt-[max(.5rem,env(safe-area-inset-top))] pb-1.5 bg-paper/95 backdrop-blur border-b border-line/60">
         <div className="mx-auto flex max-w-xl items-center gap-2">
-          <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label="Salir del entreno"><X weight="bold" className="size-5" /></button>
+          <button onClick={() => setSheet("exit")} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label={t("Salir del entreno")}><X weight="bold" className="size-5" /></button>
           <div className="flex-1 min-w-0 text-center">
             <p className="flex items-center justify-center gap-1.5 text-[15px] leading-tight font-extrabold text-ink min-w-0"><BrandIcon name={icon} className="size-5 shrink-0 text-banana-ink" /><span className="truncate">{title}</span></p>
             <p className="flex items-center justify-center gap-3 text-sm font-semibold text-muted tabular-nums">
-              <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-4" aria-hidden /><span className="sr-only">Tiempo total </span>{clock(elapsed)}</span>
-              {sessMode === "suave" && <span className="text-sky">Modo suave</span>}
-              {!online && <span role="status" className="inline-flex items-center gap-1 whitespace-nowrap text-ink"><WifiSlash weight="bold" className="size-4" aria-hidden />Sin señal<span className="sr-only">: puedes seguir, guardamos todo en este teléfono</span></span>}
+              <span className="inline-flex items-center gap-1"><Timer weight="bold" className="size-4" aria-hidden /><span className="sr-only">{t("Tiempo total")} </span>{clock(elapsed)}</span>
+              {sessMode === "suave" && <span className="text-sky">{t("Modo suave")}</span>}
+              {!online && <span role="status" className="inline-flex items-center gap-1 whitespace-nowrap text-ink"><WifiSlash weight="bold" className="size-4" aria-hidden />{t("Sin señal")}<span className="sr-only">{t(": puedes seguir, guardamos todo en este teléfono")}</span></span>}
             </p>
           </div>
-          <button onClick={() => setSheet("sound")} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label={`Sonido y voz: ${prefs.voice ? "coach de voz encendido" : prefs.sound ? "pitidos encendidos" : "silencio"}`}>
+          <button onClick={() => setSheet("sound")} className="tap pressable grid place-items-center size-12 shrink-0 rounded-full bg-white border border-line hover:bg-cream" aria-label={`${t("Sonido y voz")}: ${t(prefs.voice ? "coach de voz encendido" : prefs.sound ? "pitidos encendidos" : "silencio")}`}>
             {prefs.sound || prefs.voice ? <SpeakerHigh weight={prefs.voice ? "fill" : "bold"} className="size-5" /> : <SpeakerSlash weight="bold" className="size-5" />}
           </button>
           <SessionRing value={doneSets / Math.max(1, totalSets)} />
@@ -1028,14 +1044,14 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
         <div data-tour="trail" className="mx-auto mt-1 max-w-xl">
           {/* Cuánto llevas y cuánto falta: un segmento por ejercicio (se llena con sus series) y los minutos que quedan. */}
           <div className="flex items-center justify-between gap-3 text-[13px] font-bold tabular-nums">
-            <span className="text-ink">Ejercicio {idx + 1} de {exercises.length}</span>
+            <span className="text-ink">{t("Ejercicio {n} de {of}", { n: idx + 1, of: exercises.length })}</span>
             <span className="text-muted">{leftLine}</span>
           </div>
-          <nav aria-label="Ejercicios del entreno" className="-mb-1 flex gap-1">
+          <nav aria-label={t("Ejercicios del entreno")} className="-mb-1 flex gap-1">
             {exercises.map((e, i) => {
               const d = rows[i].filter((s) => s.done).length, tot = rows[i].length, full = d >= tot && tot > 0, on = i === idx;
               return (
-                <button key={i} type="button" onClick={() => { setIdx(i); setWork(null); }} aria-current={on ? "step" : undefined} aria-label={`${e.name}, ${d} de ${tot} ${tot === 1 ? "serie" : "series"}${full ? ", completo" : ""}`}
+                <button key={i} type="button" onClick={() => { setIdx(i); setWork(null); }} aria-current={on ? "step" : undefined} aria-label={`${nm(e)}, ${t(tot === 1 ? "{d} de {n} serie" : "{d} de {n} series", { d, n: tot })}${full ? t(", completo") : ""}`}
                   className="pressable flex-1 min-w-0 h-7 flex items-center rounded-md">
                   <span aria-hidden className={`block w-full rounded-full overflow-hidden ${on ? "h-2.5 bg-ink/15" : "h-1.5 bg-line"} ${fresh === i ? "animate-enter" : ""}`}>
                     <span className={`bar-fill block h-full w-full rounded-full ${full ? "bg-peel" : "bg-ink"}`} style={{ transform: `translateX(${(d / Math.max(1, tot) - 1) * 100}%)` }} />
@@ -1047,7 +1063,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden" role="region" aria-label="Ejercicio y series">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden" role="region" aria-label={t("Ejercicio y series")}>
         <div className={`mx-auto max-w-xl land:max-w-4xl px-4 pt-3 ${rest && !restOpen ? "pb-28" : "pb-6"}`}>
           {/* Lo primero que se ve: el movimiento en grande y el nombre del ejercicio. En horizontal, lado a lado. */}
           <div className="land:grid land:grid-cols-2 land:items-start land:gap-4">
@@ -1057,14 +1073,14 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                 const still = ex.tech?.anim ? <ExerciseMotion anim={ex.tech.anim} label={false} className="absolute inset-x-4 top-4 bottom-14" /> : <Barbell weight="duotone" className="absolute inset-0 m-auto size-24 text-ink/80" />;
                 return ex.art ? <CoachArtFill src={ex.art} sizes="(min-width: 640px) 576px, 100vw" className="object-contain pb-12" fallback={still} /> : still;
               })()}</span>
-              {!(timerOn && tp) && <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold"><Eye weight="bold" className="size-4" aria-hidden />Ver cómo se hace<span className="sr-only"> {ex.name}</span></span>}
-              {timerOn && tp && <span className="sr-only">Ver cómo se hace {ex.name}</span>}
+              {!(timerOn && tp) && <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-ink text-white text-sm font-bold"><Eye weight="bold" className="size-4" aria-hidden />{t("Ver cómo se hace")}<span className="sr-only"> {nm(ex)}</span></span>}
+              {timerOn && tp && <span className="sr-only">{t("Ver cómo se hace")} {nm(ex)}</span>}
               {/* Serie por tiempo en marcha: la cuenta regresiva es lo más grande de la pantalla (encima del movimiento). */}
               {timerOn && tp && (
                 <span aria-hidden className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 pt-16 text-left ${tp.seg.kind === "switch" ? "bg-ink/85" : "bg-gradient-to-t from-ink/85 via-ink/55 to-transparent"} text-white`}>
                   <span className="text-[96px] leading-[.85] font-extrabold tracking-tight tabular-nums">{Math.ceil(tp.left)}</span>
                   <span className="pb-2 leading-tight">
-                    <span className={`block font-extrabold uppercase tracking-wide ${(tp.paused ? "En pausa" : segLabel(tp.seg)).length > 9 ? "text-lg" : "text-2xl"}`}>{tp.paused ? "En pausa" : segLabel(tp.seg)}</span>
+                    <span className={`block font-extrabold uppercase tracking-wide ${t(tp.paused ? "En pausa" : segLabel(tp.seg)).length > 9 ? "text-lg" : "text-2xl"}`}>{t(tp.paused ? "En pausa" : segLabel(tp.seg))}</span>
                     <span className="block text-sm font-bold text-white/80">{task.step}{tp.seg.kind === "work" ? `: ${task.line}` : ""}</span>
                   </span>
                 </span>
@@ -1073,21 +1089,21 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
           </section>
 
           <div className="land:pt-1">
-            <h1 className="mt-3 land:mt-0 text-[clamp(26px,7.6vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink line-clamp-2 text-balance">{ex.name}</h1>
-            {!showBrief && ex.tech?.cues[0] && <p className="mt-0.5 text-[16px] leading-snug font-semibold text-body text-pretty">Clave: {ex.tech.cues[0].replace(/^./, (c) => c.toLowerCase())}</p>}
+            <h1 className="mt-3 land:mt-0 text-[clamp(26px,7.6vw,34px)] leading-[1.1] font-extrabold tracking-tight text-ink line-clamp-2 text-balance">{nm(ex)}</h1>
+            {!showBrief && ex.tech?.cues[0] && <p className="mt-0.5 text-[16px] leading-snug font-semibold text-body text-pretty">{t("Clave:")} {ex.tech.cues[0].replace(/^./, (c) => c.toLowerCase())}</p>}
 
             <div data-tour="sets" className="mt-3">
             {showBrief ? (
-              <ExerciseBrief chips={planChips({ sets: here.length, lo: ex.cfg.lo, hi: ex.cfg.hi, unit: ex.cfg.unit, reps: num(here[0]?.reps), kg: num(here[0]?.kg), bw: ex.bw, perSide: !!ex.cfg.perSide, rest: ex.cfg.rest, calibration: isCal })}
-                muscles={plainMuscles(ex.tech?.mus, ex.muscle)} steps={briefSteps(ex.tech?.how)} mistake={ex.tech?.err[0] ?? null} tempo={tempoCue} firstTime={firstTime} onHow={() => setSheet("tech")}
+              <ExerciseBrief chips={planChips({ sets: here.length, lo: ex.cfg.lo, hi: ex.cfg.hi, unit: ex.cfg.unit, reps: num(here[0]?.reps), kg: num(here[0]?.kg), bw: ex.bw, perSide: !!ex.cfg.perSide, rest: ex.cfg.rest, calibration: isCal }, L)}
+                muscles={plainMuscles(ex.tech?.mus, ex.muscle, L)} steps={briefSteps(ex.tech?.how)} mistake={ex.tech?.err[0] ?? null} tempo={tempoCue} firstTime={firstTime} onHow={() => setSheet("tech")}
                 extra={<>
                   {/* Primera vez con este ejercicio y con peso: el número es una sugerencia, no una orden. */}
                   {!ex.bw && !ex.cfg.unit && !ex.lastSets?.length && num(here[0]?.kg) > 0 && (
-                    <p className="mt-2 rounded-2xl bg-banana-soft/70 p-3 text-[14px] leading-snug text-ink"><span className="font-extrabold">¿No sabes qué peso usar?</span> El peso es una sugerencia. Usa uno con el que puedas hacer {ex.cfg.hi} con buena técnica; si no tienes ese, usa el más cercano y ajústalo en la serie.</p>
+                    <p className="mt-2 rounded-2xl bg-banana-soft/70 p-3 text-[14px] leading-snug text-ink"><span className="font-extrabold">{t("¿No sabes qué peso usar?")}</span> {t("El peso es una sugerencia. Usa uno con el que puedas hacer {n} con buena técnica; si no tienes ese, usa el más cercano y ajústalo en la serie.", { n: ex.cfg.hi })}</p>
                   )}
                   {firstTime && canSpeak() && (
                     <button type="button" onClick={() => setPrefs({ voice: !prefs.voice })} aria-pressed={prefs.voice} className={`mt-2 w-full chip h-11 justify-center text-sm ${prefs.voice ? "bg-ink text-white" : "bg-white border border-line text-ink"}`}>
-                      {prefs.voice ? <Check weight="bold" className="size-4" /> : <SpeakerHigh weight="bold" className="size-4" />}{prefs.voice ? "Coach de voz activado" : "Activar coach de voz"}
+                      {prefs.voice ? <Check weight="bold" className="size-4" /> : <SpeakerHigh weight="bold" className="size-4" />}{t(prefs.voice ? "Coach de voz activado" : "Activar coach de voz")}
                     </button>
                   )}
                 </>} />
@@ -1106,7 +1122,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                     {timerOn && tp ? (
                       <TimedBar view={tp} size="sm" {...timerCtl} />
                     ) : (
-                      <button onClick={startTimed} className="pressable w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-peel text-white font-extrabold"><Play weight="fill" className="size-4" />Iniciar {num(here[activeSet]?.reps) || ex.cfg.hi} s{sideWord}</button>
+                      <button onClick={startTimed} className="pressable w-full h-12 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-peel text-white font-extrabold"><Play weight="fill" className="size-4" />{t("Iniciar {n} s", { n: num(here[activeSet]?.reps) || ex.cfg.hi })}{sideWord}</button>
                     )}
                   </div>
                 ) : undefined} />
@@ -1118,27 +1134,27 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
             <div className="mt-3 flex items-center gap-3 rounded-[1.5rem] bg-banana-soft/70 p-3">
               <Monkey className="size-7 shrink-0 text-banana-ink" />
               <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-ink">Calienta primero</p>
-                <p className="text-sm text-body">{warmupText(warm, ex.barbell)} No se anotan.</p>
+                <p className="font-extrabold text-ink">{t("Calienta primero")}</p>
+                <p className="text-sm text-body">{warmupText(warm, ex.barbell, L)} {t("No se anotan.")}</p>
               </div>
-              <button onClick={() => setWarmDone(true)} className="tap pressable shrink-0 h-12 px-4 rounded-full bg-ink text-white text-sm font-bold">Ya calenté</button>
+              <button onClick={() => setWarmDone(true)} className="tap pressable shrink-0 h-12 px-4 rounded-full bg-ink text-white text-sm font-bold">{t("Ya calenté")}</button>
             </div>
           )}
 
           {/* Lo secundario a un toque: cambiar el ejercicio o ver más opciones. */}
           <div className="mt-4 grid grid-cols-2 gap-2">
-            {alts > 0 && <button data-tour="swap" onClick={() => { setSwapAsk(null); setSheet("swap"); }} className="chip justify-center h-12 px-3 bg-white border border-line text-ink text-[15px]"><ArrowsLeftRight weight="bold" className="size-5" />Cambiar<span className="sr-only"> ejercicio</span></button>}
+            {alts > 0 && <button data-tour="swap" onClick={() => { setSwapAsk(null); setSheet("swap"); }} className="chip justify-center h-12 px-3 bg-white border border-line text-ink text-[15px]"><ArrowsLeftRight weight="bold" className="size-5" />{t("Cambiar")}<span className="sr-only"> {t("ejercicio")}</span></button>}
             <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-controls="mas-opciones" className={`chip justify-center h-12 px-3 bg-white border border-line text-ink text-[15px] ${alts > 0 ? "" : "col-span-2"}`}>
-              <DotsThree weight="bold" className="size-5" />Más opciones<CaretDown weight="bold" className={`size-4 transition-transform duration-(--dur-base) ease-out ${more ? "rotate-180" : ""}`} />
+              <DotsThree weight="bold" className="size-5" />{t("Más opciones")}<CaretDown weight="bold" className={`size-4 transition-transform duration-(--dur-base) ease-out ${more ? "rotate-180" : ""}`} />
             </button>
           </div>
 
           {more && (
             <div id="mas-opciones" className="mt-3 space-y-3 rounded-[1.5rem] bg-white border border-line/70 p-4 animate-enter">
               <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-muted">
-                <span>{cap(ex.muscle.toLowerCase())}</span>
+                <span>{cap(t(ex.muscle).toLowerCase())}</span>
                 <span className={`inline-flex items-center gap-1 rounded-full bg-cream px-2.5 h-7 text-[13px] font-bold ${badgeCls}`}><BadgeIcon weight="bold" className="size-3.5" />{badge}</span>
-                {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-4" aria-hidden />Sin XP</span> : <span className="inline-flex items-center gap-1 tabular-nums"><BananaCoin className="size-4 text-banana-ink" />{xpNow.xp} XP hoy</span>}
+                {noXp ? <span className="inline-flex items-center gap-1"><Repeat weight="bold" className="size-4" aria-hidden />{t("Sin XP")}</span> : <span className="inline-flex items-center gap-1 tabular-nums"><BananaCoin className="size-4 text-banana-ink" />{t("{xp} XP hoy", { xp: xpNow.xp })}</span>}
                 {combo >= 2 && <span className="inline-flex items-center gap-1 text-ember-ink"><Lightning weight="fill" className="size-4" aria-hidden />Combo x{combo}</span>}
               </p>
               <p className="text-[15px] leading-snug text-body">{ex.rx.note}</p>
@@ -1156,16 +1172,16 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                 return (
                   <p className="flex items-start gap-2.5 text-sm text-body">
                     <BananaFlame weight="duotone" className="size-5 shrink-0 text-ember-ink" />
-                    <span>Completo, este entreno vale <span className="font-extrabold text-ink tabular-nums">+{fin.xp} XP</span> (bono de +{fin.bonus} por terminarlo) y {gam.todayDone ? `tu racha de ${streakNext} ${streakNext === 1 ? "día" : "días"} ya está a salvo hoy` : `lleva tu racha a ${streakNext} ${streakNext === 1 ? "día" : "días"}`}.</span>
+                    <span>{t("Completo, este entreno vale")} <span className="font-extrabold text-ink tabular-nums">+{fin.xp} XP</span> {t(gam.todayDone ? "(bono de +{bonus} por terminarlo) y tu racha de {days} ya está a salvo hoy." : "(bono de +{bonus} por terminarlo) y lleva tu racha a {days}.", { bonus: fin.bonus, days: t(streakNext === 1 ? "{n} día" : "{n} días", { n: streakNext }) })}</span>
                   </p>
                 );
               })()}
-              {goal && <LevelMeter idx={goal.level.idx} progress={goal.level.progress} text={levelGoalText(goal, setWord)} className="px-1" />}
+              {goal && <LevelMeter idx={goal.level.idx} progress={goal.level.progress} text={levelGoalText(goal, setWord, L)} className="px-1" />}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-bold text-muted">Cómo ver las series</span>
-                <div role="radiogroup" aria-label="Vista" className="inline-flex rounded-full bg-cream border border-line p-0.5">
+                <span className="text-sm font-bold text-muted">{t("Cómo ver las series")}</span>
+                <div role="radiogroup" aria-label={t("Vista")} className="inline-flex rounded-full bg-cream border border-line p-0.5">
                   {(["focus", "list"] as const).map((v) => (
-                    <button key={v} role="radio" aria-checked={prefs.view === v} onClick={() => setPrefs({ view: v })} className={`tap pressable h-11 px-4 whitespace-nowrap rounded-full text-sm font-bold ${prefs.view === v ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>{v === "focus" ? "Una a la vez" : "Todas"}</button>
+                    <button key={v} role="radio" aria-checked={prefs.view === v} onClick={() => setPrefs({ view: v })} className={`tap pressable h-11 px-4 whitespace-nowrap rounded-full text-sm font-bold ${prefs.view === v ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>{t(v === "focus" ? "Una a la vez" : "Todas")}</button>
                   ))}
                 </div>
               </div>
@@ -1176,7 +1192,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
           </div>
           {!focus && <p className="mt-3 text-center text-xs text-muted">{strengthCue(voice, { rest: ex.cfg.rest, unit: ex.cfg.unit })}</p>}
           {focus && !ex.cfg.unit && <p className="mt-3 text-center text-xs text-muted">{strengthCue(voice)}</p>}
-          {nextEx === null && cardio && <p className="mt-3 card p-4 flex items-center gap-2.5 text-sm font-semibold text-ink"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 text-banana-ink" />Al final: {cardio}</p>}
+          {nextEx === null && cardio && <p className="mt-3 card p-4 flex items-center gap-2.5 text-sm font-semibold text-ink"><PersonSimpleWalk weight="duotone" className="size-5 shrink-0 text-banana-ink" />{t("Al final:")} {cardio}</p>}
         </div>
       </div>
 
@@ -1184,25 +1200,25 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
         <div className="mx-auto max-w-xl">
           {showBrief ? (
             <button data-tour="done" onClick={startEx} className="pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)]">
-              <Play weight="fill" className="size-6" />{timed && !missingKg ? `Empezar: ${num(here[0]?.reps) || ex.cfg.hi} s${sideWord}` : `Empezar serie 1 de ${here.length}`}
+              <Play weight="fill" className="size-6" />{timed && !missingKg ? `${t("Empezar: {n} s", { n: num(here[0]?.reps) || ex.cfg.hi })}${sideWord}` : t("Empezar serie 1 de {n}", { n: here.length })}
             </button>
           ) : focus && activeSet >= 0 ? (
             timed ? (
               timerOn && tp ? (
                 <TimedBar view={tp} {...timerCtl} />
               ) : (
-                <button data-tour="done" onClick={startTimed} disabled={missingKg} className="pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] disabled:bg-line disabled:text-muted disabled:shadow-none"><Play weight="fill" className="size-6" />{missingKg ? "Elige un peso" : `Iniciar ${num(here[activeSet]?.reps) || ex.cfg.hi} s${sideWord}`}</button>
+                <button data-tour="done" onClick={startTimed} disabled={missingKg} className="pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] disabled:bg-line disabled:text-muted disabled:shadow-none"><Play weight="fill" className="size-6" />{missingKg ? t("Elige un peso") : `${t("Iniciar {n} s", { n: num(here[activeSet]?.reps) || ex.cfg.hi })}${sideWord}`}</button>
               )
             ) : (
               <button data-tour="done" onClick={() => complete(activeSet)} disabled={missingKg} className="relative pressable w-full h-[72px] land:h-14 inline-flex items-center justify-center gap-2.5 rounded-[1.75rem] bg-banana text-ink text-xl font-extrabold shadow-[0_6px_16px_-8px_rgb(138_98_0/.5)] hover:brightness-95 disabled:bg-line disabled:text-muted disabled:shadow-none disabled:hover:brightness-100" aria-describedby="serie-actual">
                 {pop && pop.ex === idx && <XpPop k={pop.k} xp={pop.xp} />}
-                {missingKg ? "Elige un peso para marcar" : <><Check weight="bold" className="size-7" />Terminé la serie</>}
+                {missingKg ? t("Elige un peso para marcar") : <><Check weight="bold" className="size-7" />{t("Terminé la serie")}</>}
               </button>
             )
           ) : nextEx && (allDoneHere || !focus) ? (
-            <button onClick={() => setIdx(nextEx.ex)} className={`w-full h-14 text-base ${allDoneHere ? "btn-primary" : "btn-ghost"}`}>Siguiente: <span className="truncate">{exercises[nextEx.ex].name}</span> <CaretRight weight="bold" className="size-5 shrink-0" /></button>
+            <button onClick={() => setIdx(nextEx.ex)} className={`w-full h-14 text-base ${allDoneHere ? "btn-primary" : "btn-ghost"}`}>{t("Siguiente:")} <span className="truncate">{nm(exercises[nextEx.ex])}</span> <CaretRight weight="bold" className="size-5 shrink-0" /></button>
           ) : (
-            <button onClick={finishNow} className="btn-banana w-full h-14 text-base"><FlagCheckered weight="duotone" className="size-5" />Terminar entreno</button>
+            <button onClick={finishNow} className="btn-banana w-full h-14 text-base"><FlagCheckered weight="duotone" className="size-5" />{t("Terminar entreno")}</button>
           )}
         </div>
       </footer>
@@ -1213,7 +1229,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       {guidedNow && rest && <GuidedRest left={restLeft} total={rest.total} next={guidedNext} onSkip={cancelRest} extra={cardLine} />}
       {!guidedNow && restP.mounted && shownRest && shownInfo && (
         <RestScreen left={rest ? restLeft : 0} total={shownRest.total} info={shownInfo} closing={restP.closing}
-          minimizeLabel={ex.bw && !ex.load ? "Ajustar la serie" : "Ajustar pesos"}
+          minimizeLabel={t(ex.bw && !ex.load ? "Ajustar la serie" : "Ajustar pesos")}
           onEffort={(e) => restTarget.current && setEffort(restTarget.current.ex, restTarget.current.si, e)}
           onAdjust={(d) => setRest((r) => r && (d > 0 ? { end: r.end + d * 1000, total: r.total + d } : { ...r, end: r.end + d * 1000 }))}
           onSkip={cancelRest}
@@ -1230,43 +1246,43 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
       {!guidedNow && rest && !restOpen && <RestPill left={restLeft} onOpen={() => setRestOpen(true)} onSkip={cancelRest} />}
 
       {/* Hojas */}
-      <BottomSheet open={!!sheet && sheet !== "exit"} onClose={() => { setSheet(null); setSwapAsk(null); }} label={shownSheet === "tech" && !ex.tech ? "Técnica" : undefined} className="max-h-[88dvh] overflow-y-auto">
+      <BottomSheet open={!!sheet && sheet !== "exit"} onClose={() => { setSheet(null); setSwapAsk(null); }} label={shownSheet === "tech" && !ex.tech ? t("Técnica") : undefined} className="max-h-[88dvh] overflow-y-auto">
         <div className="px-5">
           {shownSheet === "tech" && !ex.tech && (
             <div className="space-y-4">
-              <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
-              <p className="text-muted">Movimiento controlado, rango completo y sin rebotes. Si duele (no es esfuerzo, es dolor), para y cámbialo.</p>
-              <button onClick={() => setSheet(null)} className="btn-primary w-full">Entendido</button>
+              <SheetTitle className="text-2xl font-extrabold text-ink">{nm(ex)}</SheetTitle>
+              <p className="text-muted">{t("Movimiento controlado, rango completo y sin rebotes. Si duele (no es esfuerzo, es dolor), para y cámbialo.")}</p>
+              <button onClick={() => setSheet(null)} className="btn-primary w-full">{t("Entendido")}</button>
             </div>
           )}
           {shownSheet === "tech" && ex.tech && (
             <div className="space-y-4">
               {(() => {
                 const motion = ex.tech.anim ? <div className="rounded-[1.5rem] bg-banana/90 px-4 pt-6 pb-2"><ExerciseMotion anim={ex.tech.anim} mus={ex.tech.mus} cues={ex.tech.cues.length ? ex.tech.cues : undefined} className="mx-auto h-64 sm:h-80 max-w-[360px]" /></div> : null;
-                return ex.art ? <CoachArtFill src={ex.art} alt={`Así se hace: ${ex.name}`} sizes="360px" className="object-contain" fallback={motion} wrap="mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-[1.5rem] bg-[#F3E8FF]" />
+                return ex.art ? <CoachArtFill src={ex.art} alt={t("Así se hace: {name}", { name: nm(ex) })} sizes="360px" className="object-contain" fallback={motion} wrap="mx-auto aspect-square w-full max-w-[360px] overflow-hidden rounded-[1.5rem] bg-[#F3E8FF]" />
                   : motion;
               })()}
-              <SheetTitle className="text-2xl font-extrabold text-ink">{ex.name}</SheetTitle>
+              <SheetTitle className="text-2xl font-extrabold text-ink">{nm(ex)}</SheetTitle>
               {ex.tech.mus && <p className="text-sm text-muted">{ex.tech.mus}</p>}
               {ex.tech.how.length > 0 && <ol className="space-y-2">{ex.tech.how.map((h, i) => <li key={i} className="flex gap-2.5"><span className="grid place-items-center size-6 shrink-0 rounded-full bg-banana text-xs font-bold text-ink">{i + 1}</span><span>{h}</span></li>)}</ol>}
               {ex.tech.cues.length > 0 && <div className="flex flex-wrap gap-2">{ex.tech.cues.map((c) => <span key={c} className="chip bg-peel/10 text-peel"><Check weight="bold" className="size-3.5" />{c}</span>)}</div>}
               {ex.tech.err.length > 0 && <div className="space-y-1">{ex.tech.err.map((c) => <p key={c} className="flex gap-1.5 text-sm text-ember-ink"><X weight="bold" className="mt-0.5 size-4 shrink-0" />{c}</p>)}</div>}
               {ex.tech.mono && <p className="flex gap-2.5 rounded-2xl bg-white p-3 text-sm"><Monkey className="size-6 shrink-0 text-banana-ink" /><span><RichTip text={coach ? ex.tech.mono.replaceAll("Coach Banana", coach.name) : ex.tech.mono} /></span></p>}
-              {canSpeak() && ex.tech.how.length > 0 && <button onClick={() => say([ex.name, ...ex.tech!.how].join(". "), { interrupt: true })} className="btn-ghost w-full"><SpeakerHigh weight="bold" className="size-5" />Escuchar los pasos</button>}
-              <button onClick={() => setSheet(null)} className="btn-primary w-full">Entendido</button>
+              {canSpeak() && ex.tech.how.length > 0 && <button onClick={() => say([nm(ex), ...ex.tech!.how].join(". "), { interrupt: true })} className="btn-ghost w-full"><SpeakerHigh weight="bold" className="size-5" />{t("Escuchar los pasos")}</button>}
+              <button onClick={() => setSheet(null)} className="btn-primary w-full">{t("Entendido")}</button>
             </div>
           )}
           {shownSheet === "swap" && (
             <div>
-              <SheetTitle className="text-2xl font-extrabold text-ink">Cambiar ejercicio</SheetTitle>
-              <p className="text-sm text-muted">¿Máquina ocupada o sin equipo? Mismo patrón, mismas series.</p>
+              <SheetTitle className="text-2xl font-extrabold text-ink">{t("Cambiar ejercicio")}</SheetTitle>
+              <p className="text-sm text-muted">{t("¿Máquina ocupada o sin equipo? Mismo patrón, mismas series.")}</p>
               {swapAsk != null ? (
                 <div className="mt-4 rounded-[1.5rem] bg-ember/10 p-4" role="alert">
-                  <p className="font-extrabold text-ink">¿Descartar {here.filter((r) => r.done).length === 1 ? "la serie hecha" : `las ${here.filter((r) => r.done).length} series hechas`}?</p>
-                  <p className="mt-1 text-sm text-body">Ya registraste series de {ex.name}. Si cambias a {options[idx][swapAsk].name}, se borran y empiezas de cero con el nuevo ejercicio.</p>
+                  <p className="font-extrabold text-ink">{t(here.filter((r) => r.done).length === 1 ? "¿Descartar la serie hecha?" : "¿Descartar las {n} series hechas?", { n: here.filter((r) => r.done).length })}</p>
+                  <p className="mt-1 text-sm text-body">{t("Ya registraste series de {from}. Si cambias a {to}, se borran y empiezas de cero con el nuevo ejercicio.", { from: nm(ex), to: nm(options[idx][swapAsk]) })}</p>
                   <div className="mt-3 flex gap-2">
-                    <button type="button" onClick={() => setSwapAsk(null)} data-autofocus className="btn-ghost flex-1 h-12">Mejor no</button>
-                    <button type="button" onClick={() => swap(swapAsk, true)} className="btn-primary flex-1 h-12">Cambiar igual</button>
+                    <button type="button" onClick={() => setSwapAsk(null)} data-autofocus className="btn-ghost flex-1 h-12">{t("Mejor no")}</button>
+                    <button type="button" onClick={() => swap(swapAsk, true)} className="btn-primary flex-1 h-12">{t("Cambiar igual")}</button>
                   </div>
                 </div>
               ) : (
@@ -1274,12 +1290,12 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
                   {options[idx].map((o, i) => {
                     const on = choice[idx] === i;
                     const start = o.rx.kg == null && !o.bw ? loadsFor(o.load)?.start : undefined;
-                    const meta = [cap(o.muscle), i === 0 ? "plan original" : "", o.rx.kg != null ? `sugerido ${kgFmt(o.rx.kg)} kg` : start ? `para empezar ${kgFmt(start)} kg` : ""].filter(Boolean).join(", ");
+                    const meta = [cap(t(o.muscle)), i === 0 ? t("plan original") : "", o.rx.kg != null ? t("sugerido {w}", { w: wFmt(o.rx.kg, L) }) : start ? t("para empezar {w}", { w: wFmt(start, L) }) : ""].filter(Boolean).join(", ");
                     return (
                       <button key={o.id} onClick={() => swap(i)} aria-current={on || undefined} className={`pressable w-full flex items-center gap-3 rounded-2xl border p-3 text-left ${on ? "bg-banana border-banana" : "bg-white border-line hover:border-ink"}`}>
                         <span className="grid place-items-center size-12 shrink-0 rounded-xl bg-cream text-ink/80">{o.barbell ? <Barbell weight="duotone" className="size-6" /> : o.bw ? <PersonArmsSpread weight="duotone" className="size-6" /> : <BrandIcon name="gorilla" className="size-6" />}</span>
-                        <span className="flex-1 min-w-0"><span className="block font-bold text-ink">{o.name}</span><span className={`flex flex-wrap items-center gap-x-1 text-xs ${on ? "text-ink/80" : "text-muted"}`}><span>{meta}</span>{o.id.startsWith("ds:") && <span className="inline-flex items-center gap-1"><Books weight="duotone" className="size-3.5" />De la biblioteca</span>}</span></span>
-                        {on ? <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-ink"><Check weight="bold" className="size-5" />Actual</span> : null}
+                        <span className="flex-1 min-w-0"><span className="block font-bold text-ink">{nm(o)}</span><span className={`flex flex-wrap items-center gap-x-1 text-xs ${on ? "text-ink/80" : "text-muted"}`}><span>{meta}</span>{o.id.startsWith("ds:") && <span className="inline-flex items-center gap-1"><Books weight="duotone" className="size-3.5" />{t("De la biblioteca")}</span>}</span></span>
+                        {on ? <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-ink"><Check weight="bold" className="size-5" />{t("Actual")}</span> : null}
                       </button>
                     );
                   })}
@@ -1289,24 +1305,24 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
           )}
           {shownSheet === "sound" && (
             <div>
-              <SheetTitle className="text-2xl font-extrabold text-ink">Sonido y voz</SheetTitle>
-              <p className="text-sm text-muted">La pantalla se mantiene encendida mientras entrenas.</p>
+              <SheetTitle className="text-2xl font-extrabold text-ink">{t("Sonido y voz")}</SheetTitle>
+              <p className="text-sm text-muted">{t("La pantalla se mantiene encendida mientras entrenas.")}</p>
               <div className="mt-4 space-y-2">
-                <Switch on={prefs.sound} onChange={(v) => { setPrefs({ sound: v }); if (v) { unlockAudio(); sfx.done(); } }} title="Pitidos y vibración" body="Cuenta 3, 2, 1 y aviso al terminar el descanso." />
-                <Switch on={prefs.voice && canSpeak()} disabled={!canSpeak()} onChange={(v) => { setPrefs({ voice: v }); if (v) say("Listo. Te voy guiando.", { interrupt: true }); else hush(); }}
-                  title="Coach de voz" body={canSpeak() ? "Te dice el ejercicio, la meta, el descanso y la cuenta regresiva." : "Este navegador no tiene voz. Prueba con Chrome o Safari."} />
+                <Switch on={prefs.sound} onChange={(v) => { setPrefs({ sound: v }); if (v) { unlockAudio(); sfx.done(); } }} title={t("Pitidos y vibración")} body={t("Cuenta 3, 2, 1 y aviso al terminar el descanso.")} />
+                <Switch on={prefs.voice && canSpeak()} disabled={!canSpeak()} onChange={(v) => { setPrefs({ voice: v }); if (v) say(t("Listo. Te voy guiando."), { interrupt: true }); else hush(); }}
+                  title={t("Coach de voz")} body={t(canSpeak() ? "Te dice el ejercicio, la meta, el descanso y la cuenta regresiva." : "Este navegador no tiene voz. Prueba con Chrome o Safari.")} />
               </div>
-              <button onClick={() => setSheet(null)} className="btn-primary w-full mt-5">Listo</button>
+              <button onClick={() => setSheet(null)} className="btn-primary w-full mt-5">{t("Listo")}</button>
             </div>
           )}
         </div>
       </BottomSheet>
-      <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={finishNow} goal={goal} keeps={firstSession}
+      <ExitSheet open={sheet === "exit"} onClose={() => setSheet(null)} doneSets={doneSets} totalSets={totalSets} unit={setWord} onFinish={finishNow} goal={goal} keeps={firstSession} L={L}
         bonus={!noXp && !plan ? FULL_BONUS : 0} onExpress={express ? applyExpress : undefined} />
 
       {/* El aviso flotante nunca tapa el descanso (ahí está la pregunta de esfuerzo) ni una hoja abierta */}
       <Toast side="top">{toast && !(rest && restOpen) && !sheet && <>{toast.kind === "pr" ? <BananaTrophy weight="fill" className="size-5 shrink-0 text-banana" /> : toast.kind === "level" ? <LevelIcon idx={toast.idx ?? 1} className="size-5 shrink-0 text-banana!" /> : toast.kind === "express" ? <Lightning weight="fill" className="size-5 shrink-0 text-banana" /> : <ArrowsLeftRight weight="bold" className="size-5 shrink-0 text-banana" />}{toast.t}</>}</Toast>
-      {levelUp && <LevelUpBurst idx={levelUp.idx} name={levelUp.n} k={levelUp.k} />}
+      {levelUp && <LevelUpBurst idx={levelUp.idx} name={t(levelUp.n)} k={levelUp.k} />}
       <p aria-live="polite" className="sr-only">{live}</p>
 
     </Shell>
@@ -1317,37 +1333,38 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
  * Salir a medias: muestra lo que queda en la mesa sin culpa, con seguir como acción principal.
  * "Salir sin guardar" no borra nada: lo hecho queda en el teléfono por hoy, por si vuelves.
  */
-function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish, goal, bonus = 0, onExpress, keeps = false }: {
-  open: boolean; onClose: () => void; doneSets: number; totalSets: number; unit: string; onFinish: () => void;
+function ExitSheet({ open, onClose, doneSets, totalSets, unit, onFinish, goal, bonus = 0, onExpress, keeps = false, L }: {
+  open: boolean; onClose: () => void; doneSets: number; totalSets: number; unit: string; onFinish: () => void; L: Lang;
   goal?: LevelGoal | null; bonus?: number; onExpress?: () => void;
   /** Primer entreno (#246): salir guarda lo hecho como su primer entreno. */
   keeps?: boolean;
 }) {
+  const { t } = L;
   const left = Math.max(0, totalSets - doneSets);
   const one = unit === "series" ? "serie" : "intervalo";
-  const word = (n: number) => (n === 1 ? one : unit);
+  const word = (n: number) => t(n === 1 ? one : unit);
   const levelUp = goal?.level.next && goal.sets != null && goal.sets <= left ? goal.level.next.n : null;
   // Lo concreto que falta: el bono, el nivel o ambos
   const table = left > 0 && (bonus > 0 || levelUp)
-    ? `Te ${left === 1 ? "falta" : "faltan"} ${left} ${word(left)} para ${[bonus > 0 ? `el bono de +${bonus} XP` : "", levelUp ? `subir a ${levelUp}` : ""].filter(Boolean).join(" y ")}.`
+    ? t(left === 1 ? "Te falta {n} {unit} para {what}." : "Te faltan {n} {unit} para {what}.", { n: left, unit: word(left), what: [bonus > 0 ? t("el bono de +{bonus} XP", { bonus }) : "", levelUp ? t("subir a {level}", { level: t(levelUp) }) : ""].filter(Boolean).join(t(" y ")) })
     : null;
   const keep = goal?.sets != null && goal.sets < left && goal.sets <= 4 ? goal.sets : left > 0 && left <= 4 ? left : null;
   return (
     <BottomSheet open={open} onClose={onClose}>
       <div className="px-5 space-y-3">
-        <SheetTitle className="text-2xl font-extrabold text-ink">¿Salir del entreno?</SheetTitle>
-        <p className="text-body">Llevas {doneSets} de {totalSets} {unit}.{table ? ` ${table}` : ""}{doneSets > 0 ? " Lo que hiciste ya cuenta para tu racha." : ""}</p>
-        {keep != null && levelUp && keep < left && <p className="flex items-center gap-2 rounded-2xl bg-banana-soft/70 p-3 text-sm font-semibold text-banana-ink"><LevelIcon idx={goal!.level.idx + 1} className="size-5 shrink-0" />Con {keep} {word(keep)} más subes a {levelUp}.</p>}
-        <button onClick={onClose} data-autofocus className="btn-primary w-full h-13">{keep != null ? `Seguir ${keep} ${word(keep)} más` : "Seguir entrenando"}</button>
-        {doneSets > 0 && <button onClick={onFinish} className="btn-ghost w-full h-13">Guardar lo que hice</button>}
+        <SheetTitle className="text-2xl font-extrabold text-ink">{t("¿Salir del entreno?")}</SheetTitle>
+        <p className="text-body">{t("Llevas {done} de {total} {unit}.", { done: doneSets, total: totalSets, unit: t(unit) })}{table ? ` ${table}` : ""}{doneSets > 0 ? t(" Lo que hiciste ya cuenta para tu racha.") : ""}</p>
+        {keep != null && levelUp && keep < left && <p className="flex items-center gap-2 rounded-2xl bg-banana-soft/70 p-3 text-sm font-semibold text-banana-ink"><LevelIcon idx={goal!.level.idx + 1} className="size-5 shrink-0" />{t("Con {n} {unit} más subes a {level}.", { n: keep, unit: word(keep), level: t(levelUp) })}</p>}
+        <button onClick={onClose} data-autofocus className="btn-primary w-full h-13">{keep != null ? t("Seguir {n} {unit} más", { n: keep, unit: word(keep) }) : t("Seguir entrenando")}</button>
+        {doneSets > 0 && <button onClick={onFinish} className="btn-ghost w-full h-13">{t("Guardar lo que hice")}</button>}
         {onExpress && (
           <button onClick={onExpress} className="pressable w-full flex items-center gap-3 rounded-2xl bg-white border border-line p-3.5 text-left hover:border-ink/40">
             <Lightning weight="duotone" className="size-6 shrink-0 text-ember-ink" />
-            <span className="min-w-0"><span className="block font-bold text-ink">Modo exprés</span><span className="block text-sm text-muted">¿Sin tiempo? Termina ahora con 1 serie por ejercicio que falta. Cada serie suma igual{bonus > 0 ? ", sin el bono de completo" : ""}.</span></span>
+            <span className="min-w-0"><span className="block font-bold text-ink">{t("Modo exprés")}</span><span className="block text-sm text-muted">{t(bonus > 0 ? "¿Sin tiempo? Termina ahora con 1 serie por ejercicio que falta. Cada serie suma igual, sin el bono de completo." : "¿Sin tiempo? Termina ahora con 1 serie por ejercicio que falta. Cada serie suma igual.")}</span></span>
           </button>
         )}
-        <Link href="/app" className="btn w-full h-13 text-muted">{keeps && doneSets > 0 ? "Salir" : "Salir sin guardar"}</Link>
-        {doneSets > 0 && <p className="-mt-1 text-center text-xs text-muted">{keeps ? "Lo que hiciste queda guardado como tu primer entreno." : "Lo que llevas queda en este teléfono por hoy, por si vuelves."}</p>}
+        <Link href="/app" className="btn w-full h-13 text-muted">{t(keeps && doneSets > 0 ? "Salir" : "Salir sin guardar")}</Link>
+        {doneSets > 0 && <p className="-mt-1 text-center text-xs text-muted">{t(keeps ? "Lo que hiciste queda guardado como tu primer entreno." : "Lo que llevas queda en este teléfono por hoy, por si vuelves.")}</p>}
       </div>
     </BottomSheet>
   );

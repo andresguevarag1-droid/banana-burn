@@ -7,10 +7,12 @@ import { PushWhenReady } from "@/components/install/push-when-ready";
 import { useInstall } from "@/components/install/use-install";
 import { pushNeedsInstall } from "@/lib/install-env";
 import { RecapWeekPlan, type WeekPlan } from "./recap-next-day";
+import { useLang } from "./use-lang";
 
 /** `week`: el plan de la semana (#288), con la meta y los próximos días (sin programa; el programa muestra su semana en Hoy). */
 export function RecapNext({ week = null }: { week?: WeekPlan | null }) {
   const { env } = useInstall();
+  const { t } = useLang();
   const install = !!env && env !== "standalone" && env !== "desktop" && (pushNeedsInstall(env) || env === "android-inapp");
   return (
     <div className="mt-3 space-y-3 text-left">
@@ -18,7 +20,7 @@ export function RecapNext({ week = null }: { week?: WeekPlan | null }) {
       {install ? (
         <Link href="/app/instalar" className="card flex items-center gap-3 p-4">
           <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-ink text-banana"><DeviceMobile weight="duotone" className="size-6" /></span>
-          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">Que no se te pase el próximo</span><span className="block text-sm text-muted">Pon Banana Burn en tu pantalla de inicio y te avisamos el día que toca.</span></span>
+          <span className="min-w-0 flex-1"><span className="block font-extrabold text-ink">{t("Que no se te pase el próximo")}</span><span className="block text-sm text-muted">{t("Pon Banana Burn en tu pantalla de inicio y te avisamos el día que toca.")}</span></span>
           <CaretRight weight="bold" className="size-5 shrink-0 text-faint" />
         </Link>
       ) : <PushWhenReady trained />}

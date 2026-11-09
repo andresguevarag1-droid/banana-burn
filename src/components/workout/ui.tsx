@@ -2,23 +2,25 @@
 import { Banana, LevelIcon, Minus, Plus } from "@/components/icons";
 import { clock } from "./logic";
 import css from "./workout.module.css";
+import { useLang } from "./use-lang";
 
 /** Stepper grande para usar con la mano sudada: botones de 56 px y número editable al centro. */
 export function BigStepper({ label, unit, value, placeholder, inputMode, onMinus, onPlus, onChange, tone = "light" }: {
   label: string; unit: string; value: string; placeholder?: string; inputMode: "decimal" | "numeric"; onMinus: () => void; onPlus: () => void; onChange: (v: string) => void; tone?: "light" | "dark";
 }) {
+  const { t } = useLang();
   const btn = tone === "dark" ? "bg-white/10 text-white hover:bg-white/20" : "bg-white text-ink border border-line hover:border-ink/30";
   return (
     <div className="flex-1 min-w-0">
       <div className={`flex items-center gap-1.5 rounded-[1.25rem] p-1.5 ${tone === "dark" ? "bg-white/5" : "bg-cream"}`}>
-        <button type="button" onClick={onMinus} className={`pressable grid place-items-center size-12 shrink-0 rounded-2xl ${btn}`} aria-label={`Menos ${label}`}><Minus weight="bold" className="size-5" /></button>
+        <button type="button" onClick={onMinus} className={`pressable grid place-items-center size-12 shrink-0 rounded-2xl ${btn}`} aria-label={t("Menos {label}", { label })}><Minus weight="bold" className="size-5" /></button>
         <label className="flex-1 min-w-0 text-center">
           <span className="sr-only">{label}</span>
           <input value={value} onChange={(e) => onChange(e.target.value)} inputMode={inputMode} placeholder={placeholder} onFocus={(e) => e.target.select()}
             className={`w-full min-w-0 bg-transparent text-center text-[28px] leading-none font-extrabold outline-none tabular-nums rounded-lg focus-visible:ring-4 focus-visible:ring-banana/60 ${tone === "dark" ? "text-white placeholder:text-white/40" : "text-ink placeholder:text-faint"}`} />
           <span aria-hidden className={`block mt-0.5 text-[11px] font-bold ${tone === "dark" ? "text-white/60" : "text-muted"}`}>{unit}</span>
         </label>
-        <button type="button" onClick={onPlus} className={`pressable grid place-items-center size-12 shrink-0 rounded-2xl ${btn}`} aria-label={`Más ${label}`}><Plus weight="bold" className="size-5" /></button>
+        <button type="button" onClick={onPlus} className={`pressable grid place-items-center size-12 shrink-0 rounded-2xl ${btn}`} aria-label={t("Más {label}", { label })}><Plus weight="bold" className="size-5" /></button>
       </div>
     </div>
   );
@@ -61,10 +63,11 @@ export function CountRing({ left, total, size = 248, stroke = 14, track = "rgb(2
 
 /** Progreso total de la sesión (series hechas / total). */
 export function SessionRing({ value, size = 44 }: { value: number; size?: number }) {
+  const { t } = useLang();
   const sw = 4, r = (size - sw) / 2, c = 2 * Math.PI * r;
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
   return (
-    <span className="relative grid place-items-center shrink-0" style={{ width: size, height: size }} role="img" aria-label={`Sesión al ${pct} %`}>
+    <span className="relative grid place-items-center shrink-0" style={{ width: size, height: size }} role="img" aria-label={t("Sesión al {pct} %", { pct })}>
       <svg width={size} height={size} className="-rotate-90" aria-hidden>
         <circle cx={size / 2} cy={size / 2} r={r} fill="#FFF" stroke="#EDE3C6" strokeWidth={sw} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1B1505" strokeWidth={sw} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - value)} opacity={value > 0 ? 1 : 0}
@@ -90,14 +93,15 @@ export function GoldBanana({ className = "size-6", pop }: { className?: string; 
  * Debajo, una barrita con el avance de las series de ese ejercicio.
  */
 export function BananaTrail({ items, current, onPick, fresh }: { items: { name: string; done: number; total: number }[]; current: number; onPick: (i: number) => void; fresh?: number | null }) {
+  const { t } = useLang();
   return (
-    <nav aria-label="Ejercicios del entreno" className="flex gap-1">
+    <nav aria-label={t("Ejercicios del entreno")} className="flex gap-1">
       {items.map((it, i) => {
         const full = it.done >= it.total && it.total > 0;
         const on = i === current;
         return (
           <button key={i} type="button" onClick={() => onPick(i)} aria-current={on ? "step" : undefined}
-            aria-label={`${it.name}, ${it.done} de ${it.total} series${full ? ", completo" : ""}`}
+            aria-label={`${t("{name}, {done} de {total} series", { name: it.name, done: it.done, total: it.total })}${full ? t(", completo") : ""}`}
             className={`pressable flex-1 min-w-0 min-h-11 flex flex-col items-center gap-1 rounded-xl pt-1.5 pb-1 ${on ? "bg-white shadow-soft" : "hover:bg-white/60"}`}>
             {full ? <GoldBanana className="size-6" pop={fresh === i} /> : <Banana weight={on ? "duotone" : "regular"} className={`size-6 ${on ? "text-ink" : "text-faint"}`} aria-hidden />}
             <span aria-hidden className="block h-1 w-[70%] rounded-full bg-line overflow-hidden">
@@ -145,11 +149,12 @@ export function LevelMeter({ idx, progress, text, tone = "light", className = ""
  * El anuncio para lectores de pantalla lo hace el reproductor (región aria-live).
  */
 export function LevelUpBurst({ idx, name, k }: { idx: number; name: string; k: number }) {
+  const { t } = useLang();
   return (
     <div key={k} aria-hidden className="pointer-events-none fixed inset-0 z-[70] grid place-items-center px-6">
       <div className={`${css.levelup} flex flex-col items-center rounded-[2rem] bg-ink ring-2 ring-banana/70 px-8 py-6 text-center text-white shadow-lift`}>
         <span className="grid place-items-center size-20 rounded-[1.5rem] bg-banana"><LevelIcon idx={idx} className="size-12 text-ink!" /></span>
-        <p className="mt-3 text-sm font-bold text-banana">Subiste de nivel</p>
+        <p className="mt-3 text-sm font-bold text-banana">{t("Subiste de nivel")}</p>
         <p className="text-2xl font-extrabold tracking-tight">{name}</p>
       </div>
     </div>

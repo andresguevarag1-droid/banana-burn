@@ -10,6 +10,7 @@ import { activateHref, exitOfferKey, firstWorkoutOffer, offerDismissKey } from "
 import { PROMO_PCT } from "@/lib/trial";
 import type { Billing } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
+import { useLang } from "./use-lang";
 
 /** Lee y marca la oferta de salida en este teléfono. Devuelve true si es la primera vez (y desde ya queda marcada). */
 export function claimExitOffer(storage: Pick<Storage, "getItem" | "setItem">, userId: string): boolean {
@@ -48,14 +49,15 @@ export function FirstWorkoutOffer({ userId }: { userId: string }) {
 /** Oferta de salida (#227): la misma promoción del 50 % del primer mes mensual (PROMO_TERMS), sin descuentos nuevos. */
 export function ExitOfferCard({ onDismiss }: { onDismiss: () => void }) {
   const o = firstWorkoutOffer();
+  const { t } = useLang();
   return (
     <section aria-labelledby="exit-offer-title" className="mt-3 rounded-[1.5rem] border-2 border-ink bg-banana-soft p-4 text-left">
       <FunnelTracker view="card_ask_view" props={{ where: "salida" }} />
-      <h2 id="exit-offer-title" className="text-lg font-extrabold text-ink text-balance">Antes de irte: {PROMO_PCT}{"\u00a0"}% en tu primer mes si dejas tu tarjeta hoy</h2>
-      <p className="mt-1 text-sm text-body text-pretty">{o.name}: tu primer mes a <b className="tabular-nums">{usd2(o.monthFirst)}</b>, después <b className="tabular-nums">{usd2(o.month)}/mes</b>. Hoy no te cobramos: se cobra al terminar tu prueba. Precios en USD, IVA incluido.</p>
-      <Link href={activateHref("mes", undefined, "salida")} data-cta="salida-guardar-tarjeta" className="btn-banana mt-3 h-13 w-full text-base font-extrabold">Dejar mi tarjeta</Link>
-      <p className="mt-2 text-center text-sm text-muted">Cancela cuando quieras en 2 toques.</p>
-      <p className="text-center"><button type="button" onClick={onDismiss} data-cta="salida-no-gracias" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">No, gracias</button></p>
+      <h2 id="exit-offer-title" className="text-lg font-extrabold text-ink text-balance">{t("Antes de irte: {pct}\u00a0% en tu primer mes si dejas tu tarjeta hoy", { pct: PROMO_PCT })}</h2>
+      <p className="mt-1 text-sm text-body text-pretty">{t("{plan}: tu primer mes a", { plan: t(o.name) })} <b className="tabular-nums">{usd2(o.monthFirst)}</b>{t(", después")} <b className="tabular-nums">{t("{price}/mes", { price: usd2(o.month) })}</b>{t(". Hoy no te cobramos: se cobra al terminar tu prueba. Precios en USD, IVA incluido.")}</p>
+      <Link href={activateHref("mes", undefined, "salida")} data-cta="salida-guardar-tarjeta" className="btn-banana mt-3 h-13 w-full text-base font-extrabold">{t("Dejar mi tarjeta")}</Link>
+      <p className="mt-2 text-center text-sm text-muted">{t("Cancela cuando quieras en 2 toques.")}</p>
+      <p className="text-center"><button type="button" onClick={onDismiss} data-cta="salida-no-gracias" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">{t("No, gracias")}</button></p>
     </section>
   );
 }
@@ -63,20 +65,21 @@ export function ExitOfferCard({ onDismiss }: { onDismiss: () => void }) {
 /** La tarjeta en sí (sin estado, para probarla). */
 export function OfferCard({ billing, onBilling, onDismiss }: { billing: Billing; onBilling: (b: Billing) => void; onDismiss: () => void }) {
   const o = firstWorkoutOffer();
+  const { t } = useLang();
   const options: { id: Billing; title: string; price: string; line: string }[] = [
-    { id: "anual", title: "Anual", price: `${usd2(o.annual)}/año`, line: `Ahorras ${usd2(o.annualSaving)} al año` },
-    { id: "mes", title: "Mensual", price: `${usd2(o.month)}/mes`, line: `Primer mes a ${usd2(o.monthFirst)} dejando tu tarjeta` },
+    { id: "anual", title: t("Anual"), price: t("{price}/año", { price: usd2(o.annual) }), line: t("Ahorras {amount} al año", { amount: usd2(o.annualSaving) }) },
+    { id: "mes", title: t("Mensual"), price: t("{price}/mes", { price: usd2(o.month) }), line: t("Primer mes a {price} dejando tu tarjeta", { price: usd2(o.monthFirst) }) },
   ];
   return (
     <section aria-labelledby="first-offer-title" className="mt-3 rounded-[1.5rem] border-2 border-ink bg-white p-4 text-left">
       <FunnelTracker view="plan_wall_view" props={{ where: "primer-entreno" }} />
       <FunnelTracker view="card_ask_view" props={{ where: "primer-entreno" }} />
       <h2 id="first-offer-title" className="flex items-center gap-2 text-lg font-extrabold text-ink text-balance">
-        <span>Terminaste tu primer entreno <Banana weight="fill" aria-hidden className="inline size-5 align-[-3px] text-banana-ink" /> Sigue con tu plan</span>
+        <span>{t("Terminaste tu primer entreno")} <Banana weight="fill" aria-hidden className="inline size-5 align-[-3px] text-banana-ink" /> {t("Sigue con tu plan")}</span>
       </h2>
-      <p className="mt-1 text-sm text-muted">{o.name}. Precios en USD, IVA incluido.</p>
+      <p className="mt-1 text-sm text-muted">{t("{plan}. Precios en USD, IVA incluido.", { plan: t(o.name) })}</p>
       <fieldset className="mt-3 space-y-2">
-        <legend className="sr-only">Elige cómo pagar</legend>
+        <legend className="sr-only">{t("Elige cómo pagar")}</legend>
         {options.map((x) => {
           const on = billing === x.id;
           return (
@@ -91,9 +94,9 @@ export function OfferCard({ billing, onBilling, onDismiss }: { billing: Billing;
           );
         })}
       </fieldset>
-      <Link href={activateHref(billing, undefined, "primer-entreno")} data-cta={`primer-entreno-activar-${billing}`} className="btn-banana mt-3 h-13 w-full text-base font-extrabold">Activar mi plan</Link>
-      <p className="mt-2 text-center text-sm text-muted">Cancela cuando quieras en 2 toques.</p>
-      <p className="text-center"><button type="button" onClick={onDismiss} data-cta="primer-entreno-ahora-no" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">Ahora no</button></p>
+      <Link href={activateHref(billing, undefined, "primer-entreno")} data-cta={`primer-entreno-activar-${billing}`} className="btn-banana mt-3 h-13 w-full text-base font-extrabold">{t("Activar mi plan")}</Link>
+      <p className="mt-2 text-center text-sm text-muted">{t("Cancela cuando quieras en 2 toques.")}</p>
+      <p className="text-center"><button type="button" onClick={onDismiss} data-cta="primer-entreno-ahora-no" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline underline-offset-4 hover:text-ink">{t("Ahora no")}</button></p>
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { Portal } from "@/components/portal";
 import { Monkey } from "@/components/icons";
 import { useBlockBackground } from "@/components/use-block-background";
 import css from "./workout.module.css";
+import { useLang } from "./use-lang";
 
 export type TourStep = { target: string; title: string; body: string };
 
@@ -20,7 +21,8 @@ const CARD_H = 240;
 const fitBelow = (top: number): React.CSSProperties => (top + CARD_H > window.innerHeight ? { bottom: 16 } : { top });
 const fitAbove = (bottom: number, minTop: number): React.CSSProperties => (window.innerHeight - bottom - CARD_H < minTop ? { top: Math.max(minTop, 16) } : { bottom });
 
-export function Tour({ steps: all, onDone, extra, finalLabel = "A entrenar" }: { steps: TourStep[]; onDone: () => void; extra?: React.ReactNode; finalLabel?: string }) {
+export function Tour({ steps: all, onDone, extra, finalLabel }: { steps: TourStep[]; onDone: () => void; extra?: React.ReactNode; finalLabel?: string }) {
+  const { t } = useLang();
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   const [i, setI] = useState(0);
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -111,16 +113,16 @@ export function Tour({ steps: all, onDone, extra, finalLabel = "A entrenar" }: {
             <div className="flex items-start gap-3">
               <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><Monkey className="size-7" /></span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-muted tabular-nums">Paso {i + 1} de {steps.length}</p>
+                <p className="text-xs font-bold text-muted tabular-nums">{t("Paso {n} de {of}", { n: i + 1, of: steps.length })}</p>
                 <h2 id="tour-t" className="text-xl font-extrabold leading-tight text-ink">{step.title}</h2>
               </div>
             </div>
             <p id="tour-b" className="mt-2 text-[15px] text-body">{step.body}</p>
             {last && extra}
             <div className="mt-4 flex items-center gap-2">
-              <button type="button" onClick={onDone} className="btn h-12 px-4 text-muted hover:text-ink">Saltar</button>
+              <button type="button" onClick={onDone} className="btn h-12 px-4 text-muted hover:text-ink">{t("Saltar")}</button>
               <div aria-hidden className="mx-auto flex gap-1.5">{steps.map((_, k) => <span key={k} className={`h-1.5 rounded-full transition-[width,background-color] duration-(--dur-fast) ${k === i ? "w-5 bg-ink" : "w-1.5 bg-line"}`} />)}</div>
-              <button ref={next} type="button" onClick={() => (last ? onDone() : setI(i + 1))} className="btn-primary h-12 px-6">{last ? finalLabel : "Siguiente"}</button>
+              <button ref={next} type="button" onClick={() => (last ? onDone() : setI(i + 1))} className="btn-primary h-12 px-6">{t(last ? finalLabel ?? "A entrenar" : "Siguiente")}</button>
             </div>
           </div>
         </div>
