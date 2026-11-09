@@ -192,12 +192,19 @@ export const TODAY: Record<string, string> = {
   "No pudimos guardar tu preferencia. Intenta cerrar el aviso otra vez.": "We couldn't save your preference. Try closing the notice again.",
 
   // Recorrido de Hoy
+  "¿Cómo se usa?": "How does it work?",
   "Este es tu entrenamiento de hoy": "This is your workout for today",
   "Toca Empezar y la app te guía ejercicio por ejercicio: qué hacer, cuántas veces y cuándo descansar.": "Tap Start and the app guides you exercise by exercise: what to do, how many times and when to rest.",
   "Tus primeros pasos": "Your first steps",
   "Esta lista te enseña el resto de la app, un paso a la vez.": "This list shows you the rest of the app, one step at a time.",
   "{coach}, tu entrenador 24/7": "{coach}, your 24/7 trainer",
   "Pregúntale lo que quieras de tu entreno. Te responde con tu plan en mente.": "Ask anything about your workout. You get answers with your plan in mind.",
+
+  // Peso de hoy (weigh-in.tsx)
+  "Restar 0.1 {unit}": "Subtract 0.1 {unit}",
+  "Sumar 0.1 {unit}": "Add 0.1 {unit}",
+  "Guardando": "Saving",
+  "Guardar": "Save",
 
   // Números de hoy (today-panel.tsx)
   "Agua": "Water",

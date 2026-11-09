@@ -14,7 +14,10 @@ vi.mock("@/components/analytics", () => ({ FunnelTracker: () => null, track: () 
 vi.mock("@/lib/i18n/server", () => ({ getPrefs: async () => prefs }));
 vi.mock("@/app/actions/notifications", () => ({ getNotificationPrefs: async () => null, saveNotificationPrefs: async () => ({ ok: true }) }));
 
-beforeAll(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-09T14:00:00Z")); });
+beforeAll(async () => {
+  vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-11-09T14:00:00Z"));
+  await import("@/app/(app)/app/page"); // la primera importación de Hoy tarda más que los 5 s de cada prueba
+}, 60_000);
 afterAll(() => vi.useRealTimers());
 
 async function hoy(sp: Record<string, string> = {}) {
@@ -40,7 +43,7 @@ describe("Hoy en inglés (#299)", () => {
 
   it("Hoy completo: meta semanal, tu semana, números y peso en lb", async () => {
     const { text } = await hoy();
-    for (const s of ["This week:", "Daily streak:", "Your week", "Workouts", "Your numbers today", "Your challenges", "Did you weigh in yet?", "lb lost", "lb to goal"]) expect(text).toContain(s);
+    for (const s of ["This week:", "Daily streak:", "Your week", "Workouts", "Your numbers today", "Your challenges", "Did you weigh in yet?", "How does it work?", "205.3 lb Save", "lb lost", "lb to goal"]) expect(text).toContain(s);
     expect(text).not.toMatch(/kg perdidos|kg a la meta|Tu semana|Esta semana: \d+ de|Racha diaria|Tus números/);
     expect(text).not.toMatch(/\p{Extended_Pictographic}|\bAI\b|\bIA\b/u);
     expect(text).toMatchSnapshot();
@@ -68,7 +71,7 @@ describe("Hoy en inglés (#299)", () => {
   it("cada frase de Hoy tiene su traducción en src/lib/i18n/en/today.ts", () => {
     const files = ["src/app/(app)/app/page.tsx", "src/components/hoy/today-panel.tsx", "src/components/hoy/week-card.tsx", "src/components/hoy/week-line.tsx", "src/components/hoy/workout-hero.tsx",
       "src/components/hoy/exercise-tiles.tsx", "src/components/hoy/first-partial-card.tsx", "src/components/hoy/reminder-prompt.tsx", "src/components/hoy/annual-upsell.tsx", "src/components/hoy/prompt-queue.tsx",
-      "src/components/readiness.tsx", "src/components/trial-card-notice.tsx", "src/components/card-banner.tsx", "src/lib/plan-access.ts"];
+      "src/components/readiness.tsx", "src/components/trial-card-notice.tsx", "src/components/card-banner.tsx", "src/lib/plan-access.ts", "src/components/weigh-in.tsx", "src/components/primeros-pasos/page-tour.tsx"];
     const keys = files.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/\b(?:tx|t|translate\(locale,)\(\s*(?:[\w.?! =]+\?\s*)?"((?:[^"\\]|\\.)+)"/g)].map((m) => m[1]));
     expect(keys.length).toBeGreaterThan(100);
     expect(keys.filter((k) => !hasTranslation("en-US", k))).toEqual([]);
