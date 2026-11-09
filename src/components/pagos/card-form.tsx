@@ -4,6 +4,7 @@ import { CircleNotch, CreditCard, Info, Lock, WarningCircle } from "@/components
 import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody, onvoCardError, type CardErrors, type CardInput } from "@/lib/card-input";
 import type { PlanChoice } from "./plan-picker";
 import type { ChargeView } from "@/lib/trial";
+import { onvoFailCode, reportPayFail } from "./report-fail";
 
 const ONVO_PAYMENT_METHODS = "https://api.onvopay.com/v1/payment-methods";
 
@@ -118,10 +119,15 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
         body: JSON.stringify(onvoCardBody(c, prep.customerId)),
       });
       const j = (await r.json().catch(() => null)) as { id?: unknown } | null;
-      if (!r.ok || !j || typeof j.id !== "string") { setBusy(null); return setErr(onvoCardError(j)); }
+      if (!r.ok || !j || typeof j.id !== "string") {
+        setBusy(null);
+        reportPayFail({ provider: "onvo", stage: "tarjeta", code: j ? onvoFailCode(j) : `onvo_${r.status}`, plan: choice.plan, billing: choice.billing });
+        return setErr(onvoCardError(j));
+      }
       pmId = j.id;
     } catch {
       setBusy(null);
+      reportPayFail({ provider: "onvo", stage: "tarjeta", code: "conexion", plan: choice.plan, billing: choice.billing });
       return setErr("No pudimos conectar con el procesador de pagos. Revisa tu conexión e intenta de nuevo.");
     }
     setBusy("guardar");

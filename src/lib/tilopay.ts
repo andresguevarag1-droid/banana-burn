@@ -210,7 +210,7 @@ export async function chargeSavedCard(i: { token: string; email: string; amountM
 
 // ───────────────────────── Consultar ─────────────────────────
 
-export type ConsultResult = { state: "approved"; amountMinor: number | null; currency: string | null; token: string | null } | { state: "declined" } | { state: "unknown" };
+export type ConsultResult = { state: "approved"; amountMinor: number | null; currency: string | null; token: string | null } | { state: "declined"; code: string | null } | { state: "unknown"; why?: string };
 
 /**
  * Lee la consulta de una orden. La forma de /api/v1/consult no es pública: se aceptan varias formas razonables y todo lo
@@ -221,22 +221,32 @@ export function readConsult(j: unknown, orderNumber: string): ConsultResult {
   const o = j as Record<string, unknown>;
   const list = Array.isArray(o.response) ? o.response : Array.isArray(o.data) ? o.data : Array.isArray(o.transactions) ? o.transactions : [o.response && typeof o.response === "object" ? o.response : o];
   const tx = (list as unknown[]).find((t) => t && typeof t === "object" && [(t as Record<string, unknown>).orderNumber, (t as Record<string, unknown>).order, (t as Record<string, unknown>).order_number].some((x) => String(x ?? "") === orderNumber)) as Record<string, unknown> | undefined;
-  if (!tx) return { state: "unknown" };
+  if (!tx) return { state: "unknown", why: "sin_orden" };
   const code = String(tx.code ?? tx.response ?? tx.status ?? tx.estado ?? "").toLowerCase();
   const amt = Number(tx.amount ?? tx.monto);
   const cur = typeof tx.currency === "string" ? tx.currency.toUpperCase() : typeof tx.moneda === "string" ? tx.moneda.toUpperCase() : null;
-  const token = [tx.crd, tx.card, tx.token, tx.cardToken].find((x) => typeof x === "string" && TOKEN_RE.test(x)) as string | undefined;
+  // En la consulta, `card` y `last` son dígitos de la tarjeta (documentación de Tilopay): nunca se toman como token.
+  const token = [tx.crd, tx.token, tx.cardToken].find((x) => typeof x === "string" && TOKEN_RE.test(x)) as string | undefined;
   if (["1", "approved", "aprobada", "aprobado", "success", "captured"].includes(code)) return { state: "approved", amountMinor: Number.isFinite(amt) && amt > 0 ? Math.round(amt * 100) : null, currency: cur, token: token ?? null };
-  if (["0", "2", "declined", "rechazada", "rechazado", "denied", "failed", "error"].includes(code)) return { state: "declined" };
-  return { state: "unknown" };
+  // Tilopay: code "1" = aprobada; cualquier otro código numérico de la orden = rechazada.
+  if (["declined", "rechazada", "rechazado", "denied", "failed", "error"].includes(code) || /^\d{1,4}$/.test(code)) return { state: "declined", code: /^[a-z0-9_.-]{1,40}$/.test(code) ? code : null };
+  return { state: "unknown", why: "estado_desconocido" };
 }
 
+/**
+ * Consulta una orden. La documentación pide `merchantId` (en su ejemplo va vacío; TILOPAY_MERCHANT_ID si está). Una consulta
+ * que falla deja una línea en el log con el estado HTTP (sin la orden ni la respuesta), para saber por qué quedó pendiente.
+ */
 export async function consultOrder(orderNumber: string): Promise<ConsultResult> {
   try {
-    const j = await tilopay<unknown>("/api/v1/consult", { key: key(), orderNumber });
-    return readConsult(j, orderNumber);
-  } catch {
-    return { state: "unknown" };
+    const j = await tilopay<unknown>("/api/v1/consult", { key: key(), orderNumber, merchantId: process.env.TILOPAY_MERCHANT_ID?.trim() ?? "" });
+    const r = readConsult(j, orderNumber);
+    if (r.state === "unknown") console.warn(JSON.stringify({ level: "warn", area: "tilopay", code: "consult_unknown", why: r.why ?? null }));
+    return r;
+  } catch (e) {
+    const why = e instanceof TilopayError ? `tilopay_${e.status}` : "red";
+    console.warn(JSON.stringify({ level: "warn", area: "tilopay", code: "consult_failed", why }));
+    return { state: "unknown", why };
   }
 }
 
@@ -317,6 +327,21 @@ export function signState(s: Omit<ReturnState, "t">, now = Date.now(), env: Node
   if (!secret) throw new TilopayError("Tilopay no está configurado", 503);
   const payload = Buffer.from(JSON.stringify({ ...s, t: Math.floor(now / 1000) })).toString("base64url");
   return `${payload}.${createHmac("sha256", secret).update(payload).digest("base64url")}`;
+}
+
+/**
+ * Lee el estado firmado y los parámetros de la vuelta. Si Tilopay agrega los suyos con un segundo "?" (redirect ya traía
+ * ?s=...), quedan pegados al estado: se separan aquí para no tomar la vuelta como vencida ni perder el código del banco.
+ */
+export function splitReturn(q: URLSearchParams): { state: string | null; params: URLSearchParams } {
+  const params = new URLSearchParams(q);
+  const raw = params.get("s");
+  params.delete("s");
+  if (!raw) return { state: null, params };
+  const i = raw.indexOf("?");
+  if (i < 0) return { state: raw, params };
+  for (const [k, v] of new URLSearchParams(raw.slice(i + 1))) if (!params.has(k)) params.set(k, v);
+  return { state: raw.slice(0, i), params };
 }
 
 export function verifyState(token: string | null | undefined, now = Date.now(), env: NodeJS.ProcessEnv = process.env): ReturnState | null {

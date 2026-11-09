@@ -8,6 +8,7 @@ import { prepareCard, removeCard, saveCard } from "@/lib/trial-billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { normalizeCondoCode } from "@/lib/condos";
 import { dbRateLimit, dbRateLimitAll } from "@/lib/security/db-rate-limit";
+import { recordPaymentFailed } from "@/lib/pago-fallo-server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -55,8 +56,15 @@ export async function POST(req: Request) {
     // 0066: desde el enlace de un condominio con tarjeta (/c/<código>). El servidor decide si aplica.
     const condo = normalizeCondoCode(body.condo);
     const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo }));
+    // Tarjeta guardada pero el cobro de ese momento se rechazó (cuenta sin prueba): queda el motivo (#296).
+    if (r.outcome === "rechazado") await recordPaymentFailed(db, { userId: v.id, provider: "onvo", stage: "tarjeta", code: "cobro_rechazado", plan: pb.plan, billing: pb.billing });
     return NextResponse.json({ ok: true, ...r });
   } catch (e) {
+    // Cada tarjeta que no se pudo guardar deja su motivo (#296); 409 es "ya hay un cobro en curso", no un fallo.
+    if (action === "guardar" && !(e instanceof BillingError && e.status === 409)) {
+      const code = e instanceof BillingError ? (e.status === 400 ? "tarjeta_rechazada" : `billing_${e.status}`) : errCode(e);
+      await recordPaymentFailed(db, { userId: v.id, provider: "onvo", stage: "tarjeta", code });
+    }
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
     logError("pagos", "tarjeta_failed", { kind: errCode(e), action });
     return NextResponse.json({ ok: false, error: "No pudimos guardar tu tarjeta. Intenta de nuevo en un momento." }, { status: 502 });

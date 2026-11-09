@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { CircleNotch, WarningCircle } from "@/components/icons";
+import { FAIL_MESSAGE, failKind } from "@/lib/pago-fallo";
+import { onvoFailCode, reportPayFail } from "@/components/pagos/report-fail";
 
 // SDK web de ONVO: https://docs.onvopay.com/en/integrations/sdk.md
-type OnvoErrorData = { message?: string; details?: { card?: { reason?: string } } };
+type OnvoErrorData = { message?: string; code?: string; details?: { card?: { reason?: string } } };
 type OnvoPayInstance = { render: (selector: string) => void };
 declare global {
   interface Window {
@@ -15,11 +17,10 @@ declare global {
 
 const SDK_URL = "https://sdk.onvopay.com/sdk.js";
 
-function errorText(d: OnvoErrorData | undefined) {
-  const reason = d?.details?.card?.reason;
-  if (reason === "issuer_declined") return "Tu banco rechazó el pago. Prueba con otra tarjeta.";
-  if (reason === "gateway_declined") return "El pago fue rechazado. Revisa los datos o prueba otro método.";
-  return d?.message || "No se pudo completar el pago. Intenta de nuevo.";
+/** Mensaje en palabras simples (#296): rechazo del banco, 3D Secure sin terminar, fondos, datos. El formulario sigue abierto para reintentar. */
+export function errorText(d: OnvoErrorData | undefined) {
+  const kind = failKind(onvoFailCode(d), d?.message);
+  return kind === "error" ? d?.message || "No se pudo completar el pago. Intenta de nuevo." : FAIL_MESSAGE[kind];
 }
 
 /** Formulario de ONVO: suscripción (planes) o pago único (`paymentIntentId`, retos de la tienda). */
@@ -44,7 +45,11 @@ export function OnvoPayForm({ publicKey, subscriptionId, paymentIntentId, custom
         customerId,
         locale: "es",
         onSuccess: () => router.replace(successHref ?? `/pago/exito?s=${encodeURIComponent(subscriptionId ?? "")}`),
-        onError: (d: OnvoErrorData) => setError(errorText(d)),
+        onError: (d: OnvoErrorData) => {
+          setError(errorText(d));
+          // Cada fallo queda registrado con su código (nunca datos de la tarjeta), para /admin/pagos.
+          reportPayFail({ provider: "onvo", stage: "checkout", code: onvoFailCode(d), s: subscriptionId });
+        },
       })
       .render("#onvo-pay");
   }, [ready, publicKey, subscriptionId, paymentIntentId, customerId, successHref, router]);

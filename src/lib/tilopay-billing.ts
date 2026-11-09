@@ -28,6 +28,8 @@ import {
 import { sendPaymentFailed, sendSubscriptionCanceled } from "@/lib/email";
 import { errInfo } from "@/lib/security/log";
 import { logInfo } from "@/lib/log";
+import { recordPaymentFailed } from "@/lib/pago-fallo-server";
+import { failKind, type FailKind } from "@/lib/pago-fallo";
 import { PENDING_PREFIX, RENEWAL_REVIEW_AFTER_MS, REVIEW_PREFIX, pendingRef, releaseKeyAfter, renewalNext, type RenewalStep } from "@/lib/tilopay-renewal";
 import { chargeKeyHeld, periodOf, releaseChargeKey, reserveChargeKey } from "@/lib/charge-keys";
 import { readOnly } from "@/lib/supabase/read-only";
@@ -105,10 +107,17 @@ export async function startTilopayCheckout(v: Viewer, plan: PlanId, billing: Bil
 // ───────────────────────── 2. La vuelta ─────────────────────────
 
 export type ReturnOutcome = "tarjeta_ok" | "pago_ok" | "confirmando" | "rechazada" | "sin_tarjeta";
+/** Resultado de la vuelta. `kind`: por qué no se completó (pago-fallo.ts), para el mensaje y el botón de reintentar. */
+export type ReturnResult = { outcome: ReturnOutcome; result?: SaveCardResult; kind?: FailKind };
 
 let namesLogged = false;
 
-export async function handleTilopayReturn(v: Viewer, s: ReturnState, q: URLSearchParams, now = new Date()): Promise<{ outcome: ReturnOutcome; result?: SaveCardResult }> {
+/** Tilopay devolvió un código distinto de "1": se guarda solo el código; la descripción solo ayuda a clasificarlo. */
+async function browserDecline(db: SupabaseClient, userId: string, s: ReturnState, code: string, description: string | null, subId: string | null): Promise<FailKind> {
+  return recordPaymentFailed(db, { userId, provider: "tilopay", stage: "vuelta", code, hint: description, subId, plan: s.plan, billing: s.billing });
+}
+
+export async function handleTilopayReturn(v: Viewer, s: ReturnState, q: URLSearchParams, now = new Date()): Promise<ReturnResult> {
   ready();
   const db = admin();
   const r = readReturn(q);
@@ -120,8 +129,11 @@ export async function handleTilopayReturn(v: Viewer, s: ReturnState, q: URLSearc
 
   if (s.p === "tarjeta") {
     // Tilopay dijo que no (code distinto de "1"): nunca se guarda un token, aunque venga en la URL.
-    if (r.code && r.code !== "1") return { outcome: "rechazada" };
-    if (!r.token) return { outcome: "sin_tarjeta" };
+    if (r.code && r.code !== "1") return { outcome: "rechazada", kind: await browserDecline(db, v.id, s, r.code, r.description, null) };
+    if (!r.token) {
+      await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "sin_tarjeta", plan: s.plan, billing: s.billing });
+      return { outcome: "sin_tarjeta" };
+    }
     // El token viene del navegador (la vuelta de processTokenize no está documentada y no hay consulta para verificarlo).
     // Lo protege: el estado firmado de ESTA persona (la ruta), que no esté guardado en otra cuenta (storeCard) y que un
     // token inventado no da nada: la prueba gratis no depende de la tarjeta y el 50 % es solo el monto del primer cobro,
@@ -130,37 +142,71 @@ export async function handleTilopayReturn(v: Viewer, s: ReturnState, q: URLSearc
     const card: VerifiedCard = { provider: "tilopay", customerId: tilopayCustomerId(v.id), paymentMethodId: r.token, brand: r.brand, last4: r.last4, expMonth: null, expYear: null };
     if (ctx.mode === "replace") return { outcome: "tarjeta_ok", result: await replaceCard(db, v, card, ctx.subs, now) };
     const result = await saveVerifiedCard(db, v, card, { plan: s.plan, billing: s.billing }, ctx.row, ctx.plan, now);
-    return { outcome: result.outcome === "rechazado" ? "rechazada" : result.outcome === "por_confirmar" ? "confirmando" : "tarjeta_ok", result };
+    if (result.outcome === "rechazado") {
+      const kind = await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "rechazada", plan: s.plan, billing: s.billing });
+      return { outcome: "rechazada", result, kind };
+    }
+    return { outcome: result.outcome === "por_confirmar" ? "confirmando" : "tarjeta_ok", result };
   }
+  return returnPago(db, v.id, s, r, now);
+}
 
+/**
+ * Vuelta de una compra directa SIN sesión (otro navegador, cookie perdida al volver del banco). El estado firmado dice de
+ * quién es la orden y la consulta a Tilopay decide: igual que el cron, pero en el momento. Una tarjeta sin sesión no se guarda.
+ */
+export async function handleTilopayReturnNoSession(s: ReturnState, q: URLSearchParams, now = new Date()): Promise<ReturnResult | null> {
+  if (s.p !== "pago") return null;
+  ready();
+  return returnPago(admin(), s.u, s, readReturn(q), now, false);
+}
+
+async function returnPago(db: SupabaseClient, userId: string, s: ReturnState, r: ReturnType<typeof readReturn>, now: Date, withToken = true): Promise<ReturnResult> {
   // Compra directa: el número de orden viene del estado firmado, no del navegador.
   const order = s.o;
-  if (!order) return { outcome: "rechazada" };
-  if (r.order && r.order !== order) { alert("vuelta con otra orden", { userId: v.id }); return { outcome: "rechazada" }; }
-  const outcome = await confirmCheckout(db, order, r.token, now, v.id);
-  if (outcome === "rechazada" && r.code === "1") return { outcome: "confirmando" };
-  return { outcome };
+  if (!order) return { outcome: "rechazada", kind: "error" };
+  if (r.order && r.order !== order) { alert("vuelta con otra orden", { userId }); return { outcome: "rechazada", kind: "error" }; }
+  const c = await confirmCheckout(db, order, withToken ? r.token : null, now, userId);
+  const subId = tilopaySubId(order);
+  // Tilopay ya dijo en la vuelta que no (code distinto de "1") y la consulta no lo contradice: rechazada, con su motivo.
+  // La fila sigue pendiente: si la consulta luego dice aprobada, el cron la activa igual.
+  if (r.code && r.code !== "1" && (c.outcome === "confirmando" || c.outcome === "rechazada")) return { outcome: "rechazada", kind: c.outcome === "rechazada" && c.kind ? c.kind : await browserDecline(db, userId, s, r.code, r.description, subId) };
+  if (c.outcome === "rechazada" && r.code === "1") return { outcome: "confirmando", kind: "sin_confirmar" };
+  if (c.outcome === "confirmando") {
+    await recordPaymentFailed(db, { userId, provider: "tilopay", stage: "confirmacion", code: "sin_confirmar", subId, plan: s.plan, billing: s.billing }, now);
+    return { outcome: "confirmando", kind: "sin_confirmar" };
+  }
+  return c;
 }
+
+/** Sin respuesta de Tilopay pasado este tiempo, la orden ya no está en curso (Tilopay la da por error a las 2 horas). */
+export const CHECKOUT_ABANDON_MS = 2 * 3600_000;
 
 /**
  * Confirma una compra directa consultando la orden en Tilopay. Aprobada y con el monto esperado: activa y guarda la tarjeta
  * para las renovaciones. Rechazada: la suscripción pendiente vence. Sin respuesta clara: queda pendiente (el cron insiste).
  */
-async function confirmCheckout(db: SupabaseClient, order: string, browserToken: string | null, now: Date, viewerId: string | null = null): Promise<ReturnOutcome> {
+async function confirmCheckout(db: SupabaseClient, order: string, browserToken: string | null, now: Date, viewerId: string | null = null): Promise<ReturnResult> {
   const subId = tilopaySubId(order);
   const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", subId).maybeSingle();
   const sub0 = data as SubscriptionRow | null;
-  if (!sub0) return "rechazada";
-  if (viewerId && sub0.user_id !== viewerId) { alert("vuelta de una compra de otra cuenta", { userId: viewerId }); return "rechazada"; }
-  if (sub0.status === "active") return "pago_ok";
+  if (!sub0) return { outcome: "rechazada", kind: "error" };
+  if (viewerId && sub0.user_id !== viewerId) { alert("vuelta de una compra de otra cuenta", { userId: viewerId }); return { outcome: "rechazada", kind: "error" }; }
+  if (sub0.status === "active") return { outcome: "pago_ok" };
+  const fail = (code: string) => recordPaymentFailed(db, { userId: sub0.user_id, provider: "tilopay", stage: "confirmacion", code, subId, plan: sub0.plan, billing: sub0.billing }, now);
   // Siempre se consulta a Tilopay, aunque la fila ya no esté pendiente (p. ej. otro plan la reemplazó): si el cobro se
   // aprobó, nunca se pierde en silencio.
   const res = await consultOrder(order);
   if (res.state === "declined") {
     await db.from("subscriptions").update({ status: "expired", updated_at: nowIso() }).eq("id", sub0.id).eq("status", "incomplete");
-    return "rechazada";
+    return { outcome: "rechazada", kind: sub0.status === "incomplete" ? await fail(res.code ?? "rechazada") : failKind(res.code ?? "rechazada") };
   }
-  if (res.state !== "approved") return sub0.status === "incomplete" ? "confirmando" : "rechazada";
+  if (res.state !== "approved") {
+    if (sub0.status !== "incomplete") return { outcome: "rechazada", kind: "error" };
+    // Más de 2 horas y Tilopay no conoce la orden: la persona no terminó el pago (cerró la página o la verificación del banco).
+    if (now.getTime() - Date.parse(sub0.created_at) > CHECKOUT_ABANDON_MS) await fail(res.why === "sin_orden" ? "abandono" : "sin_confirmar");
+    return { outcome: "confirmando", kind: "sin_confirmar" };
+  }
   let sub = sub0;
   if (sub0.status !== "incomplete") {
     // Aprobada pero la fila ya venció o se canceló. Si ya tiene otro plan pagado vigente, pagó dos veces: alerta de reembolso.
@@ -168,12 +214,12 @@ async function confirmCheckout(db: SupabaseClient, order: string, browserToken: 
     if (((others as SubscriptionRow[] | null) ?? []).some((o) => profilePlanFor(o) !== "free")) {
       alert("compra Tilopay aprobada con otro plan ya activo: revisar reembolso", { userId: sub0.user_id, order });
       recordServerError("pagos/reembolso", "refund_review");
-      return "pago_ok";
+      return { outcome: "pago_ok" };
     }
     // Sin otro plan: se reactiva la fila y se activa con el cobro verificado.
     const { data: back } = await db.from("subscriptions").update({ status: "incomplete", cancel_at_period_end: false, canceled_at: null, updated_at: nowIso() }).eq("id", sub0.id).in("status", ["expired", "canceled"]).select(SUB_COLS);
     const row = (back as SubscriptionRow[] | null)?.[0];
-    if (!row) return "confirmando";
+    if (!row) return { outcome: "confirmando" };
     sub = row;
     log("compra Tilopay aprobada después de vencer: se reactiva", { userId: sub.user_id });
   }
@@ -194,7 +240,7 @@ async function confirmCheckout(db: SupabaseClient, order: string, browserToken: 
     periodStart: now.toISOString(), periodEnd: estimatePeriodEnd(now, sub.billing ?? "mes").toISOString(),
     amountMinor: res.amountMinor, currency: res.currency, reference: order, provider: "tilopay",
   });
-  return r.ok ? "pago_ok" : "confirmando";
+  return r.ok ? { outcome: "pago_ok" } : { outcome: "confirmando" };
 }
 
 // ───────────────────────── 3. Renovaciones ─────────────────────────
@@ -271,9 +317,11 @@ export async function sweepTilopayRenewals(now = new Date(), opts: SweepOpts = {
       const { data: done } = await db.from("subscriptions").update({ status: "canceled", next_renewal_attempt_at: null, last_event_at: at, updated_at: at }).eq("id", e.id).eq("cancel_at_period_end", true).in("status", ["active", "past_due"]).select("id");
       if (done?.length) { out.canceled++; await syncProfilePlan(db, e.user_id); }
     }
-    // 4) Compras directas pendientes de las últimas 24 h: se vuelve a consultar la orden.
+    // 4) Compras directas pendientes del último día: se vuelve a consultar la orden. 26 horas y no 24: el cron es diario y
+    //    una compra de pocos minutos antes de la corrida tiene que entrar en la siguiente. Sin respuesta pasadas 2 horas, se
+    //    guarda el motivo (abandono o sin confirmar) para /admin/pagos.
     const { data: inc } = await db.from("subscriptions").select("provider_subscription_id,created_at").eq("provider", "tilopay").eq("status", "incomplete").like("provider_subscription_id", "tlp:bbc-%")
-      .gte("created_at", new Date(now.getTime() - 864e5).toISOString()).lte("created_at", new Date(now.getTime() - 10 * 60_000).toISOString()).limit(limit);
+      .gte("created_at", new Date(now.getTime() - 26 * 3600_000).toISOString()).lte("created_at", new Date(now.getTime() - 10 * 60_000).toISOString()).limit(limit);
     for (const s of (inc as { provider_subscription_id: string }[] | null) ?? []) {
       if (!time()) break;
       out.checkouts++;

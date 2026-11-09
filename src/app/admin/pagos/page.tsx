@@ -50,17 +50,27 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
       <section aria-labelledby="p-fallos" className="space-y-2.5">
         <SectionHeading id="p-fallos" title="Pagos fallidos" />
         {d.failed.length ? (
-          <Table caption="Suscripciones con cobro fallido o pendiente" captionHidden minWidth={640}>
-            <thead className="border-b border-line"><tr><Th>Usuario</Th><Th>Plan</Th><Th>Estado</Th><Th>Venció</Th><Th className="text-right">Monto del periodo</Th><Th><span className="sr-only">Acciones</span></Th></tr></thead>
+          <Table caption="Suscripciones con cobro fallido o pendiente" captionHidden minWidth={860}>
+            <thead className="border-b border-line"><tr><Th>Usuario</Th><Th>Plan</Th><Th>Estado</Th><Th>Venció</Th><Th className="text-right">Monto del periodo</Th><Th>Motivo</Th><Th><span className="sr-only">Acciones</span></Th></tr></thead>
             <tbody>{d.failed.map((x, i) => (
               <tr key={String(x.id ?? i)} className={tr}>
                 <Td>{x.user_id ? <Link href={`/admin/usuarios/${x.user_id}`} className={link}>{x.name ?? "Usuario"}</Link> : <Nil />}{x.email && <p className="text-xs text-muted">{x.email}</p>}</Td>
                 <Td><PlanText label={x.planLabel} /></Td><Td><SubStatus status={x.status} /></Td><Td className="text-muted whitespace-nowrap">{fmtDate(x.current_period_end)}</Td>
                 <Td className="text-right">{money(x.period)}</Td>
-                <Td className="text-right">{x.provider_subscription_id ? <CopyButton value={x.provider_subscription_id} label="ID de suscripción ONVO" /> : null}</Td>
+                <Td className="min-w-48 max-w-72 text-muted text-pretty">{x.reason ?? <Nil />}</Td>
+                <Td className="text-right">
+                  <div className="-my-1 flex flex-col items-end gap-0.5">
+                    {x.provider_subscription_id ? <CopyButton value={x.provider_subscription_id} label="ID de suscripción" /> : null}
+                    {/* Reintentar (#296): enlace a Mi plan con el mismo plan y periodo, para enviárselo a la persona. */}
+                    {x.retryUrl && (x.status === "incomplete" || x.status === "past_due") ? <>
+                      <a href={x.retryUrl} target="_blank" rel="noopener noreferrer" className={`${link} inline-flex min-h-8 items-center gap-1 text-sm`}>Reintentar<ExternalLink className="size-3.5" aria-hidden /><span className="sr-only">(abre el checkout del mismo plan en otra pestaña)</span></a>
+                      <CopyButton value={x.retryUrl} label="enlace para reintentar" />
+                    </> : null}
+                  </div>
+                </Td>
               </tr>))}</tbody>
           </Table>
-        ) : <Empty title="Sin pagos fallidos">Todas las renovaciones se cobraron.</Empty>}
+        ) : <Empty title="Sin pagos fallidos">Todas las renovaciones se cobraron y no hay pagos sin completar.</Empty>}
         {d.payments && d.payments.length > 0 && (
           <Table caption="Últimos cobros rechazados" minWidth={600}>
             <thead className="border-b border-line"><tr><Th>Fecha</Th><Th>Usuario</Th><Th className="text-right">Monto</Th><Th>Motivo</Th></tr></thead>

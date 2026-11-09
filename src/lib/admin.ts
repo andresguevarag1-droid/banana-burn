@@ -13,6 +13,9 @@ import { crToday } from "@/lib/today";
 import { EX } from "@/lib/engine/data";
 import { FOODS } from "@/lib/foods";
 import { PLANS } from "@/lib/plans";
+import { PAYMENT_FAILED, pendingReason } from "@/lib/pago-fallo";
+import { intentPath, parseIntent } from "@/lib/checkout-intent";
+import { SITE_URL } from "@/lib/env";
 
 export const PAGE_SIZE = 25;
 
@@ -366,6 +369,7 @@ async function loadSubs(v: Viewer) {
       now: crNow(w.key), all: w.subs.slice().sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")),
       names: new Map(w.users.map((u) => [u.id, u.full_name])), emails: new Map(w.users.map((u) => [u.id, u.email])), plans: new Map(w.users.map((u) => [u.id, u.plan])),
       payments: w.failedPayments.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)) as PaymentRow[] | null,
+      reasons: new Map<string, string>(),
     };
   }
   const sb = await createClient();
@@ -374,9 +378,15 @@ async function loadSubs(v: Viewer) {
   const ids = all.map((s) => s.user_id!).filter(Boolean);
   const [names, plans] = await Promise.all([profileNames(sb, ids), profilePlans(sb, ids)]);
   // Cobros rechazados: eventos de ONVO guardados por el webhook (payment_events).
-  const pay = await sb.from("payment_events").select("id,user_id,amount_minor,type,note,received_at").ilike("type", "%failed%").order("received_at", { ascending: false }).limit(50);
+  const [pay, why] = await Promise.all([
+    sb.from("payment_events").select("id,user_id,amount_minor,type,note,received_at").ilike("type", "%failed%").order("received_at", { ascending: false }).limit(50),
+    // Motivo guardado de cada suscripción que no se completó (#296): el más reciente por suscripción.
+    sb.from("payment_events").select("provider_subscription_id,note").eq("type", PAYMENT_FAILED).not("provider_subscription_id", "is", null).order("received_at", { ascending: false }).limit(1000),
+  ]);
+  const reasons = new Map<string, string>();
+  for (const r of (why.data ?? []) as { provider_subscription_id: string; note: string | null }[]) if (r.note && !reasons.has(r.provider_subscription_id)) reasons.set(r.provider_subscription_id, r.note);
   const payments = pay.error ? null : (pay.data ?? []).map((r) => ({ id: r.id as number, user_id: (r.user_id as string) ?? undefined, amount: r.amount_minor != null ? Number(r.amount_minor) / 100 : undefined, status: "failed", created_at: r.received_at as string, failure_reason: (r.note as string) ?? (r.type as string) })) as PaymentRow[];
-  return { now: new Date(), all, names, emails: new Map<string, string>(), plans, payments };
+  return { now: new Date(), all, names, emails: new Map<string, string>(), plans, payments, reasons };
 }
 
 type Loaded = Awaited<ReturnType<typeof loadSubs>>;
@@ -412,7 +422,11 @@ export async function listSubscriptions(v: Viewer, f: SubFilters) {
       churn: churn(all, now, 30),
       renewing7: all.filter((s) => s.status === "active" && !s.cancel_at_period_end && s.current_period_end && Date.parse(s.current_period_end) <= in7 && Date.parse(s.current_period_end) >= now.getTime()).length,
     },
-    failed: decorated.filter((s) => FAILED.has(s.status ?? "")),
+    // Fallidas e incompletas, con su motivo y el enlace para reintentar el mismo plan (#296).
+    failed: decorated.filter((s) => FAILED.has(s.status ?? "")).map((s) => ({
+      ...s, reason: pendingReason(s, s.provider_subscription_id ? loaded.reasons.get(s.provider_subscription_id) : null, now),
+      retryUrl: (() => { const i = parseIntent(s.planId, s.billingId); return i ? `${SITE_URL}${intentPath(i)}` : null; })(),
+    })),
     payments: payments?.map((p) => ({ ...p, name: p.user_id ? names.get(p.user_id) ?? null : null })) ?? null,
     rows: filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     total: filtered.length,
