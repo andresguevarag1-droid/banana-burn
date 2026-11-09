@@ -3,7 +3,7 @@ import { TESTIMONIAL_PUBLISH_LABEL, TESTIMONIAL_QUESTION } from "@/lib/testimoni
 
 /** Niveles de gamify.ts (LEVELS), con su versión femenina. Si se agrega uno sin su nombre aquí, recap.test.tsx avisa. */
 export const LEVEL_NAMES: Record<string, string> = {
-  "Banana verde": "Green Banana", "Banana pintona": "Ripening Banana", "Banana madura": "Ripe Banana", "Plátano macho": "Plantain",
+  "Banana verde": "Green Banana", "Banana pintona": "Ripening Banana", "Banana madura": "Ripe Banana", "Plátano macho": "Big Plantain",
   "Banana dorada": "Golden Banana", "Mono fuerte": "Strong Monkey", "Mona fuerte": "Strong Monkey", Gorila: "Gorilla",
   "Rey de la selva": "King of the Jungle", "Reina de la selva": "Queen of the Jungle", "King Kong": "King Kong",
 };

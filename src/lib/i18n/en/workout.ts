@@ -46,7 +46,7 @@ const CORE: Record<string, string> = {
   // Esfuerzo y diversión
   "Fácil": "Easy", "Sobraban 4 o más": "4 or more left", Justo: "Just right", "Sobraban 1 o 2": "1 or 2 left",
   "Al límite": "All out", "No salía otra": "Couldn't do another",
-  Aburrido: "Boring", Normal: "Okay", Bien: "Good", Divertido: "Fun", "Me encantó": "Loved it",
+  Aburrido: "Boring", Normal: "Normal", Bien: "Good", Divertido: "Fun", "Me encantó": "Loved it",
   // Calentamiento y vuelta a la calma
   "Barra sola": "Empty bar",
   "1 serie con la barra sola ({reps} reps)": "1 set with the empty bar ({reps} reps)",
