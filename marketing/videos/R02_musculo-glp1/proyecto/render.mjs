@@ -271,84 +271,148 @@ function logo(ctx, cx, y, s) {
 
 // ---------- Escenas: (ctx, t, dur) con t en segundos desde el inicio de la escena ----------
 
-function hook(ctx, escala = 1) {
-  const [a, b, c] = ESCENAS.gancho.texto;
-  const ls = [
-    { t: a, size: 210, color: C.ink },
-    { t: b, size: 210, color: C.ink },
-    { t: c, size: 210, color: C.banana, marca: C.ink },
-  ];
-  ctx.save();
-  ctx.translate(W / 2, H / 2);
-  ctx.scale(escala, escala);
-  ctx.translate(-W / 2, -H / 2);
-  lineas(ctx, ls, (SAFE.top + SAFE.bottom) / 2 - alto(ls, 0.12) / 2, { gap: 0.12 });
-  ctx.restore();
+/** Segundos desde el paso `k` de la escena (negativo si todavía no llega). */
+const desde = (t, pasos, k) => t - (pasos?.[k] ?? 0);
+/** Índice del paso en curso. */
+const pasoActual = (t, pasos) => (pasos ?? [0]).reduce((k, p, i) => (t >= p ? i : k), 0);
+
+/** Tarjeta de texto cream con borde, para que el texto se lea sobre Coach Banana o capturas. */
+function placa(ctx, y, h, color = C.cream) {
+  ctx.fillStyle = color; rrect(ctx, 72, y, W - 144, h, 48); ctx.fill();
+  ctx.strokeStyle = C.line; ctx.lineWidth = 3; rrect(ctx, 72, y, W - 144, h, 48); ctx.stroke();
 }
 
 const DIBUJO = {
-  // Cuadro 0 ya trae el gancho completo: sin animación de entrada, solo un acercamiento lento.
-  gancho(ctx, t, dur) {
+  // Cuadro 0 ya trae el gancho completo. En el segundo paso ("pero, ¿y tu músculo?") la última línea da un golpe.
+  gancho(ctx, t, dur, pasos) {
     fondo(ctx, C.banana);
     franjas(ctx, t, C.bananaSoft, 90);
-    // El texto está completo desde el cuadro 0; un golpe de cámara y un acercamiento lento le dan energía.
+    const [a, b, c] = ESCENAS.gancho.texto, t2 = desde(t, pasos, 1);
     ctx.save();
     sacude(ctx, t, 16, 0.28);
+    if (t2 >= 0) sacude(ctx, t2, 14, 0.25);
     ctx.translate(0, -170);
-    hook(ctx, 1.04 - 0.04 * golpe(t, 0, 0.3) + 0.05 * easeOut(t / dur));
+    const esc = 1.04 - 0.04 * golpe(t, 0, 0.3) + 0.04 * easeOut(t / dur);
+    ctx.translate(W / 2, H / 2); ctx.scale(esc, esc); ctx.translate(-W / 2, -H / 2);
+    const ls = [{ t: a, size: 210, color: C.ink }, { t: b, size: 210, color: C.ink }];
+    const y0 = (SAFE.top + SAFE.bottom) / 2 - alto([...ls, { size: 210 }], 0.12) / 2;
+    lineas(ctx, ls, y0, { gap: 0.12 });
+    const yc = y0 + alto(ls, 0.12);
+    const pulso = t2 >= 0 ? 1 + 0.18 * (1 - golpe(t2, 0, 0.35)) : 1;
+    ctx.save(); ctx.translate(W / 2, yc + 118); ctx.scale(pulso, pulso); ctx.translate(-W / 2, -(yc + 118));
+    lineas(ctx, [{ t: c, size: 210, color: C.banana, marca: C.ink }], yc, { gap: 0.12 });
     ctx.restore();
-    // Coach Banana sube desde abajo, se asoma y mira el texto
+    ctx.restore();
     coach(ctx, t, COACH, W - 250, H - 150, 760, { delay: 0.25, voltear: true, giro: -0.05 });
   },
 
-  pierdes(ctx, t) {
+  pierdes(ctx, t, dur, pasos) {
     fondo(ctx, C.ink);
-    const [a, b, c] = ESCENAS.pierdes.texto;
+    rayos(ctx, W / 2, 900, t, "rgba(255,214,10,0.05)");
+    const [a, b, c] = ESCENAS.pierdes.texto, t2 = desde(t, pasos, 1);
     const ls = [{ t: a, size: 130, color: C.cream }, { t: b, size: 130, color: C.cream }];
-    const y0 = 820 - alto(ls) / 2;
+    const y0 = 700 - alto(ls) / 2;
     conEntrada(ctx, entra(t), () => lineas(ctx, ls, y0));
-    conEntrada(ctx, entra(t, 0.25), () => lineas(ctx, [{ t: c, size: 230, color: C.banana }], y0 + alto(ls) + 30));
+    if (t2 >= 0) {
+      ctx.save(); sacude(ctx, t2, 12, 0.25);
+      golpeTexto(ctx, golpe(t2), y0 + alto(ls) + 150, () => lineas(ctx, [{ t: c, size: 220, color: C.banana }], y0 + alto(ls) + 30));
+      ctx.restore();
+    }
+    // Coach Banana, serio, asoma desde abajo
+    coach(ctx, t, COACH, W / 2, H + 260, 760, { delay: 0.2 });
   },
 
-  // 1. Entrena poco y constante: Coach Banana con la pantalla Hoy del primer entreno
-  app(ctx, t) {
+  // Entrena poco, pero constante, con Banana Burn: una línea por frase y la tarjeta real del primer entreno
+  app(ctx, t, dur, pasos) {
     fondo(ctx, C.banana);
     franjas(ctx, t, C.bananaSoft, 110);
     const [a, b, c] = ESCENAS.app.texto;
-    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 130, color: C.ink }], SAFE.top + 10));
-    conEntrada(ctx, entra(t, 0.1), () => lineas(ctx, [{ t: b, size: 110, color: C.ink }], SAFE.top + 170));
-    golpeTexto(ctx, golpe(t, 0.25), SAFE.top + 400, () => lineas(ctx, [{ t: c, size: 170, color: C.banana, marca: C.ink }], SAFE.top + 310));
-    // Teléfono con Hoy del primer día, que sube con rebote
-    // Tarjeta real "Tu primer entreno" (Hoy, primer día), grande y legible
-    const ancho = 640, x = W - ancho - 60, y = 820, pt = golpe(t, 0.3, 0.45);
+    const yA = SAFE.top + 10, yB = SAFE.top + 160, yC = SAFE.top + 320;
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 130, color: C.ink }], yA));
+    const t2 = desde(t, pasos, 1), t3 = desde(t, pasos, 2);
+    if (t2 >= 0) golpeTexto(ctx, golpe(t2), yB + 70, () => lineas(ctx, [{ t: b, size: 120, color: C.ink, marca: C.cream }], yB));
+    if (t3 >= 0) golpeTexto(ctx, golpe(t3), yC + 80, () => lineas(ctx, [{ t: c, size: 130, color: C.banana, marca: C.ink }], yC));
+    // Tarjeta real "Tu primer entreno" (Hoy, primer día)
+    const ancho = 640, x = W - ancho - 60, y = 900, pt = golpe(t, 0.3, 0.45);
     ctx.save(); ctx.globalAlpha *= clamp(pt * 1.5);
-    ctx.translate(0, (1 - pt) * 400); ctx.translate(x + ancho / 2, y + 260); ctx.rotate(0.04 + (1 - pt) * 0.15); ctx.translate(-(x + ancho / 2), -(y + 260));
+    ctx.translate(0, (1 - pt) * 400); ctx.translate(x + ancho / 2, y + 260); ctx.rotate(0.04 + (1 - pt) * 0.15 + 0.01 * Math.sin(t * 2)); ctx.translate(-(x + ancho / 2), -(y + 260));
     telefono(ctx, x, y, ancho, HOY);
     ctx.restore();
     coach(ctx, t, SENALA, 230, H - 30, 640, { delay: 0.15, desde: "izq", jab: 16 });
   },
 
-  // 2. Cómo lo hace: una captura real por línea (peso sugerido, cómo se hace, descanso)
-  como(ctx, t, dur) {
+  // La app que no tienes que descargar: se abre desde el navegador
+  web(ctx, t, dur, pasos) {
+    fondo(ctx, C.paper);
+    franjas(ctx, t, "rgba(255,214,10,0.18)", 80);
+    const [a, b, url] = ESCENAS.web.texto, t2 = desde(t, pasos, 1);
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 120, color: C.ink }], SAFE.top + 10));
+    if (t2 >= 0) golpeTexto(ctx, golpe(t2), SAFE.top + 250, () => lineas(ctx, [{ t: b, size: 104, color: C.ink, marca: C.banana }], SAFE.top + 180));
+    // Barra de dirección: la URL se escribe sola y un toque la abre
+    const y = 820, h = 170, x = 110, w = W - 220, pb = golpe(t, 0.1, 0.4);
+    conEntrada(ctx, clamp(pb), () => {
+      sombra(ctx, () => { ctx.fillStyle = C.card; rrect(ctx, x, y, w, h, 999); ctx.fill(); });
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 6; rrect(ctx, x, y, w, h, 999); ctx.stroke();
+      const n = Math.round(clamp((t - 0.25) / 0.6) * url.length);
+      font(ctx, 84, 800); ctx.fillStyle = C.ink; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      const tx = x + 70;
+      ctx.fillText(url.slice(0, n), tx, y + h / 2 + 4);
+      if (n < url.length && Math.floor(t * 4) % 2 === 0) { const cw = ctx.measureText(url.slice(0, n)).width; ctx.fillRect(tx + cw + 6, y + 45, 8, h - 90); }
+    }, 60);
+    // Toque al terminar de escribir
+    const tt = t - 1.0;
+    if (tt > 0 && tt < 0.5) {
+      ctx.save(); ctx.globalAlpha = 1 - tt / 0.5; ctx.strokeStyle = C.ink; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(W - 220, y + h / 2, 40 + tt * 160, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    }
+    coach(ctx, t, SENALA, 300, H - 40, 680, { delay: 0.2, desde: "izq", jab: 16, giro: -0.04 });
+  },
+
+  // Qué hacer, con cuánto peso y cuánto descansar: una captura real por frase de la voz
+  como(ctx, t, dur, pasos) {
     fondo(ctx, C.paper);
     franjas(ctx, t, "rgba(255,214,10,0.16)", 70);
-    const lin = ESCENAS.como.texto, pantallas = [GUIA, COMO, DESCANSO], paso = dur / 3;
-    const k = Math.min(2, Math.floor(t / paso)), tk = t - k * paso;
-    // Lista: la línea activa en negro con marcador banana, las anteriores en gris
+    const lin = ESCENAS.como.texto, pantallas = [GUIA, GUIA, DESCANSO];
+    const k = pasoActual(t, pasos), tk = desde(t, pasos, k);
     lin.forEach((l, i) => {
       if (i > k) return;
       const activa = i === k, y = SAFE.top + i * 110;
       const dibuja = () => lineas(ctx, [{ t: l, size: 88, color: activa ? C.ink : C.bananaInk, marca: activa ? C.banana : null }], y);
       if (activa) golpeTexto(ctx, golpe(tk, 0, 0.3), y + 50, dibuja); else dibuja();
     });
-    // Teléfono que cambia de pantalla con un giro rápido en cada línea
-    const ancho = 470, x = (W - ancho) / 2 + 110, giro = 1 - golpe(tk, 0, 0.32);
+    const ancho = 470, x = (W - ancho) / 2 + 110, giro = k === 1 ? 0 : 1 - golpe(tk, 0, 0.32);
     ctx.save();
     ctx.translate(x + ancho / 2, 1200); ctx.rotate(giro * (k % 2 ? -0.18 : 0.18)); ctx.scale(1 - 0.12 * giro, 1 - 0.12 * giro);
     ctx.translate(-(x + ancho / 2), -1200);
     telefono(ctx, x, 620, ancho, pantallas[k]);
     ctx.restore();
+    // En "con cuánto peso", anillo banana sobre el peso sugerido de la captura (6 kg · Sugerido)
+    if (k === 1) {
+      const s = ancho / GUIA.width, p = golpe(tk, 0, 0.35);
+      ctx.save(); ctx.globalAlpha = clamp(p * 1.4); ctx.strokeStyle = C.banana; ctx.lineWidth = 12;
+      rrect(ctx, x + 32 * s - 12, 620 + 1138 * s - 12, 716 * s + 24, 127 * s + 24, 30); ctx.stroke(); ctx.restore();
+    }
     coach(ctx, t, SENALA, 140, H - 30, 640, { delay: 0.1, desde: "izq", jab: 14 });
+  },
+
+  fuerza(ctx, t, dur, pasos) {
+    fondo(ctx, C.ink);
+    rayos(ctx, W / 2, 760, t, "rgba(255,214,10,0.06)");
+    [[170, 0.1, 1], [910, 0.22, -1], [820, 0.34, 1]].forEach(([mx, d, s], i) => {
+      const pm = golpe(t, d, 0.5);
+      ctx.save(); ctx.globalAlpha = clamp(pm * 1.5);
+      mancuerna(ctx, mx, 300 + i * 40 + (1 - pm) * -500, 150, C.banana, s * (1 - pm) * 3 + s * 0.2 * Math.sin(t * 2));
+      ctx.restore();
+    });
+    const [a, b, c] = ESCENAS.fuerza.texto, t2 = desde(t, pasos, 1);
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 96, color: C.cream }], 440));
+    if (t2 >= 0) {
+      ctx.save(); sacude(ctx, t2, 12, 0.25);
+      golpeTexto(ctx, golpe(t2), 680, () => lineas(ctx, [{ t: b, size: 200, color: C.banana }], 570));
+      conEntrada(ctx, entra(t2, 0.15), () => lineas(ctx, [{ t: c, size: 110, color: C.cream }], 820));
+      ctx.restore();
+    }
+    coach(ctx, t, COACH, W / 2, H + 120, 760, { delay: 0.35 });
   },
 
   captura(ctx, t) {
@@ -357,96 +421,89 @@ const DIBUJO = {
     const [a, b] = ESCENAS.captura.texto;
     conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 96, color: C.ink }], SAFE.top));
     golpeTexto(ctx, golpe(t, 0.15), SAFE.top + 170, () => lineas(ctx, [{ t: b, size: 110, color: C.ink, marca: C.banana }], SAFE.top + 110));
-    const ancho = 450, x = (W - ancho) / 2 + 120;
-    // El teléfono sube con rebote y se inclina apenas
-    const pt = golpe(t, 0.08, 0.45);
-    ctx.save();
-    ctx.globalAlpha *= clamp(pt * 1.5);
-    ctx.translate(x + ancho / 2, 520 + 500);
-    ctx.rotate((1 - pt) * 0.12 + 0.015 * Math.sin(t * 3));
-    ctx.translate(-(x + ancho / 2), -(520 + 500) + (1 - pt) * 300);
+    const ancho = 450, x = (W - ancho) / 2 + 120, pt = golpe(t, 0.08, 0.45);
+    ctx.save(); ctx.globalAlpha *= clamp(pt * 1.5);
+    ctx.translate(x + ancho / 2, 1020); ctx.rotate((1 - pt) * 0.12 + 0.015 * Math.sin(t * 3)); ctx.translate(-(x + ancho / 2), -1020 + (1 - pt) * 300);
     telefono(ctx, x, 560, ancho);
     ctx.restore();
-    // Coach Banana se asoma por la izquierda y señala la pantalla
     coach(ctx, t, SENALA, 150, H - 60, 700, { delay: 0.3, desde: "izq", jab: 14 });
   },
 
-  zoom(ctx, t) {
+  // Sabemos cuánta proteína te falta hoy: zoom a "Te quedan" de la captura real
+  zoom(ctx, t, dur, pasos) {
     fondo(ctx, C.paper);
-    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: ESCENAS.zoom.texto[0], size: 80, color: C.ink }], SAFE.top + 40));
-    // Tarjeta "Te quedan" de la captura real, ampliada
+    const [a, b] = ESCENAS.zoom.texto, t2 = desde(t, pasos, 1);
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 104, color: C.ink }], SAFE.top));
+    if (t2 >= 0) golpeTexto(ctx, golpe(t2), SAFE.top + 200, () => lineas(ctx, [{ t: b, size: 110, color: C.ink, marca: C.banana }], SAFE.top + 140));
     const src = { x: 34, y: 338, w: 712, h: 576 };
     const p = entra(t, 0, 0.45);
     const anchoFinal = 960, anchoIni = 470 * (src.w / 780);
-    const w = anchoIni + (anchoFinal - anchoIni) * p, h = (w * src.h) / src.w;
-    const x = (W - w) / 2, y = 960 - h / 2 + 40;
+    const w = anchoIni + (anchoFinal - anchoIni) * p + 12 * Math.sin(t * 1.5), h = (w * src.h) / src.w;
+    const x = (W - w) / 2, y = 1000 - h / 2 + 40;
     sombra(ctx, () => { ctx.fillStyle = C.card; rrect(ctx, x, y, w, h, 48); ctx.fill(); });
-    ctx.save();
-    rrect(ctx, x, y, w, h, 48); ctx.clip();
+    ctx.save(); rrect(ctx, x, y, w, h, 48); ctx.clip();
     ctx.drawImage(CAPTURA, src.x, src.y, src.w, src.h, x, y, w, h);
     ctx.restore();
-    // Anillo banana sobre "Te faltan... de proteína"
-    const k = w / src.w, pulso = entra(t, 0.5);
-    ctx.save();
-    ctx.globalAlpha = pulso;
-    ctx.strokeStyle = C.banana;
-    ctx.lineWidth = 10;
-    rrect(ctx, x + (74 - src.x) * k - 10, y + (704 - src.y) * k - 10, 632 * k + 20, 168 * k + 20, 40);
-    ctx.stroke();
-    ctx.restore();
-  },
-
-  fuerza(ctx, t) {
-    fondo(ctx, C.ink);
-    // Rayos tenues y mancuernas que caen girando
-    rayos(ctx, W / 2, 760, t, "rgba(255,214,10,0.06)");
-    [[170, 0.1, 1], [910, 0.22, -1], [820, 0.34, 1]].forEach(([mx, d, s], i) => {
-      const pm = golpe(t, d, 0.5);
-      ctx.save(); ctx.globalAlpha = clamp(pm * 1.5);
-      mancuerna(ctx, mx, 330 + i * 40 + (1 - pm) * -500, 150, C.banana, s * (1 - pm) * 3 + s * 0.2 * Math.sin(t * 2));
-      ctx.restore();
-    });
-    const [a, b, c] = ESCENAS.fuerza.texto;
-    ctx.save();
-    sacude(ctx, t - 0.15, 12, 0.25);
-    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 104, color: C.cream }], 440));
-    golpeTexto(ctx, golpe(t, 0.15), 760, () => lineas(ctx, [{ t: b, size: 360, color: C.banana }], 580));
-    conEntrada(ctx, entra(t, 0.3), () => lineas(ctx, [{ t: c, size: 104, color: C.cream }], 830));
-    ctx.restore();
-    // Coach Banana sube desde abajo, firme
-    coach(ctx, t, COACH, W / 2, H + 120, 760, { delay: 0.35 });
+    const k = w / src.w, pulso = t2 >= 0 ? clamp(golpe(t2, 0, 0.35) * 1.4) : 0;
+    if (pulso > 0) {
+      ctx.save(); ctx.globalAlpha = pulso; ctx.strokeStyle = C.banana; ctx.lineWidth = 12;
+      rrect(ctx, x + (74 - src.x) * k - 10, y + (704 - src.y) * k - 10, 632 * k + 20, 168 * k + 20, 40); ctx.stroke(); ctx.restore();
+    }
   },
 
   shield(ctx, t) {
     fondo(ctx, C.paper);
     rayos(ctx, W / 2, 620, t, "rgba(255,214,10,0.22)", 12, 900);
-    const [a, b, c] = ESCENAS.shield.texto;
-    // Coach Banana detrás del escudo, que aparece de golpe con un destello
+    const [a, b] = ESCENAS.shield.texto;
     coach(ctx, t, COACH, W / 2, 1000, 760, { delay: 0 });
     const ps = golpe(t, 0.12, 0.4);
-    const s = 360 * ps;
     if (ps > 0) {
       const anillo = clamp((t - 0.2) / 0.35);
       ctx.save(); ctx.globalAlpha = 1 - anillo; ctx.strokeStyle = C.banana; ctx.lineWidth = 16;
       ctx.beginPath(); ctx.arc(W / 2, 640, 160 + anillo * 260, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
-      escudo(ctx, W / 2, 640, s, C.banana, C.ink);
+      escudo(ctx, W / 2, 640, 360 * ps, C.banana, C.ink);
     }
-    ctx.save(); ctx.translate(0, 120);
-    // Placa paper detrás del texto para que se lea sobre Coach Banana
-    conEntrada(ctx, entra(t, 0.1), () => {
-      ctx.fillStyle = C.cream; rrect(ctx, 72, 840, W - 144, 440, 48); ctx.fill();
-      ctx.strokeStyle = C.line; ctx.lineWidth = 3; rrect(ctx, 72, 840, W - 144, 440, 48); ctx.stroke();
-      lineas(ctx, [{ t: a, size: 96, color: C.ink }], 870);
-    });
-    golpeTexto(ctx, golpe(t, 0.2), 1040, () => lineas(ctx, [{ t: b, size: 104, color: C.ink, marca: C.banana }], 985));
-    conEntrada(ctx, entra(t, 0.35), () => lineas(ctx, [{ t: c, size: 80, color: C.body }], 1135));
+    conEntrada(ctx, entra(t, 0.1), () => { placa(ctx, 960, 330); lineas(ctx, [{ t: a, size: 100, color: C.ink }], 990); });
+    golpeTexto(ctx, golpe(t, 0.25), 1180, () => lineas(ctx, [{ t: b, size: 104, color: C.ink, marca: C.banana }], 1120));
+  },
+
+  // Y cuida tu músculo mientras bajas: Coach Banana al centro, firme, con su escudo
+  cuida(ctx, t) {
+    fondo(ctx, C.ink);
+    rayos(ctx, W / 2, 1100, t, "rgba(255,214,10,0.08)", 14, 1500);
+    const [a, b] = ESCENAS.cuida.texto;
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 112, color: C.cream }], SAFE.top + 20));
+    golpeTexto(ctx, golpe(t, 0.2), SAFE.top + 220, () => lineas(ctx, [{ t: b, size: 130, color: C.ink, marca: C.banana }], SAFE.top + 150));
+    coach(ctx, t, COACH, W / 2, H - 40, 980, { delay: 0.05 });
+    const pe = golpe(t, 0.45, 0.35);
+    if (pe > 0) escudo(ctx, W / 2 + 270, 1180, 200 * pe, C.banana, C.ink);
+  },
+
+  // Anuncio: Tu nutrición, el plan completo: Banana Shield (una frase por paso)
+  plan(ctx, t, dur, pasos) {
+    fondo(ctx, C.paper);
+    franjas(ctx, t, "rgba(255,214,10,0.16)", 70);
+    const [a, b, c] = ESCENAS.plan.texto, t2 = desde(t, pasos, 1), t3 = desde(t, pasos, 2);
+    conEntrada(ctx, entra(t), () => lineas(ctx, [{ t: a, size: 104, color: C.ink }], SAFE.top));
+    if (t2 >= 0) golpeTexto(ctx, golpe(t2), SAFE.top + 180, () => lineas(ctx, [{ t: b, size: 96, color: C.ink, marca: C.cream }], SAFE.top + 130));
+    if (t3 >= 0) golpeTexto(ctx, golpe(t3), SAFE.top + 320, () => lineas(ctx, [{ t: c, size: 120, color: C.ink, marca: C.banana }], SAFE.top + 255));
+    const ancho = 430, x = (W - ancho) / 2 + 130, pt = golpe(t, 0.08, 0.45);
+    ctx.save(); ctx.globalAlpha *= clamp(pt * 1.5);
+    ctx.translate(x + ancho / 2, 1100); ctx.rotate((1 - pt) * 0.12 + 0.015 * Math.sin(t * 3)); ctx.translate(-(x + ancho / 2), -1100 + (1 - pt) * 300);
+    telefono(ctx, x, 700, ancho);
     ctx.restore();
+    if (t3 >= 0) {
+      const ps = golpe(t3, 0.05, 0.4), anillo = clamp((t3 - 0.1) / 0.35);
+      ctx.save(); ctx.globalAlpha = 1 - anillo; ctx.strokeStyle = C.banana; ctx.lineWidth = 16;
+      ctx.beginPath(); ctx.arc(x + ancho / 2, 1150, 140 + anillo * 240, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      escudo(ctx, x + ancho / 2, 1150, 300 * ps, C.banana, C.ink);
+    }
+    coach(ctx, t, SENALA, 150, H - 40, 680, { delay: 0.2, desde: "izq", jab: 14 });
   },
 
   aviso(ctx, t) {
     fondo(ctx, C.ink);
     conEntrada(ctx, entra(t), () => escudo(ctx, W / 2, 560, 300, C.banana, C.ink));
-    // El aviso entra casi de inmediato (en 0.2 s ya es legible) y se queda toda la escena.
     conEntrada(ctx, entra(t, 0.05), () => {
       const x = 72, y = 820, w = W - 144, h = 560;
       ctx.fillStyle = C.cream; rrect(ctx, x, y, w, h, 48); ctx.fill();
@@ -459,9 +516,7 @@ const DIBUJO = {
   cierre(ctx, t) {
     fondo(ctx, C.banana);
     rayos(ctx, 360, 640, t, C.bananaSoft, 16, 1600);
-    // Coach Banana (pose "señala") entra con rebote y señala el botón
     coach(ctx, t, SENALA, 400, 1040, 820, { delay: 0, desde: "izq", jab: 22, giro: 0.04 });
-    // El botón late una vez que está en su lugar
     const late = t > 0.9 ? 1 + 0.035 * Math.max(0, Math.sin((t - 0.9) * Math.PI * 2 * 1.2)) : 1;
     ctx.save(); ctx.translate(W / 2, 1165); ctx.scale(late, late); ctx.translate(-W / 2, -1165);
     golpeTexto(ctx, golpe(t, 0.25), 1165, () => {
@@ -477,7 +532,7 @@ const DIBUJO = {
 
 // ---------- Salidas ----------
 
-const COLOR_CORTE = { gancho: C.ink, pierdes: C.banana, app: C.ink, como: C.banana, fuerza: C.banana, captura: C.ink, zoom: C.ink, shield: C.ink, aviso: C.banana };
+const COLOR_CORTE = { gancho: C.ink, pierdes: C.banana, app: C.ink, web: C.banana, como: C.ink, fuerza: C.banana, captura: C.ink, zoom: C.banana, shield: C.ink, cuida: C.banana, plan: C.ink, aviso: C.banana };
 const T_CORTE = 0.14;
 /** Cortinilla entre escenas: cubre en los últimos T_CORTE s de una y descubre en los primeros de la siguiente. El aviso no se tapa. */
 function pasoDeEscena(ctx, escenas, e, seg) {
@@ -490,7 +545,7 @@ function pasoDeEscena(ctx, escenas, e, seg) {
 
 function lineaDeTiempo(corte) {
   let inicio = 0;
-  return CORTES[corte].map(([id, dur]) => { const e = { id, dur, inicio }; inicio += dur; return e; });
+  return CORTES[corte].map(([id, dur, pasos]) => { const e = { id, dur, pasos, inicio }; inicio += dur; return e; });
 }
 
 async function video(corte) {
@@ -510,7 +565,7 @@ async function video(corte) {
     const seg = f / FPS;
     const e = escenas.findLast((x) => seg >= x.inicio - 1e-9);
     ctx.save();
-    DIBUJO[e.id](ctx, seg - e.inicio, e.dur);
+    DIBUJO[e.id](ctx, seg - e.inicio, e.dur, e.pasos);
     ctx.restore();
     pasoDeEscena(ctx, escenas, e, seg);
     const px = ctx.getImageData(0, 0, W, H).data;
@@ -540,7 +595,7 @@ function portada() {
 function cuadro(corte, seg) {
   const e = lineaDeTiempo(corte).findLast((x) => seg >= x.inicio - 1e-9);
   const canvas = createCanvas(W, H), ctx = canvas.getContext("2d");
-  DIBUJO[e.id](ctx, seg - e.inicio, e.dur);
+  DIBUJO[e.id](ctx, seg - e.inicio, e.dur, e.pasos);
   pasoDeEscena(ctx, lineaDeTiempo(corte), e, seg);
   const out = resolve(process.env.TMPDIR ?? "/tmp", `R02_${corte}_${seg}.png`);
   writeFileSync(out, canvas.toBuffer("image/png"));

@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AVISO, CORTES, ESCENAS, FPS, H, NUMEROS_PERMITIDOS, W } from "./escenas.mjs";
+import { AVISO, CORTES, ESCENAS, FPS, H, NUMEROS_PERMITIDOS, VOZ, W } from "./escenas.mjs";
 
 const SALIDA = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fallas = [];
@@ -25,32 +25,45 @@ for (const [id, e] of Object.entries(ESCENAS)) {
 }
 ok(ESCENAS.aviso.texto.includes(AVISO) && AVISO === "No sustituye la indicación de tu médico.", "el aviso médico no es el exacto");
 
-// Tiempos
-for (const [corte, escenas] of Object.entries(CORTES)) {
-  const total = escenas.reduce((s, [, d]) => s + d, 0);
-  const meta = corte.endsWith("_15s") ? [15, 15] : [20, 25];
-  ok(total >= meta[0] && total <= meta[1], `${corte}: dura ${total} s (debe ser ${meta.join(" a ")} s)`);
-  ok(escenas[0][0] === "gancho", `${corte}: no empieza con el gancho`);
-  const [ultima, dUlt] = escenas.at(-1);
-  ok(ultima === "cierre" && dUlt === 3, `${corte}: el cierre debe ser la última escena y durar 3 s`);
-  for (const [id, d] of escenas.slice(0, -1)) ok(d >= 1.5 && d <= 2.5, `${corte}: ${id} dura ${d} s (cambio visual cada 1.5 a 2.5 s)`);
-  const aviso = escenas.filter(([id]) => ESCENAS[id].aviso).reduce((s, [, d]) => s + d, 0);
-  ok(aviso >= 2, `${corte}: el aviso médico se ve ${aviso} s (mínimo 2 s)`);
-}
-
-// Archivos
 const ffmpeg = process.env.FFMPEG ?? (await import("@ffmpeg-installer/ffmpeg").then((m) => m.default.path).catch(() => "ffmpeg"));
 function info(archivo) {
   try { execFileSync(ffmpeg, ["-hide_banner", "-i", archivo], { stdio: "pipe" }); } catch (e) { return String(e.stderr); }
   return "";
 }
+
+// Tiempos (siguen a la voz): un cambio visual cada 1 a 2.5 s (cada paso de la voz cuenta como cambio)
+const { cambios, duracion } = await import("./audio.mjs");
+for (const [corte, escenas] of Object.entries(CORTES)) {
+  const total = duracion(corte);
+  const meta = corte.endsWith("_anuncio") ? [15, 20] : [20, 40];
+  ok(total >= meta[0] && total <= meta[1], `${corte}: dura ${total.toFixed(2)} s (debe ser ${meta.join(" a ")} s)`);
+  ok(escenas[0][0] === "gancho", `${corte}: no empieza con el gancho`);
+  const [ultima, dUlt] = escenas.at(-1);
+  ok(ultima === "cierre" && dUlt >= 3 && dUlt <= 3.5, `${corte}: el cierre debe ser la última escena y durar 3 a 3.5 s`);
+  for (const [id, d, pasos = [0]] of escenas.slice(0, -1)) {
+    if (ESCENAS[id].aviso) continue;
+    const marcas = [...pasos, d];
+    for (let k = 0; k < pasos.length; k++) {
+      const tramo = marcas[k + 1] - marcas[k];
+      ok(tramo >= 1 && tramo <= 2.5, `${corte}: ${id} paso ${k + 1} dura ${tramo.toFixed(2)} s (cambio visual cada 1 a 2.5 s)`);
+    }
+  }
+  const aviso = escenas.filter(([id]) => ESCENAS[id].aviso).reduce((s, [, d]) => s + d, 0);
+  ok(aviso >= 2, `${corte}: el aviso médico se ve ${aviso} s (mínimo 2 s)`);
+  // La voz dura lo mismo que el video
+  const voz = info(resolve(SALIDA, VOZ[corte]));
+  const [, h, m, s] = voz.match(/Duration: (\d+):(\d+):([\d.]+)/) ?? [];
+  ok(Math.abs(+h * 3600 + +m * 60 + +s - total) < 0.15, `${corte}: la voz no dura lo mismo que el video`);
+}
+
+// Archivos
 for (const [corte, escenas] of Object.entries(CORTES)) {
   const i = info(resolve(SALIDA, `${corte}.mp4`));
-  const total = escenas.reduce((s, [, d]) => s + d, 0);
+  const total = duracion(corte);
   ok(/Video: h264/.test(i), `${corte}.mp4: no es H.264`);
   ok(i.includes(`${W}x${H}`), `${corte}.mp4: no es ${W}x${H}`);
   ok(new RegExp(`\\b${FPS} fps`).test(i), `${corte}.mp4: no es ${FPS} fps`);
-  ok(!/Audio:/.test(i), `${corte}.mp4: trae audio`);
+  ok(/Audio: aac/.test(i), `${corte}.mp4: no trae la voz (corre node audio.mjs)`);
   const [, hh, mm, ss] = i.match(/Duration: (\d+):(\d+):([\d.]+)/) ?? [];
   ok(Math.abs(+hh * 3600 + +mm * 60 + +ss - total) < 0.05, `${corte}.mp4: la duración no coincide con el guion`);
   console.log(`${corte}.mp4: ${(i.match(/Video: [^\n]*/) ?? ["?"])[0]}`);
