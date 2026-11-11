@@ -15,7 +15,7 @@ Gancho completo desde el cuadro 0, sin logo inicial. Cambio visual cada 2 s en R
 | 8 a 10 s | 6 a 7.5 s | Reserva un espacio para entrenar | Tarjeta tipográfica; toma UGC opcional según brief. |
 | 10 a 12 s | 7.5 a 9 s | Registra tu primera sesión | Tarjeta tipográfica; toma UGC opcional según brief. |
 | 12 a 14 s | 9 a 10.5 s | Construye el hábito desde hoy | Tarjeta tipográfica; toma UGC opcional según brief. |
-| 14 a 16 s | 10.5 a 12 s | Prueba siete días sin tarjeta | Tarjeta tipográfica; toma UGC opcional según brief. |
+| 14 a 16 s | 10.5 a 12 s | Siete días gratis y hoy no pagas | Tarjeta tipográfica; toma UGC opcional según brief. |
 | 16 a 19 s | 12 a 15 s | Empieza 7 días gratis en bananaburn.app | Coach Banana señalando oficial, botón ink y logo. |
 
 ## Brief UGC
@@ -36,7 +36,7 @@ Imagen fija de una agenda sin texto y mancuernas sobre fondo paper #FFF8E3, luz 
 
 ## Post propuesto
 
-Puedes empezar antes del 1 de enero, a tu ritmo y con el equipo disponible. Prueba siete días sin tarjeta en bananaburn.app. Después, Entreno cuesta $9.99/mes. Precios en USD, IVA incluido.
+Puedes empezar antes del 1 de enero, a tu ritmo y con el equipo disponible. Prueba siete días gratis en bananaburn.app: dejas tu tarjeta al registrarte y hoy no se cobra nada. Después, Entreno cuesta $9.99/mes (el primer mes, $4.99). Precios en USD, IVA incluido.
 
 #BananaBurn #Propositos #Fuerza #Habitos #Entrenamiento
 
