@@ -1,7 +1,7 @@
 // Textos de la oferta según la fecha (BETA_ENDS_AT). Hasta el fin de la beta: todo gratis (la oferta de la tarjeta vive
 // dentro de la app: quien la deja lista paga 50 % menos su primer mes, cobrado al fin de la beta).
 // Desde el fin de la beta (0043): 7 días gratis sin tarjeta; dejarla lista es opcional y da el 50 % del primer mes.
-// Desde el 1 de enero de 2027 (#269, cardRequiredNow): la tarjeta se deja al registrarse; 7 días gratis y el día 8 se cobra
+// Desde el 1 de diciembre de 2026 (#269, cardRequiredNow): la tarjeta se deja al registrarse; 7 días gratis y el día 8 se cobra
 // el primer mes con el 50 %. Ningún texto dice "sin tarjeta" desde ese día.
 // Las páginas públicas se regeneran cada hora (revalidate = 3600), así que el cambio sale solo en la primera hora del
 // 1 de noviembre. Nunca guardes estos textos en constantes de módulo: se calculan en cada render.
@@ -13,7 +13,7 @@ import { cardRequiredNow } from "./card-required";
 export type Offer = {
   /** ¿Ya terminó la beta? (desde ahí la prueba son 7 días desde el registro, sin tarjeta). */
   card: boolean;
-  /** #269: ¿la tarjeta se pide al registrarse? (desde el 1 de enero de 2027). */
+  /** #269: ¿la tarjeta se pide al registrarse? (desde el 1 de diciembre de 2026). */
   cardRequired: boolean;
   /** Nota bajo los botones de registro. */
   note: string;
@@ -69,7 +69,7 @@ export function offer(now = new Date()): Offer {
       llms: `Prueba gratis de ${TRIAL_DAYS} días con todo incluido.`,
     };
   }
-  // #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse. Hoy no se cobra nada; el día 8 se cobra el primer
+  // #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse. Hoy no se cobra nada; el día 8 se cobra el primer
   // mes con el 50 % (solo plan mensual; el anual va a precio normal).
   if (cardRequiredNow(now)) {
     return {

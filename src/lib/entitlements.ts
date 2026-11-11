@@ -8,7 +8,7 @@
 //   - Cortesías vigentes (source 'cortesia') y staff = completo.
 //   - Regalos de meses (source 'regalo' o 'referido', 0025): respetan su plan y se apilan (empiezan al terminar lo que ya había).
 //   - Sin plan y sin prueba vigente: la app muestra el muro de planes (no se borra nada).
-//   - #269: las cuentas creadas desde CARD_REQUIRED_FROM (1 ene 2027) tienen la prueba solo con su cobro listo (tarjeta
+//   - #269: las cuentas creadas desde CARD_REQUIRED_FROM (1 dic 2026) tienen la prueba solo con su cobro listo (tarjeta
 //     activa y cobro programado). Sin él quedan bloqueadas con cardStep "card": la app las lleva a dejar la tarjeta.
 // La base de datos repite la regla de acceso en public.has_app_access() (0013/0021) para el coach y la comunidad,
 // y la de nutrición en public.has_nutrition_access() (0022) para comidas, Mis comidas y Mis recetas.
@@ -169,7 +169,7 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   // Durante la beta nadie se bloquea. Después, cada cuenta nueva tiene 7 días desde el alta, con o sin tarjeta (0043).
   const beta = Number.isFinite(betaEnd) && betaEnd > now.getTime();
   const ownEnd = trialEndFor(i.createdAt, betaEndsAt);
-  // #269: cuenta nueva desde el 1 de enero sin su cobro listo: no tiene la prueba hasta dejar la tarjeta.
+  // #269: cuenta nueva desde el 1 de diciembre sin su cobro listo: no tiene la prueba hasta dejar la tarjeta.
   const needsCard = !beta && cardRequiredFor(i.createdAt) && !cardTrialReady(tc, i.card, now);
   const ownTrial = !beta && !needsCard && trialLive(i.createdAt, now, betaEndsAt);
   // Las cuentas de la beta siguen gratis 7 días después del lanzamiento (0045): durante la beta su acceso llega hasta ahí.

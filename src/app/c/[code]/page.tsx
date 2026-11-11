@@ -45,7 +45,7 @@ export default async function CondoLink({ params, searchParams }: { params: Prom
   const found: CondoRow | null = db ? await condoByCode(db, code)
     : demo ? { id: 0, code, name: "Condominio de ejemplo", status: "mes_gratis", free_ends_at: null, paid_plan: null, paid_until: null, ...(code === "con-tarjeta" ? { card_required: true, free_until: "2027-01-01T06:00:00.000Z" } : {}) } : null;
   const v = await getViewer().catch(() => null);
-  // #269: desde el 1 de enero de 2027 todos los condominios piden la tarjeta a las cuentas nuevas. Con sesión, según el alta
+  // #269: desde el 1 de diciembre de 2026 todos los condominios piden la tarjeta a las cuentas nuevas. Con sesión, según el alta
   // de la cuenta; sin sesión, según la fecha de hoy (quien se registre hoy). Solo demo: ?tarjeta=obligatoria.
   const createdAt = v && !v.demo && db ? await createdAtOf(db, v.id).catch(() => null) : null;
   const cardRule = v && !v.demo ? cardRequiredFor(createdAt) : cardRequiredNow() || cardRequiredDemo(demo || !!v?.demo, (await searchParams).tarjeta);

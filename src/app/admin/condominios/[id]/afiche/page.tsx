@@ -58,7 +58,7 @@ export default async function CondoPoster({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <div className="bg-ink px-[7%] py-[4%] text-[clamp(.75rem,2.5vw,1.25rem)] font-bold text-white">
-            {/* #269: desde el 1 de enero de 2027 las cuentas nuevas dejan la tarjeta para completar el mes gratis. */}
+            {/* #269: desde el 1 de diciembre de 2026 las cuentas nuevas dejan la tarjeta para completar el mes gratis. */}
             {cardRequiredNow() ? `Pruébalo ${CONDO_TRY_DAYS} días gratis y completa tu mes gratis con tu tarjeta. Te avisamos antes del cobro.` : "30 días gratis con todo incluido. Sin tarjeta y sin cobros automáticos."}
           </div>
         </article>

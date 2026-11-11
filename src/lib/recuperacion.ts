@@ -6,7 +6,7 @@
 //   si una corrida falla, la pieza no se manda después ni se juntan piezas atrasadas.
 // - Solo la prueba normal vencida (trialEndFor ya pasó), sin plan, sin pagos previos, sin cortesías ni condominios, sin tester,
 //   sin staff y sin ninguna fila en trial_charges (quien guardó tarjeta ya eligió plan y tiene sus correos de cobro).
-//   Las cuentas de la beta quedan fuera: tienen finBeta (beta-fin.ts). Las creadas desde el 1 de enero de 2027 (cardRequiredFor)
+//   Las cuentas de la beta quedan fuera: tienen finBeta (beta-fin.ts). Las creadas desde el 1 de diciembre de 2026 (cardRequiredFor)
 //   tampoco: sin tarjeta no tuvieron prueba.
 // - El día 8 cuenta lo que hizo con datos reales (trialProgress); sin entrenos terminados habla de su plan, nunca de logros.
 // - El correo reemplaza al recordatorio, la reactivación, la racha y el resumen semanal de ese día: nunca dos correos el mismo día.

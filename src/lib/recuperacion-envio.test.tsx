@@ -139,7 +139,7 @@ describe("audiencia", () => {
     expect(recoveryEligible({ ...audience, now: at(6) })).toBe(false);
   });
 
-  it("desde el 1 de enero de 2027 (cardRequiredFor) una cuenta nueva no tuvo prueba: no le llega", () => {
+  it("desde el 1 de diciembre de 2026 (cardRequiredFor) una cuenta nueva no tuvo prueba: no le llega", () => {
     const before = new Date(Date.parse(CARD_REQUIRED_FROM) - 1).toISOString();
     const after = CARD_REQUIRED_FROM;
     const later = (c: string, days: number) => new Date(Date.parse(c) + days * DAY_MS);

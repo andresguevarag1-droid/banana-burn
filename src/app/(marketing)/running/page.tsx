@@ -33,7 +33,7 @@ const FEATURES = [
   [Timer, "Técnica y marcas", "Skipping, carioca, saltos de tobillo y estiramientos con la animación de tu coach. Tus mejores 1, 5, 10 y 21 km."],
 ] as const;
 
-// #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse (card = cardRequiredNow()): sin "sin tarjeta".
+// #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse (card = cardRequiredNow()): sin "sin tarjeta".
 const faq = (card = cardRequiredNow()) => [
   ["¿Qué incluye la prueba de 7 días?", card ? "Puedes probar tu plan de entrenamiento con todo incluido. Dejas tu tarjeta al registrarte y hoy no se cobra nada. La compra de la Temporada Running no está incluida: se paga aparte. Al terminar se cobra el plan que elegiste, salvo que canceles antes desde Mi plan." : "Puedes probar tu plan de entrenamiento sin tarjeta. La compra de la Temporada Running no está incluida: se paga aparte. Al terminar, eliges tu plan desde Mi plan."],
   ["¿Sirve si ya tengo un plan de mi club o mi entrenador?", "Sí. Marcas \"Ya tengo plan de carrera\" y los días que haces series o tempo. Banana Burn solo arma tu fuerza, movilidad y técnica alrededor de esos días, sin chocar."],

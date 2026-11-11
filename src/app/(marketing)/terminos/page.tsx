@@ -36,7 +36,7 @@ function trialSection(now = new Date()): LegalSection {
     [`Si dejas tu tarjeta lista durante la prueba, el primer cobro es el día en que termina tu prueba (${TRIAL_DAYS} días después del registro), salvo que canceles antes. Guardar la tarjeta no alarga la prueba.`, ...promo, "La prueba gratis es una por persona y solo para cuentas nuevas."],
   ] as LegalSection["p"];
   const beta = `Las cuentas creadas durante el acceso anticipado (hasta el ${lastBeta}) tienen acceso completo y gratis hasta el ${lastFree}, sin tarjeta.`;
-  // #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse. Las cuentas de antes conservan sus reglas.
+  // #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse. Las cuentas de antes conservan sus reglas.
   if (cardRequiredNow(now)) {
     const from = day(Date.parse(CARD_REQUIRED_FROM));
     return { id: "prueba", t: "Prueba gratis, tarjeta y primer cobro", p: [

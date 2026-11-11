@@ -17,7 +17,7 @@ import type { Metadata } from "next";
 export const revalidate = 3600;
 
 const TITLE = `Precios: tu entrenador personal en el celular desde ${FROM} al mes`;
-/** Según la fecha (offer.ts): la prueba no pide tarjeta; la beta es gratis hasta el 7 de noviembre. #269: desde el 1 de enero
+/** Según la fecha (offer.ts): la prueba no pide tarjeta; la beta es gratis hasta el 7 de noviembre. #269: desde el 1 de diciembre
  * de 2027 la tarjeta se deja al registrarse, así que ningún texto dice "sin tarjeta". */
 const description = () => `${offer().card && !offer().cardRequired ? `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido, sin tarjeta.` : `Prueba Banana Burn ${TRIAL_DAYS} días gratis con todo incluido.`} Después, Entreno desde ${FROM} al mes, o súmale nutrición con comida latina de verdad. Cancela cuando quieras.`;
 const CTA = `Empieza ${TRIAL_DAYS} días gratis`;

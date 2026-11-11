@@ -112,7 +112,7 @@ export function Pricing({ recommended = "completo", loggedIn: known, reason, tri
       </div>
       {checkout.error && <p role="alert" className="mt-6 text-center text-sm font-semibold text-bad">{checkout.error}</p>}
       {/* La prueba gratis solo se le cuenta a quien aún no tiene cuenta: en el muro (prueba terminada) y en Mi plan no aplica. */}
-      {/* #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse (offer.ts): sin "sin tarjeta". */}
+      {/* #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse (offer.ts): sin "sin tarjeta". */}
       {!loggedIn && offer().cardRequired && <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido. Dejas tu tarjeta al registrarte, hoy no se cobra nada y tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD), IVA incluido.</p>}
       {!loggedIn && !offer().cardRequired && <p className="mt-6 text-center text-sm text-muted text-pretty">Primero tienes {TRIAL_DAYS} días gratis con todo incluido, sin tarjeta. Si dejas tu tarjeta lista antes de tu primer cobro, tu primer mes del plan mensual cuesta {PROMO_PCT} % menos. Precios en dólares (USD), IVA incluido.</p>}
       {loggedIn && <p className="mt-6 text-center text-sm text-muted text-pretty">Precios en dólares (USD), IVA incluido.</p>}

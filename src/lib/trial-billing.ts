@@ -229,7 +229,7 @@ async function condoCardUntil(db: SupabaseClient, userId: string, rawCode: strin
     if (!rawCode) return null;
     const code = normalizeCondoCode(rawCode);
     const condo = code ? await condoByCode(db, code) : null;
-    // #269: desde el 1 de enero de 2027 cualquier condominio pide la tarjeta a una cuenta nueva.
+    // #269: desde el 1 de diciembre de 2026 cualquier condominio pide la tarjeta a una cuenta nueva.
     const createdAt = condo && !condo.card_required ? await createdAtOf(db, userId).catch(() => null) : null;
     if (!code || !condo || !(condo.card_required || cardRequiredFor(createdAt))) return null;
     const [{ data: member }, { data: grants }, paid] = await Promise.all([

@@ -7,7 +7,7 @@
 //   - Con tarjeta hasta una fecha (0066, piloto Soho Paradisus): primero se prueba SIN tarjeta (CONDO_TRY_DAYS con todo
 //     incluido, nunca más allá de free_until). Al dejar la tarjeta, el acceso sigue gratis hasta free_until y el primer
 //     cobro pasa a esa fecha a precio normal.
-//   - #269: desde el 1 de enero de 2027 todos los condominios piden la tarjeta a las cuentas nuevas (condoForAccount), con el
+//   - #269: desde el 1 de diciembre de 2026 todos los condominios piden la tarjeta a las cuentas nuevas (condoForAccount), con el
 //     mismo flujo: primero se prueba sin tarjeta y la tarjeta extiende el acceso hasta el fin de su mes gratis (30 días desde
 //     que lo activó; free_until es solo de Soho Paradisus). El cobro llega ese día, a precio normal.
 import { SITE_URL } from "@/lib/env";
@@ -91,7 +91,7 @@ export function condoWhatsapp(c: { name: string; code: string; card_required?: b
       `Actívalo aquí: ${condoLink(c.code)}`,
     ].join("\n");
   }
-  // #269: desde el 1 de enero las cuentas nuevas dejan la tarjeta para seguir después de probar.
+  // #269: desde el 1 de diciembre las cuentas nuevas dejan la tarjeta para seguir después de probar.
   return [
     `Hola, vecinos de ${c.name}.`,
     "",
