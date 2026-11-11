@@ -18,13 +18,17 @@ export const BOTON = ["Empieza 7 días gratis", "en bananaburn.app"];
 export const ESCENAS = {
   gancho: { texto: ["Bajaste", "rápido…", "¿y tu músculo?"] },
   pierdes: { texto: ["Bajar rápido", "también se lleva", "músculo."] },
-  proteina: { texto: ["Proteína", "primero", "en cada comida"] },
-  captura: { texto: ["Tu meta de proteína,", "cada día."] },
+  // 1. La app te ayuda a entrenar poco y constante
+  app: { texto: ["Entrena poco,", "pero", "constante."] },
+  // 2. Cómo lo hace: tres capturas reales que cambian con cada línea
+  como: { texto: ["Qué hacer,", "con cuánto peso", "y cuándo descansar."] },
+  // 3. Entrenar para reconstruir el cuerpo
+  fuerza: { texto: ["Fuerza para", "reconstruir", "tu cuerpo."] },
+  // 4. Y la nutrición
+  captura: { texto: ["Y no olvida", "tu nutrición."] },
   zoom: { texto: ["Y cuánto te falta hoy."] },
-  fuerza: { texto: ["Entrena", "fuerza", "cada semana"] },
-  entrena: { texto: ["El músculo", "se cuida", "entrenando."] },
-  shield: { texto: ["Banana Shield", "lo arma por ti."] },
-  pilares: { texto: ["Más proteína", "Fuerza primero", "Modo suave"] },
+  // 5. Plan completo con Banana Shield (sin nombrar el medicamento en pantalla)
+  shield: { texto: ["Plan completo", "con Banana Shield", "si bajas rápido."] },
   aviso: { texto: [AVISO], aviso: true },
   cierre: { texto: [...BOTON, "BananaBurn"] },
 };
@@ -32,13 +36,13 @@ export const ESCENAS = {
 /** Versión de 24 s (Reel) y de 15 s (anuncios). */
 export const CORTES = {
   "R02_musculo-glp1": [
-    ["gancho", 2], ["pierdes", 2], ["proteina", 2], ["captura", 2], ["zoom", 2], ["fuerza", 2],
-    ["entrena", 2], ["shield", 2], ["pilares", 2.5], ["aviso", 2.5], ["cierre", 3],
+    ["gancho", 2], ["pierdes", 2], ["app", 2], ["como", 2.5], ["fuerza", 2], ["captura", 2], ["zoom", 2],
+    ["shield", 2], ["aviso", 2.5], ["cierre", 3],
   ],
   "R02_musculo-glp1_15s": [
-    ["gancho", 2], ["proteina", 2], ["captura", 2], ["fuerza", 2], ["shield", 1.5], ["aviso", 2.5], ["cierre", 3],
+    ["gancho", 2], ["app", 1.5], ["como", 2.5], ["captura", 2], ["shield", 1.5], ["aviso", 2.5], ["cierre", 3],
   ],
 };
 
-/** Números permitidos en el texto: solo los 7 días del cierre estándar. Sin gramos ni frecuencias exactas (#215). */
+/** Números permitidos en el texto: solo los 7 días del cierre estándar. Sin gramos ni frecuencias exactas (#215). Los 12 min del primer entreno se ven en la captura real de Hoy. */
 export const NUMEROS_PERMITIDOS = ["7"];
