@@ -117,7 +117,7 @@ describe("textos del hero", () => {
     }, 20_000);
   }
 
-  it("desde el 1 de enero la variante usa cardRequiredNow, como el resto de la landing", async () => {
+  it("desde el 1 de diciembre la variante usa cardRequiredNow, como el resto de la landing", async () => {
     at(after);
     const t = text(await anuncio("reel_nadie_te_mira"));
     expect(t).toContain("Hoy no se cobra nada");

@@ -72,7 +72,7 @@ export default function TemporadasLanding() {
           <Link href={SIGNUP} data-cta="temporadas-hero" className="btn-primary h-14 px-7 text-base w-full sm:w-auto">{TRIAL_CTA} <ArrowRight className="size-5" /></Link>
           <a href="#deportes" className="tap font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 hover:decoration-ink">Ver las temporadas</a>
         </div>
-        {/* #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse: sin "sin tarjeta". */}
+        {/* #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse: sin "sin tarjeta". */}
         {card ? <p className="mt-3 text-sm text-ink">Hoy no se cobra nada. Cancelas cuando quieras.</p> : <>
         <p className="mt-3 text-sm text-ink">Sin tarjeta. Cancelas cuando quieras.</p>
         <Link href={SIGNUP} className="tap mt-1 inline-flex items-center text-sm font-semibold text-ink underline underline-offset-4">Continuar sin tarjeta</Link></>}

@@ -118,7 +118,7 @@ describe("recuperación de la prueba en runReminders", () => {
     expect(sent[0].text).not.toMatch(/guardaste \d/);
   });
 
-  it("no llega a una cuenta creada desde el 1 de enero de 2027 (tarjeta obligatoria: no tuvo prueba)", async () => {
+  it("no llega a una cuenta creada desde el 1 de diciembre de 2026 (tarjeta obligatoria: no tuvo prueba)", async () => {
     tables.profiles = [profile(1, { created_at: "2027-01-02T12:00:00.000Z" })];
     for (const at of ["2027-01-09T13:00:00.000Z", "2027-01-11T13:00:00.000Z"]) await runReminders(new Date(at), "daily");
     expect(sent.filter((x) => x.kind?.startsWith("recuperacion"))).toEqual([]);

@@ -44,7 +44,7 @@ const FEATURES: [PhosphorIcon, string, string][] = [
   [House, "En el gimnasio del condominio o en casa", "El plan se arma con el equipo que hay: máquinas, mancuernas, bandas o sin equipo, en el apartamento."],
 ];
 
-// #269: desde el 1 de enero de 2027 las cuentas nuevas dejan la tarjeta para completar el mes gratis (prueban 7 días sin
+// #269: desde el 1 de diciembre de 2026 las cuentas nuevas dejan la tarjeta para completar el mes gratis (prueban 7 días sin
 // ella, como en Soho Paradisus). Los textos se calculan al pedir la página (card = cardRequiredNow()).
 const steps = (card: boolean): [string, string][] => [
   ["Reunión virtual de 30 minutos", "Por videollamada te mostramos la app por dentro, te explicamos cómo se implementa y resolvemos las dudas de la administración o la junta directiva."],

@@ -34,7 +34,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   // que el resto de la app (entitlements.ts). Con plan pagado o del equipo no hay prueba que mostrar.
   // 0043: si todavía no dejó su tarjeta (beta o prueba corriendo), al final se ofrece dejarla lista con 50 % el primer mes.
   let trialEndsAt: string | null = null, trialBeta = false, nutrition = true, cardOffer = false, chargeAt: string | null = null;
-  // #269: cuenta creada desde el 1 de enero de 2027 sin su cobro listo: la tarjeta es obligatoria para empezar la prueba.
+  // #269: cuenta creada desde el 1 de diciembre de 2026 sin su cobro listo: la tarjeta es obligatoria para empezar la prueba.
   // Solo demo: ?tarjeta=obligatoria lo muestra.
   const params = await searchParams;
   let cardRequired = false;

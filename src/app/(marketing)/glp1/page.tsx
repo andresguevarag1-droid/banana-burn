@@ -14,7 +14,7 @@ import { SIGNUP_GLP1 } from "../content";
 
 export const revalidate = 3600;
 const TITLE = "Banana Shield: fuerza para quienes bajan con GLP-1";
-/** #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse: sin "sin tarjeta". Se calcula en cada render. */
+/** #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse: sin "sin tarjeta". Se calcula en cada render. */
 const description = (card = cardRequiredNow()) => `Fuerza, proteína y hábitos para ayudar a conservar músculo durante la pérdida de peso. Prueba Banana Shield 7 días gratis${card ? "" : ", sin tarjeta"}. No sustituye la indicación de tu médico.`;
 const CTA = `Empieza ${TRIAL_DAYS} días gratis`;
 const MEDICAL = "No sustituye la indicación de tu médico.";

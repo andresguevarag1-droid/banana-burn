@@ -60,7 +60,7 @@ const PILLARS: { n: string; t: string; d: string }[] = [
 ];
 
 /** Lo que hace la app, entendido en 5 segundos. */
-/** #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse: sin "Sin tarjeta". Se calcula en cada render. */
+/** #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse: sin "Sin tarjeta". Se calcula en cada render. */
 const heroTrust = (now = new Date()) => [`${TRIAL_DAYS} días gratis`, cardRequiredNow(now) ? "Hoy no se cobra nada" : "Sin tarjeta", "Cancelas cuando quieras", "Te enseñamos desde cero"];
 
 const STEPS: [string, string][] = [

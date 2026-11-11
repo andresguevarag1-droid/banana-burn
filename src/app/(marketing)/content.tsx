@@ -53,7 +53,7 @@ export const homeFaq = (now = new Date()) => {
     pick("Uso Ozempic o Mounjaro. ¿Es para mí?"),
     pick("¿Sirve si entreno en casa o sin equipo?"),
     ["¿Cuánto tiempo al día necesito?", "Tú eliges: sesiones de 15 a 60 minutos, de 3 a 6 días por semana. En los días apretados hay entrenos exprés de 10, 20 o 30 minutos sin equipo."] as const,
-    // #269: desde el 1 de enero de 2027 la tarjeta se deja al registrarse (offer.ts).
+    // #269: desde el 1 de diciembre de 2026 la tarjeta se deja al registrarse (offer.ts).
     ["¿Me cobran algo hoy?", `No. ${offer(now).cardRequired ? "Creas tu cuenta, dejas tu tarjeta y hoy no se cobra nada." : "Creas tu cuenta sin tarjeta y pruebas todo gratis."} ${pick("¿Cómo funciona la prueba gratis?")[1]}`] as const,
     pick("¿Hay descuento en el primer mes?"),
     pick("¿Cómo cancelo? ¿Hay reembolso?"),

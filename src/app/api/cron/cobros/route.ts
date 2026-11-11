@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: errors === 0, dryRun: true, resumen: summarize(planned, now.toISOString()), cobros: planned }, { status: errors === 0 ? 200 : 500 });
   }
   const t0 = Date.now();
-  // #269: el 1 de enero de 2027 las páginas públicas se regeneran ya, sin esperar su hora de caché ("sin tarjeta" sale ese día).
+  // #269: el 1 de diciembre de 2026 las páginas públicas se regeneran ya, sin esperar su hora de caché ("sin tarjeta" sale ese día).
   if (cardSwitchDay()) for (const p of CARD_COPY_PATHS) { try { revalidatePath(p); } catch { /* la caché vence sola en 1 h */ } }
   const { cobros, primerMes, renovaciones } = await runCobros(new Date(), { t0 });
   const ok = cobros !== null;

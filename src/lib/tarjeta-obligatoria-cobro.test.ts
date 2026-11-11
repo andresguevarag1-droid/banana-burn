@@ -1,4 +1,4 @@
-// #269 de punta a punta: una cuenta creada el 1 de enero de 2027 a las 00:00 de Costa Rica deja su tarjeta en el registro,
+// #269 de punta a punta: una cuenta creada el 1 de diciembre de 2026 a las 00:00 de Costa Rica deja su tarjeta en el registro,
 // tiene 7 días gratis con todo incluido y el día 8 se cobra su primer mes con el 50 % (PaymentIntent de ONVO por $4.99).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -31,7 +31,7 @@ const { entitlementsFrom } = await import("./entitlements");
 const { CARD_REQUIRED_FROM } = await import("./card-required");
 
 const USER = "33333333-3333-4333-8333-333333333333";
-const CREATED = CARD_REQUIRED_FROM; // 1 de enero de 2027, 00:00 en Costa Rica
+const CREATED = CARD_REQUIRED_FROM; // 1 de diciembre de 2026, 00:00 en Costa Rica
 const plus = (iso: string, days: number) => new Date(Date.parse(iso) + days * DAY_MS);
 const viewer = { demo: false, id: USER, email: "ana@prueba.test", name: "Ana", role: "free" as const, plan: "free", onboarded: true, tz: "America/Costa_Rica", country: "CR" };
 
@@ -72,8 +72,8 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
     expect(saved.outcome).toBe("programado");
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
-    expect(f.tables.trial_charges[0]).toMatchObject({ kind: "prueba", status: "scheduled", promo: "primer_mes_50", amount_minor: 499, trial_started_at: CREATED, charge_at: "2027-01-08T06:00:00.000Z" });
-    expect((mail.sendTrialStarted.mock.calls as unknown[][])[0][0]).toMatchObject({ amount: 4.99, promo: true, chargeAt: "2027-01-08T06:00:00.000Z" });
+    expect(f.tables.trial_charges[0]).toMatchObject({ kind: "prueba", status: "scheduled", promo: "primer_mes_50", amount_minor: 499, trial_started_at: CREATED, charge_at: "2026-12-08T06:00:00.000Z" });
+    expect((mail.sendTrialStarted.mock.calls as unknown[][])[0][0]).toMatchObject({ amount: 4.99, promo: true, chargeAt: "2026-12-08T06:00:00.000Z" });
 
     // Su prueba: 7 días con todo incluido.
     expect(access(f, plus(CREATED, 1))).toMatchObject({ access: "trial", app: true, nutrition: true, locked: false, cardStep: "none" });
@@ -87,7 +87,7 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
     onvo.createPaymentIntent.mockResolvedValue({ id: "pi_8" });
     onvo.confirmPaymentIntent.mockResolvedValue({ id: "pi_8", status: "succeeded" });
     onvo.getPaymentIntent.mockResolvedValue({ id: "pi_8", status: "succeeded", amount: 499, currency: "USD" });
-    const day8 = new Date("2027-01-08T06:05:00.000Z");
+    const day8 = new Date("2026-12-08T06:05:00.000Z");
     await tb.sweepTrialCharges(day8, { skipReminders: true });
     await tb.sweepTrialCharges(day8, { skipReminders: true });
     expect(onvo.createPaymentIntent).toHaveBeenCalledOnce();
@@ -104,9 +104,9 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
     await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, plus(CREATED, 0.01));
     expect(f.tables.trial_charges[0]).toMatchObject({ amount_minor: 749 });
     const r = await tb.cancelTrial(viewer, false, plus(CREATED, 2));
-    expect(r.accessUntil).toBe("2027-01-08T06:00:00.000Z");
+    expect(r.accessUntil).toBe("2026-12-08T06:00:00.000Z");
     expect(access(f, plus(CREATED, 3))).toMatchObject({ access: "trial", locked: false });
-    await tb.sweepTrialCharges(new Date("2027-01-08T06:05:00.000Z"), { skipReminders: true });
+    await tb.sweepTrialCharges(new Date("2026-12-08T06:05:00.000Z"), { skipReminders: true });
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(access(f, plus(CREATED, 7.1))).toMatchObject({ locked: true, cardStep: "pay" });
   });

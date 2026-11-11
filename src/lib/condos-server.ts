@@ -74,7 +74,7 @@ export async function joinCondo(userId: string, rawCode: string, now = new Date(
   const db = adminClient();
   if (!db) return { kind: "sin_config", condo: null };
   const [found, createdAt] = await Promise.all([code ? condoByCode(db, code) : null, createdAtOf(db, userId).catch(() => null)]);
-  // #269: desde el 1 de enero de 2027 la cuenta nueva necesita la tarjeta en cualquier condominio.
+  // #269: desde el 1 de diciembre de 2026 la cuenta nueva necesita la tarjeta en cualquier condominio.
   const condo = found ? condoForAccount(found, createdAt) : null;
   const [{ data: member }, { data: grants }, paid, cardReady] = await Promise.all([
     db.from("condo_members").select("condo_id,grant_id").eq("user_id", userId).maybeSingle(),
@@ -252,7 +252,7 @@ export async function syncCondoMembers(db: SupabaseClient, c: CondoRow, now = ne
         continue;
       }
       // Con tarjeta (0066) no hay aviso de "termina tu mes gratis": el aviso del cobro (2 días antes) ya lo explica.
-      // #269: tampoco para una cuenta nueva desde el 1 de enero (todos los condominios le piden la tarjeta).
+      // #269: tampoco para una cuenta nueva desde el 1 de diciembre (todos los condominios le piden la tarjeta).
       if (!c.card_required && endingNoticeDue(c, g, m.ending_notified_at, now) && !condoForAccount(c, await createdAtOf(db, m.user_id)).card_required) {
         const { data: claimed } = await db.from("condo_members").update({ ending_notified_at: now.toISOString() }).eq("id", m.id).is("ending_notified_at", null).select("id");
         if (!claimed?.length) continue;

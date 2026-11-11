@@ -17,7 +17,7 @@ export type Processor = keyof typeof FEES;
 
 export type Origin = "anuncio" | "condominio" | "organico";
 export const ORIGIN_LABEL: Record<Origin, string> = { anuncio: "Anuncio", condominio: "Condominio", organico: "Orgánico" };
-/** Cuentas antes o desde el 1 de enero de 2027 (tarjeta obligatoria, cardRequiredFor). */
+/** Cuentas antes o desde el 1 de diciembre de 2026 (tarjeta obligatoria, cardRequiredFor). */
 export type CardEra = "antes" | "desde";
 export const CARD_ERA_LABEL: Record<CardEra, string> = { antes: "Antes del 1 ene 2027", desde: "Desde el 1 ene 2027" };
 /** Valor del filtro de país para cuentas sin país. */

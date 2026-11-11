@@ -113,7 +113,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
    */
   cardOffer?: boolean;
   /**
-   * #269: cuenta creada desde el 1 de enero de 2027: el paso de la tarjeta es obligatorio y sin "seguir sin tarjeta". El plan
+   * #269: cuenta creada desde el 1 de diciembre de 2026: el paso de la tarjeta es obligatorio y sin "seguir sin tarjeta". El plan
    * se guarda al llegar a ese paso, así que si cierra la bienvenida ahí, al volver abre directo en la tarjeta.
    */
   cardRequired?: boolean;
@@ -466,7 +466,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
           </>)}
 
           {step === STEPS && cardRequired && (<>
-            {/* #269: desde el 1 de enero de 2027 la tarjeta es obligatoria para empezar la prueba. Hoy no se cobra nada. */}
+            {/* #269: desde el 1 de diciembre de 2026 la tarjeta es obligatoria para empezar la prueba. Hoy no se cobra nada. */}
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">{t("Deja tu tarjeta para empezar tus {n} días gratis", { n: TRIAL_DAYS })}</h1>
               <p className="mt-2 text-muted text-pretty">{t("Tienes todo incluido: entreno, Coach Banana, nutrición y Banana Shield.")}</p>

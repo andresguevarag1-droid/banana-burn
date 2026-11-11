@@ -1,4 +1,4 @@
-// #269: desde el 1 de enero de 2027 todos los condominios piden la tarjeta a las cuentas nuevas, con el flujo de Soho
+// #269: desde el 1 de diciembre de 2026 todos los condominios piden la tarjeta a las cuentas nuevas, con el flujo de Soho
 // Paradisus (#264, #267): primero prueban 7 días sin tarjeta y la tarjeta extiende el acceso hasta el fin de SU mes gratis
 // (30 días desde que lo activaron, no free_until). El cobro pasa a esa fecha, a precio normal. Base falsa como en
 // condos-server.test.ts.
@@ -88,17 +88,17 @@ describe("condominios con la tarjeta obligatoria (#269)", () => {
 
     // Deja la tarjeta (ONVO) en el día 3: su cobro de la prueba queda programado con el 50 %; el condominio lo mueve.
     tables.payment_methods.push({ user_id: NEW, status: "active", provider: "onvo" });
-    tables.trial_charges.push({ id: 7, user_id: NEW, status: "scheduled", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", charge_at: "2027-01-08T06:00:00.000Z", moved_from: null });
+    tables.trial_charges.push({ id: 7, user_id: NEW, status: "scheduled", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", charge_at: "2026-12-08T06:00:00.000Z", moved_from: null });
     expect((await joinCondo(NEW, "las-palmas", later)).kind).toBe("join");
     expect(grantOf(NEW).expires_at).toBe(plus(JOIN, CONDO_FREE_DAYS));
-    expect(tables.trial_charges[0]).toMatchObject({ charge_at: plus(JOIN, CONDO_FREE_DAYS), next_attempt_at: plus(JOIN, CONDO_FREE_DAYS), moved_from: "2027-01-08T06:00:00.000Z", promo: null, amount_minor: 999 });
+    expect(tables.trial_charges[0]).toMatchObject({ charge_at: plus(JOIN, CONDO_FREE_DAYS), next_attempt_at: plus(JOIN, CONDO_FREE_DAYS), moved_from: "2026-12-08T06:00:00.000Z", promo: null, amount_minor: 999 });
     expect(await pendingCardCondo(db, NEW, later)).toBeNull();
   });
 
   it("si cancela, vuelve a su prueba del condominio; su mes no se reinicia al volver a abrir el enlace", async () => {
     await joinCondo(NEW, "las-palmas", JOIN);
     tables.payment_methods.push({ user_id: NEW, status: "active", provider: "onvo" });
-    tables.trial_charges.push({ id: 7, user_id: NEW, status: "scheduled", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", charge_at: "2027-01-08T06:00:00.000Z", moved_from: null });
+    tables.trial_charges.push({ id: 7, user_id: NEW, status: "scheduled", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", charge_at: "2026-12-08T06:00:00.000Z", moved_from: null });
     await joinCondo(NEW, "las-palmas", JOIN);
     const cancelAt = new Date(JOIN.getTime() + 2 * DAY);
     expect(await cutCardCondoGrant(db, NEW, cancelAt)).toBe(plus(JOIN, CONDO_TRY_DAYS));
@@ -111,7 +111,7 @@ describe("condominios con la tarjeta obligatoria (#269)", () => {
   it("Tilopay no cuenta para el condominio (como en Soho Paradisus)", async () => {
     await joinCondo(NEW, "las-palmas", JOIN);
     tables.payment_methods.push({ user_id: NEW, status: "active", provider: "tilopay" });
-    tables.trial_charges.push({ id: 7, user_id: NEW, status: "scheduled", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", charge_at: "2027-01-08T06:00:00.000Z" });
+    tables.trial_charges.push({ id: 7, user_id: NEW, status: "scheduled", plan: "entreno", billing: "mes", amount_minor: 499, promo: "primer_mes_50", charge_at: "2026-12-08T06:00:00.000Z" });
     expect((await joinCondo(NEW, "las-palmas", JOIN)).kind).toBe("ya_vinculado");
     expect(grantOf(NEW).expires_at).toBe(plus(JOIN, CONDO_TRY_DAYS));
   });

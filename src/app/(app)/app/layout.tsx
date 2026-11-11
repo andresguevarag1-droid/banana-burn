@@ -61,7 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const affP = isAffiliate(v);
   const [ent, xp, prog, unseen, tester, guide, newsState] = await Promise.all([getEntitlements(v), getXpTotal(v).catch(() => null), getActiveProgram(v).catch(() => null), getUnseenGifts(v).catch(() => ({ gifts: [], undelivered: false })), getMyTester(v).catch(() => null), getGuideState(v).catch(() => ({ seenVersion: null, tips: [], persisted: false })), getNewsState(v).catch(() => ({ seenId: null, seenAt: null, createdAt: null, persisted: false }))]);
   const affiliate = await affP;
-  // #269: cuenta nueva desde el 1 de enero sin su tarjeta: su prueba empieza al dejarla, en el paso de la bienvenida.
+  // #269: cuenta nueva desde el 1 de diciembre sin su tarjeta: su prueba empieza al dejarla, en el paso de la bienvenida.
   if (ent.cardStep === "card") redirect("/bienvenida");
   // Un regalo creado por la base (recompensa de referidos) todavía sin correo ni push: se manda después de responder.
   // Programa activo: solo con acceso a la app (sin acceso queda guardado y vuelve al renovar).

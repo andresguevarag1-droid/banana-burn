@@ -1,4 +1,4 @@
-// #269: desde el 1 de enero de 2027 (00:00 de Costa Rica) el registro pide la tarjeta. Antes y después de la fecha: el
+// #269: desde el 1 de diciembre de 2026 (00:00 de Costa Rica) el registro pide la tarjeta. Antes y después de la fecha: el
 // interruptor, el acceso (entitlements), los condominios (decideJoin), el paso de la bienvenida y los textos públicos.
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -27,9 +27,9 @@ const { faq, homeFaq } = await import("@/app/(marketing)/content");
 
 const DAY = 864e5;
 const FROM = Date.parse(CARD_REQUIRED_FROM);
-/** 31 de diciembre de 2026 a las 23:59 de Costa Rica (UTC-6). */
+/** 30 de noviembre de 2026 a las 23:59 de Costa Rica (UTC-6). */
 const DEC31_2359 = new Date(FROM - 60_000).toISOString();
-/** 1 de enero de 2027 a las 00:00 de Costa Rica. */
+/** 1 de diciembre de 2026 a las 00:00 de Costa Rica. */
 const JAN1_0000 = CARD_REQUIRED_FROM;
 const at = (iso: string, days = 0) => new Date(Date.parse(iso) + days * DAY);
 const CARD = { brand: "visa", last4: "4242", exp_month: 12, exp_year: 2030, status: "active" as const };
@@ -45,9 +45,9 @@ const withClock = <T,>(now: Date, fn: () => T): T => { vi.useFakeTimers({ toFake
 afterEach(() => { vi.useRealTimers(); });
 
 describe("el interruptor por fecha (card-required.ts)", () => {
-  it("es la medianoche del 1 de enero de 2027 en Costa Rica", () => {
-    expect(CARD_REQUIRED_FROM).toBe("2027-01-01T06:00:00.000Z");
-    expect(new Date(CARD_REQUIRED_FROM).toLocaleString("es-419", { timeZone: "America/Costa_Rica", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })).toMatch(/1 de enero de 2027.*00:00/);
+  it("es la medianoche del 1 de diciembre de 2026 en Costa Rica", () => {
+    expect(CARD_REQUIRED_FROM).toBe("2026-12-01T06:00:00.000Z");
+    expect(new Date(CARD_REQUIRED_FROM).toLocaleString("es-419", { timeZone: "America/Costa_Rica", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })).toMatch(/1 de diciembre de 2026.*00:00/);
   });
   it("una cuenta del 31 dic a las 23:59 de Costa Rica sigue sin tarjeta; una del 1 ene a las 00:00 la necesita", () => {
     expect(cardRequiredFor(DEC31_2359)).toBe(false);
@@ -58,7 +58,7 @@ describe("el interruptor por fecha (card-required.ts)", () => {
   });
   it("el cron de cobros (00:20 de Costa Rica) regenera ese día las páginas públicas en caché", () => {
     expect(cardSwitchDay(new Date(DEC31_2359))).toBe(false);
-    expect(cardSwitchDay(new Date("2027-01-01T06:20:00Z"))).toBe(true);
+    expect(cardSwitchDay(new Date("2026-12-01T06:20:00Z"))).toBe(true);
     expect(cardSwitchDay(new Date("2027-01-02T06:20:00Z"))).toBe(false);
     expect([...CARD_COPY_PATHS]).toEqual(["/", "/anuncio/reel_cuanto_peso", "/anuncio/reel_condominio", "/anuncio/reel_casa_gym_parque", "/anuncio/reel_nadie_te_mira", "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt"]);
     expect(readFileSync("src/app/api/cron/cobros/route.ts", "utf8")).toContain("if (cardSwitchDay()) for (const p of CARD_COPY_PATHS)");
@@ -115,7 +115,7 @@ describe("acceso (entitlements) antes y después de la fecha", () => {
     expect(firstChargeMinor("entreno", "mes", promo)).toBe(499);
     expect(firstChargeMinor("completo", "mes", promo)).toBe(749);
     expect(firstChargeMinor("completo", "anual", promo)).toBe(8999);
-    expect(scheduleFor(kind, now, undefined, undefined, JAN1_0000).chargeAt).toBe("2027-01-08T06:00:00.000Z");
+    expect(scheduleFor(kind, now, undefined, undefined, JAN1_0000).chargeAt).toBe("2026-12-08T06:00:00.000Z");
   });
 });
 
@@ -150,11 +150,11 @@ describe("condominios (decideJoin) antes y después de la fecha", () => {
 });
 
 describe("bienvenida: el paso de la tarjeta obligatoria", () => {
-  const props = { name: "Ana", demo: true, initialGoal: null, glp1: false, country: "CR", intent: null, trialEndsAt: "2027-01-08T06:00:00.000Z", chargeAt: "2027-01-08T06:00:00.000Z", startOnCard: true };
+  const props = { name: "Ana", demo: true, initialGoal: null, glp1: false, country: "CR", intent: null, trialEndsAt: "2026-12-08T06:00:00.000Z", chargeAt: "2026-12-08T06:00:00.000Z", startOnCard: true };
   it("con la tarjeta obligatoria: sin \"Empezar gratis sin tarjeta\" ni \"La tarjeta es opcional\", y con el texto del cobro", () => {
     const t = text(renderToStaticMarkup(<Wizard {...props} cardOffer cardRequired />));
     expect(t).toContain("Deja tu tarjeta para empezar tus 7 días gratis");
-    expect(t).toContain("Hoy no se cobra nada. El 8 de enero se cobra $7.49, tu primer mes con 50 %. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.");
+    expect(t).toContain("Hoy no se cobra nada. El 8 de diciembre se cobra $7.49, tu primer mes con 50 %. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.");
     expect(t).not.toMatch(/sin tarjeta|opcional/i);
   });
   it("al volver con el plan ya guardado abre directo en la tarjeta, sin volver atrás", () => {
@@ -173,12 +173,12 @@ describe("bienvenida: el paso de la tarjeta obligatoria", () => {
   });
 });
 
-/** Textos públicos que no pueden decir "sin tarjeta" desde el 1 de enero. */
+/** Textos públicos que no pueden decir "sin tarjeta" desde el 1 de diciembre. */
 const NO_CARD = /sin tarjeta|tarjeta es opcional|no necesitas tarjeta|no se necesita tarjeta|nadie necesita tarjeta|no pide tarjeta/i;
 
 describe("textos públicos antes y después de la fecha", () => {
   const before = new Date(DEC31_2359), after = new Date(JAN1_0000);
-  it("offer(): ningún texto dice \"sin tarjeta\" desde el 1 de enero", () => {
+  it("offer(): ningún texto dice \"sin tarjeta\" desde el 1 de diciembre", () => {
     const strings = (o: ReturnType<typeof offer>) => Object.values(o).map((v) => (typeof v === "function" ? (v as (x: unknown) => string)(1) : String(v))).join(" ");
     expect(offer(before).cardRequired).toBe(false);
     expect(strings(offer(before))).toMatch(/sin tarjeta/);
@@ -199,14 +199,14 @@ describe("textos públicos antes y después de la fecha", () => {
     ["/temporadas", () => <Temporadas />],
   ];
   for (const [name, el] of pages) {
-    it(`${name}: dice "sin tarjeta" el 31 de diciembre y nunca desde el 1 de enero`, () => {
+    it(`${name}: dice "sin tarjeta" el 30 de noviembre y nunca desde el 1 de diciembre`, () => {
       expect(withClock(before, () => text(renderToStaticMarkup(el())))).toMatch(/sin tarjeta/i);
       const html = withClock(after, () => renderToStaticMarkup(el()));
       expect(text(html)).not.toMatch(NO_CARD);
       expect(html).not.toMatch(NO_CARD);
     });
   }
-  it("inicio (la landing): \"Sin tarjeta\" hasta el 31 de diciembre, nunca desde el 1 de enero", async () => {
+  it("inicio (la landing): \"Sin tarjeta\" hasta el 30 de noviembre, nunca desde el 1 de diciembre", async () => {
     const Home = (await import("@/app/(marketing)/page")).default as unknown as () => Promise<React.ReactElement>;
     const html = async (now: Date) => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(now); const { prelude } = await prerender(await Home()); return text(await new Response(prelude).text()); };
     expect(await html(before)).toMatch(/sin tarjeta/i);
@@ -222,12 +222,12 @@ describe("textos públicos antes y después de la fecha", () => {
     expect(withClock(before, () => text(renderToStaticMarkup(<Terminos />)))).toContain("sin tarjeta");
     const t = withClock(after, () => text(renderToStaticMarkup(<Terminos />)));
     // "Sin tarjeta" solo queda en el párrafo de las reglas de las cuentas de antes (y de la beta).
-    const i = t.indexOf("Las cuentas creadas antes del 1 de enero de 2027");
+    const i = t.indexOf("Las cuentas creadas antes del 1 de diciembre de 2026");
     const end = t.indexOf("sin tarjeta.", t.indexOf("acceso anticipado", i)) + "sin tarjeta.".length;
     expect(i).toBeGreaterThan(0);
     expect(t.slice(0, i) + t.slice(end)).not.toMatch(NO_CARD);
-    expect(t).toContain("Desde el 1 de enero de 2027, al crear tu cuenta dejas tu tarjeta para empezar tu prueba gratis de 7 días");
-    expect(t).toContain("Las cuentas creadas antes del 1 de enero de 2027 conservan sus reglas");
+    expect(t).toContain("Desde el 1 de diciembre de 2026, al crear tu cuenta dejas tu tarjeta para empezar tu prueba gratis de 7 días");
+    expect(t).toContain("Las cuentas creadas antes del 1 de diciembre de 2026 conservan sus reglas");
   });
   it("/condominios: el primer mes sigue gratis y se completa con la tarjeta", async () => {
     const render = async (now: Date) => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(now); return text(renderToStaticMarkup(await Condominios({ searchParams: Promise.resolve({}) }))); };

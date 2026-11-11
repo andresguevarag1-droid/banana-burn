@@ -27,7 +27,7 @@ export const OFFER: Record<string, string> = {
     "Try everything before you pay, including nutrition and Banana Shield. Cancel anytime from My plan, no phone calls.",
   "Todo incluido": "Everything included",
   "Al terminar eliges si sigues.": "When it ends, you decide whether to keep going.",
-  // Tarjeta al registrarse (desde el 1 de enero de 2027)
+  // Tarjeta al registrarse (desde el 1 de diciembre de 2026)
   [`${D} días gratis con todo incluido. Hoy no se cobra nada.`]: `${D} days free, everything included. You won't be charged today.`,
   [`Tu primer mes cuesta ${P} % menos.`]: `Your first month is ${P}% off.`,
   "Pruebas todo antes de pagar y te avisamos antes del cobro": "Try everything before you pay, and we'll remind you before any charge",
