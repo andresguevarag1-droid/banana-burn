@@ -4,8 +4,9 @@ Reel para quienes bajaron de peso rápido (público GLP-1, issue #14), hecho en 
 
 | Archivo | Qué es |
 | --- | --- |
-| R02_musculo-glp1.mp4 | Reel de 24 s |
-| R02_musculo-glp1_15s.mp4 | Versión de 15 s para anuncios |
+| R02_musculo-glp1.mp4 | Reel de 35 s, con voz |
+| R02_musculo-glp1_anuncio.mp4 | Versión de 19 s para el anuncio, con voz |
+| audio/voz-reel.mp3, audio/voz-anuncio.mp3 | Voz de Higgsfield (voz Julian, ElevenLabs v4) con el guion de Andrés del 11 nov |
 | R02_musculo-glp1_portada.png | Portada 1080 x 1920, legible si se recorta a 1080 x 1350 |
 | proyecto/ | Proyecto editable: `escenas.mjs` (textos y tiempos), `render.mjs` (dibujo y exportación), `verificar.mjs` (reglas) |
 
@@ -13,39 +14,48 @@ Specs: 1080 x 1920, 30 fps, H.264 (yuv420p), sin audio. Zona segura de 250 px ar
 
 Cambio del 2 nov 2026 (#215): se quitaron los gramos por kilo y la frecuencia exacta de fuerza de la pantalla y del pie de foto; los dos MP4 están renderizados de nuevo.
 
-## Guion con tiempos (24 s)
+## Versión 3 (11 nov 2026): con voz
 
-| Tiempo | Pantalla | Texto en pantalla | Palabras |
-| --- | --- | --- | --- |
-| 0.0 a 2.0 | Fondo banana. Gancho completo desde el cuadro 0, acercamiento lento | Bajaste rápido… ¿y tu músculo? | 4 |
-| 2.0 a 4.0 | Fondo ink, "músculo." grande en banana | Bajar rápido también se lleva músculo. | 6 |
-| 4.0 a 6.0 | Fondo paper, "primero" con resaltado banana | Proteína primero en cada comida | 5 |
-| 6.0 a 8.0 | Captura real de Nutrición en marco de teléfono ink (radio 42), sube desde abajo | Tu meta de proteína, cada día. | 6 |
-| 8.0 a 10.0 | Zoom a la tarjeta "Te quedan" de la misma captura; anillo banana sobre la sugerencia de proteína | Y cuánto te falta hoy. | 5 |
-| 10.0 a 12.0 | Fondo ink, "fuerza" grande en banana | Entrena fuerza cada semana | 4 |
-| 12.0 a 14.0 | Fondo banana, mancuerna que gira | El músculo se cuida entrenando. | 5 |
-| 14.0 a 16.0 | Fondo paper, escudo banana | Banana Shield lo arma por ti. | 6 |
-| 16.0 a 18.5 | Tres tarjetas que entran en cascada | Más proteína / Fuerza primero / Modo suave | 6 |
-| 18.5 a 21.0 | Fondo ink, escudo y tarjeta cream con el aviso (2.5 s) | No sustituye la indicación de tu médico. | 7 |
-| 21.0 a 24.0 | Cierre: Coach Banana, botón ink y logo | Empieza 7 días gratis en bananaburn.app + BananaBurn | 7 |
+Guion de Andrés, con tres ajustes para cumplir las reglas de Meta y de la oficina: «la app que no tienes que descargar» (no «la primera»), «cuida tu músculo mientras bajas» (no «así bajas más rápido») y «cada entreno te ayuda a reconstruir tu cuerpo»; más el aviso médico. La voz suena de corrido desde el cuadro 0 y las escenas siguen sus tiempos: cada frase de la voz es un cambio visual (los `pasos` de `escenas.mjs`). Un whoosh suave marca cada cambio de escena. La música no va en el archivo: se agrega al publicar, desde la biblioteca de Meta.
 
-## Versión de 15 s
+Coach Banana aparece en casi todas las escenas: entra con rebote, aterriza, respira, se balancea y señala lo que importa (pose oficial «señala» de E03). Más ritmo: golpes de texto con rebote, sacudidas de cámara, franjas y rayos en movimiento, cortinillas diagonales entre escenas (el aviso médico nunca se tapa).
 
-| Tiempo | Pantalla |
+## Reel (35 s)
+
+| Tiempo | Voz | Pantalla |
+| --- | --- | --- |
+| 0.0 a 3.3 | Bajaste rápido… pero, ¿y tu músculo? | Gancho completo desde el cuadro 0; golpe en «¿y tu músculo?» |
+| 3.3 a 6.0 | Bajar rápido también se lleva el músculo. | Fondo ink, «el músculo.» de golpe |
+| 6.0 a 10.3 | Así que empieza a entrenar poco, pero de manera constante, con Banana Burn: | Una línea por frase y la tarjeta real «Tu primer entreno» (hasta «unos 12 min») |
+| 10.3 a 13.0 | la app que no tienes que descargar para usarla. | Barra de dirección que escribe bananaburn.app |
+| 13.0 a 16.7 | Te indica qué hacer, con cuánto peso y cuánto descansar. | Capturas reales: ejercicio, peso sugerido marcado, descanso |
+| 16.7 a 19.5 | Cada entreno te ayuda a reconstruir tu cuerpo. | Fondo ink, mancuernas, «a reconstruir» de golpe |
+| 19.5 a 21.5 | Y además te ayudamos con tu nutrición: | Captura real de Nutrición |
+| 21.5 a 24.9 | sabemos cuánta proteína te falta hoy para llegar a tu meta. | Zoom a «Te quedan» y anillo |
+| 24.9 a 27.1 | Obtén el plan completo con Banana Shield | Coach detrás del escudo |
+| 27.1 a 29.3 | y cuida tu músculo mientras bajas. | Coach al centro con su escudo |
+| 29.3 a 31.9 | No sustituye la indicación de tu médico. | Aviso (2.6 s) |
+| 31.9 a 35.1 | Empieza siete días gratis en bananaburn punto app. | Cierre |
+
+## Anuncio (19 s)
+
+| Tiempo | Voz |
 | --- | --- |
-| 0.0 a 2.0 | Gancho |
-| 2.0 a 4.0 | Proteína primero en cada comida |
-| 4.0 a 6.0 | Captura real de Nutrición |
-| 6.0 a 8.0 | Entrena fuerza cada semana |
-| 8.0 a 9.5 | Banana Shield lo arma por ti. |
-| 9.5 a 12.0 | No sustituye la indicación de tu médico. (2.5 s) |
-| 12.0 a 15.0 | Cierre |
+| 0.0 a 3.3 | Bajaste rápido… pero, ¿y tu músculo? |
+| 3.3 a 6.5 | Entrena poco, pero constante, con Banana Burn. |
+| 6.5 a 10.0 | Te dice qué hacer, con cuánto peso y cuánto descansar. |
+| 10.0 a 13.6 | Y para tu nutrición, el plan completo: Banana Shield. |
+| 13.6 a 16.1 | No sustituye la indicación de tu médico. |
+| 16.1 a 19.2 | Empieza siete días gratis en bananaburn punto app. |
+
+En pantalla no se nombra GLP-1 ni ningún medicamento (regla de R02 y reglas de Meta sobre atributos de salud). El público GLP-1 se nombra en el texto del anuncio, con el aviso médico.
 
 ## Reglas que cumple
 
 - No nombra ningún medicamento, ni dice "GLP-1", "¿usas GLP-1?" ni "tu tratamiento" en pantalla.
 - Sin gramos por kilo ni frecuencias exactas (#215): la meta de proteína y de entreno la acuerda cada persona con su médico. El único número en pantalla son los 7 días del cierre estándar. La captura de Nutrición es la real de `public/landing/nutricion.png`, sin tocar: sus cifras son las de la app.
-- Banana Shield se describe con lo que dice la app (más proteína, fuerza primero, modo suave), sin prometer resultados.
+- Banana Shield aparece como el plan completo para quien baja rápido, sin prometer resultados.
+- Los 12 min se ven en la tarjeta real de Hoy («Empezar en casa · unos 12 min»), recortada antes del botón de gym («unos 15 min»): siempre 12 min.
 - Sin emojis, sin guiones largos, sin exclamaciones, sin IA, sin testimonios ni antes/después.
 
 ## Cómo editar y volver a renderizar
@@ -53,7 +63,7 @@ Cambio del 2 nov 2026 (#215): se quitaron los gramos por kilo y la frecuencia ex
 ```bash
 cd marketing/videos/R02_musculo-glp1/proyecto
 npm install
-npm run render      # portada y los 2 MP4 en la carpeta de arriba (unos 30 s)
+npm run render      # portada, los 2 MP4 y la voz (render.mjs y después audio.mjs)
 npm run verificar   # palabras por pantalla, números, textos prohibidos, tiempos, aviso, specs del MP4
 node render.mjs cuadro R02_musculo-glp1 9.5   # un cuadro suelto en PNG para revisar
 ```
@@ -62,11 +72,10 @@ Los textos y tiempos están en `escenas.mjs`; el dibujo de cada escena en `DIBUJ
 
 ## Pendiente
 
-- **Pose "señala" de Coach Banana.** El cierre estándar la pide, pero aquí no se pudo descargar (el kit no está en main). El cierre usa la pose de pie de `public/brand/mascota-sola.webp`. Al llegar el PNG con fondo transparente, se cambia la ruta de `COACH` en `render.mjs` y se vuelve a renderizar.
 - **Video base 1 + 4 del kit** (gym y comida). Este corte es solo de motion graphics y captura; si se quiere el video de fondo, se agrega como capa en `render.mjs`.
 
 ## Pie de foto sugerido
 
-Bajaste rápido… ¿y tu músculo? Proteína primero en cada comida y fuerza cada semana; tu meta la acuerdas con tu médico. Banana Shield lo organiza en tu plan. Regístrate y haz tu primer entreno hoy (12 min, también en casa): 7 días gratis en bananaburn.app. No sustituye la indicación de tu médico.
+Bajaste rápido… ¿y tu músculo? Entrena poco, pero constante, con Banana Burn: te dice qué hacer, con cuánto peso y cuánto descansar, sin descargar nada. Y para tu nutrición, el plan completo con Banana Shield, para cuidar tu músculo mientras bajas. Tu primer entreno dura 12 min, también en casa: 7 días gratis en bananaburn.app. No sustituye la indicación de tu médico.
 
 #BananaBurn #Recomposicion #Fuerza #Proteina #MasaMuscular

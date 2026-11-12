@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Reel R02 de Banana Burn hecho en código",
   "scripts": {
-    "render": "node render.mjs",
+    "render": "node render.mjs && node audio.mjs",
     "verificar": "node verificar.mjs"
   },
   "dependencies": {

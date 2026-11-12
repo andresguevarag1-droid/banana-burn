@@ -12,33 +12,49 @@ export const AVISO = "No sustituye la indicación de tu médico.";
 export const BOTON = ["Empieza 7 días gratis", "en bananaburn.app"];
 
 /**
- * Cada escena: id, texto en pantalla (todas las palabras que se ven) y duración en segundos.
+ * Cada escena: texto en pantalla (todas las palabras que se ven).
  * `aviso: true` marca la escena que muestra el aviso médico.
  */
 export const ESCENAS = {
   gancho: { texto: ["Bajaste", "rápido…", "¿y tu músculo?"] },
-  pierdes: { texto: ["Bajar rápido", "también se lleva", "músculo."] },
-  proteina: { texto: ["Proteína", "primero", "en cada comida"] },
-  captura: { texto: ["Tu meta de proteína,", "cada día."] },
-  zoom: { texto: ["Y cuánto te falta hoy."] },
-  fuerza: { texto: ["Entrena", "fuerza", "cada semana"] },
-  entrena: { texto: ["El músculo", "se cuida", "entrenando."] },
-  shield: { texto: ["Banana Shield", "lo arma por ti."] },
-  pilares: { texto: ["Más proteína", "Fuerza primero", "Modo suave"] },
+  pierdes: { texto: ["Bajar rápido", "también se lleva", "el músculo."] },
+  app: { texto: ["Entrena poco,", "pero constante,", "con Banana Burn."] },
+  web: { texto: ["La app que", "no tienes que descargar.", "bananaburn.app"] },
+  como: { texto: ["Qué hacer,", "con cuánto peso", "y cuánto descansar."] },
+  fuerza: { texto: ["Cada entreno te ayuda", "a reconstruir", "tu cuerpo."] },
+  captura: { texto: ["Y te ayudamos", "con tu nutrición."] },
+  zoom: { texto: ["Cuánta proteína", "te falta hoy."] },
+  shield: { texto: ["El plan completo", "con Banana Shield."] },
+  cuida: { texto: ["Y cuida tu músculo", "mientras bajas."] },
+  plan: { texto: ["Tu nutrición,", "el plan completo:", "Banana Shield."] },
   aviso: { texto: [AVISO], aviso: true },
   cierre: { texto: [...BOTON, "BananaBurn"] },
 };
 
-/** Versión de 24 s (Reel) y de 15 s (anuncios). */
+/**
+ * Cortes. Los tiempos siguen a la voz (Higgsfield, voz Julian, ElevenLabs v4), que suena de corrido desde el cuadro 0.
+ * Cada escena: [id, duración en s, pasos]. `pasos` son los segundos (dentro de la escena) en que entra cada frase de la voz;
+ * cada paso es un cambio visual, así que hay un cambio cada 1 a 2.5 s aunque la escena dure más.
+ */
 export const CORTES = {
+  // Reel (35 s): audio/voz-reel.mp3
   "R02_musculo-glp1": [
-    ["gancho", 2], ["pierdes", 2], ["proteina", 2], ["captura", 2], ["zoom", 2], ["fuerza", 2],
-    ["entrena", 2], ["shield", 2], ["pilares", 2.5], ["aviso", 2.5], ["cierre", 3],
+    ["gancho", 3.3, [0, 1.5]], ["pierdes", 2.73, [0, 1.3]], ["app", 4.3, [0, 1.22, 3.1]], ["web", 2.64, [0, 1.0]],
+    ["como", 3.73, [0, 1.3, 2.45]], ["fuerza", 2.8, [0, 1.2]], ["captura", 2.03, [0]], ["zoom", 3.37, [0, 1.6]],
+    ["shield", 2.23, [0]], ["cuida", 2.17, [0]], ["aviso", 2.57, [0]], ["cierre", 3.2, [0]],
   ],
-  "R02_musculo-glp1_15s": [
-    ["gancho", 2], ["proteina", 2], ["captura", 2], ["fuerza", 2], ["shield", 1.5], ["aviso", 2.5], ["cierre", 3],
+  // Anuncio (19 s): audio/voz-anuncio.mp3
+  "R02_musculo-glp1_anuncio": [
+    ["gancho", 3.33, [0, 1.62]], ["app", 3.14, [0, 1.0, 2.0]], ["como", 3.5, [0, 1.15, 2.15]],
+    ["plan", 3.62, [0, 1.22, 2.47]], ["aviso", 2.47, [0]], ["cierre", 3.09, [0]],
   ],
 };
 
-/** Números permitidos en el texto: solo los 7 días del cierre estándar. Sin gramos ni frecuencias exactas (#215). */
+/** Voz de cada corte (MP3 de Higgsfield, en la carpeta de arriba). */
+export const VOZ = {
+  "R02_musculo-glp1": "audio/voz-reel.mp3",
+  "R02_musculo-glp1_anuncio": "audio/voz-anuncio.mp3",
+};
+
+/** Números permitidos en el texto: solo los 7 días del cierre estándar. Sin gramos ni frecuencias exactas (#215). Los 12 min del primer entreno se ven en la captura real de Hoy. */
 export const NUMEROS_PERMITIDOS = ["7"];
