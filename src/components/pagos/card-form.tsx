@@ -46,7 +46,11 @@ function useProvider(skip: boolean) {
  * Tarjetas de fuera de Costa Rica (Tilopay, 0042): la persona guarda la tarjeta en la página segura de Tilopay y vuelve a
  * Mi plan. `beforeRedirect` deja guardado lo que haga falta antes de salir (la bienvenida guarda el plan).
  */
-export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo }: { choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean>; condo?: string }) {
+export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo, onStart }: {
+  choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean>; condo?: string;
+  /** Se llama al enviar el formulario, antes de ONVO o de salir a Tilopay (Mi plan cuenta ahí su checkout_view, #293). */
+  onStart?: () => void;
+}) {
   const id = useId();
   const [c, setC] = useState<CardInput>({ holder: "", number: "", exp: "", cvv: "" });
   const [touched, setTouched] = useState(false);
@@ -62,6 +66,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
     e.preventDefault();
     setErr(null);
     setBusy("tarjeta");
+    onStart?.();
     if (beforeRedirect && !(await beforeRedirect())) { setBusy(null); return; }
     try {
       const r = await fetch("/api/pagos/tilopay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "tarjeta", plan: choice.plan, billing: choice.billing }) });
@@ -100,6 +105,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
     setTouched(true);
     setErr(null);
     if (Object.keys(cardInputErrors(c)).length) return;
+    onStart?.();
     if (demo) {
       setBusy("guardar");
       await new Promise((r) => setTimeout(r, 500));

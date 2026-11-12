@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowCounterClockwise, CalendarCheck, CheckCircle, CircleNotch, CreditCard, Gift, WarningCircle } from "@/components/icons";
-import { FunnelTracker } from "@/components/analytics";
+import { FunnelTracker, track } from "@/components/analytics";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { PLANS } from "@/lib/plans";
@@ -45,6 +45,9 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
   useEffect(() => { if (location.hash === "#tarjeta") ref.current?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }, []);
 
   const saved = (r: CardSaved) => { setDone(r); if (!r.demo) router.refresh(); };
+  // #293: enviar la tarjeta es abrir el pago en Mi plan (ONVO aquí mismo o la página de Tilopay). Una vez por visita.
+  const started = useRef(false);
+  const start = () => { if (!demo && !started.current) { started.current = true; track("checkout_view", { plan: choice.plan, billing: choice.billing }); } };
   const price = money(priceOf(choice));
   // 0043: en la beta o en la prueba, dejar la tarjeta lista da el 50 % del primer mes (solo mensual).
   const offer = step === "trial" || step === "beta";
@@ -106,7 +109,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
       </div>
       <PlanPicker value={choice} onChange={setChoice} promo={offer} />
       {off ? <p className="rounded-2xl bg-banana-soft p-3 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.</p>
-        : <CardForm choice={choice} demo={demo} submitLabel={t.btn} note={t.note} onSaved={saved} />}
+        : <CardForm choice={choice} demo={demo} submitLabel={t.btn} note={t.note} onSaved={saved} onStart={start} />}
       {offer && <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>}
     </section>
   );

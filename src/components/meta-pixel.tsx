@@ -7,9 +7,21 @@ import { isNativeApp } from "@/lib/platform";
 type Fbq = ((...args: unknown[]) => void) & { loaded?: boolean };
 declare global { interface Window { fbq?: Fbq } }
 
-/** Llama a fbq si el píxel cargó. Nunca rompe la página (bloqueadores de anuncios, red lenta). */
+/**
+ * Eventos pedidos antes de que cargue el píxel (#293). El píxel carga después del evento load y de que el navegador quede
+ * libre, pero los FunnelTracker de una página (checkout_view en /pago/checkout) disparan al hidratar: sin esta cola, el
+ * InitiateCheckout de una carga completa se perdía. loadMetaPixel los manda después de init. Tope para no crecer sin píxel.
+ */
+const pending: unknown[][] = [];
+const PENDING_MAX = 20;
+
+/** Llama a fbq si el píxel cargó; si todavía no, lo guarda para cuando cargue. Nunca rompe la página (bloqueadores, red lenta). */
 export function fbq(...args: unknown[]) {
-  try { if (typeof window !== "undefined" && typeof window.fbq === "function") window.fbq(...args); } catch { /* sin píxel */ }
+  try {
+    if (typeof window === "undefined") return;
+    if (typeof window.fbq === "function") window.fbq(...args);
+    else if (pending.length < PENDING_MAX) pending.push(args);
+  } catch { /* sin píxel */ }
 }
 
 /**
@@ -31,6 +43,7 @@ export function loadMetaPixel(id: string, w: Window & typeof globalThis = window
   w.document.head.appendChild(t);
   n("init", id);
   n("track", "PageView");
+  for (const args of pending.splice(0)) n(...args);
 }
 
 /**
