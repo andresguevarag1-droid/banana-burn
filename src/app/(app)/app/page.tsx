@@ -217,21 +217,21 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         <FirstSteps server={{ keys: learnState.keys, workouts: learnState.workouts, weights: learnState.weights, coachMessages: learnState.coachMessages, push: learnState.push }} coach={{ name: guideCoach?.name ?? "Coach Banana", avatar: guideCoach?.avatar ?? null }} />
         {recap && <WeekRecap r={recap} />}
         {ent.annualUpsell && ent.plan !== "free" && <AnnualUpsell plan={ent.plan} userId={v.id} />}
-        <AnnouncementBanner />
+        <AnnouncementBanner locale={locale} />
         <LoMejor serverKeys={learnState.keys} />
         <PushWhenReady trained={g.trainedToday || g.streak.days > 0 || !!lastTime} />
         {/* Antes del primer entreno, nada que lo saque de la app: instalar obliga a abrirla en otro navegador. */}
         {(learnState.workouts > 0 || g.trainedToday) && <InstallCard />}
         {/* Temporada deportiva: cuenta regresiva, activar, su semana y la opinión de la última sesión. */}
         <SeasonHoy v={v} />
-        <RunHoy v={v} />
+        <RunHoy v={v} locale={locale} />
       </PromptQueue>
 
       {/* Números de hoy: calorías y macros (solo con nutrición; en Entreno, la invitación a sumarla), más agua, pasos y sueño.
           El exprés acompaña al lado en escritorio (fijo mientras bajas). */}
       <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <div data-tour="hoy-numeros"><TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} /></div>
-        {!g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} /></div>}
+        {!g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} locale={locale} /></div>}
       </div>
       {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
 

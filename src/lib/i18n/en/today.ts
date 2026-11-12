@@ -335,4 +335,38 @@ export const TODAY: Record<string, string> = {
   "Hoy el músculo crece. Camina, estira 10 min y llega a tu proteína. Mañana vuelves con todo.": "Today your muscles grow. Walk, stretch for 10 min and hit your protein. Tomorrow you come back strong.",
   "Come tus carbos de 60 a 90 min antes de entrenar: avena con banana, arroz con huevo o pan integral con yogur griego.": "Eat your carbs 60 to 90 min before training: oatmeal with banana, rice with eggs or whole-grain bread with Greek yogurt.",
   "Viernes: después del gym, pechuga con arroz y doble ensalada. Si el fin de semana hay salida, máximo 2 tragos.": "Friday: after the gym, chicken breast with rice and a double salad. If you go out this weekend, 2 drinks max.",
+  // Exprés (express-chips.tsx, #309)
+  "¿Poco tiempo? Exprés sin equipo": "Short on time? No-equipment express",
+  "{coach} exprés": "{coach} express",
+  "¿Te estás quedando sin tiempo? Termina con estos exprés": "Running out of time? Finish with one of these express workouts",
+  "Sin equipo, con tu peso, en un espacio de 2 × 2 m. Cuenta para tu racha.": "No equipment, just your body weight, in a 7 × 7 ft space. It counts toward your streak.",
+  "Sin equipo, con tu peso, en un espacio de 2 × 2 m. Cuenta para tu racha, aunque no reemplaza la sesión del programa.": "No equipment, just your body weight, in a 7 × 7 ft space. It counts toward your streak, though it doesn't replace your program session.",
+  "Entreno exprés de ": "Express workout, ",
+  "Activa": "Wake up",
+  "Despierta el cuerpo": "Get your body going",
+  "Quema": "Burn",
+  "Sube pulsaciones": "Raise your heart rate",
+  "Completo": "Complete",
+  "Cuerpo completo": "Full body",
+
+  // Running (correr/run-hoy.tsx, #309)
+  "Banana Run: tu semana de running": "Banana Run: your running week",
+  "Esta semana: {km} km": "This week: {km} km",
+  "Esta semana: {km} km, 1 carrera": "This week: {km} km, 1 run",
+  "Esta semana: {km} km, {n} carreras": "This week: {km} km, {n} runs",
+  "Mejor ritmo {pace}/km": "Best pace {pace}/km",
+  "Hoy: {title}, {detail}": "Today: {title}, {detail}",
+  "Siguiente: {title}": "Next: {title}",
+  "Falta 1 día para tu carrera": "1 day to your race",
+  "Faltan {n} días para tu carrera": "{n} days to your race",
+  "Sal a correr y registra tu carrera.": "Go for a run and log it.",
+
+  // Anuncios del equipo (admin/announcement-banner.tsx, #309): los del modo demo. Uno sin traducción no sale en inglés.
+  "Anuncio": "Announcement",
+  "Nuevo: entrena en casa": "New: train at home",
+  "Cambia a modo casa en tu perfil y tu rutina se adapta a mancuernas y peso corporal.": "Switch to home mode in your profile and your routine adapts to dumbbells and body weight.",
+  "Probar": "Try it",
+  "Plan anual con descuento": "Discounted annual plan",
+  "Solo esta semana: Entreno + Nutrición anual a $89.99.": "This week only: annual Training + Nutrition for $89.99.",
+  "Ver planes": "See plans",
 };

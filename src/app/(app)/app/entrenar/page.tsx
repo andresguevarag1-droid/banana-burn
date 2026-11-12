@@ -23,12 +23,13 @@ import { getLearnState } from "@/lib/primeros-pasos-server";
 import { MarkLearn } from "@/components/primeros-pasos/mark-learn";
 import { HowToButton, PageTour } from "@/components/primeros-pasos/page-tour";
 import { STEP_KEY } from "@/lib/primeros-pasos";
+import { getPrefs } from "@/lib/i18n/server";
 export const metadata = { title: "Entrenar" };
 
 export default async function Entrenar() {
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
-  const [a, voice, doneTpls, learnState] = await Promise.all([getAthlete(v), getVoice(v), templatesDoneToday(v), getLearnState(v)]);
+  const [a, voice, doneTpls, learnState, { locale }] = await Promise.all([getAthlete(v), getVoice(v), templatesDoneToday(v), getLearnState(v), getPrefs()]);
   const d = dashboard(a);
   const g = await getDaily(v, a.startWeight, a.currentWeight);
   const block = (d.week % 6) + 1;
@@ -97,7 +98,7 @@ export default async function Entrenar() {
       )}
       {/* Primero tu semana y el entreno de hoy; justo después, el exprés para los días ocupados (antes iba arriba y
           competía con el plan; al final de todo casi nadie lo veía). */}
-      <ExpressCard program={!!p} coach={coach} compact />
+      <ExpressCard program={!!p} coach={coach} compact locale={locale} />
       <Link href="/app/ejercicios" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-11 shrink-0 rounded-xl bg-banana-soft text-banana-ink" aria-hidden><Books weight="duotone" className="size-6" /></span><span className="flex-1"><span className="block font-extrabold text-ink">Biblioteca de {LIB_COUNT.toLocaleString("es-419")} ejercicios</span><span className="block text-sm text-muted">Busca por músculo o equipo, con pasos en español.</span></span><CaretRight weight="bold" className="size-5 shrink-0 text-faint" /></Link>
     </div>
   );
