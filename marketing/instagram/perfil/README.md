@@ -36,7 +36,7 @@ Para quien bajó de peso y quiere verse firme.
 
 Las dos dicen qué es, para quién y llevan el CTA con "7 días gratis". Apuesto por **A**: abre con la promesa que ya usa la marca, habla directo a quien bajó de peso y cierra con un verbo. B es más concreta sobre el producto; sirve para probarla 2 semanas después y comparar visitas al sitio en las estadísticas del perfil.
 
-"sin tarjeta" (bio B) solo es cierto desde el 1 de noviembre de 2026, cuando termina la beta. Ninguna menciona IA ni dice "banano".
+"sin tarjeta" (bio B) solo es cierto del 1 al 30 de noviembre de 2026. Desde el 1 de diciembre la tarjeta se deja al registrarse (#305): si la bio B está puesta, cambiar su última línea el 1 de diciembre por «7 días gratis. Tu primer entreno: bananaburn.app». Ninguna menciona IA ni dice "banano".
 
 ## Destacados (1080 x 1920)
 

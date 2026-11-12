@@ -2,6 +2,22 @@
 
 20 borradores. Cada respuesta requiere aprobación escrita de Andrés antes de enviarse. En comentarios, usar texto breve y enlace en bio si no es clicable; por DM, el enlace escrito. Responder solo a consultas recibidas, sin perseguir a quien votó. No publicar información de cuentas, correos, salud ni pagos. Si hace falta soporte privado, usar Ayuda y reportes dentro de la app. No afirmar que ya se revisó una cuenta.
 
+## Tarjeta obligatoria desde el 1 de diciembre
+
+Desde el martes 1 de diciembre a las 00:00 de Costa Rica las cuentas nuevas dejan su tarjeta al registrarse (decisión de Andrés del 10 nov; código en #305). Desde ese día **usar estas versiones** en lugar de 01, 02, 03, 04, 05, 06, 07, 09 y 17, y quitar «sin tarjeta» de cualquier otra respuesta. Hasta el 30 de noviembre siguen las de abajo. A quien se registró antes del 1 de diciembre le siguen valiendo las respuestas de abajo (su prueba no pide tarjeta).
+
+- **01. ¿Qué es Banana Burn? | Comentario.** Tu entrenador personal en el celular: te guía con tu rutina, repeticiones y técnica. Si bajaste de peso y quieres reconstruir fuerza, empieza con 7 días gratis en https://bananaburn.app: tu primer entreno dura 12 min, también en casa.
+- **02. ¿Dónde me registro? | DM.** Empieza aquí: https://bananaburn.app/entrar?modo=registro. Respondes unas preguntas cortas, eliges tu plan y dejas tu tarjeta: hoy no se cobra nada y tienes 7 días gratis con todo incluido. Tu primer entreno dura 12 min, también en casa.
+- **03. No sé entrenar | Comentario.** Puedes empezar a tu nivel. Completa la bienvenida y la app te dice ejercicios, series y descansos. Prueba 7 días gratis en https://bananaburn.app: tu primer entreno dura 12 min.
+- **04. ¿Piden tarjeta? | DM.** Sí, al registrarte dejas tu tarjeta, pero hoy no se cobra nada: tienes 7 días gratis con todo incluido. Te avisamos por correo 2 días antes y el día 8 se cobra el plan que elegiste. Si no quieres seguir, cancela antes desde Mi plan: https://bananaburn.app/app/suscripcion.
+- **05. ¿Cómo consigo el 50 %? | DM.** Ya lo tienes: si eliges el plan mensual, tu primer mes va al 50 % ($4.99 en Entreno o $7.49 en Entreno + Nutrición), una vez por cuenta. Después, $9.99 o $14.99 al mes. El anual va a precio normal: $59.99 o $89.99. Precios en USD, IVA incluido.
+- **06. ¿Cuándo me cobran? | DM.** El día 8, al terminar tus 7 días gratis, se cobra el plan que elegiste. Te avisamos por correo 2 días antes. Tu fecha y tu importe están en Mi plan: https://bananaburn.app/app/suscripcion.
+- **07. ¿Y si no quiero seguir? | DM.** Cancela antes del día 8 desde Mi plan: https://bananaburn.app/app/suscripcion. No se te cobra y conservas el acceso hasta que termine tu prueba.
+- **09. No encuentro tiempo | Comentario.** Empieza con poco: tu primer entreno dura 12 min y lo puedes hacer en casa. 7 días gratis en https://bananaburn.app.
+- **17. Uso GLP-1, ¿puedo empezar? | DM.** Banana Shield es el programa para quienes usan GLP-1 y quieren trabajar su fuerza. Revisa con tu médico cómo empezar. Conoce Banana Burn en https://bananaburn.app, con 7 días gratis: dejas tu tarjeta al registrarte y hoy no se cobra nada. No necesitas compartir información médica aquí. No sustituye la indicación de tu médico.
+- **Nueva: ¿Por qué piden tarjeta si es gratis? | DM.** Para que no se corte tu plan al terminar la prueba. Hoy no se cobra nada, te avisamos 2 días antes del cobro y cancelas cuando quieras desde Mi plan. Los datos de tu tarjeta van directo a nuestro procesador de pagos (ONVO Pay o Tilopay) y nunca pasan por nuestros servidores.
+- **Nueva: Me registré antes de diciembre, ¿ahora me piden tarjeta? | DM.** No. Si creaste tu cuenta antes del 1 de diciembre, tu prueba sigue sin tarjeta. Revisa tu estado en Mi plan: https://bananaburn.app/app/suscripcion.
+
 ## 01. ¿Qué es Banana Burn? | Comentario
 
 Tu entrenador personal en el celular: te guía con tu rutina, repeticiones y técnica. Si bajaste de peso y quieres reconstruir fuerza, empieza 7 días gratis sin tarjeta en https://bananaburn.app.

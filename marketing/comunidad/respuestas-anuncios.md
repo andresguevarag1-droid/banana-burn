@@ -22,6 +22,21 @@ La fila de spam es una decisión de moderación, no un mensaje para copiar. Prep
 
 Nunca pedir datos de tarjeta, salud ni documentos por comentario o DM. No pedir capturas que puedan contenerlos. La tarjeta se gestiona únicamente en el flujo de pago de la app. Si llegan datos sensibles espontáneamente, no copiarlos al registro de comunidad; preparar el caso para revisión de Andrés sin reproducirlos.
 
+## Desde el 1 de diciembre: tarjeta al registrarse
+
+Desde el martes 1 de diciembre a las 00:00 de Costa Rica las cuentas nuevas dejan su tarjeta al registrarse (#305). Desde ese día ninguna respuesta dice «sin tarjeta» y se usan estas filas en lugar de las de arriba:
+
+| Pregunta | Respuesta |
+| --- | --- |
+| ¿Cuánto cuesta? | Entreno cuesta US$9.99/mes; Entreno + Nutrición, US$14.99/mes. Tu primer mes mensual va al 50 % (US$4.99 o US$7.49). Los anuales cuestan US$59.99 y US$89.99 en un solo cobro. Precios en USD, IVA incluido. Primero tienes 7 días gratis: dejas tu tarjeta al registrarte y hoy no se cobra nada. https://bananaburn.app/registro |
+| ¿Es gratis? | Los primeros 7 días, sí, con todo incluido. Dejas tu tarjeta al registrarte y hoy no se cobra nada; te avisamos 2 días antes y el día 8 se cobra tu plan, salvo que canceles antes desde Mi plan. https://bananaburn.app/registro |
+| ¿Por qué piden tarjeta? | Para que tu plan siga sin cortes al terminar la prueba. Hoy no se cobra nada y cancelas cuando quieras desde Mi plan. Los datos de tu tarjeta van directo al procesador de pagos (ONVO Pay o Tilopay), nunca a nuestros servidores. |
+| ¿Sirve si nunca he ido al gym? | Sí. Elige Principiante al crear tu plan: la app ajusta ejercicios, series y descansos a tu nivel. Tu primer entreno dura 12 min, también en casa. 7 días gratis: https://bananaburn.app/registro |
+| ¿Funciona en mi país? Costa Rica | Sí. Los planes se cobran en dólares. Tienes 7 días gratis; dejas tu tarjeta al registrarte y hoy no se cobra nada. https://bananaburn.app/registro |
+| ¿Funciona en mi país? Colombia | Sí, puedes usarla desde Colombia. Los precios son en dólares y al registrarte dejas tu tarjeta (hoy no se cobra nada). No podemos garantizar que todo banco acepte el cobro: si tu tarjeta no pasa, la app te lo dice antes de empezar. https://bananaburn.app/registro |
+| ¿Es una app o un entrenador real? | Es una app que organiza tu rutina según tu nivel, tiempo y equipo, con animaciones de técnica. No es una sesión con un entrenador humano en vivo. Pruébala 7 días gratis: https://bananaburn.app/registro |
+| Comentario negativo: «Eso no sirve» | Entendemos la duda. No prometemos resultados iguales para todos. Puedes probarla 7 días gratis y cancelar desde Mi plan antes del cobro: https://bananaburn.app/registro |
+
 ## Reglas verificadas y límites
 
 - `src/lib/plans.ts`: precios en USD, `TRIAL_DAYS = 7`, Entreno y Entreno + Nutrición. La prueba de cuentas nuevas empieza al crear la cuenta, no al guardar tarjeta. Las cuentas de beta tienen una gracia distinta: no ofrecerles otros 7 días por volver a entrar.

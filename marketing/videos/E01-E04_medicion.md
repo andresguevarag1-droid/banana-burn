@@ -2,7 +2,7 @@
 
 ## Embudo y objetivo
 
-Objetivo: contribuir a 100 usuarios de pago activos y cubrir el gasto real. E01 mueve visita a prueba antes del año nuevo, sin fecha límite comercial; E03 acompaña activación y decisión al terminar la prueba; E04 explica funciones y elección del plan completo; E02 presenta pago anual por adelantado. Ninguna pieza promete resultados ni asegura conversión. El cierre común ofrece siete días sin tarjeta; el post de E02 permite comparar el anual en /precios.
+Objetivo: contribuir a 100 usuarios de pago activos y cubrir el gasto real. E01 mueve visita a prueba antes del año nuevo, sin fecha límite comercial; E03 acompaña activación y decisión al terminar la prueba; E04 explica funciones y elección del plan completo; E02 presenta pago anual por adelantado. Ninguna pieza promete resultados ni asegura conversión. El cierre común ofrece siete días gratis (desde el 1 de diciembre la tarjeta se deja al registrarse y hoy no se cobra nada; ninguna pieza dice «sin tarjeta»); el post de E02 permite comparar el anual en /precios.
 
 ## Valor económico
 
@@ -17,7 +17,7 @@ Fuente: src/lib/plans.ts, revisada el 1 de noviembre de 2026. USD. Neto por cobr
 
 Son escenarios aritméticos, no previsiones ni ingresos atribuibles ya obtenidos. El neto incremental de elegir completo en lugar de Entreno anual es $25.38 con ONVO o $25.27 con Tilopay por pago (diferencia bruta $30). Cada año pagado incluye una temporada deportiva gratis; retos Premium aparte, sin asignarles un valor inventado. Un cambio de mensual a anual no crea un usuario nuevo.
 
-La promoción mensual opcional por guardar tarjeta no se acumula al anual. Cuando aplique un cobro promocional, calcular el neto con el importe realmente cobrado, no con la tarifa regular de esta tabla. Los precios y condiciones se vuelven a comprobar antes de enero; esta entrega no cambia src/lib/plans.ts.
+Desde el 1 de diciembre la tarjeta se deja al registrarse y todo plan mensual nuevo lleva el primer mes al 50 % ($4.99 o $7.49); no se acumula al anual. Cuando aplique un cobro promocional, calcular el neto con el importe realmente cobrado, no con la tarifa regular de esta tabla. Los precios y condiciones se vuelven a comprobar antes de enero; esta entrega no cambia src/lib/plans.ts.
 
 ## Medición sin nueva instrumentación
 

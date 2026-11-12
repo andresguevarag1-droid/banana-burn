@@ -36,7 +36,7 @@ Imagen fija de una agenda sin texto y mancuernas sobre fondo paper #FFF8E3, luz 
 
 ## Post propuesto
 
-Regálate tiempo para entrenar. Entreno cuesta $59.99 al año; Entreno + Nutrición, $89.99 al año. Precios en USD, IVA incluido. Cada año pagado incluye una temporada deportiva gratis. Los retos Premium se compran aparte. Compara en bananaburn.app/precios o empieza siete días gratis sin tarjeta en bananaburn.app. El anual se paga completo; no promete resultados ni permanencia de por vida.
+Regálate tiempo para entrenar. Entreno cuesta $59.99 al año; Entreno + Nutrición, $89.99 al año. Precios en USD, IVA incluido. Cada año pagado incluye una temporada deportiva gratis. Los retos Premium se compran aparte. Compara en bananaburn.app/precios o empieza siete días gratis en bananaburn.app: dejas tu tarjeta al registrarte y hoy no se cobra nada. El anual se paga completo; no promete resultados ni permanencia de por vida.
 
 #BananaBurn #PlanAnual #Autocuidado #Fuerza #Propositos
 

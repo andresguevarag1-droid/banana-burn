@@ -48,7 +48,7 @@ export const CONFIG = {
     },
     {
       "id": "t8",
-      "texto": "Prueba siete días sin tarjeta",
+      "texto": "Siete días gratis y hoy no pagas",
       "visual": "Tarjeta tipográfica; toma UGC opcional según brief.",
       "tipo": "texto"
     },
