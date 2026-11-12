@@ -62,11 +62,18 @@ describe("Hoy en inglés (#299)", () => {
   it("no queda ningún texto del diccionario en español en Hoy en inglés", async () => {
     // Las frases del diccionario que cambian al traducirse (con más de una palabra, para no confundir "No" o "Normal").
     const spanish = Object.entries(EN).filter(([es, en]) => es !== en && /\s/.test(es.trim()) && !/\{\w+\}/.test(es)).map(([es]) => es.replace(/[\u00a0\u202f]/g, " ").trim());
-    for (const sp of [{}, { primera: "1" }] as Record<string, string>[]) {
+    for (const sp of [{}, { primera: "1" }, { primera: "2" }] as Record<string, string>[]) {
       const { text } = await hoy(sp);
       const flat = text.replace(/[\u00a0\u202f]/g, " ");
       expect(spanish.filter((es) => flat.includes(es))).toEqual([]);
     }
+  });
+
+  it("el coach pregunta al día siguiente del primer entreno (?primera=2), en inglés (#309)", async () => {
+    const { html, text } = await hoy({ primera: "2" });
+    expect(html).toContain('aria-label="Coach Banana asks you"');
+    for (const s of ["How did your first workout go?", "Good", "It was hard", "I don't know how to use a machine"]) expect(text).toContain(s);
+    expect(text).not.toMatch(/¿Cómo te fue|Me costó|No sé usar/);
   });
 
   it("en español la misma pantalla no cambia de idioma", async () => {
@@ -96,10 +103,30 @@ describe("Hoy en inglés (#299)", () => {
       "src/components/hoy/exercise-tiles.tsx", "src/components/hoy/first-partial-card.tsx", "src/components/hoy/reminder-prompt.tsx", "src/components/hoy/annual-upsell.tsx", "src/components/hoy/prompt-queue.tsx",
       "src/components/readiness.tsx", "src/components/trial-card-notice.tsx", "src/components/card-banner.tsx", "src/lib/plan-access.ts", "src/components/weigh-in.tsx", "src/components/primeros-pasos/page-tour.tsx",
       // #309
-      "src/components/express-chips.tsx", "src/components/workout/interval-screen.tsx", "src/components/challenge-card.tsx", "src/components/correr/run-hoy.tsx", "src/components/admin/announcement-banner.tsx"];
+      "src/components/express-chips.tsx", "src/components/workout/interval-screen.tsx", "src/components/challenge-card.tsx", "src/components/correr/run-hoy.tsx", "src/components/admin/announcement-banner.tsx",
+      // #309, camino de activación
+      "src/components/primeros-pasos/first-steps.tsx", "src/components/coach-prompt.tsx", "src/components/primeros-pasos/week-recap.tsx", "src/components/primeros-pasos/lo-mejor.tsx",
+      "src/components/install/push-when-ready.tsx", "src/components/install/install-card.tsx", "src/components/install/install-helper.tsx", "src/components/notifications/enable-push.tsx", "src/components/notifications/native-push.tsx"];
     const keys = files.flatMap((f) => [...readFileSync(f, "utf8").matchAll(/\b(?:tx|t|translate\(locale,)\(\s*(?:[\w.?! =]+\?\s*)?"((?:[^"\\]|\\.)+)"/g)].map((m) => JSON.parse(`"${m[1]}"`) as string));
     expect(keys.length).toBeGreaterThan(100);
     expect(keys.filter((k) => !hasTranslation("en-US", k))).toEqual([]);
+  });
+});
+
+describe("Camino de activación en inglés (#309)", () => {
+  it("cada paso de primeros pasos, respuesta del coach y línea del resumen tiene su traducción", async () => {
+    const { firstSteps } = await import("@/lib/primeros-pasos");
+    const { COACH_PROMPTS, COACH_PROMPT_QUESTION } = await import("@/lib/coach-prompt");
+    const { recapFrom } = await import("@/lib/week-recap");
+    const base = { keys: [], workouts: 1, weights: 1, coachMessages: 0, push: false, pushSupported: true };
+    const steps = [{ ...base }, { ...base, mobile: true }, { ...base, pushSupported: false }].flatMap((s) => firstSteps(s)).filter((s) => s.id !== "coach");
+    const texts = [...steps.flatMap((s) => [s.title, s.why, s.cta]), COACH_PROMPT_QUESTION, ...Object.values(COACH_PROMPTS).map((p) => p.label)];
+    for (const [workouts, heavier, moreReps] of [[4, ["Sentadilla"], 1], [2, ["Sentadilla", "Remo"], 3], [1, [], 0]] as const) {
+      const r = recapFrom({ weekOf: "2026-11-02", workouts, sets: 12, planned: 4, heavier: [...heavier], moreReps })!;
+      texts.push(r.headline, ...r.lines.map((l) => l.tpl));
+    }
+    expect(texts.filter((x) => !hasTranslation("en-US", x))).toEqual([]);
+    expect(translate("en-US", "Pregúntale algo a {coach}", { coach: "Coach Platanita" })).toBe("Ask Coach Platanita something");
   });
 });
 

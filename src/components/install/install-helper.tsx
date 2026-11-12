@@ -11,6 +11,7 @@ import { track } from "@/components/analytics";
 import { AddHomeGlyph, DotsGlyph, SafariBarDrawing, ShareGlyph } from "./drawn";
 import { useInstall } from "./use-install";
 import type { InstallEnv } from "@/lib/install-env";
+import { useT } from "@/lib/i18n/client";
 
 const SITE = "https://www.bananaburn.app";
 
@@ -26,6 +27,7 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
 /** Enlace con botón de copiar. También lo usa el registro dentro de Instagram o Facebook (`where`: "registro"). */
 export function CopyLink({ path, where }: { path: string; where?: string }) {
   const [ok, setOk] = useState(false);
+  const t = useT();
   const url = `${SITE}${path}`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(url); } catch {
@@ -37,29 +39,30 @@ export function CopyLink({ path, where }: { path: string; where?: string }) {
   };
   return (
     <div className="mt-3 flex items-center gap-2">
-      <input id="bb-install-url" readOnly value={url} aria-label="Enlace de Banana Burn" className="min-w-0 flex-1 h-12 rounded-2xl border border-line bg-white px-3 text-sm font-semibold text-ink" />
-      <button type="button" onClick={copy} className="btn-primary h-12 px-4 shrink-0">{ok ? <><Check weight="bold" className="size-4" />Copiado</> : <><Copy weight="bold" className="size-4" />Copiar</>}</button>
+      <input id="bb-install-url" readOnly value={url} aria-label={t("Enlace de Banana Burn")} className="min-w-0 flex-1 h-12 rounded-2xl border border-line bg-white px-3 text-sm font-semibold text-ink" />
+      <button type="button" onClick={copy} className="btn-primary h-12 px-4 shrink-0">{ok ? <><Check weight="bold" className="size-4" />{t("Copiado")}</> : <><Copy weight="bold" className="size-4" />{t("Copiar")}</>}</button>
     </div>
   );
 }
 
 /** Contenido según el navegador. `qrSvg`: el QR ya generado en el servidor (para computadora). */
 function Body({ env, canPrompt, onPrompt, qrSvg, path }: { env: InstallEnv; canPrompt: boolean; onPrompt: () => void; qrSvg?: string; path: string }) {
+  const t = useT();
   if (env === "standalone") {
-    return <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Check weight="bold" className="size-5 text-peel" />Ya la tienes instalada. Ábrela siempre desde tu pantalla de inicio.</p>;
+    return <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Check weight="bold" className="size-5 text-peel" />{t("Ya la tienes instalada. Ábrela siempre desde tu pantalla de inicio.")}</p>;
   }
   if (env === "ios-inapp" || env === "android-inapp") {
     const browser = env === "ios-inapp" ? "Safari" : "Chrome";
     return (
       <>
-        <p className="text-[15px] text-body">Estás viendo Banana Burn dentro de otra app (por ejemplo Instagram o Facebook). Desde aquí no se puede instalar. Ábrela en <b className="text-ink">{browser}</b>:</p>
+        <p className="text-[15px] text-body">{t("Estás viendo Banana Burn dentro de otra app (por ejemplo Instagram o Facebook). Desde aquí no se puede instalar. Ábrela en")} <b className="text-ink">{browser}</b>:</p>
         <ol className="mt-3 space-y-3">
-          <Step n={1}>Toca el menú <DotsGlyph className="inline size-4 -mt-0.5 text-ink" /> de esta pantalla (arriba o abajo a la derecha).</Step>
-          <Step n={2}>Elige <b className="text-ink">Abrir en {browser}</b> o <b className="text-ink">Abrir en el navegador</b>.</Step>
-          <Step n={3}>{env === "ios-inapp" ? <>Ya en Safari, toca <ShareGlyph className="inline size-4 -mt-1 text-ink" /> <b className="text-ink">Compartir</b> y luego <b className="text-ink">Agregar a inicio</b>.</> : <>Ya en Chrome, toca <b className="text-ink">Instalar app</b>.</>}</Step>
+          <Step n={1}>{t("Toca el menú")} <DotsGlyph className="inline size-4 -mt-0.5 text-ink" /> {t("de esta pantalla (arriba o abajo a la derecha).")}</Step>
+          <Step n={2}>{t("Elige")} <b className="text-ink">{t("Abrir en {browser}", { browser })}</b> {t("o")} <b className="text-ink">{t("Abrir en el navegador")}</b>.</Step>
+          <Step n={3}>{env === "ios-inapp" ? <>{t("Ya en Safari, toca")} <ShareGlyph className="inline size-4 -mt-1 text-ink" /> <b className="text-ink">{t("Compartir")}</b> {t("y luego")} <b className="text-ink">{t("Agregar a inicio")}</b>.</> : <>{t("Ya en Chrome, toca")} <b className="text-ink">{t("Instalar app")}</b>.</>}</Step>
         </ol>
-        {path.includes("entrar=") && <p className="mt-3 text-sm font-semibold text-ink">Allá entras con un toque, sin contraseña.</p>}
-        <p className="mt-3 text-sm text-muted">¿No ves la opción? Copia el enlace y pégalo en {browser}.</p>
+        {path.includes("entrar=") && <p className="mt-3 text-sm font-semibold text-ink">{t("Allá entras con un toque, sin contraseña.")}</p>}
+        <p className="mt-3 text-sm text-muted">{t("¿No ves la opción? Copia el enlace y pégalo en {browser}.", { browser })}</p>
         <CopyLink path={path} />
       </>
     );
@@ -69,9 +72,9 @@ function Body({ env, canPrompt, onPrompt, qrSvg, path }: { env: InstallEnv; canP
       <>
         <div className="mx-auto max-w-[220px]"><SafariBarDrawing /></div>
         <ol className="mt-4 space-y-3">
-          <Step n={1}>Toca <ShareGlyph className="inline size-[18px] -mt-1 text-ink" /> <b className="text-ink">Compartir</b>{env === "ios-safari" ? " en la barra de abajo." : " (en Chrome está arriba a la derecha)."}</Step>
-          <Step n={2}>Baja y elige <AddHomeGlyph className="inline size-[18px] -mt-1 text-ink" /> <b className="text-ink">Agregar a inicio</b>.</Step>
-          <Step n={3}>Toca <b className="text-ink">Agregar</b>. Listo: Banana Burn queda como app en tu pantalla.</Step>
+          <Step n={1}>{t("Toca")} <ShareGlyph className="inline size-[18px] -mt-1 text-ink" /> <b className="text-ink">{t("Compartir")}</b>{t(env === "ios-safari" ? " en la barra de abajo." : " (en Chrome está arriba a la derecha).")}</Step>
+          <Step n={2}>{t("Baja y elige")} <AddHomeGlyph className="inline size-[18px] -mt-1 text-ink" /> <b className="text-ink">{t("Agregar a inicio")}</b>.</Step>
+          <Step n={3}>{t("Toca")} <b className="text-ink">{t("Agregar")}</b>{t(". Listo: Banana Burn queda como app en tu pantalla.")}</Step>
         </ol>
       </>
     );
@@ -80,12 +83,12 @@ function Body({ env, canPrompt, onPrompt, qrSvg, path }: { env: InstallEnv; canP
     return (
       <>
         {canPrompt ? (
-          <button type="button" onClick={onPrompt} className="btn-banana w-full h-14 text-base"><DeviceMobile weight="bold" className="size-5" />Instalar Banana Burn</button>
+          <button type="button" onClick={onPrompt} className="btn-banana w-full h-14 text-base"><DeviceMobile weight="bold" className="size-5" />{t("Instalar Banana Burn")}</button>
         ) : (
           <ol className="space-y-3">
-            <Step n={1}>Toca el menú <DotsGlyph className="inline size-4 -mt-0.5 text-ink" /> de Chrome (arriba a la derecha).</Step>
-            <Step n={2}>Elige <b className="text-ink">Instalar app</b> o <b className="text-ink">Agregar a pantalla principal</b>.</Step>
-            <Step n={3}>Confirma con <b className="text-ink">Instalar</b>.</Step>
+            <Step n={1}>{t("Toca el menú")} <DotsGlyph className="inline size-4 -mt-0.5 text-ink" /> {t("de Chrome (arriba a la derecha).")}</Step>
+            <Step n={2}>{t("Elige")} <b className="text-ink">{t("Instalar app")}</b> {t("o")} <b className="text-ink">{t("Agregar a pantalla principal")}</b>.</Step>
+            <Step n={3}>{t("Confirma con")} <b className="text-ink">{t("Instalar")}</b>.</Step>
           </ol>
         )}
       </>
@@ -94,11 +97,11 @@ function Body({ env, canPrompt, onPrompt, qrSvg, path }: { env: InstallEnv; canP
   // Computadora.
   return (
     <div className="flex flex-col sm:flex-row items-center gap-5">
-      {qrSvg ? <div className="size-40 shrink-0 rounded-2xl bg-white p-2.5 border border-line [&_svg]:size-full" role="img" aria-label="Código QR para abrir bananaburn.app en tu celular" dangerouslySetInnerHTML={{ __html: qrSvg }} /> : null}
+      {qrSvg ? <div className="size-40 shrink-0 rounded-2xl bg-white p-2.5 border border-line [&_svg]:size-full" role="img" aria-label={t("Código QR para abrir bananaburn.app en tu celular")} dangerouslySetInnerHTML={{ __html: qrSvg }} /> : null}
       <ol className="space-y-3">
-        <Step n={1}>Apunta la cámara de tu celular a este código.</Step>
-        <Step n={2}>Abre el enlace (en iPhone, con Safari).</Step>
-        <Step n={3}>Sigue los pasos para agregarla a tu pantalla de inicio.</Step>
+        <Step n={1}>{t("Apunta la cámara de tu celular a este código.")}</Step>
+        <Step n={2}>{t("Abre el enlace (en iPhone, con Safari).")}</Step>
+        <Step n={3}>{t("Sigue los pasos para agregarla a tu pantalla de inicio.")}</Step>
       </ol>
     </div>
   );
@@ -136,6 +139,7 @@ export function InstallHelper({ where, qrSvg, path = "/app", title = true }: { w
   const seen = useRef(false);
   const pass = useHandoff(env === "ios-inapp" || env === "android-inapp");
   const [done, setDone] = useState(false);
+  const t = useT();
   useEffect(() => {
     if (!env || seen.current) return;
     seen.current = true;
@@ -153,10 +157,10 @@ export function InstallHelper({ where, qrSvg, path = "/app", title = true }: { w
     <div>
       {title && (
         <p className="mb-3 text-sm font-semibold text-muted">
-          {env === "desktop" ? "Ábrela en tu celular" : env === "standalone" || done ? "Instalada" : "Toma 10 segundos"}
+          {t(env === "desktop" ? "Ábrela en tu celular" : env === "standalone" || done ? "Instalada" : "Toma 10 segundos")}
         </p>
       )}
-      {done ? <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Check weight="bold" className="size-5 text-peel" />Lista. Búscala en tu pantalla de inicio.</p> : <Body env={env} canPrompt={canPrompt} onPrompt={onPrompt} qrSvg={qrSvg} path={pass ?? path} />}
+      {done ? <p className="flex items-center gap-2 text-[15px] font-semibold text-ink"><Check weight="bold" className="size-5 text-peel" />{t("Lista. Búscala en tu pantalla de inicio.")}</p> : <Body env={env} canPrompt={canPrompt} onPrompt={onPrompt} qrSvg={qrSvg} path={pass ?? path} />}
     </div>
   );
 }

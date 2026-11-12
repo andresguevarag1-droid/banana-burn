@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BananaFlame, Barbell, Bell, BellSlash, Check, Export, Moon, PlusSquare } from "@/components/icons";
 import { useIsNativeApp } from "@/components/platform-provider";
 import { NativePush } from "./native-push";
+import { useT } from "@/lib/i18n/client";
 
 type State = "checking" | "unsupported" | "ios-install" | "not-configured" | "default" | "denied" | "subscribed" | "working";
 
@@ -43,6 +44,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
   const [snoozed, setSnoozed] = useState(false);
   const [installDone, setInstallDone] = useState(false);
   const native = useIsNativeApp();
+  const t = useT();
 
   const refresh = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -77,7 +79,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
       if (!res.ok) throw new Error("save");
       setState("subscribed"); onChange?.(true);
     } catch {
-      setErr("No pudimos activar los avisos en este dispositivo. Intenta de nuevo.");
+      setErr(t("No pudimos activar los avisos en este dispositivo. Intenta de nuevo."));
       void refresh();
     }
   };
@@ -92,7 +94,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
         await sub.unsubscribe();
       }
       setState("default"); onChange?.(false);
-    } catch { setErr("No pudimos desactivar los avisos. Intenta de nuevo."); void refresh(); }
+    } catch { setErr(t("No pudimos desactivar los avisos. Intenta de nuevo.")); void refresh(); }
   };
 
   /** "Ya lo hice": este dispositivo ya instaló la app; no volvemos a mostrar los pasos aquí. */
@@ -108,8 +110,8 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-peel/30 bg-peel/5 p-3">
         <span className="grid place-items-center size-10 rounded-xl bg-peel/15 text-peel"><Bell weight="fill" className="size-5" /></span>
-        <div className="flex-1 min-w-0"><p className="text-sm font-bold text-ink">Avisos activos en este dispositivo</p><p className="text-xs text-muted">{hourly ? "Máximo 2 al día, nunca en tus horas de silencio." : "Máximo 2 al día."}</p></div>
-        <button onClick={disable} className="tap px-2 text-xs font-bold text-muted underline hover:text-ink">Desactivar</button>
+        <div className="flex-1 min-w-0"><p className="text-sm font-bold text-ink">{t("Avisos activos en este dispositivo")}</p><p className="text-xs text-muted">{t(hourly ? "Máximo 2 al día, nunca en tus horas de silencio." : "Máximo 2 al día.")}</p></div>
+        <button onClick={disable} className="tap px-2 text-xs font-bold text-muted underline hover:text-ink">{t("Desactivar")}</button>
       </div>
     );
   }
@@ -118,24 +120,24 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
   if (state === "ios-install") {
     return (
       <div className="rounded-3xl border border-line bg-cream p-4">
-        <p className="flex items-center gap-2 font-extrabold text-ink"><Bell weight="duotone" className="size-5 text-banana-ink" />Avisos en iPhone</p>
-        <p className="mt-1 text-sm text-muted">Apple solo permite notificaciones cuando Banana Burn está instalada en tu pantalla de inicio (iOS 16.4 o superior).</p>
+        <p className="flex items-center gap-2 font-extrabold text-ink"><Bell weight="duotone" className="size-5 text-banana-ink" />{t("Avisos en iPhone")}</p>
+        <p className="mt-1 text-sm text-muted">{t("Apple solo permite notificaciones cuando Banana Burn está instalada en tu pantalla de inicio (iOS 16.4 o superior).")}</p>
         <ol className="mt-3 space-y-2 text-sm text-body">
-          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">1</span>Abre esta página en Safari y toca <Export weight="bold" className="inline size-4" /> <b>Compartir</b></li>
-          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">2</span>Elige <PlusSquare weight="bold" className="inline size-4" /> <b>Agregar a inicio</b></li>
-          <li className="flex items-start gap-2"><span className="grid shrink-0 place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span><span className="pt-0.5">Abre la app desde el ícono de Banana Burn y activa los avisos aquí</span></li>
+          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">1</span>{t("Abre esta página en Safari y toca")} <Export weight="bold" className="inline size-4" /> <b>{t("Compartir")}</b></li>
+          <li className="flex items-center gap-2"><span className="grid place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">2</span>{t("Elige")} <PlusSquare weight="bold" className="inline size-4" /> <b>{t("Agregar a inicio")}</b></li>
+          <li className="flex items-start gap-2"><span className="grid shrink-0 place-items-center size-6 rounded-full bg-banana text-xs font-bold text-ink">3</span><span className="pt-0.5">{t("Abre la app desde el ícono de Banana Burn y activa los avisos aquí")}</span></li>
         </ol>
         {hideWhenSnoozed && (
           <div className="mt-4 flex items-center gap-4">
-            <button onClick={markInstalled} className="pressable inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-5 text-sm font-bold text-white"><Check weight="bold" className="size-4" />Ya lo hice</button>
-            <button onClick={snooze} className="tap h-11 text-xs font-bold text-muted underline hover:text-ink">Ahora no</button>
+            <button onClick={markInstalled} className="pressable inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-5 text-sm font-bold text-white"><Check weight="bold" className="size-4" />{t("Ya lo hice")}</button>
+            <button onClick={snooze} className="tap h-11 text-xs font-bold text-muted underline hover:text-ink">{t("Ahora no")}</button>
           </div>
         )}
       </div>
     );
   }
 
-  if (state === "unsupported") return <p className="text-sm text-muted">Este navegador no soporta notificaciones push. Prueba con Chrome, Edge, Firefox o Safari actualizado. Los recordatorios por correo siguen funcionando.</p>;
+  if (state === "unsupported") return <p className="text-sm text-muted">{t("Este navegador no soporta notificaciones push. Prueba con Chrome, Edge, Firefox o Safari actualizado. Los recordatorios por correo siguen funcionando.")}</p>;
   // Sin llave VAPID no hay push en esta instalación: no mostramos nada (los avisos siguen en la campanita).
   if (state === "not-configured") return null;
 
@@ -143,7 +145,7 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
     return (
       <div className="flex items-start gap-3 rounded-2xl border border-line bg-cream p-3">
         <span className="grid place-items-center size-10 shrink-0 rounded-xl bg-white text-muted"><BellSlash weight="duotone" className="size-5" /></span>
-        <p className="text-sm text-muted">Los avisos están bloqueados en este navegador. Para activarlos, toca el candado junto a la dirección, luego <b>Notificaciones</b> y <b>Permitir</b>, y recarga la página.</p>
+        <p className="text-sm text-muted">{t("Los avisos están bloqueados en este navegador. Para activarlos, toca el candado junto a la dirección, luego")} <b>{t("Notificaciones")}</b> {t("y")} <b>{t("Permitir")}</b>{t(", y recarga la página.")}</p>
       </div>
     );
   }
@@ -154,18 +156,18 @@ export function EnablePush({ publicKey, hideWhenSnoozed = false, onChange, hourl
       <div className="flex items-start gap-3">
         <span className="grid place-items-center size-11 shrink-0 rounded-2xl bg-banana text-ink"><Bell weight="duotone" className="size-6" /></span>
         <div className="min-w-0">
-          <p className="font-extrabold text-ink">Que no se te pase ningún entreno</p>
+          <p className="font-extrabold text-ink">{t("Que no se te pase ningún entreno")}</p>
           <ul className="mt-2 space-y-1 text-sm text-body">
-            <li className="flex items-center gap-2"><Barbell weight="duotone" className="size-4 shrink-0 text-banana-ink" />{hourly ? "Qué te toca hoy, a la hora que elijas" : "Qué te toca hoy, en la mañana"}</li>
-            {hourly && <li className="flex items-center gap-2"><BananaFlame className="size-4 shrink-0 text-ember-ink" />Un empujón a las 8 p. m. si tu racha está en juego</li>}
-            <li className="flex items-center gap-2"><Moon weight="duotone" className="size-4 shrink-0 text-banana-ink" />{hourly ? "Máximo 2 al día y nunca en tus horas de silencio" : "Máximo 2 al día"}</li>
+            <li className="flex items-center gap-2"><Barbell weight="duotone" className="size-4 shrink-0 text-banana-ink" />{t(hourly ? "Qué te toca hoy, a la hora que elijas" : "Qué te toca hoy, en la mañana")}</li>
+            {hourly && <li className="flex items-center gap-2"><BananaFlame className="size-4 shrink-0 text-ember-ink" />{t("Un empujón a las 8 p. m. si tu racha está en juego")}</li>}
+            <li className="flex items-center gap-2"><Moon weight="duotone" className="size-4 shrink-0 text-banana-ink" />{t(hourly ? "Máximo 2 al día y nunca en tus horas de silencio" : "Máximo 2 al día")}</li>
           </ul>
         </div>
       </div>
       {err && <p role="alert" className="mt-3 text-sm font-semibold text-bad">{err}</p>}
       <div className="mt-4 flex gap-2">
-        <button onClick={enable} disabled={state === "working"} className="btn-primary h-11 flex-1 px-5">{state === "working" ? "Activando…" : "Activar avisos"}</button>
-        {hideWhenSnoozed && <button onClick={snooze} className="btn-ghost h-11 px-5">Ahora no</button>}
+        <button onClick={enable} disabled={state === "working"} className="btn-primary h-11 flex-1 px-5">{t(state === "working" ? "Activando…" : "Activar avisos")}</button>
+        {hideWhenSnoozed && <button onClick={snooze} className="btn-ghost h-11 px-5">{t("Ahora no")}</button>}
       </div>
     </div>
   );

@@ -14,6 +14,8 @@ import { PP_CELEBRATED, PP_HIDDEN, STEP_KEY, checklistState, nextStep, type Firs
 import { isNativeApp } from "@/lib/platform";
 import { nativePushAvailable } from "@/lib/native/push-flag";
 import { useLearnKeys } from "./learn-store";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n/t";
 
 /** Evento para abrir el ayudante de instalación de la LinkApp desde otra pieza. Si nadie lo atiende (preventDefault), se abre aquí. */
 export const INSTALL_EVENT = "bb:instalar";
@@ -37,6 +39,7 @@ export function FirstSteps({ server, coach }: {
   coach: { name: string; avatar: string | null };
 }) {
   const { keys, ready, mark } = useLearnKeys(server.keys);
+  const t = useT();
   const [dev, setDev] = useState<Device | null>(null);
   const [sheet, setSheet] = useState<"avisos" | "instalar" | null>(null);
   useEffect(() => { setDev(readDevice()); }, []);
@@ -66,21 +69,21 @@ export function FirstSteps({ server, coach }: {
         {coach.avatar ? <CoachPic src={coach.avatar} size={56} className="size-14 shrink-0 rounded-2xl object-cover" /> : <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-ink text-banana"><Monkey className="size-9" /></span>}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-ink/75">{coach.name}</p>
-          <h2 id="pp-t" className="text-xl font-extrabold leading-tight text-ink text-balance">{st.complete ? "Completaste tus primeros pasos" : "Tus primeros pasos"}</h2>
+          <h2 id="pp-t" className="text-xl font-extrabold leading-tight text-ink text-balance">{t(st.complete ? "Completaste tus primeros pasos" : "Tus primeros pasos")}</h2>
         </div>
-        <Ring pct={pct} label={`${st.done} de ${st.total}`} />
+        <Ring pct={pct} done={st.done} total={st.total} t={t} />
         {!st.complete && (
-          <button type="button" onClick={() => mark(PP_HIDDEN)} className="tap -mr-2 -mt-2 grid size-11 shrink-0 place-items-center rounded-full text-ink/70 hover:text-ink" aria-label="Ocultar primeros pasos">
+          <button type="button" onClick={() => mark(PP_HIDDEN)} className="tap -mr-2 -mt-2 grid size-11 shrink-0 place-items-center rounded-full text-ink/70 hover:text-ink" aria-label={t("Ocultar primeros pasos")}>
             <X weight="bold" className="size-5" />
           </button>
         )}
       </div>
 
-      <p className="mt-3 text-[15px] text-ink/85 text-pretty">{st.complete ? "Ya sabes usar lo más importante. Ahora toca ser constante: tu plan se ajusta solo con lo que anotas." : "Hazlos en orden. Cada paso te enseña a usar la app."}</p>
+      <p className="mt-3 text-[15px] text-ink/85 text-pretty">{t(st.complete ? "Ya sabes usar lo más importante. Ahora toca ser constante: tu plan se ajusta solo con lo que anotas." : "Hazlos en orden. Cada paso te enseña a usar la app.")}</p>
       {st.complete ? (
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/app/aprende" className="btn-primary h-12 px-5"><BookOpen weight="bold" className="size-5" />Aprende a entrenar</Link>
-          <button type="button" onClick={() => mark(PP_CELEBRATED)} className="btn h-12 bg-white/70 px-5 text-ink hover:bg-white">Listo, ocultar</button>
+          <Link href="/app/aprende" className="btn-primary h-12 px-5"><BookOpen weight="bold" className="size-5" />{t("Aprende a entrenar")}</Link>
+          <button type="button" onClick={() => mark(PP_CELEBRATED)} className="btn h-12 bg-white/70 px-5 text-ink hover:bg-white">{t("Listo, ocultar")}</button>
         </div>
       ) : (
         <ol className="mt-3 space-y-2">
@@ -91,13 +94,13 @@ export function FirstSteps({ server, coach }: {
                 <Link href={s.href} onClick={(e) => open(s, e)} aria-current={isNext ? "step" : undefined}
                   className={`pressable flex items-center gap-3 rounded-2xl px-3.5 py-3 ${s.done ? "bg-white/45" : isNext ? "bg-white shadow-soft" : "bg-white/75"}`}>
                   <span className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-extrabold tabular-nums ${s.done ? "bg-peel text-white" : isNext ? "bg-ink text-banana" : "bg-ink/10 text-ink"}`}>
-                    {s.done ? <Check weight="bold" className="size-4" aria-label="Hecho" /> : i + 1}
+                    {s.done ? <Check weight="bold" className="size-4" aria-label={t("Hecho")} /> : i + 1}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={`block font-extrabold leading-tight text-ink ${s.done ? "line-through decoration-ink/40" : ""}`}>{s.title}</span>
-                    {isNext && <span className="mt-0.5 block text-sm text-ink/75 text-pretty">{s.why}</span>}
+                    <span className={`block font-extrabold leading-tight text-ink ${s.done ? "line-through decoration-ink/40" : ""}`}>{s.id === "coach" ? t("Pregúntale algo a {coach}", { coach: coach.name }) : t(s.title)}</span>
+                    {isNext && <span className="mt-0.5 block text-sm text-ink/75 text-pretty">{t(s.why)}</span>}
                   </span>
-                  {!s.done && <span className={`shrink-0 inline-flex items-center gap-1 text-sm font-bold ${isNext ? "text-ink" : "text-ink/60"}`}>{isNext ? s.cta : null}<ArrowRight weight="bold" className="size-4" /></span>}
+                  {!s.done && <span className={`shrink-0 inline-flex items-center gap-1 text-sm font-bold ${isNext ? "text-ink" : "text-ink/60"}`}>{isNext ? t(s.cta) : null}<ArrowRight weight="bold" className="size-4" /></span>}
                 </Link>
               </li>
             );
@@ -106,13 +109,13 @@ export function FirstSteps({ server, coach }: {
       )}
       {!st.complete && (
         <Link href="/app/aprende" className="tap mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
-          <BookOpen weight="bold" className="size-4" />¿Primera vez entrenando? Aprende a entrenar en 5 minutos
+          <BookOpen weight="bold" className="size-4" />{t("¿Primera vez entrenando? Aprende a entrenar en 5 minutos")}
         </Link>
       )}
 
       <Sheet open={sheet === "avisos"} onClose={() => setSheet(null)}>
-        <SheetTitle className="text-xl font-extrabold text-ink">Activa los recordatorios</SheetTitle>
-        <p className="mt-1 text-sm text-muted">Te avisamos los días que toca entrenar. Puedes cambiar la hora o apagarlos en Perfil.</p>
+        <SheetTitle className="text-xl font-extrabold text-ink">{t("Activa los recordatorios")}</SheetTitle>
+        <p className="mt-1 text-sm text-muted">{t("Te avisamos los días que toca entrenar. Puedes cambiar la hora o apagarlos en Perfil.")}</p>
         <div className="mt-4"><EnablePush onChange={(on) => { if (on) { mark(STEP_KEY.avisos); setSheet(null); } }} /></div>
       </Sheet>
       <Sheet open={sheet === "instalar"} onClose={() => setSheet(null)}>
@@ -122,27 +125,28 @@ export function FirstSteps({ server, coach }: {
   );
 }
 
-function Ring({ pct, label }: { pct: number; label: string }) {
+function Ring({ pct, done, total, t }: { pct: number; done: number; total: number; t: T }) {
   const r = 20, c = 2 * Math.PI * r;
   return (
-    <span className="relative grid size-14 shrink-0 place-items-center" role="img" aria-label={`Progreso: ${label}`}>
+    <span className="relative grid size-14 shrink-0 place-items-center" role="img" aria-label={t("Progreso: {n} de {total}", { n: done, total })}>
       <svg viewBox="0 0 48 48" className="absolute inset-0 size-full -rotate-90" aria-hidden>
         <circle cx="24" cy="24" r={r} fill="none" stroke="rgb(27 21 5 / .12)" strokeWidth="5" />
         <circle cx="24" cy="24" r={r} fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" className="text-ink transition-[stroke-dashoffset] duration-500 ease-[cubic-bezier(.23,1,.32,1)]" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} />
       </svg>
-      <span className="text-xs font-extrabold text-ink tabular-nums">{label.replace(" de ", "/")}</span>
+      <span className="text-xs font-extrabold text-ink tabular-nums">{done}/{total}</span>
     </span>
   );
 }
 
 /** Instalar la LinkApp: el mismo ayudante de instalación que Hoy y Perfil (components/install). */
 function InstallSteps({ onDone }: { onDone: () => void }) {
+  const t = useT();
   return (
     <div>
-      <SheetTitle className="text-xl font-extrabold text-ink">Instala tu LinkApp</SheetTitle>
-      <p className="mt-1 mb-4 text-sm text-muted">Así abres Banana Burn con un toque desde tu pantalla de inicio, como cualquier app.</p>
+      <SheetTitle className="text-xl font-extrabold text-ink">{t("Instala tu LinkApp")}</SheetTitle>
+      <p className="mt-1 mb-4 text-sm text-muted">{t("Así abres Banana Burn con un toque desde tu pantalla de inicio, como cualquier app.")}</p>
       <InstallHelper where="primeros-pasos" />
-      <button type="button" onClick={onDone} className="btn-ghost mt-5 h-12 w-full">Ya la instalé</button>
+      <button type="button" onClick={onDone} className="btn-ghost mt-5 h-12 w-full">{t("Ya la instalé")}</button>
     </div>
   );
 }
