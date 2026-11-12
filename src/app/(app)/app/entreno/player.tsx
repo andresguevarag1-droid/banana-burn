@@ -773,7 +773,7 @@ export function Player({ week = null, firstSession = false, firstOffer, firstSet
   }, [firstSetAsk, firstOffer, doneSets, phase]);
   const hideCardAsk = () => { try { localStorage.setItem(firstSetAskKey(firstOffer!), String(Date.now())); } catch { /* */ } setCardAsk("off"); };
   const cardLine = cardAsk === "line" ? (
-    <FirstSetCardLine onClose={hideCardAsk} onOpen={() => { setRestOpen(false); setCardAsk("sheet"); }}
+    <FirstSetCardLine onClose={hideCardAsk} onOpen={() => { setRestOpen(false); setCardAsk("sheet"); track("card_form_view", { where: "primera-serie" }); }}
       onSeen={() => { if (!cardAskSeen.current) { cardAskSeen.current = true; track("card_ask_view", { where: "primera-serie" }); } }} />
   ) : null;
   // Abrió cómo se hace: si muchos lo abren y luego se van, la explicación no alcanza.

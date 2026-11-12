@@ -98,7 +98,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
 
   return (
     <section ref={ref} id="tarjeta" aria-labelledby="tarjeta-titulo" className={`scroll-mt-24 rounded-[1.5rem] border-2 bg-white p-5 sm:p-6 space-y-4 ${failed ? "border-bad/40" : "border-ink"}`}>
-      {(where === "mi-plan" || where === "dia6") && <FunnelTracker view="card_ask_view" props={{ where }} />}
+      {(where === "mi-plan" || where === "dia6") && <FunnelTracker view="card_ask_view" props={{ where }} />}{!off && <FunnelTracker view="card_form_view" props={{ where }} />}
       <div>
         <h2 id="tarjeta-titulo" className="flex items-center gap-2 text-xl font-extrabold text-ink text-balance">{failed ? <WarningCircle weight="duotone" className="size-6 shrink-0 text-bad" /> : step === "trial" || step === "card" ? <Gift weight="duotone" className="size-6 shrink-0 text-banana-ink" /> : <CreditCard weight="duotone" className="size-6 shrink-0 text-banana-ink" />}{t.title}</h2>
         <p className="mt-1 text-sm text-muted text-pretty">{t.sub}</p>

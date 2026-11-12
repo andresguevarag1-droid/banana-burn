@@ -153,7 +153,12 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
   // Embudo del registro (#236): un onboarding_step al entrar a cada paso 0 a 6 (la oferta de la tarjeta no cuenta aquí).
   useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
   // #280: el pedido de la tarjeta de la bienvenida (opcional u obligatorio) cuenta como card_ask_view "bienvenida".
-  useEffect(() => { if (step === STEPS && cardStep) track("card_ask_view", { where: "bienvenida" }); }, [step, cardStep]);
+  // #308: aquí el formulario va dentro del pedido, así que card_form_view sale a la vez (si los pagos están activos).
+  useEffect(() => {
+    if (step !== STEPS || !cardStep) return;
+    track("card_ask_view", { where: "bienvenida" });
+    if (payments || demo) track("card_form_view", { where: "bienvenida" });
+  }, [step, cardStep, payments, demo]);
   const [o, setO] = useState<Draft>(() => ({
     name: initialName, goal: initialGoal ?? "grasa", sex: startOnCard ? "m" : null, heightCm: startOnCard ? 175 : null, weight: startOnCard ? 85 : null, goalWeight: startOnCard ? 78 : null, goalDate: startOnCard ? suggestDate(85, 78).date : "",
     days: 4, equipment: "gym", level: startOnCard ? "intermedio" : null, minutes: 45, consent: startOnCard, glp1, glp1Med: "semaglutida", glp1Dow: 1, country: country ?? "",

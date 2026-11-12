@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { describe, expect, it } from "vitest";
+import { cleanEvent } from "@/app/api/track/event";
 import {
-  STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cohortTable, countriesOf, crWeeks, isAdUtm, netAfterAds, netUsd, parseUsd, pctOf, secondWorkoutUsers, weekKey, type FunnelRows,
+  CARD_ERA_LABEL, STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cardAskTable, cohortTable, countriesOf, crWeeks, isAdUtm, netAfterAds, netUsd, parseUsd, pctOf, secondWorkoutUsers, weekKey, type FunnelRows,
 } from "@/lib/embudo-plata";
 
 const NOW = new Date("2026-11-07T18:00:00Z"); // sábado 7 nov, 12:00 en Costa Rica
@@ -197,7 +198,7 @@ describe("cohortes por semana de registro", () => {
     expect(t.net).toBeNull();
   });
 
-  it("filtra por país (con Sin dato), origen y cuentas antes o desde el 1 ene 2027", () => {
+  it("filtra por país (con Sin dato), origen y cuentas antes o desde el 1 dic 2026", () => {
     const a = buildAccounts(sample(), NOW);
     expect(countriesOf(a)).toEqual(["CO", "CR"]);
     expect(applyFilters(a, { country: "CR" })!.length).toBe(2);
@@ -207,7 +208,7 @@ describe("cohortes por semana de registro", () => {
     expect(applyFilters(a, { origin: "organico" })!.length).toBe(2);
     expect(applyFilters(a, { era: "antes" })!.length).toBe(4);
     expect(applyFilters(a, { era: "desde" })!.length).toBe(0);
-    const later = buildAccounts({ ...sample(), profiles: [{ id: id(9), created_at: "2027-01-01T06:00:00Z", role: "free", country: "CR" }] }, NOW);
+    const later = buildAccounts({ ...sample(), profiles: [{ id: id(9), created_at: "2026-12-01T06:00:00Z", role: "free", country: "CR" }] }, NOW);
     expect(applyFilters(later, { era: "desde" })!.length).toBe(1);
   });
 
@@ -255,11 +256,51 @@ describe("primer contacto en el embudo (#283)", () => {
   });
 });
 
+describe("pedido de tarjeta por lugar (#308)", () => {
+  it("la etiqueta de las cuentas sale de CARD_REQUIRED_FROM", () => {
+    expect(CARD_ERA_LABEL).toEqual({ antes: "Antes del 1 dic 2026", desde: "Desde el 1 dic 2026" });
+  });
+
+  it("cuenta cada cuenta una vez por lugar: lo vio, vio el formulario, la guardó", () => {
+    const ask = (user: number, name: string, where: string | null) => ({ user_id: id(user), name, where });
+    const cardAsks = [
+      ask(1, "card_ask_view", "hoy-banner"), ask(1, "card_ask_view", "hoy-banner"), ask(1, "card_form_view", "hoy-banner"), ask(1, "card_saved", "hoy-banner"),
+      ask(3, "card_ask_view", "hoy-banner"), ask(3, "card_ask_view", "salida"), ask(3, "card_form_view", null),
+      ask(4, "card_ask_view", "muro"), ask(4, "hoy_view", "muro"),
+    ];
+    const rows = cardAskTable(buildAccounts({ ...sample(), cardAsks }, NOW))!;
+    expect(rows.map((r) => r.where)).toEqual(["bienvenida", "hoy-banner", "primer-entreno", "primera-serie", "salida", "mi-plan", "muro", "dia6"]);
+    expect(rows.find((r) => r.where === "hoy-banner")).toMatchObject({ label: "Banner de Hoy", view: 2, form: 1, saved: 1 });
+    expect(rows.find((r) => r.where === "salida")).toMatchObject({ view: 1, form: 0, saved: 0 });
+    expect(rows.find((r) => r.where === "muro")).toMatchObject({ view: 1, form: 0, saved: 0 });
+    // Con un filtro, solo las cuentas que pasan.
+    expect(cardAskTable(applyFilters(buildAccounts({ ...sample(), cardAsks }, NOW), { country: "CR" })!)!.find((r) => r.where === "hoy-banner")!.view).toBe(0);
+  });
+
+  it("sin la fuente de los pedidos, sin dato (nunca cero)", () => {
+    expect(cardAskTable(buildAccounts(sample(), NOW))).toBeNull();
+    expect(cardAskTable(buildAccounts({ ...sample(), cardAsks: null }, NOW))).toBeNull();
+  });
+
+  it("card_form_view lleva el `where` del pedido donde se muestra el formulario", () => {
+    expect(cleanEvent({ name: "card_form_view", props: { where: "muro", correo: "ana@x.com" } })).toEqual({ name: "card_form_view", props: { where: "muro" } });
+    expect(cleanEvent({ name: "card_form_view", props: { where: "otro" } })).toBeNull();
+    expect(readFileSync("src/app/(app)/app/suscripcion/card-panel.tsx", "utf8")).toContain('<FunnelTracker view="card_form_view" props={{ where }} />');
+    expect(readFileSync("src/app/(app)/app/entreno/player.tsx", "utf8")).toContain('track("card_form_view", { where: "primera-serie" })');
+    expect(readFileSync("src/app/bienvenida/wizard.tsx", "utf8")).toContain('track("card_form_view", { where: "bienvenida" })');
+    expect(readFileSync("src/lib/embudo-plata-server.ts", "utf8")).toContain("where:props->>where");
+  });
+});
+
 describe("0068_embudo_plata.sql", () => {
-  it("se puede aplicar dos veces y deja la tabla del gasto con RLS", async () => {
+  // #308: falló en CI por el timeout de 5 s (main, 11 nov). 0068 solo usa profiles e is_admin(), así que van mínimos en vez
+  // de 0001_init.sql entero. Casi todo el tiempo (~1 s aquí) es PGlite arrancando Postgres en WASM, que con el CI cargado
+  // pasa de 5 s: 20 s de margen.
+  it("se puede aplicar dos veces y deja la tabla del gasto con RLS", { timeout: 20_000 }, async () => {
     const pg = new PGlite({ extensions: { pgcrypto } });
     await pg.exec(readFileSync("supabase/tests/stub.sql", "utf8"));
-    await pg.exec(readFileSync("supabase/migrations/0001_init.sql", "utf8"));
+    await pg.exec(`create table public.profiles (id uuid primary key references auth.users(id), created_at timestamptz not null default now());
+      create function public.is_admin() returns boolean language sql stable as $$ select false $$;`);
     const sql = readFileSync("supabase/migrations/0068_embudo_plata.sql", "utf8");
     await pg.exec(sql);
     await pg.exec(sql);

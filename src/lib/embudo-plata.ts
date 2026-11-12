@@ -1,8 +1,9 @@
 // Embudo de plata por semana de registro (#279): registro > Hoy > entreno > primera serie > primer entreno > segundo entreno > 3 entrenos > tarjeta > pago
 // > ingreso neto. Reglas puras, sin base ni red: embudo-plata-server.ts lee las filas y esto las cuenta.
 // Si una fuente no se pudo leer llega como null y sus celdas salen "sin dato": nunca se cuenta como cero.
+import { CARD_ASK_WHERE, type CardAskWhere } from "@/app/api/track/event";
 import { STAFF_ROLES } from "@/lib/admin-perms";
-import { cardRequiredFor } from "@/lib/card-required";
+import { CARD_REQUIRED_FROM, cardRequiredFor } from "@/lib/card-required";
 import { PLANS } from "@/lib/plans";
 import { finishedInTrial } from "@/lib/segundo-entreno";
 import type { Role } from "@/lib/supabase/server";
@@ -17,9 +18,12 @@ export type Processor = keyof typeof FEES;
 
 export type Origin = "anuncio" | "condominio" | "organico";
 export const ORIGIN_LABEL: Record<Origin, string> = { anuncio: "Anuncio", condominio: "Condominio", organico: "Orgánico" };
-/** Cuentas antes o desde el 1 de diciembre de 2026 (tarjeta obligatoria, cardRequiredFor). */
+/** Cuentas antes o desde CARD_REQUIRED_FROM (tarjeta obligatoria, cardRequiredFor). */
 export type CardEra = "antes" | "desde";
-export const CARD_ERA_LABEL: Record<CardEra, string> = { antes: "Antes del 1 ene 2027", desde: "Desde el 1 ene 2027" };
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+/** "1 dic 2026": el día de Costa Rica (UTC-6) de un instante. */
+const crDay = (iso: string) => { const d = new Date(Date.parse(iso) - 6 * 3600_000); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+export const CARD_ERA_LABEL: Record<CardEra, string> = { antes: `Antes del ${crDay(CARD_REQUIRED_FROM)}`, desde: `Desde el ${crDay(CARD_REQUIRED_FROM)}` };
 /** Valor del filtro de país para cuentas sin país. */
 export const NO_COUNTRY = "sin";
 
@@ -37,6 +41,20 @@ export const STEPS = [
 ] as const;
 export type StepKey = (typeof STEPS)[number]["key"];
 export const STEP_EVENTS = STEPS.flatMap((s) => ("event" in s ? [s.event] : []));
+
+/** Pedido de tarjeta (#308): lo vio, se le mostró el formulario, la guardó. Todos con el `where` del pedido. */
+export const CARD_ASK_EVENTS = { view: "card_ask_view", form: "card_form_view", saved: "card_saved" } as const;
+export type CardAskStep = keyof typeof CARD_ASK_EVENTS;
+export const CARD_ASK_LABEL: Record<CardAskWhere, string> = {
+  bienvenida: "Bienvenida",
+  "hoy-banner": "Banner de Hoy",
+  "primera-serie": "Tras la primera serie",
+  "primer-entreno": "Al terminar el primer entreno",
+  salida: "Oferta de salida",
+  "mi-plan": "Mi plan",
+  muro: "Muro de planes",
+  dia6: "Correo del día 6",
+};
 
 export type Week = { key: string; start: string; end: string };
 
@@ -93,6 +111,8 @@ export type FunnelRows = {
   signup: SignupRow[] | null;
   /** Eventos de STEP_EVENTS de esas cuentas. */
   events: { user_id: string | null; name: string }[] | null;
+  /** Eventos de CARD_ASK_EVENTS de esas cuentas, con props.where (#308). Sin la fuente: undefined o null. */
+  cardAsks?: { user_id: string | null; name: string; where: string | null }[] | null;
   /** Cuentas con un entreno terminado (workouts.finished_at). */
   finished: string[] | null;
   /** Cuentas con 2 o más entrenos terminados en sus primeros 7 días (#286, secondWorkoutUsers). */
@@ -120,6 +140,8 @@ export type Account = {
   ad: string | null;
   era: CardEra;
   steps: Record<StepKey, boolean | null>;
+  /** Pedidos de tarjeta de la cuenta (#308): en qué `where` llegó a cada paso. null: sin dato. */
+  asks: Record<CardAskStep, Set<string>> | null;
   /** Neto del primer pago (0 si no pagó). null: sin dato. */
   net: number | null;
   estimated: boolean;
@@ -145,6 +167,14 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
   const signup = new Map((r.signup ?? []).map((s) => [s.user_id, s]));
   const byEvent = new Map<string, Set<string>>(STEP_EVENTS.map((e) => [e, new Set<string>()]));
   for (const e of r.events ?? []) if (e.user_id) byEvent.get(e.name)?.add(e.user_id);
+  const asks = new Map<string, Record<CardAskStep, Set<string>>>();
+  const askStep = Object.fromEntries(Object.entries(CARD_ASK_EVENTS).map(([k, v]) => [v, k])) as Record<string, CardAskStep>;
+  for (const e of r.cardAsks ?? []) {
+    const k = askStep[e.name];
+    if (!e.user_id || !k || !e.where) continue;
+    if (!asks.has(e.user_id)) asks.set(e.user_id, { view: new Set(), form: new Set(), saved: new Set() });
+    asks.get(e.user_id)![k].add(e.where);
+  }
   const finished = r.finished && new Set(r.finished);
   const second = r.second && new Set(r.second);
   const third = r.third && new Set(r.third);
@@ -192,6 +222,7 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
         campaign: a?.utm_campaign?.trim() || null,
         ad: a?.utm_content?.trim() || null,
         era: cardRequiredFor(p.created_at) ? "desde" : "antes",
+        asks: r.cardAsks ? asks.get(p.id) ?? { view: new Set(), form: new Set(), saved: new Set() } : null,
         steps: { hoy: ev("hoy_view"), open: ev("workout_open"), firstView: ev("workout_first_set_view"), firstSet: ev("workout_first_set"), finished: finished ? finished.has(p.id) : null, second: second ? second.has(p.id) : null, third: third ? third.has(p.id) : null, card, paid },
         net,
         estimated,
@@ -230,6 +261,20 @@ export function cohortTable(accounts: Account[], weeks: Week[]): CohortRow[] {
     const steps = Object.fromEntries(STEPS.map((s) => [s.key, sumOrNull(rows.map((a) => a.steps[s.key]))])) as Record<StepKey, number | null>;
     const net = rows.some((a) => a.net === null) ? null : Math.round(rows.reduce((t, a) => t + (a.net ?? 0), 0) * 100) / 100;
     return { week: w.key, registrados: rows.length, steps, net, estimated: rows.some((a) => a.estimated) };
+  });
+}
+
+export type CardAskRow = { where: CardAskWhere; label: string } & Record<CardAskStep, number>;
+
+/**
+ * Pedido de tarjeta por lugar (#308): cuentas de `accounts` (ya filtradas por semana y filtros) que vieron cada pedido,
+ * a las que se les mostró el formulario y que la guardaron, con el `where` de cada evento. null si falta la fuente.
+ */
+export function cardAskTable(accounts: Account[]): CardAskRow[] | null {
+  if (accounts.some((a) => a.asks === null)) return null;
+  return CARD_ASK_WHERE.map((where) => {
+    const n = (k: CardAskStep) => accounts.filter((a) => a.asks![k].has(where)).length;
+    return { where, label: CARD_ASK_LABEL[where], view: n("view"), form: n("form"), saved: n("saved") };
   });
 }
 

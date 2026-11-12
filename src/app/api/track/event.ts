@@ -17,6 +17,8 @@ export const FUNNEL_EVENTS = [
   "card_banner_view",
   // Cada pedido de tarjeta (#280): dónde se vio (CARD_ASK_WHERE). card_saved lleva el mismo `where` del pedido que funcionó.
   "card_ask_view",
+  // Se mostró el formulario de la tarjeta (#308), con el `where` del pedido que lo trajo: separa no tocar el pedido de abandonar el formulario.
+  "card_form_view",
   "card_saved",
   "install_view",
   "install_click",
@@ -79,6 +81,7 @@ const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolea
   signup_error: { key: "reason", ok: (v) => (SIGNUP_ERRORS as readonly unknown[]).includes(v) },
   landing_variant_view: { key: "variant", ok: (v) => (LANDING_VARIANTS as readonly unknown[]).includes(v) },
   card_ask_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
+  card_form_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
 };
 
