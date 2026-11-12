@@ -3,7 +3,7 @@ import { ActionForm, Submit } from "@/components/admin/action-form";
 import { DemoNotice, Field, FilterBar, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDay, fmtNum, fmtPct, fw, inputSm, money, panel, tr } from "@/components/admin/ui";
 import { COUNTRY_NAME } from "@/lib/countries";
 import {
-  CARD_ERA_LABEL, NO_COUNTRY, ORIGIN_LABEL, STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cohortTable, countriesOf, crWeeks, netAfterAds, pctOf,
+  CARD_ASK_LABEL, CARD_ERA_LABEL, NO_COUNTRY, ORIGIN_LABEL, STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cardAskTable, cohortTable, countriesOf, crWeeks, netAfterAds, pctOf,
   type CardEra, type CohortRow, type Filters, type FunnelRows, type Origin, type Week,
 } from "@/lib/embudo-plata";
 import { getFunnel } from "@/lib/embudo-plata-server";
@@ -20,6 +20,8 @@ function demoRows(weeks: Week[]): FunnelRows {
   const events: NonNullable<FunnelRows["events"]> = [];
   const finished: string[] = [], second: string[] = [], third: string[] = [], charges: NonNullable<FunnelRows["charges"]> = [], condo: string[] = [];
   const signup: NonNullable<FunnelRows["signup"]> = [];
+  const cardAsks: NonNullable<FunnelRows["cardAsks"]> = [];
+  const wheres = Object.keys(CARD_ASK_LABEL);
   weeks.forEach((w, wi) => {
     for (let i = 0; i < 14 - wi; i++) {
       const id = `00000000-0000-4000-8000-${String(wi * 100 + i).padStart(12, "0")}`;
@@ -31,13 +33,17 @@ function demoRows(weeks: Week[]): FunnelRows {
       if (reach < 6) events.push({ user_id: id, name: "workout_open" });
       if (reach < 5) events.push({ user_id: id, name: "workout_first_set_view" });
       if (reach < 4) events.push({ user_id: id, name: "workout_first_set" });
+      const where = wheres[i % wheres.length];
+      if (reach < 7) cardAsks.push({ user_id: id, name: "card_ask_view", where });
+      if (reach < 4) cardAsks.push({ user_id: id, name: "card_form_view", where });
+      if (reach < 1) cardAsks.push({ user_id: id, name: "card_saved", where });
       if (reach < 3) finished.push(id);
       if (reach < 2) second.push(id);
       if (reach < 1) third.push(id);
       if (reach < 2 && wi > 0) charges.push({ user_id: id, status: reach === 0 ? "succeeded" : "scheduled", amount_minor: 499 });
     }
   });
-  return { profiles, testers: [], condo, utm: [], signup, events, finished, second, third, charges, methods: [], subs: [] };
+  return { profiles, testers: [], condo, utm: [], signup, events, cardAsks, finished, second, third, charges, methods: [], subs: [] };
 }
 
 const ORIGINS = Object.keys(ORIGIN_LABEL) as Origin[];
@@ -77,6 +83,7 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
   const shown = accounts ? applyFilters(accounts, filters) : null;
   const table: CohortRow[] | null = shown ? cohortTable(shown, weeks) : null;
   const current = table?.find((r) => r.week === week.key) ?? null;
+  const asks = shown ? cardAskTable(shown.filter((a) => a.week === week.key)) : null;
   // Sin fila guardada para la semana: sin dato (no se asume $0).
   const ads = spend?.get(week.key) ?? null;
   const result = netAfterAds(current?.net ?? null, ads);
@@ -154,6 +161,33 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
           <Kpi label="Ingreso neto menos anuncios" value={result != null ? money(result) : <NoData />} tone={result == null ? "muted" : result > 0 ? "good" : "bad"}
             hint={result == null ? undefined : result > 0 ? "La semana se pagó sola" : "Los anuncios todavía no se recuperan"} />
         </div>
+      </section>
+
+      <section aria-labelledby="pedido-tarjeta" className="space-y-2.5">
+        <SectionHeading id="pedido-tarjeta" title="Pedido de tarjeta" desc="Cuentas de la semana elegida, con los filtros, por lugar del pedido. % sobre las que lo vieron. Cada cuenta cuenta una vez por lugar." />
+        {!asks ? (
+          <div className={`${panel} p-4`}><NoData /></div>
+        ) : (
+          <Table caption="Pedido de tarjeta por lugar" captionHidden minWidth={640}>
+            <thead className="border-b border-line">
+              <tr><Th>Lugar</Th><Th className="text-right">Lo vieron</Th><Th className="text-right">Vieron el formulario</Th><Th className="text-right">Guardaron la tarjeta</Th></tr>
+            </thead>
+            <tbody>
+              {asks.map((r) => (
+                <tr key={r.where} className={tr}>
+                  <Td className="whitespace-nowrap font-semibold">{r.label}</Td>
+                  <Td className="text-right tabular-nums font-bold">{fmtNum(r.view)}</Td>
+                  <Td className="text-right"><Cell n={r.form} total={r.view} /></Td>
+                  <Td className="text-right"><Cell n={r.saved} total={r.view} /></Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+        <p className="text-xs text-muted text-pretty">
+          Lo vieron: card_ask_view. Vieron el formulario: card_form_view, que existe desde el 12 nov 2026 (antes sale 0): al llegar a Mi plan desde el pedido o al abrir la hoja tras la primera serie.
+          En la bienvenida y en Mi plan el formulario va dentro del pedido, así que coincide con Lo vieron. Guardaron: card_saved con el mismo lugar.
+        </p>
       </section>
 
       <section aria-labelledby="tabla" className="space-y-2.5">
