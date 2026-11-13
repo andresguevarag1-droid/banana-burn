@@ -263,7 +263,7 @@ describe("adaptación al equipo", () => {
 
 // ───────────── 0027: experiencias y programas nuevos ─────────────
 import { ALL_PROGRAM_SEED, EXPERIENCES, PROGRAM_SEED_2, PROGRAM_UPGRADES, program0027Sql } from "./program-seed";
-import { habitsToday, parseExperience, tipFor, type ProgramExperience } from "./programs";
+import { habitsToday, parseExperience, tipFor, withoutRings, type ProgramExperience } from "./programs";
 import { RESTYLE } from "./catalog-0028";
 
 const sql27 = readFileSync(new URL("../../supabase/migrations/0027_experiencias.sql", import.meta.url), "utf8");
@@ -361,6 +361,12 @@ describe("hábitos del programa", () => {
   });
   it("entrenar hoy cumple el hábito de entreno", () => {
     expect(habitsToday(x, log, { checks: [], proteinTarget: null, trainedToday: true, sessionDay: false })[0].done).toBe(true);
+  });
+  it("la lista del programa no repite pasos, agua ni sueño, que ya tienen anillo en Hoy", () => {
+    const r: ProgramExperience = { ...x, habits: [...x.habits, { key: "agua", label: "Agua", kind: "agua", target: 8 }, { key: "sueno", label: "Sueño", kind: "sueno", target: 7 }] };
+    const h = habitsToday(r, log, { checks: [], proteinTarget: 120, trainedToday: false, sessionDay: true });
+    expect(h.map((v) => v.kind)).toEqual(["entreno", "pasos", "proteina", "check", "agua", "sueno"]);
+    expect(withoutRings(h).map((v) => v.key)).toEqual(["entreno", "proteina", "yo"]);
   });
   it("consejo por semana; el último se repite", () => {
     expect([tipFor(x, 1), tipFor(x, 2), tipFor(x, 9), tipFor(null, 1)]).toEqual(["uno", "dos", "dos", null]);

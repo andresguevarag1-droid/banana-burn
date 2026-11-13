@@ -23,7 +23,7 @@ import { lastTimeLine, type Voice } from "@/lib/voice";
 import { ProgramHero } from "@/components/programas/program-hero";
 import { ProgramHabits } from "@/components/programas/program-habits";
 import { getProgramChecks, getProgramStates, loadProgram } from "@/lib/programs-server";
-import { habitsToday } from "@/lib/programs";
+import { habitsToday, withoutRings } from "@/lib/programs";
 import { TodayPanel } from "@/components/hoy/today-panel";
 import { coachOf } from "@/lib/coaches";
 import { CoachPic } from "@/components/coach-pic";
@@ -71,9 +71,6 @@ export async function generateMetadata() {
   return { title: tr((await getPrefs()).locale)("Hoy") };
 }
 
-/** Hábitos que ya tienen su anillo en el panel de hoy (TodayPanel). */
-const RINGS = new Set<string>(["pasos", "agua", "sueno"]);
-
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string; primera?: string; demo?: string }> }) {
@@ -100,7 +97,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   ]);
   // Programa con experiencia (0027): sus hábitos del día y una línea de comida que cambia cada día.
   const habits = px && d.program ? habitsToday(px, { ...g.log, protein: g.log.protein + eaten.protein }, { checks, proteinTarget: ent.nutrition ? d.t.protein : null, trainedToday: g.trainedToday || d.program.run.today === "hecho", sessionDay: d.program.run.today === "entreno" }) : null;
-  const programHabits = habits?.filter((h) => !RINGS.has(h.kind)) ?? null;
+  const programHabits = habits ? withoutRings(habits) : null;
   const food = px?.food.length ? px.food[d.program!.run.effectiveDay % px.food.length] : null;
   const { plan, t } = d;
   // Con un programa de Coach Platanita, ella firma la tarjeta del coach (y el resto de Hoy).
