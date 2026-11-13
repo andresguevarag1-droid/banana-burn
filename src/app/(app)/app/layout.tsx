@@ -30,7 +30,7 @@ import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
 import { bannerFor } from "@/lib/trial";
 import { hoyCardBanner } from "@/lib/card-ask";
-import { HideOnPath } from "@/components/hide-on-path";
+import { FIRST_WORKOUT_PATH, HideOnPath } from "@/components/hide-on-path";
 import { demoCardState } from "@/lib/trial-demo";
 import { runDueForUser } from "@/lib/trial-billing";
 import { GuideProvider } from "@/components/guide/guide-provider";
@@ -131,7 +131,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TesterCelebration until={testerWelcome} renewal={tester?.renewal} demo={v.demo} />
       <GuideProvider input={guideInput} seenVersion={guide.seenVersion} tips={guide.tips} persisted={guide.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} tz={v.tz} firstRun={firstRun}>
       <NewsLauncher releases={news.releases} seenId={newsState.seenId} seenAt={newsState.seenAt} createdAt={newsState.createdAt} persisted={newsState.persisted} locked={locked} busy={unseen.gifts.length > 0 || !!testerWelcome} demo={v.demo} guideSeenVersion={guide.seenVersion} />
-      <main id="contenido" tabIndex={-1} className="block text-[17px] leading-relaxed mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-32 lg:pb-16">
+      <main id="contenido" tabIndex={-1} className="block text-[17px] leading-relaxed mx-auto max-w-5xl min-w-0 overflow-x-clip px-4 sm:px-8 outline-none pt-6 sm:pt-10 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:pb-16">
         {live && <ProgramRibbon p={{ slug: live.c.id, title: live.c.title, mode: live.c.program.experience?.mode ?? "Programa activo", cover: live.c.cover, icon: live.c.icon, at: live.run.today === "terminado" ? "tu certificado te espera" : live.run.byDays ? `día ${Math.min(live.run.days, live.run.effectiveDay + 1)} de ${live.run.days}` : `semana ${live.run.week} de ${live.run.weeks}`, avatar: liveCoach && liveCoach.id !== "banana" ? liveCoach.avatar : null }} />}
         {condoBanner ? <CondoCardBanner condo={condoBanner} tz={v.tz} />
           : banner === "beta-add" ? <AddCardBanner />
@@ -139,7 +139,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           : banner === "failed" && charge ? <FailedBanner charge={charge} tz={v.tz} />
           : banner === "processing" ? <ProcessingBanner />
           : banner === "beta" ? <BetaBanner />
-          : banner === "trial" && trial ? <HideOnPath path={hoyAsk ? "/app" : ""}><TrialBanner daysLeft={trial.daysLeft} charge={charge && (charge.phase === "programado" || charge.phase === "cancelado") ? { amount: charge.amount, canceled: charge.phase === "cancelado" } : null} /></HideOnPath>
+          // #315: en "¿Entrenamos ahora?" nada antes del botón de empezar; la prueba se ve en Hoy y en Mi plan.
+          : banner === "trial" && trial ? <HideOnPath path={FIRST_WORKOUT_PATH}><HideOnPath path={hoyAsk ? "/app" : ""}><TrialBanner daysLeft={trial.daysLeft} charge={charge && (charge.phase === "programado" || charge.phase === "cancelado") ? { amount: charge.amount, canceled: charge.phase === "cancelado" } : null} /></HideOnPath></HideOnPath>
           : recovery ? <RecoveryNotice account={v.id} />
           : null}
         <PlanGate locked={locked} trialEndedOn={ent.locked && ent.trialEndsAt ? fmtDay(ent.trialEndsAt, v.tz) : null} cardStep={cardStep} chargePhase={charge?.phase ?? null}>{children}</PlanGate>

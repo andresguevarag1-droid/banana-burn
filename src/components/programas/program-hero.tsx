@@ -52,32 +52,33 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
   const tip = first ? x!.welcome : tipFor(x, r.week);
   return (
     <section aria-labelledby="prog-hoy" className="overflow-hidden rounded-[1.75rem] shadow-soft">
-      <ChallengeCover c={{ id: p.slug, cover: p.cover, icon: p.icon }} chip={false} className="p-5 sm:p-6">
+      <ChallengeCover c={{ id: p.slug, cover: p.cover, icon: p.icon }} chip={false} className="p-4 sm:p-6">
         <div className={`relative ${ink}`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-ink px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-banana"><BrandIcon name={p.icon} className="size-3.5" />{x?.mode ?? "Programa activo"}</span>
             {p.season && <span style={{ backgroundColor: SPORTS[p.season.sport].accent }} className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white"><Medal weight="fill" className="size-3.5" />Temporada de {SPORTS[p.season.sport].name.toLowerCase()}</span>}
             {r.phase.phase.deload && <span className="inline-flex h-7 items-center gap-1 rounded-full bg-white/85 px-2.5 text-[11px] font-extrabold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
           </div>
-          {/* Título y semana sin pasar del velo (72 %): no se montan sobre la coach de la portada. */}
-          <h2 id="prog-hoy" className="mt-3 max-w-[72%] text-[26px] sm:text-[30px] font-extrabold leading-tight tracking-tight text-balance">{p.title}</h2>
+          {/* Título y semana sin pasar del velo (72 %): no se montan sobre la coach de la portada. En el teléfono, la portada
+              va más compacta (#315): el botón de empezar tiene que verse sin desplazar en 390 × 664. */}
+          <h2 id="prog-hoy" className="mt-2 sm:mt-3 max-w-[72%] text-[22px] sm:text-[30px] font-extrabold leading-tight tracking-tight text-balance">{p.title}</h2>
           <p className="mt-1 max-w-[72%] text-sm font-bold opacity-85">{weekLabel(p)}. Fase {r.phase.index}: {r.phase.phase.name}</p>
-          <div className="mt-3">
+          <div className="mt-2 sm:mt-3">
             <ProgressBar value={r.pct} min={0.03} className="h-2.5" track="bg-white/25" fill={p.cover === "noche" ? "bg-banana" : "bg-ink"} label={`Programa: ${r.sessionsDone} de ${r.sessionsTotal} sesiones`} />
             <p className="mt-1.5 flex flex-wrap justify-between gap-x-3 text-xs font-bold tabular-nums opacity-85"><span>{n(r.sessionsDone)} de {n(r.sessionsTotal)} sesiones</span><span>{Math.round(r.pct * 100)} % del programa</span></p>
           </div>
         </div>
       </ChallengeCover>
 
-      <div className="bg-cream p-5 sm:p-6">
+      <div className="bg-cream p-4 sm:p-6">
         {session ? (
           <>
             <p className="text-sm font-semibold text-muted">Hoy {DAY_NAMES[new Date(dateKey + "T12:00:00").getDay()]}, sesión del programa</p>
-            <h3 className="mt-0.5 text-2xl font-extrabold tracking-tight text-ink">{plan.name}</h3>
+            <h3 className="mt-0.5 text-xl sm:text-2xl font-extrabold tracking-tight text-ink">{plan.name}</h3>
             <p className="mt-1 text-sm font-semibold text-ink/70 tabular-nums">{sessionLine(voice, { exercises: plan.exercises.length, mins, tempo: commonTempo(plan.program?.exercises ?? []) })}{plan.program?.deload ? t(voice, { basico: ", más liviano esta semana", intermedio: ", con carga de descarga", tecnico: ", descarga" }) : ""}</p>
             {trainedToday ? (
               <p className="mt-4 flex items-center gap-2 font-extrabold text-ink"><CheckCircle weight="fill" className="size-5 shrink-0 text-peel" />Ya entrenaste hoy. La sesión del programa sigue lista para cuando quieras.</p>
-            ) : <div className="mt-4"><Readiness voice={voice} initial={energy} dateKey={dateKey} demo={demo} mins={mins} she={she} coachName={coach.name} program /></div>}
+            ) : <div className="mt-3 sm:mt-4"><Readiness voice={voice} initial={energy} dateKey={dateKey} demo={demo} mins={mins} she={she} coachName={coach.name} program /></div>}
             {lastTime && !trainedToday && <p className="mt-3 flex items-start gap-1.5 rounded-2xl bg-ink px-3 py-2.5 text-sm font-semibold leading-snug text-banana"><TrendUp weight="bold" className="mt-0.5 size-4 shrink-0" aria-hidden />{lastTime}</p>}
             <div className="mt-3"><ExerciseTiles exercises={plan.program!.exercises} voice={voice} label="Ejercicios de la sesión" art={coach.exercise} /></div>
             {setsLegend(voice) && !trainedToday && <p className="mt-2 text-xs font-semibold text-ink/70">{setsLegend(voice)}</p>}
