@@ -172,7 +172,8 @@ describe("vuelta de Tilopay del plan anual (el caso del 7 nov)", () => {
     tilo.consultOrder.mockResolvedValue({ state: "approved", amountMinor: 8999, currency: "USD", token: null });
     expect(await tlb.handleTilopayReturnNoSession(st, new URLSearchParams("code=1"), NOW)).toMatchObject({ outcome: "pago_ok" });
     expect(f.tables.subscriptions[0].status).toBe("active");
-    expect(await tlb.handleTilopayReturnNoSession({ ...st, p: "tarjeta" }, new URLSearchParams(""), NOW)).toBeNull();
+    // #313: una tarjeta sin sesión también se procesa (aquí sin token: no hay nada que guardar).
+    expect(await tlb.handleTilopayReturnNoSession({ ...st, p: "tarjeta" }, new URLSearchParams(""), NOW)).toEqual({ outcome: "sin_tarjeta" });
   });
 
   it("cerró el navegador a mitad del pago: el cron consulta y, pasadas 2 horas, guarda 'abandono'", async () => {

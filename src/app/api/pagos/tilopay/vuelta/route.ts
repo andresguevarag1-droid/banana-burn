@@ -15,7 +15,8 @@ export const runtime = "nodejs";
 /**
  * Vuelta desde Tilopay (GET, la hace el navegador). Exige el estado firmado (2 horas) Y la sesión de la misma persona.
  * Los parámetros del navegador nunca dan acceso solos: una compra se confirma consultando a Tilopay (tilopay-billing.ts).
- * Sin sesión, una compra directa se confirma igual con el estado firmado y se pide entrar para ver el resultado.
+ * Sin sesión, una compra directa o una tarjeta (#313, prueba con tarjeta obligatoria) se procesan igual con el estado firmado
+ * y se pide entrar para ver el resultado.
  * Termina en Mi plan con ?tilopay=<resultado>&motivo=<por qué no se completó>. Cada fallo queda en payment_events (#296).
  */
 export async function GET(req: Request) {
