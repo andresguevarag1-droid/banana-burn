@@ -9,6 +9,8 @@ import { ProgressBar } from "@/components/progress-bar";
 import { ChallengeCover, coverInk } from "@/components/retos/cover";
 import type { Challenge, CoverStyle } from "@/lib/challenges";
 import { CHALLENGE_DAY_XP, MILESTONE_XP } from "@/lib/gamify";
+import { useLocale, useT } from "@/lib/i18n/client";
+import { translateContent } from "@/lib/i18n/content";
 
 type Cell = { n: number; iso: string; done: boolean; past: boolean; today: boolean };
 export type ChallengeView = {
@@ -50,8 +52,11 @@ function DrawnCheck({ className = "size-4" }: { className?: string }) {
   return <svg viewBox="0 0 24 24" aria-hidden className={`bb-check-draw ${className}`} fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"><polyline points="5 12.5 10 17.5 19 7.5" /></svg>;
 }
 
+/** En inglés (#309) traduce la tarjeta y, si están en el diccionario, el título, la tarea y la medalla del reto. */
 export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compact?: boolean }) {
   const router = useRouter();
+  const t = useT(), locale = useLocale();
+  const tc = (s: string) => translateContent(locale, s);
   const [done, setDone] = useState(v.todayDone);
   const [justDone, setJustDone] = useState(false);
   const [cells, setCells] = useState(v.cells);
@@ -72,20 +77,20 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
     setCells((cs) => cs.map((c) => (c.today ? { ...c, done: true } : c)));
     try { navigator.vibrate?.([30, 40, 60]); } catch { /* */ }
     start(async () => {
-      const r = await checkInChallenge(v.ucId).catch(() => ({ ok: false, error: "Sin conexión. Intenta de nuevo." }));
+      const r = await checkInChallenge(v.ucId).catch(() => ({ ok: false, error: t("Sin conexión. Intenta de nuevo.") }));
       if (!r.ok) {
         setDone(false); setJustDone(false);
         setCells((cs) => cs.map((c) => (c.today ? { ...c, done: false } : c)));
-        setErr(r.error ?? "No pudimos marcar el día. Intenta de nuevo.");
+        setErr(r.error ? tc(r.error) : t("No pudimos marcar el día. Intenta de nuevo."));
       } else router.refresh();
     });
   }
   function leave() {
     setErr(null);
     start(async () => {
-      const r = await leaveChallenge(v.ucId).catch(() => ({ ok: false, error: "Sin conexión. Intenta de nuevo." }));
+      const r = await leaveChallenge(v.ucId).catch(() => ({ ok: false, error: t("Sin conexión. Intenta de nuevo.") }));
       if (r.ok) router.refresh();
-      else { setErr(r.error ?? "No pudimos salir del reto. Intenta de nuevo."); setLeaving(false); }
+      else { setErr(r.error ? tc(r.error) : t("No pudimos salir del reto. Intenta de nuevo.")); setLeaving(false); }
     });
   }
 
@@ -94,33 +99,33 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
       <ChallengeCover c={{ id: v.c.id, cover: v.c.cover as CoverStyle, icon: v.c.icon }} className={compact ? "h-[5.5rem]" : "h-28"}>
         <div className={`absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 ${compact ? "pl-[4.25rem] pt-3" : "pl-[4.25rem]"}`}>
           <div className="min-w-0 flex-1">
-            <Link href={`/app/retos/${v.c.id}`} className={`block truncate font-extrabold leading-tight after:absolute after:inset-0 hover:underline ${ink} ${compact ? "text-base" : "text-lg"}`}>{v.c.title}</Link>
-            <p className={`text-xs font-bold tabular-nums opacity-85 ${ink}`}>Día {v.day} de {v.c.days}</p>
+            <Link href={`/app/retos/${v.c.id}`} className={`block truncate font-extrabold leading-tight after:absolute after:inset-0 hover:underline ${ink} ${compact ? "text-base" : "text-lg"}`}>{tc(v.c.title)}</Link>
+            <p className={`text-xs font-bold tabular-nums opacity-85 ${ink}`}>{t("Día {day} de {days}", { day: v.day, days: v.c.days })}</p>
           </div>
           <span className={`shrink-0 rounded-full bg-white/90 px-2.5 py-1 text-xs font-extrabold tabular-nums text-ink`} aria-hidden>{completed}/{v.c.days}</span>
         </div>
       </ChallengeCover>
 
       <div className="p-4">
-        <ProgressBar value={completed / v.c.days} className="h-2" fill="bg-ink" label={`${completed} de ${v.c.days} días cumplidos`} />
+        <ProgressBar value={completed / v.c.days} className="h-2" fill="bg-ink" label={t("{completed} de {days} días cumplidos", { completed, days: v.c.days })} />
         <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-2xl bg-ember/10 px-1 py-2"><dt className="sr-only">Racha</dt><dd className="flex items-center justify-center gap-1 text-base font-extrabold tabular-nums text-ember-ink"><BananaFlame weight={streak > 0 ? "fill" : "duotone"} className="size-4" />{streak}</dd><dd aria-hidden className="text-[11px] font-semibold text-muted">{streak === 1 ? "día seguido" : "días seguidos"}</dd></div>
-          <div className="rounded-2xl bg-sky/10 px-1 py-2"><dt className="sr-only">Comodines</dt>
-            <dd className="flex h-6 items-center justify-center gap-0.5"><span className="sr-only">{`${v.graceLeft} de ${v.grace} comodines`}</span>
+          <div className="rounded-2xl bg-ember/10 px-1 py-2"><dt className="sr-only">{t("Racha")}</dt><dd className="flex items-center justify-center gap-1 text-base font-extrabold tabular-nums text-ember-ink"><BananaFlame weight={streak > 0 ? "fill" : "duotone"} className="size-4" />{streak}</dd><dd aria-hidden className="text-[11px] font-semibold text-muted">{t(streak === 1 ? "día seguido" : "días seguidos")}</dd></div>
+          <div className="rounded-2xl bg-sky/10 px-1 py-2"><dt className="sr-only">{t("Comodines")}</dt>
+            <dd className="flex h-6 items-center justify-center gap-0.5"><span className="sr-only">{t("{left} de {total} comodines", { left: v.graceLeft, total: v.grace })}</span>
               {v.grace === 0 ? <span className="text-sm font-extrabold text-sky">0</span> : v.grace <= 5 ? Array.from({ length: v.grace }, (_, i) => <Shield key={i} weight={i < v.graceLeft ? "fill" : "regular"} className={`size-4 ${i < v.graceLeft ? "text-sky" : "text-sky/35"}`} aria-hidden />) : <span className="text-base font-extrabold tabular-nums text-sky">{v.graceLeft}/{v.grace}</span>}
-            </dd><dd aria-hidden className="text-[11px] font-semibold text-muted">comodines</dd></div>
-          <div className="rounded-2xl bg-banana-soft px-1 py-2"><dt className="sr-only">Meta</dt><dd className="text-base font-extrabold tabular-nums text-banana-ink">{completed}/{v.need}</dd><dd aria-hidden className="text-[11px] font-semibold text-muted">para la medalla</dd></div>
+            </dd><dd aria-hidden className="text-[11px] font-semibold text-muted">{t("comodines")}</dd></div>
+          <div className="rounded-2xl bg-banana-soft px-1 py-2"><dt className="sr-only">{t("Meta")}</dt><dd className="text-base font-extrabold tabular-nums text-banana-ink">{completed}/{v.need}</dd><dd aria-hidden className="text-[11px] font-semibold text-muted">{t("para la medalla")}</dd></div>
         </dl>
 
         <div className="mt-3 flex items-center gap-3 rounded-2xl bg-cream p-3">
-          <p className="flex flex-1 gap-1.5 text-sm font-semibold text-ink"><PushPin weight="duotone" className="mt-0.5 size-4 shrink-0 text-ink/70" /><span>Hoy: {v.task}{!done && !manual && v.hint && <span className="mt-0.5 block text-xs font-semibold text-muted">{v.hint}</span>}</span></p>
+          <p className="flex flex-1 gap-1.5 text-sm font-semibold text-ink"><PushPin weight="duotone" className="mt-0.5 size-4 shrink-0 text-ink/70" /><span>{t("Hoy: {task}", { task: tc(v.task) })}{!done && !manual && v.hint && <span className="mt-0.5 block text-xs font-semibold text-muted">{tc(v.hint)}</span>}</span></p>
           {done ? (
             <span className="relative inline-flex shrink-0 flex-col items-end gap-1">
-              <span className={`chip h-10 bg-peel text-white ${justDone ? "bb-check-pop" : ""}`}>{justDone ? <DrawnCheck /> : <Check weight="bold" className="size-4" />}Hecho</span>
+              <span className={`chip h-10 bg-peel text-white ${justDone ? "bb-check-pop" : ""}`}>{justDone ? <DrawnCheck /> : <Check weight="bold" className="size-4" />}{t("Hecho")}</span>
               {justDone && manual && <span className="bb-celebrate text-[11px] font-extrabold text-peel tabular-nums" role="status">+{CHALLENGE_DAY_XP} XP</span>}
             </span>
           ) : manual ? (
-            <button onClick={check} disabled={pending} className="tap pressable inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-white hover:bg-black">Hecho <Check weight="bold" className="size-4" /></button>
+            <button onClick={check} disabled={pending} className="tap pressable inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-white hover:bg-black">{t("Hecho")} <Check weight="bold" className="size-4" /></button>
           ) : null}
         </div>
         {err && <p role="alert" className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-bad"><WarningCircle weight="fill" className="size-4 shrink-0" />{err}</p>}
@@ -128,31 +133,32 @@ export function ChallengeCard({ v, compact = false }: { v: ChallengeView; compac
         {goal && (
           <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/80">
             {goal.final ? <BananaMedal className="size-5 shrink-0 text-banana-ink" /> : <Flag weight="duotone" className="size-4 shrink-0 text-ember-ink" />}
-            <span>{goal.left === 1 ? "Falta 1 día" : `Faltan ${goal.left} días`} cumplidos para {goal.final ? <>la medalla <b>{v.c.badge}</b> (+{n(v.c.xp)} XP)</> : <>el hito del día {goal.at} (+{MILESTONE_XP} XP)</>}</span>
+            <span>{goal.final ? <>{t(goal.left === 1 ? "Falta 1 día cumplidos para la medalla" : "Faltan {n} días cumplidos para la medalla", { n: goal.left })} <b>{tc(v.c.badge)}</b> (+{n(v.c.xp)} XP)</>
+              : t(goal.left === 1 ? "Falta 1 día cumplidos para el hito del día {at} (+{xp} XP)" : "Faltan {n} días cumplidos para el hito del día {at} (+{xp} XP)", { n: goal.left, at: goal.at, xp: MILESTONE_XP })}</span>
           </p>
         )}
 
-        {compact && <button onClick={() => setShowCal((s) => !s)} className="tap mt-2 text-xs font-bold text-ink/75 hover:text-ink" aria-expanded={showCal}>{showCal ? "Ocultar calendario" : "Ver calendario"}</button>}
+        {compact && <button onClick={() => setShowCal((s) => !s)} className="tap mt-2 text-xs font-bold text-ink/75 hover:text-ink" aria-expanded={showCal}>{t(showCal ? "Ocultar calendario" : "Ver calendario")}</button>}
         {showCal && (
-          <ol className="mt-3 grid grid-cols-7 gap-1 sm:grid-cols-10" aria-label="Calendario del reto">
+          <ol className="mt-3 grid grid-cols-7 gap-1 sm:grid-cols-10" aria-label={t("Calendario del reto")}>
             {cells.map((c) => {
               const ms = c.n === 7 || c.n === 14 || c.n === v.c.days;
               return (
-                <li key={c.n} title={`Día ${c.n}`} className={`relative grid aspect-square place-items-center rounded-lg text-[11px] font-bold ${c.done ? `bg-ink text-banana ${c.today && justDone ? "bb-check-pop" : ""}` : c.today ? "border-2 border-ink bg-white text-ink" : c.past ? "bg-cream text-faint line-through" : "bg-paper text-ink/60"}`}>
+                <li key={c.n} title={t("Día {n}", { n: c.n })} className={`relative grid aspect-square place-items-center rounded-lg text-[11px] font-bold ${c.done ? `bg-ink text-banana ${c.today && justDone ? "bb-check-pop" : ""}` : c.today ? "border-2 border-ink bg-white text-ink" : c.past ? "bg-cream text-faint line-through" : "bg-paper text-ink/60"}`}>
                   {c.done ? (c.today && justDone ? <DrawnCheck className="size-3.5" /> : <Check weight="bold" className="size-3" />) : c.n}
                   {ms && !c.done && <span aria-hidden className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-ember ring-2 ring-white" />}
-                  <span className="sr-only">{c.done ? " cumplido" : c.past ? " no cumplido" : ms ? " hito" : ""}</span>
+                  <span className="sr-only">{c.done ? t(" cumplido") : c.past ? t(" no cumplido") : ms ? t(" hito") : ""}</span>
                 </li>
               );
             })}
           </ol>
         )}
-        {!compact && <p className="mt-2 text-[11px] font-semibold text-muted">Los puntos naranjas marcan los hitos. {v.grace > 0 ? `Si fallas más de ${v.grace} ${v.grace === 1 ? "día" : "días"}, el reto termina y puedes reintentarlo.` : "Sin comodines: cada día cuenta."}</p>}
+        {!compact && <p className="mt-2 text-[11px] font-semibold text-muted">{t("Los puntos naranjas marcan los hitos.")} {v.grace > 0 ? t(v.grace === 1 ? "Si fallas más de 1 día, el reto termina y puedes reintentarlo." : "Si fallas más de {n} días, el reto termina y puedes reintentarlo.", { n: v.grace }) : t("Sin comodines: cada día cuenta.")}</p>}
         {!compact && (leaving ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="font-semibold text-ink">¿Seguro? Pierdes tu progreso.</span>
-            <button onClick={leave} disabled={pending} className="tap px-2 font-bold text-bad underline">{pending ? "Saliendo…" : "Sí, abandonar"}</button>
-            <button onClick={() => setLeaving(false)} className="tap px-2 font-bold text-ink underline">No</button></div>
-        ) : <button onClick={() => setLeaving(true)} className="tap mt-2 text-xs font-semibold text-muted underline hover:text-ink">Abandonar reto</button>)}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs"><span className="font-semibold text-ink">{t("¿Seguro? Pierdes tu progreso.")}</span>
+            <button onClick={leave} disabled={pending} className="tap px-2 font-bold text-bad underline">{t(pending ? "Saliendo…" : "Sí, abandonar")}</button>
+            <button onClick={() => setLeaving(false)} className="tap px-2 font-bold text-ink underline">{t("No")}</button></div>
+        ) : <button onClick={() => setLeaving(true)} className="tap mt-2 text-xs font-semibold text-muted underline hover:text-ink">{t("Abandonar reto")}</button>)}
       </div>
     </article>
   );

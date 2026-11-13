@@ -24,6 +24,6 @@ export async function weekRecapFor(v: Viewer, today: { iso: string; dow: number 
   // Lo que cambia: ejercicios de la próxima sesión donde el motor ya pide más peso o más repeticiones.
   const weighted = nextExercises.filter((e) => (EX[e.id as keyof typeof EX]?.inc ?? 0) > 0).slice(0, 8);
   const hist = weighted.length ? await getHistory(v, weighted.map((e) => e.id)) : {};
-  const ups = weighted.map((e) => ({ name: e.name, rx: prescribe(e.id, e.cfg, hist[e.id] ?? []) })).filter((x) => x.rx.type === "up" || x.rx.type === "reps");
-  return recapFrom({ weekOf: from, workouts: new Set((ws ?? []).map((w) => w.day as string)).size, sets, planned: trainDays, heavier: ups.filter((u) => u.rx.type === "up").map((u) => u.name), moreReps: ups.filter((u) => u.rx.type === "reps").length });
+  const ups = weighted.map((e) => ({ id: e.id, name: e.name, rx: prescribe(e.id, e.cfg, hist[e.id] ?? []) })).filter((x) => x.rx.type === "up" || x.rx.type === "reps");
+  return recapFrom({ weekOf: from, workouts: new Set((ws ?? []).map((w) => w.day as string)).size, sets, planned: trainDays, heavier: ups.filter((u) => u.rx.type === "up").map((u) => u.name), heavierIds: ups.filter((u) => u.rx.type === "up").map((u) => u.id), moreReps: ups.filter((u) => u.rx.type === "reps").length });
 }

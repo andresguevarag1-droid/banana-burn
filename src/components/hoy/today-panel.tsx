@@ -209,7 +209,7 @@ function MealToday({ meal, coach }: { meal: HoyFood; coach: NutritionNumbers["co
                 <span className="flex items-center justify-between gap-1 text-xs font-bold text-white/75">{t(s.label)}{has && <CheckCircle weight="fill" aria-hidden className="size-4 text-banana" />}</span>
                 {has ? (
                   <>
-                    <span className="mt-1 line-clamp-3 text-sm font-bold leading-snug text-white">{s.items.join(", ")}</span>
+                    <span className="mt-1 line-clamp-3 text-sm font-bold leading-snug text-white">{s.items.map((x) => t(x)).join(", ")}</span>
                     <span className="mt-auto pt-1 text-[11px] font-semibold tabular-nums text-white/70">{t("{kcal} kcal, {g} g proteína", { kcal: n0(s.kcal), g: n0(s.protein) })}</span>
                   </>
                 ) : (
@@ -229,9 +229,9 @@ function MealToday({ meal, coach }: { meal: HoyFood; coach: NutritionNumbers["co
             : <Image src="/brand/mascota-sola.webp" alt="" width={56} height={56} className="size-14 shrink-0 object-contain" />}
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-ink/75">{t("{coach} te recomienda. {when}:", { coach: coach?.name ?? "Coach Banana", when: t(nx.when) })}</p>
-            <p className="mt-0.5 text-[17px] font-extrabold leading-tight text-balance">{nx.title}</p>
+            <p className="mt-0.5 text-[17px] font-extrabold leading-tight text-balance">{t(nx.title)}</p>
             <p className="mt-1 text-xs font-semibold tabular-nums text-ink/80">{t("{kcal} kcal y {g} g de proteína", { kcal: n0(nx.kcal), g: n0(nx.protein) })}{nx.portions !== 1 ? ` ${t("({n} porciones)", { n: nx.portions.toLocaleString("es-419") })}` : ""}</p>
-            {nx.others.length > 0 && <p className="mt-1 text-xs text-ink/75">{t("También te sirve: {list}.", { list: nx.others.join(t(" o ")) })}</p>}
+            {nx.others.length > 0 && <p className="mt-1 text-xs text-ink/75">{t("También te sirve: {list}.", { list: nx.others.map((x) => t(x)).join(t(" o ")) })}</p>}
             <Link href="/app/nutricion/recetas" className="tap pressable mt-2.5 inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-extrabold text-banana">{t("Ver la receta")}<ArrowRight weight="bold" className="size-3.5" /></Link>
           </div>
         </div>
