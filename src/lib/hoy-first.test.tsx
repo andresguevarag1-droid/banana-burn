@@ -46,7 +46,7 @@ describe("Hoy del primer día", () => {
   });
 
   it("con 1 entreno guardado vuelve todo lo de antes", () => {
-    for (const c of ["PageTour", "FirstSteps", "InstallCard", "PushWhenReady", "AnnouncementBanner", "LoMejor", "SeasonHoy", "RunHoy", "TodayPanel", "WeekCard", "ChallengeCard", "WeighIn", "Glp1Card", "AnnualUpsell", "TrialCardNotice", "HoyCardBanner", "WeekLine", "ExpressCard"])
+    for (const c of ["PageTour", "FirstSteps", "InstallCard", "PushWhenReady", "AnnouncementBanner", "LoMejor", "SeasonHoy", "RunHoy", "TodayPanel", "WeekCard", "ChallengesFolded", "WeighIn", "Glp1Card", "AnnualUpsell", "TrialCardNotice", "HoyCardBanner", "ExpressCard"])
       expect(fullReturn, c).toContain(`<${c} `);
     expect(fullReturn).toContain("{header}");
     expect(fullReturn).toContain(": hero}");

@@ -30,7 +30,6 @@ import { CoachPic } from "@/components/coach-pic";
 import { hoyFood } from "@/lib/hoy-food";
 import { localHour } from "@/lib/recipes";
 import { WeekCard } from "@/components/hoy/week-card";
-import { WeekLine } from "@/components/hoy/week-line";
 import { PromptQueue } from "@/components/hoy/prompt-queue";
 import { WeighIn } from "@/components/weigh-in";
 import { ExpressCard } from "@/components/express-chips";
@@ -39,7 +38,7 @@ import { InstallCard } from "@/components/install/install-card";
 import { PushWhenReady } from "@/components/install/push-when-ready";
 import { AnnouncementBanner } from "@/components/admin/announcement-banner";
 import { Glp1Card } from "@/components/glp1-card";
-import { ChallengeCard } from "@/components/challenge-card";
+import { ChallengesFolded } from "@/components/hoy/challenges-folded";
 import { getMyChallenges } from "@/lib/challenges-server";
 import { getXpSummary } from "@/lib/xp-server";
 import { toView } from "@/lib/challenge-view";
@@ -72,6 +71,9 @@ export async function generateMetadata() {
   return { title: tr((await getPrefs()).locale)("Hoy") };
 }
 
+/** Hábitos que ya tienen su anillo en el panel de hoy (TodayPanel). */
+const RINGS = new Set<string>(["pasos", "agua", "sueno"]);
+
 const nf = (n: number, d = 1) => n.toLocaleString("es-419", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 export default async function Hoy({ searchParams }: { searchParams: Promise<{ tester?: string; primera?: string; demo?: string }> }) {
@@ -98,6 +100,7 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
   ]);
   // Programa con experiencia (0027): sus hábitos del día y una línea de comida que cambia cada día.
   const habits = px && d.program ? habitsToday(px, { ...g.log, protein: g.log.protein + eaten.protein }, { checks, proteinTarget: ent.nutrition ? d.t.protein : null, trainedToday: g.trainedToday || d.program.run.today === "hecho", sessionDay: d.program.run.today === "entreno" }) : null;
+  const programHabits = habits?.filter((h) => !RINGS.has(h.kind)) ?? null;
   const food = px?.food.length ? px.food[d.program!.run.effectiveDay % px.food.length] : null;
   const { plan, t } = d;
   // Con un programa de Coach Platanita, ella firma la tarjeta del coach (y el resto de Hoy).
@@ -186,8 +189,9 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
       {d.program ? <div data-tour="hoy-entreno"><ProgramHero p={d.program} she={a.sex === "f"} trainedToday={g.trainedToday} energy={g.log.energy ?? 0} dateKey={d.today.iso} demo={v.demo} mins={mins} voice={voice} lastTime={lastTime} /></div>
         : hero}
 
-      {/* 2. La meta de la semana al frente (#288), con la racha semanal; la diaria, secundaria. */}
-      <WeekLine count={weekCount(g.trainedDays, d.today.iso)} goal={goalOf(monday)} monday={monday} weekStreak={weeklyStreak(g.trainedDays, d.today.iso, goalOf, regDay)} streak={g.streak.days} todayDone={g.streak.todayDone} locale={locale} />
+      {/* 2. Tu semana (#316): una sola tarjeta con la meta de #288, la racha semanal, los días y el nivel. La racha diaria,
+          solo en el saludo. */}
+      <div data-tour="hoy-semana"><WeekCard s={xs} goal={{ count: weekCount(g.trainedDays, d.today.iso), goal: goalOf(monday), monday, weekStreak: weeklyStreak(g.trainedDays, d.today.iso, goalOf, regDay) }} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} nutrition={ent.nutrition} locale={locale} /></div>
 
       {/* 3. Un solo aviso a la vez, por prioridad (el primero que aplique). */}
       {/* Días 1 a 6 sin tarjeta (#280): el banner con los días que quedan; el día 7, el aviso grande. */}
@@ -233,22 +237,18 @@ export default async function Hoy({ searchParams }: { searchParams: Promise<{ te
         <div data-tour="hoy-numeros"><TodayPanel initial={g.log} nutrition={ent.nutrition ? { base: eaten, target: { kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat }, mode: d.mode, meal: meal!, coach: coach.id === "banana" ? null : { name: coach.name, avatar: coach.avatar } } : null} habits={{ steps: t.steps, sleep: t.sleep, water: d.glp1 ? Math.round(d.glp1.waterL * 4) : 8 }} dateKey={d.today.iso} demo={v.demo} /></div>
         {!g.trainedToday && <div className="lg:sticky lg:top-6"><ExpressCard program={!!d.program && d.program.run.today !== "terminado"} compact coach={coach.id === "banana" ? null : coach} locale={locale} /></div>}
       </div>
-      {px && habits && d.program && d.program.run.today !== "terminado" && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={habits} food={food} nutrition={ent.nutrition} />}
+      {/* Pasos, agua y sueño ya están en los anillos de TodayPanel: la lista del programa no los repite (#316). */}
+      {px && programHabits && d.program && d.program.run.today !== "terminado" && (programHabits.length > 0 || food) && <ProgramHabits mode={px.mode} icon={d.program.icon} habits={programHabits} food={food} nutrition={ent.nutrition} />}
 
-
-      {/* Semana y retos */}
-      <div className="grid items-start gap-5 lg:grid-cols-2 [&>*]:min-w-0">
-        <div data-tour="hoy-semana"><WeekCard s={xs} week={g.week} sched={d.sched} todayIso={d.today.iso} training={training} weighed={g.weighedToday} streak={g.streak.days} nutrition={ent.nutrition} locale={locale} /></div>
-        <section>
-          <div className="flex items-baseline justify-between mb-3"><h3 className="text-lg font-extrabold text-ink">{tx("Tus retos")}</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{tx(ch.active.length ? "Tienda de retos" : "Explorar retos")} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
-          {ch.active.length ? (
-            <div className="grid gap-3">{ch.active.slice(0, 2).map((m) => <ChallengeCard key={m.ucId} v={toView(m)} compact />)}</div>
-          ) : (
-            <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">{tx("Elige tu próximo reto")}</span><span className="block text-sm text-muted">{tx("Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.")}</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
-          )}
-        </section>
-
-      </div>
+      {/* Retos: una línea por reto, se abre al tocarla (#316). */}
+      <section aria-labelledby="hoy-retos">
+        <div className="flex items-baseline justify-between mb-3"><h3 id="hoy-retos" className="text-lg font-extrabold text-ink">{tx("Tus retos")}</h3><Link href="/app/retos" className="tap inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">{tx(ch.active.length ? "Tienda de retos" : "Explorar retos")} <ArrowRight weight="bold" className="size-3.5" /></Link></div>
+        {ch.active.length ? (
+          <ChallengesFolded list={ch.active.slice(0, 2).map(toView)} locale={locale} />
+        ) : (
+          <Link href="/app/retos" className="card p-4 flex items-center gap-3"><span className="grid place-items-center size-12 shrink-0 rounded-xl bg-banana-soft text-banana-ink"><BananaTrophy className="size-7" /></span><span className="flex-1"><span className="block font-extrabold text-ink">{tx("Elige tu próximo reto")}</span><span className="block text-sm text-muted">{tx("Retos gratis y Premium de 7 a 42 días, con plan diario, hitos y medalla al final.")}</span></span><CaretRight weight="bold" className="size-5 text-faint" /></Link>
+        )}
+      </section>
 
       <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Peso y meta */}
