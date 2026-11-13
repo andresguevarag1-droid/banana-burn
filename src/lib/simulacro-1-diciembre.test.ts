@@ -233,6 +233,21 @@ describe("2. Tilopay (tarjeta extranjera): salida, vuelta sin sesión y cobro de
   });
 });
 
+describe("2b. Vuelta sin sesión con un plan que ya paga", () => {
+  it("no reemplaza la tarjeta que cobra: pide entrar y Mi plan para reintentar", async () => {
+    const f = setup(CREATED, "CO");
+    clock(plus(CREATED, 10));
+    f.tables.subscriptions.push({ id: "sub_tlp_1", user_id: USER, provider: "tilopay", provider_subscription_id: "tlp:sub_1", plan: "completo", billing: "mes", status: "active", cancel_at_period_end: false, current_period_start: plus(CREATED, 7).toISOString(), current_period_end: plus(CREATED, 37).toISOString() } as never);
+    f.tables.payment_methods.push({ user_id: USER, provider: "tilopay", provider_payment_method_id: "tok_buena", status: "active", last4: "4242" } as never);
+    const s = signState({ u: USER, p: "tarjeta", plan: "completo", billing: "mes", n: "n2" });
+    state.viewer = null;
+    const back = await vueltaRoute.GET(new Request(`${ORIGIN}/api/pagos/tilopay/vuelta?s=${encodeURIComponent(s)}&code=1&crd=tok_ajena&brand=visa&last4=9999`));
+    expect(new URL(String(back.headers.get("location"))).searchParams.get("next")).toBe("/app/suscripcion");
+    expect(f.tables.payment_methods).toHaveLength(1);
+    expect(f.tables.payment_methods[0]).toMatchObject({ provider_payment_method_id: "tok_buena", last4: "4242" });
+  });
+});
+
 describe("3. Tarjeta rechazada en la bienvenida", () => {
   it("mensaje claro, sigue en el paso de la tarjeta, queda payment_failed y al reintentar con otra empieza la prueba", async () => {
     const f = setup();
