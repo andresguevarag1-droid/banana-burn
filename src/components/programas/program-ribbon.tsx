@@ -1,9 +1,10 @@
 "use client";
 // Cinta del programa activo en todas las secciones de la app (0027): recuerda en qué modo estás y cuánto llevas.
-// En Hoy no se muestra: allí está el héroe del programa.
+// En Hoy no se muestra: allí está el héroe del programa. Tampoco en "¿Entrenamos ahora?" (#315): ahí solo el botón de empezar.
 import { CoachPic } from "@/components/coach-pic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FIRST_WORKOUT_PATH } from "@/components/hide-on-path";
 import { ArrowRight, BrandIcon } from "@/components/icons";
 import { ChallengeCover } from "@/components/retos/cover";
 import type { CoverStyle } from "@/lib/challenges";
@@ -13,7 +14,7 @@ export type RibbonProgram = { slug: string; title: string; mode: string; cover: 
 
 export function ProgramRibbon({ p }: { p: RibbonProgram }) {
   const path = usePathname();
-  if (path === "/app" || path.startsWith(`/app/retos/${p.slug}`)) return null;
+  if (path === "/app" || path === FIRST_WORKOUT_PATH || path.startsWith(`/app/retos/${p.slug}`)) return null;
   return (
     <Link href={`/app/retos/${p.slug}/progreso`} className="pressable mb-5 block overflow-hidden rounded-2xl shadow-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-banana/60">
       <ChallengeCover c={{ cover: p.cover, icon: p.icon }} art={false} chip={false} className="flex min-h-12 items-center gap-3 px-4 py-2.5">

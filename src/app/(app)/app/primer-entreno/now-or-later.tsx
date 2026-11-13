@@ -27,11 +27,13 @@ export function NowOrLater() {
   };
 
   return (
-    <div className="mx-auto max-w-md py-4 text-center">
-      <span className="mx-auto grid size-20 place-items-center rounded-[1.75rem] bg-banana-soft text-banana-ink"><MonkeyBanana className="size-14" /></span>
+    <div className="mx-auto max-w-md pb-4 text-center">
+      {/* #315: en la primera pregunta, sin mascota arriba: el título, una línea y el botón de empezar se ven sin desplazar
+          en 320 × 568, por encima de la barra de abajo. */}
+      {later && <span className="mx-auto mb-4 grid size-20 place-items-center rounded-[1.75rem] bg-banana-soft text-banana-ink"><MonkeyBanana className="size-14" /></span>}
       {!later ? (
         <>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink text-balance">{t("¿Entrenamos ahora?")}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{t("¿Entrenamos ahora?")}</h1>
           <p className="mt-2 text-muted text-pretty">{t("Tu primer entreno es corto. Coach Banana te dice cada paso.")}</p>
           <div className="mt-6 flex flex-col gap-3 text-left">
             <Link href="/app/entreno?casa=1" data-cta="primer-entreno-casa" className="btn-primary flex min-h-16 h-auto w-full items-center justify-between gap-3 px-5 py-3 text-lg font-extrabold">
@@ -49,13 +51,13 @@ export function NowOrLater() {
         </>
       ) : done ? (
         <>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink text-balance">{t("Listo, te escribimos {when}.", { when: t(WHEN[done]) })}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{t("Listo, te escribimos {when}.", { when: t(WHEN[done]) })}</h1>
           <p className="mt-2 text-muted text-pretty">{t("Tu primer entreno te espera en Hoy. Si se te abre un rato antes, son solo 12 minutos en casa.")}</p>
           <Link href="/app" data-cta="primer-entreno-ir-hoy" className="btn-primary mt-6 h-14 w-full text-base">{t("Ver mi plan")} <ArrowRight weight="bold" className="size-5" /></Link>
         </>
       ) : (
         <>
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-ink text-balance">{t("¿A qué hora te recordamos?")}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink text-balance">{t("¿A qué hora te recordamos?")}</h1>
           <p className="mt-2 text-muted text-pretty">{t("Te avisamos a esa hora para tu primer entreno. Lo cambias cuando quieras en tu perfil.")}</p>
           <div className="mt-6 grid grid-cols-2 gap-2 text-left">
             {TRAIN_SLOTS.map((s) => (
