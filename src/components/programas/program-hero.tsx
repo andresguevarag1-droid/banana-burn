@@ -59,11 +59,12 @@ export function ProgramHero({ p, trainedToday, energy, dateKey, demo, mins, voic
             {p.season && <span style={{ backgroundColor: SPORTS[p.season.sport].accent }} className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold uppercase tracking-[.1em] text-white"><Medal weight="fill" className="size-3.5" />Temporada de {SPORTS[p.season.sport].name.toLowerCase()}</span>}
             {r.phase.phase.deload && <span className="inline-flex h-7 items-center gap-1 rounded-full bg-white/85 px-2.5 text-[11px] font-extrabold text-ink"><TreePalm weight="duotone" className="size-3.5" />Semana de descarga</span>}
           </div>
-          {/* Título y semana sin pasar del velo (72 %): no se montan sobre la coach de la portada. En el teléfono, la portada
-              va más compacta (#315): el botón de empezar tiene que verse sin desplazar en 390 × 664. */}
+          {/* Título y semana sin pasar del velo (72 %): no se montan sobre la coach de la portada. En el teléfono (#315), la
+              portada lleva solo el título y la semana: la fase y la barra de avance van desde sm (el avance sigue en "Ver
+              avance"), para que "Empezar entrenamiento de hoy" se vea sin desplazar en 390 × 664. */}
           <h2 id="prog-hoy" className="mt-2 sm:mt-3 max-w-[72%] text-[22px] sm:text-[30px] font-extrabold leading-tight tracking-tight text-balance">{p.title}</h2>
-          <p className="mt-1 max-w-[72%] text-sm font-bold opacity-85">{weekLabel(p)}. Fase {r.phase.index}: {r.phase.phase.name}</p>
-          <div className="mt-2 sm:mt-3">
+          <p className="mt-1 max-w-[72%] text-sm font-bold opacity-85">{weekLabel(p)}<span className="hidden sm:inline">. Fase {r.phase.index}: {r.phase.phase.name}</span></p>
+          <div className="mt-3 hidden sm:block">
             <ProgressBar value={r.pct} min={0.03} className="h-2.5" track="bg-white/25" fill={p.cover === "noche" ? "bg-banana" : "bg-ink"} label={`Programa: ${r.sessionsDone} de ${r.sessionsTotal} sesiones`} />
             <p className="mt-1.5 flex flex-wrap justify-between gap-x-3 text-xs font-bold tabular-nums opacity-85"><span>{n(r.sessionsDone)} de {n(r.sessionsTotal)} sesiones</span><span>{Math.round(r.pct * 100)} % del programa</span></p>
           </div>

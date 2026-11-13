@@ -75,3 +75,19 @@ describe("nada debajo de la barra de abajo (#315)", () => {
     expect(readFileSync("src/components/app-nav.tsx", "utf8")).toContain("fixed bottom-0 inset-x-0 z-40 border-t border-line bg-white/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]");
   });
 });
+
+// Hoy en 390 × 664 (demo, aviso de la prueba, título del programa en dos líneas), de arriba hacia abajo, en px:
+// aviso de demo 23, pt-6 24, aviso de la prueba 44 + 16, encabezado (fecha 20, saludo 35, "¿Cómo se usa?" 44) 99,
+// space-y-5 20 → 226; portada p-4 16, chips 28, mt-2 8, título 2 × 27.5, semana 4 + 20, p-4 16 → 373; sesión p-4 16,
+// "Hoy …" 20, nombre 2 + 28, línea de la sesión (hasta dos líneas) 4 + 40, mt-3 12, botón 64 → 559. La barra de abajo
+// mide 75 (empieza en 589): quedan 30 libres. Con la fase y la barra de avance (unos 40 a 60 más) quedaba debajo.
+describe("Hoy: la portada del programa no empuja el botón de empezar (#315)", () => {
+  it("en el teléfono la portada lleva solo el título y la semana; la fase y el avance, desde sm", () => {
+    const hero = readFileSync("src/components/programas/program-hero.tsx", "utf8");
+    expect(hero).toContain('{weekLabel(p)}<span className="hidden sm:inline">. Fase {r.phase.index}: {r.phase.phase.name}</span>');
+    const progress = hero.slice(0, hero.indexOf("<ProgressBar"));
+    expect(progress.slice(progress.lastIndexOf("<div")).match(/className="([^"]+)"/)?.[1].split(" ")).toEqual(expect.arrayContaining(["hidden", "sm:block"]));
+    // El avance no se pierde: "Ver avance" sigue al pie del héroe.
+    expect(hero).toContain("/progreso`} className=\"tap inline-flex min-h-11");
+  });
+});
