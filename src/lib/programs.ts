@@ -243,6 +243,10 @@ export function habitsToday(x: ProgramExperience, log: { steps: number; water: n
   });
 }
 
+/** Hábitos que ya tienen su anillo en el panel de hoy (TodayPanel): la lista del programa no los repite. */
+export const RING_KINDS: ReadonlySet<HabitKind> = new Set<HabitKind>(["pasos", "agua", "sueno"]);
+export const withoutRings = (habits: HabitView[]) => habits.filter((h) => !RING_KINDS.has(h.kind));
+
 // ───────────── Calendario ─────────────
 
 const DAY_MS = 864e5;

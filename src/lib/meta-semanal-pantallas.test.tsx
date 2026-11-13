@@ -1,15 +1,25 @@
-// Hábito semanal (#288) en pantalla: la meta de la semana al frente en Hoy (bananas, racha semanal y la diaria debajo), los
-// eventos del embudo y el progreso entre entrenos en el cierre.
+// Hábito semanal (#288) en pantalla: la meta de la semana al frente en Hoy (bananas y racha semanal) dentro de "Tu semana"
+// (#316, un solo número para la semana), los eventos del embudo y el progreso entre entrenos en el cierre.
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { FUNNEL_EVENTS } from "@/app/api/track/event";
 
 vi.mock("@/components/analytics", () => ({ track: () => {} }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/app", useRouter: () => ({ push() {}, refresh() {} }) }));
 const { WeekLine, weeklyGoalLine } = await import("@/components/hoy/week-line");
+const { WeekCard, weekGoalNote } = await import("@/components/hoy/week-card");
+type Xp = Parameters<typeof WeekCard>[0]["s"];
 
 const card = (over: Partial<Parameters<typeof WeekLine>[0]> = {}) =>
-  renderToStaticMarkup(<WeekLine count={1} goal={3} monday="2026-11-09" weekStreak={0} streak={2} todayDone={false} {...over} />);
+  renderToStaticMarkup(<WeekLine count={1} goal={3} monday="2026-11-09" weekStreak={0} {...over} />);
+
+// Semana del 9 nov 2026 (lunes), hoy jueves 12: entrenó lunes, martes y miércoles; su programa trae 4 días con rutina.
+const XP = { level: { idx: 2, n: "Banana pintona", progress: 0.4 }, next: { name: "Banana madura", xpLeft: 300 }, total: 900, today: { xp: 0 }, week: { xp: 240, goal: 300 }, sources: { workout: 0, meals: 0, weigh: 0 } } as unknown as Xp;
+const WEEK = ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"].map((d, i) => ({ d, active: i < 3, trained: i < 3 }));
+const weekCard = (goal: number) => renderToStaticMarkup(<WeekCard s={XP} goal={{ count: 3, goal, monday: "2026-11-09", weekStreak: 1 }} week={WEEK} sched={{ 1: 1, 2: 1, 3: 1, 5: 1 }}
+  todayIso="2026-11-12" training={false} weighed nutrition={false} />);
+const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("Hoy: meta de la semana", () => {
   it("\"Esta semana: 1 de 3 entrenos\" con una banana por entreno de la meta", () => {
@@ -19,11 +29,10 @@ describe("Hoy: meta de la semana", () => {
     expect(html.match(/opacity-30/g)).toHaveLength(2);
   });
 
-  it("la racha semanal va al frente y la diaria queda secundaria", () => {
+  it("la racha semanal va en la tarjeta; la diaria, solo en el saludo (#316)", () => {
     const html = card({ weekStreak: 2 });
-    const weekly = html.indexOf("2 semanas cumpliendo tu meta"), daily = html.indexOf("Racha diaria: 2 días");
-    expect(weekly).toBeGreaterThan(0);
-    expect(daily).toBeGreaterThan(weekly);
+    expect(html).toContain("2 semanas cumpliendo tu meta");
+    expect(html).not.toContain("Racha diaria");
     expect(card()).toContain("Tu meta: 3 entrenos por semana");
   });
 
@@ -42,6 +51,33 @@ describe("Hoy: meta de la semana", () => {
     expect(page).toContain("weeklyGoal({ trainDays: a.trainDays, regDay, monday: mon })");
     expect(page).toContain("weekCount(g.trainedDays, d.today.iso)");
     expect(page).toContain("weeklyStreak(g.trainedDays, d.today.iso, goalOf, regDay)");
+  });
+});
+
+describe("Tu semana: un solo número para la semana (#316)", () => {
+  it("la línea de la meta y lo que falta dicen la misma meta, aunque el plan traiga otra cantidad de días", () => {
+    for (const goal of [3, 6]) {
+      const t = text(weekCard(goal));
+      expect(t).toContain(weeklyGoalLine(3, goal));
+      const goals = [...t.matchAll(/de (\d+) entrenos?/g)].map((m) => Number(m[1]));
+      expect(goals.length).toBeGreaterThan(0);
+      expect(new Set(goals)).toEqual(new Set([goal]));
+      expect(t).not.toMatch(/\b3\/4\b|para cumplir la semana|Racha/);
+    }
+    expect(text(weekCard(6))).toContain("Te faltan 3 entrenos para tu meta de la semana. Tu plan trae 4 días con rutina.");
+    expect(text(weekCard(3))).toContain("Meta de la semana cumplida.");
+  });
+
+  it("el plan solo se nombra cuando trae otra cantidad de días que la meta", () => {
+    expect(weekGoalNote(1, 3, 3)).toBe("Te faltan 2 entrenos para tu meta de la semana.");
+    expect(weekGoalNote(2, 3, 5)).toBe("Te falta 1 entreno para tu meta de la semana. Tu plan trae 5 días con rutina.");
+    expect(weekGoalNote(0, 3, 0)).toBe("Te faltan 3 entrenos para tu meta de la semana.");
+  });
+
+  it("Hoy pasa a Tu semana la meta de #288 y ya no muestra la línea aparte", () => {
+    const page = readFileSync("src/app/(app)/app/page.tsx", "utf8");
+    expect(page).toContain("<WeekCard s={xs} goal={{ count: weekCount(g.trainedDays, d.today.iso), goal: goalOf(monday)");
+    expect(page).not.toContain("<WeekLine");
   });
 });
 

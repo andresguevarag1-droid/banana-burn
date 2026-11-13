@@ -46,7 +46,7 @@ describe("Hoy en inglés (#299)", () => {
 
   it("Hoy completo: meta semanal, tu semana, números y peso en lb", async () => {
     const { text } = await hoy();
-    for (const s of ["This week:", "Daily streak:", "Your week", "Workouts", "Your numbers today", "Your challenges", "Did you weigh in yet?", "How does it work?", "205.3 lb Save", "lb lost", "lb to goal"]) expect(text).toContain(s);
+    for (const s of ["This week:", "Your week", "XP this week", "Your numbers today", "Your challenges", "Did you weigh in yet?", "How does it work?", "205.3 lb Save", "lb lost", "lb to goal"]) expect(text).toContain(s);
     expect(text).not.toMatch(/kg perdidos|kg a la meta|Tu semana|Esta semana: \d+ de|Racha diaria|Tus números/);
     expect(text).not.toMatch(/\p{Extended_Pictographic}|\bAI\b|\bIA\b/u);
     expect(text).toMatchSnapshot();
@@ -80,7 +80,7 @@ describe("Hoy en inglés (#299)", () => {
     prefs.locale = "es-419"; prefs.units = "metric";
     try {
       const { text } = await hoy();
-      for (const s of ["Esta semana:", "Racha diaria:", "Tu semana", "Tus números de hoy", "kg perdidos", "kg a la meta",
+      for (const s of ["Esta semana:", "Tu semana", "XP esta semana", "Tus números de hoy", "kg perdidos", "kg a la meta",
         "¿Te estás quedando sin tiempo? Termina con estos exprés", "Cuenta para tu racha", "Nuevo: entrena en casa", "Probar", "Faltan 48 días para tu carrera",
         "Arroz con frijoles y huevos revueltos", "Rey de las flexiones", "Día 11 de 30", "Hoy: 16 flexiones en total hoy", "Ver calendario"]) expect(text).toContain(s);
       expect(text).not.toMatch(/Running out|Push-up King|Microwave egg|free passes/);
@@ -99,7 +99,7 @@ describe("Hoy en inglés (#299)", () => {
   });
 
   it("cada frase de Hoy tiene su traducción en src/lib/i18n/en/today.ts", () => {
-    const files = ["src/app/(app)/app/page.tsx", "src/components/hoy/today-panel.tsx", "src/components/hoy/week-card.tsx", "src/components/hoy/week-line.tsx", "src/components/hoy/workout-hero.tsx",
+    const files = ["src/app/(app)/app/page.tsx", "src/components/hoy/today-panel.tsx", "src/components/hoy/week-card.tsx", "src/components/hoy/week-line.tsx", "src/components/hoy/challenges-folded.tsx", "src/components/hoy/workout-hero.tsx",
       "src/components/hoy/exercise-tiles.tsx", "src/components/hoy/first-partial-card.tsx", "src/components/hoy/reminder-prompt.tsx", "src/components/hoy/annual-upsell.tsx", "src/components/hoy/prompt-queue.tsx",
       "src/components/readiness.tsx", "src/components/trial-card-notice.tsx", "src/components/card-banner.tsx", "src/lib/plan-access.ts", "src/components/weigh-in.tsx", "src/components/primeros-pasos/page-tour.tsx",
       // #309
