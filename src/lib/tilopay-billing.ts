@@ -127,38 +127,53 @@ export async function handleTilopayReturn(v: Viewer, s: ReturnState, q: URLSearc
     logInfo("pagos", "tilopay_return_params", { purpose: s.p, names: [...new Set([...q.keys()])].filter((k) => k !== "s").sort().join(",").slice(0, 300) });
   }
 
-  if (s.p === "tarjeta") {
-    // Tilopay dijo que no (code distinto de "1"): nunca se guarda un token, aunque venga en la URL.
-    if (r.code && r.code !== "1") return { outcome: "rechazada", kind: await browserDecline(db, v.id, s, r.code, r.description, null) };
-    if (!r.token) {
-      await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "sin_tarjeta", plan: s.plan, billing: s.billing });
-      return { outcome: "sin_tarjeta" };
-    }
-    // El token viene del navegador (la vuelta de processTokenize no está documentada y no hay consulta para verificarlo).
-    // Lo protege: el estado firmado de ESTA persona (la ruta), que no esté guardado en otra cuenta (storeCard) y que un
-    // token inventado no da nada: la prueba gratis no depende de la tarjeta y el 50 % es solo el monto del primer cobro,
-    // que con un token falso se rechaza (muro, como cualquier rechazo).
-    const ctx = await cardSaveContext(db, v, now, "tilopay");
-    const card: VerifiedCard = { provider: "tilopay", customerId: tilopayCustomerId(v.id), paymentMethodId: r.token, brand: r.brand, last4: r.last4, expMonth: null, expYear: null };
-    if (ctx.mode === "replace") return { outcome: "tarjeta_ok", result: await replaceCard(db, v, card, ctx.subs, now) };
-    const result = await saveVerifiedCard(db, v, card, { plan: s.plan, billing: s.billing }, ctx.row, ctx.plan, now);
-    if (result.outcome === "rechazado") {
-      const kind = await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "rechazada", plan: s.plan, billing: s.billing });
-      return { outcome: "rechazada", result, kind };
-    }
-    return { outcome: result.outcome === "por_confirmar" ? "confirmando" : "tarjeta_ok", result };
-  }
+  if (s.p === "tarjeta") return returnTarjeta(db, v, s, r, now) as Promise<ReturnResult>; // con sesión nunca es null
   return returnPago(db, v.id, s, r, now);
 }
 
 /**
- * Vuelta de una compra directa SIN sesión (otro navegador, cookie perdida al volver del banco). El estado firmado dice de
- * quién es la orden y la consulta a Tilopay decide: igual que el cron, pero en el momento. Una tarjeta sin sesión no se guarda.
+ * Vuelta SIN sesión (otro navegador, cookie perdida al volver del banco). El estado firmado dice de quién es la orden o la
+ * tarjeta. Compra directa: la consulta a Tilopay decide, igual que el cron, pero en el momento. Tarjeta (#313): desde el
+ * 1 de diciembre de 2026 la prueba empieza con la tarjeta (card-required.ts), así que se guarda igual que con sesión; si no,
+ * una tarjeta de otro país que vuelve sin la cookie nunca empieza su prueba.
  */
 export async function handleTilopayReturnNoSession(s: ReturnState, q: URLSearchParams, now = new Date()): Promise<ReturnResult | null> {
-  if (s.p !== "pago") return null;
   ready();
-  return returnPago(admin(), s.u, s, readReturn(q), now, false);
+  const db = admin();
+  if (s.p === "tarjeta") return returnTarjeta(db, await ownerOf(db, s.u), s, readReturn(q), now, true);
+  return returnPago(db, s.u, s, readReturn(q), now, false);
+}
+
+/** La persona del estado firmado, sin sesión. Guardar la tarjeta solo usa su id y su correo (Tilopay lo pide al quitar la anterior). */
+async function ownerOf(db: SupabaseClient, userId: string): Promise<Viewer> {
+  return { demo: false, id: userId, email: (await emailOf(db, userId)) ?? "", name: "", role: "free", plan: "free", onboarded: true, tz: "America/Costa_Rica", country: null };
+}
+
+/** Vuelta de "guardar tarjeta": guarda el token con las mismas reglas de prueba que ONVO (saveVerifiedCard). */
+async function returnTarjeta(db: SupabaseClient, v: Viewer, s: ReturnState, r: ReturnType<typeof readReturn>, now: Date, noSession = false): Promise<ReturnResult | null> {
+  // Tilopay dijo que no (code distinto de "1"): nunca se guarda un token, aunque venga en la URL.
+  if (r.code && r.code !== "1") return { outcome: "rechazada", kind: await browserDecline(db, v.id, s, r.code, r.description, null) };
+  if (!r.token) {
+    await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "sin_tarjeta", plan: s.plan, billing: s.billing });
+    return { outcome: "sin_tarjeta" };
+  }
+  // El token viene del navegador (la vuelta de processTokenize no está documentada y no hay consulta para verificarlo).
+  // Lo protege: el estado firmado de ESTA persona (la ruta), que no esté guardado en otra cuenta (storeCard) y que un
+  // token inventado no da más que la prueba: antes de CARD_REQUIRED_FROM la prueba no depende de la tarjeta; desde entonces
+  // abre los mismos 7 días que antes eran sin tarjeta. El 50 % es solo el monto del primer cobro, que con un token falso se
+  // rechaza (muro, como cualquier rechazo).
+  const ctx = await cardSaveContext(db, v, now, "tilopay");
+  // Sin sesión solo se empieza la prueba: cambiar la tarjeta de una suscripción que ya paga pide entrar (un estado firmado
+  // filtrado no puede reemplazar la tarjeta que cobra). null: la ruta manda a entrar y a Mi plan para reintentar.
+  if (noSession && ctx.mode === "replace") return null;
+  const card: VerifiedCard = { provider: "tilopay", customerId: tilopayCustomerId(v.id), paymentMethodId: r.token, brand: r.brand, last4: r.last4, expMonth: null, expYear: null };
+  if (ctx.mode === "replace") return { outcome: "tarjeta_ok", result: await replaceCard(db, v, card, ctx.subs, now) };
+  const result = await saveVerifiedCard(db, v, card, { plan: s.plan, billing: s.billing }, ctx.row, ctx.plan, now);
+  if (result.outcome === "rechazado") {
+    const kind = await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "rechazada", plan: s.plan, billing: s.billing });
+    return { outcome: "rechazada", result, kind };
+  }
+  return { outcome: result.outcome === "por_confirmar" ? "confirmando" : "tarjeta_ok", result };
 }
 
 async function returnPago(db: SupabaseClient, userId: string, s: ReturnState, r: ReturnType<typeof readReturn>, now: Date, withToken = true): Promise<ReturnResult> {
