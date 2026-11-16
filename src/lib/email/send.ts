@@ -2,6 +2,7 @@ import "server-only";
 import { SITE_URL } from "@/lib/env";
 import { errCode, logError } from "@/lib/log";
 import { signUnsubToken, unsubSecret, type UnsubScope } from "./token";
+import { isSuppressed } from "./suppression";
 
 const DEFAULT_FROM = "Banana Burn <hola@bananaburn.app>";
 /**
@@ -37,6 +38,8 @@ export async function sendEmail(to: string, msg: EmailMessage, opts: { idempoten
     if (process.env.NODE_ENV !== "production") console.info(`[email:demo] -> ${to}: ${msg.subject}`);
     return { ok: false, skipped: true };
   }
+  // Rebotó o marcó spam (0072): no se le vuelve a escribir.
+  if (await isSuppressed(to)) return { ok: false, skipped: true, error: "suprimido" };
   const headers: Record<string, string> = {};
   if (opts.unsubscribe) {
     headers["List-Unsubscribe"] = `<${opts.unsubscribe}>`;
