@@ -16,6 +16,7 @@ import { bearerOk } from "@/lib/security";
 import { errCode, logError } from "@/lib/log";
 import { beat, runMonitorMaintenance } from "@/lib/monitor/server";
 import { cronFailed } from "@/lib/monitor/alerts";
+import { syncSuppressions } from "@/lib/email/suppression";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * Y la limpieza de tablas que crecen sin fin (0040).
  * Y las renovaciones con Tilopay (0042), que cobramos nosotros con la tarjeta guardada.
  * Y los condominios afiliados (0053): plan del condominio para sus residentes y aviso de fin del mes gratis.
+ * Antes de los avisos, los correos que rebotaron o marcaron spam (0072) se guardan para no volver a escribirles.
  * Y el correo de checkout abandonado (#237, dentro de runReminders): 1 hora después de abrir el pago sin pagar, en
  *   sent.checkout_abandonado.
  */
@@ -50,6 +52,8 @@ export async function GET(req: Request) {
   // Limpieza (0040): ventanas viejas de límites, tickets del coach y registros de avisos. Por lotes; primero porque es
   // rápida y así corre todos los días aunque lo de abajo use todo el tiempo.
   const limpieza = await purgeHousekeeping();
+  // Correos que rebotaron o marcaron spam (0072), antes de mandar nada: así no se les escribe en esta misma corrida.
+  const supresion = await syncSuppressions({ deadline: t0 + 4_000 });
   const stats = await runReminders(new Date(), undefined, { deadline: t0 + 25_000 }).catch((e) => {
     logError("cron:recordatorios", "run_failed", { kind: errCode(e) });
     return { ok: false, mode: "daily" as const, scanned: 0, candidates: 0, sent: {}, push: 0, email: 0, errors: 1 };
@@ -84,5 +88,5 @@ export async function GET(req: Request) {
   await beat("cron:recordatorios", stats.ok, Date.now() - t0, { scanned: stats.scanned, errors: stats.errors, monitoreo: monitoreo !== null }).catch(() => {});
   // Falla = las consultas de recordatorios fallaron o el cobro de pruebas se cortó con un error (cobros null).
   if (!stats.ok || cobros === null) await cronFailed("recordatorios", { errores: stats.errors, cobros: cobros !== null });
-  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, referidores, condominios, monitoreo, limpieza }, { status: stats.ok ? 200 : 500 });
+  return NextResponse.json({ ...stats, retos, regalos, cobros, renovaciones, primerMes, testers, identidad, soporte, novedades, referidores, condominios, monitoreo, limpieza, supresion }, { status: stats.ok ? 200 : 500 });
 }
