@@ -1,4 +1,4 @@
-// #313: simulacro del 1 de diciembre de 2026. Desde CARD_REQUIRED_FROM (00:00 de Costa Rica) toda cuenta nueva deja tarjeta
+// #313: simulacro del 23 de noviembre de 2026. Desde CARD_REQUIRED_FROM (00:00 de Costa Rica) toda cuenta nueva deja tarjeta
 // para empezar su prueba. Aquí se recorre la cadena completa de una cuenta creada el 1 dic a las 00:01 de Costa Rica, con
 // ONVO y Tilopay simulados (sin red ni base real): bienvenida, tarjeta por las rutas de la app, prueba activa, cobro del
 // día 8 por el cron y Subscribe por la API de Conversiones. Tilopay no manda webhook: el cobro se confirma con su respuesta
@@ -58,12 +58,12 @@ const webhookRoute = await import("@/app/api/pagos/webhook/route");
 const { Wizard } = await import("@/app/bienvenida/wizard");
 
 const USER = "44444444-4444-4444-8444-444444444444";
-/** 1 de diciembre de 2026 a las 00:01 de Costa Rica: un minuto después del corte. */
-const CREATED = "2026-12-01T06:01:00.000Z";
-/** 30 de noviembre de 2026 a las 23:59 de Costa Rica: un minuto antes del corte. */
-const BEFORE = "2026-12-01T05:59:00.000Z";
+/** 23 de noviembre de 2026 a las 00:01 de Costa Rica: un minuto después del corte. */
+const CREATED = "2026-11-23T06:01:00.000Z";
+/** 22 de noviembre de 2026 a las 23:59 de Costa Rica: un minuto antes del corte. */
+const BEFORE = "2026-11-23T05:59:00.000Z";
 /** Día 8: el cron de cobros de las 00:20 de Costa Rica (vercel.json "20 6 * * *"). */
-const DAY8 = "2026-12-08T06:20:00.000Z";
+const DAY8 = "2026-11-30T06:20:00.000Z";
 const plus = (iso: string, days: number) => new Date(Date.parse(iso) + days * DAY_MS);
 const ORIGIN = "https://bananaburn.app";
 const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
@@ -116,9 +116,9 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("el corte", () => {
-  it("la app y la base usan la misma fecha (0071) y la cuenta de las 00:01 cae después", () => {
-    expect(CARD_REQUIRED_FROM).toBe("2026-12-01T06:00:00.000Z");
-    expect(readFileSync("supabase/migrations/0071_tarjeta_desde_diciembre.sql", "utf8")).toContain("timestamptz '2026-12-01 06:00:00+00'");
+  it("la app y la base usan la misma fecha (0073) y la cuenta de las 00:01 cae después", () => {
+    expect(CARD_REQUIRED_FROM).toBe("2026-11-23T06:00:00.000Z");
+    expect(readFileSync("supabase/migrations/0073_tarjeta_desde_23_noviembre.sql", "utf8")).toContain("timestamptz '2026-11-23 06:00:00+00'");
     expect(cardRequiredFor(CREATED)).toBe(true);
     expect(cardRequiredFor(BEFORE)).toBe(false);
   });
@@ -306,7 +306,7 @@ describe("4. Condominio después del corte", () => {
   });
 });
 
-describe("5. Cuenta del 30 de noviembre a las 23:59", () => {
+describe("5. Cuenta del 22 de noviembre a las 23:59", () => {
   it("sigue con las reglas de antes: 7 días gratis sin tarjeta y la tarjeta es opcional", async () => {
     const f = setup(BEFORE);
     clock(plus(BEFORE, 0.01));

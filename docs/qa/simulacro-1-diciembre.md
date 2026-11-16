@@ -1,11 +1,13 @@
-# Simulacro del 1 de diciembre: registro con tarjeta obligatoria (ONVO y Tilopay)
+# Simulacro del 23 de noviembre: registro con tarjeta obligatoria (ONVO y Tilopay)
 
-Desde el **1 de diciembre de 2026 a las 00:00 de Costa Rica** (`CARD_REQUIRED_FROM` en `src/lib/card-required.ts`, la
+> Fecha actualizada el 16 nov 2026 (#322): la tarjeta obligatoria empieza el **lunes 23 de noviembre**, no el 1 de diciembre. Revisión A1 a A4: **domingo 22 nov en la tarde**. El nombre del archivo se queda para no romper enlaces.
+
+Desde el **23 de noviembre de 2026 a las 00:00 de Costa Rica** (`CARD_REQUIRED_FROM` en `src/lib/card-required.ts`, la
 misma fecha que `public._card_required_from()` de la migración 0071) toda cuenta nueva deja su tarjeta para empezar sus
 7 días gratis. Si algo de esa cadena falla ese día, no entra ningún registro.
 
 La cadena completa ya está probada con ONVO y Tilopay simulados en `src/lib/simulacro-1-diciembre.test.ts` (#313). Esta
-guía es para probarla **en producción** el 1 de diciembre a las 00:05, con una tarjeta real de Costa Rica y otra de
+guía es para probarla **en producción** el 23 de noviembre a las 00:05, con una tarjeta real de Costa Rica y otra de
 otro país, y cancelar después sin que se cobre nada.
 
 Corre: Andrés (es el único con acceso a Vercel, Supabase, ONVO, Tilopay y el panel admin). Revisa: Grace. Arregla lo que
@@ -15,13 +17,13 @@ necesite código: Adrian, con un PR que Andrés aprueba.
 
 | # | Dónde | Qué revisar | Si falla | Resultado |
 | --- | --- | --- | --- | --- |
-| A1 | Supabase, SQL editor | `select public._card_required_from();` devuelve `2026-12-01 06:00:00+00`. | Corre `supabase/migrations/0071_tarjeta_desde_diciembre.sql`. Sin ella, la base daría la prueba sin tarjeta todo diciembre. | |
+| A1 | Supabase, SQL editor | `select public._card_required_from();` devuelve `2026-11-23 06:00:00+00`. | Corre `supabase/migrations/0073_tarjeta_desde_23_noviembre.sql`. Sin ella, la base daría la prueba sin tarjeta hasta el 30 de noviembre. | |
 | A2 | Vercel, Settings, variables de entorno (Production) | Existen `ONVO_SECRET_KEY`, `NEXT_PUBLIC_ONVO_PUBLISHABLE_KEY`, `ONVO_WEBHOOK_SECRET`, las cuatro `ONVO_PRICE_*`, `TILOPAY_API_USER`, `TILOPAY_API_PASSWORD`, `TILOPAY_KEY`, `TILOPAY_STATE_SECRET`, `CRON_SECRET`, `META_CAPI_TOKEN`. Revisa solo que existan, sin copiar valores. | Agrégala y haz Redeploy. | |
-| A3 | Vercel, variable `TILOPAY_ENABLED` | Vale `1`. Con `staff` solo el equipo ve "¿Tu tarjeta es de otro país?": desde el 1 de diciembre una persona con tarjeta extranjera **no podría registrarse**. | Cámbiala a `1` y haz Redeploy. | |
+| A3 | Vercel, variable `TILOPAY_ENABLED` | Vale `1`. Con `staff` solo el equipo ve "¿Tu tarjeta es de otro país?": desde el 23 de noviembre una persona con tarjeta extranjera **no podría registrarse**. | Cámbiala a `1` y haz Redeploy. | |
 | A4 | Vercel, Crons | Está `/api/cron/cobros` a las `20 6 * * *` (00:20 de Costa Rica). | Revisa `vercel.json` en main. | |
 | A5 | Dos correos nuevos | Tienes dos correos que nunca se registraron en Banana Burn (uno por tarjeta). | Crea dos alias (por ejemplo `+cr` y `+ext`). | |
 
-## El 1 de diciembre a las 00:05
+## El 23 de noviembre a las 00:05
 
 Usa una ventana privada distinta para cada cuenta. Anota solo el id de cuenta (Admin > Usuarios), nunca correos ni datos
 de tarjeta.
@@ -31,10 +33,10 @@ de tarjeta.
 | # | Paso | Qué debe pasar | Resultado |
 | --- | --- | --- | --- |
 | C1 | Abre `bananaburn.app/entrar?modo=registro` y crea la cuenta con el primer correo. | Entra a la bienvenida. La portada y /precios ya no dicen "sin tarjeta". | |
-| C2 | Completa la bienvenida hasta "Crear mi plan". | Aparece "Deja tu tarjeta para empezar tus 7 días gratis", sin "Empezar gratis sin tarjeta" ni forma de saltar el paso. El texto dice cuándo y cuánto se cobra ($4.99 Entreno o $7.49 Entreno + Nutrición, el 8 de diciembre). | |
+| C2 | Completa la bienvenida hasta "Crear mi plan". | Aparece "Deja tu tarjeta para empezar tus 7 días gratis", sin "Empezar gratis sin tarjeta" ni forma de saltar el paso. El texto dice cuándo y cuánto se cobra ($4.99 Entreno o $7.49 Entreno + Nutrición, el 30 de noviembre). | |
 | C3 | Abre `bananaburn.app/app` en otra pestaña sin dejar la tarjeta. | Te devuelve a la bienvenida (sin tarjeta no hay prueba). | |
-| C4 | Deja la tarjeta de Costa Rica y toca "Empezar mis 7 días gratis". | Entra a la app. Hoy no se cobra nada: en ONVO no aparece ningún cargo. Llega el correo "Tarjeta lista: tu primer mes con 50 % se cobra el 8 de diciembre". | |
-| C5 | Abre Mi plan (`/app/suscripcion`). | Dice prueba gratis, 7 días, y el cobro programado del 8 de diciembre con el monto del paso C2. | |
+| C4 | Deja la tarjeta de Costa Rica y toca "Empezar mis 7 días gratis". | Entra a la app. Hoy no se cobra nada: en ONVO no aparece ningún cargo. Llega el correo "Tarjeta lista: tu primer mes con 50 % se cobra el 30 de noviembre". | |
+| C5 | Abre Mi plan (`/app/suscripcion`). | Dice prueba gratis, 7 días, y el cobro programado del 30 de noviembre con el monto del paso C2. | |
 | C6 | Admin > Pagos. | No hay ningún "pago fallido" de esta cuenta. | |
 
 ### 2. Tarjeta de otro país (Tilopay)
@@ -54,7 +56,7 @@ de tarjeta.
 | R2 | Admin > Pagos. | Aparece un pago fallido de esa cuenta con su motivo. | |
 | R3 | Reintenta con la tarjeta buena. | Entra a la app con su prueba activa. | |
 
-## Cancelar después (el mismo 1 de diciembre)
+## Cancelar después (el mismo 23 de noviembre)
 
 Para cada cuenta de prueba:
 
@@ -73,7 +75,7 @@ Manager debe aparecer un Subscribe por cada cobro aprobado.
 
 ## Qué cubre la prueba automática
 
-`src/lib/simulacro-1-diciembre.test.ts`, con una cuenta creada el `2026-12-01T06:01Z`:
+`src/lib/simulacro-1-diciembre.test.ts`, con una cuenta creada el `2026-11-23T06:01Z`:
 
 1. ONVO: bienvenida sin forma de saltar la tarjeta, `/api/pagos/tarjeta` (preparar y guardar), prueba activa, cobro de
    $4.99 el día 8 por el cron (una sola vez), webhook de ONVO del mismo cobro sin duplicar y un Subscribe por CAPI.
@@ -85,5 +87,5 @@ Manager debe aparecer un Subscribe por cada cobro aprobado.
 5. Cuenta del 30 de noviembre a las 23:59: prueba de 7 días sin tarjeta, como antes.
 
 Arreglo que salió del simulacro (#313): la vuelta de Tilopay sin sesión solo confirmaba compras directas; una tarjeta
-guardada sin sesión se perdía, y desde el 1 de diciembre eso dejaba sin prueba a quien se registra con tarjeta extranjera.
+guardada sin sesión se perdía, y desde el 23 de noviembre eso dejaba sin prueba a quien se registra con tarjeta extranjera.
 Ahora se guarda con el estado firmado, igual que con sesión.

@@ -198,7 +198,7 @@ describe("cohortes por semana de registro", () => {
     expect(t.net).toBeNull();
   });
 
-  it("filtra por país (con Sin dato), origen y cuentas antes o desde el 1 dic 2026", () => {
+  it("filtra por país (con Sin dato), origen y cuentas antes o desde el 23 nov 2026", () => {
     const a = buildAccounts(sample(), NOW);
     expect(countriesOf(a)).toEqual(["CO", "CR"]);
     expect(applyFilters(a, { country: "CR" })!.length).toBe(2);
@@ -208,7 +208,7 @@ describe("cohortes por semana de registro", () => {
     expect(applyFilters(a, { origin: "organico" })!.length).toBe(2);
     expect(applyFilters(a, { era: "antes" })!.length).toBe(4);
     expect(applyFilters(a, { era: "desde" })!.length).toBe(0);
-    const later = buildAccounts({ ...sample(), profiles: [{ id: id(9), created_at: "2026-12-01T06:00:00Z", role: "free", country: "CR" }] }, NOW);
+    const later = buildAccounts({ ...sample(), profiles: [{ id: id(9), created_at: "2026-11-23T06:00:00Z", role: "free", country: "CR" }] }, NOW);
     expect(applyFilters(later, { era: "desde" })!.length).toBe(1);
   });
 
@@ -258,7 +258,7 @@ describe("primer contacto en el embudo (#283)", () => {
 
 describe("pedido de tarjeta por lugar (#308)", () => {
   it("la etiqueta de las cuentas sale de CARD_REQUIRED_FROM", () => {
-    expect(CARD_ERA_LABEL).toEqual({ antes: "Antes del 1 dic 2026", desde: "Desde el 1 dic 2026" });
+    expect(CARD_ERA_LABEL).toEqual({ antes: "Antes del 23 nov 2026", desde: "Desde el 23 nov 2026" });
   });
 
   it("cuenta cada cuenta una vez por lugar: lo vio, vio el formulario, la guardó", () => {

@@ -134,7 +134,7 @@ export async function handleTilopayReturn(v: Viewer, s: ReturnState, q: URLSearc
 /**
  * Vuelta SIN sesión (otro navegador, cookie perdida al volver del banco). El estado firmado dice de quién es la orden o la
  * tarjeta. Compra directa: la consulta a Tilopay decide, igual que el cron, pero en el momento. Tarjeta (#313): desde el
- * 1 de diciembre de 2026 la prueba empieza con la tarjeta (card-required.ts), así que se guarda igual que con sesión; si no,
+ * 23 de noviembre de 2026 la prueba empieza con la tarjeta (card-required.ts), así que se guarda igual que con sesión; si no,
  * una tarjeta de otro país que vuelve sin la cookie nunca empieza su prueba.
  */
 export async function handleTilopayReturnNoSession(s: ReturnState, q: URLSearchParams, now = new Date()): Promise<ReturnResult | null> {
