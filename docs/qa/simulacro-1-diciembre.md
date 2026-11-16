@@ -17,7 +17,7 @@ necesite código: Adrian, con un PR que Andrés aprueba.
 
 | # | Dónde | Qué revisar | Si falla | Resultado |
 | --- | --- | --- | --- | --- |
-| A1 | Supabase, SQL editor | `select public._card_required_from();` devuelve `2026-11-23 06:00:00+00`. | Corre `supabase/migrations/0073_tarjeta_desde_23_noviembre.sql`. Sin ella, la base daría la prueba sin tarjeta todo diciembre. | |
+| A1 | Supabase, SQL editor | `select public._card_required_from();` devuelve `2026-11-23 06:00:00+00`. | Corre `supabase/migrations/0073_tarjeta_desde_23_noviembre.sql`. Sin ella, la base daría la prueba sin tarjeta hasta el 30 de noviembre. | |
 | A2 | Vercel, Settings, variables de entorno (Production) | Existen `ONVO_SECRET_KEY`, `NEXT_PUBLIC_ONVO_PUBLISHABLE_KEY`, `ONVO_WEBHOOK_SECRET`, las cuatro `ONVO_PRICE_*`, `TILOPAY_API_USER`, `TILOPAY_API_PASSWORD`, `TILOPAY_KEY`, `TILOPAY_STATE_SECRET`, `CRON_SECRET`, `META_CAPI_TOKEN`. Revisa solo que existan, sin copiar valores. | Agrégala y haz Redeploy. | |
 | A3 | Vercel, variable `TILOPAY_ENABLED` | Vale `1`. Con `staff` solo el equipo ve "¿Tu tarjeta es de otro país?": desde el 23 de noviembre una persona con tarjeta extranjera **no podría registrarse**. | Cámbiala a `1` y haz Redeploy. | |
 | A4 | Vercel, Crons | Está `/api/cron/cobros` a las `20 6 * * *` (00:20 de Costa Rica). | Revisa `vercel.json` en main. | |
@@ -33,10 +33,10 @@ de tarjeta.
 | # | Paso | Qué debe pasar | Resultado |
 | --- | --- | --- | --- |
 | C1 | Abre `bananaburn.app/entrar?modo=registro` y crea la cuenta con el primer correo. | Entra a la bienvenida. La portada y /precios ya no dicen "sin tarjeta". | |
-| C2 | Completa la bienvenida hasta "Crear mi plan". | Aparece "Deja tu tarjeta para empezar tus 7 días gratis", sin "Empezar gratis sin tarjeta" ni forma de saltar el paso. El texto dice cuándo y cuánto se cobra ($4.99 Entreno o $7.49 Entreno + Nutrición, el 8 de diciembre). | |
+| C2 | Completa la bienvenida hasta "Crear mi plan". | Aparece "Deja tu tarjeta para empezar tus 7 días gratis", sin "Empezar gratis sin tarjeta" ni forma de saltar el paso. El texto dice cuándo y cuánto se cobra ($4.99 Entreno o $7.49 Entreno + Nutrición, el 30 de noviembre). | |
 | C3 | Abre `bananaburn.app/app` en otra pestaña sin dejar la tarjeta. | Te devuelve a la bienvenida (sin tarjeta no hay prueba). | |
-| C4 | Deja la tarjeta de Costa Rica y toca "Empezar mis 7 días gratis". | Entra a la app. Hoy no se cobra nada: en ONVO no aparece ningún cargo. Llega el correo "Tarjeta lista: tu primer mes con 50 % se cobra el 8 de diciembre". | |
-| C5 | Abre Mi plan (`/app/suscripcion`). | Dice prueba gratis, 7 días, y el cobro programado del 8 de diciembre con el monto del paso C2. | |
+| C4 | Deja la tarjeta de Costa Rica y toca "Empezar mis 7 días gratis". | Entra a la app. Hoy no se cobra nada: en ONVO no aparece ningún cargo. Llega el correo "Tarjeta lista: tu primer mes con 50 % se cobra el 30 de noviembre". | |
+| C5 | Abre Mi plan (`/app/suscripcion`). | Dice prueba gratis, 7 días, y el cobro programado del 30 de noviembre con el monto del paso C2. | |
 | C6 | Admin > Pagos. | No hay ningún "pago fallido" de esta cuenta. | |
 
 ### 2. Tarjeta de otro país (Tilopay)
