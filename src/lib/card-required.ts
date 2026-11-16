@@ -1,5 +1,5 @@
 // Tarjeta obligatoria en el registro (#269, decisión del dueño del 6 nov 2026). Desde CARD_REQUIRED_FROM, la medianoche del
-// 1 de diciembre de 2026 en Costa Rica (antes 1 de diciembre de 2026; el dueño la adelantó el 10 nov 2026), cada cuenta nueva deja su tarjeta para empezar: 7 días gratis con todo incluido y el día 8
+// 23 de noviembre de 2026 en Costa Rica (antes 1 de enero de 2027 y luego 23 de noviembre de 2026; el dueño la adelantó el 10 y el 16 nov 2026), cada cuenta nueva deja su tarjeta para empezar: 7 días gratis con todo incluido y el día 8
 // se cobra el plan elegido, con el primer mes al 50 %. Los condominios también la piden (el cobro llega al fin de su mes gratis).
 // Las cuentas creadas antes conservan sus reglas: beta, prueba sin tarjeta y condominios ya vinculados.
 //   - cardRequiredFor(createdAt): reglas de una cuenta (acceso, bienvenida, condominios). La base repite la regla en
@@ -10,8 +10,8 @@
 
 import { HERO_VARIANT_KEYS, variantPath } from "./landing-variants";
 
-/** Medianoche de Costa Rica (UTC-6) del 1 de diciembre de 2026 (adelantada del 1 de enero el 10 nov 2026). Misma fecha que public._card_required_from() (0071). */
-export const CARD_REQUIRED_FROM = "2026-12-01T06:00:00.000Z";
+/** Medianoche de Costa Rica (UTC-6) del lunes 23 de noviembre de 2026 (antes 1 dic; adelantada el 16 nov 2026). Misma fecha que public._card_required_from() (0073). */
+export const CARD_REQUIRED_FROM = "2026-11-23T06:00:00.000Z";
 
 const at = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN);
 
