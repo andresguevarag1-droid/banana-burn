@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { track, trackOnce, FunnelTracker } from "@/components/analytics";
-import { ONBOARDING_STEPS } from "@/app/api/track/event";
+import { ONBOARDING_STEPS, type EmailClickKind } from "@/app/api/track/event";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning } from "@/components/icons";
@@ -102,7 +102,7 @@ export function requiredLine(chargeDay: string | null, c: PlanChoice, t: T = tr(
   return `${t("Hoy no se cobra nada.")} ${when} ${charge}. ${t("Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.")}`;
 }
 
-export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, cardRequired = false, onboarded = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "" }: {
+export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, cardRequired = false, onboarded = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "", emailClick = null }: {
   /** Solo demo: abrir en el paso de experiencia (?vista=lenguaje). */
   startOnVoice?: boolean;
   /** #287: idioma de la bienvenida (se guarda en el perfil) y unidades guardadas, si ya las eligió. */
@@ -127,6 +127,8 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
   payments?: boolean;
   /** Solo demo: abrir directo en el paso de la tarjeta (?vista=tarjeta) para revisarlo. */
   startOnCard?: boolean;
+  /** #325: llegó desde el botón de un correo (?e=): cuenta email_click una vez al abrir. */
+  emailClick?: EmailClickKind | null;
   /** "1 de noviembre": primer día con cobro (para el resumen de la beta). */
   betaFirstPaid?: string;
   /** Último día gratis de la beta ("7 de noviembre"), el mismo que muestra el aviso de la tarjeta. */
@@ -152,13 +154,16 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
   const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
+  useEffect(() => { if (emailClick) track("email_click", { kind: emailClick }); }, [emailClick]);
   // Embudo del registro (#236): un onboarding_step al entrar a cada paso 0 a 6 (la oferta de la tarjeta no cuenta aquí).
   useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
   // #280: el pedido de la tarjeta de la bienvenida (opcional u obligatorio) cuenta como card_ask_view "bienvenida".
+  // #325: card_step_view marca la llegada al paso de la tarjeta, sin quitar card_ask_view.
   // #308: aquí el formulario va dentro del pedido, así que card_form_view sale a la vez (si los pagos están activos).
   useEffect(() => {
     if (step !== STEPS || !cardStep) return;
     track("card_ask_view", { where: "bienvenida" });
+    track("card_step_view", { where: "bienvenida" });
     if (payments || demo) track("card_form_view", { where: "bienvenida" });
   }, [step, cardStep, payments, demo]);
   const [o, setO] = useState<Draft>(() => ({
@@ -482,7 +487,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
               <>
-                <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} note={null} />
+                <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida" note={null} />
                 {/* #323: cómo funciona el cobro en una línea y quién guarda la tarjeta, pegado al formulario. */}
                 <p className="text-sm font-semibold text-ink text-pretty">{trustCopy(locale).oneLine}</p>
                 <SecurePay trust={trustCopy(locale)} />
@@ -517,7 +522,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             </ul>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel={cardOfferLabel(choice, t)} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay}
+              <CardForm choice={choice} demo={demo} submitLabel={cardOfferLabel(choice, t)} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida"
                 note={chargeDay ? (promoApplies("primer_mes_50", choice.billing) ? <>{t(promoChargeLine("{day}"), { day: chargeDay })} {t("Monto: {price}; desde el segundo mes, {full} al mes.", { price: money2(promoPrice(choice.plan)), full: money2(PLANS.find((p) => p.id === choice.plan)!.price.mes) })}</> : <>{t("Hoy no te cobramos. El {day} se cobran {price} del plan anual, salvo que canceles antes desde Mi plan.", { day: chargeDay, price: money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]) })}</>) : null} />
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.")}</p>

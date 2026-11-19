@@ -42,8 +42,11 @@ export const STEPS = [
 export type StepKey = (typeof STEPS)[number]["key"];
 export const STEP_EVENTS = STEPS.flatMap((s) => ("event" in s ? [s.event] : []));
 
-/** Pedido de tarjeta (#308): lo vio, se le mostró el formulario, la guardó. Todos con el `where` del pedido. */
-export const CARD_ASK_EVENTS = { view: "card_ask_view", form: "card_form_view", saved: "card_saved" } as const;
+/**
+ * Pedido de tarjeta (#308): lo vio, se le mostró el formulario, la guardó. Todos con el `where` del pedido. #325: también
+ * empezó (tocó el formulario o el botón de Tilopay) y el procesador la rechazó.
+ */
+export const CARD_ASK_EVENTS = { view: "card_ask_view", form: "card_form_view", start: "card_form_start", error: "card_step_error", saved: "card_saved" } as const;
 export type CardAskStep = keyof typeof CARD_ASK_EVENTS;
 export const CARD_ASK_LABEL: Record<CardAskWhere, string> = {
   bienvenida: "Bienvenida",
@@ -173,7 +176,7 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
   for (const e of r.cardAsks ?? []) {
     const k = askStep[e.name];
     if (!e.user_id || !k || !e.where) continue;
-    if (!asks.has(e.user_id)) asks.set(e.user_id, { view: new Set(), form: new Set(), saved: new Set() });
+    if (!asks.has(e.user_id)) asks.set(e.user_id, { view: new Set(), form: new Set(), start: new Set(), error: new Set(), saved: new Set() });
     asks.get(e.user_id)![k].add(e.where);
   }
   const finished = r.finished && new Set(r.finished);
@@ -223,7 +226,7 @@ export function buildAccounts(r: FunnelRows, now = new Date()): Account[] {
         campaign: a?.utm_campaign?.trim() || null,
         ad: a?.utm_content?.trim() || null,
         era: cardRequiredFor(p.created_at) ? "desde" : "antes",
-        asks: r.cardAsks ? asks.get(p.id) ?? { view: new Set(), form: new Set(), saved: new Set() } : null,
+        asks: r.cardAsks ? asks.get(p.id) ?? { view: new Set(), form: new Set(), start: new Set(), error: new Set(), saved: new Set() } : null,
         steps: { hoy: ev("hoy_view"), open: ev("workout_open"), firstView: ev("workout_first_set_view"), firstSet: ev("workout_first_set"), finished: finished ? finished.has(p.id) : null, second: second ? second.has(p.id) : null, third: third ? third.has(p.id) : null, card, paid },
         net,
         estimated,
@@ -275,7 +278,7 @@ export function cardAskTable(accounts: Account[]): CardAskRow[] | null {
   if (accounts.some((a) => a.asks === null)) return null;
   return CARD_ASK_WHERE.map((where) => {
     const n = (k: CardAskStep) => accounts.filter((a) => a.asks![k].has(where)).length;
-    return { where, label: CARD_ASK_LABEL[where], view: n("view"), form: n("form"), saved: n("saved") };
+    return { where, label: CARD_ASK_LABEL[where], view: n("view"), form: n("form"), start: n("start"), error: n("error"), saved: n("saved") };
   });
 }
 

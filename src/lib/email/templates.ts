@@ -15,6 +15,7 @@ import { nfmt, usd2 } from "../num";
 import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving, type Billing, type PlanId } from "../plans";
 import { PROMO_PCT, planLine, promoPrice } from "../trial";
 import { intentPath } from "../checkout-intent";
+import { rescuePath } from "../tarjeta-rescate";
 import type { TrialProgress } from "../recuperacion";
 import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "../i18n/locale";
 import { kgToLb, loadShown, weightUnit } from "../i18n/format";
@@ -1291,6 +1292,64 @@ export function checkoutAbandonado(d: { plan: PlanId; billing: Billing; promo: b
     subject: ABANDONED_SUBJECT, preheader,
     html: layout({ preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
     text: textLayout([ABANDONED_SUBJECT, "", ...lines, ...(promoLine ? ["", promoLine] : []), "", "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason),
+  };
+}
+
+// ───────────── Rescate del paso de la tarjeta (#325, docs/emails/tarjeta-rescate.md) ─────────────
+// Cuenta desde CARD_REQUIRED_FROM que llegó al paso de la tarjeta de la bienvenida y no la dejó. T1 a la hora, T2 al día
+// siguiente a las 7:00. Lo envía sendCardRescueEmails (notify-run.ts, tarjeta-rescate.ts).
+
+export type RescueGoal = "grasa" | "recomp" | "fuerza";
+/** El objetivo de la bienvenida, dentro de una frase ("Tu plan para bajar grasa..."). */
+export const RESCUE_GOAL: Record<RescueGoal, string> = { grasa: "bajar grasa", recomp: "bajar grasa y ganar músculo", fuerza: "ganar fuerza" };
+
+export const CARD_RESCUE_MAILS = {
+  tarjeta_rescate_1: {
+    subject: "Tu plan ya está armado: falta un paso",
+    preheader: "Deja tu tarjeta y empiezas tus 7 días gratis.",
+    lead: "Para empezar tu prueba solo falta dejar tu tarjeta. Tu plan te espera en el mismo paso donde lo dejaste.",
+  },
+  tarjeta_rescate_2: {
+    subject: "Tu primer entreno de 12 min te está esperando",
+    preheader: "Deja tu tarjeta y hazlo hoy, también en casa.",
+    lead: "Tu primer entreno dura 12 minutos y lo puedes hacer en casa. Para abrirlo solo falta dejar tu tarjeta.",
+  },
+  /** T2 cuando su primer entreno no es el de 12 minutos en casa (offersHomeFirst): sin prometer los 12 minutos. */
+  tarjeta_rescate_2_largo: {
+    subject: "Tu primer entreno te está esperando",
+    preheader: "Deja tu tarjeta y hazlo hoy.",
+    lead: "Tu primer entreno dura hasta 15 minutos, con las indicaciones de cada ejercicio en el celular. Para abrirlo solo falta dejar tu tarjeta.",
+  },
+} as const;
+export const CARD_RESCUE_CTA = "Dejar mi tarjeta";
+export const CARD_RESCUE_BILLING = [
+  "Hoy no se cobra nada. Tienes 7 días gratis y te avisamos 2 días antes del cobro.",
+  "El día 8 se cobra el primer mes de tu plan con 50\u00a0% de descuento: {entreno} con Entreno o {completo} con Entreno + Nutrición. Si eliges el plan anual, se cobra su precio completo.",
+  "Cancelas cuando quieras desde Mi plan.",
+] as const;
+
+/**
+ * El correo de rescate. `goal` y `days`: lo que eligió en la bienvenida (sin dato, la frase sin ellos). `home`: su primer
+ * entreno es el de 12 minutos en casa (offersHomeFirst); si no, T2 no promete los 12 minutos. El botón abre el paso de la
+ * tarjeta de la bienvenida (rescuePath) y entra sin contraseña (withLoginLinks).
+ */
+export function tarjetaRescate(d: { kind: "tarjeta_rescate_1" | "tarjeta_rescate_2"; goal: RescueGoal | null; days: number | null; home: boolean; unsubscribe: string; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const c = CARD_RESCUE_MAILS[d.kind === "tarjeta_rescate_2" && !d.home ? "tarjeta_rescate_2_largo" : d.kind];
+  const subject = t(c.subject), preheader = t(c.preheader);
+  const plan = d.goal && d.days
+    ? t("Tu plan para {goal} ya está armado: {days} entrenos por semana, con tus pesos y tu nivel.", { goal: t(RESCUE_GOAL[d.goal]), days: d.days })
+    : t("Tu plan ya está armado con tus días, tus pesos y tu nivel.");
+  const [free, charge, cancel] = CARD_RESCUE_BILLING.map((x) => t(x, { entreno: usd2(promoPrice("entreno")), completo: usd2(promoPrice("completo")) }));
+  const paragraphs = [plan, t(c.lead)];
+  const cta = t(CARD_RESCUE_CTA), path = rescuePath(d.kind);
+  const hero: Hero = { eyebrow: t("Tu plan"), title: esc(subject), lead: esc(preheader), mascot: true };
+  const html = paragraphs.map((x) => p(esc(x))).join("") + [free, charge, cancel].map((x) => small(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
+  const reason = t("Recibes este correo porque armaste tu plan en Banana Burn sin terminar de dejar tu tarjeta y tienes activados los recordatorios.");
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([subject, "", ...paragraphs.flatMap((x) => [x, ""]), free, charge, cancel, "", "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason, undefined, locale),
   };
 }
 

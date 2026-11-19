@@ -37,6 +37,8 @@ function demoRows(weeks: Week[]): FunnelRows {
       const where = wheres[i % wheres.length];
       if (reach < 7) cardAsks.push({ user_id: id, name: "card_ask_view", where });
       if (reach < 4) cardAsks.push({ user_id: id, name: "card_form_view", where });
+      if (reach < 3 && where === "bienvenida") cardAsks.push({ user_id: id, name: "card_form_start", where });
+      if (reach === 2 && where === "bienvenida") cardAsks.push({ user_id: id, name: "card_step_error", where });
       if (reach < 1) cardAsks.push({ user_id: id, name: "card_saved", where });
       if (reach < 3) finished.push(id);
       if (reach < 2) second.push(id);
@@ -178,9 +180,9 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
         {!asks ? (
           <div className={`${panel} p-4`}><NoData /></div>
         ) : (
-          <Table caption="Pedido de tarjeta por lugar" captionHidden minWidth={640}>
+          <Table caption="Pedido de tarjeta por lugar" captionHidden minWidth={820}>
             <thead className="border-b border-line">
-              <tr><Th>Lugar</Th><Th className="text-right">Lo vieron</Th><Th className="text-right">Vieron el formulario</Th><Th className="text-right">Guardaron la tarjeta</Th></tr>
+              <tr><Th>Lugar</Th><Th className="text-right">Lo vieron</Th><Th className="text-right">Vieron el formulario</Th><Th className="text-right">Empezaron</Th><Th className="text-right">Error</Th><Th className="text-right">Guardaron la tarjeta</Th></tr>
             </thead>
             <tbody>
               {asks.map((r) => (
@@ -188,6 +190,8 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
                   <Td className="whitespace-nowrap font-semibold">{r.label}</Td>
                   <Td className="text-right tabular-nums font-bold">{fmtNum(r.view)}</Td>
                   <Td className="text-right"><Cell n={r.form} total={r.view} /></Td>
+                  <Td className="text-right"><Cell n={r.start} total={r.view} /></Td>
+                  <Td className="text-right"><Cell n={r.error} total={r.view} /></Td>
                   <Td className="text-right"><Cell n={r.saved} total={r.view} /></Td>
                 </tr>
               ))}
@@ -196,7 +200,8 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
         )}
         <p className="text-xs text-muted text-pretty">
           Lo vieron: card_ask_view. Vieron el formulario: card_form_view, que existe desde el 12 nov 2026 (antes sale 0): al llegar a Mi plan desde el pedido o al abrir la hoja tras la primera serie.
-          En la bienvenida y en Mi plan el formulario va dentro del pedido, así que coincide con Lo vieron. Guardaron: card_saved con el mismo lugar.
+          En la bienvenida y en Mi plan el formulario va dentro del pedido, así que coincide con Lo vieron. Empezaron: card_form_start (tocó un campo o el botón de Tilopay) y
+          Error: card_step_error (el procesador la rechazó), por ahora solo en la bienvenida (#325; antes sale 0). Guardaron: card_saved con el mismo lugar.
         </p>
       </section>
 
