@@ -405,7 +405,7 @@ export async function processWebhook(evt: OnvoEvent, rawBody: string): Promise<W
       const { data } = await db.from("subscriptions").select(SUB_COLS).eq("provider_subscription_id", action.subscriptionId).maybeSingle();
       const row = data as SubscriptionRow | null;
       if (!row) return finish("ignored", "suscripción desconocida");
-      // Primer cobro de la prueba rechazado: muro, aviso y un solo reintento al día 8 (trial-billing.ts), no past_due.
+      // Primer cobro de la prueba rechazado: avisos y reintentos al día +1 y +3 (trial-billing.ts, #328), no past_due.
       const { trialOnRenewalFailed } = await import("@/lib/trial-billing");
       if (await trialOnRenewalFailed(db, action.subscriptionId)) return finish("processed", "rechazo del primer cobro de la prueba", row.user_id);
       const status = action.terminal ? "canceled" : "past_due";

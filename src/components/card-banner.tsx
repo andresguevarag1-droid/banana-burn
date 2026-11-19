@@ -82,14 +82,14 @@ export function ScheduledBanner({ charge, tz }: { charge: ChargeView; tz: string
   );
 }
 
-/** El cobro no pasó: cambiar la tarjeta. */
+/** El cobro no pasó: cambiar la tarjeta (#328: fijo arriba de Hoy y de toda la app, también durante la gracia). */
 export function FailedBanner({ charge, tz }: { charge: ChargeView; tz: string }) {
   return (
     <aside role="alert" className="mb-5 flex items-center gap-2.5 rounded-2xl border border-bad/30 bg-bad/5 px-3.5 py-1 text-sm">
       <FunnelTracker view="card_banner_view" props={{ kind: "failed" }} />
       <WarningCircle weight="duotone" className="size-5 shrink-0 text-bad" aria-hidden />
-      <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink"><b>No pudimos cobrar tu plan.</b> {charge.testerHold && charge.retryAt ? `Mientras seas tester no se te cobra: lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}, al terminar tu mes de tester. Puedes cambiar tu tarjeta antes.` : charge.retryAt ? `Lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}, o cambia tu tarjeta para seguir hoy.` : "Cambia tu tarjeta para seguir."}</p>
-      <Link href="/app/suscripcion#tarjeta" data-cta="card-banner-cambiar" className="tap inline-flex h-11 shrink-0 items-center gap-1 font-bold text-bad hover:text-ink">Cambiar<ArrowRight weight="bold" className="size-4" /></Link>
+      <p className="min-w-0 flex-1 py-1.5 text-pretty text-ink"><b>No pudimos cobrar tu plan: actualiza tu tarjeta.</b> {charge.testerHold && charge.retryAt ? `Mientras seas tester no se te cobra: lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}, al terminar tu mes de tester. Puedes cambiar tu tarjeta antes.` : charge.retryAt ? `Si no, lo intentaremos de nuevo el ${fmt(charge.retryAt, tz)}.` : "Al cambiarla se cobra en el momento y tu plan sigue."}</p>
+      <Link href="/app/suscripcion#tarjeta" data-cta="card-banner-cambiar" className="tap inline-flex h-11 shrink-0 items-center gap-1 font-bold text-bad hover:text-ink">Actualizar<ArrowRight weight="bold" className="size-4" /></Link>
     </aside>
   );
 }

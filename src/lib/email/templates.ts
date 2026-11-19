@@ -287,7 +287,7 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
   const subject = d.paused ? "No pudimos cobrar tu plan. Cambia tu tarjeta para seguir" : "No pudimos procesar tu pago. Se arregla en 1 minuto";
   const preheader = d.paused ? `Tu cobro de ${total} no pasó. Tu acceso queda en pausa hasta que se pague; tu progreso sigue guardado.` : `Tu cobro de ${total} no pasó. Actualiza tu método de pago y sigues entrenando sin pausa.`;
   const meanwhile = d.paused ? "Mientras tanto tu acceso queda en pausa. No se borra nada: tu plan y tu progreso siguen guardados." : "Mientras tanto mantienes tu acceso.";
-  const retry = d.retryDate ? `Lo volveremos a intentar una vez el ${longDate(d.retryDate)}.` : d.paused ? "No haremos más intentos automáticos." : "";
+  const retry = d.retryDate ? `Lo volveremos a intentar el ${longDate(d.retryDate)}.` : d.paused ? "No haremos más intentos automáticos." : "";
   const coach = "Tu progreso y tus récords están a salvo. Lo arreglas en un minuto y seguimos.";
   const hero: Hero = { eyebrow: "Pago", title: d.paused ? "No pudimos cobrar tu plan" : "Tu pago no pasó", lead: `${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó.` };
   const body =
@@ -299,6 +299,58 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
     subject, preheader,
     html: layout({ preheader, hero, body, reason, coach }),
     text: textLayout([`Hola ${n}, no pudimos cobrar ${total} de tu plan ${d.plan}.`, [retry, meanwhile].filter(Boolean).join(" "), "", `${d.paused ? "Cambia tu tarjeta" : "Actualiza tu método de pago"}: ${abs(url)}`, "Aceptamos tarjetas de crédito y débito."], undefined, reason, coach),
+  };
+}
+
+/** #328: motivos más comunes de un rechazo, en lenguaje claro (segundo aviso). */
+export const DECLINE_REASONS = [
+  "No había fondos suficientes en la tarjeta en ese momento.",
+  "Tu banco bloquea las compras en línea o internacionales.",
+  "El banco pidió una verificación extra (3D Secure) que no se completó.",
+] as const;
+
+/** #328: segundo rechazo del primer cobro. El acceso queda en pausa y queda un último intento automático. */
+export function pagoFallidoOtraVez(d: PaymentData & { retryDate?: string | null; updateUrl?: string }): Email {
+  const n = firstName(d.name);
+  const total = money(d.amount, d.currency);
+  const url = d.updateUrl ?? "/app/suscripcion#tarjeta";
+  const subject = "Tu tarjeta no pasó otra vez";
+  const retry = d.retryDate ? `Lo intentaremos una última vez el ${longDate(d.retryDate)}.` : "No haremos más intentos automáticos.";
+  const preheader = `Tu cobro de ${total} no pasó por segunda vez. Llama a tu banco y autoriza Banana Burn.`;
+  const meanwhile = "Mientras tanto tu acceso queda en pausa. Tu plan y tu progreso siguen guardados.";
+  const coach = "Casi siempre es un bloqueo del banco, no tu tarjeta. Una llamada y seguimos.";
+  const hero: Hero = { eyebrow: "Pago", title: "Tu tarjeta no pasó otra vez", lead: `${esc(n)}, volvimos a intentar cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó.` };
+  const body =
+    p("Los motivos más comunes:") + list(DECLINE_REASONS.map((r) => `${dot()}${esc(r)}`)) +
+    p("<b>Llama a tu banco y autoriza Banana Burn.</b> Después cambia tu tarjeta o vuelve a guardarla: se cobra en el momento y tu plan sigue.") +
+    p(`<b>${esc(retry)}</b> ${esc(meanwhile)}`) +
+    button("Cambiar mi tarjeta", url) + small("Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.");
+  const reason = "Recibes este correo porque hubo un problema con el pago de tu suscripción.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason, coach }),
+    text: textLayout([`Hola ${n}, tu cobro de ${total} de tu plan ${d.plan} no pasó otra vez.`, "", "Los motivos más comunes:", ...DECLINE_REASONS.map((r) => `- ${r}`), "", "Llama a tu banco y autoriza Banana Burn. Después cambia tu tarjeta: se cobra en el momento.", `${retry} ${meanwhile}`, "", `Cambia tu tarjeta: ${abs(url)}`], undefined, reason, coach),
+  };
+}
+
+/** #328: tercer rechazo (o sin más intentos): el plan queda en pausa hasta cambiar la tarjeta. */
+export function planEnPausa(d: PaymentData & { updateUrl?: string }): Email {
+  const n = firstName(d.name);
+  const total = money(d.amount, d.currency);
+  const url = d.updateUrl ?? "/app/suscripcion#tarjeta";
+  const subject = "Tu plan quedó en pausa";
+  const preheader = `No pudimos cobrar ${total}. Cambia tu tarjeta y tu plan se reactiva en el momento.`;
+  const coach = "Tu progreso y tus récords están a salvo. Cuando vuelvas, seguimos donde lo dejaste.";
+  const hero: Hero = { eyebrow: "Pago", title: "Tu plan quedó en pausa", lead: `${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó.` };
+  const body =
+    p("No haremos más intentos automáticos. No se borra nada: tu plan y tu progreso siguen guardados.") +
+    p("Cambia tu tarjeta y se cobra en el momento: tu plan se reactiva sin esperar. Si es la misma tarjeta, llama antes a tu banco y autoriza Banana Burn.") +
+    button("Cambiar mi tarjeta", url) + small("Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.");
+  const reason = "Recibes este correo porque hubo un problema con el pago de tu suscripción.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason, coach }),
+    text: textLayout([`Hola ${n}, tu plan ${d.plan} quedó en pausa: no pudimos cobrar ${total}.`, "No haremos más intentos automáticos. Tu progreso sigue guardado.", "Cambia tu tarjeta y se cobra en el momento: tu plan se reactiva sin esperar.", "", `Cambiar mi tarjeta: ${abs(url)}`], undefined, reason, coach),
   };
 }
 

@@ -10,7 +10,8 @@ import { cardRequiredFor } from "@/lib/card-required";
 //   3. attemptCharge(): cuando toca (cron diario o visita a la app), reclama la fila con un UPDATE condicional (un solo
 //      proceso gana), crea la suscripción en ONVO con la tarjeta guardada y sin allow_incomplete (ONVO cobra el primer
 //      periodo de inmediato) y la deja "pending". El plan pagado lo da SOLO el webhook (billing.ts → trialOnActivated).
-//   4. Rechazo: muro de planes, aviso por correo, push y campanita, y un solo reintento automático al día siguiente.
+//   4. Rechazo (#328): hasta 3 intentos automáticos (el del día, día +1 y día +3), un aviso por intento (correo, push y
+//      campanita) y el acceso sigue hasta el segundo rechazo (inGrace). Cambiar la tarjeta cobra en el momento.
 // Nunca cobra dos veces: una fila por persona, un intento a la vez, y si la respuesta de ONVO se pierde el intento queda
 // "por confirmar" hasta encontrar su suscripción por metadata (o confirmar que no existe).
 //
@@ -43,7 +44,7 @@ import {
   estimatePeriodEnd, expectedAmountMinor, getPaymentIntent, intentOutcome, getPaymentMethod, getSubscription, isOnvoConfigured, listCustomerSubscriptions, matchesAttempt, priceIdFor, profilePlanFor,
 } from "@/lib/onvo";
 import {
-  REVIEW_AFTER_MS, REVIEW_PREFIX, STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, attemptKeyFor, canCancel, canChangePlan, chargeBusy, chargeMoved, chargeView,
+  REVIEW_AFTER_MS, REVIEW_PREFIX, STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, attemptKeyFor, declinePush, declineStep, inGrace, canCancel, canChangePlan, chargeBusy, chargeMoved, chargeView,
   MAX_ATTEMPTS, amountMinorFor, firstChargeMinor, idemKeyFor, inReview, isDue, onCardSaved, promoApplies, promoFor, reminderDue, reminderLine, scheduleFor, type CardRow, type CardSavedPlan, type ChargeView, type TrialChargeRow,
 } from "@/lib/trial";
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
@@ -155,14 +156,17 @@ export async function sendReminderIfDue(db: SupabaseClient, row: TrialChargeRow,
   return true;
 }
 
-async function notifyDecline(db: SupabaseClient, row: TrialChargeRow, retryAt: string | null) {
+async function notifyDecline(db: SupabaseClient, row: TrialChargeRow, retryAt: string | null, now = new Date()) {
   // Un aviso por intento: dos procesos a la vez no lo mandan dos veces.
   const { data: claimed } = await db.from("trial_charges").update({ failure_notified_attempt: row.attempts })
     .eq("id", row.id).or(`failure_notified_attempt.is.null,failure_notified_attempt.lt.${row.attempts}`).select("id");
   if (!claimed?.length) return;
   const amount = row.amount_minor / 100;
-  await sendPaymentFailed({ userId: row.user_id, plan: planName(row.plan), amount, currency: "USD", reference: `${attemptKeyFor(row)}:rechazo`, retryDate: retryAt, updateUrl: "/app/suscripcion#tarjeta", paused: true }).catch(() => null);
-  await pushTo(db, row.user_id, { title: "No pudimos cobrar tu plan", body: retryAt ? `Lo intentaremos de nuevo el ${fmtDay(retryAt)}. Cambia tu tarjeta para seguir hoy.` : "Cambia tu tarjeta para seguir. Tu progreso sigue guardado.", url: "/app/suscripcion#tarjeta", tag: `cobro-fallido-${row.id}` });
+  const step = declineStep(row);
+  // Gracia (#328): después del primer rechazo el acceso sigue hasta el segundo intento.
+  const paused = !inGrace({ ...row, failure_notified_attempt: row.attempts }, now);
+  await sendPaymentFailed({ userId: row.user_id, plan: planName(row.plan), amount, currency: "USD", reference: `${attemptKeyFor(row)}:rechazo`, retryDate: retryAt, updateUrl: "/app/suscripcion#tarjeta", paused, attempt: step }).catch(() => null);
+  await pushTo(db, row.user_id, { ...declinePush(step, retryAt ? fmtDay(retryAt) : null, paused), url: "/app/suscripcion#tarjeta", tag: `cobro-fallido-${row.id}` });
 }
 
 // ───────────────────────── Paso 1 y 2: guardar la tarjeta ─────────────────────────
@@ -867,7 +871,7 @@ async function reconcileTilopay(db: SupabaseClient, r: TrialChargeRow, now: Date
   return "sigue";
 }
 
-/** Rechazo: cancela la suscripción en ONVO (para que ONVO no reintente por su cuenta), muro y un solo reintento al día 8. */
+/** Rechazo: cancela la suscripción en ONVO (para que ONVO no reintente por su cuenta), programa el reintento (afterDecline) y avisa. */
 async function decline(db: SupabaseClient, r: TrialChargeRow, reason: string, subId: string | null, now = new Date(), provider: PayProvider = "onvo"): Promise<"rechazado"> {
   if (subId) {
     if (provider === "onvo" && !isIntroSub(subId)) await cancelSubscription(subId).catch((e) => log("no se pudo cancelar la suscripción rechazada en ONVO", { subscriptionId: subId, error: errInfo(e) }));
@@ -878,7 +882,7 @@ async function decline(db: SupabaseClient, r: TrialChargeRow, reason: string, su
     .eq("id", r.id).in("status", ["charging", "pending", "unknown"]);
   await releaseChargeKey(db, firstKey(r, provider), "rechazado");
   log("cobro rechazado", { userId: r.user_id, chargeId: r.id, attempt: r.attempts, next: next.status });
-  await notifyDecline(db, { ...r, status: next.status }, next.nextAttemptAt);
+  await notifyDecline(db, { ...r, status: next.status }, next.nextAttemptAt, now);
   return "rechazado";
 }
 

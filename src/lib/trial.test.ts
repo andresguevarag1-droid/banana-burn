@@ -109,12 +109,14 @@ describe("qué día se cobra", () => {
 });
 
 describe("rechazo y reintento", () => {
-  it("el rechazo del día 7 se reintenta una vez al día siguiente (día 8)", () => {
-    const now = plus(START, 7);
-    expect(afterDecline({ attempts: 1 }, now)).toEqual({ status: "retry_scheduled", nextAttemptAt: plus(now, 1).toISOString() });
+  it("#328: el rechazo del día 7 se reintenta al día siguiente y el segundo, 2 días después (día +3), a la medianoche de Costa Rica", () => {
+    const now = plus(START, 7); // 17 nov, 09:00 en Costa Rica
+    expect(afterDecline({ attempts: 1 }, now)).toEqual({ status: "retry_scheduled", nextAttemptAt: "2026-11-18T06:00:00.000Z" });
+    expect(afterDecline({ attempts: 2 }, plus(START, 8))).toEqual({ status: "retry_scheduled", nextAttemptAt: "2026-11-20T06:00:00.000Z" });
   });
-  it("si el reintento también falla, no hay más intentos automáticos", () => {
-    expect(afterDecline({ attempts: 2 }, plus(START, 8))).toEqual({ status: "failed", nextAttemptAt: null });
+  it("#328: si el tercer intento también falla, no hay más intentos automáticos", () => {
+    expect(afterDecline({ attempts: 3 }, plus(START, 10))).toEqual({ status: "failed", nextAttemptAt: null });
+    expect(afterDecline({ attempts: 4 }, plus(START, 12))).toEqual({ status: "failed", nextAttemptAt: null });
   });
   it("una tarjeta nueva después de un rechazo cobra en ese momento", () => {
     expect(onCardSaved(row({ status: "retry_scheduled", attempts: 1 }), { createdAt: START.toISOString(), now: plus(START, 7.2) })).toEqual({ do: "charge_now" });

@@ -389,6 +389,33 @@ async function loadSubs(v: Viewer) {
   return { now: new Date(), all, names, emails: new Map<string, string>(), plans, payments, reasons };
 }
 
+/** #328: primer cobro (trial_charges) rechazado, con su intento (1, 2 o 3) y la próxima fecha. */
+export type FirstChargeFailRow = { id: number; user_id: string; plan: string; billing: string; amount_minor: number; status: string; attempts: number; next_attempt_at: string | null; last_attempt_at: string | null; last_error: string | null };
+export type FirstChargeFail = FirstChargeFailRow & { name: string | null; planLabel: string; amount: number; attempt: number; nextAt: string | null };
+
+/** Puro: arma las filas de "Primeros cobros rechazados" (las más recientes primero). */
+export function firstChargeFailures(rows: FirstChargeFailRow[], names: Map<string, string>): FirstChargeFail[] {
+  return rows
+    .filter((r) => (r.status === "retry_scheduled" || r.status === "failed") && r.attempts > 0)
+    .sort((a, b) => (b.last_attempt_at ?? "").localeCompare(a.last_attempt_at ?? ""))
+    .map((r) => ({
+      ...r, name: names.get(r.user_id) ?? null, amount: r.amount_minor / 100, attempt: r.attempts,
+      planLabel: `${PLAN_LABEL[r.plan] ?? "Plan sin identificar"} (${BILLING_LABEL[r.billing] ?? r.billing})`,
+      nextAt: r.status === "retry_scheduled" ? r.next_attempt_at : null,
+    }));
+}
+
+async function loadFirstChargeFailures(v: Viewer): Promise<FirstChargeFail[]> {
+  if (v.demo) return [];
+  const db = adminClient();
+  if (!db) return [];
+  const { data, error } = await db.from("trial_charges").select("id,user_id,plan,billing,amount_minor,status,attempts,next_attempt_at,last_attempt_at,last_error")
+    .in("status", ["retry_scheduled", "failed"]).order("last_attempt_at", { ascending: false }).limit(200);
+  if (error) return [];
+  const rows = (data ?? []) as FirstChargeFailRow[];
+  return firstChargeFailures(rows, await profileNames(db as unknown as SB, rows.map((r) => r.user_id)));
+}
+
 type Loaded = Awaited<ReturnType<typeof loadSubs>>;
 function decorateAll({ all, names, emails, plans }: Loaded): SubListRow[] {
   return all.map((s) => {
@@ -408,7 +435,7 @@ function filterSubs(rows: SubListRow[], f: SubFilters) {
 
 export async function listSubscriptions(v: Viewer, f: SubFilters) {
   const page = Math.max(1, f.page ?? 1);
-  const loaded = await loadSubs(v);
+  const [loaded, firstCharges] = await Promise.all([loadSubs(v), loadFirstChargeFailures(v)]);
   const { now, all, names, plans, payments } = loaded;
   const m = mrr(all, (id) => (id ? plans.get(id) : null));
   const count = (st: string) => all.filter((s) => s.status === st).length;
@@ -428,6 +455,7 @@ export async function listSubscriptions(v: Viewer, f: SubFilters) {
       retryUrl: (() => { const i = parseIntent(s.planId, s.billingId); return i ? `${SITE_URL}${intentPath(i)}` : null; })(),
     })),
     payments: payments?.map((p) => ({ ...p, name: p.user_id ? names.get(p.user_id) ?? null : null })) ?? null,
+    firstCharges,
     rows: filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     total: filtered.length,
   };
