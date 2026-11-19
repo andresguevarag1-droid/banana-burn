@@ -184,6 +184,24 @@ describe("resumen diario de cobros", () => {
     expect(calls.some((c) => has(c, "gte", "last_attempt_at", "2026-11-30T06:00:00.000Z"))).toBe(true);
   });
 
+  it("manda resumen cuando el único cobro del día es una renovación Tilopay", async () => {
+    sendEmail.mockClear();
+    // activateVerified registra las renovaciones en payment_events, sin crear trial_charges.
+    const { db } = fakeDb((c) => {
+      if (c.table === "payment_events") return { data: [{
+        id: "renewal-event", provider: "tilopay", event_key: "tilopay.charge.approved:renewal-1",
+        type: "charge.approved", user_id: "u1", provider_subscription_id: "tlp:renewal-1",
+        amount_minor: 999, currency: "USD", status: "processed", received_at: CRON.toISOString(),
+        processed_at: CRON.toISOString(), payload: { reference: "renewal-1" },
+      }] };
+      return { data: [] };
+    });
+    const result = await sendCobrosResumen(CRON, db);
+    expect(result.sent).toBe(true);
+    expect(result.resumen).toMatchObject({ pasaron: 1, fallaron: 0, brutoMinor: 999 });
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
   it("si la base falla no lanza ni manda", async () => {
     sendEmail.mockClear();
     const { db } = fakeDb(() => ({ data: null, error: { message: "caída" } }));

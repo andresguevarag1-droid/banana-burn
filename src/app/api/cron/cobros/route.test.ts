@@ -55,6 +55,18 @@ describe("cron de cobros: aviso si falla", () => {
     await GET(req());
     expect(cronFailed).toHaveBeenCalled();
   });
+  it.each(["primerMes", "renovaciones"])("avisa si el barrido de %s lanza y runCobros devuelve null", async (part) => {
+    // runCobros transforma una excepción de cada barrido en null: no equivale a cero errores.
+    run.result = {
+      cobros: { attempted: 0, sent: 0, errors: 0 },
+      primerMes: { due: 0, errors: 0 },
+      renovaciones: { due: 0, errors: 0 },
+      [part]: null,
+    };
+    await GET(req());
+    expect(cronFailed).toHaveBeenCalledTimes(1);
+    expect(cronFailed).toHaveBeenCalledWith("cobros", expect.any(Object));
+  });
   it("el simulacro (dryRun) nunca avisa ni manda el resumen", async () => {
     run.result = { cobros: null, primerMes: null, renovaciones: null };
     await GET(req("?dryRun=1"));
