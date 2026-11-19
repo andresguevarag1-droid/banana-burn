@@ -100,7 +100,7 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   try { await sendAbandonedCheckoutEmails(admin, now, stats, late); }
   catch (e) { stats.errors++; logError("cron:checkout-abandonado", "run_failed", { kind: errCode(e) }); }
   // Rescate de la tarjeta de la bienvenida (#325): 1 h y el día siguiente a las 7:00 después de ver el paso sin dejarla.
-  try { await sendCardRescueEmails(admin, now, mode, stats, late); }
+  try { await sendCardRescueEmails(admin, now, stats, late); }
   catch (e) { stats.errors++; logError("cron:tarjeta-rescate", "run_failed", { kind: errCode(e) }); }
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
@@ -1041,7 +1041,7 @@ export async function sendAbandonedCheckoutEmails(admin: SupabaseClient, now: Da
  * la dejaron. Cada correo una vez por cuenta (notification_log, kind tarjeta_rescate_1/2), reclamado antes de enviarse; si
  * Resend lo rechaza, se libera el turno. Si falla una lectura, el lote se salta. Exportada para pruebas.
  */
-export async function sendCardRescueEmails(admin: SupabaseClient, now: Date, mode: "hourly" | "daily", stats: RunStats, late: () => boolean = () => false) {
+export async function sendCardRescueEmails(admin: SupabaseClient, now: Date, stats: RunStats, late: () => boolean = () => false) {
   if (late()) { stats.partial = true; return; }
   const since = new Date(now.getTime() - RESCUE_LOOKBACK_MS).toISOString();
   const views = await allPages((a, b) => admin.from("funnel_events").select("user_id,created_at")
@@ -1086,7 +1086,7 @@ export async function sendCardRescueEmails(admin: SupabaseClient, now: Date, mod
         const kind = cardRescueDue({
           now, createdAt: p.created_at, stepAt: stepAt.get(p.id)!, subs: subsBy.get(p.id) ?? [], chargeStatuses: (chargesBy.get(p.id) ?? []).map((c) => c.status),
           cards: (cardsBy.get(p.id) ?? []).length, emailReminders: pr.email_reminders !== false, timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end,
-          mode, sent: logsBy.get(p.id) ?? [],
+          sent: logsBy.get(p.id) ?? [],
         });
         if (!kind) return;
         const day = localClock(now, pr.timezone).iso;

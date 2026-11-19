@@ -19,7 +19,7 @@ const STEP = "2026-11-23T16:00:00.000Z";
 const at = (h: number) => new Date(Date.parse(STEP) + h * H);
 const base = (over: Partial<RescueInput> = {}): RescueInput => ({
   now: at(1), createdAt: CARD_REQUIRED_FROM, stepAt: STEP, subs: [], chargeStatuses: [], cards: 0, emailReminders: true,
-  timezone: "America/Costa_Rica", quietStart: null, quietEnd: null, mode: "hourly", sent: [], ...over,
+  timezone: "America/Costa_Rica", quietStart: null, quietEnd: null, sent: [], ...over,
 });
 
 describe("T1: de 1 h a 24 h después de ver el paso", () => {
@@ -59,9 +59,19 @@ describe("T2: a las 7:00 locales, 24 h o más después del paso", () => {
   it("una sola vez por cuenta, y nada después de T2", () => {
     expect(cardRescueDue(base({ now: new Date("2026-11-25T14:00:00Z"), sent: [...t1, { kind: "tarjeta_rescate_2", local_day: "2026-11-25" }] }))).toBeNull();
   });
-  it("con el cron diario, en la primera corrida desde las 24 h", () => {
-    expect(cardRescueDue(base({ mode: "daily", now: at(25), sent: t1 }))).toBe("tarjeta_rescate_2");
-    expect(cardRescueDue(base({ mode: "daily", now: at(72) }))).toBeNull();
+  it("sin atajo diario: en Buenos Aires (UTC-3) sale a las 7:00 locales, no en la corrida de las 13:00 UTC", () => {
+    const ba = { timezone: "America/Argentina/Buenos_Aires", sent: t1 };
+    // 25 nov 7:00 en Buenos Aires = 10:00 UTC.
+    expect(cardRescueDue(base({ ...ba, now: new Date("2026-11-25T09:05:00Z") }))).toBeNull();
+    expect(cardRescueDue(base({ ...ba, now: new Date("2026-11-25T10:05:00Z") }))).toBe("tarjeta_rescate_2");
+    expect(cardRescueDue(base({ now: at(72), sent: t1 }))).toBeNull();
+  });
+  it("el cron se llama cada hora y este paso no depende de NOTIFY_CRON_MODE", async () => {
+    const { readFileSync } = await import("node:fs");
+    const wf = readFileSync(".github/workflows/recordatorios-cada-hora.yml", "utf8");
+    expect(wf).toMatch(/cron: "\d+ \* \* \* \*"/);
+    expect(wf).toMatch(/\/api\/cron\/recordatorios/);
+    expect(readFileSync("src/lib/notify-run.ts", "utf8")).toMatch(/sendCardRescueEmails\(admin, now, stats, late\)/);
   });
 });
 

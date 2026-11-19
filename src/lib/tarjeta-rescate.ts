@@ -4,8 +4,9 @@
 //
 // - T1 (tarjeta_rescate_1): de 1 h a 24 h después de ver el paso (primer card_ask_view "bienvenida") sin guardarla.
 // - T2 (tarjeta_rescate_2): a las 7:00 de su hora local del primer día en que esa hora cae 24 h o más después de ver el paso
-//   (la primera corrida desde esa hora; si las 7:00 caen en sus horas de silencio, al terminar el silencio ese día). Con el
-//   cron diario, en la primera corrida desde las 24 h.
+//   (la primera corrida desde esa hora; si las 7:00 caen en sus horas de silencio, al terminar el silencio ese día).
+// - Las horas salen de la llamada de cada hora al cron (.github/workflows/recordatorios-cada-hora.yml), como el checkout
+//   abandonado: este paso corre en cada corrida sin importar NOTIFY_CRON_MODE.
 // - Solo cuentas creadas desde CARD_REQUIRED_FROM. Una vez por cuenta y por correo, máximo uno de los dos por día local.
 // - Se corta al guardar la tarjeta (o tener un cobro de la prueba abierto, o un plan pagado). Con email_reminders y fuera de
 //   las horas de silencio. Las direcciones suprimidas (0072) las descarta sendEmail.
@@ -46,8 +47,6 @@ export type RescueInput = {
   timezone: string;
   quietStart: string | null;
   quietEnd: string | null;
-  /** "daily" (una corrida al día a hora fija): T2 sale en la primera corrida desde las 24 h, sin mirar la hora local. */
-  mode?: "hourly" | "daily";
   /** Lo ya reclamado en notification_log: qué correo y en qué día local. */
   sent: { kind: string; local_day: string }[];
   from?: string;
@@ -74,7 +73,6 @@ export function cardRescueDue(i: RescueInput): RescueKind | null {
   const has = (k: RescueKind) => i.sent.some((s) => s.kind === k);
   if (has("tarjeta_rescate_2")) return null;
   if (age < RESCUE_T2_AFTER_MS) return has("tarjeta_rescate_1") ? null : "tarjeta_rescate_1";
-  if (i.mode === "daily") return "tarjeta_rescate_2";
   // T2: el primer día cuyas 7:00 locales caen 24 h o más después del paso. Antes de las 7:00 todavía no; después, solo ese día.
   if (c.hour < RESCUE_T2_HOUR) return null;
   const seven = sevenToday(i.now, i.timezone);

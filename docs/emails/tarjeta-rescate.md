@@ -7,12 +7,13 @@ Copy de los correos de #325 (Martín revisa los textos). Los envía `sendCardRes
 | # | Cuándo sale | A quién |
 | --- | --- | --- |
 | T1 | De 1 h a 24 h después de ver el paso (primer `card_ask_view` "bienvenida"), en la primera corrida fuera de las horas de silencio | Cuentas creadas desde `CARD_REQUIRED_FROM` (23 nov 2026, 00:00 de Costa Rica) que no dejaron la tarjeta |
-| T2 | A las 7:00 de su hora local del primer día en que esa hora cae 24 h o más después de ver el paso (con el cron diario, en la primera corrida desde las 24 h) | Las mismas, si siguen sin tarjeta |
+| T2 | A las 7:00 de su hora local del primer día en que esa hora cae 24 h o más después de ver el paso | Las mismas, si siguen sin tarjeta |
 
 - Una vez por cuenta y por correo (`notification_log`, kind `tarjeta_rescate_1` y `tarjeta_rescate_2`). Máximo uno de los dos por día local.
 - Se corta al guardar la tarjeta (tarjeta activa, cobro de la prueba abierto o plan pagado).
 - Solo con `email_reminders` activo y fuera de las horas de silencio; el enlace de baja es el de los recordatorios. Las direcciones que rebotaron o marcaron spam (0072) no reciben nada.
 - No le llegan al equipo (staff).
+- Las horas (1 h y 7:00 locales) dependen de la llamada de cada hora al cron de recordatorios (`.github/workflows/recordatorios-cada-hora.yml`, con el secreto CRON_SECRET en GitHub), igual que el checkout abandonado. Este paso corre en cada llamada, sin importar NOTIFY_CRON_MODE. Sin esa llamada, solo queda la corrida diaria de Vercel (13:00 UTC): T1 saldría hasta esa corrida y T2 solo cuando sus 7:00 locales ya pasaron.
 - Se mide con `email_click` (`e=tarjeta_rescate_1/2`) y con `card_saved` "bienvenida" en /admin/embudo, tabla "Pedido de tarjeta".
 
 ## T1. Tu plan ya está armado: falta un paso
