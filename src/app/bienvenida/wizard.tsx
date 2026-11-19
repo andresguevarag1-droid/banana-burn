@@ -156,10 +156,12 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
   // Embudo del registro (#236): un onboarding_step al entrar a cada paso 0 a 6 (la oferta de la tarjeta no cuenta aquí).
   useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
   // #280: el pedido de la tarjeta de la bienvenida (opcional u obligatorio) cuenta como card_ask_view "bienvenida".
+  // #325: card_step_view marca la llegada al paso de la tarjeta, sin quitar card_ask_view.
   // #308: aquí el formulario va dentro del pedido, así que card_form_view sale a la vez (si los pagos están activos).
   useEffect(() => {
     if (step !== STEPS || !cardStep) return;
     track("card_ask_view", { where: "bienvenida" });
+    track("card_step_view", { where: "bienvenida" });
     if (payments || demo) track("card_form_view", { where: "bienvenida" });
   }, [step, cardStep, payments, demo]);
   const [o, setO] = useState<Draft>(() => ({

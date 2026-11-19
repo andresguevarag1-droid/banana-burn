@@ -23,7 +23,8 @@ export const FUNNEL_EVENTS = [
   "card_saved",
   // Paso de la tarjeta (#325), con el `where` del pedido: tocó el primer campo o el botón de Tilopay (una vez por pantalla),
   // el procesador la rechazó (`reason`: la clase de pago-fallo, nunca el código crudo) y se ofreció Tilopay porque ONVO
-  // falló o tardó más de 8 s.
+  // falló o tardó más de 8 s. card_step_view: llegó al paso de la tarjeta (además de card_ask_view, que se mantiene).
+  "card_step_view",
   "card_form_start",
   "card_step_error",
   "card_tilopay_hint",
@@ -97,6 +98,7 @@ const STRICT: Partial<Record<string, Rule>> = {
   landing_variant_view: { key: "variant", ok: (v) => (LANDING_VARIANTS as readonly unknown[]).includes(v) },
   card_ask_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
   card_form_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
+  card_step_view: { key: "where", ok: isWhere },
   card_form_start: { key: "where", ok: isWhere },
   card_step_error: { key: "where", ok: isWhere, also: { key: "reason", ok: (v) => (FAIL_KINDS as readonly unknown[]).includes(v) } },
   card_tilopay_hint: { key: "where", ok: isWhere },
