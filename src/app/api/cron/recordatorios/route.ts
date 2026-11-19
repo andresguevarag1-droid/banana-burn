@@ -17,6 +17,7 @@ import { errCode, logError } from "@/lib/log";
 import { beat, runMonitorMaintenance } from "@/lib/monitor/server";
 import { cronFailed } from "@/lib/monitor/alerts";
 import { syncSuppressions } from "@/lib/email/suppression";
+import { cobrosCronMissed } from "@/lib/cobros-diarios-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ const authorized = (req: Request) => bearerOk(req.headers.get("authorization"), 
  * Y las renovaciones con Tilopay (0042), que cobramos nosotros con la tarjeta guardada.
  * Y los condominios afiliados (0053): plan del condominio para sus residentes y aviso de fin del mes gratis.
  * Antes de los avisos, los correos que rebotaron o marcaron spam (0072) se guardan para no volver a escribirles.
+ * Y revisa que el cron de cobros de las 00:20 haya corrido hoy (#330): si no, aviso de sistema por cronFailed.
  * Y el correo de checkout abandonado (#237, dentro de runReminders): 1 hora después de abrir el pago sin pagar, en
  *   sent.checkout_abandonado.
  */
@@ -49,6 +51,8 @@ export async function GET(req: Request) {
   // Monitoreo (0041), primero porque es corto (2 consultas): borra errores de más de 30 días y avisa al dueño si se
   // dispararon en 24 h. Si falla, sigue lo demás.
   const monitoreo = await runMonitorMaintenance().catch((e) => { logError("cron:monitoreo", "run_failed", { kind: errCode(e) }); return null; });
+  // #330: si el cron de cobros de las 00:20 no dejó latido hoy, no corrió. Aviso de sistema (el mismo de cuando falla).
+  if (await cobrosCronMissed().catch(() => null)) await cronFailed("cobros", { motivo: "no_corrio" });
   // Limpieza (0040): ventanas viejas de límites, tickets del coach y registros de avisos. Por lotes; primero porque es
   // rápida y así corre todos los días aunque lo de abajo use todo el tiempo.
   const limpieza = await purgeHousekeeping();
