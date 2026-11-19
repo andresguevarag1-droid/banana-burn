@@ -77,10 +77,16 @@ export async function sendCobrosResumen(now = new Date(), db: SupabaseClient | n
     const { data, error } = await db.from("trial_charges").select("user_id,status,amount_minor,last_error").gte("last_attempt_at", start).lt("last_attempt_at", end).limit(2000);
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as { user_id: string; status: string; amount_minor: number; last_error: string | null }[];
-    if (!rows.length) return { sent: false, resumen: null };
-    const { data: pm } = await db.from("payment_methods").select("user_id,provider").in("user_id", [...new Set(rows.map((r) => r.user_id))]).eq("status", "active");
+    // Renovaciones de Tilopay aprobadas hoy: activateVerified las deja en payment_events, sin trial_charges.
+    const { data: ev } = await db.from("payment_events").select("amount_minor").eq("provider", "tilopay").eq("type", "charge.approved").eq("status", "processed").gte("received_at", start).lt("received_at", end).limit(2000);
+    const renewals = ((ev ?? []) as { amount_minor: number | null }[]).filter((e) => (e.amount_minor ?? 0) > 0);
+    if (!rows.length && !renewals.length) return { sent: false, resumen: null };
+    const { data: pm } = rows.length ? await db.from("payment_methods").select("user_id,provider").in("user_id", [...new Set(rows.map((r) => r.user_id))]).eq("status", "active") : { data: [] };
     const method = new Map(((pm ?? []) as { user_id: string; provider: string | null }[]).map((m) => [m.user_id, proc(m.provider)]));
-    const day: DayCharge[] = rows.map((r) => ({ status: r.status, amountMinor: r.amount_minor, processor: method.get(r.user_id) ?? "onvo", lastError: r.last_error }));
+    const day: DayCharge[] = [
+      ...rows.map((r) => ({ status: r.status, amountMinor: r.amount_minor, processor: method.get(r.user_id) ?? "onvo", lastError: r.last_error })),
+      ...renewals.map((e) => ({ status: "succeeded", amountMinor: e.amount_minor ?? 0, processor: "tilopay" as const, lastError: null })),
+    ];
     const resumen = buildResumen(day, label, await paidBefore(db, start));
     if (!resumen) return { sent: false, resumen: null };
     const r = await sendEmail(RESUMEN_TO, resumenEmail(resumen), { idempotencyKey: resumenKey(label), tags: { tipo: "cobros_resumen" } });

@@ -45,11 +45,14 @@ export async function GET(req: Request) {
   if (!ok) await cronFailed("cobros", { renovaciones: renovaciones !== null, primerMes: primerMes !== null });
   else {
     // Un error en cualquiera de los tres barridos avisa, aunque los cobros de prueba hayan salido bien.
+    // runCobros convierte una excepción de un barrido en null: eso también avisa (no es "cero errores").
     const introErr = primerMes?.errors ?? 0, renewErr = renovaciones?.errors ?? 0;
-    if (cobros.errors + introErr + renewErr > 0) {
+    const introThrew = primerMes === null, renewThrew = renovaciones === null;
+    if (cobros.errors + introErr + renewErr > 0 || introThrew || renewThrew) {
       await cronFailed("cobros", {
         errores: cobros.errors, intentados: cobros.attempted,
         ...(introErr > 0 ? { erroresPrimerMes: introErr } : {}), ...(renewErr > 0 ? { erroresRenovaciones: renewErr } : {}),
+        ...(introThrew ? { primerMesFallo: true } : {}), ...(renewThrew ? { renovacionesFallo: true } : {}),
       });
     }
   }

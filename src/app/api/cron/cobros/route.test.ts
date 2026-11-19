@@ -26,14 +26,14 @@ describe("cron de cobros: aviso si falla", () => {
     expect(cronFailed).toHaveBeenCalledWith("cobros", { renovaciones: true, primerMes: false });
   });
   it("si sale bien no avisa, pero revisa la tasa de errores", async () => {
-    run.result = { cobros: { attempted: 2, sent: 2, errors: 0 }, primerMes: null, renovaciones: null };
+    run.result = { cobros: { attempted: 2, sent: 2, errors: 0 }, primerMes: { due: 0, errors: 0 }, renovaciones: { due: 0, errors: 0 } };
     const r = await GET(req());
     expect(r.status).toBe(200);
     expect(cronFailed).not.toHaveBeenCalled();
     expect(checkErrorRate).toHaveBeenCalledTimes(1);
   });
   it("si algún cobro terminó con error avisa aunque la corrida responda 200", async () => {
-    run.result = { cobros: { attempted: 3, sent: 2, errors: 1 }, primerMes: null, renovaciones: null };
+    run.result = { cobros: { attempted: 3, sent: 2, errors: 1 }, primerMes: { due: 0, errors: 0 }, renovaciones: { due: 0, errors: 0 } };
     const r = await GET(req());
     expect(r.status).toBe(200);
     expect(cronFailed).toHaveBeenCalledWith("cobros", { errores: 1, intentados: 3 });
