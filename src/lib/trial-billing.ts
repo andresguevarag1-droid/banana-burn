@@ -832,7 +832,7 @@ async function reconcileIntro(db: SupabaseClient, r: TrialChargeRow, now: Date):
   if (out === "not_confirmed" && now.getTime() - Date.parse(r.last_attempt_at ?? r.updated_at) > UNKNOWN_GIVE_UP_MS) {
     // El PaymentIntent existe pero nunca se confirmó: no hubo cobro. Se devuelve el intento para hacerlo de nuevo.
     await db.from("subscriptions").update({ status: "expired", updated_at: nowIso() }).eq("provider_subscription_id", r.provider_subscription_id!).eq("status", "incomplete");
-    await db.from("trial_charges").update({ status: r.attempts <= 1 ? "scheduled" : "retry_scheduled", attempts: Math.max(0, r.attempts - 1), provider_subscription_id: null, next_attempt_at: nowIso(), updated_at: nowIso() }).eq("id", r.id).in("status", ["unknown", "pending"]);
+    await db.from("trial_charges").update({ status: r.attempts <= 1 ? "scheduled" : "retry_scheduled", attempts: Math.max(0, r.attempts - 1), provider_subscription_id: null, next_attempt_at: now.toISOString(), updated_at: nowIso() }).eq("id", r.id).in("status", ["unknown", "pending"]);
     await releaseChargeKey(db, firstKey(r, "onvo"), "PaymentIntent sin confirmar");
     return "reprogramado";
   }
@@ -943,7 +943,7 @@ async function reconcileUnknown(db: SupabaseClient, r: TrialChargeRow, now = new
   const old = now.getTime() - Date.parse(r.last_attempt_at ?? r.updated_at) > UNKNOWN_GIVE_UP_MS;
   if (old && metadataWorks) {
     // ONVO no tiene ninguna suscripción de este intento: no se creó. Se devuelve el intento para hacerlo de nuevo.
-    await db.from("trial_charges").update({ status: r.attempts <= 1 ? "scheduled" : "retry_scheduled", attempts: Math.max(0, r.attempts - 1), next_attempt_at: nowIso(), updated_at: nowIso() }).eq("id", r.id).eq("status", "unknown");
+    await db.from("trial_charges").update({ status: r.attempts <= 1 ? "scheduled" : "retry_scheduled", attempts: Math.max(0, r.attempts - 1), next_attempt_at: now.toISOString(), updated_at: nowIso() }).eq("id", r.id).eq("status", "unknown");
     await releaseChargeKey(db, firstKey(r, "onvo"), "no llegó a ONVO");
     log("intento por confirmar no llegó a ONVO: se reprograma", { chargeId: r.id });
     return "reprogramado";
