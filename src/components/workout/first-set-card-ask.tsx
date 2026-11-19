@@ -7,6 +7,7 @@ import { CheckCircle, CreditCard, X } from "@/components/icons";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { firstWorkoutOffer } from "@/lib/first-workout-offer";
 import { PROMO_TERMS } from "@/lib/trial";
+import { consentLine } from "@/lib/billing-consent";
 import { usd2 } from "@/lib/num";
 import { useLang } from "./use-lang";
 
@@ -48,7 +49,7 @@ export function FirstSetCardSheet({ onClose, onSaved }: { onClose: () => void; o
             <button type="button" onClick={onClose} aria-label={t("Volver al entreno")} className="tap -mr-2 grid size-11 shrink-0 place-items-center rounded-xl text-muted hover:text-ink"><X weight="bold" className="size-5" /></button>
           </div>
           <p className="text-body text-pretty">{t("{plan} mensual:", { plan: t(o.name) })} <b className="tabular-nums">{usd2(o.monthFirst)}</b> {t("el primer mes, después")} <span className="tabular-nums">{usd2(o.month)}</span> {t("al mes. Precios en USD, IVA incluido.")}</p>
-          <CardForm choice={{ plan: o.plan, billing: "mes" }} demo={false} submitLabel={t("Dejar mi tarjeta")} onSaved={(r) => { onSaved(r); setDone(true); }}
+          <CardForm choice={{ plan: o.plan, billing: "mes" }} demo={false} submitLabel={t("Dejar mi tarjeta")} consent={consentLine({ button: t("Dejar mi tarjeta"), plan: o.plan, billing: "mes", promo: true, day: null }, t)} onSaved={(r) => { onSaved(r); setDone(true); }}
             note={<><b>{t("Hoy no se cobra nada.")}</b> {t("Se cobra al terminar tu prueba, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.")}</>} />
           <p className="text-xs text-muted text-pretty">{t(PROMO_TERMS)}</p>
           <button type="button" onClick={onClose} className="btn-ghost h-12 w-full">{t("Seguir entrenando")}</button>

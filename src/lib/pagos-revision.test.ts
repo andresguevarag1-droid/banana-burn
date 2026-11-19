@@ -1,6 +1,7 @@
 // Revisión de pagos (24 oct 2026): doble cobro en renovaciones, cambio de tarjeta con la renovación rechazada, vuelta de
 // Tilopay, compra directa y cobro programado a la vez, cobros sin confirmar, promoción una vez por tarjeta.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CONSENT_VERSION } from "@/lib/billing-consent";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fakeDb } from "./fake-db";
 import { idemKeyFor, type TrialChargeRow } from "./trial";
@@ -210,7 +211,7 @@ describe("3. cambiar la tarjeta con la renovación rechazada (enlace del correo:
     f.tables.payment_methods.push({ user_id: U, provider: "onvo", provider_customer_id: "cus_u", provider_payment_method_id: "pm_viejo", status: "active" });
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_nuevo", customerId: "cus_u", status: "active", type: "card", card: { brand: "visa", last4: "1111", expMonth: 1, expYear: 2031 } });
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_nuevo", status: "active" });
-    const r = await tb.saveCard(viewer(U), { paymentMethodId: "pm_nuevo", plan: "entreno", billing: "mes" }, T0);
+    const r = await tb.saveCard(viewer(U), { paymentMethodId: "pm_nuevo", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0);
     expect(r.outcome).toBe("tarjeta_cambiada");
     expect(onvo.cancelSubscription).toHaveBeenCalledWith("sub_viejo");
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ paymentMethodId: "pm_nuevo", trialKey: "cambio:9", attempt: 1 });
@@ -219,7 +220,7 @@ describe("3. cambiar la tarjeta con la renovación rechazada (enlace del correo:
   });
   it("con un plan normal de ONVO al día no se cambia la tarjeta (ONVO no lo permite)", async () => {
     setup({ subscriptions: [{ id: 9, user_id: U, provider: "onvo", provider_subscription_id: "sub_ok", status: "active", plan: "entreno", billing: "mes", cancel_at_period_end: false, current_period_end: iso(plusH(T0, 240)) }] });
-    await expect(tb.saveCard(viewer(U), { paymentMethodId: "pm_nuevo", plan: "entreno", billing: "mes" }, T0)).rejects.toThrow(/activo/);
+    await expect(tb.saveCard(viewer(U), { paymentMethodId: "pm_nuevo", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0)).rejects.toThrow(/activo/);
   });
   it("la tarjeta tiene que ser del mismo procesador que el plan", async () => {
     const f = setup();
@@ -229,7 +230,7 @@ describe("3. cambiar la tarjeta con la renovación rechazada (enlace del correo:
 });
 
 describe("4. vuelta de Tilopay al guardar la tarjeta", () => {
-  const s = () => ({ u: OTHER, p: "tarjeta" as const, plan: "entreno" as const, billing: "mes" as const, n: "y", t: Math.floor(Date.now() / 1000) });
+  const s = () => ({ u: OTHER, p: "tarjeta" as const, plan: "entreno" as const, billing: "mes" as const, n: "y", t: Math.floor(Date.now() / 1000), c: CONSENT_VERSION });
   it("Tilopay dijo que no (code distinto de 1): no se guarda nada aunque venga un token", async () => {
     const f = setup();
     const out = await tp.handleTilopayReturn(viewer(OTHER), s(), new URLSearchParams({ code: "0", crd: "tok_rechazado_1" }), T0);
@@ -302,10 +303,10 @@ describe("8. promoción una vez por tarjeta", () => {
     const f = setup({ profiles: [{ id: U, created_at: "2026-12-08T12:00:00.000Z", plan: "free" }, { id: OTHER, created_at: "2026-12-09T12:00:00.000Z", plan: "free" }] });
     const card = (customerId: string, id: string) => ({ id, customerId, status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
     onvo.getPaymentMethod.mockResolvedValueOnce(card("cus_u", "pm_a"));
-    await tb.saveCard(viewer(U), { paymentMethodId: "pm_a", plan: "entreno", billing: "mes" }, T0);
+    await tb.saveCard(viewer(U), { paymentMethodId: "pm_a", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0);
     expect(f.tables.trial_charges.find((t) => t.user_id === U)).toMatchObject({ promo: "primer_mes_50", amount_minor: 499 });
     onvo.getPaymentMethod.mockResolvedValueOnce(card("cus_o", "pm_b"));
-    await tb.saveCard(viewer(OTHER), { paymentMethodId: "pm_b", plan: "entreno", billing: "mes" }, T0);
+    await tb.saveCard(viewer(OTHER), { paymentMethodId: "pm_b", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0);
     expect(f.tables.trial_charges.find((t) => t.user_id === OTHER)).toMatchObject({ promo: null, amount_minor: 999 });
     expect(f.tables.card_fingerprints).toHaveLength(2);
   });

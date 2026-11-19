@@ -68,7 +68,7 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
 
     // Deja su tarjeta en la bienvenida con Entreno mensual: hoy no se cobra nada.
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_1", customerId: "cus_new", status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
-    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, signup);
+    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, signup);
     expect(saved.outcome).toBe("programado");
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
@@ -101,7 +101,7 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_1", customerId: "cus_new", status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
     onvo.detachPaymentMethod.mockResolvedValue(null);
-    await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, plus(CREATED, 0.01));
+    await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "mes", consent: { ipCountry: "CR" } }, plus(CREATED, 0.01));
     expect(f.tables.trial_charges[0]).toMatchObject({ amount_minor: 749 });
     const r = await tb.cancelTrial(viewer, false, plus(CREATED, 2));
     expect(r.accessUntil).toBe("2026-11-30T06:00:00.000Z");

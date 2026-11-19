@@ -4,7 +4,7 @@
 /** Tablas con columna user_id que se exportan completas (todas con RLS "propio": la sesión solo ve lo suyo). */
 export const EXPORT_BY_USER = [
   "goals", "weights", "measurements", "daily_logs", "meals", "workouts", "workout_sets", "coach_messages", "xp_events", "coach_usage",
-  "subscriptions", "billing_customers", "payment_events", "comp_grants", "trial_charges",
+  "subscriptions", "billing_customers", "payment_events", "comp_grants", "trial_charges", "billing_consents",
   "notification_prefs", "notification_log", "saved_foods", "user_recipes", "notifications", "progress_photos",
   "user_challenges", "challenge_checkins", "challenge_milestones", "challenge_purchases", "challenge_entitlements", "user_programs",
   "device_interest", "posts", "comments", "kudos", "referral_codes", "tester_grants", "feedback_reports", "support_tickets", "profile_flair", "identity_verifications",

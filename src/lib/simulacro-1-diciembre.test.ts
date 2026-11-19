@@ -4,6 +4,7 @@
 // día 8 por el cron y Subscribe por la API de Conversiones. Tilopay no manda webhook: el cobro se confirma con su respuesta
 // servidor a servidor (o con la consulta de la orden). La guía para probarlo en producción: docs/qa/simulacro-1-diciembre.md.
 import { readFileSync } from "node:fs";
+import { CONSENT_VERSION } from "@/lib/billing-consent";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -143,7 +144,7 @@ describe("1. ONVO (tarjeta de Costa Rica): de la bienvenida al Subscribe del dí
     const prep = await (await post({ action: "preparar" })).json();
     expect(prep).toMatchObject({ ok: true, customerId: "cus_cr", publicKey: "onvo_test_publishable" });
     onvo.getPaymentMethod.mockResolvedValue(goodCard("pm_cr", "cus_cr"));
-    const res = await post({ action: "guardar", paymentMethodId: "pm_cr", plan: "entreno", billing: "mes" });
+    const res = await post({ action: "guardar", paymentMethodId: "pm_cr", plan: "entreno", billing: "mes", consent: CONSENT_VERSION });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, outcome: "programado", card: { brand: "visa", last4: "4242" } });
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
@@ -184,7 +185,7 @@ describe("2. Tilopay (tarjeta extranjera): salida, vuelta sin sesión y cobro de
 
     // Salida: la app pide a Tilopay su página segura para guardar la tarjeta, con la vuelta firmada.
     tlp.createTokenizeUrl.mockResolvedValue("https://tilopay.test/tokenize/abc");
-    const out = await tilopayRoute.POST(new Request(`${ORIGIN}/api/pagos/tilopay`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGIN, host: "bananaburn.app" }, body: JSON.stringify({ purpose: "tarjeta", plan: "completo", billing: "mes" }) }));
+    const out = await tilopayRoute.POST(new Request(`${ORIGIN}/api/pagos/tilopay`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGIN, host: "bananaburn.app" }, body: JSON.stringify({ purpose: "tarjeta", plan: "completo", billing: "mes", consent: CONSENT_VERSION }) }));
     expect(await out.json()).toEqual({ ok: true, url: "https://tilopay.test/tokenize/abc" });
     const redirect = String((tlp.createTokenizeUrl.mock.calls as unknown as [{ redirect: string }][])[0][0].redirect);
     expect(redirect.startsWith(`${ORIGIN}/api/pagos/tilopay/vuelta?s=`)).toBe(true);
@@ -223,7 +224,7 @@ describe("2. Tilopay (tarjeta extranjera): salida, vuelta sin sesión y cobro de
   it("vuelta sin sesión con la tarjeta rechazada en Tilopay: no se guarda, queda el motivo y sigue sin prueba", async () => {
     const f = setup(CREATED, "CO");
     clock(plus(CREATED, 0.002));
-    const s = signState({ u: USER, p: "tarjeta", plan: "entreno", billing: "mes", n: "n1" });
+    const s = signState({ u: USER, p: "tarjeta", plan: "entreno", billing: "mes", n: "n1", c: CONSENT_VERSION });
     state.viewer = null;
     const back = await vueltaRoute.GET(new Request(`${ORIGIN}/api/pagos/tilopay/vuelta?s=${encodeURIComponent(s)}&code=0&crd=tok_rechazada_1&description=Denied`));
     expect(new URL(String(back.headers.get("location"))).searchParams.get("next")).toMatch(/^\/app\/suscripcion\?tilopay=rechazada/);
@@ -239,7 +240,7 @@ describe("2b. Vuelta sin sesión con un plan que ya paga", () => {
     clock(plus(CREATED, 10));
     f.tables.subscriptions.push({ id: "sub_tlp_1", user_id: USER, provider: "tilopay", provider_subscription_id: "tlp:sub_1", plan: "completo", billing: "mes", status: "active", cancel_at_period_end: false, current_period_start: plus(CREATED, 7).toISOString(), current_period_end: plus(CREATED, 37).toISOString() } as never);
     f.tables.payment_methods.push({ user_id: USER, provider: "tilopay", provider_payment_method_id: "tok_buena", status: "active", last4: "4242" } as never);
-    const s = signState({ u: USER, p: "tarjeta", plan: "completo", billing: "mes", n: "n2" });
+    const s = signState({ u: USER, p: "tarjeta", plan: "completo", billing: "mes", n: "n2", c: CONSENT_VERSION });
     state.viewer = null;
     const back = await vueltaRoute.GET(new Request(`${ORIGIN}/api/pagos/tilopay/vuelta?s=${encodeURIComponent(s)}&code=1&crd=tok_ajena&brand=visa&last4=9999`));
     expect(new URL(String(back.headers.get("location"))).searchParams.get("next")).toBe("/app/suscripcion");
@@ -257,7 +258,7 @@ describe("3. Tarjeta rechazada en la bienvenida", () => {
 
     // El banco no aprueba la tarjeta para pagos recurrentes: ONVO la devuelve inactiva.
     onvo.getPaymentMethod.mockResolvedValue({ ...goodCard("pm_mala", "cus_cr"), status: "inactive" });
-    const res = await post({ action: "guardar", paymentMethodId: "pm_mala", plan: "entreno", billing: "mes" });
+    const res = await post({ action: "guardar", paymentMethodId: "pm_mala", plan: "entreno", billing: "mes", consent: CONSENT_VERSION });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ ok: false, error: "Tu banco no aprobó la tarjeta para pagos recurrentes. Prueba con otra." });
     expect(failures(f)).toMatchObject([{ user_id: USER, provider: "onvo", payload: { stage: "tarjeta", code: "tarjeta_rechazada" } }]);
@@ -268,7 +269,7 @@ describe("3. Tarjeta rechazada en la bienvenida", () => {
 
     // Reintenta con otra tarjeta: ahora sí.
     onvo.getPaymentMethod.mockResolvedValue(goodCard("pm_buena", "cus_cr"));
-    const again = await post({ action: "guardar", paymentMethodId: "pm_buena", plan: "entreno", billing: "mes" });
+    const again = await post({ action: "guardar", paymentMethodId: "pm_buena", plan: "entreno", billing: "mes", consent: CONSENT_VERSION });
     expect(await again.json()).toMatchObject({ ok: true, outcome: "programado" });
     expect(access(f, new Date())).toMatchObject({ access: "trial", locked: false, cardStep: "none" });
   });
@@ -282,7 +283,7 @@ describe("4. Condominio después del corte", () => {
     onvo.createCustomer.mockResolvedValue({ id: "cus_condo" });
     await post({ action: "preparar" });
     onvo.getPaymentMethod.mockResolvedValue(goodCard("pm_condo", "cus_condo"));
-    const res = await post({ action: "guardar", paymentMethodId: "pm_condo", plan: "entreno", billing: "mes", condo: "las-palmas" });
+    const res = await post({ action: "guardar", paymentMethodId: "pm_condo", plan: "entreno", billing: "mes", condo: "las-palmas", consent: CONSENT_VERSION });
     expect(await res.json()).toMatchObject({ ok: true, outcome: "programado" });
     const freeEnd = plus(join.toISOString(), CONDO_FREE_DAYS).toISOString();
     expect(f.tables.trial_charges[0]).toMatchObject({ status: "scheduled", charge_at: freeEnd, next_attempt_at: freeEnd, promo: null, amount_minor: 999 });

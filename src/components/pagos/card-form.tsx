@@ -5,6 +5,7 @@ import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody,
 import type { PlanChoice } from "./plan-picker";
 import type { ChargeView } from "@/lib/trial";
 import { onvoFailCode, reportPayFail } from "./report-fail";
+import { CONSENT_VERSION } from "@/lib/billing-consent";
 
 const ONVO_PAYMENT_METHODS = "https://api.onvopay.com/v1/payment-methods";
 
@@ -45,9 +46,13 @@ function useProvider(skip: boolean) {
  * navegador. En modo demo se simula todo sin llamar a ONVO.
  * Tarjetas de fuera de Costa Rica (Tilopay, 0042): la persona guarda la tarjeta en la página segura de Tilopay y vuelve a
  * Mi plan. `beforeRedirect` deja guardado lo que haga falta antes de salir (la bienvenida guarda el plan).
+ * #329: `consent` es el texto del cobro recurrente (consentLine): va justo arriba del botón y, al tocarlo, se manda
+ * CONSENT_VERSION. Sin él el servidor no programa un cobro nuevo (solo cambia la tarjeta de un cobro que ya existe).
  */
-export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo, onStart }: {
+export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo, onStart, consent }: {
   choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean>; condo?: string;
+  /** Texto del consentimiento del cobro recurrente (#329), arriba del botón. */
+  consent?: string;
   /** Se llama al enviar el formulario, antes de ONVO o de salir a Tilopay (Mi plan cuenta ahí su checkout_view, #293). */
   onStart?: () => void;
 }) {
@@ -61,6 +66,8 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   // Condominio con tarjeta (0066): solo tarjetas verificadas con ONVO (el token de Tilopay no se puede verificar).
   const [pay, setProvider] = useProvider(demo || !!condo);
   const tilopay = pay.available && pay.provider === "tilopay";
+  const accepted = consent ? { consent: CONSENT_VERSION } : {};
+  const consentText = consent && <p data-consent={CONSENT_VERSION} className="text-sm text-ink text-pretty">{consent}</p>;
 
   async function goTilopay(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +76,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
     onStart?.();
     if (beforeRedirect && !(await beforeRedirect())) { setBusy(null); return; }
     try {
-      const r = await fetch("/api/pagos/tilopay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "tarjeta", plan: choice.plan, billing: choice.billing }) });
+      const r = await fetch("/api/pagos/tilopay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "tarjeta", plan: choice.plan, billing: choice.billing, ...accepted }) });
       const j = (await r.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
       if (j.ok && j.url) { window.location.assign(j.url); return; }
       setErr(j.error ?? "No pudimos abrir la página de pago. Intenta de nuevo.");
@@ -90,6 +97,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       <form onSubmit={goTilopay} noValidate className="space-y-3" aria-describedby={`${id}-sec`}>
         <p className="flex items-start gap-2 rounded-2xl bg-banana-soft p-3 text-sm text-ink text-pretty"><CreditCard weight="duotone" aria-hidden className="mt-0.5 size-5 shrink-0" /><span>Vas a guardar tu tarjeta en la página segura de Tilopay, nuestro procesador para tarjetas de otros países. Al terminar vuelves aquí.</span></p>
         {err && <p role="alert" className="flex gap-2 rounded-2xl border border-bad/20 bg-bad/5 p-3 text-sm font-semibold text-bad"><WarningCircle weight="duotone" className="size-5 shrink-0" />{err}</p>}
+        {consentText}
         <button type="submit" disabled={Boolean(busy)} aria-busy={Boolean(busy)} className="btn-banana h-14 w-full text-base">
           {busy ? <><CircleNotch weight="bold" className="size-5 animate-spin motion-reduce:animate-none" />Abriendo la página segura…</> : submitLabel}
         </button>
@@ -137,7 +145,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       return setErr("No pudimos conectar con el procesador de pagos. Revisa tu conexión e intenta de nuevo.");
     }
     setBusy("guardar");
-    const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing, ...(condo ? { condo } : {}) });
+    const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing, ...(condo ? { condo } : {}), ...accepted });
     setBusy(null);
     if (!saved.ok) return setErr(saved.error ?? "No pudimos guardar tu tarjeta. Intenta de nuevo.");
     setC({ holder: "", number: "", exp: "", cvv: "" });
@@ -175,6 +183,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
         </label>
       </div>
       {err && <p role="alert" className="flex gap-2 rounded-2xl border border-bad/20 bg-bad/5 p-3 text-sm font-semibold text-bad"><WarningCircle weight="duotone" className="size-5 shrink-0" />{err}</p>}
+      {consentText}
       <button type="submit" disabled={Boolean(busy)} aria-busy={Boolean(busy)} className="btn-banana h-14 w-full text-base">
         {busy ? <><CircleNotch weight="bold" className="size-5 animate-spin motion-reduce:animate-none" />{busy === "tarjeta" ? "Guardando tu tarjeta…" : "Confirmando…"}</> : submitLabel}
       </button>

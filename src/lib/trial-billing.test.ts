@@ -68,7 +68,7 @@ describe("guardar la tarjeta", () => {
   it("cuenta nueva: guarda marca y últimos 4 que dice ONVO y programa el cobro al final de SU prueba (alta + 7 días), sin cobrar hoy", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "anual" }, T0);
+    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "anual", consent: { ipCountry: "CR" } }, T0);
     expect(r.outcome).toBe("programado");
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(f.tables.payment_methods[0]).toMatchObject({ brand: "visa", last4: "4242", status: "active", provider_payment_method_id: "pm_1" });
@@ -80,7 +80,7 @@ describe("guardar la tarjeta", () => {
   it("0043: plan mensual con la tarjeta lista antes del primer cobro: 50 % del primer mes; cambiar a anual lo quita, volver a mensual lo devuelve", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, T0);
+    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes", consent: { ipCountry: "CR" } }, T0);
     expect(charge(f)).toMatchObject({ amount_minor: 749, promo: "primer_mes_50" });
     expect(r.charge).toMatchObject({ promo: true, amount: 7.49, fullAmount: 14.99 });
     expect((mail.sendTrialStarted.mock.calls as unknown[][])[0][0]).toMatchObject({ amount: 7.49, promo: true });
@@ -92,32 +92,32 @@ describe("guardar la tarjeta", () => {
   it("0043: quien ya pagó un plan antes no gana el 50 %", async () => {
     const f = setup({ subscriptions: [{ id: 3, user_id: NEW_USER, status: "canceled", plan: "entreno", current_period_start: "2026-09-01T00:00:00Z", current_period_end: "2026-10-01T00:00:00Z", cancel_at_period_end: false }] });
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, T0);
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0);
     expect(charge(f)).toMatchObject({ amount_minor: 999, promo: null });
   });
   it("rechaza una tarjeta de otro cliente de ONVO o que no está activa", async () => {
     setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_otro" }));
-    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, T0)).rejects.toThrow(/otra/);
+    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0)).rejects.toThrow(/otra/);
     onvo.getPaymentMethod.mockResolvedValue(pm({ status: "requires-verification" }));
-    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, T0)).rejects.toThrow(/banco/);
+    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0)).rejects.toThrow(/banco/);
   });
   it("no acepta IDs raros (el ID viene del navegador)", async () => {
     setup();
-    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1'; drop", plan: "entreno", billing: "mes" }, T0)).rejects.toThrow(/inválida/);
+    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1'; drop", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0)).rejects.toThrow(/inválida/);
     expect(onvo.getPaymentMethod).not.toHaveBeenCalled();
   });
   it("0045: cuenta de la beta antes del 1 de noviembre: se cobra el 8 de noviembre (00:00 Costa Rica), con el 50 %", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
-    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-10-25T12:00:00Z"));
+    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, new Date("2026-10-25T12:00:00Z"));
     expect(charge(f)).toMatchObject({ kind: "beta", charge_at: GRACE, trial_ends_at: GRACE, next_attempt_at: GRACE, promo: "primer_mes_50", amount_minor: 499 });
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
   });
   it("0045: cuenta de la beta que guarda la tarjeta entre el 1 y el 7 de noviembre: también se cobra el 8, nunca antes", async () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
-    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-11-03T12:00:00Z"));
+    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, new Date("2026-11-03T12:00:00Z"));
     expect(r.outcome).toBe("programado");
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(charge(f)).toMatchObject({ kind: "beta", charge_at: GRACE, promo: "primer_mes_50", amount_minor: 499 });
@@ -135,7 +135,7 @@ describe("guardar la tarjeta", () => {
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_1", status: "active" });
-    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date("2026-11-09T12:00:00Z"));
+    const r = await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, new Date("2026-11-09T12:00:00Z"));
     expect(r.outcome).toBe("enviado");
     expect(onvo.createChargedSubscription).toHaveBeenCalledOnce();
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ customerId: "cus_old", paymentMethodId: "pm_1", plan: "entreno", billing: "mes", trialKey: idemKeyFor(OLD_USER), attempt: 1 });
@@ -145,7 +145,7 @@ describe("guardar la tarjeta", () => {
   });
   it("con un plan pagado vigente no se programa nada", async () => {
     setup({ subscriptions: [{ id: 9, user_id: NEW_USER, status: "active", plan: "entreno", current_period_end: plus(T0, 20).toISOString(), cancel_at_period_end: false }] });
-    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, T0)).rejects.toThrow(/activo/);
+    await expect(tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, T0)).rejects.toThrow(/activo/);
   });
 });
 
@@ -239,7 +239,7 @@ describe("rechazo del día 7 y reintento del día 8", () => {
     const f = setup(); scheduled(f, { status: "retry_scheduled", attempts: 1, next_attempt_at: plus(T0, 8).toISOString() });
     onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_2" }));
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_8" });
-    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "completo", billing: "mes" }, plus(T0, 7.3));
+    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "completo", billing: "mes", consent: { ipCountry: "CR" } }, plus(T0, 7.3));
     expect(r.outcome).toBe("enviado");
     expect(onvo.detachPaymentMethod).toHaveBeenCalledWith("pm_1");
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ paymentMethodId: "pm_2", attempt: 2 });
@@ -441,7 +441,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
   it("cuenta nueva: el cobro nace programado para el 1 de enero, a precio normal y sin cobrar hoy; queda vinculada con acceso hasta esa fecha", async () => {
     const f = withCondo();
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, T0);
+    const r = await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus", consent: { ipCountry: "CR" } }, T0);
     expect(r.outcome).toBe("programado");
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
@@ -453,7 +453,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
   it("cuenta vieja cuya prueba ya terminó: tampoco se cobra hoy", async () => {
     const f = withCondo();
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
-    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes", condo: "soho-paradisus" }, T0);
+    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes", condo: "soho-paradisus", consent: { ipCountry: "CR" } }, T0);
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, promo: null, amount_minor: 1499 });
@@ -463,21 +463,21 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     const f = withCondo();
     const original = scheduled(f, { plan: "entreno", amount_minor: 499, promo: "primer_mes_50" } as Partial<TrialChargeRow>).charge_at;
     onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_2" }));
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, T0);
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "entreno", billing: "mes", condo: "soho-paradisus", consent: { ipCountry: "CR" } }, T0);
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, moved_from: original, promo: null, amount_minor: 999, reminder_sent_at: null });
     expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL, source: "condominio" });
   });
   it("un condominio sin tarjeta ignora el código: la tarjeta se guarda como siempre (con el 50 %)", async () => {
     const f = withCondo({ ...soho, card_required: false, free_until: null });
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, T0);
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus", consent: { ipCountry: "CR" } }, T0);
     expect(charge(f)).toMatchObject({ charge_at: "2026-11-16T12:00:00.000Z", promo: "primer_mes_50", amount_minor: 499 });
     expect(f.tables.comp_grants).toHaveLength(0);
   });
   it("después del 1 de enero el enlace ya no aplica", async () => {
     const f = withCondo();
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus" }, new Date("2027-01-02T12:00:00.000Z"));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", condo: "soho-paradisus", consent: { ipCountry: "CR" } }, new Date("2027-01-02T12:00:00.000Z"));
     expect(f.tables.comp_grants).toHaveLength(0);
   });
 
@@ -490,7 +490,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     expect(f.tables.trial_charges).toHaveLength(0);
     // Deja la tarjeta desde Mi plan (sin código): el condominio aplica igual.
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, plus(T0, 3));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "completo", billing: "mes", consent: { ipCountry: "CR" } }, plus(T0, 3));
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, promo: null, amount_minor: 1499 });
     expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
@@ -500,7 +500,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     const { joinCondo } = await import("./condos-server");
     await joinCondo(OLD_USER, "soho-paradisus", T0);
     onvo.getPaymentMethod.mockResolvedValue(pm({ customerId: "cus_old" }));
-    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, plus(T0, 12));
+    await tb.saveCard(viewer(OLD_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, plus(T0, 12));
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, amount_minor: 999 });
@@ -513,7 +513,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     const { joinCondo } = await import("./condos-server");
     await joinCondo(NEW_USER, "soho-paradisus", T0);
     onvo.getPaymentMethod.mockResolvedValue(pm());
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, plus(T0, 2));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, plus(T0, 2));
     expect(f.tables.comp_grants[0]).toMatchObject({ expires_at: UNTIL });
     // Cancela: pierde la extensión y vuelve a su prueba del condominio (7 días desde que se unió).
     const c = await tb.cancelTrial(viewer(NEW_USER), true, plus(T0, 3));
@@ -521,7 +521,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     expect(c.accessUntil).toBe(plus(T0, 7).toISOString());
     // Después de su prueba deja la tarjeta otra vez: ni cobro inmediato ni 50 %.
     onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_2" }));
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "entreno", billing: "mes" }, plus(T0, 12));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_2", plan: "entreno", billing: "mes", consent: { ipCountry: "CR" } }, plus(T0, 12));
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, next_attempt_at: UNTIL, promo: null, amount_minor: 999 });
@@ -533,7 +533,7 @@ describe("0066: condominio con tarjeta (Soho Paradisus): gratis hasta el 1 de en
     const { joinCondo } = await import("./condos-server");
     await joinCondo(NEW_USER, "soho-paradisus", plus(T0, 10));
     onvo.getPaymentMethod.mockResolvedValue(pm({ id: "pm_9" }));
-    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_9", plan: "completo", billing: "mes" }, plus(T0, 11));
+    await tb.saveCard(viewer(NEW_USER), { paymentMethodId: "pm_9", plan: "completo", billing: "mes", consent: { ipCountry: "CR" } }, plus(T0, 11));
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(charge(f)).toMatchObject({ status: "scheduled", charge_at: UNTIL, attempts: 2, promo: null, amount_minor: 1499 });

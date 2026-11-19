@@ -65,4 +65,13 @@ export const OFFER: Record<string, string> = {
   "Sin tarjeta": "No card needed",
   [`Prueba gratis de ${D} días con todo incluido, sin tarjeta. Opcional: quien deja su tarjeta lista antes de su primer cobro y nunca pagó un plan recibe ${P} % de descuento en su primer mes del plan mensual; ese día no se cobra nada, hay aviso 2 días antes del cobro y se cancela sin costo antes desde Mi plan.`]:
     `${D}-day free trial with everything included, no card needed. Optional: anyone who adds a card before their first charge and never paid for a plan gets ${P}% off the first month of the monthly plan. Nothing is charged that day, there's a reminder 2 days before, and you can cancel for free before then from My plan.`,
+  // Consentimiento del cobro recurrente, arriba del botón que guarda la tarjeta (#329, src/lib/billing-consent.ts)
+  "Al tocar «{button}» autorizas que el {day} se cobre {first} ({plan}) y luego {full} {every}, hasta que canceles en Mi plan. Hoy no se cobra nada.":
+    "By tapping “{button}” you authorize a charge of {first} ({plan}) on {day}, then {full} {every}, until you cancel in My plan. Nothing is charged today.",
+  "Al tocar «{button}» autorizas que al terminar tu prueba se cobre {first} ({plan}) y luego {full} {every}, hasta que canceles en Mi plan. Hoy no se cobra nada.":
+    "By tapping “{button}” you authorize a charge of {first} ({plan}) when your trial ends, then {full} {every}, until you cancel in My plan. Nothing is charged today.",
+  "Al tocar «{button}» autorizas que hoy se cobre {first} ({plan}) y luego {full} {every}, hasta que canceles en Mi plan.":
+    "By tapping “{button}” you authorize a charge of {first} ({plan}) today, then {full} {every}, until you cancel in My plan.",
+  "cada mes": "every month",
+  "cada año": "every year",
 };

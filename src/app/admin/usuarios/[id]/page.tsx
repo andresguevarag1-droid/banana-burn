@@ -213,6 +213,26 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                   </Table>
                 ) : <p className="text-sm text-muted">Sin suscripciones registradas.</p>}
                 {d.billing.subs.length > 0 && can(v.role, "payments.view") && a.full_name && <Link href={`/admin/pagos?q=${encodeURIComponent(a.full_name)}`} className={`inline-block text-sm ${link}`}>Ver en Pagos</Link>}
+                {d.billing.consents && (
+                  <div>
+                    <h3 className="text-sm font-bold text-ink mb-2">Consentimiento del cobro recurrente</h3>
+                    {d.billing.consents.length ? (
+                      <ul className="space-y-2">{d.billing.consents.map((k) => (
+                        <li key={k.id} className="rounded-xl border border-line px-3 py-2.5 text-sm">
+                          <p className="font-semibold text-ink">Aceptó el {fmtDateTime(k.accepted_at)}</p>
+                          <MetaList className="mt-0.5" items={[
+                            `${PLAN[k.plan] ?? k.plan} (${k.billing === "anual" ? "anual" : "mensual"})`,
+                            `Primer cobro ${money(k.first_amount_minor / 100)} el ${fmtDate(k.first_charge_at)}`,
+                            `Luego ${money(k.full_amount_minor / 100)} ${k.billing === "anual" ? "cada año" : "cada mes"}`,
+                            k.processor === "tilopay" ? "Tilopay" : "ONVO",
+                            k.ip_country && `Conexión desde ${COUNTRY[k.ip_country] ?? k.ip_country}`,
+                            `Texto ${k.text_version}`,
+                          ]} />
+                        </li>))}
+                      </ul>
+                    ) : <p className="text-sm text-muted">Sin consentimiento guardado.</p>}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-sm font-bold text-ink mb-2">Cortesías</h3>
                   {comps.length ? (

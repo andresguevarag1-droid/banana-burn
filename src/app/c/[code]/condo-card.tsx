@@ -7,6 +7,7 @@ import { CardForm } from "@/components/pagos/card-form";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { PLANS } from "@/lib/plans";
 import { money } from "@/lib/copy";
+import { consentLine } from "@/lib/billing-consent";
 
 export function CondoCard({ code, demo, freeDay, chargeDay }: { code: string; demo: boolean; freeDay: string; chargeDay: string }) {
   const [choice, setChoice] = useState<PlanChoice>({ plan: "entreno", billing: "mes" });
@@ -23,6 +24,7 @@ export function CondoCard({ code, demo, freeDay, chargeDay }: { code: string; de
         choice={choice}
         demo={demo}
         condo={code}
+        consent={consentLine({ button: `Seguir gratis hasta el ${freeDay}`, ...choice, promo: false, day: chargeDay })}
         submitLabel={`Seguir gratis hasta el ${freeDay}`}
         note={<>Hoy no se cobra nada. El {chargeDay} se cobra {money(price)} {period}, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.</>}
         onSaved={() => { window.location.assign(`/c/${code}`); }}

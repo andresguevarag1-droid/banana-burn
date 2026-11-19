@@ -8,6 +8,7 @@ import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { PLANS } from "@/lib/plans";
 import type { CardAskWhere } from "@/lib/card-ask";
 import { money } from "@/lib/copy";
+import { consentLine } from "@/lib/billing-consent";
 import { PROMO_TERMS, PROMO_TITLE, planLine, promoChargeLine, promoPrice, type CardStep, type ChargeView } from "@/lib/trial";
 
 type Card = { brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null; active: boolean } | null;
@@ -109,7 +110,8 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
       </div>
       <PlanPicker value={choice} onChange={setChoice} promo={offer} />
       {off ? <p className="rounded-2xl bg-banana-soft p-3 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.</p>
-        : <CardForm choice={choice} demo={demo} submitLabel={t.btn} note={t.note} onSaved={saved} onStart={start} />}
+        : <CardForm choice={choice} demo={demo} submitLabel={t.btn} note={t.note} onSaved={saved} onStart={start}
+            consent={consentLine({ button: t.btn, ...choice, promo: promoNow, day: chargeDay, today: step === "pay" })} />}
       {offer && <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>}
     </section>
   );
@@ -170,7 +172,7 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
         {trialLive && !keptCard && (payments || demo) && (
           <details className="rounded-2xl border border-line p-4">
             <summary className="tap flex min-h-11 cursor-pointer items-center font-bold text-ink">Cambié de opinión: volver a mi plan</summary>
-            <div className="mt-3"><CardForm choice={{ plan: charge.plan, billing: charge.billing }} demo={demo} submitLabel="Guardar tarjeta y seguir" note={<>No se cobra nada ahora. El {day(charge.chargeAt)} se cobra {planLine(charge.plan, charge.billing)} por {money(charge.amount)}, salvo que canceles antes.</>} onSaved={() => { setView("idle"); if (!demo) onChanged(); }} /></div>
+            <div className="mt-3"><CardForm choice={{ plan: charge.plan, billing: charge.billing }} demo={demo} submitLabel="Guardar tarjeta y seguir" consent={consentLine({ button: "Guardar tarjeta y seguir", plan: charge.plan, billing: charge.billing, promo: charge.promo, day: day(charge.chargeAt) })} note={<>No se cobra nada ahora. El {day(charge.chargeAt)} se cobra {planLine(charge.plan, charge.billing)} por {money(charge.amount)}, salvo que canceles antes.</>} onSaved={() => { setView("idle"); if (!demo) onChanged(); }} /></div>
           </details>
         )}
       </section>

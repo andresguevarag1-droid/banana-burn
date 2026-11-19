@@ -9,6 +9,7 @@ import { adminClient } from "@/lib/supabase/admin";
 import { normalizeCondoCode } from "@/lib/condos";
 import { dbRateLimit, dbRateLimitAll } from "@/lib/security/db-rate-limit";
 import { recordPaymentFailed } from "@/lib/pago-fallo-server";
+import { consentGiven, ipCountryOf } from "@/lib/billing-consent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,7 +18,9 @@ export const runtime = "nodejs";
  * Tarjeta guardada (0026). El número de la tarjeta NUNCA llega aquí: el navegador la crea directo en ONVO con la llave
  * publicable y solo nos manda el ID.
  *   { action: "preparar" }                                   -> { customerId, publicKey }
- *   { action: "guardar", paymentMethodId, plan, billing, condo? } -> { card, charge, outcome }  (plan y precio los valida el servidor)
+ *   { action: "guardar", paymentMethodId, plan, billing, condo?, consent? } -> { card, charge, outcome }  (plan y precio los valida el servidor)
+ *     consent: CONSENT_VERSION si la persona tocó el botón con el texto del cobro recurrente a la vista (#329). Sin él no se
+ *     programa un cobro nuevo.
  *   { action: "quitar" }                                     -> { ok }
  * Límite de intentos por persona en la base (rate_hit de 0023) y en memoria.
  */
@@ -25,7 +28,7 @@ export async function POST(req: Request) {
   if (!isSameOrigin(req)) return NextResponse.json({ ok: false, error: "Origen no permitido." }, { status: 403 });
   const v = await getViewer();
   if (!v) return NextResponse.json({ ok: false, error: "Inicia sesión para continuar." }, { status: 401 });
-  const body = (await req.json().catch(() => ({}))) as { action?: unknown; paymentMethodId?: unknown; plan?: unknown; billing?: unknown; condo?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { action?: unknown; paymentMethodId?: unknown; plan?: unknown; billing?: unknown; condo?: unknown; consent?: unknown };
   const action = body.action;
   if (action !== "preparar" && action !== "guardar" && action !== "quitar") return NextResponse.json({ ok: false, error: "Acción inválida." }, { status: 400 });
   // Modo demo: la pantalla simula la tarjeta sin llamar a ONVO.
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
     const pmId = body.paymentMethodId;
     // 0066: desde el enlace de un condominio con tarjeta (/c/<código>). El servidor decide si aplica.
     const condo = normalizeCondoCode(body.condo);
-    const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo }));
+    const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo, consent: consentGiven(body.consent) ? { ipCountry: ipCountryOf(req.headers) } : null }));
     // Tarjeta guardada pero el cobro de ese momento se rechazó (cuenta sin prueba): queda el motivo (#296).
     if (r.outcome === "rechazado") await recordPaymentFailed(db, { userId: v.id, provider: "onvo", stage: "tarjeta", code: "cobro_rechazado", plan: pb.plan, billing: pb.billing });
     return NextResponse.json({ ok: true, ...r });
