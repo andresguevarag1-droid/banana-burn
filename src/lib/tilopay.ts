@@ -300,7 +300,11 @@ export function readReturn(q: URLSearchParams): { code: string | null; order: st
 // ───────────────────────── Estado firmado de la vuelta ─────────────────────────
 
 export type ReturnPurpose = "tarjeta" | "pago";
-export type ReturnState = { u: string; p: ReturnPurpose; plan: PlanId; billing: Billing; n: string; t: number; o?: string };
+/**
+ * `c`: versión del consentimiento del cobro recurrente que aceptó al salir a Tilopay (#329); `fa`/`fu`: el primer cobro y el
+ * de cada periodo que decía ese texto, en centavos; `cc`: país de esa conexión.
+ */
+export type ReturnState = { u: string; p: ReturnPurpose; plan: PlanId; billing: Billing; n: string; t: number; o?: string; c?: string; fa?: number; fu?: number; cc?: string };
 
 /** Vigencia del estado: 2 horas para llenar la tarjeta en Tilopay y volver. */
 export const STATE_MAX_AGE_MS = 2 * 3600_000;

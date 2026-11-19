@@ -46,6 +46,7 @@ const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
   sin_tarjeta: { ok: false, text: "No recibimos tu tarjeta desde Tilopay. Intenta de nuevo." },
   vencido: { ok: false, text: "El enlace de pago venció. Vuelve a intentarlo." },
   ocupado: { ok: false, text: "Estamos procesando tu cobro. Revisa en unos minutos." },
+  monto: { ok: false, text: "Esa tarjeta ya usó el 50 % del primer mes, así que el primer cobro es al precio normal. No guardamos nada: revisa el monto arriba del botón y vuelve a intentarlo." },
   error: { ok: false, text: "No pudimos terminar con Tilopay. Intenta de nuevo en un momento." },
 };
 
@@ -130,7 +131,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         </section>
       )}
       {!(condoPending && !charge) && (cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
-        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null} where={askWhere(sp.desde) ?? "mi-plan"}
+        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null} where={askWhere(sp.desde) ?? "mi-plan"} promoLost={sp.tilopay === "monto"}
           initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />
       )}
 

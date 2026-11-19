@@ -53,6 +53,7 @@ const pruebaRoute = await import("@/app/api/pagos/prueba/route");
 const cancelarRoute = await import("@/app/api/pagos/cancelar/route");
 const { CardPanel } = await import("@/app/(app)/app/suscripcion/card-panel");
 const { SubscriptionManager } = await import("@/app/(app)/app/suscripcion/manager");
+const { acceptBody: acepta } = await import("@/lib/consent-fixture");
 
 const USER = "55555555-5555-4555-8555-555555555555";
 /** 23 de noviembre de 2026 a las 00:01 de Costa Rica: ya con tarjeta obligatoria. */
@@ -142,7 +143,7 @@ describe("1. ONVO: prueba con tarjeta, cancelar antes del día 8", () => {
     onvo.createCustomer.mockResolvedValue({ id: "cus_cr" });
     await tarjetaRoute.POST(post("/api/pagos/tarjeta", { action: "preparar" }));
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_cr", customerId: "cus_cr", status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
-    expect(await (await tarjetaRoute.POST(post("/api/pagos/tarjeta", { action: "guardar", paymentMethodId: "pm_cr", plan: "entreno", billing: "mes" }))).json()).toMatchObject({ ok: true, outcome: "programado" });
+    expect(await (await tarjetaRoute.POST(post("/api/pagos/tarjeta", { action: "guardar", paymentMethodId: "pm_cr", plan: "entreno", billing: "mes", consent: acepta("entreno", "mes") }))).json()).toMatchObject({ ok: true, outcome: "programado" });
     const trialEnd = plus(CREATED, 7).toISOString();
 
     // Día 3, Mi plan: el cobro programado y el botón visible.

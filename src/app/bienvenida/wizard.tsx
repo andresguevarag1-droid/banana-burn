@@ -24,6 +24,7 @@ import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoP
 import { money as money2 } from "@/lib/copy";
 import { voiceForLevel } from "@/lib/voice";
 import { cardOfferLabel } from "@/lib/card-ask";
+import { consentFor } from "@/lib/billing-consent";
 import { tr, type T } from "@/lib/i18n/t";
 import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "@/lib/i18n/locale";
 import { cmToFtIn, fmtNumber, fmtWeight, ftInToCm, kgToLb, lbToKg } from "@/lib/i18n/format";
@@ -487,7 +488,8 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
               <>
-                <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida" note={null} />
+                <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida" note={null}
+                  consent={(promo = true) => consentFor({ button: t("Empezar mis {n} días gratis", { n: TRIAL_DAYS }), ...choice, promo, day: chargeDay }, t)} />
                 {/* #323: cómo funciona el cobro en una línea y quién guarda la tarjeta, pegado al formulario. */}
                 <p className="text-sm font-semibold text-ink text-pretty">{trustCopy(locale).oneLine}</p>
                 <SecurePay trust={trustCopy(locale)} />
@@ -523,6 +525,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
               <CardForm choice={choice} demo={demo} submitLabel={cardOfferLabel(choice, t)} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida"
+                consent={(promo = true) => consentFor({ button: cardOfferLabel(choice, t), ...choice, promo, day: chargeDay }, t)}
                 note={chargeDay ? (promoApplies("primer_mes_50", choice.billing) ? <>{t(promoChargeLine("{day}"), { day: chargeDay })} {t("Monto: {price}; desde el segundo mes, {full} al mes.", { price: money2(promoPrice(choice.plan)), full: money2(PLANS.find((p) => p.id === choice.plan)!.price.mes) })}</> : <>{t("Hoy no te cobramos. El {day} se cobran {price} del plan anual, salvo que canceles antes desde Mi plan.", { day: chargeDay, price: money2(PLANS.find((p) => p.id === choice.plan)!.price[choice.billing]) })}</>) : null} />
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.")}</p>

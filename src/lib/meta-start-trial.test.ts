@@ -33,6 +33,7 @@ const { startTrialEvent, isTrialEventId, TRIAL_LTV_MONTHS } = await import("./me
 const { startTrialPayload, sendStartTrial } = await import("./meta-capi");
 const { trackStartTrial } = await import("@/components/analytics");
 const { tilopayReturnPath } = await import("./pago-fallo");
+const { accept: acepta } = await import("@/lib/consent-fixture");
 
 const USER = "33333333-3333-4333-8333-333333333333";
 const SIGNUP = new Date(Date.parse(CARD_REQUIRED_FROM) + 15 * 60_000);
@@ -83,18 +84,18 @@ describe("valor de StartTrial", () => {
 describe("StartTrial al guardar la tarjeta", () => {
   it("la tarjeta que empieza la prueba devuelve StartTrial; volver a guardarla no", async () => {
     const f = setup();
-    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, SIGNUP);
+    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: acepta("entreno", "mes") }, SIGNUP);
     const id = (f.tables.trial_charges[0] as { id: number }).id;
     expect(saved.outcome).toBe("programado");
     expect(saved.startTrial).toEqual({ eventId: `trial-${id}`, value: 4.99, predicted_ltv: 29.97 });
 
-    const again = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, new Date(SIGNUP.getTime() + 60_000));
+    const again = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: acepta("entreno", "mes") }, new Date(SIGNUP.getTime() + 60_000));
     expect(again.startTrial ?? null).toBeNull();
   });
 
   it("plan anual: el valor es el del año", async () => {
     setup();
-    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "anual" }, SIGNUP);
+    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "anual", consent: acepta("completo", "anual") }, SIGNUP);
     expect(saved.startTrial).toMatchObject({ value: 89.99, predicted_ltv: 89.99 });
   });
 

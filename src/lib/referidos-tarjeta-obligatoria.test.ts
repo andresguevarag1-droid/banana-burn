@@ -47,6 +47,7 @@ const tarjetaRoute = await import("@/app/api/pagos/tarjeta/route");
 const tilopayRoute = await import("@/app/api/pagos/tilopay/route");
 const vueltaRoute = await import("@/app/api/pagos/tilopay/vuelta/route");
 const webhookRoute = await import("@/app/api/pagos/webhook/route");
+const { acceptBody: acepta } = await import("@/lib/consent-fixture");
 
 const FRIEND = "33333333-3333-4333-8333-333333333333";
 /** Lunes 23 de noviembre de 2026, 00:01 de Costa Rica: ya con tarjeta obligatoria. */
@@ -89,7 +90,7 @@ async function arriveAndSaveOnvoCard(f: F, billing: "mes" | "anual" = "mes") {
   onvo.createCustomer.mockResolvedValue({ id: "cus_ref" });
   await post({ action: "preparar" });
   onvo.getPaymentMethod.mockResolvedValue(goodCard("pm_ref", "cus_ref"));
-  const saved = await post({ action: "guardar", paymentMethodId: "pm_ref", plan: "entreno", billing });
+  const saved = await post({ action: "guardar", paymentMethodId: "pm_ref", plan: "entreno", billing, consent: acepta("entreno", billing) });
   expect(await saved.json()).toMatchObject({ ok: true, outcome: "programado" });
   expect(f.tables.trial_charges[0]).toMatchObject({ kind: "prueba", status: "scheduled", charge_at: plus(CREATED, 7).toISOString() });
 }
@@ -166,7 +167,7 @@ describe("referido con tarjeta obligatoria (Tilopay, plan anual)", () => {
 
     clock(plus(CREATED, 0.002));
     tlp.createTokenizeUrl.mockResolvedValue("https://tilopay.test/tokenize/ref");
-    await tilopayRoute.POST(new Request(`${ORIGIN}/api/pagos/tilopay`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGIN, host: "bananaburn.app" }, body: JSON.stringify({ purpose: "tarjeta", plan: "entreno", billing: "anual" }) }));
+    await tilopayRoute.POST(new Request(`${ORIGIN}/api/pagos/tilopay`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGIN, host: "bananaburn.app" }, body: JSON.stringify({ purpose: "tarjeta", plan: "entreno", billing: "anual", consent: acepta("entreno", "anual") }) }));
     const redirect = String((tlp.createTokenizeUrl.mock.calls as unknown as [{ redirect: string }][])[0][0].redirect);
     await vueltaRoute.GET(new Request(`${redirect}&code=1&crd=tok_ref_anual&brand=visa&last4=1111`));
     expect(f.tables.trial_charges[0]).toMatchObject({ kind: "prueba", status: "scheduled", billing: "anual" });

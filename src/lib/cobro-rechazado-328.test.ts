@@ -32,6 +32,7 @@ vi.mock("@/lib/push", () => ({ sendPush: vi.fn(async () => 1) }));
 
 const { OnvoError } = await import("./onvo");
 const tb = await import("./trial-billing");
+const { accept: acepta } = await import("@/lib/consent-fixture");
 
 const USER = "33333333-3333-4333-8333-333333333333";
 // Cuenta del lunes 23 de noviembre: su cobro del día 8 corre el lunes 30 a las 00:20 de Costa Rica (06:20 UTC).
@@ -159,7 +160,7 @@ describe("cambiar la tarjeta desde el banner", () => {
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_2", customerId: "cus_1", status: "active", type: "card", card: { brand: "mastercard", last4: "5555", expMonth: 1, expYear: 2031 } });
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_nueva", status: "pending" });
     const now = new Date("2026-11-30T18:00:00.000Z");
-    const r = await tb.saveCard(viewer, { paymentMethodId: "pm_2", plan: "entreno", billing: "mes" }, now);
+    const r = await tb.saveCard(viewer, { paymentMethodId: "pm_2", plan: "entreno", billing: "mes", consent: acepta("entreno", "mes", false) }, now);
     expect(r.outcome).toBe("enviado");
     expect(onvo.createChargedSubscription).toHaveBeenCalledOnce();
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ paymentMethodId: "pm_2", attempt: 2 });
@@ -175,7 +176,7 @@ describe("cambiar la tarjeta desde el banner", () => {
     const f = setup(); scheduled(f, { status: "failed", attempts: 3, failure_notified_attempt: 3, last_attempt_at: CRON_3.toISOString(), next_attempt_at: null });
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_3", customerId: "cus_1", status: "active", type: "card", card: { brand: "visa", last4: "1111", expMonth: 1, expYear: 2031 } });
     onvo.createChargedSubscription.mockResolvedValue({ id: "sub_3", status: "pending" });
-    const r = await tb.saveCard(viewer, { paymentMethodId: "pm_3", plan: "entreno", billing: "mes" }, new Date("2026-12-04T15:00:00.000Z"));
+    const r = await tb.saveCard(viewer, { paymentMethodId: "pm_3", plan: "entreno", billing: "mes", consent: acepta("entreno", "mes", false) }, new Date("2026-12-04T15:00:00.000Z"));
     expect(r.outcome).toBe("enviado");
     expect(onvo.createChargedSubscription.mock.calls[0][0]).toMatchObject({ paymentMethodId: "pm_3", attempt: 4 });
   });

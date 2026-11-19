@@ -271,12 +271,15 @@ async function withSubs<T extends { id: string }>(sb: SB, rows: T[]): Promise<(T
 export type CompGrant = { id: number | string; plan: string; reason: string | null; starts_at: string; expires_at: string; revoked_at: string | null; granted_by_name?: string; source?: string | null; months?: number | null; message?: string | null };
 export type AuditRow = { id: number; actor: string | null; actor_name?: string; action: string; target: string | null; target_name?: string; meta: Record<string, unknown> | null; created_at: string };
 
+/** #329: aceptación del cobro recurrente (0074), para responder a un contracargo. Montos en centavos. */
+export type BillingConsent = { id: number; accepted_at: string; text_version: string; plan: string; billing: string; first_amount_minor: number; full_amount_minor: number; first_charge_at: string; processor: string; ip_country: string | null };
+
 export type UserDetail = {
   account: { id: string; full_name: string | null; email: string | null; role: Role; plan: string; onboarded: boolean; created_at: string; country: string | null; last_sign_in_at: string | null; last_active: string | null;
     username?: string | null; suspended_at?: string | null; suspended_reason?: string | null };
   health?: { goal_type: string | null; equipment: string | null; train_days: number | null; goal: { start_weight: number; goal_weight: number; goal_date: string; mode: string } | null; weights: { day: string; kg: number }[] };
   activity?: { workouts_total: number; workouts_30: number; active_days_30: number; recent: string[] };
-  billing?: { subs: (SubRow & { planLabel: string; monthly: number; period: number })[]; comps: CompGrant[] };
+  billing?: { subs: (SubRow & { planLabel: string; monthly: number; period: number })[]; comps: CompGrant[]; consents?: BillingConsent[] };
   audit?: AuditRow[];
 };
 
@@ -330,13 +333,15 @@ export async function getUserDetail(v: Viewer, id: string): Promise<UserDetail |
     d.activity = { workouts_total: tot.count ?? 0, workouts_30: w30.count ?? 0, active_days_30: rec.length, recent: rec };
   })());
   if (can(v.role, "users.billing")) jobs.push((async () => {
-    const [s, c] = await Promise.all([
+    const [s, c, k] = await Promise.all([
       sb.from("subscriptions").select("*").eq("user_id", id).order("created_at", { ascending: false }),
       sb.from("comp_grants").select("*").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+      sb.from("billing_consents").select("id,accepted_at,text_version,plan,billing,first_amount_minor,full_amount_minor,first_charge_at,processor,ip_country").eq("user_id", id).order("accepted_at", { ascending: false }).limit(20),
     ]);
     const comps = (c.error ? [] : (c.data ?? [])) as (CompGrant & { granted_by: string | null })[];
     const names = await profileNames(sb, comps.map((x) => x.granted_by!).filter(Boolean));
-    d.billing = { subs: ((s.data ?? []) as SubRow[]).map((x) => decorateSub(x, p.plan)), comps: comps.map((x) => ({ ...x, granted_by_name: x.granted_by ? names.get(x.granted_by) : undefined })) };
+    // Sin 0074 (k.error) la ficha no muestra la sección de consentimientos.
+    d.billing = { subs: ((s.data ?? []) as SubRow[]).map((x) => decorateSub(x, p.plan)), comps: comps.map((x) => ({ ...x, granted_by_name: x.granted_by ? names.get(x.granted_by) : undefined })), consents: k.error ? undefined : ((k.data ?? []) as BillingConsent[]) };
   })());
   if (can(v.role, "audit.view")) jobs.push((async () => {
     const { data } = await sb.from("audit_log").select("*").eq("target", id).order("created_at", { ascending: false }).limit(20);

@@ -1,6 +1,7 @@
 // #269 de punta a punta: una cuenta creada el 23 de noviembre de 2026 a las 00:00 de Costa Rica deja su tarjeta en el registro,
 // tiene 7 días gratis con todo incluido y el día 8 se cobra su primer mes con el 50 % (PaymentIntent de ONVO por $4.99).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { accept } from "./consent-fixture";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fakeDb } from "./fake-db";
 import { DAY_MS, type CardRow, type TrialChargeRow } from "./trial";
@@ -68,7 +69,7 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
 
     // Deja su tarjeta en la bienvenida con Entreno mensual: hoy no se cobra nada.
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_1", customerId: "cus_new", status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
-    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes" }, signup);
+    const saved = await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "entreno", billing: "mes", consent: accept("entreno", "mes") }, signup);
     expect(saved.outcome).toBe("programado");
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(onvo.createChargedSubscription).not.toHaveBeenCalled();
@@ -101,7 +102,7 @@ describe("tarjeta obligatoria: registro, 7 días gratis y cobro del día 8 con e
     const f = setup();
     onvo.getPaymentMethod.mockResolvedValue({ id: "pm_1", customerId: "cus_new", status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
     onvo.detachPaymentMethod.mockResolvedValue(null);
-    await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "mes" }, plus(CREATED, 0.01));
+    await tb.saveCard(viewer, { paymentMethodId: "pm_1", plan: "completo", billing: "mes", consent: accept("completo", "mes") }, plus(CREATED, 0.01));
     expect(f.tables.trial_charges[0]).toMatchObject({ amount_minor: 749 });
     const r = await tb.cancelTrial(viewer, false, plus(CREATED, 2));
     expect(r.accessUntil).toBe("2026-11-30T06:00:00.000Z");

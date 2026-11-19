@@ -45,7 +45,7 @@ import {
 } from "@/lib/onvo";
 import {
   REVIEW_AFTER_MS, REVIEW_PREFIX, STALE_CHARGING_MS, UNKNOWN_GIVE_UP_MS, afterDecline, attemptKeyFor, declinePush, declineStep, inGrace, canCancel, canChangePlan, chargeBusy, chargeMoved, chargeView,
-  MAX_ATTEMPTS, amountMinorFor, firstChargeMinor, idemKeyFor, inReview, isDue, onCardSaved, promoApplies, promoFor, reminderDue, reminderLine, scheduleFor, type CardRow, type CardSavedPlan, type ChargeView, type TrialChargeRow,
+  MAX_ATTEMPTS, amountMinorFor, firstChargeMinor, idemKeyFor, inReview, isDue, onCardSaved, promoApplies, promoFor, reminderDue, reminderLine, scheduleFor, type CardRow, type CardSavedPlan, type ChargeView, type Promo, type TrialChargeRow,
 } from "@/lib/trial";
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
 import { pushToUser } from "@/lib/push";
@@ -54,6 +54,8 @@ import { errInfo } from "@/lib/security/log";
 import { FIRST_CHARGE_PERIOD, chargeKeyHeld, releaseChargeKey, reserveChargeKey } from "@/lib/charge-keys";
 import { readOnly } from "@/lib/supabase/read-only";
 import { readAll, type PlannedCharge } from "@/lib/cobros-simulacro";
+import { CONSENT_VERSION } from "@/lib/billing-consent";
+import { usd2 } from "@/lib/num";
 
 export const CHARGE_COLS = "id,user_id,idem_key,kind,plan,billing,amount_minor,promo,trial_started_at,trial_ends_at,charge_at,next_attempt_at,status,attempts,last_attempt_at,provider_subscription_id,last_error,reminder_sent_at,failure_notified_attempt,canceled_at,created_at,updated_at";
 const CARD_COLS = "user_id,provider,provider_customer_id,provider_payment_method_id,brand,last4,exp_month,exp_year,status";
@@ -191,7 +193,7 @@ const PM_ID = /^[A-Za-z0-9_-]{1,100}$/;
  * Guarda la tarjeta que el navegador creó en ONVO y programa (o reanuda, o cobra) el primer cobro.
  * `plan`/`billing` los valida el servidor; el monto sale de plans.ts (sin descuentos por nivel: esos son solo de programas Premium).
  */
-export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan: PlanId; billing: Billing; condo?: string | null }, now = new Date()): Promise<SaveCardResult> {
+export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan: PlanId; billing: Billing; condo?: string | null; consent?: Consent }, now = new Date()): Promise<SaveCardResult> {
   const db = admin();
   if (!PM_ID.test(input.paymentMethodId)) throw new BillingError("Tarjeta inválida.", 400);
   if (!priceIdFor(input.plan, input.billing)) throw new BillingError("Este plan aún no está disponible para pago.", 503);
@@ -219,7 +221,7 @@ export async function saveCard(v: Viewer, input: { paymentMethodId: string; plan
   const fpRaw = typeof raw.fingerprint === "string" ? raw.fingerprint : typeof raw.card?.fingerprint === "string" ? raw.card.fingerprint : null;
   const verified: VerifiedCard = { provider: "onvo", ...c, customerId, providerFingerprint: fpRaw };
   if (ctx.mode === "replace") return replaceCard(db, v, verified, ctx.subs, now);
-  return saveVerifiedCard(db, v, verified, { plan: input.plan, billing: input.billing, condo: input.condo ?? null }, ctx.row, ctx.plan, now);
+  return saveVerifiedCard(db, v, verified, { plan: input.plan, billing: input.billing, condo: input.condo ?? null, consent: input.consent ?? null }, ctx.row, ctx.plan, now);
 }
 
 /**
@@ -359,12 +361,55 @@ export async function replaceCard(db: SupabaseClient, v: Viewer, c: VerifiedCard
 }
 
 /**
+ * #329: la persona tocó el botón con el texto del cobro recurrente a la vista. `firstMinor`/`fullMinor`: los montos que
+ * decía ese texto (el primer cobro y el de cada periodo). null: no lo aceptó (o pantalla vieja).
+ */
+export type Consent = { ipCountry: string | null; firstMinor: number; fullMinor: number } | null;
+export const CONSENT_MISSING = "Para empezar, acepta el cobro recurrente que se muestra arriba del botón.";
+export const consentChanged = (firstMinor: number) => `Tu primer cobro es de ${usd2(firstMinor / 100)}, no el monto que se mostraba. Revisa el texto de arriba del botón y vuelve a tocarlo.`;
+
+/** #329: lo que se va a cobrar no es lo que la persona vio. 409 con lo correcto, para que la pantalla lo muestre y pida otra vez. */
+export class ConsentMismatch extends BillingError {
+  constructor(public terms: { promo: boolean; firstMinor: number; fullMinor: number }) { super(consentChanged(terms.firstMinor), 409); }
+}
+
+/** #329: ¿este cobro empieza un plan que se renueva? (programado o cobrado ya). Reanudar, seguir o cambiar la tarjeta no. */
+export const startsRecurring = (plan: CardSavedPlan) => plan.do === "create" || plan.do === "charge_now";
+
+/** #329: exige el consentimiento y que sus montos sean los que se van a cobrar; si no, nada se guarda. */
+export function checkConsent(consent: Consent | undefined, plan: PlanId, billing: Billing, promo: Promo): asserts consent is NonNullable<Consent> {
+  if (!consent) throw new BillingError(CONSENT_MISSING, 400);
+  const firstMinor = firstChargeMinor(plan, billing, promo), fullMinor = amountMinorFor(plan, billing);
+  if (consent.firstMinor !== firstMinor || consent.fullMinor !== fullMinor) throw new ConsentMismatch({ promo: promo !== null, firstMinor, fullMinor });
+}
+
+/** #329: el 50 % del primer cobro de una cuenta que empieza un plan, sin mirar la tarjeta (Tilopay antes de su página). */
+export async function promoBeforeCard(db: SupabaseClient, userId: string, plan: CardSavedPlan, row: TrialChargeRow | null): Promise<Promo> {
+  return plan.do === "create" ? promoFor(plan.kind, await paidBefore(db, userId)) : (row?.promo ?? null);
+}
+
+/** #329: guarda la aceptación del cobro recurrente (0074). Sin esta fila no se programa el cobro. */
+async function recordConsent(db: SupabaseClient, userId: string, r: { plan: PlanId; billing: Billing; firstMinor: number; fullMinor: number; firstChargeAt: string; processor: PayProvider; ipCountry: string | null }, now: Date) {
+  const { error } = await db.from("billing_consents").insert({
+    user_id: userId, accepted_at: now.toISOString(), text_version: CONSENT_VERSION, plan: r.plan, billing: r.billing,
+    first_amount_minor: r.firstMinor, full_amount_minor: r.fullMinor, first_charge_at: r.firstChargeAt, processor: r.processor, ip_country: r.ipCountry,
+  });
+  if (error) {
+    log("no se pudo guardar el consentimiento: no se programa el cobro", { userId, code: (error as { code?: string }).code ?? null });
+    throw new BillingError("No pudimos guardar tu autorización del cobro. Intenta de nuevo en un momento.", 503);
+  }
+}
+
+/**
  * Guarda una tarjeta ya verificada por el servidor (ONVO: leída con la llave secreta; Tilopay: token devuelto a nuestra
  * vuelta firmada) y programa, reanuda o cobra el primer cobro con las reglas de trial.ts.
+ * #329: empezar un plan que se renueva (programarlo o cobrarlo ya) exige el consentimiento (`input.consent`) con los montos
+ * que se van a cobrar, y deja su fila en billing_consents antes.
  */
-export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: VerifiedCard, input: { plan: PlanId; billing: Billing; condo?: string | null }, rowIn: TrialChargeRow | null, plan: ReturnType<typeof onCardSaved>, now = new Date()): Promise<SaveCardResult> {
+export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: VerifiedCard, input: { plan: PlanId; billing: Billing; condo?: string | null; consent?: Consent }, rowIn: TrialChargeRow | null, plan: ReturnType<typeof onCardSaved>, now = new Date()): Promise<SaveCardResult> {
+  const recurring = startsRecurring(plan);
+  if (recurring && !input.consent) throw new BillingError(CONSENT_MISSING, 400);
   let row = rowIn;
-  const card = await storeCard(db, v, c, now);
   // 0066: residente de un condominio con tarjeta: el primer cobro va al final del acceso gratis y a precio normal, en
   // cualquier caso (cuenta nueva, cobro programado, cancelado, rechazado o anulado). Nunca con Tilopay: su token viene del
   // navegador sin verificar, y aquí daría acceso gratis hasta el fin sin una tarjeta real (auditoría del 4 nov).
@@ -373,9 +418,13 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
   // 0045: una vez por tarjeta, no por cuenta (la misma tarjeta en otra cuenta que ya la ganó o ya pagó no la vuelve a ganar).
   const fp = cardFingerprint(c);
   const promo = condoHold ? null : plan.do === "create" ? promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp))) : (row?.promo ?? null);
+  // #329: antes de guardar nada, el monto que la persona vio tiene que ser el que se va a cobrar.
+  if (recurring) checkConsent(input.consent, input.plan, input.billing, promo);
+  const card = await storeCard(db, v, c, now);
   await recordCardFingerprint(db, v.id, fp, c.provider, promo !== null);
   const amount = firstChargeMinor(input.plan, input.billing, promo);
   const planFields = { plan: input.plan, billing: input.billing, amount_minor: amount };
+  const consentAt = (firstChargeAt: string) => recordConsent(db, v.id, { ...input, firstMinor: amount, fullMinor: amountMinorFor(input.plan, input.billing), firstChargeAt, processor: c.provider, ipCountry: input.consent?.ipCountry ?? null }, now);
 
   if (plan.do === "create") {
     // La prueba empieza con el alta (0043): guardar la tarjeta no la alarga.
@@ -383,6 +432,7 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
     const s = scheduleFor(plan.kind, now, undefined, undefined, (prof?.created_at as string | undefined) ?? null);
     // Condominio con tarjeta: nace programado para el fin del acceso gratis (nunca se cobra ya, aunque la prueba terminara).
     const held = condoHold && Date.parse(condoHold.until) > Date.parse(s.chargeAt) ? { charge_at: condoHold.until, next_attempt_at: condoHold.until, moved_from: s.chargeAt } : { charge_at: s.chargeAt, next_attempt_at: s.chargeAt };
+    await consentAt(held.charge_at);
     const ins = await db.from("trial_charges").insert({
       user_id: v.id, idem_key: idemKeyFor(v.id), kind: plan.kind, ...planFields, promo,
       trial_started_at: s.trialStartedAt, trial_ends_at: s.trialEndsAt, ...held, status: "scheduled", attempts: 0,
@@ -439,6 +489,7 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
   // vuelve a programarse para el fin del acceso gratis, a precio normal, y el acceso del condominio llega hasta esa fecha.
   if (condoHold && (plan.do === "resume" || plan.do === "charge_now" || plan.do === "card_only") && row.attempts < MAX_ATTEMPTS && ["canceled", "failed", "retry_scheduled", "superseded"].includes(row.status)
     && Date.parse(row.trial_ends_at) < Date.parse(condoHold.until)) {
+    if (plan.do === "charge_now") await consentAt(condoHold.until);
     const { data: held } = await db.from("trial_charges").update({
       ...planFields, promo: null, amount_minor: amountMinorFor(input.plan, input.billing),
       status: "scheduled", charge_at: condoHold.until, next_attempt_at: condoHold.until, moved_from: row.moved_from ?? row.charge_at,
@@ -462,6 +513,7 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
   if (plan.do === "charge_now") {
     // Tarjeta nueva después de un rechazo, o volver después de cancelar: se cobra ya, con el plan elegido ahora.
     const from = row.status;
+    await consentAt(now.toISOString());
     const { data: ready } = await db.from("trial_charges")
       .update({ ...planFields, status: from === "retry_scheduled" ? "retry_scheduled" : "scheduled", next_attempt_at: now.toISOString(), canceled_at: null, updated_at: now.toISOString() })
       .eq("id", row.id).eq("status", from).select(CHARGE_COLS);
