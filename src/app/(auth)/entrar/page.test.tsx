@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const state = vi.hoisted(() => ({ ua: "", viewer: null as null | { email: string; onboarded: boolean }, blocked: false, cookies: {} as Record<string, string> }));
@@ -9,6 +9,8 @@ vi.mock("@/lib/platform-server", () => ({ requestPlatform: async () => "web" }))
 vi.mock("@/components/analytics", () => ({ FunnelTracker: ({ view, props }: { view: string; props: object }) => <output data-view={view}>{JSON.stringify(props)}</output> }));
 vi.mock("./login-form", () => ({ LoginForm: ({ openIn, signupChecks }: { openIn: string | null; signupChecks?: string[] }) => <><input aria-label="openIn" value={openIn ?? "normal"} readOnly /><ul>{(signupChecks ?? []).map((c) => <li key={c}>{c}</li>)}</ul></> }));
 const { default: Entrar } = await import("./page");
+const { CARD_REQUIRED_FROM } = await import("@/lib/card-required");
+const { trustCopy } = await import("@/lib/card-trust");
 const render = async (modo?: string) => renderToStaticMarkup(await Entrar({ searchParams: Promise.resolve({ modo }) }));
 
 describe("signup_view y detección del servidor (#235)", () => {
@@ -54,5 +56,25 @@ describe("registro desde la página de un condominio", () => {
   it("sin condominio sigue la oferta normal", async () => {
     const html = await render("registro");
     expect(html).not.toContain("Beneficio de tu condominio");
+  });
+});
+
+describe("registro con la tarjeta obligatoria (#323)", () => {
+  const at = (iso: string, ms = 0) => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(Date.parse(iso) + ms); };
+  beforeEach(() => { state.ua = ""; state.viewer = null; state.blocked = false; state.cookies = {}; });
+  afterEach(() => { vi.useRealTimers(); });
+  it("desde la fecha, junto al registro: el cobro en una línea y el pago seguro", async () => {
+    at(CARD_REQUIRED_FROM);
+    const html = await render("registro");
+    expect(html).toContain(trustCopy().oneLine);
+    expect(html).toContain(trustCopy().secure);
+    expect(await render()).not.toContain(trustCopy().secure);
+  });
+  it("antes de la fecha, o desde un condominio, no", async () => {
+    at(CARD_REQUIRED_FROM, -60_000);
+    expect(await render("registro")).not.toContain(trustCopy().secure);
+    at(CARD_REQUIRED_FROM);
+    state.cookies = { bb_condo: "soho-paradisus" };
+    expect(await render("registro")).not.toContain(trustCopy().secure);
   });
 });

@@ -25,7 +25,7 @@ export const cardRequiredNow = (now = new Date(), from = CARD_REQUIRED_FROM) => 
  * Páginas públicas en caché (ISR, 1 h) con textos que cambian ese día. El cron de cobros de las 00:20 de Costa Rica las
  * regenera el día del cambio (cardSwitchDay), para que nadie vea "sin tarjeta" una hora más.
  */
-export const CARD_COPY_PATHS = ["/", ...HERO_VARIANT_KEYS.map(variantPath), "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt"] as const;
+export const CARD_COPY_PATHS = ["/", ...HERO_VARIANT_KEYS.map(variantPath), "/precios", "/glp1", "/running", "/temporadas", "/terminos", "/llms.txt", "/en", "/en/pricing"] as const;
 
 /** ¿Es el primer día de la tarjeta obligatoria? (las 24 h desde CARD_REQUIRED_FROM). */
 export const cardSwitchDay = (now = new Date(), from = CARD_REQUIRED_FROM) => now.getTime() >= Date.parse(from) && now.getTime() < Date.parse(from) + 864e5;

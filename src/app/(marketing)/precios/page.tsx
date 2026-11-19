@@ -12,6 +12,8 @@ import { Phone } from "@/components/phone";
 import { REMINDER_DAYS_BEFORE } from "@/lib/trial";
 import { StickyCta } from "../sticky-cta";
 import type { Metadata } from "next";
+import { cardTrust } from "@/lib/card-trust";
+import { SecurePay, TrialTimeline, UnderCta } from "@/components/card-trust";
 
 // Pública e igual para todos: ISR (la CDN la sirve y se regenera cada hora; nada depende de la persona).
 export const revalidate = 3600;
@@ -41,6 +43,8 @@ export default function Precios() {
     ["¿Puedo cambiar de plan?", "Sí, desde Mi plan. Si ya tienes una suscripción, el nuevo plan empieza cuando se confirma su pago y reemplaza al actual, sin prorrateo. Si cambias desde un anual, el tiempo restante no se reembolsa ni se descuenta; puedes cancelar la renovación y esperar a que termine tu año."],
     ...faq().filter(([q]) => q === "¿Cómo pago?"),
   ] as const;
+  // #323: desde CARD_REQUIRED_FROM, la línea de tiempo de la prueba va arriba de los planes y reemplaza "Cómo funciona el cobro".
+  const trust = cardTrust();
   const steps = o.cardRequired ? [
     [`Prueba ${TRIAL_DAYS} días`, "Crea tu cuenta y deja tu tarjeta: hoy no se cobra nada. Prueba el entreno, la nutrición y Banana Shield antes de elegir qué necesitas."],
     ["Te avisamos antes del cobro", `Te avisamos ${REMINDER_DAYS_BEFORE} días antes del cobro. El día ${TRIAL_DAYS + 1} se cobra tu plan, con tu primer mes mensual a mitad de precio.`],
@@ -60,11 +64,13 @@ export default function Precios() {
             <h1 className="mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-ink text-balance sm:text-5xl">Gana fuerza con un plan que te guía cada día</h1>
             <p className="mt-4 max-w-xl text-body text-pretty">Tu rutina, tus cargas y tu progreso en un solo lugar. Prueba todo y decide si también quieres sumar nutrición.</p>
             <div data-sticky-anchor className="mt-5"><Start location="hero" card={o.cardRequired} /></div>
-            <p className="mt-1 text-sm text-ink">Cancelas cuando quieras desde Mi plan.</p>
+            {trust ? <><UnderCta trust={trust} className="mt-1" /><SecurePay trust={trust} className="mt-4 max-w-xl" /></> : <p className="mt-1 text-sm text-ink">Cancelas cuando quieras desde Mi plan.</p>}
           </div>
           <Image src="/brand/mascota-sola.webp" alt="Coach Banana, tu guía de entrenamiento" width={240} height={300} sizes="240px" className="hidden h-[300px] w-[240px] object-contain md:block" />
         </div>
       </section>
+
+      {trust && <TrialTimeline trust={trust} className="mx-auto max-w-6xl px-4 pt-12 sm:px-6" />}
 
       <section id="planes" aria-labelledby="planes-title" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <h2 id="planes-title" className="text-3xl font-extrabold tracking-tight text-ink">Elige lo que quieres seguir usando</h2>
@@ -73,12 +79,12 @@ export default function Precios() {
         <Pricing trialGuarantee={o.guarantee} trialLabel={CTA} />
       </section>
 
-      <section aria-labelledby="cobro-title" className="bg-cream py-12">
+      {!trust && <section aria-labelledby="cobro-title" className="bg-cream py-12">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 id="cobro-title" className="text-3xl font-extrabold tracking-tight text-ink">Cómo funciona el cobro</h2>
           <ol className="mt-6 grid gap-4 md:grid-cols-3">{steps.map(([title, detail], i) => <li key={title} className="card p-5"><span className="grid size-11 place-items-center rounded-2xl bg-banana font-extrabold tabular-nums text-ink">{i + 1}</span><h3 className="mt-4 text-lg font-extrabold text-ink">{title}</h3><p className="mt-2 text-body text-pretty">{detail}</p></li>)}</ol>
         </div>
-      </section>
+      </section>}
 
       <section aria-labelledby="para-ti" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <h2 id="para-ti" className="text-3xl font-extrabold tracking-tight text-ink">¿Qué plan va contigo?</h2>
@@ -95,6 +101,7 @@ export default function Precios() {
           <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-ink text-balance">Tu próximo entreno empieza con una decisión sencilla</h2>
           <p className="mt-3 text-body">{o.cardRequired ? <>Prueba {TRIAL_DAYS} días con todo incluido. Hoy no se cobra nada.</> : <>Prueba {TRIAL_DAYS} días con todo incluido, sin tarjeta. Después eliges tu plan.</>}</p>
           <div className="mt-5"><Start location="final" card={o.cardRequired} /></div>
+          {trust && <><UnderCta trust={trust} className="mt-2" /><SecurePay trust={trust} className="mt-4 max-w-xl" /></>}
         </div>
       </section>
       {o.cardRequired ? <StickyCta note="Hoy no se cobra nada"><Link href={SIGNUP} data-cta="precios-sticky" className="btn-primary min-h-12 px-4 text-sm">{CTA}</Link></StickyCta>

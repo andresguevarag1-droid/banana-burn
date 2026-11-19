@@ -4,6 +4,7 @@ import { PLANS } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { fmtMoney } from "@/lib/i18n/format";
 import { offerFor } from "@/lib/i18n/offer";
+import { cardTrust, withTrustFaq } from "@/lib/card-trust";
 
 const ENTRENO = PLANS.find((p) => p.id === "entreno")!;
 
@@ -19,9 +20,10 @@ export const NAV_EN = [
   ["/en#faq", "FAQ"],
 ] as const;
 
-export const homeFaqEn = (): [string, string][] => {
-  const o = offerFor("en-US");
-  return [
+/** #323: desde CARD_REQUIRED_FROM van primero las preguntas del cobro (card-trust.ts), sin repetir las que tocan lo mismo. */
+export const homeFaqEn = (now = new Date()): (readonly [string, string])[] => {
+  const o = offerFor("en-US", now);
+  return withTrustFaq([
     ["Do I need to know how to work out?", "No. Every exercise comes with an animated demo and simple cues from Coach Banana. Your first workout is short and teaches you the basic moves at your own pace."],
     ["How does the free trial work?", o.faqTrial("Training + Nutrition")],
     ["Can I train at home?", "Yes. Your plan uses what you have: a full gym, a pair of dumbbells or bands, or just your body."],
@@ -29,5 +31,5 @@ export const homeFaqEn = (): [string, string][] => {
     ["Can I use pounds and feet?", "Yes. You choose lb and ft/in or kg and cm when you set up your plan, and you can change it later in your profile."],
     ["How do I cancel?", o.faqCancel],
     ["How do I pay?", "With a credit or debit card. Prices are in US dollars (USD). Card details go straight to our payment processor and never touch our servers."],
-  ];
+  ], cardTrust("en-US", now), ["Do I need to know how to work out?", "Can I train at home?", "How do I cancel?"]);
 };

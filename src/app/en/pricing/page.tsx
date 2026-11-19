@@ -6,6 +6,8 @@ import { PLANS, annualSavingPct } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { REMINDER_DAYS_BEFORE } from "@/lib/trial";
 import { offerFor } from "@/lib/i18n/offer";
+import { cardTrust } from "@/lib/card-trust";
+import { SecurePay, TrialTimeline, UnderCta } from "@/components/card-trust";
 import { Faq } from "../../(marketing)/parts";
 import { StickyCta } from "../../(marketing)/sticky-cta";
 import { faqJsonLd, ldScript, ogImage } from "../../(marketing)/seo";
@@ -32,7 +34,9 @@ export function generateMetadata(): Metadata {
 
 export default function EnglishPricing() {
   const o = offerFor("en-US");
-  const faq = homeFaqEn().filter(([q]) => q !== "Can I train at home?" && q !== "Do I need to know how to work out?");
+  // #323: desde CARD_REQUIRED_FROM, la línea de tiempo de la prueba va arriba de los planes y reemplaza "How billing works".
+  const trust = cardTrust("en-US");
+  const faq = trust ? homeFaqEn() : homeFaqEn().filter(([q]) => q !== "Can I train at home?" && q !== "Do I need to know how to work out?");
   const steps: [string, string][] = o.cardRequired ? [
     [`Try it for ${TRIAL_DAYS} days`, "Create your account and add your card. Nothing is charged today. Try workouts, nutrition and Banana Shield before you decide what you need."],
     ["We remind you before any charge", `We remind you ${REMINDER_DAYS_BEFORE} days before the charge. On day ${TRIAL_DAYS + 1} your plan is charged, with your first monthly payment at half price.`],
@@ -51,9 +55,11 @@ export default function EnglishPricing() {
           <h1 className="mt-3 max-w-2xl text-4xl font-extrabold tracking-tight text-ink text-balance sm:text-5xl">Get stronger with a plan that guides you every day</h1>
           <p className="mt-4 max-w-xl text-body text-pretty">Your workouts, your weights and your progress in one place. Try everything, then decide if you want to add nutrition.</p>
           <div data-sticky-anchor className="mt-5"><Link href={SIGNUP_EN} data-cta="precios-hero" className="btn-primary min-h-12 w-full sm:w-auto">{CTA_EN}<ArrowRight aria-hidden className="size-5" /></Link></div>
-          <p className="mt-2 text-sm text-ink">Cancel anytime from My plan.</p>
+          {trust ? <><UnderCta trust={trust} className="mt-2" /><SecurePay trust={trust} className="mt-4 max-w-xl" /></> : <p className="mt-2 text-sm text-ink">Cancel anytime from My plan.</p>}
         </div>
       </section>
+
+      {trust && <TrialTimeline trust={trust} id="your-trial" className="mx-auto max-w-6xl px-4 pt-12 sm:px-6" />}
 
       <section id="plans" aria-labelledby="plans-title" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <h2 id="plans-title" className="text-3xl font-extrabold tracking-tight text-ink">Pick what you want to keep</h2>
@@ -61,12 +67,12 @@ export default function EnglishPricing() {
         <Pricing trialGuarantee={o.guarantee} trialLabel={CTA_EN} />
       </section>
 
-      <section aria-labelledby="billing-title" className="bg-cream py-12">
+      {!trust && <section aria-labelledby="billing-title" className="bg-cream py-12">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 id="billing-title" className="text-3xl font-extrabold tracking-tight text-ink">How billing works</h2>
           <ol className="mt-6 grid gap-4 md:grid-cols-3">{steps.map(([title, detail], i) => <li key={title} className="card p-5"><span className="grid size-11 place-items-center rounded-2xl bg-banana font-extrabold tabular-nums text-ink">{i + 1}</span><h3 className="mt-4 text-lg font-extrabold text-ink">{title}</h3><p className="mt-2 text-body text-pretty">{detail}</p></li>)}</ol>
         </div>
-      </section>
+      </section>}
 
       <div className="pb-12"><Faq id="faq" items={faq} title="Frequently asked questions" more="Anything else? Email us at" /></div>
       <section data-sticky-hide className="bg-banana">
@@ -74,6 +80,7 @@ export default function EnglishPricing() {
           <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-ink text-balance">Your next workout starts with one simple decision</h2>
           <p className="mt-3 text-body">{o.note}</p>
           <div className="mt-5"><Link href={SIGNUP_EN} data-cta="precios-final" className="btn-primary min-h-12 w-full sm:w-auto">{CTA_EN}<ArrowRight aria-hidden className="size-5" /></Link></div>
+          {trust && <><UnderCta trust={trust} className="mt-2" /><SecurePay trust={trust} className="mt-4 max-w-xl" /></>}
         </div>
       </section>
       <StickyCta note={o.note}><Link href={SIGNUP_EN} data-cta="precios-sticky" className="btn-primary min-h-12 px-4 text-sm">Try it free</Link></StickyCta>
