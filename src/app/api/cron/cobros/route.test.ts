@@ -45,6 +45,16 @@ describe("cron de cobros: aviso si falla", () => {
     await GET(req());
     expect(sendCobrosResumen).toHaveBeenCalledTimes(2);
   });
+  it.each(["primerMes", "renovaciones"])("avisa si el barrido de %s termina con error", async (part) => {
+    run.result = {
+      cobros: { attempted: 0, sent: 0, errors: 0 },
+      primerMes: { due: 0, errors: 0 },
+      renovaciones: { due: 0, errors: 0 },
+      [part]: { due: 1, errors: 1 },
+    };
+    await GET(req());
+    expect(cronFailed).toHaveBeenCalled();
+  });
   it("el simulacro (dryRun) nunca avisa ni manda el resumen", async () => {
     run.result = { cobros: null, primerMes: null, renovaciones: null };
     await GET(req("?dryRun=1"));
