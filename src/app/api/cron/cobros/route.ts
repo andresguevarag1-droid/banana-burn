@@ -43,7 +43,16 @@ export async function GET(req: Request) {
   const ok = cobros !== null;
   await beat("cron:cobros", ok, Date.now() - t0, { intentados: cobros?.attempted ?? 0, enviados: cobros?.sent ?? 0, errores: cobros?.errors ?? 0 }).catch(() => {});
   if (!ok) await cronFailed("cobros", { renovaciones: renovaciones !== null, primerMes: primerMes !== null });
-  else if (cobros.errors > 0) await cronFailed("cobros", { errores: cobros.errors, intentados: cobros.attempted });
+  else {
+    // Un error en cualquiera de los tres barridos avisa, aunque los cobros de prueba hayan salido bien.
+    const introErr = primerMes?.errors ?? 0, renewErr = renovaciones?.errors ?? 0;
+    if (cobros.errors + introErr + renewErr > 0) {
+      await cronFailed("cobros", {
+        errores: cobros.errors, intentados: cobros.attempted,
+        ...(introErr > 0 ? { erroresPrimerMes: introErr } : {}), ...(renewErr > 0 ? { erroresRenovaciones: renewErr } : {}),
+      });
+    }
+  }
   await sendCobrosResumen().catch(() => {});
   await checkErrorRate().catch(() => {});
   return NextResponse.json({ ok, cobros, primerMes, renovaciones }, { status: ok ? 200 : 500 });
