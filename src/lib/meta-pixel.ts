@@ -76,3 +76,27 @@ export function newEventId(): string {
   const r = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return r.replace(/[^a-z0-9-]/gi, "").slice(0, 40);
 }
+
+/** StartTrial (#331): la tarjeta quedó guardada y empezó la prueba. Lo arma el servidor; el píxel y la API de Conversiones mandan lo mismo. */
+export type StartTrial = { eventId: string; value: number; predicted_ltv: number };
+
+/** Meses que se espera que pague quien empieza la prueba con plan mensual: predicted_ltv = precio mensual × 3. */
+export const TRIAL_LTV_MONTHS = 3;
+
+/**
+ * StartTrial de un cobro programado (fila de trial_charges): `value` es el primer cobro (con el 50 % si aplica, por
+ * ejemplo 4.99) y `predicted_ltv` un valor fijo: mensual × 3, o el precio del plan anual. event_id `trial-<id>`, uno por
+ * prueba (solo hay una por persona), sin datos de la persona.
+ */
+export function startTrialEvent(c: { id: number | string; plan: PlanId; billing: Billing; amountMinor: number }): StartTrial | null {
+  const p = PLANS.find((x) => x.id === c.plan);
+  if (!p || !(c.amountMinor > 0)) return null;
+  const ltv = c.billing === "anual" ? p.price.anual : p.price.mes * TRIAL_LTV_MONTHS;
+  return { eventId: `trial-${String(c.id).replace(/[^a-z0-9-]/gi, "")}`.slice(0, 40), value: c.amountMinor / 100, predicted_ltv: Math.round(ltv * 100) / 100 };
+}
+
+/** Parámetros de StartTrial para Meta (píxel y servidor). */
+export const startTrialParams = (t: StartTrial) => ({ value: t.value, currency: "USD", predicted_ltv: t.predicted_ltv });
+
+/** event_id válido de StartTrial (para leerlo de la URL a la vuelta de Tilopay). */
+export const isTrialEventId = (v: unknown): v is string => typeof v === "string" && /^trial-[a-z0-9-]{1,34}$/i.test(v);

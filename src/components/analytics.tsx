@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import type { FunnelEvent, FunnelProps } from "@/app/api/track/event";
-import { newEventId, toMetaEvent } from "@/lib/meta-pixel";
+import { newEventId, startTrialParams, toMetaEvent, type StartTrial } from "@/lib/meta-pixel";
 import { fbq } from "@/components/meta-pixel";
 
 /**
@@ -31,6 +31,24 @@ export function trackOnce(name: FunnelEvent, props: FunnelProps = {}) {
   const k = `bb_once_${name}`;
   try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, "1"); } catch { /* sin almacenamiento: queda el freno del servidor */ }
   track(name, props);
+}
+
+/**
+ * StartTrial del píxel (#331): la tarjeta quedó guardada y empezó la prueba. Lo arma el servidor (startTrialEvent), que ya lo
+ * mandó por la API de Conversiones con el mismo event_id, así que aquí no va beacon. Pasa por la cola de fbq si el píxel
+ * todavía no cargó, y una sola vez por prueba en este navegador (recargar Mi plan no lo repite).
+ */
+export function trackStartTrial(st: StartTrial | null | undefined) {
+  if (!st?.eventId) return;
+  const k = `bb_st_${st.eventId}`;
+  try { if (localStorage.getItem(k)) return; localStorage.setItem(k, "1"); } catch { /* sin almacenamiento: Meta deduplica por event_id */ }
+  fbq("track", "StartTrial", startTrialParams(st), { eventID: st.eventId });
+}
+
+/** Manda trackStartTrial al mostrarse (Mi plan, a la vuelta de Tilopay con ?inicio=). */
+export function StartTrialPixel(st: StartTrial) {
+  useEffect(() => { trackStartTrial(st); }, [st.eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
 }
 
 /**

@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { errCode, logError } from "@/lib/log";
 import { getViewer } from "@/lib/supabase/server";
-import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
+import { clientIp, isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
 import { prepareCard, removeCard, saveCard } from "@/lib/trial-billing";
@@ -9,6 +9,9 @@ import { adminClient } from "@/lib/supabase/admin";
 import { normalizeCondoCode } from "@/lib/condos";
 import { dbRateLimit, dbRateLimitAll } from "@/lib/security/db-rate-limit";
 import { recordPaymentFailed } from "@/lib/pago-fallo-server";
+import { sendStartTrial } from "@/lib/meta-capi";
+import { SITE_URL } from "@/lib/env";
+import { nativeAgentFrom } from "@/lib/platform-ua";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -58,6 +61,16 @@ export async function POST(req: Request) {
     const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo }));
     // Tarjeta guardada pero el cobro de ese momento se rechazó (cuenta sin prueba): queda el motivo (#296).
     if (r.outcome === "rechazado") await recordPaymentFailed(db, { userId: v.id, provider: "onvo", stage: "tarjeta", code: "cobro_rechazado", plan: pb.plan, billing: pb.billing });
+    // #331: la tarjeta empezó la prueba: StartTrial a Meta desde el servidor, con el mismo event_id que manda el píxel.
+    // Desde la app nativa no va nada a Meta (igual que /api/track).
+    const ua = req.headers.get("user-agent") ?? "";
+    if (r.startTrial && !nativeAgentFrom(ua)) {
+      const ip = clientIp(req);
+      const st = r.startTrial;
+      const send = () => sendStartTrial(st, { ip: ip === "local" ? "" : ip, ua, cookies: req.headers.get("cookie"), origin: SITE_URL, path: refererPath(req) });
+      // after() fuera de un request (pruebas que llaman a POST directo) lanza: el evento a Meta nunca puede tumbar el guardado.
+      try { after(send); } catch { void Promise.resolve().then(send).catch(() => null); }
+    }
     return NextResponse.json({ ok: true, ...r });
   } catch (e) {
     // Cada tarjeta que no se pudo guardar deja su motivo (#296); 409 es "ya hay un cobro en curso", no un fallo.
@@ -69,4 +82,9 @@ export async function POST(req: Request) {
     logError("pagos", "tarjeta_failed", { kind: errCode(e), action });
     return NextResponse.json({ ok: false, error: "No pudimos guardar tu tarjeta. Intenta de nuevo en un momento." }, { status: 502 });
   }
+}
+
+/** Pantalla donde se guardó la tarjeta (bienvenida, Mi plan…), sin parámetros, para event_source_url. */
+function refererPath(req: Request): string {
+  try { return new URL(req.headers.get("referer") ?? "/", SITE_URL).pathname.slice(0, 120); } catch { return "/"; }
 }
