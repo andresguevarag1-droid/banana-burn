@@ -16,7 +16,7 @@ Desde el 23 de noviembre (0073) toda cuenta nueva deja su tarjeta para empezar l
 4. **Cancela antes del día 8:** no hay cobro y no cuenta. Sale **Sin pagar**. Si después paga un plan dentro de los 60 días, cuenta ese pago.
 5. **Al tercer amigo que pagó** se entrega 1 mes gratis una sola vez; si uno de los 3 pagó el plan anual, 3 meses.
 
-En `/app/referidos` quien invita ve de cada amigo solo su nombre de pila, la fecha en que se unió y su estado: En prueba, Pagó, Pagó anual, Sin pagar, No pagó a tiempo, En revisión o No cuenta. Nada más del amigo (ni apellido, ni correo, ni plan, ni montos). Lo arma `my_referrals()` (0074).
+En `/app/referidos` quien invita ve de cada amigo solo su nombre de pila (o solo su inicial si el nombre es un correo o parece un usuario, como ana.rojas o ana92), la fecha en que se unió y su estado: En prueba, Pagó, Pagó anual, Sin pagar, No pagó a tiempo, En revisión o No cuenta. Nada más del amigo (ni apellido, ni correo, ni plan, ni montos). Lo arma `my_referrals()` (0074).
 
 Pruebas: `src/lib/referidos-tarjeta-obligatoria.test.ts` (rutas de la app con ONVO y Tilopay simulados, como el simulacro de #313) y `src/lib/referidos-tarjeta-obligatoria-sql.test.ts` (la base en PGlite: atribución, en prueba, cancelación, premio al tercero una sola vez y 3 meses con anual).
 

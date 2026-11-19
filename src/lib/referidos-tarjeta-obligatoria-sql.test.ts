@@ -94,4 +94,16 @@ describe("referidos con tarjeta obligatoria (0064 + 0074)", () => {
     expect(await rewards()).toHaveLength(2);
     expect((await mine()).find((r) => r.first_name === "Diego")).toMatchObject({ status: "registrado", in_trial: false });
   });
+
+  it("si el nombre es un correo o un usuario (ana.rojas, ana_r, ana92) no sale el nombre, solo la inicial", async () => {
+    for (const name of ["ana.rojas@gmail.com", "ana.rojas", "ana_rojas Mora", "ana92", "  ana.rojas  @gmail.com"]) {
+      await db.query("update public.profiles set full_name = $1 where id = $2", [name, uid(7)]);
+      const list = await mine();
+      expect(list.filter((r) => r.first_name === null)).toEqual([expect.objectContaining({ initial: "A", first_name: null })]);
+      expect(JSON.stringify(list)).not.toMatch(/rojas|gmail|92/i);
+    }
+    await db.query("update public.profiles set full_name = $1 where id = $2", ["Ana  Rojas", uid(7)]);
+    expect((await mine()).filter((r) => r.first_name === "Ana")).toHaveLength(2);
+    await db.query("update public.profiles set full_name = $1 where id = $2", [NAMES[7], uid(7)]);
+  });
 });
