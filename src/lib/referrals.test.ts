@@ -216,9 +216,10 @@ describe("revocación por fraude", () => {
 
 describe("lo que ve quien invita", () => {
   it("estados en español", () => {
-    expect(referralLabel({ status: "calificado", annual: false, expired: false }).label).toBe("Cuenta");
-    expect(referralLabel({ status: "calificado", annual: true, expired: false }).label).toBe("Compró anual");
-    expect(referralLabel({ status: "registrado", annual: false, expired: false }).label).toBe("Registrado");
+    expect(referralLabel({ status: "calificado", annual: false, expired: false }).label).toBe("Pagó");
+    expect(referralLabel({ status: "calificado", annual: true, expired: false }).label).toBe("Pagó anual");
+    expect(referralLabel({ status: "registrado", annual: false, expired: false, in_trial: true }).label).toBe("En prueba");
+    expect(referralLabel({ status: "registrado", annual: false, expired: false }).label).toBe("Sin pagar");
     expect(referralLabel({ status: "registrado", annual: false, expired: true }).label).toBe("No pagó a tiempo");
     expect(referralLabel({ status: "sospechoso", annual: false, expired: false }).label).toBe("En revisión");
     expect(referralLabel({ status: "descartado", annual: false, expired: false }).label).toBe("No cuenta");

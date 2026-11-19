@@ -152,7 +152,8 @@ export type Account = {
 
 const PROCESSORS = Object.keys(FEES) as Processor[];
 const isProcessor = (p: string): p is Processor => (PROCESSORS as string[]).includes(p);
-const listPrice = (plan: string | null, billing: string | null) => {
+/** Precio de lista en centavos (con IVA) de un plan y periodo, o null si no se conoce. */
+export const listPrice = (plan: string | null, billing: string | null) => {
   const p = PLANS.find((x) => x.id === plan);
   return p && (billing === "mes" || billing === "anual") ? Math.round(p.price[billing] * 100) : null;
 };

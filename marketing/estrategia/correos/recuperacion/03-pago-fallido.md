@@ -60,7 +60,7 @@ Dejar de recibir estos correos: {{baja_url}}
 
 ## Relación con lo que la app ya envía
 
-**Se cruza con `pagoFallido`** (src/lib/email/templates.ts, con `paused: true`). trial-billing.ts (notifyDecline) lo manda por correo, push y en la app en cada intento rechazado: el 8 de noviembre ("Lo volveremos a intentar una vez el 9 de noviembre") y el 9 si el reintento también falla ("No haremos más intentos automáticos"). R3 no repite ese aviso: sale 48 horas después del último intento, solo si sigue sin pagar, y suma por qué pasa, cómo pedirle al banco que lo apruebe y qué pasa si no quiere seguir.
+**Se cruza con los avisos de cada rechazo** (src/lib/email/templates.ts). Desde #328, trial-billing.ts (notifyDecline) manda por correo, push y en la app un aviso por intento rechazado: `pagoFallido` el día del cobro (sin pausa, con reintento al día siguiente), `pagoFallidoOtraVez` ("Tu tarjeta no pasó otra vez", con los motivos y "llama a tu banco") el día +1 y `planEnPausa` ("Tu plan quedó en pausa") el día +3, cuando ya no hay más intentos automáticos. R3 no repite ese aviso: sale 48 horas después del último intento, solo si sigue sin pagar, y suma por qué pasa, cómo pedirle al banco que lo apruebe y qué pasa si no quiere seguir.
 
 - No se manda R3 después del primer rechazo (status retry_scheduled): ese día ya hay `pagoFallido` y el reintento del día siguiente.
 - La renovación fallida de una suscripción ya pagada (src/lib/tilopay-billing.ts) también usa `pagoFallido`; R3 no aplica ahí, solo al primer cobro de la prueba o de la beta.

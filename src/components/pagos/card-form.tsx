@@ -5,7 +5,8 @@ import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody,
 import type { PlanChoice } from "./plan-picker";
 import type { ChargeView } from "@/lib/trial";
 import { onvoFailCode, reportPayFail } from "./report-fail";
-import { track } from "@/components/analytics";
+import { track, trackStartTrial } from "@/components/analytics";
+import type { StartTrial } from "@/lib/meta-pixel";
 import { failKind, type FailKind } from "@/lib/pago-fallo";
 import type { CardAskWhere } from "@/app/api/track/event";
 
@@ -18,7 +19,7 @@ export const plainError = (r: { error?: string; status: number }, fallback: stri
 
 export type CardSaved = { demo?: boolean; card?: { brand: string | null; last4: string | null }; charge?: ChargeView | null; outcome?: string };
 
-type Post = { ok?: boolean; error?: string; demo?: boolean; customerId?: string; publicKey?: string; card?: CardSaved["card"]; charge?: ChargeView | null; outcome?: string };
+type Post = { ok?: boolean; error?: string; demo?: boolean; customerId?: string; publicKey?: string; card?: CardSaved["card"]; charge?: ChargeView | null; outcome?: string; startTrial?: StartTrial | null };
 
 async function post(body: Record<string, unknown>): Promise<Post & { status: number }> {
   try {
@@ -180,6 +181,8 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       return setErr(plainError(saved, "No pudimos guardar tu tarjeta. Intenta de nuevo."));
     }
     setC({ holder: "", number: "", exp: "", cvv: "" });
+    // #331: si esta tarjeta empezó la prueba, StartTrial al píxel con el event_id que el servidor ya mandó a Meta.
+    trackStartTrial(saved.startTrial);
     onSaved({ card: saved.card, charge: saved.charge ?? null, outcome: saved.outcome });
   }
 

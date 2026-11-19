@@ -27,13 +27,15 @@ import { getNotificationPrefs } from "@/app/actions/notifications";
 import { DEFAULT_PREFS } from "@/lib/notify";
 import { dayList, registrationDay, suggestDays, weekCount, weekMonday, weeklyGoal } from "@/lib/meta-semanal";
 import { getLocale } from "@/lib/i18n/server";
+import { FunnelTracker } from "@/components/analytics";
+import { isComebackKind } from "@/lib/regreso-kinds";
 
 export const metadata = { title: "Entreno" };
 
 const isEngine = (id: string): id is ExerciseId => Object.hasOwn(EX, id);
 
-export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string; primera?: string; casa?: string }> }) {
-  const { dia, modo, expres, repetir, cambiar, por, sesion, primera, casa } = await searchParams;
+export default async function Entreno({ searchParams }: { searchParams: Promise<{ dia?: string; modo?: string; expres?: string; repetir?: string; cambiar?: string; por?: string; sesion?: string; primera?: string; casa?: string; e?: string }> }) {
+  const { dia, modo, expres, repetir, cambiar, por, sesion, primera, casa, e } = await searchParams;
   const v = (await getViewer())!;
   prefetchDaily(v); // el registro del día se lee en paralelo con el atleta (getDaily lo reutiliza)
   // Primer entreno corto: se decide aquí con los entrenos guardados (no con un dato del cliente). El exprés y ?dia= no cambian.
@@ -164,6 +166,8 @@ export default async function Entreno({ searchParams }: { searchParams: Promise<
   }
   // El coach se presenta en el cierre del primer entreno (#198), solo en los primeros días desde el registro.
   const coachPrompt = firstSession && inCoachPromptWindow({ registeredAt: a.createdAt, now: new Date(), demo: v.demo }) ? { home: eq === "casa" || eq === "ninguno" } : null;
-  return <Player week={week} firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
-    doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} />;
+  // Entró por el botón de un correo de regreso (#320, ?e=regreso_rN): se cuenta el clic con el kind, sin datos personales.
+  const emailClick = isComebackKind(e) ? <FunnelTracker view="email_click" props={{ kind: e }} /> : null;
+  return <>{emailClick}<Player week={week} firstSession={firstSession} firstOffer={firstOffer} firstSetAsk={!!firstOffer && !pend && isOnvoConfigured()} condoNudge={condoNudge} askTestimonial={askTestimonial} coachPrompt={coachPrompt} variant={homeFirst ? "casa-primero" : undefined} nutritionUpsell={nutritionUpsell} voice={voice} hook={plan.hook} intro={intro} mins={plan.mins ?? null} template={template} title={title} icon={plan.icon} cardio={plan.cardio} options={options} dateKey={d.today.iso} mode={modo === "suave" || modo === "fuerte" ? modo : "normal"}
+    doneToday={doneToday} repeat={repetir === "1"} preswap={preswap} ballast={!(plan.program && prog && !prog.meta.adapt)} coach={coach && coach.id !== "banana" ? { name: coach.name, avatar: coach.avatar } : null} gam={{ xp: g.xp, streak: g.streak.days, todayDone: g.streak.todayDone, sex: a.sex }} /></>;
 }

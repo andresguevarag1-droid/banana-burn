@@ -184,8 +184,8 @@ describe("eventos del paso de la tarjeta (sin datos personales)", () => {
     expect(cleanEvent({ name: "card_tilopay_hint", props: { where: "bienvenida" } })).toEqual({ name: "card_tilopay_hint", props: { where: "bienvenida" } });
   });
   it("email_click solo con un correo conocido", () => {
-    expect(cleanEvent({ name: "email_click", props: { e: "tarjeta_rescate_2", path: "/bienvenida" } })).toEqual({ name: "email_click", props: { e: "tarjeta_rescate_2", path: "/bienvenida" } });
-    expect(cleanEvent({ name: "email_click", props: { e: "a@b.co" } })).toBeNull();
+    expect(cleanEvent({ name: "email_click", props: { kind: "tarjeta_rescate_2", path: "/bienvenida" } })).toEqual({ name: "email_click", props: { kind: "tarjeta_rescate_2", path: "/bienvenida" } });
+    expect(cleanEvent({ name: "email_click", props: { kind: "a@b.co" } })).toBeNull();
   });
   it("/admin/embudo: la fila Bienvenida muestra vieron, empezaron, error y guardaron", () => {
     const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;

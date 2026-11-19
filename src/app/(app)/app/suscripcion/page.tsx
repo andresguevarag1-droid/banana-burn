@@ -10,7 +10,8 @@ import { isOnvoConfigured } from "@/lib/onvo";
 import { PLANS, usd } from "@/lib/plans";
 import { INTENT_COOKIE, decodeIntent, parseIntent } from "@/lib/checkout-intent";
 import { SubscriptionManager } from "./manager";
-import { FunnelTracker } from "@/components/analytics";
+import { FunnelTracker, StartTrialPixel } from "@/components/analytics";
+import { isTrialEventId, startTrialEvent } from "@/lib/meta-pixel";
 import { CardPanel } from "./card-panel";
 import { PastDueCard } from "./past-due-card";
 import { betaDates } from "@/components/beta-notice";
@@ -50,7 +51,7 @@ const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
 
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };
 
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string; motivo?: string; para?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string; motivo?: string; para?: string; inicio?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
   const [real, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
@@ -66,6 +67,10 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   const payments = isOnvoConfigured() && !v.demo;
   const tlp = sp.tilopay && Object.hasOwn(TILOPAY_NOTICE, sp.tilopay) ? TILOPAY_NOTICE[sp.tilopay] : null;
   const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent(jar.get(INTENT_COOKIE)?.value);
+  // #331: la tarjeta de Tilopay empezó la prueba (?inicio=<event_id>): StartTrial del píxel con el mismo event_id que mandó el servidor.
+  const trialStart = sp.tilopay === "tarjeta_ok" && isTrialEventId(sp.inicio) && charge?.phase === "programado" && charge.kind !== "inmediato"
+    ? startTrialEvent({ id: sp.inicio.slice("trial-".length), plan: charge.plan, billing: charge.billing, amountMinor: Math.round(charge.amount * 100) })
+    : null;
 
   // Historial: pagos confirmados por webhook (datos reales de ONVO guardados en payment_events).
   let history: Payment[] = [];
@@ -115,6 +120,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
       {ent.locked && cardStep !== "trial" && charge?.phase !== "procesando" && charge?.phase !== "reintento" && charge?.phase !== "fallido" && <p className="rounded-2xl bg-ember/10 p-4 text-sm text-ink"><b>Tu prueba gratis terminó{ent.trialEndsAt ? ` el ${fmtDay(ent.trialEndsAt)}` : ""}.</b> Tus datos siguen guardados. Elige un plan para volver a entrenar con Banana Burn.</p>}
 
       <TrialCardNotice ent={ent} tz={v.tz} screen="suscripcion" />
+      {trialStart && <StartTrialPixel {...trialStart} />}
       {tlp && <TilopayNotice notice={tlp} motivo={sp.motivo} para={sp.para} plan={sp.plan} pago={sp.pago} demo={v.demo} />}
       {condoPending && !charge && (
         <section className="rounded-2xl border-2 border-ink bg-banana-soft p-4 text-sm text-ink">

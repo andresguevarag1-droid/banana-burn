@@ -88,19 +88,42 @@ export const EMAIL: Record<string, string> = {
   "Tu cuenta sigue abierta, con lo que guardaste. Cuando quieras seguir, elige tu plan en Mi plan: el anual aparece primero y también puedes pagar mes a mes. Precios en USD, con IVA incluido.":
     "Your account is still open, with everything you saved. When you want to keep going, choose your plan in My plan. Yearly comes first, and you can also pay month to month. Prices in USD, tax included.",
 
-  // Segundo entreno
-  "Tu segundo entreno": "Your second workout",
+  // Regreso (#320): R1, R2 y R4
   "Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.":
     "You're getting this email because you finished your first workout on Banana Burn and have reminders turned on.",
-  "Tu segundo entreno está listo": "Your second workout is ready",
-  "Ya hiciste el primero. El segundo se hace igual, paso a paso.": "You did the first one. The second one works the same way, step by step.",
-  "Hace unos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.":
-    "A few days ago you finished your first workout. The second one is already in your plan, adjusted to what you logged that time.",
+  "Tu entreno 2": "Your workout 2",
+  "Tu entreno 3": "Your workout 3",
+  "Tu entreno 2 está listo: unos {mins} min": "Your workout 2 is ready: about {mins} min",
+  "Tu entreno 2 está listo": "Your workout 2 is ready",
+  "Ayer hiciste el primero. El segundo ya está en tu plan.": "You did the first one yesterday. The second one is already in your plan.",
+  "Ayer terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste.":
+    "Yesterday you finished your first workout. The second one is already in your plan, adjusted to what you logged.",
+  "Ayer no pudiste. Hoy son {mins} minutos": "Yesterday didn't work out. Today it's {mins} minutes",
+  "Ayer no pudiste. Tu entreno 2 sigue listo": "Yesterday didn't work out. Your workout 2 is still ready",
+  "Tu entreno 2 te espera, sin nada que recuperar.": "Your workout 2 is waiting, with nothing to make up.",
+  "Tu entreno 2 sigue en tu plan. No tienes que recuperar nada: haces este y tu plan sigue desde ahí.":
+    "Your workout 2 is still in your plan. You don't have to make up for anything: do this one and your plan picks up from there.",
+  "Vas 2. El 3.º es el que hace el hábito": "That's 2. The 3rd is the one that builds the habit",
+  "Ya llevas 2 entrenos. Hoy puedes hacer el tercero.": "You've done 2 workouts. Today you can do the third.",
+  "Ya llevas 2 entrenos. El tercero es el que convierte esto en costumbre.": "You've done 2 workouts. The third is the one that turns this into a habit.",
+  "Hoy te toca {routine}: unos {mins} minutos.": "Today it's {routine}: about {mins} minutes.",
+  "Hoy te toca {routine}.": "Today it's {routine}.",
+  "La vez pasada hiciste {exercise} con {load}; hoy toca {next}.": "Last time you did {exercise} with {load}; today it's {next}.",
+  "La vez pasada hiciste {exercise} con {load}.": "Last time you did {exercise} with {load}.",
   "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.":
     "Open it when you have a few minutes today. Coach Banana tells you each exercise, how many reps and when to rest.",
-  "Tu plan funciona entrenando varias veces por semana: el segundo entreno es el que lo pone en marcha.":
-    "Your plan works when you train several times a week. The second workout is what gets it going.",
-  "Empezar mi segundo entreno": "Start my second workout",
+  "Empezar mi entreno 2": "Start my workout 2",
+  "Empezar mi entreno 3": "Start my workout 3",
+  // Regreso: R3, texto plano de Andrés
+  "¿Qué te frenó para volver?": "What kept you from coming back?",
+  "Hola, {name}:": "Hi {name},",
+  "Hola:": "Hi,",
+  "Soy Andrés, de Banana Burn. Vi que hace unos días hiciste tu primer entreno y todavía no el segundo.":
+    "I'm Andrés, from Banana Burn. I saw that you did your first workout a few days ago and haven't done the second one yet.",
+  "Te quiero hacer una sola pregunta: ¿qué te frenó para volver?": "I want to ask you just one question: what kept you from coming back?",
+  "Respóndeme este correo con lo que sea, aunque sea una línea. Lo leo yo y me sirve para mejorar la app.":
+    "Reply to this email with anything, even one line. I read it myself, and it helps me make the app better.",
+  "Si no quieres recibir más correos como este: {url}": "If you don't want more emails like this one: {url}",
 
   // Meta semanal
   "Tu meta de la semana": "Your weekly goal",

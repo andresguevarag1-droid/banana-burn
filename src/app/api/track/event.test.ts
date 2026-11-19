@@ -19,3 +19,11 @@ describe("cleanEvent", () => {
     expect(e?.props).toEqual({ cta: "hero", n: 3 });
   });
 });
+
+describe("email_click (#320)", () => {
+  it("solo el kind de un correo de regreso, sin nada más", () => {
+    expect(cleanEvent({ name: "email_click", props: { kind: "regreso_r1", email: "ana@correo.com", path: "/app/entreno" } })).toEqual({ name: "email_click", props: { kind: "regreso_r1", path: "/app/entreno" } });
+    expect(cleanEvent({ name: "email_click", props: { kind: "otro" } })).toBeNull();
+    expect(cleanEvent({ name: "email_click" })).toBeNull();
+  });
+});

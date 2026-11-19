@@ -74,14 +74,23 @@ export async function sendPaymentReceipt(r: Recipient & Pay): Promise<SendResult
   return sendEmail(to.to, T.reciboPago({ ...r, name: to.name }), { idempotencyKey: r.reference ? `recibo/${r.reference}` : undefined, tags: { kind: "recibo" } });
 }
 
-/** Webhook ONVO: cobro rechazado. También deja un aviso en la campanita. */
-export async function sendPaymentFailed(r: Recipient & Pay & { retryDate?: string | null; updateUrl?: string; paused?: boolean }): Promise<SendResult> {
+/**
+ * Cobro rechazado (webhook de renovación o primer cobro). También deja un aviso en la campanita.
+ * `attempt` (#328, primer cobro): 1 = primer rechazo (pagoFallido), 2 = "Tu tarjeta no pasó otra vez", 3 = "Tu plan quedó en pausa".
+ */
+export async function sendPaymentFailed(r: Recipient & Pay & { retryDate?: string | null; updateUrl?: string; paused?: boolean; attempt?: 1 | 2 | 3 }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  if (to.userId) await notifyInApp(to.userId, r.paused
-    ? { kind: "pago_fallido", title: "No pudimos cobrar tu plan", body: "Cambia tu tarjeta para seguir. Tu progreso sigue guardado.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/suscripcion" }
-    : { kind: "pago_fallido", title: "Tu pago no pasó", body: "Actualiza tu método de pago para seguir sin pausa.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/perfil" });
-  return sendEmail(to.to, T.pagoFallido({ ...r, name: to.name }), { idempotencyKey: r.reference ? `pago_fallido/${r.reference}` : undefined, tags: { kind: "pago_fallido" } });
+  const url = r.updateUrl?.startsWith("/") ? r.updateUrl : r.paused || r.attempt ? "/app/suscripcion" : "/app/perfil";
+  if (to.userId) await notifyInApp(to.userId, r.attempt === 3
+    ? { kind: "pago_fallido", title: "Tu plan quedó en pausa", body: "Cambia tu tarjeta y se reactiva en el momento. Tu progreso sigue guardado.", url }
+    : r.attempt === 2
+    ? { kind: "pago_fallido", title: "Tu tarjeta no pasó otra vez", body: "Llama a tu banco y autoriza Banana Burn, o cambia tu tarjeta.", url }
+    : r.paused
+    ? { kind: "pago_fallido", title: "No pudimos cobrar tu plan", body: "Cambia tu tarjeta para seguir. Tu progreso sigue guardado.", url }
+    : { kind: "pago_fallido", title: r.attempt ? "No pudimos cobrar tu plan" : "Tu pago no pasó", body: r.attempt ? "Actualiza tu tarjeta para no perder tu acceso." : "Actualiza tu método de pago para seguir sin pausa.", url });
+  const mail = r.attempt === 3 ? T.planEnPausa({ ...r, name: to.name }) : r.attempt === 2 ? T.pagoFallidoOtraVez({ ...r, name: to.name }) : T.pagoFallido({ ...r, name: to.name });
+  return sendEmail(to.to, mail, { idempotencyKey: r.reference ? `pago_fallido/${r.reference}` : undefined, tags: { kind: "pago_fallido" } });
 }
 
 type ChargeMail = Omit<T.ChargeMailData, "name">;

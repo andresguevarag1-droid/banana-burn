@@ -21,6 +21,8 @@ import { offer } from "@/lib/offer";
 import { cardRequiredNow } from "@/lib/card-required";
 import { GENERAL_VARIANT, HERO_VARIANTS, type HeroVariantKey } from "@/lib/landing-variants";
 import { VariantView } from "./variant-view";
+import { cardTrust } from "@/lib/card-trust";
+import { SecurePay, TrialTimeline, UnderCta } from "@/components/card-trust";
 
 // Cuerpo de la portada (page.tsx) y de sus variantes por anuncio (anuncio/[variante]/page.tsx, #285): solo cambia el hero.
 
@@ -90,6 +92,15 @@ export function Landing({ variant }: { variant?: HeroVariantKey }) {
   const o = offer();
   const faqItems = homeFaq();
   const v = variant ? HERO_VARIANTS[variant] : null;
+  // #323: desde CARD_REQUIRED_FROM, cómo funciona la prueba y el pago seguro. En la portada va después de los 3 pasos; en el
+  // anuncio, antes del último botón.
+  const trust = cardTrust();
+  const trial = trust && (
+    <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
+      <TrialTimeline trust={trust} id={v ? "tu-prueba-anuncio" : "tu-prueba"} />
+      <SecurePay trust={trust} className="mt-4" />
+    </section>
+  );
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(appJsonLd())} />
@@ -176,7 +187,10 @@ export function Landing({ variant }: { variant?: HeroVariantKey }) {
           ))}
         </ol>
         <Link href={SIGNUP} data-cta="pasos" className="pressable mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
+        {trust && <UnderCta trust={trust} className="mt-2" />}
       </section>
+
+      {!v && trial}
 
 
       {/* 5. LA APP POR DENTRO: recorrido con capturas reales y técnica animada */}
@@ -219,6 +233,7 @@ export function Landing({ variant }: { variant?: HeroVariantKey }) {
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">La hice porque yo la necesitaba.</h2>
             <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink/80 text-pretty">Soy Andrés, el fundador, y soy el usuario número 1. Mi meta: de 94 a 85 kg antes del 31 de diciembre, sin perder músculo. Ninguna app me decía qué hacer hoy en el gym, en español y con la comida que como todos los días.</p>
             <p className="mt-3 max-w-[60ch] leading-relaxed text-ink/80 text-pretty">Lo que me escribas a <a href="mailto:hola@bananaburn.app" className="tap font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a> me llega directo.</p>
+            {trust && <p className="mt-3 max-w-[60ch] text-sm font-semibold text-ink text-pretty">{v ? trust.companyShort : trust.company}</p>}
           </div>
           <div className="relative mx-auto hidden aspect-square w-full max-w-[260px] rounded-[1.75rem] bg-banana lg:block">
             <div className="absolute inset-[7%]">
@@ -245,12 +260,15 @@ export function Landing({ variant }: { variant?: HeroVariantKey }) {
 
       <Faq id="faq" items={faqItems} aside={<FaqCta cta="faq" />} />
 
+      {v && trial}
+
       {/* 12. CTA FINAL con el mono */}
       <section data-sticky-hide className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
         <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-6 pt-12 text-center sm:px-16 sm:pb-8 sm:pt-16">
           <h2 className={`${H2} mx-auto max-w-3xl`}>Tu cuerpo nuevo empieza con el primer entreno.</h2>
           <Link href={SIGNUP} data-cta="final" className="pressable mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-ink px-8 text-base font-extrabold text-banana shadow-lift hover:bg-black sm:w-auto">{CTA} <ArrowRight weight="bold" className="size-5" /></Link>
-          <p className="mt-4 text-sm font-semibold text-ink/80">{o.note} {o.from(FROM)}</p>
+          <p className="mt-4 text-sm font-semibold text-ink/80">{trust ? trust.underCta : o.note} {o.from(FROM)}</p>
+          {trust && <SecurePay trust={trust} className="mx-auto mt-4 max-w-xl" />}
           <ul className="mx-auto mt-6 grid w-fit max-w-3xl grid-cols-1 gap-x-6 gap-y-2 text-left text-sm font-semibold text-ink sm:grid-cols-2">
             {risk().map(([I, t]) => <li key={t} className="flex items-center gap-2"><I weight="duotone" aria-hidden className="size-5 shrink-0" />{t}</li>)}
           </ul>
@@ -258,7 +276,7 @@ export function Landing({ variant }: { variant?: HeroVariantKey }) {
         </div>
       </section>
 
-      <StickyCta note={o.note}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={trust ? trust.underCta : o.note}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }

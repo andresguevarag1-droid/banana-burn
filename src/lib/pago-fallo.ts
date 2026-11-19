@@ -100,11 +100,13 @@ export function pendingReason(s: { status?: string | null; created_at?: string |
 
 /**
  * Adónde vuelve la persona desde Tilopay: Mi plan con el resultado (?tilopay=) y, si no se completó, el motivo (?motivo=), si
- * era tarjeta o pago (?para=) y el mismo plan y periodo (?plan=&pago=) para reintentar con un toque.
+ * era tarjeta o pago (?para=) y el mismo plan y periodo (?plan=&pago=) para reintentar con un toque. ?inicio=: la prueba empezó (#331).
  */
-export function tilopayReturnPath(result: string, s?: { p: "tarjeta" | "pago"; plan: string; billing: string } | null, kind?: FailKind): string {
+export function tilopayReturnPath(result: string, s?: { p: "tarjeta" | "pago"; plan: string; billing: string } | null, kind?: FailKind, trialEventId?: string): string {
   const q = new URLSearchParams({ tilopay: result });
   if (kind) q.set("motivo", kind);
+  // #331: la tarjeta empezó la prueba: Mi plan manda el StartTrial del píxel con este event_id (el servidor ya mandó el suyo).
+  if (trialEventId && result === "tarjeta_ok") q.set("inicio", trialEventId);
   if (s && result !== "tarjeta_ok" && result !== "pago_ok") { q.set("para", s.p); q.set("plan", s.plan); q.set("pago", s.billing); }
   return `/app/suscripcion?${q}#tarjeta`;
 }

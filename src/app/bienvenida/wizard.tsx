@@ -17,6 +17,8 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
 import { safeAction } from "@/lib/action-client";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
+import { SecurePay } from "@/components/card-trust";
+import { trustCopy } from "@/lib/card-trust";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
 import { money as money2 } from "@/lib/copy";
@@ -152,7 +154,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
   const [saved, setSaved] = useState<CardSaved | null>(null);
   const [dir, setDir] = useState(1);
   const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); window.scrollTo({ top: 0 }); };
-  useEffect(() => { if (emailClick) track("email_click", { e: emailClick }); }, [emailClick]);
+  useEffect(() => { if (emailClick) track("email_click", { kind: emailClick }); }, [emailClick]);
   // Embudo del registro (#236): un onboarding_step al entrar a cada paso 0 a 6 (la oferta de la tarjeta no cuenta aquí).
   useEffect(() => { if (step < ONBOARDING_STEPS) track("onboarding_step", { step }); }, [step]);
   // #280: el pedido de la tarjeta de la bienvenida (opcional u obligatorio) cuenta como card_ask_view "bienvenida".
@@ -484,7 +486,12 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink text-pretty">{requiredLine(chargeDay, choice, t)}</p>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
             {payments || demo ? (
-              <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida" note={null} />
+              <>
+                <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida" note={null} />
+                {/* #323: cómo funciona el cobro en una línea y quién guarda la tarjeta, pegado al formulario. */}
+                <p className="text-sm font-semibold text-ink text-pretty">{trustCopy(locale).oneLine}</p>
+                <SecurePay trust={trustCopy(locale)} />
+              </>
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.")}</p>
             )}

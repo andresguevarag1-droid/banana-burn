@@ -6,7 +6,7 @@ import "server-only";
 // Nunca correo, teléfono, id de usuario ni datos de salud. El cobro automático (sin navegador) solo manda el id con hash SHA-256.
 import { createHash } from "node:crypto";
 import { clean } from "@/lib/env";
-import { META_PIXEL_ID, toMetaEvent } from "@/lib/meta-pixel";
+import { META_PIXEL_ID, startTrialParams, toMetaEvent, type StartTrial } from "@/lib/meta-pixel";
 import type { CleanEvent } from "@/app/api/track/event";
 
 const GRAPH = "https://graph.facebook.com/v23.0";
@@ -19,11 +19,17 @@ function cookie(header: string | null, name: string): string | undefined {
 }
 
 /** Arma el cuerpo de la API de Conversiones (exportado para pruebas). null = no se envía. */
-export function capiPayload(evt: CleanEvent, ctx: { ip: string; ua: string; cookies: string | null; origin: string; now?: number }) {
+export function capiPayload(evt: CleanEvent, ctx: BrowserCtx) {
   const meta = toMetaEvent(evt.name, evt.props);
   const eid = typeof evt.props.event_id === "string" ? evt.props.event_id : "";
   if (!meta || !eid) return null;
   const path = typeof evt.props.path === "string" && evt.props.path.startsWith("/") ? evt.props.path : "/";
+  return websitePayload(meta.name, eid, meta.params, path, ctx);
+}
+
+type BrowserCtx = { ip: string; ua: string; cookies: string | null; origin: string; now?: number };
+
+function websitePayload(name: string, eventId: string, params: Record<string, string | number>, path: string, ctx: BrowserCtx) {
   const user_data: Record<string, string> = {};
   if (ctx.ip) user_data.client_ip_address = ctx.ip;
   if (ctx.ua) user_data.client_user_agent = ctx.ua.slice(0, 400);
@@ -33,15 +39,31 @@ export function capiPayload(evt: CleanEvent, ctx: { ip: string; ua: string; cook
   if (fbc) user_data.fbc = fbc;
   return {
     data: [{
-      event_name: meta.name,
+      event_name: name,
       event_time: Math.floor((ctx.now ?? Date.now()) / 1000),
-      event_id: eid,
+      event_id: eventId,
       action_source: "website",
       event_source_url: `${ctx.origin}${path}`,
       user_data,
-      custom_data: meta.params,
+      custom_data: params,
     }],
   };
+}
+
+/**
+ * StartTrial (#331) desde el servidor al guardar la tarjeta (ONVO en /api/pagos/tarjeta, Tilopay a su vuelta), con el mismo
+ * event_id que el píxel (startTrialEvent): Meta lo cuenta una vez aunque el navegador bloquee el píxel. null = no se envía.
+ */
+export function startTrialPayload(t: StartTrial | null | undefined, ctx: BrowserCtx & { path?: string }) {
+  if (!t?.eventId || !(t.value > 0)) return null;
+  const path = ctx.path?.startsWith("/") ? ctx.path : "/";
+  return websitePayload("StartTrial", t.eventId, startTrialParams(t), path, ctx);
+}
+
+/** Envía el StartTrial de una tarjeta guardada. Nunca lanza. */
+export async function sendStartTrial(t: StartTrial | null | undefined, ctx: Parameters<typeof startTrialPayload>[1]) {
+  const body = startTrialPayload(t, ctx);
+  if (body) await post(body);
 }
 
 /** Envía el evento. Nunca lanza: si Meta falla, solo queda en el log. */

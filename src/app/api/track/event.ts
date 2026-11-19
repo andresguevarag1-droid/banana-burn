@@ -1,5 +1,6 @@
 // Eventos del embudo (sin terceros). Lo que llega del navegador se valida aquí antes de registrarse.
 import { LANDING_VARIANTS } from "@/lib/landing-variants";
+import { isComebackKind } from "@/lib/regreso-kinds";
 import { FAIL_KINDS } from "@/lib/pago-fallo";
 
 /** Eventos permitidos. Cualquier otro nombre se descarta. */
@@ -63,6 +64,8 @@ export const FUNNEL_EVENTS = [
   "signup_submit",
   "signup_error",
   "onboarding_step",
+  // Correos de regreso (#320): entró por el botón del correo (?e=regreso_rN en /app/entreno). Solo el kind del correo.
+  "email_click",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
@@ -102,7 +105,7 @@ const STRICT: Partial<Record<string, Rule>> = {
   card_form_start: { key: "where", ok: isWhere },
   card_step_error: { key: "where", ok: isWhere, also: { key: "reason", ok: (v) => (FAIL_KINDS as readonly unknown[]).includes(v) } },
   card_tilopay_hint: { key: "where", ok: isWhere },
-  email_click: { key: "e", ok: isEmailClickKind },
+  email_click: { key: "kind", ok: (v) => isComebackKind(v) || isEmailClickKind(v) },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
 };
 
