@@ -208,22 +208,27 @@ describe("el cobro del día 7 es idempotente", () => {
 });
 
 describe("rechazo del día 7 y reintento del día 8", () => {
-  it("rechazo: muro, aviso y un reintento al día siguiente; si vuelve a fallar, sin más intentos", async () => {
+  it("#328: rechazo: reintento al día siguiente y a los 3 días; al tercer rechazo, sin más intentos", async () => {
     const f = setup(); const r = scheduled(f);
     onvo.createChargedSubscription.mockRejectedValue(new OnvoError("Fondos insuficientes", 402));
-    const d7 = plus(T0, 7);
+    const d7 = plus(T0, 7); // 17 nov, 09:00 en Costa Rica
     expect(await tb.attemptCharge(f.db, r, d7)).toBe("rechazado");
-    expect(charge(f)).toMatchObject({ status: "retry_scheduled", attempts: 1, next_attempt_at: plus(d7, 1).toISOString() });
+    expect(charge(f)).toMatchObject({ status: "retry_scheduled", attempts: 1, next_attempt_at: "2026-11-18T06:00:00.000Z" });
     expect(mail.sendPaymentFailed).toHaveBeenCalledOnce();
-    expect((mail.sendPaymentFailed.mock.calls as unknown as [Record<string, unknown>][])[0][0]).toMatchObject({ paused: true, retryDate: plus(d7, 1).toISOString(), updateUrl: "/app/suscripcion#tarjeta" });
-    // Antes del día 8 no reintenta.
+    // Gracia: el primer rechazo no pausa el acceso.
+    expect((mail.sendPaymentFailed.mock.calls as unknown as [Record<string, unknown>][])[0][0]).toMatchObject({ paused: false, attempt: 1, retryDate: "2026-11-18T06:00:00.000Z", updateUrl: "/app/suscripcion#tarjeta" });
+    // Antes del día siguiente no reintenta.
     expect(await tb.attemptCharge(f.db, charge(f), plus(d7, 0.5))).toBe("omitido");
-    // Día 8: reintenta una vez y falla de nuevo.
-    expect(await tb.attemptCharge(f.db, charge(f), plus(d7, 1))).toBe("rechazado");
-    expect(charge(f)).toMatchObject({ status: "failed", attempts: 2, next_attempt_at: null });
-    expect(mail.sendPaymentFailed).toHaveBeenCalledTimes(2);
-    expect(await tb.attemptCharge(f.db, charge(f), plus(d7, 5))).toBe("omitido");
-    expect(onvo.createChargedSubscription).toHaveBeenCalledTimes(2);
+    // Día +1: segundo intento, falla y pausa.
+    expect(await tb.attemptCharge(f.db, charge(f), new Date("2026-11-18T06:20:00.000Z"))).toBe("rechazado");
+    expect(charge(f)).toMatchObject({ status: "retry_scheduled", attempts: 2, next_attempt_at: "2026-11-20T06:00:00.000Z" });
+    expect((mail.sendPaymentFailed.mock.calls as unknown as [Record<string, unknown>][])[1][0]).toMatchObject({ paused: true, attempt: 2, retryDate: "2026-11-20T06:00:00.000Z" });
+    // Día +3: tercer y último intento.
+    expect(await tb.attemptCharge(f.db, charge(f), new Date("2026-11-20T06:20:00.000Z"))).toBe("rechazado");
+    expect(charge(f)).toMatchObject({ status: "failed", attempts: 3, next_attempt_at: null });
+    expect((mail.sendPaymentFailed.mock.calls as unknown as [Record<string, unknown>][])[2][0]).toMatchObject({ paused: true, attempt: 3, retryDate: null });
+    expect(await tb.attemptCharge(f.db, charge(f), plus(d7, 8))).toBe("omitido");
+    expect(onvo.createChargedSubscription).toHaveBeenCalledTimes(3);
   });
   it("rechazo informado por webhook: cancela la suscripción en ONVO (para que ONVO no reintente por su cuenta)", async () => {
     const f = setup(); const r = scheduled(f);

@@ -123,7 +123,7 @@ la víspera. No cobra ni escribe nada en la base.
    limpio.
 5. **Cobro doble.** Reembolsa el segundo cobro en el panel del procesador. No liberes llaves en `charge_keys` a mano.
    Adrian revisa con el id de la fila por qué no lo frenó la llave única (0062).
-6. **ONVO o Tilopay caídos.** Un primer cobro rechazado por la caída tiene un solo reintento automático, al día siguiente. Si sigue caído más de
-   un día, pausa los crons (punto 4) para no gastar intentos de nadie y avisa a Adrian.
+6. **ONVO o Tilopay caídos.** Un primer cobro rechazado por la caída tiene dos reintentos automáticos (#328): al día siguiente y al día +3, con
+   el cron de las 00:20. El acceso sigue hasta el segundo rechazo. Si sigue caído más de un día, pausa los crons (punto 4) para no gastar intentos de nadie y avisa a Adrian.
 7. **Errores sobre el umbral (`OPS_ALERT_THRESHOLD`).** Llega un aviso de sistema a Admin > Avisos y por correo. Abre
    `/admin/salud`, ve la ruta con más errores y abre issue para Adrian.

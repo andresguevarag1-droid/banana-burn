@@ -71,6 +71,22 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
               </tr>))}</tbody>
           </Table>
         ) : <Empty title="Sin pagos fallidos">Todas las renovaciones se cobraron y no hay pagos sin completar.</Empty>}
+        {/* #328: primer cobro de la prueba rechazado: en qué intento va (1, 2 o 3) y cuándo es el próximo. */}
+        {d.firstCharges.length > 0 && (
+          <Table caption="Primeros cobros rechazados" minWidth={760}>
+            <thead className="border-b border-line"><tr><Th>Usuario</Th><Th>Plan</Th><Th className="text-right">Monto</Th><Th className="text-right">Intento</Th><Th>Último intento</Th><Th>Próximo intento</Th><Th>Motivo</Th></tr></thead>
+            <tbody>{d.firstCharges.map((x) => (
+              <tr key={x.id} className={tr}>
+                <Td><Link href={`/admin/usuarios/${x.user_id}`} className={link}>{x.name ?? "Ver ficha"}</Link></Td>
+                <Td><PlanText label={x.planLabel} /></Td>
+                <Td className="text-right">{money(x.amount)}</Td>
+                <Td className="text-right tabular-nums">{fmtNum(x.attempt)}</Td>
+                <Td className="text-muted whitespace-nowrap">{x.last_attempt_at ? fmtDateTime(x.last_attempt_at) : <Nil />}</Td>
+                <Td className="whitespace-nowrap">{x.nextAt ? fmtDateTime(x.nextAt) : <span className="text-muted">Sin más intentos</span>}</Td>
+                <Td className="min-w-48 max-w-72 text-muted text-pretty">{x.last_error ?? <Nil />}</Td>
+              </tr>))}</tbody>
+          </Table>
+        )}
         {d.payments && d.payments.length > 0 && (
           <Table caption="Últimos cobros rechazados" minWidth={600}>
             <thead className="border-b border-line"><tr><Th>Fecha</Th><Th>Usuario</Th><Th className="text-right">Monto</Th><Th>Motivo</Th></tr></thead>
