@@ -251,7 +251,11 @@ export function planListo(d: { name: string; trainDays: number; todayRoutine: st
 
 export type PaymentData = { name: string; plan: string; amount: number; currency?: string; date?: string; reference?: string; method?: string; nextCharge?: string | null;
   /** 0043: primer mes con 50 %. Precio normal (USD) que se cobra desde el siguiente mes. */
-  promoFull?: number | null };
+  promoFull?: number | null;
+  /** #334: con ALEGRA_ENABLED el comprobante electrónico de Hacienda sale aparte. */
+  einvoice?: boolean };
+
+export const EINVOICE_NOTE = "Tu comprobante electrónico te llega aparte.";
 
 export function reciboPago(d: PaymentData): Email {
   const n = firstName(d.name);
@@ -266,12 +270,12 @@ export function reciboPago(d: PaymentData): Email {
   if (d.nextCharge) r.push(["Próximo cobro", d.promoFull ? `${longDate(d.nextCharge)}, ${money(d.promoFull, d.currency)} (precio normal)` : longDate(d.nextCharge)]);
   const hero: Hero = { eyebrow: "Recibo", chip: "Pago confirmado", title: "Pago recibido, gracias", lead: `${esc(n)}, tu suscripción a <b>${esc(d.plan)}</b> está activa.` };
   const body = rows(r) +
-    small("Guarda este correo como comprobante. ¿Necesitas factura? Responde a este correo con tus datos de facturación y te la enviamos.") + button("Ir a mi entreno", "/app/entreno", "banana");
+    small(d.einvoice ? `${EINVOICE_NOTE} ¿Necesitas factura a tu nombre? Responde a este correo con tus datos de facturación.` : "Guarda este correo como comprobante. ¿Necesitas factura? Responde a este correo con tus datos de facturación y te la enviamos.") + button("Ir a mi entreno", "/app/entreno", "banana");
   const reason = "Recibes este correo como comprobante de tu pago en Banana Burn.";
   return {
     subject, preheader,
     html: layout({ preheader, hero, body, reason, coach }),
-    text: textLayout([`Pago recibido. Gracias, ${n}.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", "¿Necesitas factura? Responde a este correo con tus datos de facturación.", `Ir a la app: ${abs("/app")}`], undefined, "Comprobante de pago de Banana Burn.", coach),
+    text: textLayout([`Pago recibido. Gracias, ${n}.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", ...(d.einvoice ? [EINVOICE_NOTE] : []), "¿Necesitas factura? Responde a este correo con tus datos de facturación.", `Ir a la app: ${abs("/app")}`], undefined, "Comprobante de pago de Banana Burn.", coach),
   };
 }
 
