@@ -10,10 +10,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }), usePathname: () => "/bienvenida", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({}) }));
 
-const { CONSENT_VERSION, consentAmounts, consentGiven, consentLine, ipCountryOf } = await import("./billing-consent");
+const { CONSENT_VERSION, consentAmounts, consentBody, consentFor, consentGiven, consentLine, ipCountryOf } = await import("./billing-consent");
 const { tr } = await import("./i18n/t");
 const { Wizard } = await import("@/app/bienvenida/wizard");
 const Terminos = (await import("@/app/(marketing)/terminos/page")).default;
+const { CardPanel } = await import("@/app/(app)/app/suscripcion/card-panel");
 
 const nb = (s: string) => s.replace(/[\u00a0\u202f]/g, " ");
 const text = (html: string) => nb(html).replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, "\"").replace(/\s+/g, " ");
@@ -50,9 +51,14 @@ describe("texto del consentimiento", () => {
   it("montos en centavos para el registro; solo la versión vigente cuenta como aceptada; solo el país, nunca la IP", () => {
     expect(consentAmounts("entreno", "mes", true)).toEqual({ firstMinor: 499, fullMinor: 999 });
     expect(consentAmounts("entreno", "anual", true)).toEqual({ firstMinor: 5999, fullMinor: 5999 });
-    expect(consentGiven(CONSENT_VERSION)).toBe(true);
-    expect(consentGiven(true)).toBe(false);
-    expect(consentGiven("2020-01-01")).toBe(false);
+    // Se guarda lo que la pantalla mostró: la versión y los dos montos (consentBody de card-form.tsx).
+    const shown = consentFor({ button: BTN, plan: "entreno", billing: "mes", promo: true, day: null });
+    expect(consentGiven(consentBody(shown))).toEqual({ firstMinor: 499, fullMinor: 999 });
+    expect(consentGiven(CONSENT_VERSION)).toBeNull();
+    expect(consentGiven(true)).toBeNull();
+    expect(consentGiven({ ...consentBody(shown), version: "2020-01-01" })).toBeNull();
+    expect(consentGiven({ version: CONSENT_VERSION, first_amount_minor: 499 })).toBeNull();
+    expect(consentGiven({ version: CONSENT_VERSION, first_amount_minor: "499", full_amount_minor: 999 })).toBeNull();
     expect(ipCountryOf(new Headers({ "x-vercel-ip-country": "cr", "x-forwarded-for": "201.1.2.3" }))).toBe("CR");
     expect(ipCountryOf(new Headers({ "x-vercel-ip-country": "201.1.2.3" }))).toBeNull();
   });
@@ -76,9 +82,19 @@ describe("pantallas: el texto va justo arriba del botón", () => {
     expect(t).toContain("you authorize a charge of $7.49 (Training + Nutrition) on November 30, then $14.99 every month, until you cancel in My plan.");
   });
 
+  it("Mi plan con la tarjeta obligatoria (step card): mensual con el 50 %, como la bienvenida y el cobro programado; anual al precio normal", () => {
+    const panel = (billing: "mes" | "anual", promoLost = false) => text(renderToStaticMarkup(<CardPanel step="card" charge={null} card={null} demo payments
+      initial={{ plan: "entreno", billing }} tz="America/Costa_Rica" betaFirstPaid="8 de noviembre" trialEndsAt="2026-11-30T15:00:00.000Z" promoLost={promoLost} />));
+    expect(panel("mes")).toContain("Al tocar «Empezar mis 7 días gratis» autorizas que el 30 de noviembre se cobre $4.99 (Entreno) y luego $9.99 cada mes, hasta que canceles en Mi plan. Hoy no se cobra nada.");
+    expect(panel("mes")).toContain("se cobra $4.99 , tu primer mes con 50 %");
+    expect(panel("anual")).toContain("el 30 de noviembre se cobre $59.99 (Entreno) y luego $59.99 cada año");
+    // Vuelta de Tilopay con una tarjeta que ya usó el 50 % (?tilopay=monto): el texto dice el precio normal.
+    expect(panel("mes", true)).toContain("el 30 de noviembre se cobre $9.99 (Entreno) y luego $9.99 cada mes");
+  });
+
   it("todos los formularios que pueden programar un cobro mandan el consentimiento", () => {
     for (const f of ["src/app/bienvenida/wizard.tsx", "src/app/(app)/app/suscripcion/card-panel.tsx", "src/app/c/[code]/condo-card.tsx", "src/components/workout/first-set-card-ask.tsx"]) {
-      expect(readFileSync(f, "utf8"), f).toMatch(/consent=\{consentLine\(/);
+      expect(readFileSync(f, "utf8"), f).toMatch(/consent=\{\(promo = [\w.]+\) => consentFor\(/);
     }
     const form = readFileSync("src/components/pagos/card-form.tsx", "utf8");
     // ONVO (guardar) y Tilopay (antes de salir a su página) mandan la versión aceptada.

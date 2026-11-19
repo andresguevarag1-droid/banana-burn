@@ -4,13 +4,14 @@ import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
+import { ConsentMismatch } from "@/lib/trial-billing";
 import { TilopayError, tilopayOfferedTo } from "@/lib/tilopay";
 import { providerFor } from "@/lib/pay-provider";
 import { startTilopayCard } from "@/lib/tilopay-billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { dbRateLimit } from "@/lib/security/db-rate-limit";
 import { recordPaymentFailed } from "@/lib/pago-fallo-server";
-import { consentGiven, ipCountryOf } from "@/lib/billing-consent";
+import { consentAccepted as accepted } from "@/lib/billing-consent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,7 +20,8 @@ export const runtime = "nodejs";
  * Tilopay (0042), para tarjetas de fuera de Costa Rica.
  *   GET                                     -> { available, suggested: "onvo" | "tilopay" }  (país por IP o el de la bienvenida)
  *   POST { purpose: "tarjeta", plan, billing, consent? } -> { url }  página segura de Tilopay para guardar la tarjeta (número nunca aquí)
- *     consent: CONSENT_VERSION si aceptó el cobro recurrente (#329); sin él no se abre la página para un cobro nuevo.
+ *     consent: { version, first_amount_minor, full_amount_minor } del cobro recurrente que aceptó (#329); sin él no se abre la
+ *     página para un plan nuevo, y con otros montos responde 409 con los correctos (como /api/pagos/tarjeta).
  */
 export async function GET(req: Request) {
   const v = await getViewer();
@@ -44,9 +46,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Demasiados intentos con tarjetas. Espera un rato e intenta de nuevo." }, { status: 429, headers: { "Retry-After": "600" } });
   try {
     const origin = new URL(req.url).origin;
-    const { url } = await singleFlight(`tilopay:tarjeta:${v.id}`, () => startTilopayCard(v, pb.plan, pb.billing, origin, consentGiven(body.consent) ? { ipCountry: ipCountryOf(req.headers) } : null));
+    const { url } = await singleFlight(`tilopay:tarjeta:${v.id}`, () => startTilopayCard(v, pb.plan, pb.billing, origin, accepted(body.consent, req.headers)));
     return NextResponse.json({ ok: true, url });
   } catch (e) {
+    if (e instanceof ConsentMismatch) return NextResponse.json({ ok: false, error: e.message, consent: e.terms }, { status: e.status });
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
     logError("pagos", "tilopay_start_failed", { kind: errCode(e) });
     await recordPaymentFailed(adminClient(), { userId: v.id, provider: "tilopay", stage: "tarjeta", code: e instanceof TilopayError ? `tilopay_${e.status}` : errCode(e), plan: pb.plan, billing: pb.billing });

@@ -5,13 +5,16 @@ import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody,
 import type { PlanChoice } from "./plan-picker";
 import type { ChargeView } from "@/lib/trial";
 import { onvoFailCode, reportPayFail } from "./report-fail";
-import { CONSENT_VERSION } from "@/lib/billing-consent";
+import { CONSENT_VERSION, consentBody, type ConsentShown } from "@/lib/billing-consent";
 
 const ONVO_PAYMENT_METHODS = "https://api.onvopay.com/v1/payment-methods";
 
 export type CardSaved = { demo?: boolean; card?: { brand: string | null; last4: string | null }; charge?: ChargeView | null; outcome?: string };
 
-type Post = { ok?: boolean; error?: string; demo?: boolean; customerId?: string; publicKey?: string; card?: CardSaved["card"]; charge?: ChargeView | null; outcome?: string };
+/** `consent`: con 409, lo que de verdad se cobra (#329): la pantalla corrige el texto y pide tocar otra vez. */
+type ConsentFix = { consent?: { promo?: boolean } };
+
+type Post = ConsentFix & { ok?: boolean; error?: string; demo?: boolean; customerId?: string; publicKey?: string; card?: CardSaved["card"]; charge?: ChargeView | null; outcome?: string };
 
 async function post(body: Record<string, unknown>): Promise<Post & { status: number }> {
   try {
@@ -46,13 +49,15 @@ function useProvider(skip: boolean) {
  * navegador. En modo demo se simula todo sin llamar a ONVO.
  * Tarjetas de fuera de Costa Rica (Tilopay, 0042): la persona guarda la tarjeta en la página segura de Tilopay y vuelve a
  * Mi plan. `beforeRedirect` deja guardado lo que haga falta antes de salir (la bienvenida guarda el plan).
- * #329: `consent` es el texto del cobro recurrente (consentLine): va justo arriba del botón y, al tocarlo, se manda
- * CONSENT_VERSION. Sin él el servidor no programa un cobro nuevo (solo cambia la tarjeta de un cobro que ya existe).
+ * #329: `consent` da el texto del cobro recurrente (consentFor): va justo arriba del botón y, al tocarlo, se mandan la
+ * versión y los montos que se vieron. Sin él el servidor no programa ni cobra un plan nuevo (solo cambia la tarjeta de un
+ * cobro que ya existe). Si el servidor cobraría otro monto (p. ej. la tarjeta ya usó el 50 %), responde 409 con `promo`:
+ * se vuelve a pedir el texto con ese valor y la persona toca otra vez.
  */
 export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo, onStart, consent }: {
   choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean>; condo?: string;
-  /** Texto del consentimiento del cobro recurrente (#329), arriba del botón. */
-  consent?: string;
+  /** Texto y montos del consentimiento del cobro recurrente (#329), arriba del botón. `promo`: el que corrigió el servidor. */
+  consent?: (promo?: boolean) => ConsentShown;
   /** Se llama al enviar el formulario, antes de ONVO o de salir a Tilopay (Mi plan cuenta ahí su checkout_view, #293). */
   onStart?: () => void;
 }) {
@@ -66,8 +71,12 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   // Condominio con tarjeta (0066): solo tarjetas verificadas con ONVO (el token de Tilopay no se puede verificar).
   const [pay, setProvider] = useProvider(demo || !!condo);
   const tilopay = pay.available && pay.provider === "tilopay";
-  const accepted = consent ? { consent: CONSENT_VERSION } : {};
-  const consentText = consent && <p data-consent={CONSENT_VERSION} className="text-sm text-ink text-pretty">{consent}</p>;
+  const [promoFix, setPromoFix] = useState<boolean | undefined>(undefined);
+  const shown = consent?.(promoFix);
+  const accepted = shown ? { consent: consentBody(shown) } : {};
+  const consentText = shown && <p data-consent={CONSENT_VERSION} className="text-sm text-ink text-pretty">{shown.text}</p>;
+  // 409 con el monto correcto: el texto de arriba cambia y la persona vuelve a tocar el botón (nada se guardó).
+  const fixConsent = (j: ConsentFix) => { if (typeof j.consent?.promo === "boolean") setPromoFix(j.consent.promo); };
 
   async function goTilopay(e: React.FormEvent) {
     e.preventDefault();
@@ -77,8 +86,9 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
     if (beforeRedirect && !(await beforeRedirect())) { setBusy(null); return; }
     try {
       const r = await fetch("/api/pagos/tilopay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "tarjeta", plan: choice.plan, billing: choice.billing, ...accepted }) });
-      const j = (await r.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
+      const j = (await r.json().catch(() => ({}))) as ConsentFix & { ok?: boolean; url?: string; error?: string };
       if (j.ok && j.url) { window.location.assign(j.url); return; }
+      fixConsent(j);
       setErr(j.error ?? "No pudimos abrir la página de pago. Intenta de nuevo.");
     } catch {
       setErr("Sin conexión. Revisa tu internet e intenta de nuevo.");
@@ -147,7 +157,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
     setBusy("guardar");
     const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing, ...(condo ? { condo } : {}), ...accepted });
     setBusy(null);
-    if (!saved.ok) return setErr(saved.error ?? "No pudimos guardar tu tarjeta. Intenta de nuevo.");
+    if (!saved.ok) { fixConsent(saved); return setErr(saved.error ?? "No pudimos guardar tu tarjeta. Intenta de nuevo."); }
     setC({ holder: "", number: "", exp: "", cvv: "" });
     onSaved({ card: saved.card, charge: saved.charge ?? null, outcome: saved.outcome });
   }

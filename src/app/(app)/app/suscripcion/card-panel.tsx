@@ -8,7 +8,7 @@ import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { PLANS } from "@/lib/plans";
 import type { CardAskWhere } from "@/lib/card-ask";
 import { money } from "@/lib/copy";
-import { consentLine } from "@/lib/billing-consent";
+import { consentFor } from "@/lib/billing-consent";
 import { PROMO_TERMS, PROMO_TITLE, planLine, promoChargeLine, promoPrice, type CardStep, type ChargeView } from "@/lib/trial";
 
 type Card = { brand: string | null; last4: string | null; expMonth: number | null; expYear: number | null; active: boolean } | null;
@@ -30,12 +30,14 @@ async function prueba(body: Record<string, unknown>): Promise<{ ok?: boolean; er
  * Tarjeta guardada y primer cobro en Mi plan (#tarjeta): empezar la prueba, agregar la tarjeta en la beta, cambiarla después
  * de un rechazo, ver cuándo y cuánto se cobra, cambiar el plan y cancelar sin costo antes del cobro.
  */
-export function CardPanel({ step, charge, card, demo, payments, initial, tz, betaFirstPaid, trialEndsAt = null, where = "mi-plan" }: {
+export function CardPanel({ step, charge, card, demo, payments, initial, tz, betaFirstPaid, trialEndsAt = null, where = "mi-plan", promoLost = false }: {
   step: CardStep; charge: ChargeView | null; card: Card; demo: boolean; payments: boolean; initial: PlanChoice; tz: string; betaFirstPaid: string;
   /** Fin de su prueba de 7 días (para "trial"): ese día sería el primer cobro si deja la tarjeta lista. */
   trialEndsAt?: string | null;
   /** Pedido que trajo aquí (?desde, #280): va en card_saved. Sin él es el de Mi plan. Solo Mi plan y el correo del día 6 cuentan aquí su card_ask_view; los demás, donde se mostraron. */
   where?: CardAskWhere;
+  /** #329: la vuelta de Tilopay (?tilopay=monto) dijo que el primer cobro va sin el 50 %. */
+  promoLost?: boolean;
 }) {
   const router = useRouter();
   const [choice, setChoice] = useState<PlanChoice>(charge ? { plan: charge.plan, billing: charge.billing } : initial);
@@ -52,7 +54,8 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
   const price = money(priceOf(choice));
   // 0043: en la beta o en la prueba, dejar la tarjeta lista da el 50 % del primer mes (solo mensual).
   const offer = step === "trial" || step === "beta";
-  const promoNow = offer && choice.billing === "mes";
+  // También la cuenta con tarjeta obligatoria (#269), como en la bienvenida, salvo que Tilopay dijera que ya no (#329).
+  const promoNow = (offer || step === "card") && choice.billing === "mes" && !promoLost;
   const firstPrice = promoNow ? money(promoPrice(choice.plan)) : price;
   const off = !payments && !demo;
 
@@ -111,7 +114,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
       <PlanPicker value={choice} onChange={setChoice} promo={offer} />
       {off ? <p className="rounded-2xl bg-banana-soft p-3 text-sm font-semibold text-banana-ink">Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.</p>
         : <CardForm choice={choice} demo={demo} submitLabel={t.btn} note={t.note} onSaved={saved} onStart={start}
-            consent={consentLine({ button: t.btn, ...choice, promo: promoNow, day: chargeDay, today: step === "pay" })} />}
+            consent={(promo = promoNow) => consentFor({ button: t.btn, ...choice, promo, day: chargeDay, today: step === "pay" })} />}
       {offer && <p className="text-xs text-muted text-pretty">{PROMO_TERMS}</p>}
     </section>
   );
@@ -172,7 +175,7 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
         {trialLive && !keptCard && (payments || demo) && (
           <details className="rounded-2xl border border-line p-4">
             <summary className="tap flex min-h-11 cursor-pointer items-center font-bold text-ink">Cambié de opinión: volver a mi plan</summary>
-            <div className="mt-3"><CardForm choice={{ plan: charge.plan, billing: charge.billing }} demo={demo} submitLabel="Guardar tarjeta y seguir" consent={consentLine({ button: "Guardar tarjeta y seguir", plan: charge.plan, billing: charge.billing, promo: charge.promo, day: day(charge.chargeAt) })} note={<>No se cobra nada ahora. El {day(charge.chargeAt)} se cobra {planLine(charge.plan, charge.billing)} por {money(charge.amount)}, salvo que canceles antes.</>} onSaved={() => { setView("idle"); if (!demo) onChanged(); }} /></div>
+            <div className="mt-3"><CardForm choice={{ plan: charge.plan, billing: charge.billing }} demo={demo} submitLabel="Guardar tarjeta y seguir" consent={(promo = charge.promo) => consentFor({ button: "Guardar tarjeta y seguir", plan: charge.plan, billing: charge.billing, promo, day: day(charge.chargeAt) })} note={<>No se cobra nada ahora. El {day(charge.chargeAt)} se cobra {planLine(charge.plan, charge.billing)} por {money(charge.amount)}, salvo que canceles antes.</>} onSaved={() => { setView("idle"); if (!demo) onChanged(); }} /></div>
           </details>
         )}
       </section>

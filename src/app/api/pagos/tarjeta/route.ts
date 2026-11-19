@@ -4,12 +4,13 @@ import { getViewer } from "@/lib/supabase/server";
 import { isSameOrigin, memoryRateLimit, singleFlight } from "@/lib/security";
 import { isOnvoConfigured, parsePlanBilling } from "@/lib/onvo";
 import { BillingError } from "@/lib/billing";
+import { ConsentMismatch } from "@/lib/trial-billing";
 import { prepareCard, removeCard, saveCard } from "@/lib/trial-billing";
 import { adminClient } from "@/lib/supabase/admin";
 import { normalizeCondoCode } from "@/lib/condos";
 import { dbRateLimit, dbRateLimitAll } from "@/lib/security/db-rate-limit";
 import { recordPaymentFailed } from "@/lib/pago-fallo-server";
-import { consentGiven, ipCountryOf } from "@/lib/billing-consent";
+import { consentAccepted as accepted } from "@/lib/billing-consent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,8 +20,9 @@ export const runtime = "nodejs";
  * publicable y solo nos manda el ID.
  *   { action: "preparar" }                                   -> { customerId, publicKey }
  *   { action: "guardar", paymentMethodId, plan, billing, condo?, consent? } -> { card, charge, outcome }  (plan y precio los valida el servidor)
- *     consent: CONSENT_VERSION si la persona tocó el botón con el texto del cobro recurrente a la vista (#329). Sin él no se
- *     programa un cobro nuevo.
+ *     consent: { version: CONSENT_VERSION, first_amount_minor, full_amount_minor }: el texto del cobro recurrente que la persona
+ *     vio al tocar el botón (#329). Sin él no se programa ni se cobra un plan nuevo; si esos montos no son los que se cobrarían,
+ *     409 con { consent: { promo, firstMinor, fullMinor } } y no se guarda nada.
  *   { action: "quitar" }                                     -> { ok }
  * Límite de intentos por persona en la base (rate_hit de 0023) y en memoria.
  */
@@ -58,7 +60,7 @@ export async function POST(req: Request) {
     const pmId = body.paymentMethodId;
     // 0066: desde el enlace de un condominio con tarjeta (/c/<código>). El servidor decide si aplica.
     const condo = normalizeCondoCode(body.condo);
-    const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo, consent: consentGiven(body.consent) ? { ipCountry: ipCountryOf(req.headers) } : null }));
+    const r = await singleFlight(`tarjeta:guardar:${v.id}`, () => saveCard(v, { paymentMethodId: pmId, plan: pb.plan, billing: pb.billing, condo, consent: accepted(body.consent, req.headers) }));
     // Tarjeta guardada pero el cobro de ese momento se rechazó (cuenta sin prueba): queda el motivo (#296).
     if (r.outcome === "rechazado") await recordPaymentFailed(db, { userId: v.id, provider: "onvo", stage: "tarjeta", code: "cobro_rechazado", plan: pb.plan, billing: pb.billing });
     return NextResponse.json({ ok: true, ...r });
@@ -68,6 +70,7 @@ export async function POST(req: Request) {
       const code = e instanceof BillingError ? (e.status === 400 ? "tarjeta_rechazada" : `billing_${e.status}`) : errCode(e);
       await recordPaymentFailed(db, { userId: v.id, provider: "onvo", stage: "tarjeta", code });
     }
+    if (e instanceof ConsentMismatch) return NextResponse.json({ ok: false, error: e.message, consent: e.terms }, { status: e.status });
     if (e instanceof BillingError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
     logError("pagos", "tarjeta_failed", { kind: errCode(e), action });
     return NextResponse.json({ ok: false, error: "No pudimos guardar tu tarjeta. Intenta de nuevo en un momento." }, { status: 502 });

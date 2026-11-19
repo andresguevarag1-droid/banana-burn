@@ -17,7 +17,7 @@ import type { Viewer } from "@/lib/supabase/server";
 import type { SubscriptionRow } from "@/lib/entitlements";
 import { PLANS, type Billing, type PlanId } from "@/lib/plans";
 import { BillingError, SUB_COLS, activateVerified, recordAppEvent, syncProfilePlan } from "@/lib/billing";
-import { CONSENT_MISSING, cardSaveContext, emailOf, replaceCard, saveVerifiedCard, type Consent, type SaveCardResult, type VerifiedCard } from "@/lib/trial-billing";
+import { ConsentMismatch, cardSaveContext, checkConsent, emailOf, promoBeforeCard, replaceCard, saveVerifiedCard, startsRecurring, type Consent, type SaveCardResult, type VerifiedCard } from "@/lib/trial-billing";
 import { CONSENT_VERSION } from "@/lib/billing-consent";
 import { chargeBusy } from "@/lib/trial";
 import { recordServerError } from "@/lib/monitor/server";
@@ -70,9 +70,10 @@ export async function startTilopayCard(v: Viewer, plan: PlanId, billing: Billing
   // Mismas reglas que con ONVO: si ya paga (y no puede cambiar la tarjeta de su plan) o hay un cobro en curso, no se abre la
   // página. Con un plan de Tilopay que se renueva, guardar la tarjeta la cambia para la renovación (trial-billing.ts).
   const ctx = await cardSaveContext(db, v, new Date(), "tilopay");
-  // #329: un cobro nuevo se programa solo con el consentimiento, que viaja en el estado firmado hasta la vuelta.
-  if (ctx.mode === "trial" && ctx.plan.do === "create" && !consent) throw new BillingError(CONSENT_MISSING, 400);
-  const state = signState({ u: v.id, p: "tarjeta", plan, billing, n: randomBytes(9).toString("base64url"), ...(consent ? { c: CONSENT_VERSION, ...(consent.ipCountry ? { cc: consent.ipCountry } : {}) } : {}) });
+  // #329: un plan nuevo se programa (o cobra) solo con el consentimiento y sus montos, que viajan en el estado firmado hasta
+  // la vuelta. Aquí todavía no hay tarjeta: la vuelta revisa otra vez con su huella (una tarjeta que ya usó el 50 %).
+  if (ctx.mode === "trial" && startsRecurring(ctx.plan)) checkConsent(consent, plan, billing, await promoBeforeCard(db, v.id, ctx.plan, ctx.row));
+  const state = signState({ u: v.id, p: "tarjeta", plan, billing, n: randomBytes(9).toString("base64url"), ...(consent ? { c: CONSENT_VERSION, fa: consent.firstMinor, fu: consent.fullMinor, ...(consent.ipCountry ? { cc: consent.ipCountry } : {}) } : {}) });
   const url = await createTokenizeUrl({ redirect: returnUrl(origin, state), email: v.email, name: v.name });
   log("página para guardar tarjeta", { userId: v.id });
   return { url };
@@ -109,7 +110,8 @@ export async function startTilopayCheckout(v: Viewer, plan: PlanId, billing: Bil
 
 // ───────────────────────── 2. La vuelta ─────────────────────────
 
-export type ReturnOutcome = "tarjeta_ok" | "pago_ok" | "confirmando" | "rechazada" | "sin_tarjeta";
+/** `monto`: la tarjeta ya no gana el 50 % que decía el texto aceptado (#329); no se guardó nada y Mi plan muestra el monto real. */
+export type ReturnOutcome = "tarjeta_ok" | "pago_ok" | "confirmando" | "rechazada" | "sin_tarjeta" | "monto";
 /** Resultado de la vuelta. `kind`: por qué no se completó (pago-fallo.ts), para el mensaje y el botón de reintentar. */
 export type ReturnResult = { outcome: ReturnOutcome; result?: SaveCardResult; kind?: FailKind };
 
@@ -171,8 +173,16 @@ async function returnTarjeta(db: SupabaseClient, v: Viewer, s: ReturnState, r: R
   if (noSession && ctx.mode === "replace") return null;
   const card: VerifiedCard = { provider: "tilopay", customerId: tilopayCustomerId(v.id), paymentMethodId: r.token, brand: r.brand, last4: r.last4, expMonth: null, expYear: null };
   if (ctx.mode === "replace") return { outcome: "tarjeta_ok", result: await replaceCard(db, v, card, ctx.subs, now) };
-  const consent = s.c === CONSENT_VERSION ? { ipCountry: s.cc ?? null } : null;
-  const result = await saveVerifiedCard(db, v, card, { plan: s.plan, billing: s.billing, consent }, ctx.row, ctx.plan, now);
+  const consent = s.c === CONSENT_VERSION && typeof s.fa === "number" && typeof s.fu === "number" ? { ipCountry: s.cc ?? null, firstMinor: s.fa, fullMinor: s.fu } : null;
+  let result: SaveCardResult;
+  try {
+    result = await saveVerifiedCard(db, v, card, { plan: s.plan, billing: s.billing, consent }, ctx.row, ctx.plan, now);
+  } catch (e) {
+    if (!(e instanceof ConsentMismatch)) throw e;
+    // El token no se guardó: quien vuelve a Mi plan ve el monto correcto y guarda la tarjeta otra vez.
+    log("tarjeta de Tilopay sin el 50 % que aceptó: no se guarda", { userId: v.id });
+    return { outcome: "monto" };
+  }
   if (result.outcome === "rechazado") {
     const kind = await recordPaymentFailed(db, { userId: v.id, provider: "tilopay", stage: "tarjeta", code: "rechazada", plan: s.plan, billing: s.billing });
     return { outcome: "rechazada", result, kind };
