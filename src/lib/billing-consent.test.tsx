@@ -110,12 +110,12 @@ describe("pantallas: el texto va justo arriba del botón", () => {
   });
 });
 
-describe("0074_consentimiento_cobro.sql", () => {
+describe("0075_consentimiento_cobro.sql", () => {
   it("se aplica dos veces; la persona lee solo los suyos y no escribe; service_role escribe", async () => {
     const pg = new PGlite({ extensions: { pgcrypto } });
     await pg.exec(readFileSync("supabase/tests/stub.sql", "utf8"));
     await pg.exec(readFileSync("supabase/migrations/0001_init.sql", "utf8"));
-    const sql = readFileSync("supabase/migrations/0074_consentimiento_cobro.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/0075_consentimiento_cobro.sql", "utf8");
     await pg.exec(sql);
     await pg.exec(sql);
     const a = "00000000-0000-4000-8000-00000000000a", b = "00000000-0000-4000-8000-00000000000b";
