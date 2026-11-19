@@ -48,6 +48,7 @@ import {
 } from "@/lib/trial";
 import { notifyInApp, sendChargeCanceled, sendChargeReminder, sendPaymentFailed, sendTrialStarted } from "@/lib/email";
 import { pushToUser } from "@/lib/push";
+import { startTrialEvent, type StartTrial } from "@/lib/meta-pixel";
 import { errInfo } from "@/lib/security/log";
 import { FIRST_CHARGE_PERIOD, chargeKeyHeld, releaseChargeKey, reserveChargeKey } from "@/lib/charge-keys";
 import { readOnly } from "@/lib/supabase/read-only";
@@ -174,7 +175,11 @@ export async function prepareCard(v: Viewer): Promise<{ customerId: string }> {
   return { customerId: await getOrCreateCustomer(db, v) };
 }
 
-export type SaveCardResult = { card: { brand: string | null; last4: string | null }; charge: ChargeView | null; outcome: "programado" | "reanudado" | "sin_cambio" | "tarjeta_cambiada" | AttemptResult };
+export type SaveCardResult = {
+  card: { brand: string | null; last4: string | null }; charge: ChargeView | null; outcome: "programado" | "reanudado" | "sin_cambio" | "tarjeta_cambiada" | AttemptResult;
+  /** #331: solo cuando esta tarjeta empezó la prueba (cobro nuevo a futuro). Va a Meta como StartTrial, por el píxel y por el servidor. */
+  startTrial?: StartTrial | null;
+};
 
 const PM_ID = /^[A-Za-z0-9_-]{1,100}$/;
 
@@ -412,7 +417,7 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
     const promoOn = promoApplies(row.promo, row.billing);
     await sendTrialStarted({ userId: v.id, chargeId: row.id, plan: planName(row.plan), amount: amount / 100, chargeAt: row.charge_at, kind: row.kind, card: cardLabel(card), promo: promoOn }).catch(() => null);
     await notifyInApp(v.id, { kind: "prueba", title: "Tu tarjeta quedó lista", body: promoOn ? `Hoy no te cobramos. El ${fmtDay(row.charge_at)} se cobra tu primer mes con 50 % de descuento, salvo que canceles antes.` : `Hoy no te cobramos. El ${fmtDay(row.charge_at)} se cobra tu plan, salvo que canceles antes.`, url: "/app/suscripcion" }).catch(() => false);
-    return { card, charge: chargeView(row, now), outcome: "programado" };
+    return { card, charge: chargeView(row, now), outcome: "programado", startTrial: startTrialEvent({ id: row.id, plan: row.plan, billing: row.billing, amountMinor: row.amount_minor }) };
   }
 
   if (!row) throw new BillingError("No pudimos programar tu plan. Intenta de nuevo.", 500);
