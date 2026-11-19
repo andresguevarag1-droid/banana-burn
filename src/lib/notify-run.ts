@@ -24,7 +24,8 @@ import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, trialProgre
 import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
 import { todayIn } from "@/lib/today";
 import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
-import { SECOND_KIND, SECOND_WINDOW, TRIAL_DAYS, secondIdemKey, secondWorkoutEmailDue } from "@/lib/segundo-entreno";
+import { COMEBACK_DAYS, COMEBACK_KINDS, LEGACY_R2_KIND, comebackDue, comebackIdemKey, comebackKind, comebackLift, isComebackKind, type LiftSet } from "@/lib/regreso";
+import { RESCUE_KINDS, RESCUE_LOOKBACK_MS, cardRescueDue, rescueIdemKey } from "@/lib/tarjeta-rescate";
 import { WEEKLY_KIND, registrationDay, weekCount, weekMonday, weeklyGoal, weeklyIdemKey, weeklyNudgeCopy, weeklyNudgeDue } from "@/lib/meta-semanal";
 import { DEFAULT_LOCALE, isLocale, isUnits, type Locale, type Units } from "@/lib/i18n/locale";
 import { ACTIVATION_KINDS, ACTIVATION_MAX_HOURS, activationDue, activationIdemKey, activationKind, emailedToday, isActivationKind, type LogEntry } from "@/lib/activacion-correos";
@@ -92,12 +93,15 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   // Activación (#225): antes de los avisos del día, para que la pieza reemplace al recordatorio del primer entreno.
   try { await sendActivationEmails(admin, now, mode, stats, late); }
   catch (e) { stats.errors++; logError("cron:activacion", "run_failed", { kind: errCode(e) }); }
-  // Segundo entreno (#286): de 48 a 72 h después del primero, también antes de los avisos del día (reemplaza al recordatorio).
-  try { await sendSecondWorkoutEmails(admin, now, stats, late); }
-  catch (e) { stats.errors++; logError("cron:segundo-entreno", "run_failed", { kind: errCode(e) }); }
+  // Regreso (#320): después del primer entreno, también antes de los avisos del día (reemplaza al recordatorio y a la prueba).
+  try { await sendComebackEmails(admin, now, mode, stats, late); }
+  catch (e) { stats.errors++; logError("cron:regreso", "run_failed", { kind: errCode(e) }); }
   // Checkout abandonado (#237): 1 hora después de abrir el pago sin pagar.
   try { await sendAbandonedCheckoutEmails(admin, now, stats, late); }
   catch (e) { stats.errors++; logError("cron:checkout-abandonado", "run_failed", { kind: errCode(e) }); }
+  // Rescate de la tarjeta de la bienvenida (#325): 1 h y el día siguiente a las 7:00 después de ver el paso sin dejarla.
+  try { await sendCardRescueEmails(admin, now, stats, late); }
+  catch (e) { stats.errors++; logError("cron:tarjeta-rescate", "run_failed", { kind: errCode(e) }); }
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
     const { data: profiles, error } = await profilePage(admin, from);
@@ -456,8 +460,8 @@ async function processUser(admin: SupabaseClient, u: Profile, prefsOf: Map<strin
     const seasonDue = season && !userLogs.some((l) => l.kind === season.step) ? season : null;
     // Activación (#225): si hoy salió una pieza, ese día no sale otro correo de rutina ni la pieza de la prueba (cede ante
     // A1 y A2, docs/emails/activacion.md). Push y campanita siguen igual.
-    // Lo mismo con el correo del segundo entreno (#286).
-    const activationToday = todayLogs.some((l) => (isActivationKind(l.kind) || l.kind === SECOND_KIND) && l.channels?.includes("email"));
+    // Lo mismo con los correos de regreso (#320, antes el del segundo entreno de #286): si choca, gana el de regreso.
+    const activationToday = todayLogs.some((l) => (isActivationKind(l.kind) || isComebackKind(l.kind) || l.kind === LEGACY_R2_KIND) && l.channels?.includes("email"));
     if (activationToday) for (const d of decisions) d.email = false;
     const trialStep = activationToday ? null : step;
     // Meta semanal (#288): a la hora del recordatorio, el día en que todavía llega a su meta pero va atrás; una vez por
@@ -868,74 +872,78 @@ export async function sendActivationEmails(admin: SupabaseClient, now: Date, mod
   }
 }
 
-// ───────────── Segundo entreno (#286) ─────────────
+// ───────────── Regreso (#320) ─────────────
 
-const HOUR_MS = 36e5;
+type ComebackProfile = { id: string; created_at: string | null; timezone: string | null; plan: string | null; role: string | null; full_name: string | null; train_days: number | null; equipment: string | null; sex?: string | null };
 
 /**
- * "Tu segundo entreno está listo" (segundo-entreno.ts) a quien terminó su primer entreno hace 48 a 72 h y no terminó otro,
- * dentro de su prueba de 7 días y con las exclusiones de la secuencia de la prueba. Se reclama en notification_log (kind
- * segundo_entreno, local_day = día local del envío) antes de enviarse: una vez por cuenta. Se omite (sin reclamar) si hoy ya
- * recibió otro correo. Si Resend lo rechaza, se libera el turno. Si falla una lectura, el lote se salta. Exportada para pruebas.
+ * Correos de regreso R1 a R4 (regreso.ts) a las cuentas de menos de 14 días que terminaron su primer entreno y no hicieron el
+ * siguiente, con las exclusiones de la secuencia de la prueba. Cada correo se reclama en notification_log (kind regreso_rN,
+ * local_day = día local del envío) antes de enviarse: una vez por cuenta. Se omite (sin reclamar, `regreso_rN_omitido`) si
+ * hoy ya recibió otro correo o es el día de su correo de recuperación. Si Resend lo rechaza, se libera el turno. Si falla una
+ * lectura, la página se salta. Exportada para pruebas.
  */
-export async function sendSecondWorkoutEmails(admin: SupabaseClient, now: Date, stats: RunStats, late: () => boolean = () => false) {
-  if (late()) { stats.partial = true; return; }
-  const at = (h: number) => new Date(now.getTime() - h * HOUR_MS).toISOString();
-  // Cuentas con un entreno terminado dentro de la ventana; las que tienen otro se descartan abajo.
-  const recent = await allPages((a, b) => admin.from("workouts").select("user_id,finished_at").gte("finished_at", at(SECOND_WINDOW[1])).order("id").range(a, b));
-  if (recent.error) { stats.ok = false; stats.errors++; logError("cron:segundo-entreno", "workouts_query_failed", { code: recent.error.code }); return; }
-  const all = [...new Set((recent.data as { user_id: string; finished_at: string }[]).filter((r) => Date.parse(r.finished_at) < now.getTime() - SECOND_WINDOW[0] * HOUR_MS).map((r) => r.user_id))];
+export async function sendComebackEmails(admin: SupabaseClient, now: Date, mode: "hourly" | "daily", stats: RunStats, late: () => boolean = () => false) {
+  const since = new Date(now.getTime() - COMEBACK_DAYS * 24 * 36e5).toISOString();
   const utcToday = now.toISOString().slice(0, 10);
-  const trialStart = at(TRIAL_DAYS * 24);
-  for (let i = 0; i < all.length; i += CHUNK) {
+  for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
-    const ids = all.slice(i, i + CHUNK);
-    const [profiles, prefs, done, subs, comps, testers, charges, sent, dated, once] = await Promise.all([
-      allPages((a, b) => admin.from("profiles").select("id,created_at,timezone,plan,role").in("id", ids).gte("created_at", trialStart).order("id").range(a, b)),
+    const { data, error } = await admin.from("profiles").select("id,created_at,timezone,plan,role,full_name,train_days,equipment,sex")
+      .eq("onboarded", true).gte("created_at", since).order("id").range(from, from + PAGE - 1);
+    if (error) { stats.ok = false; stats.errors++; logError("cron:regreso", "profiles_query_failed", { code: error.code, from }); break; }
+    const profiles = (data ?? []) as ComebackProfile[];
+    if (!profiles.length) break;
+    const ids = profiles.map((p) => p.id);
+    const [prefs, done, subs, comps, testers, charges, sent, dated, once] = await Promise.all([
       allPages((a, b) => admin.from("notification_prefs").select("*").in("user_id", ids).order("user_id").range(a, b)),
-      allPages((a, b) => admin.from("workouts").select("user_id,finished_at").in("user_id", ids).gte("finished_at", trialStart).order("id").range(a, b)),
+      allPages((a, b) => admin.from("workouts").select("id,user_id,finished_at").in("user_id", ids).gte("finished_at", since).order("id").range(a, b)),
       allPages((a, b) => admin.from("subscriptions").select("user_id,status").in("user_id", ids).order("id").range(a, b)),
       allPages((a, b) => admin.from("comp_grants").select("user_id,revoked_at").in("user_id", ids).order("user_id").range(a, b)),
       allPages((a, b) => admin.from("tester_grants").select("user_id,revoked_at").in("user_id", ids).order("user_id").range(a, b)),
       allPages((a, b) => admin.from("trial_charges").select("user_id,status,kind,charge_at,reminder_sent_at").in("user_id", ids).order("user_id").range(a, b)),
-      allPages((a, b) => admin.from("notification_log").select("user_id").in("user_id", ids).eq("kind", SECOND_KIND).order("id").range(a, b)),
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind").in("user_id", ids).in("kind", [...COMEBACK_KINDS, LEGACY_R2_KIND]).order("id").range(a, b)),
       // Correos con fecha de hoy y únicos (ONCE_DAY) que salieron hoy, para no mandar dos el mismo día.
       allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,channels,created_at").in("user_id", ids).gte("local_day", isoMinus(utcToday, 1)).order("id").range(a, b)),
       allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day,channels,created_at").in("user_id", ids).eq("local_day", ONCE_DAY).gte("created_at", isoMinus(utcToday, 1) + "T00:00:00Z").order("id").range(a, b)),
     ]);
-    const failed = [profiles, prefs, done, subs, comps, testers, charges, sent, dated, once].find((r) => r.error);
-    if (failed) { stats.ok = false; stats.errors++; logError("cron:segundo-entreno", "query_failed", { code: failed.error?.code }); continue; }
-    type P = { id: string; created_at: string | null; timezone: string | null; plan: string | null; role: string | null };
+    const failed = [prefs, done, subs, comps, testers, charges, sent, dated, once].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:regreso", "query_failed", { code: failed.error?.code }); if (profiles.length < PAGE) break; continue; }
     const prefsOf = new Map<string, Prefs>();
-    const langBy = await languagesOf(admin, (profiles.data as P[]).map((p) => p.id));
-    for (const p of profiles.data as P[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
+    const langBy = await languagesOf(admin, ids);
+    for (const p of profiles) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
     for (const r of prefs.data as Record<string, unknown>[]) if (prefsOf.has(r.user_id as string)) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
     const has = (rows: unknown[], ok: (r: Record<string, unknown>) => boolean = () => true) => new Set((rows as Record<string, unknown>[]).filter(ok).map((r) => r.user_id as string));
     const paid = has(subs.data, (r) => r.status !== "incomplete");
     const comp = has(comps.data, (r) => !r.revoked_at);
     const tester = has(testers.data, (r) => !r.revoked_at);
-    const already = has(sent.data);
     const chargeBy = new Map((charges.data as (TrialSequenceCharge & { user_id: string })[]).map((r) => [r.user_id, r]));
-    const finishedBy = new Map<string, string[]>();
-    for (const r of done.data as { user_id: string; finished_at: string }[]) finishedBy.set(r.user_id, [...(finishedBy.get(r.user_id) ?? []), r.finished_at]);
+    const doneBy = new Map<string, { id: string; finished_at: string }[]>();
+    for (const r of done.data as { id: string; user_id: string; finished_at: string }[]) doneBy.set(r.user_id, [...(doneBy.get(r.user_id) ?? []), r]);
+    const sentBy = new Map<string, string[]>();
+    for (const r of sent.data as { user_id: string; kind: string }[]) sentBy.set(r.user_id, [...(sentBy.get(r.user_id) ?? []), r.kind]);
     const logsBy = new Map<string, LogEntry[]>();
     for (const r of [...dated.data, ...once.data] as (LogEntry & { user_id: string })[]) logsBy.set(r.user_id, [...(logsBy.get(r.user_id) ?? []), r]);
 
-    // Sin perfil en la prueba (cuenta borrada o de más de 7 días) no se manda nada.
-    await forEachLimit(profiles.data as P[], USER_CONCURRENCY, async (p) => {
+    await forEachLimit(profiles, USER_CONCURRENCY, async (p) => {
       if (late()) { stats.partial = true; return; }
       try {
         const pr = prefsOf.get(p.id)!;
-        const due = secondWorkoutEmailDue({
-          createdAt: p.created_at, now, emailReminders: pr.email_reminders !== false, profilePlan: p.plan, staff: STAFF.includes(p.role as (typeof STAFF)[number]),
+        const workouts = doneBy.get(p.id) ?? [];
+        const step = comebackDue({
+          createdAt: p.created_at, now, mode, emailReminders: pr.email_reminders !== false, profilePlan: p.plan, staff: STAFF.includes(p.role as (typeof STAFF)[number]),
           paid: paid.has(p.id), comp: comp.has(p.id), tester: tester.has(p.id), charge: chargeBy.get(p.id) ?? null,
-          finished: finishedBy.get(p.id) ?? [], timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end, sent: already.has(p.id),
+          finished: workouts.map((w) => w.finished_at), timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end, sent: sentBy.get(p.id) ?? [],
         });
-        if (!due) return;
-        if (emailedToday(logsBy.get(p.id) ?? [], now, pr.timezone)) { stats.sent[`${SECOND_KIND}_omitido`] = (stats.sent[`${SECOND_KIND}_omitido`] ?? 0) + 1; return; }
+        if (step === null) return;
+        const kind = comebackKind(step);
+        // Un correo por día: si hoy ya salió otro, o hoy toca el de recuperación (día 8 o 10, que manda en su día), no sale.
+        if (emailedToday(logsBy.get(p.id) ?? [], now, pr.timezone) || recoveryStepAt(p.created_at, mode === "hourly" ? recoveryAt(now, pr) : now)) {
+          stats.sent[`${kind}_omitido`] = (stats.sent[`${kind}_omitido`] ?? 0) + 1;
+          return;
+        }
         const day = localClock(now, pr.timezone).iso;
         const { data: claimed, error: claimErr } = await admin.from("notification_log")
-          .upsert({ user_id: p.id, kind: SECOND_KIND, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .upsert({ user_id: p.id, kind, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
           .select("id");
         if (claimErr) { stats.errors++; return; }
         if (!claimed?.length) return;
@@ -943,14 +951,40 @@ export async function sendSecondWorkoutEmails(admin: SupabaseClient, now: Date, 
         const to = u.user?.email;
         if (!to) return;
         const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
-        const r = await sendEmail(to, withLoginLinks(T.segundoEntreno({ unsubscribe, locale: langBy.get(p.id)?.locale }), p.id), { idempotencyKey: secondIdemKey(p.id), unsubscribe, tags: { kind: SECOND_KIND } });
+        const lang = langBy.get(p.id);
+        const r = step === "r3"
+          ? await sendEmail(to, T.regresoPregunta({ name: p.full_name || "", unsubscribe, locale: lang?.locale }), { idempotencyKey: comebackIdemKey(step, p.id), unsubscribe, tags: { kind }, from: T.COMEBACK_QUESTION_FROM, replyTo: T.COMEBACK_QUESTION_REPLY_TO })
+          : await sendEmail(to, withLoginLinks(T.regreso({ step, ...(await comebackSession(admin, p, workouts, localClock(now, pr.timezone).dow)), unsubscribe, locale: lang?.locale, units: lang?.units }), p.id),
+            { idempotencyKey: comebackIdemKey(step, p.id), unsubscribe, tags: { kind } });
         if (r.ok) stats.email++;
         // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo (como la activación).
-        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", SECOND_KIND).eq("local_day", day).then(() => null, () => null); return; }
-        stats.sent[SECOND_KIND] = (stats.sent[SECOND_KIND] ?? 0) + 1;
-      } catch (e) { stats.errors++; logError("cron:segundo-entreno", "user_failed", { kind: errCode(e) }); }
+        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", kind).eq("local_day", day).then(() => null, () => null); return; }
+        stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:regreso", "user_failed", { kind: errCode(e) }); }
     });
+    if (stats.partial || profiles.length < PAGE) break;
   }
+}
+
+/**
+ * La sesión que le toca hoy (en un día de descanso, la próxima, como /app/entreno), sus minutos y el dato de su último entreno
+ * (comebackLift). Si la lectura de las series falla, el correo sale sin el dato.
+ */
+async function comebackSession(admin: SupabaseClient, p: ComebackProfile, workouts: { id: string; finished_at: string }[], dow: number): Promise<{ routine: string; mins: number | null; lift: ReturnType<typeof comebackLift> }> {
+  const sched = scheduleFor(Number(p.train_days ?? 6));
+  const opts = { equipment: (p.equipment as Equipment) ?? "gym", sex: p.sex };
+  const today = planDay(dow, 0, sched, opts);
+  const nd = today.tpl === null ? nextTrainingDow(sched, dow) : null;
+  const plan = nd == null ? today : planDay(nd, 0, sched, opts);
+  const last = [...workouts].sort((a, b) => Date.parse(a.finished_at) - Date.parse(b.finished_at)).at(-1);
+  let lift: ReturnType<typeof comebackLift> = null;
+  if (last) {
+    try {
+      const { data, error } = await admin.from("workout_sets").select("exercise,kg,reps,rir").eq("workout_id", last.id).limit(200);
+      if (!error && data) lift = comebackLift(plan.exercises, data as LiftSet[]);
+    } catch { /* sin el dato */ }
+  }
+  return { routine: plan.name, mins: plan.mins ?? null, lift };
 }
 
 // ───────────── Checkout abandonado (#237) ─────────────
@@ -1025,6 +1059,84 @@ export async function sendAbandonedCheckoutEmails(admin: SupabaseClient, now: Da
         else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", id).eq("kind", ABANDONED_KIND).eq("local_day", day).then(() => null, () => null); return; }
         stats.sent[ABANDONED_KIND] = (stats.sent[ABANDONED_KIND] ?? 0) + 1;
       } catch (e) { stats.errors++; logError("cron:checkout-abandonado", "user_failed", { kind: errCode(e) }); }
+    });
+  }
+}
+
+// ───────────── Rescate del paso de la tarjeta (#325) ─────────────
+
+/**
+ * "Tu plan ya está armado: falta un paso" y "Tu primer entreno te está esperando" (tarjeta-rescate.ts) a las cuentas desde
+ * CARD_REQUIRED_FROM que vieron el paso de la tarjeta de la bienvenida (card_ask_view "bienvenida") en las últimas 72 h y no
+ * la dejaron. Cada correo una vez por cuenta (notification_log, kind tarjeta_rescate_1/2), reclamado antes de enviarse; si
+ * Resend lo rechaza, se libera el turno. Si falla una lectura, el lote se salta. Exportada para pruebas.
+ */
+export async function sendCardRescueEmails(admin: SupabaseClient, now: Date, stats: RunStats, late: () => boolean = () => false) {
+  if (late()) { stats.partial = true; return; }
+  const since = new Date(now.getTime() - RESCUE_LOOKBACK_MS).toISOString();
+  const views = await allPages((a, b) => admin.from("funnel_events").select("user_id,created_at")
+    .eq("name", "card_ask_view").eq("props->>where", "bienvenida").gte("created_at", since).order("id").range(a, b));
+  if (views.error) { stats.ok = false; stats.errors++; logError("cron:tarjeta-rescate", "events_query_failed", { code: views.error.code }); return; }
+  // La primera vez que vio el paso, por cuenta.
+  const stepAt = new Map<string, string>();
+  for (const v of views.data as { user_id: string | null; created_at: string }[]) {
+    if (v.user_id && (!stepAt.has(v.user_id) || v.created_at < stepAt.get(v.user_id)!)) stepAt.set(v.user_id, v.created_at);
+  }
+  const all = [...stepAt.keys()];
+  for (let i = 0; i < all.length; i += CHUNK) {
+    if (late()) { stats.partial = true; break; }
+    const ids = all.slice(i, i + CHUNK);
+    const [profiles, prefs, subs, charges, cards, logs] = await Promise.all([
+      allPages((a, b) => admin.from("profiles").select("id,created_at,timezone,role,train_days,goal_type,equipment").in("id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("notification_prefs").select("*").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("subscriptions").select("user_id,status,current_period_start").in("user_id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("trial_charges").select("user_id,status").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("payment_methods").select("user_id").in("user_id", ids).eq("status", "active").order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day").in("user_id", ids).in("kind", [...RESCUE_KINDS]).order("id").range(a, b)),
+    ]);
+    const failed = [profiles, prefs, subs, charges, cards, logs].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:tarjeta-rescate", "query_failed", { code: failed.error?.code }); continue; }
+    type P = { id: string; created_at: string | null; timezone: string | null; role: string | null; train_days: number | null; goal_type: string | null; equipment: string | null };
+    const group = <T extends { user_id: string }>(rows: T[]) => { const m = new Map<string, T[]>(); for (const r of rows) m.set(r.user_id, [...(m.get(r.user_id) ?? []), r]); return m; };
+    const prefsOf = new Map<string, Prefs>();
+    for (const p of profiles.data as P[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
+    for (const r of prefs.data as Record<string, unknown>[]) if (prefsOf.has(r.user_id as string)) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
+    const langBy = await languagesOf(admin, (profiles.data as P[]).map((p) => p.id));
+    const subsBy = group(subs.data as (PaidSub & { user_id: string })[]);
+    const chargesBy = group(charges.data as { user_id: string; status: string }[]);
+    const cardsBy = group(cards.data as { user_id: string }[]);
+    const logsBy = group(logs.data as { user_id: string; kind: string; local_day: string }[]);
+
+    // Sin perfil (cuenta borrada) no se manda nada. El equipo no recibe estos correos.
+    await forEachLimit(profiles.data as P[], USER_CONCURRENCY, async (p) => {
+      if (late()) { stats.partial = true; return; }
+      try {
+        if (STAFF.includes(p.role as (typeof STAFF)[number])) return;
+        const pr = prefsOf.get(p.id)!;
+        const kind = cardRescueDue({
+          now, createdAt: p.created_at, stepAt: stepAt.get(p.id)!, subs: subsBy.get(p.id) ?? [], chargeStatuses: (chargesBy.get(p.id) ?? []).map((c) => c.status),
+          cards: (cardsBy.get(p.id) ?? []).length, emailReminders: pr.email_reminders !== false, timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end,
+          sent: logsBy.get(p.id) ?? [],
+        });
+        if (!kind) return;
+        const day = localClock(now, pr.timezone).iso;
+        const { data: claimed, error: claimErr } = await admin.from("notification_log")
+          .upsert({ user_id: p.id, kind, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .select("id");
+        if (claimErr) { stats.errors++; return; }
+        if (!claimed?.length) return;
+        const { data: u } = await admin.auth.admin.getUserById(p.id);
+        const to = u.user?.email;
+        if (!to) return;
+        const goal = p.goal_type === "grasa" || p.goal_type === "recomp" || p.goal_type === "fuerza" ? p.goal_type : null;
+        const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
+        const msg = T.tarjetaRescate({ kind, goal, days: p.train_days, home: offersHomeFirst((p.equipment ?? "gym") as Equipment), unsubscribe, locale: langBy.get(p.id)?.locale });
+        const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: rescueIdemKey(p.id, kind), unsubscribe, tags: { kind } });
+        if (r.ok) stats.email++;
+        // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo.
+        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", kind).eq("local_day", day).then(() => null, () => null); return; }
+        stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:tarjeta-rescate", "user_failed", { kind: errCode(e) }); }
     });
   }
 }

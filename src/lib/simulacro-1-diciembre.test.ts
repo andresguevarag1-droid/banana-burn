@@ -19,6 +19,8 @@ vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => state.db }));
 vi.mock("@/lib/supabase/server", () => ({ STAFF: ["admin", "superadmin"], createClient: async () => ({}), getViewer: async () => state.viewer }));
 vi.mock("@/lib/security/db-rate-limit", async (orig) => ({ ...(await orig<object>()), dbRateLimit: async () => true, dbRateLimitAll: async () => true }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined, set: () => {} }), headers: async () => new Headers() }));
+// after() de Next necesita una petición real: aquí corre en el momento (StartTrial por la API de Conversiones, #331).
+vi.mock("next/server", async (orig) => ({ ...(await orig<object>()), after: (task: () => unknown) => { void task(); } }));
 vi.mock("next/cache", () => ({ revalidatePath: () => {}, revalidateTag: () => {}, unstable_cache: (f: unknown) => f }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, replace: () => {}, refresh: () => {} }), usePathname: () => "/bienvenida", useSearchParams: () => new URLSearchParams(), redirect: () => {} }));
 const onvo = vi.hoisted(() => ({
@@ -94,8 +96,10 @@ const clock = (iso: string | Date) => vi.setSystemTime(new Date(iso));
 const post = (body: unknown) => tarjetaRoute.POST(new Request(`${ORIGIN}/api/pagos/tarjeta`, { method: "POST", headers: { "content-type": "application/json", origin: ORIGIN, host: "bananaburn.app" }, body: JSON.stringify(body) }));
 const failures = (f: F) => f.tables.payment_events.filter((e) => e.type === PAYMENT_FAILED);
 /** Eventos que llegaron a Meta por la API de Conversiones. */
-const subscribes = () => (fetchMock.mock.calls as unknown as [string, RequestInit][])
+const metaEvents = () => (fetchMock.mock.calls as unknown as [string, RequestInit][])
   .filter(([url]) => String(url).includes("graph.facebook.com")).map(([, init]) => JSON.parse(String(init.body)).data[0]);
+const subscribes = () => metaEvents().filter((e) => e.event_name === "Subscribe");
+const startTrials = () => metaEvents().filter((e) => e.event_name === "StartTrial");
 const goodCard = (id: string, customerId: string) => ({ id, customerId, status: "active", type: "card", card: { brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 } });
 
 beforeEach(() => {
@@ -146,9 +150,14 @@ describe("1. ONVO (tarjeta de Costa Rica): de la bienvenida al Subscribe del dí
     onvo.getPaymentMethod.mockResolvedValue(goodCard("pm_cr", "cus_cr"));
     const res = await post({ action: "guardar", paymentMethodId: "pm_cr", plan: "entreno", billing: "mes", consent: acceptBody("entreno", "mes") });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ ok: true, outcome: "programado", card: { brand: "visa", last4: "4242" } });
+    const saved = await res.json();
+    expect(saved).toMatchObject({ ok: true, outcome: "programado", card: { brand: "visa", last4: "4242" } });
     expect(onvo.createPaymentIntent).not.toHaveBeenCalled();
     expect(f.tables.trial_charges[0]).toMatchObject({ kind: "prueba", status: "scheduled", promo: "primer_mes_50", amount_minor: 499, trial_started_at: CREATED, charge_at: plus(CREATED, 7).toISOString() });
+    // #331: empezó la prueba: StartTrial a Meta desde el servidor, con el mismo event_id que recibe el píxel en la respuesta.
+    const trialId = `trial-${f.tables.trial_charges[0].id}`;
+    expect(saved.startTrial).toEqual({ eventId: trialId, value: 4.99, predicted_ltv: 29.97 });
+    expect(startTrials()).toMatchObject([{ event_id: trialId, action_source: "website", custom_data: { value: 4.99, currency: "USD", predicted_ltv: 29.97 } }]);
     expect(failures(f)).toEqual([]);
 
     // Prueba activa: 7 días con todo incluido, el cobro programado con el 50 %.
@@ -174,6 +183,7 @@ describe("1. ONVO (tarjeta de Costa Rica): de la bienvenida al Subscribe del dí
     const hook = await webhookRoute.POST(new Request(`${ORIGIN}/api/pagos/webhook`, { method: "POST", headers: { "x-webhook-secret": "webhook-de-prueba" }, body: JSON.stringify(evt) }));
     expect(hook.status).toBe(200);
     expect(subscribes()).toMatchObject([{ event_name: "Subscribe", action_source: "system_generated", event_id: "onvo.charge.approved:pi_cr", custom_data: { value: 4.99, currency: "USD" } }]);
+    expect(startTrials()).toHaveLength(1);
   });
 });
 
@@ -198,7 +208,10 @@ describe("2. Tilopay (tarjeta extranjera): salida, vuelta sin sesión y cobro de
     expect(back.status).toBe(303);
     const loc = new URL(String(back.headers.get("location")));
     expect(loc.pathname).toBe("/entrar");
-    expect(loc.searchParams.get("next")).toBe("/app/suscripcion?tilopay=tarjeta_ok#tarjeta");
+    // #331: Mi plan recibe el event_id de StartTrial para el píxel; el servidor ya mandó el suyo con el mismo.
+    const trialId = `trial-${f.tables.trial_charges[0].id}`;
+    expect(loc.searchParams.get("next")).toBe(`/app/suscripcion?tilopay=tarjeta_ok&inicio=${trialId}#tarjeta`);
+    expect(startTrials()).toMatchObject([{ event_id: trialId, custom_data: { value: 7.49, currency: "USD", predicted_ltv: 44.97 } }]);
     expect(f.tables.payment_methods[0]).toMatchObject({ user_id: USER, provider: "tilopay", provider_payment_method_id: "tok_extranjera_123", status: "active", last4: "1111" });
     expect(f.tables.trial_charges[0]).toMatchObject({ kind: "prueba", status: "scheduled", plan: "completo", promo: "primer_mes_50", amount_minor: 749, charge_at: plus(CREATED, 7).toISOString() });
     expect(failures(f)).toEqual([]);

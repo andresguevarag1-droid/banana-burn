@@ -88,19 +88,42 @@ export const EMAIL: Record<string, string> = {
   "Tu cuenta sigue abierta, con lo que guardaste. Cuando quieras seguir, elige tu plan en Mi plan: el anual aparece primero y también puedes pagar mes a mes. Precios en USD, con IVA incluido.":
     "Your account is still open, with everything you saved. When you want to keep going, choose your plan in My plan. Yearly comes first, and you can also pay month to month. Prices in USD, tax included.",
 
-  // Segundo entreno
-  "Tu segundo entreno": "Your second workout",
+  // Regreso (#320): R1, R2 y R4
   "Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.":
     "You're getting this email because you finished your first workout on Banana Burn and have reminders turned on.",
-  "Tu segundo entreno está listo": "Your second workout is ready",
-  "Ya hiciste el primero. El segundo se hace igual, paso a paso.": "You did the first one. The second one works the same way, step by step.",
-  "Hace unos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.":
-    "A few days ago you finished your first workout. The second one is already in your plan, adjusted to what you logged that time.",
+  "Tu entreno 2": "Your workout 2",
+  "Tu entreno 3": "Your workout 3",
+  "Tu entreno 2 está listo: unos {mins} min": "Your workout 2 is ready: about {mins} min",
+  "Tu entreno 2 está listo": "Your workout 2 is ready",
+  "Ayer hiciste el primero. El segundo ya está en tu plan.": "You did the first one yesterday. The second one is already in your plan.",
+  "Ayer terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste.":
+    "Yesterday you finished your first workout. The second one is already in your plan, adjusted to what you logged.",
+  "Ayer no pudiste. Hoy son {mins} minutos": "Yesterday didn't work out. Today it's {mins} minutes",
+  "Ayer no pudiste. Tu entreno 2 sigue listo": "Yesterday didn't work out. Your workout 2 is still ready",
+  "Tu entreno 2 te espera, sin nada que recuperar.": "Your workout 2 is waiting, with nothing to make up.",
+  "Tu entreno 2 sigue en tu plan. No tienes que recuperar nada: haces este y tu plan sigue desde ahí.":
+    "Your workout 2 is still in your plan. You don't have to make up for anything: do this one and your plan picks up from there.",
+  "Vas 2. El 3.º es el que hace el hábito": "That's 2. The 3rd is the one that builds the habit",
+  "Ya llevas 2 entrenos. Hoy puedes hacer el tercero.": "You've done 2 workouts. Today you can do the third.",
+  "Ya llevas 2 entrenos. El tercero es el que convierte esto en costumbre.": "You've done 2 workouts. The third is the one that turns this into a habit.",
+  "Hoy te toca {routine}: unos {mins} minutos.": "Today it's {routine}: about {mins} minutes.",
+  "Hoy te toca {routine}.": "Today it's {routine}.",
+  "La vez pasada hiciste {exercise} con {load}; hoy toca {next}.": "Last time you did {exercise} with {load}; today it's {next}.",
+  "La vez pasada hiciste {exercise} con {load}.": "Last time you did {exercise} with {load}.",
   "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.":
     "Open it when you have a few minutes today. Coach Banana tells you each exercise, how many reps and when to rest.",
-  "Tu plan funciona entrenando varias veces por semana: el segundo entreno es el que lo pone en marcha.":
-    "Your plan works when you train several times a week. The second workout is what gets it going.",
-  "Empezar mi segundo entreno": "Start my second workout",
+  "Empezar mi entreno 2": "Start my workout 2",
+  "Empezar mi entreno 3": "Start my workout 3",
+  // Regreso: R3, texto plano de Andrés
+  "¿Qué te frenó para volver?": "What kept you from coming back?",
+  "Hola, {name}:": "Hi {name},",
+  "Hola:": "Hi,",
+  "Soy Andrés, de Banana Burn. Vi que hace unos días hiciste tu primer entreno y todavía no el segundo.":
+    "I'm Andrés, from Banana Burn. I saw that you did your first workout a few days ago and haven't done the second one yet.",
+  "Te quiero hacer una sola pregunta: ¿qué te frenó para volver?": "I want to ask you just one question: what kept you from coming back?",
+  "Respóndeme este correo con lo que sea, aunque sea una línea. Lo leo yo y me sirve para mejorar la app.":
+    "Reply to this email with anything, even one line. I read it myself, and it helps me make the app better.",
+  "Si no quieres recibir más correos como este: {url}": "If you don't want more emails like this one: {url}",
 
   // Meta semanal
   "Tu meta de la semana": "Your weekly goal",
@@ -139,4 +162,64 @@ export const EMAIL: Record<string, string> = {
   "La sesión te muestra qué hacer en cada ejercicio. Sigue las indicaciones, avanza a tu ritmo y guarda el entreno al terminar.":
     "The session shows you what to do in each exercise. Follow the cues, go at your own pace and save the workout when you finish.",
   "No necesitas recuperar los días que pasaron. Empieza por hoy.": "You don't need to make up for the days that went by. Start with today.",
+
+  // Rescate del paso de la tarjeta (#325)
+  "Tu plan ya está armado: falta un paso": "Your plan is ready: one step left",
+  "Deja tu tarjeta y empiezas tus 7 días gratis.": "Add your card and your 7 free days begin.",
+  "Para empezar tu prueba solo falta dejar tu tarjeta. Tu plan te espera en el mismo paso donde lo dejaste.":
+    "To start your trial, all that's left is adding your card. Your plan is waiting at the same step where you left it.",
+  "Tu primer entreno de 12 min te está esperando": "Your first 12-minute workout is waiting for you",
+  "Deja tu tarjeta y hazlo hoy, también en casa.": "Add your card and do it today, even at home.",
+  "Tu primer entreno dura 12 minutos y lo puedes hacer en casa. Para abrirlo solo falta dejar tu tarjeta.":
+    "Your first workout takes 12 minutes and you can do it at home. To open it, all that's left is adding your card.",
+  "Tu primer entreno te está esperando": "Your first workout is waiting for you",
+  "Deja tu tarjeta y hazlo hoy.": "Add your card and do it today.",
+  "Tu primer entreno dura hasta 15 minutos, con las indicaciones de cada ejercicio en el celular. Para abrirlo solo falta dejar tu tarjeta.":
+    "Your first workout takes up to 15 minutes, with the cues for each exercise on your phone. To open it, all that's left is adding your card.",
+  "Dejar mi tarjeta": "Add my card",
+  "Hoy no se cobra nada. Tienes 7 días gratis y te avisamos 2 días antes del cobro.": "You won't be charged today. You get 7 free days and we'll remind you 2 days before the charge.",
+  "El día 8 se cobra el primer mes de tu plan con 50\u00a0% de descuento: {entreno} con Entreno o {completo} con Entreno + Nutrición. Si eliges el plan anual, se cobra su precio completo.":
+    "On day 8 we charge your plan's first month at 50\u00a0% off: {entreno} for Training or {completo} for Training + Nutrition. If you choose the yearly plan, we charge its full price.",
+  "Cancelas cuando quieras desde Mi plan.": "Cancel anytime from My plan.",
+  "Tu plan para {goal} ya está armado: {days} entrenos por semana, con tus pesos y tu nivel.": "Your plan to {goal} is ready: {days} workouts a week, built around your weights and your level.",
+  "Tu plan ya está armado con tus días, tus pesos y tu nivel.": "Your plan is ready, built around your days, your weights and your level.",
+  "bajar grasa": "lose fat",
+  "bajar grasa y ganar músculo": "lose fat and build muscle",
+  "ganar fuerza": "get stronger",
+  "Tu plan": "Your plan",
+  "Recibes este correo porque armaste tu plan en Banana Burn sin terminar de dejar tu tarjeta y tienes activados los recordatorios.":
+    "You're getting this email because you built your plan on Banana Burn without finishing adding your card, and you have reminders turned on.",
+
+  // Cancelación (#326): cobro de la prueba cancelado y plan pagado cancelado
+  "Plan": "Plan",
+  "Volver a mi plan": "Go back to my plan",
+  "Recibes este correo como confirmación de un cambio en tu plan.": "You're getting this email to confirm a change to your plan.",
+  "Cancelaste tu plan: no se te cobrará": "You canceled your plan: you won't be charged",
+  "Sigues con acceso hasta el {date}. No se hará ningún cobro.": "You keep access until {date}. No charge will be made.",
+  "No se hará ningún cobro.": "No charge will be made.",
+  "Listo, no se te cobrará": "Done, you won't be charged",
+  "{name}, cancelaste <b>{plan}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.": "{name}, you canceled <b>{plan}</b> before the charge. Your card won't be charged.",
+  "{name}, cancelaste {plan} antes del cobro. No se hará ningún cargo.": "{name}, you canceled {plan} before the charge. No charge will be made.",
+  "Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan.": "Your card is still saved in case you come back; you can remove it from My plan.",
+  "Quitamos tu tarjeta guardada.": "We removed your saved card.",
+  "Para volver, abre Mi plan y elige tu plan. Tus entrenos y tu progreso quedan guardados y retomas donde ibas.":
+    "To come back, open My plan and choose your plan. Your workouts and progress stay saved and you pick up where you left off.",
+  "Sigues con acceso hasta el <b>{date}</b>.": "You keep access until <b>{date}</b>.",
+  "Sigues con acceso hasta el {date}.": "You keep access until {date}.",
+  "Cancelaste tu plan de Banana Burn": "You canceled your Banana Burn plan",
+  "Sigues con acceso hasta el {date}. No se renueva.": "You keep access until {date}. It won't renew.",
+  "No se renueva. Tu progreso queda guardado.": "It won't renew. Your progress stays saved.",
+  "Gracias por entrenar conmigo. Tus récords te esperan cuando quieras volver.": "Thanks for training with me. Your records will be waiting whenever you come back.",
+  "Listo, cancelaste tu plan": "Done, you canceled your plan",
+  "{name}, confirmamos la cancelación de <b>{plan}</b>. No se harán más cobros.": "{name}, we confirm that <b>{plan}</b> is canceled. There will be no more charges.",
+  "{name}, confirmamos la cancelación de {plan}. No se harán más cobros.": "{name}, we confirm that {plan} is canceled. There will be no more charges.",
+  "Para volver, abre Mi plan y elige tu plan. Tus entrenos, récords y pesajes quedan guardados y retomas donde ibas.":
+    "To come back, open My plan and choose your plan. Your workouts, records and weigh-ins stay saved and you pick up where you left off.",
+  "Sigues con acceso hasta el <b>{date}</b>. No se renueva.": "You keep access until <b>{date}</b>. It won't renew.",
+  "Tu plan de Banana Burn se canceló": "Your Banana Burn plan was canceled",
+  "No pudimos cobrar la renovación. Tu progreso queda guardado.": "We couldn't charge the renewal. Your progress stays saved.",
+  "Tu plan se canceló": "Your plan was canceled",
+  "{name}, no pudimos cobrar la renovación de <b>{plan}</b> y el plan se canceló. No se harán más cobros.": "{name}, we couldn't charge the renewal of <b>{plan}</b>, so the plan was canceled. There will be no more charges.",
+  "{name}, no pudimos cobrar la renovación de {plan} y el plan se canceló. No se harán más cobros.": "{name}, we couldn't charge the renewal of {plan}, so the plan was canceled. There will be no more charges.",
+  "¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.": "Can you tell us why you're leaving? Reply to this email; we read everything and it helps us improve.",
 };

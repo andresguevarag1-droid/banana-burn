@@ -11,6 +11,7 @@ import { BETA_GRACE_UNTIL, betaLive } from "@/lib/plans";
 import { isOnvoConfigured } from "@/lib/onvo";
 import { betaDates } from "@/components/beta-notice";
 import { cardRequiredDemo } from "@/lib/card-required";
+import { isEmailClickKind } from "@/app/api/track/event";
 import { getPrefs } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/client";
 
@@ -18,7 +19,7 @@ export const metadata = { title: "Bienvenida", robots: { index: false, follow: f
 export const dynamic = "force-dynamic";
 
 
-export default async function Bienvenida({ searchParams }: { searchParams: Promise<{ vista?: string; tarjeta?: string }> }) {
+export default async function Bienvenida({ searchParams }: { searchParams: Promise<{ vista?: string; tarjeta?: string; e?: string }> }) {
   const v = await getViewer();
   if (!v) redirect("/entrar?next=/bienvenida");
 
@@ -61,6 +62,9 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   // #269: si ya guardó su plan y cerró la bienvenida en la tarjeta, al volver abre directo en ese paso.
   const resumeCard = cardRequired && !v.demo && v.onboarded;
   const startOnCard = v.demo && cardOffer && vista === "tarjeta";
+  // #325: el botón de los correos de rescate (?e=tarjeta_rescate_1/2). Si ya dejó la tarjeta y terminó la bienvenida, a la app.
+  const emailClick = isEmailClickKind(params.e) ? params.e : null;
+  if (emailClick && !v.demo && v.onboarded && !resumeCard) redirect("/app");
   // Solo demo: ?vista=lenguaje abre el paso de experiencia para revisarlo ("Cómo te hablo" está en Perfil desde #255).
   const startOnVoice = v.demo && vista === "lenguaje";
   // #287: idioma de la cuenta (o el de /en y el navegador); las unidades guardadas solo si ya terminó la bienvenida.
@@ -69,7 +73,7 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   return (
     <>
       <TzSync current={v.tz} />
-      <LocaleProvider locale={prefs.locale} units={prefs.units}><Wizard locale={prefs.locale} units={v.onboarded ? prefs.units : null} name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} cardRequired={cardRequired} onboarded={resumeCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard || resumeCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} /></LocaleProvider>
+      <LocaleProvider locale={prefs.locale} units={prefs.units}><Wizard locale={prefs.locale} units={v.onboarded ? prefs.units : null} name={v.name} demo={v.demo} initialGoal={initialGoal} glp1={glp1} country={isCountry(v.country) ? v.country : null} intent={intent} trialEndsAt={trialEndsAt} trialBeta={trialBeta} nutrition={nutrition} cardOffer={startOnCard} cardRequired={cardRequired} onboarded={resumeCard} chargeAt={chargeAt} payments={isOnvoConfigured()} startOnCard={startOnCard || resumeCard} startOnVoice={startOnVoice} betaFirstPaid={betaDates().firstPaid} betaLastFree={betaDates().lastFree} emailClick={emailClick} /></LocaleProvider>
     </>
   );
 }

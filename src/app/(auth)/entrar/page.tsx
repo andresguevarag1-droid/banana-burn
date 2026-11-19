@@ -17,6 +17,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { offerFor } from "@/lib/i18n/offer";
 import { tr } from "@/lib/i18n/t";
 import { LocaleProvider } from "@/lib/i18n/client";
+import { cardTrust } from "@/lib/card-trust";
+import { SecurePay } from "@/components/card-trust";
 
 export const metadata = { title: "Entrar", robots: { index: false, follow: true } };
 
@@ -45,6 +47,8 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
   const t = tr(locale);
   const base = locale === "es-419" ? offer() : offerFor(locale);
   const o = condo ? { ...base, signupChecks: [t("Beneficio de tu condominio"), t("Sin tarjeta")] as [string, string], signupLine: t("Al crear tu cuenta se activa el beneficio de tu condominio.") } : base;
+  // #323: desde CARD_REQUIRED_FROM, junto al registro, cómo funciona el cobro en una línea y el pago seguro (no en condominios).
+  const trust = signup && !condo ? cardTrust(locale) : null;
   // Dentro de Instagram o Facebook: sin Google (lo bloquea ahí) y con el enlace para abrirla en Safari o Chrome.
   const openIn = inAppOpenIn(detectInstallEnv((await headers()).get("user-agent") ?? ""));
   return (
@@ -81,6 +85,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
               <>
                 {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />{t("Llegaste con una invitación. Crea tu cuenta y entrena gratis {n} días.", { n: TRIAL_DAYS })}</p>}
                 <LocaleProvider locale={locale}><Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} openIn={openIn} /></Suspense></LocaleProvider>
+                {trust && <><p className="mt-5 text-sm font-semibold text-ink text-pretty">{trust.oneLine}</p><SecurePay trust={trust} className="mt-3" /></>}
               </>
             )}
           </div>

@@ -6,6 +6,7 @@ import { ONCE_DAY } from "@/lib/notify";
 import { sendEmail, type SendResult } from "./send";
 import { withLoginLinks } from "./login-link";
 import * as T from "./templates";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/locale";
 
 export { sendEmail, unsubscribeUrl, isEmailConfigured } from "./send";
 export * as templates from "./templates";
@@ -24,6 +25,19 @@ async function resolve(r: Recipient): Promise<{ to: string; name: string; userId
   }
   if (!to) return null;
   return { to, name: name || to.split("@")[0], userId: r.userId };
+}
+
+/** Idioma de la cuenta (profiles.locale, 0070). Sin cuenta o si falla la lectura: español. */
+async function localeOf(userId?: string): Promise<Locale> {
+  const admin = userId ? adminClient() : null;
+  if (!admin || !userId) return DEFAULT_LOCALE;
+  try {
+    const { data } = await admin.from("profiles").select("locale").eq("id", userId).maybeSingle();
+    const l = (data as { locale?: unknown } | null)?.locale;
+    return isLocale(l) ? l : DEFAULT_LOCALE;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
 }
 
 /** Reclama un envío único (bienvenida, plan listo). false si ya se había mandado. */
@@ -74,14 +88,23 @@ export async function sendPaymentReceipt(r: Recipient & Pay): Promise<SendResult
   return sendEmail(to.to, T.reciboPago({ ...r, name: to.name }), { idempotencyKey: r.reference ? `recibo/${r.reference}` : undefined, tags: { kind: "recibo" } });
 }
 
-/** Webhook ONVO: cobro rechazado. También deja un aviso en la campanita. */
-export async function sendPaymentFailed(r: Recipient & Pay & { retryDate?: string | null; updateUrl?: string; paused?: boolean }): Promise<SendResult> {
+/**
+ * Cobro rechazado (webhook de renovación o primer cobro). También deja un aviso en la campanita.
+ * `attempt` (#328, primer cobro): 1 = primer rechazo (pagoFallido), 2 = "Tu tarjeta no pasó otra vez", 3 = "Tu plan quedó en pausa".
+ */
+export async function sendPaymentFailed(r: Recipient & Pay & { retryDate?: string | null; updateUrl?: string; paused?: boolean; attempt?: 1 | 2 | 3 }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  if (to.userId) await notifyInApp(to.userId, r.paused
-    ? { kind: "pago_fallido", title: "No pudimos cobrar tu plan", body: "Cambia tu tarjeta para seguir. Tu progreso sigue guardado.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/suscripcion" }
-    : { kind: "pago_fallido", title: "Tu pago no pasó", body: "Actualiza tu método de pago para seguir sin pausa.", url: r.updateUrl?.startsWith("/") ? r.updateUrl : "/app/perfil" });
-  return sendEmail(to.to, T.pagoFallido({ ...r, name: to.name }), { idempotencyKey: r.reference ? `pago_fallido/${r.reference}` : undefined, tags: { kind: "pago_fallido" } });
+  const url = r.updateUrl?.startsWith("/") ? r.updateUrl : r.paused || r.attempt ? "/app/suscripcion" : "/app/perfil";
+  if (to.userId) await notifyInApp(to.userId, r.attempt === 3
+    ? { kind: "pago_fallido", title: "Tu plan quedó en pausa", body: "Cambia tu tarjeta y se reactiva en el momento. Tu progreso sigue guardado.", url }
+    : r.attempt === 2
+    ? { kind: "pago_fallido", title: "Tu tarjeta no pasó otra vez", body: "Llama a tu banco y autoriza Banana Burn, o cambia tu tarjeta.", url }
+    : r.paused
+    ? { kind: "pago_fallido", title: "No pudimos cobrar tu plan", body: "Cambia tu tarjeta para seguir. Tu progreso sigue guardado.", url }
+    : { kind: "pago_fallido", title: r.attempt ? "No pudimos cobrar tu plan" : "Tu pago no pasó", body: r.attempt ? "Actualiza tu tarjeta para no perder tu acceso." : "Actualiza tu método de pago para seguir sin pausa.", url });
+  const mail = r.attempt === 3 ? T.planEnPausa({ ...r, name: to.name }) : r.attempt === 2 ? T.pagoFallidoOtraVez({ ...r, name: to.name }) : T.pagoFallido({ ...r, name: to.name });
+  return sendEmail(to.to, mail, { idempotencyKey: r.reference ? `pago_fallido/${r.reference}` : undefined, tags: { kind: "pago_fallido" } });
 }
 
 type ChargeMail = Omit<T.ChargeMailData, "name">;
@@ -108,14 +131,16 @@ export async function sendChargeReminder(r: Recipient & ChargeMail & { chargeId:
 export async function sendChargeCanceled(r: Recipient & { plan: string; accessUntil?: string | null; cardKept: boolean; chargeId: number }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  return sendEmail(to.to, T.cobroCancelado({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, cardKept: r.cardKept }), { idempotencyKey: `cobro_cancelado/${r.chargeId}`, tags: { kind: "cobro_cancelado" } });
+  const locale = await localeOf(to.userId);
+  return sendEmail(to.to, T.cobroCancelado({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, cardKept: r.cardKept, locale }), { idempotencyKey: `cobro_cancelado/${r.chargeId}`, tags: { kind: "cobro_cancelado" } });
 }
 
-/** Webhook ONVO / cancelación desde la app. */
-export async function sendSubscriptionCanceled(r: Recipient & { plan: string; accessUntil?: string | null; subscriptionId?: string }): Promise<SendResult> {
+/** Cancelación pedida desde Mi plan o el panel (`byUser`), o la del sistema tras no poder renovar. En el idioma de la cuenta. */
+export async function sendSubscriptionCanceled(r: Recipient & { plan: string; accessUntil?: string | null; byUser?: boolean; subscriptionId?: string }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
+  const locale = await localeOf(to.userId);
+  return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, byUser: r.byUser, locale }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
 }
 
 /** Regalo de meses o recompensa por referidos. Idempotente por regalo (`grantId`). Transaccional. */

@@ -4,7 +4,9 @@ import { requireSection } from "@/lib/admin-auth";
 import { listSubscriptions, PAGE_SIZE } from "@/lib/admin";
 import { SUB_BILLING_FILTERS, SUB_PLAN_FILTERS, SUB_STATUS_FILTERS, subFiltersFrom, type SubFilterInput } from "@/lib/admin-csv";
 import { CopyButton } from "@/components/admin/copy-button";
-import { DemoNotice, Empty, Field, FilterBar, Kpi, MetaList, Nil, Notice, PageHeader, Pagination, PlanText, SectionHeading, SubStatus, Table, Td, Th, btnGhost, fmtDate, fmtDateTime, fmtNum, fmtPct, fw, inputSm, link, money, panel, tr, trHover } from "@/components/admin/ui";
+import { loadUpcoming } from "@/lib/cobros-diarios-server";
+import { groupUpcoming, KIND_LABEL, PLAN_LABEL, splitMinor } from "@/lib/cobros-diarios";
+import { DemoNotice, Empty, fmtDay, Field, FilterBar, Kpi, MetaList, Nil, Notice, PageHeader, Pagination, PlanText, SectionHeading, SubStatus, Table, Td, Th, btnGhost, fmtDate, fmtDateTime, fmtNum, fmtPct, fw, inputSm, link, money, panel, tr, trHover } from "@/components/admin/ui";
 
 export const metadata = { title: "Pagos" };
 
@@ -14,7 +16,8 @@ const ONVO_DASHBOARD = "https://dashboard.onvopay.com";
 export default async function Pagos({ searchParams }: { searchParams: Promise<SubFilterInput> }) {
   const v = await requireSection("pagos");
   const f = subFiltersFrom(await searchParams);
-  const d = await listSubscriptions(v, f);
+  const [d, upcoming] = await Promise.all([listSubscriptions(v, f), v.demo ? Promise.resolve(null) : loadUpcoming()]);
+  const days = upcoming && groupUpcoming(upcoming);
   const s = d.summary;
   const params = { status: f.status, plan: f.plan, billing: f.billing, q: f.q };
   const filtered = !!(f.status || f.plan || f.billing || f.q);
@@ -47,6 +50,33 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
         ) : <Empty title="Sin ingresos recurrentes">Cuando haya suscripciones activas verás aquí el MRR por plan.</Empty>}
       </section>
 
+      <section aria-labelledby="p-proximos" className="space-y-2.5">
+        <SectionHeading id="p-proximos" title="Próximos cobros (7 días)" />
+        {!days ? <Empty title="Sin dato">No se pudieron leer los cobros programados{v.demo ? " en el modo demo" : ""}.</Empty>
+          : days.every((x) => !x.rows.length) ? <Empty title="Sin cobros programados">En los próximos 7 días no vence ningún cobro ni renovación.</Empty>
+          : (<>
+            <Table caption="Totales por día, hora de Costa Rica" minWidth={560}>
+              <thead className="border-b border-line"><tr><Th>Día</Th><Th className="text-right">Cobros</Th><Th className="text-right">Bruto</Th><Th className="text-right">Comisiones</Th><Th className="text-right">Neto sin IVA</Th></tr></thead>
+              <tbody>{days.map((x) => (
+                <tr key={x.day} className={tr}><Td className="whitespace-nowrap text-ink">{fmtDay(x.day)}</Td><Td className="text-right">{fmtNum(x.rows.length)}</Td><Td className="text-right">{money(x.brutoMinor / 100)}</Td><Td className="text-right text-muted">{money(x.comisionMinor / 100)}</Td><Td className="text-right">{money(x.netoMinor / 100)}</Td></tr>
+              ))}</tbody>
+            </Table>
+            <Table caption="Cobros programados" captionHidden minWidth={760}>
+              <thead className="border-b border-line"><tr><Th>Fecha</Th><Th>Usuario</Th><Th>Plan</Th><Th className="text-right">Monto</Th><Th className="text-right">Neto sin IVA</Th><Th>Procesador</Th><Th>Intento</Th></tr></thead>
+              <tbody>{days.flatMap((x) => x.rows).map((c, i) => (
+                <tr key={`${c.userId}-${c.kind}-${i}`} className={tr}>
+                  <Td className="whitespace-nowrap">{fmtDateTime(c.at)}</Td>
+                  <Td><Link href={`/admin/usuarios/${c.userId}`} className={link}>{c.alias}</Link></Td>
+                  <Td><PlanText label={PLAN_LABEL(c.plan, c.billing)} /></Td>
+                  <Td className="text-right">{money(c.amountMinor / 100)}</Td>
+                  <Td className="text-right text-muted">{money(splitMinor(c.amountMinor, c.processor).netoMinor / 100)}</Td>
+                  <Td>{c.processor === "tilopay" ? "Tilopay" : "ONVO"}</Td>
+                  <Td className="whitespace-nowrap">{KIND_LABEL[c.kind]} <span className="text-muted tabular-nums">({c.attempt})</span></Td>
+                </tr>))}</tbody>
+            </Table>
+          </>)}
+      </section>
+
       <section aria-labelledby="p-fallos" className="space-y-2.5">
         <SectionHeading id="p-fallos" title="Pagos fallidos" />
         {d.failed.length ? (
@@ -71,6 +101,22 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
               </tr>))}</tbody>
           </Table>
         ) : <Empty title="Sin pagos fallidos">Todas las renovaciones se cobraron y no hay pagos sin completar.</Empty>}
+        {/* #328: primer cobro de la prueba rechazado: en qué intento va (1, 2 o 3) y cuándo es el próximo. */}
+        {d.firstCharges.length > 0 && (
+          <Table caption="Primeros cobros rechazados" minWidth={760}>
+            <thead className="border-b border-line"><tr><Th>Usuario</Th><Th>Plan</Th><Th className="text-right">Monto</Th><Th className="text-right">Intento</Th><Th>Último intento</Th><Th>Próximo intento</Th><Th>Motivo</Th></tr></thead>
+            <tbody>{d.firstCharges.map((x) => (
+              <tr key={x.id} className={tr}>
+                <Td><Link href={`/admin/usuarios/${x.user_id}`} className={link}>{x.name ?? "Ver ficha"}</Link></Td>
+                <Td><PlanText label={x.planLabel} /></Td>
+                <Td className="text-right">{money(x.amount)}</Td>
+                <Td className="text-right tabular-nums">{fmtNum(x.attempt)}</Td>
+                <Td className="text-muted whitespace-nowrap">{x.last_attempt_at ? fmtDateTime(x.last_attempt_at) : <Nil />}</Td>
+                <Td className="whitespace-nowrap">{x.nextAt ? fmtDateTime(x.nextAt) : <span className="text-muted">Sin más intentos</span>}</Td>
+                <Td className="min-w-48 max-w-72 text-muted text-pretty">{x.last_error ?? <Nil />}</Td>
+              </tr>))}</tbody>
+          </Table>
+        )}
         {d.payments && d.payments.length > 0 && (
           <Table caption="Últimos cobros rechazados" minWidth={600}>
             <thead className="border-b border-line"><tr><Th>Fecha</Th><Th>Usuario</Th><Th className="text-right">Monto</Th><Th>Motivo</Th></tr></thead>
@@ -137,7 +183,7 @@ export default async function Pagos({ searchParams }: { searchParams: Promise<Su
           : <Empty title="Todavía no hay suscripciones">Aparecen aquí cuando alguien paga un plan con ONVO.</Empty>)}
         <Pagination page={f.page} total={d.total} pageSize={PAGE_SIZE} basePath="/admin/pagos" params={params} />
       </section>
-      <Notice title="Cómo se calcula">MRR: suscripciones activas con su precio mensual, o el anual dividido entre 12. Churn 30 d: cancelaciones en la ventana dividido entre los suscriptores pagos al inicio. Mensual renueva un mes después del último cobro; anual, un año después.</Notice>
+      <Notice title="Cómo se calcula">MRR: suscripciones activas con su precio mensual, o el anual dividido entre 12. Churn 30 d: cancelaciones en la ventana dividido entre los suscriptores pagos al inicio. Mensual renueva un mes después del último cobro; anual, un año después. Próximos cobros: neto sin IVA (13 %) ni la comisión de cada procesador (ONVO 3.9 % + $0.35, Tilopay 4.25 % + $0.35).</Notice>
     </div>
   );
 }

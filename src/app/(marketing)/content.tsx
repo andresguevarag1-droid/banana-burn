@@ -7,6 +7,8 @@ import { PLANS } from "@/lib/plans";
 import { GLP1, TRIAL_DAYS, money } from "@/lib/copy";
 import { offer } from "@/lib/offer";
 import { COACH_LIMITS } from "@/lib/coach-quota";
+import { cardTrust, withTrustFaq } from "@/lib/card-trust";
+import { UnderCta } from "@/components/card-trust";
 
 export const [ENTRENO, COMPLETO] = PLANS;
 /** Precio de entrada: Entreno con pago anual, por mes. */
@@ -44,11 +46,12 @@ export const faq = (now = new Date()): (readonly [string, string])[] => {
   ];
 };
 
-/** Inicio: primero las dudas de quien llega de un anuncio y nunca ha entrenado; luego las de dinero. */
+/** Inicio: primero las dudas de quien llega de un anuncio y nunca ha entrenado; luego las de dinero. #323: desde
+ * CARD_REQUIRED_FROM van primero las del cobro (card-trust.ts), sin repetir las que tocan lo mismo. */
 export const homeFaq = (now = new Date()) => {
   const f = faq(now);
   const pick = (q: string) => f.find(([k]) => k === q)!;
-  return [
+  return withTrustFaq([
     ["Nunca he entrenado. ¿Me sirve?", "Sí, está hecha para empezar de cero. Tu primer entreno es guiado paso a paso, cada ejercicio trae su animación y en Aprende a entrenar tienes 10 lecciones de 30 segundos. La primera semana Coach Banana aprende tus pesos."] as const,
     pick("Uso Ozempic o Mounjaro. ¿Es para mí?"),
     pick("¿Sirve si entreno en casa o sin equipo?"),
@@ -61,11 +64,11 @@ export const homeFaq = (now = new Date()) => {
     pick("¿Por qué pagar si hay rutinas gratis en internet?"),
     pick("¿Cuánto peso voy a bajar?"),
     pick("¿Qué diferencia hay entre los planes?"),
-  ] as (readonly [string, string])[];
+  ] as (readonly [string, string])[], cardTrust("es-419", now), ["Nunca he entrenado. ¿Me sirve?", "¿Sirve si entreno en casa o sin equipo?", "¿Me cobran algo hoy?", "¿Cómo cancelo? ¿Hay reembolso?"]);
 };
 
-/** Preguntas de /precios: las de dinero primero. */
-export const pricingFaq = (now = new Date()) => { const f = faq(now); return [0, 10, 7, 8, 1, 5, 11].map((i) => f[i]); };
+/** Preguntas de /precios: las de dinero primero. #323: desde CARD_REQUIRED_FROM, primero las del cobro. */
+export const pricingFaq = (now = new Date()) => { const f = faq(now); return withTrustFaq([0, 10, 7, 8, 1, 5, 11].map((i) => f[i]), cardTrust("es-419", now), ["¿Cómo cancelo? ¿Hay reembolso?"]); };
 
 type Mark = true | false | string;
 const PAY_ROW = "Cómo se paga";
@@ -133,11 +136,13 @@ export { GLP1 };
 
 /** CTA que acompaña al título de las preguntas frecuentes en escritorio. */
 export function FaqCta({ href = SIGNUP, cta }: { href?: string; cta: string }) {
+  const trust = cardTrust();
   return (
     <div className="mt-8 hidden lg:block rounded-3xl bg-banana-soft p-6">
       <p className="font-extrabold text-ink text-balance">La mejor respuesta es probarlo.</p>
       <p className="mt-1 text-sm text-ink/75 text-pretty">{trialNote()}{offer().faqCtaExtra}</p>
       <Link href={href} data-cta={cta} className="mt-4 btn-primary h-12 px-5">{TRIAL_CTA} <ArrowRight className="size-4" /></Link>
+      {trust && <UnderCta trust={trust} className="mt-2" />}
     </div>
   );
 }

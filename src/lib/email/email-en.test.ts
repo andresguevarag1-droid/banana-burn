@@ -2,7 +2,7 @@
 // traducir y el copy coincide con docs/emails/en.md.
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { ACTIVATION_MAILS, RECOVERY_MAILS, SECOND_WORKOUT_MAIL, TRIAL_SEQUENCE, WEEKLY_GOAL_MAIL, activacion, metaSemanal, recoveryProgressLine, recuperacionPrueba, secuenciaPrueba, segundoEntreno, type Email } from "./templates";
+import { ACTIVATION_MAILS, COMEBACK_LINES, COMEBACK_MAILS, COMEBACK_QUESTION, RECOVERY_MAILS, TRIAL_SEQUENCE, WEEKLY_GOAL_MAIL, activacion, comebackParagraphs, metaSemanal, recoveryProgressLine, recuperacionPrueba, regreso, regresoPregunta, secuenciaPrueba, type Email } from "./templates";
 import { hasTranslation, tr } from "@/lib/i18n/t";
 import type { Locale } from "@/lib/i18n/locale";
 
@@ -13,6 +13,7 @@ const { languagesOf } = await import("@/lib/notify-run");
 
 const unsubscribe = "https://bananaburn.app/api/email/baja?token=x";
 const progress = { workouts: 2, sets: 3, kg: 1240 };
+const lift = { exercise: "Sentadilla trasera", kg: 20, next: 22.5 };
 
 /** Todos los correos de la prueba en un idioma. */
 const all = (locale?: Locale): [string, Email][] => [
@@ -20,7 +21,10 @@ const all = (locale?: Locale): [string, Email][] => [
   ["recuperacion_d8", recuperacionPrueba({ day: 8, unsubscribe, progress, trainDays: 4, locale })],
   ["recuperacion_d8 sin entrenos", recuperacionPrueba({ day: 8, unsubscribe, progress: null, trainDays: 4, locale })],
   ["recuperacion_d10", recuperacionPrueba({ day: 10, unsubscribe, locale })],
-  ["segundo_entreno", segundoEntreno({ unsubscribe, locale })],
+  ["regreso_r1", regreso({ step: "r1", routine: "Fuerza total: piernas, pecho y hombros", mins: 25, lift, unsubscribe, locale })],
+  ["regreso_r1 sin minutos ni dato", regreso({ step: "r1", routine: "Fuerza total: piernas, pecho y hombros", mins: null, lift: null, unsubscribe, locale })],
+  ["regreso_r2", regreso({ step: "r2", routine: "Fuerza total: piernas, pecho y hombros", mins: 25, lift, unsubscribe, locale })],
+  ["regreso_r4", regreso({ step: "r4", routine: "Fuerza total: piernas, pecho y hombros", mins: 25, lift: { ...lift, next: null }, unsubscribe, locale })],
   ["meta_semanal", metaSemanal({ count: 1, goal: 3, mins: 20, unsubscribe, locale })],
   ["meta_semanal sin minutos", metaSemanal({ count: 0, goal: 3, mins: null, unsubscribe, locale })],
   ...([0, 1, 2] as const).map((step): [string, Email] => [`activacion_${step}`, activacion({ step, home: true, unsubscribe, locale })]),
@@ -53,10 +57,13 @@ describe("correos de la prueba en inglés (#301)", () => {
 
   it("cada frase de las plantillas tiene traducción en src/lib/i18n/en/email.ts", () => {
     const pieces = [
-      ...Object.values(TRIAL_SEQUENCE), ...Object.values(RECOVERY_MAILS), SECOND_WORKOUT_MAIL,
+      ...Object.values(TRIAL_SEQUENCE), ...Object.values(RECOVERY_MAILS),
       ...Object.values(ACTIVATION_MAILS).map((c) => ({ ...c, cta: "Empezar mi entreno" })),
     ];
     for (const c of pieces) for (const s of [c.subject, c.preheader, c.cta, ...c.paragraphs]) expect(hasTranslation("en-US", s), s).toBe(true);
+    for (const c of Object.values(COMEBACK_MAILS)) for (const s of Object.values(c)) expect(hasTranslation("en-US", s), s).toBe(true);
+    for (const s of [...Object.values(COMEBACK_LINES), COMEBACK_QUESTION.subject, COMEBACK_QUESTION.greeting, COMEBACK_QUESTION.greetingNoName, COMEBACK_QUESTION.unsubscribe, ...COMEBACK_QUESTION.paragraphs])
+      expect(hasTranslation("en-US", s), s).toBe(true);
     expect(hasTranslation("en-US", WEEKLY_GOAL_MAIL.subject)).toBe(true);
     expect(hasTranslation("en-US", WEEKLY_GOAL_MAIL.cta)).toBe(true);
   });
@@ -78,14 +85,37 @@ describe("correos de la prueba en inglés (#301)", () => {
       expect(doc, name).toContain(`**Subject:** ${e.subject}`);
       if (!name.startsWith("meta_semanal")) expect(doc, name).toContain(`**Preview:** ${e.preheader}`);
     }
-    const pieces = [...Object.values(TRIAL_SEQUENCE), ...Object.values(RECOVERY_MAILS), SECOND_WORKOUT_MAIL, ...Object.values(ACTIVATION_MAILS).map((c) => ({ ...c, cta: "Empezar mi entreno" }))];
+    const pieces = [...Object.values(TRIAL_SEQUENCE), ...Object.values(RECOVERY_MAILS), ...Object.values(ACTIVATION_MAILS).map((c) => ({ ...c, cta: "Empezar mi entreno" }))];
     for (const c of pieces) {
       expect(doc).toContain(`**Button:** ${t(c.cta)}`);
       for (const para of c.paragraphs) expect(doc).toContain(t(para));
     }
     for (const para of WEEKLY_GOAL_MAIL.text(1, 3, 20, t).paragraphs) expect(doc).toContain(para);
+    for (const step of ["r1", "r2", "r4"] as const) {
+      expect(doc).toContain(`**Button:** ${t(COMEBACK_MAILS[step].cta)}`);
+      for (const para of comebackParagraphs(step, { routine: "Fuerza total: piernas, pecho y hombros", mins: 25, lift, locale: "en-US", units: "metric" })) expect(doc, step).toContain(para);
+    }
+    const q = regresoPregunta({ name: "Ana", unsubscribe, locale: "en-US" });
+    expect(doc).toContain(`**Subject:** ${q.subject}`);
+    for (const para of COMEBACK_QUESTION.paragraphs) expect(doc).toContain(t(para));
     expect(doc).toContain(recoveryProgressLine(progress, 4, "en-US", "imperial"));
     expect(doc).toContain(recoveryProgressLine(null, 4, "en-US"));
+  });
+});
+
+describe("regreso R3 en inglés (#320)", () => {
+  it("texto plano, sin html, en inglés y con la baja", () => {
+    const e = regresoPregunta({ name: "Ana López", unsubscribe, locale: "en-US" });
+    expect(e.html).toBe("");
+    expect(e.subject).toBe("What kept you from coming back?");
+    expect(e.text.startsWith("Hi Ana,\n")).toBe(true);
+    expect(e.text).toContain(`If you don't want more emails like this one: ${unsubscribe}`);
+    expect(e.text.replace(/https?:\S+/g, "")).not.toMatch(SPANISH);
+  });
+
+  it("R1 en libras con unidades imperiales: 20 kg son 45 lb y 22.5 kg, 50 lb", () => {
+    const e = regreso({ step: "r1", routine: "Fuerza total: piernas, pecho y hombros", mins: 25, lift, unsubscribe, locale: "en-US", units: "imperial" });
+    expect(e.text).toContain("with 45 lb; today it's 50 lb.");
   });
 });
 

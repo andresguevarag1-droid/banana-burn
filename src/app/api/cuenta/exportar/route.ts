@@ -37,7 +37,7 @@ export async function GET() {
     out.reports = rp.data ?? [];
     out.push_subscriptions = push.data ?? [];
     out.native_push_tokens = nativePush.error ? [] : nativePush.data ?? [];
-    // Referidos (0025): a quién invitaste (solo inicial y estado), tus recompensas y lo que guardamos para evitar abusos.
+    // Referidos (0025): a quién invitaste (solo nombre de pila, inicial y estado), tus recompensas y lo que guardamos para evitar abusos.
     const [mine, rewards] = await Promise.all([sb.rpc("my_referrals"), sb.from("referral_rewards").select("group_no,months,plan,created_at,upgraded_at,revoked_at").eq("referrer", v.id)]);
     out.referidos = { invitados: mine.data ?? [], recompensas: rewards.data ?? [] };
     // Referidores (0051): si eres referidor, tu código, tus referidos (anonimizados), comisiones, pagos y método de pago.

@@ -15,9 +15,10 @@ import { nfmt, usd2 } from "../num";
 import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving, type Billing, type PlanId } from "../plans";
 import { PROMO_PCT, planLine, promoPrice } from "../trial";
 import { intentPath } from "../checkout-intent";
+import { rescuePath } from "../tarjeta-rescate";
 import type { TrialProgress } from "../recuperacion";
 import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "../i18n/locale";
-import { kgToLb } from "../i18n/format";
+import { kgToLb, loadShown, weightUnit } from "../i18n/format";
 import { tr, type T as Translate } from "../i18n/t";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
@@ -43,9 +44,9 @@ const kg = (n: number, max = 1) => num(n, max);
 
 /** $9.99 para USD; otras monedas con su código delante. */
 export const money = (amount: number, currency = "USD") => `${currency === "USD" ? "$" : `${currency} `}${num(amount, 2, 2)}`;
-export const longDate = (iso: string) => {
+export const longDate = (iso: string, locale: Locale = DEFAULT_LOCALE) => {
   const d = new Date(iso.length === 10 ? iso + "T12:00:00" : iso);
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Costa_Rica" });
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "America/Costa_Rica" });
 };
 
 // ───────────── Meta de peso (personalización) ─────────────
@@ -251,7 +252,11 @@ export function planListo(d: { name: string; trainDays: number; todayRoutine: st
 
 export type PaymentData = { name: string; plan: string; amount: number; currency?: string; date?: string; reference?: string; method?: string; nextCharge?: string | null;
   /** 0043: primer mes con 50 %. Precio normal (USD) que se cobra desde el siguiente mes. */
-  promoFull?: number | null };
+  promoFull?: number | null;
+  /** #334: con ALEGRA_ENABLED el comprobante electrónico de Hacienda sale aparte. */
+  einvoice?: boolean };
+
+export const EINVOICE_NOTE = "Tu comprobante electrónico te llega aparte.";
 
 export function reciboPago(d: PaymentData): Email {
   const n = firstName(d.name);
@@ -266,12 +271,12 @@ export function reciboPago(d: PaymentData): Email {
   if (d.nextCharge) r.push(["Próximo cobro", d.promoFull ? `${longDate(d.nextCharge)}, ${money(d.promoFull, d.currency)} (precio normal)` : longDate(d.nextCharge)]);
   const hero: Hero = { eyebrow: "Recibo", chip: "Pago confirmado", title: "Pago recibido, gracias", lead: `${esc(n)}, tu suscripción a <b>${esc(d.plan)}</b> está activa.` };
   const body = rows(r) +
-    small("Guarda este correo como comprobante. ¿Necesitas factura? Responde a este correo con tus datos de facturación y te la enviamos.") + button("Ir a mi entreno", "/app/entreno", "banana");
+    small(d.einvoice ? `${EINVOICE_NOTE} ¿Necesitas factura a tu nombre? Responde a este correo con tus datos de facturación.` : "Guarda este correo como comprobante. ¿Necesitas factura? Responde a este correo con tus datos de facturación y te la enviamos.") + button("Ir a mi entreno", "/app/entreno", "banana");
   const reason = "Recibes este correo como comprobante de tu pago en Banana Burn.";
   return {
     subject, preheader,
     html: layout({ preheader, hero, body, reason, coach }),
-    text: textLayout([`Pago recibido. Gracias, ${n}.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", "¿Necesitas factura? Responde a este correo con tus datos de facturación.", `Ir a la app: ${abs("/app")}`], undefined, "Comprobante de pago de Banana Burn.", coach),
+    text: textLayout([`Pago recibido. Gracias, ${n}.`, "", ...r.map(([k, v]) => `${k}: ${v}`), "", ...(d.einvoice ? [EINVOICE_NOTE] : []), "¿Necesitas factura? Responde a este correo con tus datos de facturación.", `Ir a la app: ${abs("/app")}`], undefined, "Comprobante de pago de Banana Burn.", coach),
   };
 }
 
@@ -283,7 +288,7 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
   const subject = d.paused ? "No pudimos cobrar tu plan. Cambia tu tarjeta para seguir" : "No pudimos procesar tu pago. Se arregla en 1 minuto";
   const preheader = d.paused ? `Tu cobro de ${total} no pasó. Tu acceso queda en pausa hasta que se pague; tu progreso sigue guardado.` : `Tu cobro de ${total} no pasó. Actualiza tu método de pago y sigues entrenando sin pausa.`;
   const meanwhile = d.paused ? "Mientras tanto tu acceso queda en pausa. No se borra nada: tu plan y tu progreso siguen guardados." : "Mientras tanto mantienes tu acceso.";
-  const retry = d.retryDate ? `Lo volveremos a intentar una vez el ${longDate(d.retryDate)}.` : d.paused ? "No haremos más intentos automáticos." : "";
+  const retry = d.retryDate ? `Lo volveremos a intentar el ${longDate(d.retryDate)}.` : d.paused ? "No haremos más intentos automáticos." : "";
   const coach = "Tu progreso y tus récords están a salvo. Lo arreglas en un minuto y seguimos.";
   const hero: Hero = { eyebrow: "Pago", title: d.paused ? "No pudimos cobrar tu plan" : "Tu pago no pasó", lead: `${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó.` };
   const body =
@@ -295,6 +300,58 @@ export function pagoFallido(d: PaymentData & { retryDate?: string | null; update
     subject, preheader,
     html: layout({ preheader, hero, body, reason, coach }),
     text: textLayout([`Hola ${n}, no pudimos cobrar ${total} de tu plan ${d.plan}.`, [retry, meanwhile].filter(Boolean).join(" "), "", `${d.paused ? "Cambia tu tarjeta" : "Actualiza tu método de pago"}: ${abs(url)}`, "Aceptamos tarjetas de crédito y débito."], undefined, reason, coach),
+  };
+}
+
+/** #328: motivos más comunes de un rechazo, en lenguaje claro (segundo aviso). */
+export const DECLINE_REASONS = [
+  "No había fondos suficientes en la tarjeta en ese momento.",
+  "Tu banco bloquea las compras en línea o internacionales.",
+  "El banco pidió una verificación extra (3D Secure) que no se completó.",
+] as const;
+
+/** #328: segundo rechazo del primer cobro. El acceso queda en pausa y queda un último intento automático. */
+export function pagoFallidoOtraVez(d: PaymentData & { retryDate?: string | null; updateUrl?: string }): Email {
+  const n = firstName(d.name);
+  const total = money(d.amount, d.currency);
+  const url = d.updateUrl ?? "/app/suscripcion#tarjeta";
+  const subject = "Tu tarjeta no pasó otra vez";
+  const retry = d.retryDate ? `Lo intentaremos una última vez el ${longDate(d.retryDate)}.` : "No haremos más intentos automáticos.";
+  const preheader = `Tu cobro de ${total} no pasó por segunda vez. Llama a tu banco y autoriza Banana Burn.`;
+  const meanwhile = "Mientras tanto tu acceso queda en pausa. Tu plan y tu progreso siguen guardados.";
+  const coach = "Casi siempre es un bloqueo del banco, no tu tarjeta. Una llamada y seguimos.";
+  const hero: Hero = { eyebrow: "Pago", title: "Tu tarjeta no pasó otra vez", lead: `${esc(n)}, volvimos a intentar cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó.` };
+  const body =
+    p("Los motivos más comunes:") + list(DECLINE_REASONS.map((r) => `${dot()}${esc(r)}`)) +
+    p("<b>Llama a tu banco y autoriza Banana Burn.</b> Después cambia tu tarjeta o vuelve a guardarla: se cobra en el momento y tu plan sigue.") +
+    p(`<b>${esc(retry)}</b> ${esc(meanwhile)}`) +
+    button("Cambiar mi tarjeta", url) + small("Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.");
+  const reason = "Recibes este correo porque hubo un problema con el pago de tu suscripción.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason, coach }),
+    text: textLayout([`Hola ${n}, tu cobro de ${total} de tu plan ${d.plan} no pasó otra vez.`, "", "Los motivos más comunes:", ...DECLINE_REASONS.map((r) => `- ${r}`), "", "Llama a tu banco y autoriza Banana Burn. Después cambia tu tarjeta: se cobra en el momento.", `${retry} ${meanwhile}`, "", `Cambia tu tarjeta: ${abs(url)}`], undefined, reason, coach),
+  };
+}
+
+/** #328: tercer rechazo (o sin más intentos): el plan queda en pausa hasta cambiar la tarjeta. */
+export function planEnPausa(d: PaymentData & { updateUrl?: string }): Email {
+  const n = firstName(d.name);
+  const total = money(d.amount, d.currency);
+  const url = d.updateUrl ?? "/app/suscripcion#tarjeta";
+  const subject = "Tu plan quedó en pausa";
+  const preheader = `No pudimos cobrar ${total}. Cambia tu tarjeta y tu plan se reactiva en el momento.`;
+  const coach = "Tu progreso y tus récords están a salvo. Cuando vuelvas, seguimos donde lo dejaste.";
+  const hero: Hero = { eyebrow: "Pago", title: "Tu plan quedó en pausa", lead: `${esc(n)}, intentamos cobrar <b>${total}</b> de tu plan <b>${esc(d.plan)}</b> y el banco no lo aprobó.` };
+  const body =
+    p("No haremos más intentos automáticos. No se borra nada: tu plan y tu progreso siguen guardados.") +
+    p("Cambia tu tarjeta y se cobra en el momento: tu plan se reactiva sin esperar. Si es la misma tarjeta, llama antes a tu banco y autoriza Banana Burn.") +
+    button("Cambiar mi tarjeta", url) + small("Puedes pagar con otra tarjeta de crédito o débito. ¿Dudas? Responde este correo.");
+  const reason = "Recibes este correo porque hubo un problema con el pago de tu suscripción.";
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body, reason, coach }),
+    text: textLayout([`Hola ${n}, tu plan ${d.plan} quedó en pausa: no pudimos cobrar ${total}.`, "No haremos más intentos automáticos. Tu progreso sigue guardado.", "Cambia tu tarjeta y se cobra en el momento: tu plan se reactiva sin esperar.", "", `Cambiar mi tarjeta: ${abs(url)}`], undefined, reason, coach),
   };
 }
 
@@ -352,20 +409,25 @@ export function recordatorioCobro(d: ChargeMailData): Email {
 }
 
 /** Canceló el cobro programado antes de que llegara: no se cobra y conserva el acceso hasta el final de la prueba. */
-export function cobroCancelado(d: { name: string; plan: string; accessUntil?: string | null; cardKept: boolean }): Email {
-  const n = firstName(d.name);
-  const subject = "Cancelaste tu plan: no se te cobrará";
-  const preheader = d.accessUntil ? `Sigues con acceso hasta el ${longDate(d.accessUntil)}. No se hará ningún cobro.` : "No se hará ningún cobro.";
-  const hero: Hero = { eyebrow: "Plan", title: "Listo, no se te cobrará", lead: `${esc(n)}, cancelaste <b>${esc(d.plan)}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.` };
+export function cobroCancelado(d: { name: string; plan: string; accessUntil?: string | null; cardKept: boolean; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const n = firstName(d.name), plan = t(d.plan);
+  const until = d.accessUntil ? longDate(d.accessUntil, locale) : null;
+  const subject = t("Cancelaste tu plan: no se te cobrará");
+  const preheader = until ? t("Sigues con acceso hasta el {date}. No se hará ningún cobro.", { date: until }) : t("No se hará ningún cobro.");
+  const hero: Hero = { eyebrow: t("Plan"), title: t("Listo, no se te cobrará"), lead: t("{name}, cancelaste <b>{plan}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.", { name: esc(n), plan: esc(plan) }) };
+  const card = d.cardKept ? t("Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan.") : t("Quitamos tu tarjeta guardada.");
+  // #326: cómo volver, con o sin tarjeta guardada.
+  const back = t("Para volver, abre Mi plan y elige tu plan. Tus entrenos y tu progreso quedan guardados y retomas donde ibas.");
+  const cta = t("Volver a mi plan");
   const body =
-    (d.accessUntil ? p(`Sigues con todo incluido hasta el <b>${esc(longDate(d.accessUntil))}</b>.`) : "") +
-    p(d.cardKept ? "Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan." : "Quitamos tu tarjeta guardada.") +
-    p("Tus entrenos y tu progreso quedan guardados. Si vuelves, retomas donde ibas.") + button("Ver mi plan", "/app/suscripcion");
-  const reason = "Recibes este correo como confirmación de un cambio en tu plan.";
+    (until ? p(t("Sigues con acceso hasta el <b>{date}</b>.", { date: esc(until) })) : "") +
+    p(card) + p(back) + button(cta, "/app/suscripcion");
+  const reason = t("Recibes este correo como confirmación de un cambio en tu plan.");
   return {
     subject, preheader,
-    html: layout({ preheader, hero, body, reason }),
-    text: textLayout([`${n}, cancelaste ${d.plan} antes del cobro. No se hará ningún cargo.`, d.accessUntil ? `Sigues con acceso hasta el ${longDate(d.accessUntil)}.` : "", d.cardKept ? "Tu tarjeta sigue guardada; puedes quitarla desde Mi plan." : "Quitamos tu tarjeta guardada.", "", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
+    html: layout({ preheader, hero, body, reason, locale }),
+    text: textLayout([t("{name}, cancelaste {plan} antes del cobro. No se hará ningún cargo.", { name: n, plan }), until ? t("Sigues con acceso hasta el {date}.", { date: until }) : "", card, back, "", `${cta}: ${abs("/app/suscripcion")}`], undefined, reason, undefined, locale),
   };
 }
 
@@ -391,21 +453,41 @@ export function correoCambiado(d: { name: string; email: string; pending: boolea
   };
 }
 
-export function suscripcionCancelada(d: { name: string; plan: string; accessUntil?: string | null }): Email {
-  const n = firstName(d.name);
-  const subject = "Tu suscripción fue cancelada";
-  const preheader = d.accessUntil ? `Mantienes acceso hasta el ${longDate(d.accessUntil)}. Tu progreso queda guardado.` : "Tu progreso queda guardado por si decides volver.";
-  const coach = "Gracias por entrenar conmigo. Tus récords te esperan cuando quieras volver.";
-  const hero: Hero = { eyebrow: "Suscripción", title: "Listo, cancelamos tu suscripción", lead: `${esc(n)}, confirmamos la cancelación de <b>${esc(d.plan)}</b>. No se harán más cobros.` };
+/**
+ * Plan cancelado. `byUser`: lo pidió la persona en Mi plan o el panel (#326), sigue con acceso hasta el fin del periodo.
+ * Sin `byUser` lo canceló el sistema tras no poder cobrar la renovación: no dice que canceló ni promete acceso.
+ */
+export function suscripcionCancelada(d: { name: string; plan: string; accessUntil?: string | null; byUser?: boolean; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const n = firstName(d.name), plan = t(d.plan);
+  const coach = t("Gracias por entrenar conmigo. Tus récords te esperan cuando quieras volver.");
+  const reason = t("Recibes este correo como confirmación de un cambio en tu plan.");
+  const back = t("Para volver, abre Mi plan y elige tu plan. Tus entrenos, récords y pesajes quedan guardados y retomas donde ibas.");
+  const cta = t("Volver a mi plan");
+  if (!d.byUser) {
+    const subject = t("Tu plan de Banana Burn se canceló");
+    const preheader = t("No pudimos cobrar la renovación. Tu progreso queda guardado.");
+    const hero: Hero = { eyebrow: t("Plan"), title: t("Tu plan se canceló"), lead: t("{name}, no pudimos cobrar la renovación de <b>{plan}</b> y el plan se canceló. No se harán más cobros.", { name: esc(n), plan: esc(plan) }) };
+    const body = p(back) + button(cta, "/app/suscripcion");
+    return {
+      subject, preheader,
+      html: layout({ preheader, hero, body, reason, coach, locale }),
+      text: textLayout([t("{name}, no pudimos cobrar la renovación de {plan} y el plan se canceló. No se harán más cobros.", { name: n, plan }), back, "", `${cta}: ${abs("/app/suscripcion")}`], undefined, reason, coach, locale),
+    };
+  }
+  const until = d.accessUntil ? longDate(d.accessUntil, locale) : null;
+  const subject = t("Cancelaste tu plan de Banana Burn");
+  const preheader = until ? t("Sigues con acceso hasta el {date}. No se renueva.", { date: until }) : t("No se renueva. Tu progreso queda guardado.");
+  const hero: Hero = { eyebrow: t("Plan"), title: t("Listo, cancelaste tu plan"), lead: t("{name}, confirmamos la cancelación de <b>{plan}</b>. No se harán más cobros.", { name: esc(n), plan: esc(plan) }) };
+  // #326: lo mismo que dice Mi plan al confirmar, y cómo volver.
   const body =
-    (d.accessUntil ? p(`Sigues teniendo acceso completo hasta el <b>${esc(longDate(d.accessUntil))}</b>.`) : "") +
-    p("Tus entrenos, récords y pesajes quedan guardados. Si vuelves, retomas exactamente donde ibas.") +
-    p("¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.") + button("Reactivar mi plan", "/precios");
-  const reason = "Recibes este correo como confirmación de un cambio en tu suscripción.";
+    (until ? p(t("Sigues con acceso hasta el <b>{date}</b>. No se renueva.", { date: esc(until) })) : "") +
+    p(back) +
+    p(t("¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.")) + button(cta, "/app/suscripcion");
   return {
     subject, preheader,
-    html: layout({ preheader, hero, body, reason, coach }),
-    text: textLayout([`${n}, confirmamos la cancelación de ${d.plan}. No se harán más cobros.`, d.accessUntil ? `Mantienes acceso hasta el ${longDate(d.accessUntil)}.` : "", "Tus datos y progreso quedan guardados.", "", `Reactivar: ${abs("/precios")}`], undefined, reason, coach),
+    html: layout({ preheader, hero, body, reason, coach, locale }),
+    text: textLayout([t("{name}, confirmamos la cancelación de {plan}. No se harán más cobros.", { name: n, plan }), until ? t("Sigues con acceso hasta el {date}. No se renueva.", { date: until }) : "", back, "", `${cta}: ${abs("/app/suscripcion")}`], undefined, reason, coach, locale),
   };
 }
 
@@ -981,33 +1063,107 @@ export function activacion(d: { step: ActivationMailStep; home: boolean; unsubsc
   };
 }
 
-// ───────────── Segundo entreno (#286, docs/emails/segundo-entreno.md) ─────────────
-// De 48 a 72 h después del primer entreno terminado, si no hizo otro. Lo envía runReminders (notify-run.ts).
+// ───────────── Regreso (#320, docs/emails/regreso.md) ─────────────
+// Después del primer entreno, a quien no hizo el siguiente: R1, R2 y R4 con la sesión que le toca, sus minutos y un dato de su
+// último entreno; R3 en texto plano de Andrés con una pregunta. Lo envía sendComebackEmails (notify-run.ts).
 
-export const SECOND_WORKOUT_MAIL = {
-  subject: "Tu segundo entreno está listo",
-  preheader: "Ya hiciste el primero. El segundo se hace igual, paso a paso.",
-  paragraphs: [
-    "Hace unos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.",
-    "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.",
-    "Tu plan funciona entrenando varias veces por semana: el segundo entreno es el que lo pone en marcha.",
-  ],
-  cta: "Empezar mi segundo entreno",
-  path: "/app/entreno",
+/** R1, R2 y R4. `subjectNoMins` cuando no se saben los minutos. El botón lleva ?e=<kind> para contar el clic (email_click). */
+export const COMEBACK_MAILS = {
+  r1: {
+    eyebrow: "Tu entreno 2",
+    subject: "Tu entreno 2 está listo: unos {mins} min",
+    subjectNoMins: "Tu entreno 2 está listo",
+    preheader: "Ayer hiciste el primero. El segundo ya está en tu plan.",
+    intro: "Ayer terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste.",
+    cta: "Empezar mi entreno 2",
+  },
+  r2: {
+    eyebrow: "Tu entreno 2",
+    subject: "Ayer no pudiste. Hoy son {mins} minutos",
+    subjectNoMins: "Ayer no pudiste. Tu entreno 2 sigue listo",
+    preheader: "Tu entreno 2 te espera, sin nada que recuperar.",
+    intro: "Tu entreno 2 sigue en tu plan. No tienes que recuperar nada: haces este y tu plan sigue desde ahí.",
+    cta: "Empezar mi entreno 2",
+  },
+  r4: {
+    eyebrow: "Tu entreno 3",
+    subject: "Vas 2. El 3.º es el que hace el hábito",
+    subjectNoMins: "Vas 2. El 3.º es el que hace el hábito",
+    preheader: "Ya llevas 2 entrenos. Hoy puedes hacer el tercero.",
+    intro: "Ya llevas 2 entrenos. El tercero es el que convierte esto en costumbre.",
+    cta: "Empezar mi entreno 3",
+  },
+} as const;
+
+/** Frases que comparten R1, R2 y R4: la sesión de hoy, el dato del último entreno y el cierre. */
+export const COMEBACK_LINES = {
+  session: "Hoy te toca {routine}: unos {mins} minutos.",
+  sessionNoMins: "Hoy te toca {routine}.",
+  liftNext: "La vez pasada hiciste {exercise} con {load}; hoy toca {next}.",
+  lift: "La vez pasada hiciste {exercise} con {load}.",
+  outro: "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.",
 };
 
-/** El correo del segundo entreno. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function segundoEntreno(d: { unsubscribe: string; locale?: Locale }): Email {
+export type ComebackMailStep = keyof typeof COMEBACK_MAILS;
+export const comebackPath = (step: ComebackMailStep | "r3") => `/app/entreno?e=regreso_${step}`;
+
+const lowerFirst = (s: string) => (s ? s[0].toLocaleLowerCase() + s.slice(1) : s);
+/** Peso de una serie como se ve en el entreno: kg tal cual; en lb, redondeado a 2.5 lb. */
+const loadText = (kgValue: number, units: Units) => `${num(loadShown(kgValue, units), 2)} ${weightUnit(units)}`;
+
+/** Párrafos de R1, R2 y R4 en el idioma de la cuenta. Exportada para pruebas y para docs/emails/regreso.md. */
+export function comebackParagraphs(step: ComebackMailStep, d: { routine: string; mins: number | null; lift: { exercise: string; kg: number; next: number | null } | null; locale?: Locale; units?: Units | null }): string[] {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale), units = d.units ?? defaultUnits(locale);
+  const routine = t(d.routine);
+  const session = d.mins ? t(COMEBACK_LINES.session, { routine, mins: d.mins }) : t(COMEBACK_LINES.sessionNoMins, { routine });
+  const lift = d.lift && t(d.lift.next ? COMEBACK_LINES.liftNext : COMEBACK_LINES.lift, {
+    exercise: lowerFirst(t(d.lift.exercise)), load: loadText(d.lift.kg, units), next: d.lift.next ? loadText(d.lift.next, units) : "",
+  });
+  return [t(COMEBACK_MAILS[step].intro), session, ...(lift ? [lift] : []), t(COMEBACK_LINES.outro)];
+}
+
+/** R1, R2 o R4. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function regreso(d: { step: ComebackMailStep; routine: string; mins: number | null; lift: { exercise: string; kg: number; next: number | null } | null; unsubscribe: string; locale?: Locale; units?: Units | null }): Email {
   const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
-  const c = localized(SECOND_WORKOUT_MAIL, t);
-  const hero: Hero = { eyebrow: t("Tu segundo entreno"), title: esc(c.subject), lead: esc(c.preheader), mascot: true };
-  const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(c.cta, c.path, "banana");
+  const m = COMEBACK_MAILS[d.step];
+  const subject = d.mins ? t(m.subject, { mins: d.mins }) : t(m.subjectNoMins);
+  const preheader = t(m.preheader), cta = t(m.cta), path = comebackPath(d.step);
+  const paragraphs = comebackParagraphs(d.step, d);
+  const hero: Hero = { eyebrow: t(m.eyebrow), title: esc(subject), lead: esc(preheader), mascot: true };
+  const html = paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
   const reason = t("Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.");
   return {
-    subject: c.subject, preheader: c.preheader,
-    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
-    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, undefined, locale),
+    subject, preheader,
+    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason, undefined, locale),
   };
+}
+
+/** R3: remitente y respuesta. Las respuestas llegan a hola@bananaburn.app y son las entrevistas. */
+export const COMEBACK_QUESTION_FROM = "Andrés de Banana Burn <hola@bananaburn.app>";
+export const COMEBACK_QUESTION_REPLY_TO = SUPPORT;
+
+/** R3: texto plano, sin botón ni diseño, como un correo escrito a mano. */
+export const COMEBACK_QUESTION = {
+  subject: "¿Qué te frenó para volver?",
+  greeting: "Hola, {name}:",
+  greetingNoName: "Hola:",
+  paragraphs: [
+    "Soy Andrés, de Banana Burn. Vi que hace unos días hiciste tu primer entreno y todavía no el segundo.",
+    "Te quiero hacer una sola pregunta: ¿qué te frenó para volver?",
+    "Respóndeme este correo con lo que sea, aunque sea una línea. Lo leo yo y me sirve para mejorar la app.",
+  ],
+  signature: "Andrés",
+  unsubscribe: "Si no quieres recibir más correos como este: {url}",
+};
+
+/** R3 en texto plano (html vacío: sendEmail manda solo el texto). Lleva enlace de baja de los recordatorios. */
+export function regresoPregunta(d: { name: string; unsubscribe: string; locale?: Locale }): Email {
+  const t = tr(d.locale ?? DEFAULT_LOCALE), q = COMEBACK_QUESTION;
+  const name = (d.name || "").trim().split(/\s+/)[0];
+  const subject = t(q.subject);
+  const lines = [name ? t(q.greeting, { name }) : t(q.greetingNoName), "", ...q.paragraphs.flatMap((x) => [t(x), ""]), q.signature, "", "--", t(q.unsubscribe, { url: d.unsubscribe })];
+  return { subject, preheader: t(q.paragraphs[1]), html: "", text: lines.join("\n") };
 }
 
 // ───────────── Meta semanal (#288, docs/emails/meta-semanal.md) ─────────────
@@ -1136,6 +1292,64 @@ export function checkoutAbandonado(d: { plan: PlanId; billing: Billing; promo: b
     subject: ABANDONED_SUBJECT, preheader,
     html: layout({ preheader, hero, body: html, unsubscribe: d.unsubscribe, reason }),
     text: textLayout([ABANDONED_SUBJECT, "", ...lines, ...(promoLine ? ["", promoLine] : []), "", "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason),
+  };
+}
+
+// ───────────── Rescate del paso de la tarjeta (#325, docs/emails/tarjeta-rescate.md) ─────────────
+// Cuenta desde CARD_REQUIRED_FROM que llegó al paso de la tarjeta de la bienvenida y no la dejó. T1 a la hora, T2 al día
+// siguiente a las 7:00. Lo envía sendCardRescueEmails (notify-run.ts, tarjeta-rescate.ts).
+
+export type RescueGoal = "grasa" | "recomp" | "fuerza";
+/** El objetivo de la bienvenida, dentro de una frase ("Tu plan para bajar grasa..."). */
+export const RESCUE_GOAL: Record<RescueGoal, string> = { grasa: "bajar grasa", recomp: "bajar grasa y ganar músculo", fuerza: "ganar fuerza" };
+
+export const CARD_RESCUE_MAILS = {
+  tarjeta_rescate_1: {
+    subject: "Tu plan ya está armado: falta un paso",
+    preheader: "Deja tu tarjeta y empiezas tus 7 días gratis.",
+    lead: "Para empezar tu prueba solo falta dejar tu tarjeta. Tu plan te espera en el mismo paso donde lo dejaste.",
+  },
+  tarjeta_rescate_2: {
+    subject: "Tu primer entreno de 12 min te está esperando",
+    preheader: "Deja tu tarjeta y hazlo hoy, también en casa.",
+    lead: "Tu primer entreno dura 12 minutos y lo puedes hacer en casa. Para abrirlo solo falta dejar tu tarjeta.",
+  },
+  /** T2 cuando su primer entreno no es el de 12 minutos en casa (offersHomeFirst): sin prometer los 12 minutos. */
+  tarjeta_rescate_2_largo: {
+    subject: "Tu primer entreno te está esperando",
+    preheader: "Deja tu tarjeta y hazlo hoy.",
+    lead: "Tu primer entreno dura hasta 15 minutos, con las indicaciones de cada ejercicio en el celular. Para abrirlo solo falta dejar tu tarjeta.",
+  },
+} as const;
+export const CARD_RESCUE_CTA = "Dejar mi tarjeta";
+export const CARD_RESCUE_BILLING = [
+  "Hoy no se cobra nada. Tienes 7 días gratis y te avisamos 2 días antes del cobro.",
+  "El día 8 se cobra el primer mes de tu plan con 50\u00a0% de descuento: {entreno} con Entreno o {completo} con Entreno + Nutrición. Si eliges el plan anual, se cobra su precio completo.",
+  "Cancelas cuando quieras desde Mi plan.",
+] as const;
+
+/**
+ * El correo de rescate. `goal` y `days`: lo que eligió en la bienvenida (sin dato, la frase sin ellos). `home`: su primer
+ * entreno es el de 12 minutos en casa (offersHomeFirst); si no, T2 no promete los 12 minutos. El botón abre el paso de la
+ * tarjeta de la bienvenida (rescuePath) y entra sin contraseña (withLoginLinks).
+ */
+export function tarjetaRescate(d: { kind: "tarjeta_rescate_1" | "tarjeta_rescate_2"; goal: RescueGoal | null; days: number | null; home: boolean; unsubscribe: string; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const c = CARD_RESCUE_MAILS[d.kind === "tarjeta_rescate_2" && !d.home ? "tarjeta_rescate_2_largo" : d.kind];
+  const subject = t(c.subject), preheader = t(c.preheader);
+  const plan = d.goal && d.days
+    ? t("Tu plan para {goal} ya está armado: {days} entrenos por semana, con tus pesos y tu nivel.", { goal: t(RESCUE_GOAL[d.goal]), days: d.days })
+    : t("Tu plan ya está armado con tus días, tus pesos y tu nivel.");
+  const [free, charge, cancel] = CARD_RESCUE_BILLING.map((x) => t(x, { entreno: usd2(promoPrice("entreno")), completo: usd2(promoPrice("completo")) }));
+  const paragraphs = [plan, t(c.lead)];
+  const cta = t(CARD_RESCUE_CTA), path = rescuePath(d.kind);
+  const hero: Hero = { eyebrow: t("Tu plan"), title: esc(subject), lead: esc(preheader), mascot: true };
+  const html = paragraphs.map((x) => p(esc(x))).join("") + [free, charge, cancel].map((x) => small(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
+  const reason = t("Recibes este correo porque armaste tu plan en Banana Burn sin terminar de dejar tu tarjeta y tienes activados los recordatorios.");
+  return {
+    subject, preheader,
+    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([subject, "", ...paragraphs.flatMap((x) => [x, ""]), free, charge, cancel, "", "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason, undefined, locale),
   };
 }
 

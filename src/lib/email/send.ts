@@ -30,8 +30,10 @@ export function unsubscribeUrl(userId: string | undefined, scope: UnsubScope): s
 /**
  * Envía con la API REST de Resend. Sin RESEND_API_KEY no hace nada (modo demo) y devuelve skipped.
  * `idempotencyKey` evita duplicados si la misma tarea se reintenta (Resend la recuerda 24 h).
+ * `from`: otro nombre de remitente (solo del dominio verificado, si no va el de siempre). `replyTo`: a dónde llegan las
+ * respuestas. Con `html` vacío sale solo el texto plano (el correo de Andrés del regreso, #320).
  */
-export async function sendEmail(to: string, msg: EmailMessage, opts: { idempotencyKey?: string; unsubscribe?: string; tags?: Record<string, string> } = {}): Promise<SendResult> {
+export async function sendEmail(to: string, msg: EmailMessage, opts: { idempotencyKey?: string; unsubscribe?: string; tags?: Record<string, string>; from?: string; replyTo?: string } = {}): Promise<SendResult> {
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: "correo inválido" };
   const key = process.env.RESEND_API_KEY;
   if (!key) {
@@ -54,10 +56,11 @@ export async function sendEmail(to: string, msg: EmailMessage, opts: { idempoten
         ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey.slice(0, 256) } : {}),
       },
       body: JSON.stringify({
-        from: EMAIL_FROM,
+        from: opts.from ? emailFrom(opts.from) : EMAIL_FROM,
         to: [to],
+        ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
         subject: msg.subject,
-        html: msg.html,
+        ...(msg.html ? { html: msg.html } : {}),
         text: msg.text,
         headers,
         tags: Object.entries(opts.tags ?? {}).map(([name, value]) => ({ name, value: value.replace(/[^a-zA-Z0-9_-]/g, "_") })),

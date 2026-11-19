@@ -4,7 +4,7 @@
 | --- | --- |
 | Asunto | {{nombre}}, tu progreso sigue guardado |
 | Preheader | No se te cobró nada. Si cambias de idea antes de que termine tu prueba, vuelves con un toque. |
-| Evento que lo dispara | Cobro de la prueba cancelado: trial_charges pasa a status = canceled (cancelTrial en src/lib/trial-billing.ts, botón "Cancelar sin costo" de Mi plan), en un cobro de kind prueba o beta. |
+| Evento que lo dispara | Cobro de la prueba cancelado: trial_charges pasa a status = canceled (cancelTrial en src/lib/trial-billing.ts, botón "Cancelar mi plan" de Mi plan), en un cobro de kind prueba o beta. |
 | Hora de envío (Costa Rica, UTC-6) | 10:00 a. m. del primer día en que ya pasaron 24 horas desde canceled_at. Cohorte de la beta: quien cancela el 5 de noviembre lo recibe el 6 a las 10:00 a. m. |
 | Condición para enviarlo | Al momento de enviar: el cobro sigue cancelado, la prueba sigue vigente (trial_ends_at todavía no llega), sin plan pagado y sin baja de estos correos. Si la prueba ya terminó, no se envía. Una sola vez por cobro. |
 | Tipo | Ciclo de vida (con enlace de baja) |

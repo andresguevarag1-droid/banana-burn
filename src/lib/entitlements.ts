@@ -10,6 +10,7 @@
 //   - Sin plan y sin prueba vigente: la app muestra el muro de planes (no se borra nada).
 //   - #269: las cuentas creadas desde CARD_REQUIRED_FROM (23 nov 2026) tienen la prueba solo con su cobro listo (tarjeta
 //     activa y cobro programado). Sin él quedan bloqueadas con cardStep "card": la app las lleva a dejar la tarjeta.
+//   - #328: si el primer cobro se rechaza una vez, el acceso sigue hasta el segundo intento (inGrace en trial.ts).
 // La base de datos repite la regla de acceso en public.has_app_access() (0013/0021) para el coach y la comunidad,
 // y la de nutrición en public.has_nutrition_access() (0022) para comidas, Mis comidas y Mis recetas.
 import "server-only";
@@ -22,7 +23,7 @@ import { profilePlanFor } from "@/lib/onvo";
 import { APP_LOCKED_MSG, NUTRITION_LOCKED_MSG, type Need } from "@/lib/plan-access";
 import { bestLiveComp, compChainEnd, compPlan } from "@/lib/gifts";
 import { cardRequiredFor } from "@/lib/card-required";
-import { cardStepFor, cardTrialReady, chargeView, graceUntil, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
+import { cardStepFor, cardTrialReady, chargeView, graceUntil, inGrace, signedUpInBeta, trialEndFor, trialLive, type CardRow, type CardStep, type ChargeView, type TrialChargeRow } from "@/lib/trial";
 
 export type SubStatus = "demo" | "none" | "incomplete" | "active" | "trialing" | "past_due" | "canceling" | "canceled" | "expired";
 
@@ -190,6 +191,8 @@ export function entitlementsFrom(i: AccessInput): Entitlements {
   const base = { annualUpsell, status, billing, renewsAt, endsAt, compEndsAt: comp ? compChainEnd(comps, now) : undefined, trialEndsAt: endedAt?.toISOString(), fromSubscription: source === "subscription", charge, card, cardStep };
 
   if (plan !== "free") return { ...base, plan, access: source, app: true, nutrition: plan === "completo", locked: false, trial: null };
+  // #328: primer cobro rechazado una vez: sigue con todo hasta el segundo intento (el banner de Hoy pide cambiar la tarjeta).
+  if (!beta && inGrace(tc, now)) return { ...base, plan: "free", access: "trial", app: true, nutrition: true, locked: false, trial: null };
   if (live) {
     const daysLeft = Math.max(1, Math.ceil((trialEnd!.getTime() - now.getTime()) / DAY));
     return { ...base, plan: "free", access: "trial", app: true, nutrition: true, locked: false, trial: { endsAt: trialEnd!.toISOString(), daysLeft, ...(beta ? { beta: true } : {}) } };

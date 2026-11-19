@@ -6,7 +6,7 @@ English copy of the trial emails (#301), for accounts with `profiles.locale = 'e
 - Weights: stored in kg. With `units = 'imperial'` (or no units and English), the day-8 total is shown in lb, rounded to 2.5 lb.
 - Prices stay in USD, tax included, with the same numbers as `src/lib/plans.ts`. Plan names: Training (Entreno) and Training + Nutrition (Entreno + Nutrición).
 - Voice: direct, with "you". No emojis, no mention of AI. Coach Banana signs every email.
-- Routes, one-tap login links (`withLoginLinks`), timing and audience are the same as in Spanish (see secuencia-prueba.md, recuperacion.md, segundo-entreno.md, meta-semanal.md and activacion.md).
+- Routes, one-tap login links (`withLoginLinks`), timing and audience are the same as in Spanish (see secuencia-prueba.md, recuperacion.md, regreso.md, meta-semanal.md and activacion.md).
 
 ## Footer (every email)
 
@@ -16,7 +16,7 @@ Why you get it:
 
 - Trial days 2, 4 and 6: You're getting this email because you're on your 7-day trial and have Banana Burn reminders turned on.
 - Recovery days 8 and 10: You're getting this email because your 7-day trial ended without a plan and you have Banana Burn reminders turned on.
-- Second workout: You're getting this email because you finished your first workout on Banana Burn and have reminders turned on.
+- Comeback R1, R2 and R4: You're getting this email because you finished your first workout on Banana Burn and have reminders turned on.
 - Weekly goal: You're getting this email because you train with Banana Burn and have reminders turned on.
 - Activation: You're getting this email because you created a Banana Burn account and have reminders turned on.
 
@@ -134,25 +134,98 @@ Coach Banana
 
 **Route:** `/app/suscripcion`
 
-## Second workout
+## Comeback R1
 
-**Subject:** Your second workout is ready
+_Example with a 25-minute session and a squat logged at 20 kg (in metric units; with imperial units the weights show in lb, rounded to 2.5 lb). Without the minutes, the subject is "Your workout 2 is ready" and the session line is "Today it's {routine}." Without weights, the "Last time" line is left out; when the plan doesn't go up, it ends after "{load}."_
 
-**Preview:** You did the first one. The second one works the same way, step by step.
+**Subject:** Your workout 2 is ready: about 25 min
+
+**Preview:** You did the first one yesterday. The second one is already in your plan.
 
 **Body:**
 
-A few days ago you finished your first workout. The second one is already in your plan, adjusted to what you logged that time.
+Yesterday you finished your first workout. The second one is already in your plan, adjusted to what you logged.
+
+Today it's Total strength: legs, chest and shoulders: about 25 minutes.
+
+Last time you did back squat with 20 kg; today it's 22.5 kg.
 
 Open it when you have a few minutes today. Coach Banana tells you each exercise, how many reps and when to rest.
 
-Your plan works when you train several times a week. The second workout is what gets it going.
+Coach Banana
+
+**Button:** Start my workout 2
+
+**Route:** `/app/entreno?e=regreso_r1`
+
+## Comeback R2
+
+_Without the minutes, the subject is "Yesterday didn't work out. Your workout 2 is still ready"._
+
+**Subject:** Yesterday didn't work out. Today it's 25 minutes
+
+**Preview:** Your workout 2 is waiting, with nothing to make up.
+
+**Body:**
+
+Your workout 2 is still in your plan. You don't have to make up for anything: do this one and your plan picks up from there.
+
+Today it's Total strength: legs, chest and shoulders: about 25 minutes.
+
+Last time you did back squat with 20 kg; today it's 22.5 kg.
+
+Open it when you have a few minutes today. Coach Banana tells you each exercise, how many reps and when to rest.
 
 Coach Banana
 
-**Button:** Start my second workout
+**Button:** Start my workout 2
 
-**Route:** `/app/entreno`
+**Route:** `/app/entreno?e=regreso_r2`
+
+## Comeback R3
+
+Plain text from Andrés (From: Andrés de Banana Burn <hola@bananaburn.app>, Reply-To: hola@bananaburn.app). No design and no button.
+
+**Subject:** What kept you from coming back?
+
+**Body:**
+
+Hi {name},
+
+I'm Andrés, from Banana Burn. I saw that you did your first workout a few days ago and haven't done the second one yet.
+
+I want to ask you just one question: what kept you from coming back?
+
+Reply to this email with anything, even one line. I read it myself, and it helps me make the app better.
+
+Andrés
+
+--
+If you don't want more emails like this one: {url}
+
+Without a name in the profile, the greeting is "Hi,".
+
+## Comeback R4
+
+**Subject:** That's 2. The 3rd is the one that builds the habit
+
+**Preview:** You've done 2 workouts. Today you can do the third.
+
+**Body:**
+
+You've done 2 workouts. The third is the one that turns this into a habit.
+
+Today it's Total strength: legs, chest and shoulders: about 25 minutes.
+
+Last time you did back squat with 20 kg.
+
+Open it when you have a few minutes today. Coach Banana tells you each exercise, how many reps and when to rest.
+
+Coach Banana
+
+**Button:** Start my workout 3
+
+**Route:** `/app/entreno?e=regreso_r4`
 
 ## Weekly goal
 

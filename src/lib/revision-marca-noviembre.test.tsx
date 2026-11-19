@@ -53,7 +53,7 @@ describe("revisión de marca de noviembre (#96)", () => {
       "temporadas/page.tsx|114": "bg-banana-soft",
       "card-panel.tsx|129": "mientras lo confirmamos",
       "card-panel.tsx|183": "Acceso anticipado",
-      "suscripcion/page.tsx|143": "<s>No incluidas</s>",
+      "suscripcion/page.tsx|149": "<s>No incluidas</s>",
       "pricing.tsx|121": "Conoce las condiciones de tu plan",
       "pricing.tsx|122": "para consultar antes de elegir tu plan",
     };

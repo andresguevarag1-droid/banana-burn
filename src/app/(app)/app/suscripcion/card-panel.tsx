@@ -99,7 +99,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
     card: { title: "Deja tu tarjeta para empezar tus 7 días gratis", sub: "Tienes todo incluido durante 7 días. Tu primer cobro llega cuando terminan.", btn: "Empezar mis 7 días gratis", note: chargeDay ? <>Hoy no se cobra nada. El {chargeDay} se cobra{promoNow ? <> <b>{firstPrice}</b>, tu primer mes con 50 %</> : <>n <b>{price}</b> del plan anual</>}. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.</> : null }, // #269
     beta: { title: PROMO_TITLE, sub: `Desde el ${betaFirstPaid} la app se paga; hasta ese día todo sigue gratis. Si dejas tu tarjeta lista ahora, tu primer mes cuesta la mitad y sigues sin cortes.`, btn: "Dejar mi tarjeta lista", note: offerNote },
     pay: failed
-      ? { title: "Cambia tu tarjeta", sub: charge?.retryAt && charge.testerHold ? `No pudimos cobrar tu plan. Mientras seas tester no se te cobra: lo intentaremos una vez más el ${day(charge.retryAt)}, al terminar tu mes de tester.` : charge?.retryAt ? `No pudimos cobrar tu plan. Lo intentaremos una vez más el ${day(charge.retryAt)}, o cambia tu tarjeta para seguir hoy.` : "No pudimos cobrar tu plan con tu tarjeta. Cambia la tarjeta para seguir.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> }
+      ? { title: "Cambia tu tarjeta", sub: charge?.retryAt && charge.testerHold ? `No pudimos cobrar tu plan. Mientras seas tester no se te cobra: lo intentaremos una vez más el ${day(charge.retryAt)}, al terminar tu mes de tester.` : charge?.retryAt ? `No pudimos cobrar tu plan. Lo intentaremos una vez más el ${day(charge.retryAt)}, o cambia tu tarjeta y se cobra en el momento.` : "No pudimos cobrar tu plan con tu tarjeta. Cambia la tarjeta para seguir.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> }
       : { title: "Guarda tu tarjeta y elige tu plan", sub: "Tu acceso gratis terminó. Tu progreso sigue guardado y retomas donde ibas.", btn: `Guardar tarjeta y pagar ${price}`, note: <><b>Se cobra hoy {price}.</b> {choice.billing === "anual" ? "Se renueva cada año" : "Se renueva cada mes"} hasta que canceles.</> },
   }[step];
 
@@ -203,7 +203,7 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
         <div className="grid gap-2 sm:grid-cols-3">
           <button type="button" onClick={() => setView("plan")} disabled={!charge.canChangePlan} className="btn-ghost h-12">Cambiar plan</button>
           <button type="button" onClick={() => setView("tarjeta")} disabled={!payments && !demo} className="btn-ghost h-12">Cambiar tarjeta</button>
-          <button type="button" onClick={() => setView("cancelar")} disabled={!charge.canCancel} className="btn-ghost h-12 text-bad">Cancelar sin costo</button>
+          <button type="button" onClick={() => setView("cancelar")} disabled={!charge.canCancel} className="btn-ghost h-12 text-bad">Cancelar mi plan</button>
         </div>
       )}
 
@@ -230,15 +230,16 @@ function Scheduled({ charge, card, demo, payments, tz, onChanged }: { charge: Ch
 
       {view === "cancelar" && (
         <div role="alertdialog" aria-labelledby="cancelar-titulo" className="space-y-3 rounded-2xl border-2 border-bad/30 bg-bad/5 p-4">
-          <p id="cancelar-titulo" className="font-extrabold text-ink">¿Cancelar antes del cobro?</p>
-          <p className="text-sm text-body text-pretty">No se cobra nada. {trialLive && !beta ? <>Sigues con todo incluido hasta el <b>{day(charge.trialEndsAt)}</b>.</> : null} Tu progreso queda guardado.</p>
+          <p id="cancelar-titulo" className="font-extrabold text-ink">Cancelar tu plan</p>
+          {/* #326: lo mismo que prometen /terminos y los anuncios. Una sola confirmación, sin ofertas que frenen. */}
+          <p className="text-sm text-body text-pretty">Si cancelas hoy no se te cobra nada. {trialLive && !beta ? <>Sigues con acceso hasta el <b>{day(charge.trialEndsAt)}</b>.</> : null} Tu progreso queda guardado.</p>
           <label className="flex min-h-11 items-start gap-3 text-sm text-body cursor-pointer">
             <input type="checkbox" checked={removeCard} onChange={(e) => setRemoveCard(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-ink" />
             <span>Quitar también mi tarjeta guardada ({cardText(card)}). Si la dejas, puedes volver a tu plan sin escribirla de nuevo.</span>
           </label>
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setView("idle")} className="btn-primary h-12 sm:flex-1">Mejor no</button>
+            <button type="button" onClick={() => setView("idle")} className="btn-ghost h-12 sm:flex-1">Volver</button>
             <button type="button" disabled={busy} onClick={() => act({ action: "cancelar", keepCard: !removeCard }, "cancelado")} className="btn h-12 sm:flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" /> : null}Confirmar cancelación</button>
           </div>
         </div>
