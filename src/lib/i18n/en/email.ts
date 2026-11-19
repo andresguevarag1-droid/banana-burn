@@ -139,4 +139,32 @@ export const EMAIL: Record<string, string> = {
   "La sesión te muestra qué hacer en cada ejercicio. Sigue las indicaciones, avanza a tu ritmo y guarda el entreno al terminar.":
     "The session shows you what to do in each exercise. Follow the cues, go at your own pace and save the workout when you finish.",
   "No necesitas recuperar los días que pasaron. Empieza por hoy.": "You don't need to make up for the days that went by. Start with today.",
+
+  // Cancelación (#326): cobro de la prueba cancelado y plan pagado cancelado
+  "Plan": "Plan",
+  "Volver a mi plan": "Go back to my plan",
+  "Recibes este correo como confirmación de un cambio en tu plan.": "You're getting this email to confirm a change to your plan.",
+  "Cancelaste tu plan: no se te cobrará": "You canceled your plan: you won't be charged",
+  "Sigues con acceso hasta el {date}. No se hará ningún cobro.": "You keep access until {date}. No charge will be made.",
+  "No se hará ningún cobro.": "No charge will be made.",
+  "Listo, no se te cobrará": "Done, you won't be charged",
+  "{name}, cancelaste <b>{plan}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.": "{name}, you canceled <b>{plan}</b> before the charge. Your card won't be charged.",
+  "{name}, cancelaste {plan} antes del cobro. No se hará ningún cargo.": "{name}, you canceled {plan} before the charge. No charge will be made.",
+  "Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan.": "Your card is still saved in case you come back; you can remove it from My plan.",
+  "Quitamos tu tarjeta guardada.": "We removed your saved card.",
+  "Para volver, abre Mi plan y elige tu plan. Tus entrenos y tu progreso quedan guardados y retomas donde ibas.":
+    "To come back, open My plan and choose your plan. Your workouts and progress stay saved and you pick up where you left off.",
+  "Sigues con acceso hasta el <b>{date}</b>.": "You keep access until <b>{date}</b>.",
+  "Sigues con acceso hasta el {date}.": "You keep access until {date}.",
+  "Cancelaste tu plan de Banana Burn": "You canceled your Banana Burn plan",
+  "Sigues con acceso hasta el {date}. No se renueva.": "You keep access until {date}. It won't renew.",
+  "No se renueva. Tu progreso queda guardado.": "It won't renew. Your progress stays saved.",
+  "Gracias por entrenar conmigo. Tus récords te esperan cuando quieras volver.": "Thanks for training with me. Your records will be waiting whenever you come back.",
+  "Listo, cancelaste tu plan": "Done, you canceled your plan",
+  "{name}, confirmamos la cancelación de <b>{plan}</b>. No se harán más cobros.": "{name}, we confirm that <b>{plan}</b> is canceled. There will be no more charges.",
+  "{name}, confirmamos la cancelación de {plan}. No se harán más cobros.": "{name}, we confirm that {plan} is canceled. There will be no more charges.",
+  "Para volver, abre Mi plan y elige tu plan. Tus entrenos, récords y pesajes quedan guardados y retomas donde ibas.":
+    "To come back, open My plan and choose your plan. Your workouts, records and weigh-ins stay saved and you pick up where you left off.",
+  "Sigues con acceso hasta el <b>{date}</b>. No se renueva.": "You keep access until <b>{date}</b>. It won't renew.",
+  "¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.": "Can you tell us why you're leaving? Reply to this email; we read everything and it helps us improve.",
 };

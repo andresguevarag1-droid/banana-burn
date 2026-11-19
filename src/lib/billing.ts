@@ -138,6 +138,8 @@ export async function cancelAtPeriodEndFor(userId: string, reason?: string): Pro
     await db.from("subscriptions").update({ cancel_at_period_end: true, canceled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", r.id);
     await recordAppEvent(db, `app.cancel_requested:${r.provider_subscription_id ?? r.id}`, "app.cancel_requested", v.id, r.provider_subscription_id, { reason: reason?.slice(0, 200) ?? null });
     if (r.current_period_end && (!endsAt || r.current_period_end > endsAt)) endsAt = r.current_period_end;
+    // #326: confirmación por correo con la fecha hasta la que tiene acceso y cómo volver.
+    await sendSubscriptionCanceled({ userId: v.id, plan: planName(r.plan), accessUntil: r.current_period_end, subscriptionId: `${r.provider_subscription_id ?? r.id}:pedido` }).catch(() => null);
   }
   log("cancelación al final del periodo", { userId: v.id, endsAt });
   return { endsAt };
