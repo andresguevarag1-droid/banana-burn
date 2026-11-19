@@ -91,8 +91,9 @@ Lo que hace la app (`src/lib/factura.ts`):
 ```
 cobro verificado (notifyPaid en src/lib/billing.ts)
   └─ enqueueBillingDocument: billing_documents en 'pendiente' (una vez por cobro: charge_id único)
-  └─ issueBillingDocument:
+  └─ issueBillingDocument (solo si enqueue creó la fila; un aviso repetido del cobro no emite otra vez):
        ALEGRA_ENABLED distinto de "1" → no hace nada (sin llamadas a Alegra)
+       reclama la fila (attempts 0 → 1 si sigue 'pendiente'); si otro aviso ya la reclamó, no llama a Alegra
        ALEGRA_ENABLED = "1"           → POST /invoices con stamp; guarda número, clave, PDF → 'emitido'
                                          si Alegra falla → 'error' con el motivo (el cobro y el recibo siguen)
 ```

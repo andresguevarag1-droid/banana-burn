@@ -315,8 +315,9 @@ async function notifyPaid(db: SupabaseClient, provider: "onvo" | "tilopay", row:
   const amount = amountMinor != null ? amountMinor / 100 : row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0;
   // Comprobante electrónico (0074): en 'pendiente' una vez por cobro; solo se emite con ALEGRA_ENABLED. Nunca bloquea el cobro.
   try {
-    await enqueueBillingDocument(db, { userId: row.user_id, provider, reference, amountMinor: amountMinor ?? Math.round(amount * 100), currency: currency ?? "USD" });
-    await issueBillingDocument(db, chargeIdFor(provider, reference));
+    // Solo quien crea la fila emite: un evento repetido del mismo cobro no manda otro POST a Alegra (reintento: etapa 2).
+    const queued = await enqueueBillingDocument(db, { userId: row.user_id, provider, reference, amountMinor: amountMinor ?? Math.round(amount * 100), currency: currency ?? "USD" });
+    if (queued === "creado") await issueBillingDocument(db, chargeIdFor(provider, reference));
   } catch (e) { console.error(JSON.stringify({ scope: "pagos", msg: "comprobante electrónico", userId: row.user_id, reference, ...errInfo(e) })); }
   await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd, promoFull, einvoice: alegraEnabled() }).catch(() => {});
   const { affiliateOnPaid } = await import("@/lib/affiliates-server");

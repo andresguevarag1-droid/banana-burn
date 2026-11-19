@@ -90,6 +90,32 @@ describe("con ALEGRA_ENABLED=1", () => {
     expect(email.sendPaymentReceipt.mock.calls[0][0]).toMatchObject({ einvoice: true });
   });
 
+  it("un aviso repetido del mismo cobro (enqueue = duplicado) no vuelve a llamar a Alegra, aunque la fila siga en 'pendiente'", async () => {
+    vi.stubEnv("ALEGRA_ENABLED", "1");
+    // Alegra responde sin clave: la fila queda en 'pendiente' con su id, el caso que antes se reemitía.
+    fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ id: 78 }), { status: 201 }));
+    const f = setup();
+    await cobrar(f);
+    expect(f.tables.billing_documents[0]).toMatchObject({ status: "pendiente", provider_document_id: "78", attempts: 1 });
+    // El evento del cobro quedó en 'received' (p. ej. murió antes de marcarlo): el reintento vuelve a pasar por notifyPaid.
+    f.tables.payment_events[0].status = "received";
+    expect(await cobrar(f)).toMatchObject({ ok: true });
+    expect(alegraCalls()).toHaveLength(1);
+    expect(f.tables.billing_documents).toHaveLength(1);
+    expect(f.tables.billing_documents[0]).toMatchObject({ status: "pendiente", attempts: 1 });
+  });
+
+  it("dos emisiones del mismo cobro a la vez: solo una reclama la fila y llama a Alegra", async () => {
+    vi.stubEnv("ALEGRA_ENABLED", "1");
+    const f = setup();
+    await factura.enqueueBillingDocument(f.db, { userId: USER, provider: "onvo", reference: "pi_3", amountMinor: 999, currency: "USD" });
+    const out = await Promise.all([factura.issueBillingDocument(f.db, "onvo:pi_3"), factura.issueBillingDocument(f.db, "onvo:pi_3")]);
+    expect(out.sort()).toEqual(["emitido", "ya intentado"]);
+    expect(alegraCalls()).toHaveLength(1);
+    expect(await factura.issueBillingDocument(f.db, "onvo:pi_3")).toBe("emitido");
+    expect(alegraCalls()).toHaveLength(1);
+  });
+
   it("si Alegra falla, el cobro y el recibo siguen y el comprobante queda en error", async () => {
     vi.stubEnv("ALEGRA_ENABLED", "1");
     fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ message: "Credenciales inválidas" }), { status: 401 }));

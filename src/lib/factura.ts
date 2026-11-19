@@ -45,26 +45,32 @@ export async function enqueueBillingDocument(db: SupabaseClient, c: { userId: st
 }
 
 /**
- * Emite con Alegra el comprobante de un cobro. Con la bandera apagada no hace nada (ni una llamada a Alegra).
+ * Emite con Alegra el comprobante de un cobro, una sola vez. Con la bandera apagada no hace nada (ni una llamada a Alegra).
+ * Antes de llamar a Alegra reclama la fila (attempts 0 → 1 con status 'pendiente', atómico): si dos avisos del mismo cobro
+ * llegan a la vez, solo uno emite. Una fila ya intentada ('pendiente' sin clave o 'error') no se reemite aquí: eso es el
+ * reintento de la etapa 2 (docs/pagos/factura-electronica.md).
  * Sin la clave de Hacienda en la respuesta, la fila sigue en 'pendiente' con el id de Alegra para revisarla a mano.
  */
-export async function issueBillingDocument(db: SupabaseClient, chargeId: string, vars: NodeJS.ProcessEnv = process.env): Promise<DocStatus | "apagado" | "no existe"> {
+export async function issueBillingDocument(db: SupabaseClient, chargeId: string, vars: NodeJS.ProcessEnv = process.env): Promise<DocStatus | "apagado" | "no existe" | "ya intentado"> {
   if (!alegraEnabled(vars)) return "apagado";
-  const { data } = await db.from("billing_documents").select("*").eq("charge_id", chargeId).maybeSingle();
-  const doc = data as BillingDocument | null;
-  if (!doc) return "no existe";
-  if (doc.status === "emitido") return "emitido";
   const now = new Date().toISOString();
+  const { data } = await db.from("billing_documents").update({ attempts: 1, updated_at: now })
+    .eq("charge_id", chargeId).eq("status", "pendiente").eq("attempts", 0).select("*").maybeSingle();
+  const doc = data as BillingDocument | null;
+  if (!doc) {
+    const { data: prev } = await db.from("billing_documents").select("status").eq("charge_id", chargeId).maybeSingle();
+    return !prev ? "no existe" : prev.status === "emitido" ? "emitido" : "ya intentado";
+  }
   try {
     const out = await createAlegraInvoice(doc, vars);
     const emitted = !!out.haciendaKey;
     await db.from("billing_documents").update({
       status: emitted ? "emitido" : "pendiente", provider_document_id: out.id, number: out.number, hacienda_key: out.haciendaKey, pdf_url: out.pdfUrl,
-      issued_at: emitted ? now : null, attempts: doc.attempts + 1, last_error: emitted ? null : "Alegra no devolvió la clave de Hacienda", updated_at: now,
+      issued_at: emitted ? now : null, last_error: emitted ? null : "Alegra no devolvió la clave de Hacienda", updated_at: new Date().toISOString(),
     }).eq("id", doc.id);
     return emitted ? "emitido" : "pendiente";
   } catch (e) {
-    await db.from("billing_documents").update({ status: "error", attempts: doc.attempts + 1, last_error: String((e as Error)?.message ?? e).slice(0, 500), updated_at: now }).eq("id", doc.id);
+    await db.from("billing_documents").update({ status: "error", last_error: String((e as Error)?.message ?? e).slice(0, 500), updated_at: new Date().toISOString() }).eq("id", doc.id);
     return "error";
   }
 }
