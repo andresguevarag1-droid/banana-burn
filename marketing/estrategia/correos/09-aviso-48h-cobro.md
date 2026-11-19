@@ -28,7 +28,7 @@ Si quieres seguir, no tienes que hacer nada.
 
 Cómo cancelar sin costo
 1. Abre Mi plan, con el enlace de abajo o en la app desde el menú.
-2. Toca Cancelar sin costo y confirma. No se cobra nada.
+2. Toca Cancelar mi plan y confirma. No se cobra nada.
 3. Sigues con acceso hasta el final de tu prueba, y tu progreso queda guardado.
 
 Cancela antes del {{fecha_cobro}}. ¿Dudas? Escríbenos a hola@bananaburn.app.

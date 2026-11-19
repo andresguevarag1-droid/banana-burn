@@ -90,7 +90,7 @@ describe("secuencia de correos de la prueba", () => {
     expect(md).toContain("| $7.49 |");
     const text = textOf("09-aviso-48h-cobro.md");
     expect(text).toMatch(/Cómo cancelar sin costo/);
-    expect(text).toMatch(/Cancelar sin costo/);
+    expect(text).toMatch(/Cancelar mi plan/);
     expect(text).toContain("{{monto}}");
     expect(read("html/09-aviso-48h-cobro.html")).toMatch(/Cómo cancelar sin costo/);
   });

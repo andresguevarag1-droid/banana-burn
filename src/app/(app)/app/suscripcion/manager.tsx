@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowCounterClockwise, ArrowRight, CircleNotch, Handshake, Lock, MonkeyBanana, Scroll } from "@/components/icons";
+import { ArrowCounterClockwise, ArrowRight, CircleNotch, Lock, Scroll } from "@/components/icons";
 import { PLANS, annualSaving, annualSavingPct, usd, type Billing, type PlanId } from "@/lib/plans";
 import { money } from "@/lib/copy";
 import { INTENT_COOKIE, type CheckoutIntent } from "@/lib/checkout-intent";
@@ -66,6 +66,11 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
         )}
       {checkout.error && <p role="alert" className="rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm font-semibold text-bad">{checkout.error}</p>}
 
+      {/* #326: visible arriba de los planes. Cancelar mi plan y una confirmación: 1 toque más la confirmación. */}
+      {current.cancellable && current.plan !== "free" && current.billing && (
+        <CancelFlow plan={current.plan} billing={current.billing} trial={current.status === "trialing"} endsAt={current.endsAt} onOffer={choose} offerBusy={checkout.busy} payments={payments} />
+      )}
+
       <section className="card p-5 sm:p-6" aria-labelledby="cambiar">
         <h2 id="cambiar" className="font-extrabold text-ink">{paid ? "Cambiar de plan" : "Elige tu plan"}</h2>
         {paid && current.fromSubscription && <p className="mt-1 text-sm text-muted">El nuevo plan empieza al confirmar el pago y reemplaza al actual (sin prorrateo).</p>}
@@ -107,16 +112,13 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
         )}
       </section>
 
-      {current.cancellable && current.plan !== "free" && current.billing && (
-        <CancelFlow plan={current.plan} billing={current.billing} endsAt={current.endsAt} onOffer={choose} offerBusy={checkout.busy} payments={payments} />
-      )}
     </>
   );
 }
 
-function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { plan: PlanId; billing: Billing; endsAt: string | null; onOffer: (p: PlanId, b: Billing) => void; offerBusy: string | null; payments: boolean }) {
+function CancelFlow({ plan, billing, trial, endsAt, onOffer, offerBusy, payments }: { plan: PlanId; billing: Billing; trial: boolean; endsAt: string | null; onOffer: (p: PlanId, b: Billing) => void; offerBusy: string | null; payments: boolean }) {
   const router = useRouter();
-  const [step, setStep] = useState<"idle" | "offer" | "confirm" | "done">("idle");
+  const [step, setStep] = useState<"idle" | "confirm" | "done">("idle");
   const [reason, setReason] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -125,12 +127,17 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
   useEffect(() => { if (step !== "idle") heading.current?.focus(); }, [step]);
 
   const p = planOf(plan);
-  const offers: { key: string; title: string; body: string; plan: PlanId; billing: Billing }[] = [];
-  if (billing === "mes") offers.push({ key: `${plan}.anual`, title: `Pásate a anual y ahorra ${annualSavingPct(p)} %`, body: `${usd(p.price.anual)}/año en vez de ${usd(p.price.mes * 12)} pagando mes a mes.`, plan, billing: "anual" });
+  const offers: { key: string; title: string; plan: PlanId; billing: Billing }[] = [];
+  if (billing === "mes") offers.push({ key: `${plan}.anual`, title: `Pasarme a anual: ${usd(p.price.anual)}/año, ${annualSavingPct(p)} % menos`, plan, billing: "anual" });
   if (plan === "completo") {
     const e = planOf("entreno");
-    offers.push({ key: `entreno.${billing}`, title: `Quédate con Entreno por ${usd(e.price[billing])}${billing === "anual" ? "/año" : "/mes"}`, body: "Mantén tus rutinas, progreso y Coach Banana; solo dejas el plan de nutrición.", plan: "entreno", billing });
+    offers.push({ key: `entreno.${billing}`, title: `Quedarme solo con Entreno: ${usd(e.price[billing])}${billing === "anual" ? "/año" : "/mes"}`, plan: "entreno", billing });
   }
+  const day = fmtDate(until);
+  // #326: el mismo texto en la confirmación y al terminar (y en /terminos).
+  const access = trial
+    ? <>Si cancelas hoy no se te cobra nada. {day ? <>Sigues con acceso hasta el <b>{day}</b>.</> : "Sigues con acceso hasta el final de tu prueba."}</>
+    : <>{day ? <>Sigues con acceso hasta el <b>{day}</b>.</> : "Sigues con acceso hasta el final del periodo que ya pagaste."} No se renueva.</>;
 
   async function confirm() {
     setBusy(true); setErr(null);
@@ -145,42 +152,20 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
 
   if (step === "idle") {
     return (
-      <section className="card p-5 sm:p-6">
-        <h2 className="font-extrabold text-ink">Cancelar renovación</h2>
-        <p className="mt-1 text-sm text-muted">Mantienes el acceso hasta el final del periodo que ya pagaste.</p>
-        <button type="button" onClick={() => setStep(offers.length ? "offer" : "confirm")} className="btn-ghost mt-4 h-11 text-bad">Cancelar suscripción</button>
+      <section className="card p-5 sm:p-6" aria-labelledby="cancelar-plan">
+        <h2 id="cancelar-plan" className="font-extrabold text-ink">Cancelar mi plan</h2>
+        <p className="mt-1 text-sm text-muted">{trial ? "Si cancelas antes del cobro, no pagas nada." : "Mantienes el acceso hasta el final del periodo que ya pagaste."}</p>
+        <button type="button" onClick={() => setStep("confirm")} className="btn-ghost mt-4 h-12 text-bad">Cancelar mi plan</button>
       </section>
     );
   }
 
   return (
     <section className="rounded-[1.5rem] border-2 border-line bg-white p-5 sm:p-6 space-y-4" aria-live="polite">
-      {step === "offer" && (
-        <>
-          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none flex items-center gap-2"><Handshake weight="duotone" className="size-5 text-ember" />Antes de irte…</h2>
-          <p className="text-sm text-muted">Tu racha y tu progreso se quedan contigo. Quizá esto te sirve más:</p>
-          <ul className="space-y-2">
-            {offers.map((o) => (
-              <li key={o.key} className="rounded-2xl bg-paper p-4">
-                <p className="font-bold text-ink flex items-center gap-2"><MonkeyBanana className="size-5 shrink-0 text-banana-ink" />{o.title}</p>
-                <p className="mt-1 text-sm text-muted">{o.body}</p>
-                <button type="button" disabled={!payments || Boolean(offerBusy)} onClick={() => onOffer(o.plan, o.billing)} className="btn-banana mt-3 h-11 w-full sm:w-auto" aria-busy={offerBusy === o.key}>
-                  {offerBusy === o.key ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Preparando…</> : "Quiero esta opción"}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 sm:flex-1">Me quedo como estoy</button>
-            <button type="button" onClick={() => setStep("confirm")} className="btn-ghost h-11 sm:flex-1">No, quiero cancelar</button>
-          </div>
-        </>
-      )}
-
       {step === "confirm" && (
         <>
-          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none">¿Cancelar la renovación?</h2>
-          <p className="text-sm text-body">No habrá más cobros. Sigues con acceso {fmtDate(endsAt) ? <>hasta el <b>{fmtDate(endsAt)}</b></> : "hasta el final de tu periodo pagado"}. Tus datos no se borran.</p>
+          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none">Cancelar tu plan</h2>
+          <p className="text-sm text-body">{access} Tus datos no se borran.</p>
           <fieldset className="space-y-2">
             <legend className="text-sm font-bold text-ink mb-2">¿Por qué te vas? <span className="font-normal text-muted">(opcional)</span></legend>
             {REASONS.map((r) => (
@@ -191,16 +176,31 @@ function CancelFlow({ plan, billing, endsAt, onOffer, offerBusy, payments }: { p
           </fieldset>
           {err && <p role="alert" className="text-sm font-semibold text-bad">{err}</p>}
           <div className="flex flex-col sm:flex-row gap-2">
-            <button type="button" onClick={() => setStep("idle")} className="btn-primary h-11 sm:flex-1">Mejor no</button>
-            <button type="button" disabled={busy} onClick={confirm} className="btn h-11 sm:flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Cancelando…</> : "Confirmar cancelación"}</button>
+            <button type="button" onClick={() => setStep("idle")} className="btn-ghost h-12 sm:flex-1">Volver</button>
+            <button type="button" disabled={busy} onClick={confirm} className="btn h-12 sm:flex-1 bg-bad text-white" aria-busy={busy}>{busy ? <><CircleNotch weight="bold" className="size-4 animate-spin" />Cancelando…</> : "Confirmar cancelación"}</button>
           </div>
+          {/* Opcional y después de confirmar: no agrega toques ni frena la cancelación. */}
+          {offers.length > 0 && (
+            <div className="border-t border-line pt-3">
+              <p className="text-xs font-semibold text-muted">Si prefieres pagar menos en vez de cancelar (opcional):</p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {offers.map((o) => (
+                  <li key={o.key}>
+                    <button type="button" disabled={!payments || Boolean(offerBusy)} onClick={() => onOffer(o.plan, o.billing)} className="tap inline-flex min-h-11 items-center gap-1.5 text-left text-sm font-bold text-ink underline decoration-ink/30 underline-offset-4 disabled:opacity-50" aria-busy={offerBusy === o.key}>
+                      {offerBusy === o.key && <CircleNotch weight="bold" className="size-4 animate-spin" />}{o.title}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
 
       {step === "done" && (
         <>
-          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none">Listo, cancelaste la renovación</h2>
-          <p className="text-sm text-muted">{fmtDate(until) ? <>Sigues con tu plan hasta el <b>{fmtDate(until)}</b>.</> : "Sigues con tu plan hasta el final del periodo pagado."} Puedes volver a suscribirte cuando quieras desde esta página.</p>
+          <h2 ref={heading} tabIndex={-1} className="text-lg font-extrabold text-ink outline-none">Listo, cancelaste tu plan</h2>
+          <p className="text-sm text-muted">{access} Te enviamos la confirmación por correo. Para volver, elige tu plan aquí mismo cuando quieras.</p>
         </>
       )}
     </section>
