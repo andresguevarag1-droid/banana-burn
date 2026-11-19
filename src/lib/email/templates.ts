@@ -17,7 +17,7 @@ import { PROMO_PCT, planLine, promoPrice } from "../trial";
 import { intentPath } from "../checkout-intent";
 import type { TrialProgress } from "../recuperacion";
 import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "../i18n/locale";
-import { kgToLb } from "../i18n/format";
+import { kgToLb, loadShown, weightUnit } from "../i18n/format";
 import { tr, type T as Translate } from "../i18n/t";
 
 export type Email = { subject: string; preheader: string; html: string; text: string };
@@ -981,33 +981,107 @@ export function activacion(d: { step: ActivationMailStep; home: boolean; unsubsc
   };
 }
 
-// ───────────── Segundo entreno (#286, docs/emails/segundo-entreno.md) ─────────────
-// De 48 a 72 h después del primer entreno terminado, si no hizo otro. Lo envía runReminders (notify-run.ts).
+// ───────────── Regreso (#320, docs/emails/regreso.md) ─────────────
+// Después del primer entreno, a quien no hizo el siguiente: R1, R2 y R4 con la sesión que le toca, sus minutos y un dato de su
+// último entreno; R3 en texto plano de Andrés con una pregunta. Lo envía sendComebackEmails (notify-run.ts).
 
-export const SECOND_WORKOUT_MAIL = {
-  subject: "Tu segundo entreno está listo",
-  preheader: "Ya hiciste el primero. El segundo se hace igual, paso a paso.",
-  paragraphs: [
-    "Hace unos días terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste esa vez.",
-    "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.",
-    "Tu plan funciona entrenando varias veces por semana: el segundo entreno es el que lo pone en marcha.",
-  ],
-  cta: "Empezar mi segundo entreno",
-  path: "/app/entreno",
+/** R1, R2 y R4. `subjectNoMins` cuando no se saben los minutos. El botón lleva ?e=<kind> para contar el clic (email_click). */
+export const COMEBACK_MAILS = {
+  r1: {
+    eyebrow: "Tu entreno 2",
+    subject: "Tu entreno 2 está listo: unos {mins} min",
+    subjectNoMins: "Tu entreno 2 está listo",
+    preheader: "Ayer hiciste el primero. El segundo ya está en tu plan.",
+    intro: "Ayer terminaste tu primer entreno. El segundo ya está en tu plan, ajustado con lo que anotaste.",
+    cta: "Empezar mi entreno 2",
+  },
+  r2: {
+    eyebrow: "Tu entreno 2",
+    subject: "Ayer no pudiste. Hoy son {mins} minutos",
+    subjectNoMins: "Ayer no pudiste. Tu entreno 2 sigue listo",
+    preheader: "Tu entreno 2 te espera, sin nada que recuperar.",
+    intro: "Tu entreno 2 sigue en tu plan. No tienes que recuperar nada: haces este y tu plan sigue desde ahí.",
+    cta: "Empezar mi entreno 2",
+  },
+  r4: {
+    eyebrow: "Tu entreno 3",
+    subject: "Vas 2. El 3.º es el que hace el hábito",
+    subjectNoMins: "Vas 2. El 3.º es el que hace el hábito",
+    preheader: "Ya llevas 2 entrenos. Hoy puedes hacer el tercero.",
+    intro: "Ya llevas 2 entrenos. El tercero es el que convierte esto en costumbre.",
+    cta: "Empezar mi entreno 3",
+  },
+} as const;
+
+/** Frases que comparten R1, R2 y R4: la sesión de hoy, el dato del último entreno y el cierre. */
+export const COMEBACK_LINES = {
+  session: "Hoy te toca {routine}: unos {mins} minutos.",
+  sessionNoMins: "Hoy te toca {routine}.",
+  liftNext: "La vez pasada hiciste {exercise} con {load}; hoy toca {next}.",
+  lift: "La vez pasada hiciste {exercise} con {load}.",
+  outro: "Ábrelo cuando tengas un rato hoy. Coach Banana te dice cada ejercicio, cuántas veces y cuándo descansar.",
 };
 
-/** El correo del segundo entreno. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function segundoEntreno(d: { unsubscribe: string; locale?: Locale }): Email {
+export type ComebackMailStep = keyof typeof COMEBACK_MAILS;
+export const comebackPath = (step: ComebackMailStep | "r3") => `/app/entreno?e=regreso_${step}`;
+
+const lowerFirst = (s: string) => (s ? s[0].toLocaleLowerCase() + s.slice(1) : s);
+/** Peso de una serie como se ve en el entreno: kg tal cual; en lb, redondeado a 2.5 lb. */
+const loadText = (kgValue: number, units: Units) => `${num(loadShown(kgValue, units), 2)} ${weightUnit(units)}`;
+
+/** Párrafos de R1, R2 y R4 en el idioma de la cuenta. Exportada para pruebas y para docs/emails/regreso.md. */
+export function comebackParagraphs(step: ComebackMailStep, d: { routine: string; mins: number | null; lift: { exercise: string; kg: number; next: number | null } | null; locale?: Locale; units?: Units | null }): string[] {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale), units = d.units ?? defaultUnits(locale);
+  const routine = t(d.routine);
+  const session = d.mins ? t(COMEBACK_LINES.session, { routine, mins: d.mins }) : t(COMEBACK_LINES.sessionNoMins, { routine });
+  const lift = d.lift && t(d.lift.next ? COMEBACK_LINES.liftNext : COMEBACK_LINES.lift, {
+    exercise: lowerFirst(t(d.lift.exercise)), load: loadText(d.lift.kg, units), next: d.lift.next ? loadText(d.lift.next, units) : "",
+  });
+  return [t(COMEBACK_MAILS[step].intro), session, ...(lift ? [lift] : []), t(COMEBACK_LINES.outro)];
+}
+
+/** R1, R2 o R4. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
+export function regreso(d: { step: ComebackMailStep; routine: string; mins: number | null; lift: { exercise: string; kg: number; next: number | null } | null; unsubscribe: string; locale?: Locale; units?: Units | null }): Email {
   const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
-  const c = localized(SECOND_WORKOUT_MAIL, t);
-  const hero: Hero = { eyebrow: t("Tu segundo entreno"), title: esc(c.subject), lead: esc(c.preheader), mascot: true };
-  const html = c.paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(c.cta, c.path, "banana");
+  const m = COMEBACK_MAILS[d.step];
+  const subject = d.mins ? t(m.subject, { mins: d.mins }) : t(m.subjectNoMins);
+  const preheader = t(m.preheader), cta = t(m.cta), path = comebackPath(d.step);
+  const paragraphs = comebackParagraphs(d.step, d);
+  const hero: Hero = { eyebrow: t(m.eyebrow), title: esc(subject), lead: esc(preheader), mascot: true };
+  const html = paragraphs.map((x) => p(esc(x))).join("") + p("<b>Coach Banana</b>") + button(cta, path, "banana");
   const reason = t("Recibes este correo porque terminaste tu primer entreno en Banana Burn y tienes activados los recordatorios.");
   return {
-    subject: c.subject, preheader: c.preheader,
-    html: layout({ preheader: c.preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
-    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, undefined, locale),
+    subject, preheader,
+    html: layout({ preheader, hero, body: html, reason, unsubscribe: d.unsubscribe, locale }),
+    text: textLayout([subject, "", ...paragraphs.flatMap((x) => [x, ""]), "Coach Banana", "", `${cta}: ${abs(path)}`], d.unsubscribe, reason, undefined, locale),
   };
+}
+
+/** R3: remitente y respuesta. Las respuestas llegan a hola@bananaburn.app y son las entrevistas. */
+export const COMEBACK_QUESTION_FROM = "Andrés de Banana Burn <hola@bananaburn.app>";
+export const COMEBACK_QUESTION_REPLY_TO = SUPPORT;
+
+/** R3: texto plano, sin botón ni diseño, como un correo escrito a mano. */
+export const COMEBACK_QUESTION = {
+  subject: "¿Qué te frenó para volver?",
+  greeting: "Hola, {name}:",
+  greetingNoName: "Hola:",
+  paragraphs: [
+    "Soy Andrés, de Banana Burn. Vi que hace unos días hiciste tu primer entreno y todavía no el segundo.",
+    "Te quiero hacer una sola pregunta: ¿qué te frenó para volver?",
+    "Respóndeme este correo con lo que sea, aunque sea una línea. Lo leo yo y me sirve para mejorar la app.",
+  ],
+  signature: "Andrés",
+  unsubscribe: "Si no quieres recibir más correos como este: {url}",
+};
+
+/** R3 en texto plano (html vacío: sendEmail manda solo el texto). Lleva enlace de baja de los recordatorios. */
+export function regresoPregunta(d: { name: string; unsubscribe: string; locale?: Locale }): Email {
+  const t = tr(d.locale ?? DEFAULT_LOCALE), q = COMEBACK_QUESTION;
+  const name = (d.name || "").trim().split(/\s+/)[0];
+  const subject = t(q.subject);
+  const lines = [name ? t(q.greeting, { name }) : t(q.greetingNoName), "", ...q.paragraphs.flatMap((x) => [t(x), ""]), q.signature, "", "--", t(q.unsubscribe, { url: d.unsubscribe })];
+  return { subject, preheader: t(q.paragraphs[1]), html: "", text: lines.join("\n") };
 }
 
 // ───────────── Meta semanal (#288, docs/emails/meta-semanal.md) ─────────────
