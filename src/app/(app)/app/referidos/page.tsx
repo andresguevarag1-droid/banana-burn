@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Gift, Info } from "@/components/icons";
 import { getViewer } from "@/lib/supabase/server";
 import { getReferralPage } from "@/lib/referrals-server";
-import { monthsEarned, referralLabel, referralProgress, REF_ANNUAL_MONTHS, REF_GROUP_SIZE, REF_MAX_REWARDS_YEAR, REF_WINDOW_DAYS, type RefTone } from "@/lib/referrals";
+import { monthsEarned, referralLabel, referralName, referralProgress, REF_ANNUAL_MONTHS, REF_GROUP_SIZE, REF_MAX_REWARDS_YEAR, REF_WINDOW_DAYS, type RefTone } from "@/lib/referrals";
 import { monthsLabel, planLabel } from "@/lib/gifts";
 import { TRIAL_DAYS } from "@/lib/plans";
 import { ShareLink } from "./share";
@@ -15,12 +15,13 @@ const TONE: Record<RefTone, string> = {
   banana: "bg-banana text-ink",
   warn: "bg-ember/15 text-ember-ink",
   muted: "bg-line text-muted",
+  soft: "bg-banana-soft text-banana-ink",
 };
 const fmt = (iso: string, tz: string) => new Date(iso).toLocaleDateString("es-419", { day: "numeric", month: "long", timeZone: tz });
 
 const RULES: [string, string][] = [
   ["Comparte tu enlace", `Tu amigo crea su cuenta con él y tiene ${TRIAL_DAYS} días gratis con todo incluido.`],
-  ["Cuenta cuando paga su primer plan", `Entreno o Entreno + Nutrición, mensual o anual, dentro de ${REF_WINDOW_DAYS} días desde que se registró con tu enlace. La prueba gratis no cuenta.`],
+  ["Cuenta cuando entra su primer cobro", `Entreno o Entreno + Nutrición, mensual o anual, dentro de ${REF_WINDOW_DAYS} días desde que se registró con tu enlace. Dejar la tarjeta para su prueba no cuenta: cuenta el cobro del día ${TRIAL_DAYS + 1}. Si cancela antes, no cuenta.`],
   [`Cada ${REF_GROUP_SIZE} amigos que pagan: 1 mes gratis`, "Se suma al final de tu acceso actual. No pagas nada y no pierdes ni un día."],
   [`Si uno de esos ${REF_GROUP_SIZE} paga el plan anual`, `Ese mes se convierte en ${REF_ANNUAL_MONTHS} meses gratis.`],
 ];
@@ -99,7 +100,7 @@ export default async function Referidos() {
                   <li key={i} className="flex items-center gap-3 py-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-banana-soft font-extrabold text-banana-ink" aria-hidden>{r.initial}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-ink"><span className="sr-only">Persona con inicial </span>{r.initial}.</p>
+                      <p className="truncate font-semibold text-ink">{referralName(r)}</p>
                       <p className="text-xs text-muted">Se unió el {fmt(r.created_at, v.tz)}</p>
                     </div>
                     <span className={`chip shrink-0 ${TONE[st.tone]}`}>{st.label}</span>

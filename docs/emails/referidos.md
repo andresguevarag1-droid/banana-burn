@@ -6,7 +6,21 @@ Borrador para aprobación de Andrés. Este archivo no conecta ni envía correos,
 
 Desde la decisión de Andrés del 1 de noviembre de 2026 (migración 0064), **3 amigos que pagan su primer plan = 1 mes gratis.** Activarse (bienvenida, entreno, agua, pasos o sueño) ya no basta. Las calificaciones registradas antes con la regla anterior se respetan.
 
-Fuentes: `src/lib/referrals.ts` (constantes y simulación), `supabase/migrations/0025_regalos_referidos.sql` (`referral_attribute`, `_referral_settle`, `referral_annual_paid`), `supabase/migrations/0064_referidos_al_pagar.sql` (`_referral_try_qualify`, `referral_paid`, `admin_referral_refund`) y `src/app/(app)/app/referidos/page.tsx`. La calificación exige el primer pago verificado de un plan (Entreno o Entreno + Nutrición, mensual o anual, por ONVO o Tilopay) dentro de los 60 días desde que el amigo se registró con el enlace. No cuentan la prueba de 7 días, la tarjeta guardada sin cobro, cortesías, beta, condominio, retos ni temporadas sueltas, ni un pago reembolsado. La atribución se acepta en las primeras 72 horas de la cuenta; el enlace guarda una cookie de 30 días. No cuentan cuentas propias ni repetidas ni pagos con la misma tarjeta de quien invita; las sospechosas pasan por revisión. Cada grupo se recompensa una sola vez; máximo 12 recompensas no revocadas en 365 días. Si alguien del grupo paga el plan anual (cobro verificado de ONVO o Tilopay), el premio sube a 3 meses en total, incluso si ya se entregó el primero.
+### Con tarjeta obligatoria (desde el lunes 23 de noviembre de 2026)
+
+Desde el 23 de noviembre (0073) toda cuenta nueva deja su tarjeta para empezar los 7 días gratis. Eso cambia cuándo un amigo "paga", no la regla (#333):
+
+1. El enlace `/r/<código>` guarda el código en una cookie y abre el registro (`/entrar?modo=registro`). Al crear la cuenta, el servidor la atribuye a quien invitó (`referral_attribute`), antes de que deje la tarjeta.
+2. **Día 0, deja la tarjeta:** no es un pago. Queda un cobro programado y en Invita y gana sale **En prueba**. No cuenta para el mes gratis.
+3. **Día 8, primer cobro real:** el cron cobra la tarjeta guardada (ONVO o Tilopay), el cobro verificado pasa por `activate()` en `src/lib/billing.ts` y llama a `referral_paid`. Recién ahí el amigo cuenta y sale **Pagó** (o **Pagó anual**). Reintentos, el webhook del mismo cobro y las renovaciones no vuelven a contar.
+4. **Cancela antes del día 8:** no hay cobro y no cuenta. Sale **Sin pagar**. Si después paga un plan dentro de los 60 días, cuenta ese pago.
+5. **Al tercer amigo que pagó** se entrega 1 mes gratis una sola vez; si uno de los 3 pagó el plan anual, 3 meses.
+
+En `/app/referidos` quien invita ve de cada amigo solo su nombre de pila (o solo su inicial si el nombre es un correo o parece un usuario, como ana.rojas o ana92), la fecha en que se unió y su estado: En prueba, Pagó, Pagó anual, Sin pagar, No pagó a tiempo, En revisión o No cuenta. Nada más del amigo (ni apellido, ni correo, ni plan, ni montos). Lo arma `my_referrals()` (0074).
+
+Pruebas: `src/lib/referidos-tarjeta-obligatoria.test.ts` (rutas de la app con ONVO y Tilopay simulados, como el simulacro de #313) y `src/lib/referidos-tarjeta-obligatoria-sql.test.ts` (la base en PGlite: atribución, en prueba, cancelación, premio al tercero una sola vez y 3 meses con anual).
+
+Fuentes: `src/lib/referrals.ts` (constantes y simulación), `supabase/migrations/0025_regalos_referidos.sql` (`referral_attribute`, `_referral_settle`, `referral_annual_paid`), `supabase/migrations/0064_referidos_al_pagar.sql` (`_referral_try_qualify`, `referral_paid`, `admin_referral_refund`), `supabase/migrations/0074_referidos_en_prueba.sql` (`my_referrals`) y `src/app/(app)/app/referidos/page.tsx`. La calificación exige el primer pago verificado de un plan (Entreno o Entreno + Nutrición, mensual o anual, por ONVO o Tilopay) dentro de los 60 días desde que el amigo se registró con el enlace. No cuentan la prueba de 7 días, la tarjeta guardada sin cobro, cortesías, beta, condominio, retos ni temporadas sueltas, ni un pago reembolsado. La atribución se acepta en las primeras 72 horas de la cuenta; el enlace guarda una cookie de 30 días. No cuentan cuentas propias ni repetidas ni pagos con la misma tarjeta de quien invita; las sospechosas pasan por revisión. Cada grupo se recompensa una sola vez; máximo 12 recompensas no revocadas en 365 días. Si alguien del grupo paga el plan anual (cobro verificado de ONVO o Tilopay), el premio sube a 3 meses en total, incluso si ya se entregó el primero.
 
 ## Correo listo para revisión
 
@@ -18,7 +32,7 @@ Fuentes: `src/lib/referrals.ts` (constantes y simulación), `supabase/migrations
 
 Entrenar con tu gente puede regalarte tu próximo mes.
 
-Abre Invita y gana en /app/referidos, toca Copiar y comparte tu enlace. Tus amigos crean una cuenta nueva con él y cuentan cuando pagan su primer plan, mensual o anual, dentro de los 60 días desde que se registran. La prueba gratis no cuenta.
+Abre Invita y gana en /app/referidos, toca Copiar y comparte tu enlace. Tus amigos crean una cuenta nueva con él y cuentan cuando pagan su primer plan, mensual o anual, dentro de los 60 días desde que se registran. La prueba gratis no cuenta: cuenta su primer cobro.
 
 Cada 3 amigos que pagan te dan 1 mes gratis, al final de tu acceso actual. Si uno del grupo paga el plan anual, ganas 3 meses en total.
 
@@ -55,7 +69,7 @@ Valorar un mes regalado como el neto mensual regular que se deja de cobrar: $8.0
 
 Comparación con la sección 3 de [campana-conversion-noviembre.md](../metas/campana-conversion-noviembre.md): su caso conservador fija un techo de **$4.99 por usuario de pago** (y $1.75 por prueba iniciada); los techos mensuales regulares son $9.99 y $14.99. El costo repartido del mes regalado queda por debajo del techo de $4.99, porque la regla vigente solo lo entrega cuando los 3 pagan. Pero esos valores son límites antes de comisión, no CAC observados. Aplicando las comisiones del encargo al primer cobro promocional de $4.99 o $7.49 de `src/lib/trial.ts`, quedan $3.85–$3.87 o $5.96–$5.99 netos: esos serían techos más estrictos para recuperar en el primer cobro.
 
-Por tanto, no se puede afirmar aún que referidos cueste menos que los anuncios reales. Con la regla anterior un premio podía salir sin ningún pago; con la vigente cada premio viene de 3 primeros pagos, y un reembolso anula la recompensa de su grupo. El premio anual consume 3 meses: valorar ese costo con el plan y los meses efectivamente otorgados, sin aplicar el cálculo de un mes. Comparar siempre (neto de todos los regalos + costo incremental de envío) ÷ invitados con pago confirmado contra gasto publicitario ÷ usuarios de pago atribuidos a anuncios, con la misma ventana. Las UTMs de `/r/<código>` se pierden al redirigir; usar la atribución en `referrals`, no prometer seguimiento por UTM.
+Por tanto, no se puede afirmar aún que referidos cueste menos que los anuncios reales. Con la regla anterior un premio podía salir sin ningún pago; con la vigente cada premio viene de 3 primeros pagos, y un reembolso anula la recompensa de su grupo. El premio anual consume 3 meses: valorar ese costo con el plan y los meses efectivamente otorgados, sin aplicar el cálculo de un mes. Comparar siempre (neto de todos los regalos + costo incremental de envío) ÷ invitados con pago confirmado contra gasto publicitario ÷ usuarios de pago atribuidos a anuncios, con la misma ventana. `/r/<código>` conserva los UTM permitidos al redirigir, pero para contar invitados usar la atribución en `referrals`, no los UTM.
 
 Escenario aritmético, no pronóstico: si tres invitados hacen un primer pago mensual regular del mismo plan que quien invita y se entrega un solo mes, el neto de esos tres cobros menos el regalo sería $16.21 con ONVO o $16.14 con Tilopay para Entreno; $24.66 o $24.56 para Entreno + Nutrición. Calculado sin redondeos intermedios. Si hay promoción, anual, mezcla de planes o devolución, usar los cobros reales y el regalo real. No hay tasa de conversión verificada para estimar cuánto ingresará por este correo.
 
