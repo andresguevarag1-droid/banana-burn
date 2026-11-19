@@ -8,6 +8,7 @@ import { GLP1, TRIAL_DAYS, money } from "@/lib/copy";
 import { offer } from "@/lib/offer";
 import { COACH_LIMITS } from "@/lib/coach-quota";
 import { cardTrust, withTrustFaq } from "@/lib/card-trust";
+import { UnderCta } from "@/components/card-trust";
 
 export const [ENTRENO, COMPLETO] = PLANS;
 /** Precio de entrada: Entreno con pago anual, por mes. */
@@ -135,11 +136,13 @@ export { GLP1 };
 
 /** CTA que acompaña al título de las preguntas frecuentes en escritorio. */
 export function FaqCta({ href = SIGNUP, cta }: { href?: string; cta: string }) {
+  const trust = cardTrust();
   return (
     <div className="mt-8 hidden lg:block rounded-3xl bg-banana-soft p-6">
       <p className="font-extrabold text-ink text-balance">La mejor respuesta es probarlo.</p>
       <p className="mt-1 text-sm text-ink/75 text-pretty">{trialNote()}{offer().faqCtaExtra}</p>
       <Link href={href} data-cta={cta} className="mt-4 btn-primary h-12 px-5">{TRIAL_CTA} <ArrowRight className="size-4" /></Link>
+      {trust && <UnderCta trust={trust} className="mt-2" />}
     </div>
   );
 }

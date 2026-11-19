@@ -276,7 +276,7 @@ export function Landing({ variant }: { variant?: HeroVariantKey }) {
         </div>
       </section>
 
-      <StickyCta note={o.note}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
+      <StickyCta note={trust ? trust.underCta : o.note}><Link href={SIGNUP} data-cta="sticky" className="btn-primary h-12 shrink-0 px-5">{CTA} <ArrowRight className="size-4" /></Link></StickyCta>
     </>
   );
 }
