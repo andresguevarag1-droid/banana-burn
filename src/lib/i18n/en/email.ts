@@ -166,5 +166,10 @@ export const EMAIL: Record<string, string> = {
   "Para volver, abre Mi plan y elige tu plan. Tus entrenos, récords y pesajes quedan guardados y retomas donde ibas.":
     "To come back, open My plan and choose your plan. Your workouts, records and weigh-ins stay saved and you pick up where you left off.",
   "Sigues con acceso hasta el <b>{date}</b>. No se renueva.": "You keep access until <b>{date}</b>. It won't renew.",
+  "Tu plan de Banana Burn se canceló": "Your Banana Burn plan was canceled",
+  "No pudimos cobrar la renovación. Tu progreso queda guardado.": "We couldn't charge the renewal. Your progress stays saved.",
+  "Tu plan se canceló": "Your plan was canceled",
+  "{name}, no pudimos cobrar la renovación de <b>{plan}</b> y el plan se canceló. No se harán más cobros.": "{name}, we couldn't charge the renewal of <b>{plan}</b>, so the plan was canceled. There will be no more charges.",
+  "{name}, no pudimos cobrar la renovación de {plan} y el plan se canceló. No se harán más cobros.": "{name}, we couldn't charge the renewal of {plan}, so the plan was canceled. There will be no more charges.",
   "¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.": "Can you tell us why you're leaving? Reply to this email; we read everything and it helps us improve.",
 };

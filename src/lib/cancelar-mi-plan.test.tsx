@@ -213,7 +213,7 @@ describe("3. Plan pagado: cancelar no renueva y manda la confirmación", () => {
     expect(onvo.cancelSubscription).toHaveBeenCalledWith("sub_onvo_1");
     expect(f.tables.subscriptions.every((s) => s.cancel_at_period_end === true)).toBe(true);
     expect(mail.sendSubscriptionCanceled).toHaveBeenCalledTimes(2);
-    for (const [arg] of mail.sendSubscriptionCanceled.mock.calls as unknown as [Record<string, unknown>][]) expect(arg).toMatchObject({ userId: USER, accessUntil: end });
+    for (const [arg] of mail.sendSubscriptionCanceled.mock.calls as unknown as [Record<string, unknown>][]) expect(arg).toMatchObject({ userId: USER, accessUntil: end, byUser: true });
     expect(access(f, new Date())).toMatchObject({ status: "canceling", endsAt: end, locked: false });
   });
 });
@@ -238,13 +238,36 @@ describe("4. Correos de confirmación en es y en", () => {
   });
 
   it("en un plan pagado: hasta qué día tiene acceso, que no se renueva y cómo volver", () => {
-    const es = T.suscripcionCancelada({ name: "Ana", plan: "Entreno + Nutrición", accessUntil: until });
+    const es = T.suscripcionCancelada({ name: "Ana", plan: "Entreno + Nutrición", accessUntil: until, byUser: true });
     expect(es.text).toContain("Sigues con acceso hasta el 30 de noviembre de 2026. No se renueva.");
     expect(es.text).toContain("Para volver, abre Mi plan y elige tu plan.");
-    const en = T.suscripcionCancelada({ name: "Ana", plan: "Entreno + Nutrición", accessUntil: until, locale: "en-US" });
+    const en = T.suscripcionCancelada({ name: "Ana", plan: "Entreno + Nutrición", accessUntil: until, byUser: true, locale: "en-US" });
     expect(en.text).toContain("You keep access until November 30, 2026. It won't renew.");
     expect(en.text).toContain("Training + Nutrition");
     expect(visible(en)).not.toMatch(SPANISH);
+  });
+
+  it("cancelado por el sistema (renovación perdida): no dice que canceló ni promete acceso", () => {
+    const past = "2026-11-10T06:01:00.000Z";
+    for (const e of [T.suscripcionCancelada({ name: "Ana", plan: "Entreno", accessUntil: past }), T.suscripcionCancelada({ name: "Ana", plan: "Entreno", accessUntil: past, locale: "en-US" })]) {
+      const all = visible(e);
+      expect(all).not.toMatch(/cancelaste|you canceled|Sigues con acceso|keep access|No se renueva|won't renew|10 de noviembre|November 10/i);
+    }
+    const es = T.suscripcionCancelada({ name: "Ana", plan: "Entreno", accessUntil: past });
+    expect(es.subject).toBe("Tu plan de Banana Burn se canceló");
+    expect(es.text).toContain("no pudimos cobrar la renovación de Entreno y el plan se canceló");
+    expect(es.text).toContain("Para volver, abre Mi plan y elige tu plan.");
+    const en = T.suscripcionCancelada({ name: "Ana", plan: "Entreno", accessUntil: past, locale: "en-US" });
+    expect(en.subject).toBe("Your Banana Burn plan was canceled");
+    expect(visible(en)).not.toMatch(SPANISH);
+  });
+
+  it("los envíos del sistema (ONVO terminal, Tilopay e intro tras reintentos) no marcan byUser", () => {
+    for (const f of ["src/lib/billing.ts", "src/lib/tilopay-billing.ts", "src/lib/onvo-intro.ts"]) {
+      const calls = readFileSync(f, "utf8").match(/sendSubscriptionCanceled\(\{[^}]*\}/g) ?? [];
+      expect(calls.length).toBeGreaterThan(0);
+      expect(calls.filter((c) => c.includes("byUser: true")).length).toBe(f === "src/lib/billing.ts" ? 1 : 0);
+    }
   });
 });
 

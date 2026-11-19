@@ -126,12 +126,12 @@ export async function sendChargeCanceled(r: Recipient & { plan: string; accessUn
   return sendEmail(to.to, T.cobroCancelado({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, cardKept: r.cardKept, locale }), { idempotencyKey: `cobro_cancelado/${r.chargeId}`, tags: { kind: "cobro_cancelado" } });
 }
 
-/** Webhook ONVO / cancelación desde la app (Mi plan o el panel, en el idioma de la cuenta). */
-export async function sendSubscriptionCanceled(r: Recipient & { plan: string; accessUntil?: string | null; subscriptionId?: string }): Promise<SendResult> {
+/** Cancelación pedida desde Mi plan o el panel (`byUser`), o la del sistema tras no poder renovar. En el idioma de la cuenta. */
+export async function sendSubscriptionCanceled(r: Recipient & { plan: string; accessUntil?: string | null; byUser?: boolean; subscriptionId?: string }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
   const locale = await localeOf(to.userId);
-  return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, locale }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
+  return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, byUser: r.byUser, locale }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
 }
 
 /** Regalo de meses o recompensa por referidos. Idempotente por regalo (`grantId`). Transaccional. */
