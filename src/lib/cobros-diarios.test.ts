@@ -96,6 +96,21 @@ describe("próximos cobros (7 días)", () => {
     ]);
   });
 
+  it("deja fuera las suscripciones que no cobra ningún procesador (condominio, regaladas, de prueba)", async () => {
+    const subs = [
+      { user_id: "u1", provider: "onvo", plan: "entreno", billing: "mes", current_period_end: "2026-12-01T06:00:00.000Z", renewal_attempts: 0 },
+      { user_id: "u2", provider: "condominio", plan: "completo", billing: "mes", current_period_end: "2026-12-01T06:00:00.000Z", renewal_attempts: 0 },
+    ];
+    const { db, calls } = fakeDb((c) => {
+      if (c.table !== "subscriptions") return { data: [] };
+      const only = c.ops.find(([k, a]) => k === "in" && a[0] === "provider")?.[1][1] as string[] | undefined;
+      return { data: only ? subs.filter((s) => only.includes(s.provider)) : subs };
+    });
+    const rows = await loadUpcoming(CRON, db);
+    expect(has(calls.find((c) => c.table === "subscriptions")!, "in", "provider", ["onvo", "tilopay"])).toBe(true);
+    expect(rows?.map((r) => r.userId)).toEqual(["u1"]);
+  });
+
   it("si la base falla devuelve null (el panel dice sin dato, nunca cero)", async () => {
     const { db } = fakeDb((c) => (c.table === "trial_charges" ? { data: null, error: { message: "x", code: "42P01" } } : { data: [] }));
     expect(await loadUpcoming(CRON, db)).toBeNull();

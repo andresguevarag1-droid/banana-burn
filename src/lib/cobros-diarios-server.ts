@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { crDayRange } from "@/lib/admin-avisos-server";
 import { sendEmail } from "@/lib/email/send";
-import { listPrice, type Processor } from "@/lib/embudo-plata";
+import { FEES, listPrice, type Processor } from "@/lib/embudo-plata";
 import { errCode, logError } from "@/lib/log";
 import { aliasOf, buildResumen, resumenEmail, resumenKey, upcomingWindow, type CobrosResumen, type DayCharge, type UpcomingCharge } from "@/lib/cobros-diarios";
 
@@ -13,6 +13,8 @@ import { aliasOf, buildResumen, resumenEmail, resumenKey, upcomingWindow, type C
 export const RESUMEN_TO = "hola@bananaburn.app";
 
 const proc = (p: string | null | undefined): Processor => (p === "tilopay" ? "tilopay" : "onvo");
+/** Solo las suscripciones que cobra un procesador: las de condominio, regaladas o de prueba no se renuevan con tarjeta. */
+const PROCESSORS = Object.keys(FEES) as Processor[];
 
 type ChargeRow = { user_id: string; plan: string | null; billing: string | null; amount_minor: number; next_attempt_at: string; status: string; attempts: number };
 type SubRow = { user_id: string; provider: string | null; plan: string | null; billing: string | null; current_period_end: string; renewal_attempts: number | null };
@@ -26,7 +28,7 @@ export async function loadUpcoming(now = new Date(), db: SupabaseClient | null =
   const { end } = upcomingWindow(now);
   const [tc, subs] = await Promise.all([
     db.from("trial_charges").select("user_id,plan,billing,amount_minor,next_attempt_at,status,attempts").in("status", ["scheduled", "retry_scheduled"]).lt("next_attempt_at", end).order("next_attempt_at").limit(2000),
-    db.from("subscriptions").select("user_id,provider,plan,billing,current_period_end,renewal_attempts").in("status", ["active", "past_due"]).eq("cancel_at_period_end", false)
+    db.from("subscriptions").select("user_id,provider,plan,billing,current_period_end,renewal_attempts").in("status", ["active", "past_due"]).in("provider", PROCESSORS).eq("cancel_at_period_end", false)
       .gte("current_period_end", upcomingWindow(now).start).lt("current_period_end", end).order("current_period_end").limit(2000),
   ]);
   if (tc.error || subs.error) { logError("admin:pagos", "upcoming_failed", { kind: tc.error?.code ?? subs.error?.code ?? "error" }); return null; }
