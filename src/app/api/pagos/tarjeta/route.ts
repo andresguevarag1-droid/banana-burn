@@ -67,7 +67,9 @@ export async function POST(req: Request) {
     if (r.startTrial && !nativeAgentFrom(ua)) {
       const ip = clientIp(req);
       const st = r.startTrial;
-      after(() => sendStartTrial(st, { ip: ip === "local" ? "" : ip, ua, cookies: req.headers.get("cookie"), origin: SITE_URL, path: refererPath(req) }));
+      const send = () => sendStartTrial(st, { ip: ip === "local" ? "" : ip, ua, cookies: req.headers.get("cookie"), origin: SITE_URL, path: refererPath(req) });
+      // after() fuera de un request (pruebas que llaman a POST directo) lanza: el evento a Meta nunca puede tumbar el guardado.
+      try { after(send); } catch { void Promise.resolve().then(send).catch(() => null); }
     }
     return NextResponse.json({ ok: true, ...r });
   } catch (e) {
