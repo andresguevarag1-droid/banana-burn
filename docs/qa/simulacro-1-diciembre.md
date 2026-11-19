@@ -61,7 +61,7 @@ de tarjeta.
 Para cada cuenta de prueba:
 
 1. Entra con esa cuenta y abre Mi plan (`/app/suscripcion`).
-2. Toca **Cancelar sin costo** y confirma. Debe decir que no se cobrará y hasta qué día sigue el acceso.
+2. Toca **Cancelar mi plan** y confirma. Debe decir que no se cobrará y hasta qué día sigue el acceso.
 3. Admin > Usuarios > esa cuenta: el cobro de la prueba está **Cancelado** y no hay ningún cobro programado.
 4. Si quieres quitar la tarjeta del todo, quítala en Mi plan. Para borrar la cuenta: Perfil > Borrar mi cuenta.
 

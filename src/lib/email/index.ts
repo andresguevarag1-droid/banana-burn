@@ -6,6 +6,7 @@ import { ONCE_DAY } from "@/lib/notify";
 import { sendEmail, type SendResult } from "./send";
 import { withLoginLinks } from "./login-link";
 import * as T from "./templates";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/locale";
 
 export { sendEmail, unsubscribeUrl, isEmailConfigured } from "./send";
 export * as templates from "./templates";
@@ -24,6 +25,19 @@ async function resolve(r: Recipient): Promise<{ to: string; name: string; userId
   }
   if (!to) return null;
   return { to, name: name || to.split("@")[0], userId: r.userId };
+}
+
+/** Idioma de la cuenta (profiles.locale, 0070). Sin cuenta o si falla la lectura: español. */
+async function localeOf(userId?: string): Promise<Locale> {
+  const admin = userId ? adminClient() : null;
+  if (!admin || !userId) return DEFAULT_LOCALE;
+  try {
+    const { data } = await admin.from("profiles").select("locale").eq("id", userId).maybeSingle();
+    const l = (data as { locale?: unknown } | null)?.locale;
+    return isLocale(l) ? l : DEFAULT_LOCALE;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
 }
 
 /** Reclama un envío único (bienvenida, plan listo). false si ya se había mandado. */
@@ -117,14 +131,16 @@ export async function sendChargeReminder(r: Recipient & ChargeMail & { chargeId:
 export async function sendChargeCanceled(r: Recipient & { plan: string; accessUntil?: string | null; cardKept: boolean; chargeId: number }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  return sendEmail(to.to, T.cobroCancelado({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, cardKept: r.cardKept }), { idempotencyKey: `cobro_cancelado/${r.chargeId}`, tags: { kind: "cobro_cancelado" } });
+  const locale = await localeOf(to.userId);
+  return sendEmail(to.to, T.cobroCancelado({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, cardKept: r.cardKept, locale }), { idempotencyKey: `cobro_cancelado/${r.chargeId}`, tags: { kind: "cobro_cancelado" } });
 }
 
-/** Webhook ONVO / cancelación desde la app. */
-export async function sendSubscriptionCanceled(r: Recipient & { plan: string; accessUntil?: string | null; subscriptionId?: string }): Promise<SendResult> {
+/** Cancelación pedida desde Mi plan o el panel (`byUser`), o la del sistema tras no poder renovar. En el idioma de la cuenta. */
+export async function sendSubscriptionCanceled(r: Recipient & { plan: string; accessUntil?: string | null; byUser?: boolean; subscriptionId?: string }): Promise<SendResult> {
   const to = await resolve(r);
   if (!to) return skip();
-  return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
+  const locale = await localeOf(to.userId);
+  return sendEmail(to.to, T.suscripcionCancelada({ name: to.name, plan: r.plan, accessUntil: r.accessUntil, byUser: r.byUser, locale }), { idempotencyKey: r.subscriptionId ? `cancelada/${r.subscriptionId}` : undefined, tags: { kind: "cancelada" } });
 }
 
 /** Regalo de meses o recompensa por referidos. Idempotente por regalo (`grantId`). Transaccional. */

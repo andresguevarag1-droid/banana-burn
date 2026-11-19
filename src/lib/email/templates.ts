@@ -44,9 +44,9 @@ const kg = (n: number, max = 1) => num(n, max);
 
 /** $9.99 para USD; otras monedas con su código delante. */
 export const money = (amount: number, currency = "USD") => `${currency === "USD" ? "$" : `${currency} `}${num(amount, 2, 2)}`;
-export const longDate = (iso: string) => {
+export const longDate = (iso: string, locale: Locale = DEFAULT_LOCALE) => {
   const d = new Date(iso.length === 10 ? iso + "T12:00:00" : iso);
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("es-419", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Costa_Rica" });
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "America/Costa_Rica" });
 };
 
 // ───────────── Meta de peso (personalización) ─────────────
@@ -409,20 +409,25 @@ export function recordatorioCobro(d: ChargeMailData): Email {
 }
 
 /** Canceló el cobro programado antes de que llegara: no se cobra y conserva el acceso hasta el final de la prueba. */
-export function cobroCancelado(d: { name: string; plan: string; accessUntil?: string | null; cardKept: boolean }): Email {
-  const n = firstName(d.name);
-  const subject = "Cancelaste tu plan: no se te cobrará";
-  const preheader = d.accessUntil ? `Sigues con acceso hasta el ${longDate(d.accessUntil)}. No se hará ningún cobro.` : "No se hará ningún cobro.";
-  const hero: Hero = { eyebrow: "Plan", title: "Listo, no se te cobrará", lead: `${esc(n)}, cancelaste <b>${esc(d.plan)}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.` };
+export function cobroCancelado(d: { name: string; plan: string; accessUntil?: string | null; cardKept: boolean; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const n = firstName(d.name), plan = t(d.plan);
+  const until = d.accessUntil ? longDate(d.accessUntil, locale) : null;
+  const subject = t("Cancelaste tu plan: no se te cobrará");
+  const preheader = until ? t("Sigues con acceso hasta el {date}. No se hará ningún cobro.", { date: until }) : t("No se hará ningún cobro.");
+  const hero: Hero = { eyebrow: t("Plan"), title: t("Listo, no se te cobrará"), lead: t("{name}, cancelaste <b>{plan}</b> antes del cobro. No se hará ningún cargo a tu tarjeta.", { name: esc(n), plan: esc(plan) }) };
+  const card = d.cardKept ? t("Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan.") : t("Quitamos tu tarjeta guardada.");
+  // #326: cómo volver, con o sin tarjeta guardada.
+  const back = t("Para volver, abre Mi plan y elige tu plan. Tus entrenos y tu progreso quedan guardados y retomas donde ibas.");
+  const cta = t("Volver a mi plan");
   const body =
-    (d.accessUntil ? p(`Sigues con todo incluido hasta el <b>${esc(longDate(d.accessUntil))}</b>.`) : "") +
-    p(d.cardKept ? "Tu tarjeta sigue guardada por si decides volver; puedes quitarla desde Mi plan." : "Quitamos tu tarjeta guardada.") +
-    p("Tus entrenos y tu progreso quedan guardados. Si vuelves, retomas donde ibas.") + button("Ver mi plan", "/app/suscripcion");
-  const reason = "Recibes este correo como confirmación de un cambio en tu plan.";
+    (until ? p(t("Sigues con acceso hasta el <b>{date}</b>.", { date: esc(until) })) : "") +
+    p(card) + p(back) + button(cta, "/app/suscripcion");
+  const reason = t("Recibes este correo como confirmación de un cambio en tu plan.");
   return {
     subject, preheader,
-    html: layout({ preheader, hero, body, reason }),
-    text: textLayout([`${n}, cancelaste ${d.plan} antes del cobro. No se hará ningún cargo.`, d.accessUntil ? `Sigues con acceso hasta el ${longDate(d.accessUntil)}.` : "", d.cardKept ? "Tu tarjeta sigue guardada; puedes quitarla desde Mi plan." : "Quitamos tu tarjeta guardada.", "", `Ver mi plan: ${abs("/app/suscripcion")}`], undefined, reason),
+    html: layout({ preheader, hero, body, reason, locale }),
+    text: textLayout([t("{name}, cancelaste {plan} antes del cobro. No se hará ningún cargo.", { name: n, plan }), until ? t("Sigues con acceso hasta el {date}.", { date: until }) : "", card, back, "", `${cta}: ${abs("/app/suscripcion")}`], undefined, reason, undefined, locale),
   };
 }
 
@@ -448,21 +453,41 @@ export function correoCambiado(d: { name: string; email: string; pending: boolea
   };
 }
 
-export function suscripcionCancelada(d: { name: string; plan: string; accessUntil?: string | null }): Email {
-  const n = firstName(d.name);
-  const subject = "Tu suscripción fue cancelada";
-  const preheader = d.accessUntil ? `Mantienes acceso hasta el ${longDate(d.accessUntil)}. Tu progreso queda guardado.` : "Tu progreso queda guardado por si decides volver.";
-  const coach = "Gracias por entrenar conmigo. Tus récords te esperan cuando quieras volver.";
-  const hero: Hero = { eyebrow: "Suscripción", title: "Listo, cancelamos tu suscripción", lead: `${esc(n)}, confirmamos la cancelación de <b>${esc(d.plan)}</b>. No se harán más cobros.` };
+/**
+ * Plan cancelado. `byUser`: lo pidió la persona en Mi plan o el panel (#326), sigue con acceso hasta el fin del periodo.
+ * Sin `byUser` lo canceló el sistema tras no poder cobrar la renovación: no dice que canceló ni promete acceso.
+ */
+export function suscripcionCancelada(d: { name: string; plan: string; accessUntil?: string | null; byUser?: boolean; locale?: Locale }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE, t = tr(locale);
+  const n = firstName(d.name), plan = t(d.plan);
+  const coach = t("Gracias por entrenar conmigo. Tus récords te esperan cuando quieras volver.");
+  const reason = t("Recibes este correo como confirmación de un cambio en tu plan.");
+  const back = t("Para volver, abre Mi plan y elige tu plan. Tus entrenos, récords y pesajes quedan guardados y retomas donde ibas.");
+  const cta = t("Volver a mi plan");
+  if (!d.byUser) {
+    const subject = t("Tu plan de Banana Burn se canceló");
+    const preheader = t("No pudimos cobrar la renovación. Tu progreso queda guardado.");
+    const hero: Hero = { eyebrow: t("Plan"), title: t("Tu plan se canceló"), lead: t("{name}, no pudimos cobrar la renovación de <b>{plan}</b> y el plan se canceló. No se harán más cobros.", { name: esc(n), plan: esc(plan) }) };
+    const body = p(back) + button(cta, "/app/suscripcion");
+    return {
+      subject, preheader,
+      html: layout({ preheader, hero, body, reason, coach, locale }),
+      text: textLayout([t("{name}, no pudimos cobrar la renovación de {plan} y el plan se canceló. No se harán más cobros.", { name: n, plan }), back, "", `${cta}: ${abs("/app/suscripcion")}`], undefined, reason, coach, locale),
+    };
+  }
+  const until = d.accessUntil ? longDate(d.accessUntil, locale) : null;
+  const subject = t("Cancelaste tu plan de Banana Burn");
+  const preheader = until ? t("Sigues con acceso hasta el {date}. No se renueva.", { date: until }) : t("No se renueva. Tu progreso queda guardado.");
+  const hero: Hero = { eyebrow: t("Plan"), title: t("Listo, cancelaste tu plan"), lead: t("{name}, confirmamos la cancelación de <b>{plan}</b>. No se harán más cobros.", { name: esc(n), plan: esc(plan) }) };
+  // #326: lo mismo que dice Mi plan al confirmar, y cómo volver.
   const body =
-    (d.accessUntil ? p(`Sigues teniendo acceso completo hasta el <b>${esc(longDate(d.accessUntil))}</b>.`) : "") +
-    p("Tus entrenos, récords y pesajes quedan guardados. Si vuelves, retomas exactamente donde ibas.") +
-    p("¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.") + button("Reactivar mi plan", "/precios");
-  const reason = "Recibes este correo como confirmación de un cambio en tu suscripción.";
+    (until ? p(t("Sigues con acceso hasta el <b>{date}</b>. No se renueva.", { date: esc(until) })) : "") +
+    p(back) +
+    p(t("¿Nos cuentas por qué te vas? Responde este correo; lo leemos todo y nos ayuda a mejorar.")) + button(cta, "/app/suscripcion");
   return {
     subject, preheader,
-    html: layout({ preheader, hero, body, reason, coach }),
-    text: textLayout([`${n}, confirmamos la cancelación de ${d.plan}. No se harán más cobros.`, d.accessUntil ? `Mantienes acceso hasta el ${longDate(d.accessUntil)}.` : "", "Tus datos y progreso quedan guardados.", "", `Reactivar: ${abs("/precios")}`], undefined, reason, coach),
+    html: layout({ preheader, hero, body, reason, coach, locale }),
+    text: textLayout([t("{name}, confirmamos la cancelación de {plan}. No se harán más cobros.", { name: n, plan }), until ? t("Sigues con acceso hasta el {date}. No se renueva.", { date: until }) : "", back, "", `${cta}: ${abs("/app/suscripcion")}`], undefined, reason, coach, locale),
   };
 }
 

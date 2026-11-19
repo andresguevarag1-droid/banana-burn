@@ -152,7 +152,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         </dl>
         {ent.status === "past_due" && <p role="alert" className="mt-4 rounded-2xl bg-bad/5 border border-bad/20 p-3 text-sm text-bad font-semibold">No pudimos cobrar tu renovación. Cambia tu tarjeta aquí abajo y lo intentamos de nuevo en ese momento, o revisa que tu tarjeta tenga fondos.</p>}
         {ent.status === "past_due" && payments && ent.plan !== "free" && ent.billing && <PastDueCard choice={{ plan: ent.plan, billing: ent.billing }} />}
-        {ent.status === "canceling" && <p className="mt-4 text-sm text-muted">Cancelaste la renovación. Sigues con acceso completo hasta el {fmtDate(ent.endsAt)}; no habrá más cobros.</p>}
+        {ent.status === "canceling" && <p className="mt-4 text-sm text-muted">Cancelaste tu plan. Sigues con acceso hasta el {fmtDate(ent.endsAt)}. No se renueva.</p>}
         {ent.access === "comp" && <p className="mt-4 text-sm text-muted">Es un plan regalado{ent.compEndsAt ? ` hasta el ${fmtDay(ent.compEndsAt)}` : ""}; no tiene cobros automáticos.</p>}
         {(ent.access === "manual" || ent.access === "staff") && !v.demo && <p className="mt-4 text-sm text-muted">Este plan fue asignado por el equipo de Banana Burn; no tiene cobros automáticos.</p>}
       </section>
