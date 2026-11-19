@@ -196,3 +196,9 @@ describe("eventos del paso de la tarjeta (sin datos personales)", () => {
     expect(rows.find((r) => r.where === "bienvenida")).toMatchObject({ view: 3, start: 2, error: 1, saved: 1 });
   });
 });
+
+// The issue explicitly requests this event in addition to keeping card_ask_view.
+it("accepts the required card_step_view event without personal data (#325)", () => {
+  expect(cleanEvent({ name: "card_step_view", props: { where: "bienvenida", email: "private@example.test" } }))
+    .toEqual({ name: "card_step_view", props: { where: "bienvenida" } });
+});
