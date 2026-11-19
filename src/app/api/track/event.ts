@@ -1,5 +1,6 @@
 // Eventos del embudo (sin terceros). Lo que llega del navegador se valida aquí antes de registrarse.
 import { LANDING_VARIANTS } from "@/lib/landing-variants";
+import { isComebackKind } from "@/lib/regreso-kinds";
 
 /** Eventos permitidos. Cualquier otro nombre se descarta. */
 export const FUNNEL_EVENTS = [
@@ -53,6 +54,8 @@ export const FUNNEL_EVENTS = [
   "signup_submit",
   "signup_error",
   "onboarding_step",
+  // Correos de regreso (#320): entró por el botón del correo (?e=regreso_rN en /app/entreno). Solo el kind del correo.
+  "email_click",
 ] as const;
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
@@ -82,6 +85,7 @@ const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolea
   landing_variant_view: { key: "variant", ok: (v) => (LANDING_VARIANTS as readonly unknown[]).includes(v) },
   card_ask_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
   card_form_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
+  email_click: { key: "kind", ok: isComebackKind },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
 };
 
