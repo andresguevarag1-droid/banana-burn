@@ -16,6 +16,7 @@ import { markCardsPaid } from "@/lib/card-fingerprint";
 import { recordServerError } from "@/lib/monitor/server";
 import { sendChargeSubscribe } from "@/lib/meta-capi";
 import { purchaseEventId } from "@/lib/meta-pixel";
+import { alegraEnabled, chargeIdFor, enqueueBillingDocument, issueBillingDocument } from "@/lib/factura";
 import {
   OnvoError, actionForEvent, cancelSubscription, createCustomer, createSubscription, estimatePeriodEnd, eventKey,
   expectedAmountMinor, fetchSubscriptionState, priceIdFor, profilePlanFor, type OnvoEvent,
@@ -312,7 +313,12 @@ export async function activateVerified(db: SupabaseClient, row: SubscriptionRow,
  */
 async function notifyPaid(db: SupabaseClient, provider: "onvo" | "tilopay", row: SubscriptionRow, amountMinor: number | null, currency: string | null, periodEnd: string | null, reference: string, promoFull: number | null = null) {
   const amount = amountMinor != null ? amountMinor / 100 : row.plan && row.billing ? expectedAmountMinor(row.plan, row.billing) / 100 : 0;
-  await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd, promoFull }).catch(() => {});
+  // Comprobante electrónico (0074): en 'pendiente' una vez por cobro; solo se emite con ALEGRA_ENABLED. Nunca bloquea el cobro.
+  try {
+    await enqueueBillingDocument(db, { userId: row.user_id, provider, reference, amountMinor: amountMinor ?? Math.round(amount * 100), currency: currency ?? "USD" });
+    await issueBillingDocument(db, chargeIdFor(provider, reference));
+  } catch (e) { console.error(JSON.stringify({ scope: "pagos", msg: "comprobante electrónico", userId: row.user_id, reference, ...errInfo(e) })); }
+  await sendPaymentReceipt({ userId: row.user_id, plan: planName(row.plan), amount, currency: currency ?? "USD", reference, nextCharge: periodEnd, promoFull, einvoice: alegraEnabled() }).catch(() => {});
   const { affiliateOnPaid } = await import("@/lib/affiliates-server");
   await affiliateOnPaid(db, { userId: row.user_id, provider, reference, amountMinor, currency, plan: row.plan, billing: row.billing }).catch(() => "error");
   // Aviso al dueño (0059): idempotente por referencia; nunca bloquea el cobro.
