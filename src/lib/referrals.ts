@@ -2,7 +2,8 @@
 // (0025_regalos_referidos.sql: referral_attribute, _referral_settle, referral_annual_paid; 0064_referidos_al_pagar.sql:
 // _referral_try_qualify, referral_paid, admin_referral_refund).
 //
-// Reglas (decididas con el dueño; desde el 1 de noviembre de 2026 el amigo cuenta cuando paga, no al activarse):
+// Reglas (decididas con el dueño; desde el 1 de noviembre de 2026 el amigo cuenta cuando paga, no al activarse; desde el
+// 23 de noviembre deja la tarjeta el día 0 y cuenta recién con su primer cobro real, el del día 8: #333 y 0074):
 //   1. Cada persona tiene un enlace /r/<código> (8 caracteres sin 0, 1, i, l ni o). El enlace guarda una cookie y abre el registro.
 //   2. La cuenta nueva se atribuye en el servidor al crearse: una sola vez, nunca a sí misma, solo en sus primeras 72 horas
 //      y una sola vez por correo (aunque la cuenta se borre y se vuelva a crear).
@@ -75,19 +76,26 @@ export function ipPrefix(ip: string | null | undefined): string | null {
 
 export type RefStatus = "registrado" | "calificado" | "sospechoso" | "descartado";
 
-/** Lo que la persona ve de cada referido (my_referrals()): inicial y estado. */
-export type MyReferral = { initial: string; status: RefStatus; created_at: string; qualified_at: string | null; annual: boolean; group_no: number | null; expired: boolean };
+/**
+ * Lo que la persona ve de cada referido (my_referrals(), 0074): nombre de pila (o inicial si no hay) y estado. `in_trial`:
+ * dejó la tarjeta y su prueba sigue, sin cobro todavía (con tarjeta obligatoria cuenta recién con el cobro del día 8).
+ */
+export type MyReferral = { initial: string; first_name?: string | null; status: RefStatus; created_at: string; qualified_at: string | null; annual: boolean; group_no: number | null; expired: boolean; in_trial?: boolean };
 export type MyReward = { id: number; group_no: number; months: number; plan: string; created_at: string; upgraded_at: string | null; revoked_at: string | null };
 
-export type RefTone = "muted" | "good" | "banana" | "warn";
-export function referralLabel(r: Pick<MyReferral, "status" | "annual" | "expired">): { label: string; tone: RefTone } {
+export type RefTone = "muted" | "good" | "banana" | "warn" | "soft";
+export function referralLabel(r: Pick<MyReferral, "status" | "annual" | "expired" | "in_trial">): { label: string; tone: RefTone } {
   if (r.status === "descartado") return { label: "No cuenta", tone: "muted" };
   if (r.status === "sospechoso") return { label: "En revisión", tone: "warn" };
-  if (r.annual && r.status === "calificado") return { label: "Compró anual", tone: "banana" };
-  if (r.status === "calificado") return { label: "Cuenta", tone: "good" };
+  if (r.annual && r.status === "calificado") return { label: "Pagó anual", tone: "banana" };
+  if (r.status === "calificado") return { label: "Pagó", tone: "good" };
   if (r.expired) return { label: "No pagó a tiempo", tone: "muted" };
-  return { label: r.annual ? "Compró anual" : "Registrado", tone: r.annual ? "banana" : "muted" };
+  if (r.annual) return { label: "Pagó anual", tone: "banana" };
+  return r.in_trial ? { label: "En prueba", tone: "soft" } : { label: "Sin pagar", tone: "muted" };
 }
+
+/** Cómo se nombra al amigo en la lista: solo su nombre de pila; si no lo hay, su inicial. */
+export const referralName = (r: Pick<MyReferral, "initial" | "first_name">) => r.first_name?.trim() || `${r.initial}.`;
 
 /** Progreso hacia la próxima recompensa: calificados que todavía no forman grupo. */
 export function referralProgress(list: Pick<MyReferral, "status" | "group_no">[]) {
