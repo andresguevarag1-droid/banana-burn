@@ -128,3 +128,22 @@ describe("bienvenida: el paso de la tarjeta obligatoria", () => {
     expect(t).toContain(trustCopy("en-US").secure);
   });
 });
+
+// QA #323: comprobar cada ubicación, no solo que la frase aparece alguna vez en la página.
+describe("microcopy junto a los registros secundarios después del cambio", () => {
+  it("el registro del FAQ también explica que hoy no se cobra y que puedes cancelar", async () => {
+    clock(after);
+    const { FaqCta } = await import("@/app/(marketing)/content");
+    const copy = text(renderToStaticMarkup(<FaqCta cta="faq" />));
+    expect(copy).toContain(trustCopy().underCta);
+  });
+  for (const [path, render] of PAGES.slice(0, 2)) {
+    it(`${path}: el registro fijo móvil incluye la misma tranquilidad del resto de botones`, async () => {
+      clock(after);
+      const html = await render();
+      const sticky = html.match(/<div[^>]*class="[^"]*fixed inset-x-0 bottom-0[^"]*"[^>]*>([\s\S]*?)<\/div>/);
+      expect(sticky, "la página debe conservar el registro fijo móvil").not.toBeNull();
+      expect(text(sticky![1])).toContain(trustCopy().underCta);
+    }, 30_000);
+  }
+});
