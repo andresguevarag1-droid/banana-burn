@@ -7,6 +7,7 @@ import {
   type CardEra, type CohortRow, type Filters, type FunnelRows, type Origin, type Week,
 } from "@/lib/embudo-plata";
 import { getFunnel } from "@/lib/embudo-plata-server";
+import type { ComebackRow, ComebackStep } from "@/lib/regreso";
 import { saveAdSpend } from "./actions";
 
 export const metadata = { title: "Embudo" };
@@ -46,6 +47,15 @@ function demoRows(weeks: Week[]): FunnelRows {
   return { profiles, testers: [], condo, utm: [], signup, events, cardAsks, finished, second, third, charges, methods: [], subs: [] };
 }
 
+/** Modo demo: cifras inventadas de los correos de regreso. */
+const DEMO_COMEBACK: ComebackRow[] = [
+  { step: "r1", sent: 24, clicks: 7, trained: 5 }, { step: "r2", sent: 18, clicks: 4, trained: 3 },
+  { step: "r3", sent: 12, clicks: 0, trained: 1 }, { step: "r4", sent: 5, clicks: 2, trained: 2 },
+];
+const COMEBACK_LABEL: Record<ComebackStep, string> = {
+  r1: "R1, al día siguiente del primer entreno", r2: "R2, de 48 a 72 h", r3: "R3, pregunta de Andrés (día 4 o 5)", r4: "R4, al día siguiente del segundo entreno",
+};
+
 const ORIGINS = Object.keys(ORIGIN_LABEL) as Origin[];
 const ERAS = Object.keys(CARD_ERA_LABEL) as CardEra[];
 
@@ -78,7 +88,7 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
   };
   const filtered = Boolean(filters.country || filters.origin || filters.era || filters.campaign || filters.ad || q.semana);
 
-  const { rows, spend } = v.demo ? { rows: demoRows(weeks), spend: new Map([[weeks[1].key, 40]]) } : await getFunnel(weeks);
+  const { rows, spend, comeback } = v.demo ? { rows: demoRows(weeks), spend: new Map([[weeks[1].key, 40]]), comeback: DEMO_COMEBACK } : await getFunnel(weeks);
   const accounts = rows ? buildAccounts(rows) : null;
   const shown = accounts ? applyFilters(accounts, filters) : null;
   const table: CohortRow[] | null = shown ? cohortTable(shown, weeks) : null;
@@ -215,6 +225,33 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
           Origen: condominio si la cuenta está en un condominio; anuncio si la primera visita traía utm o fbclid (o el enlace de referidor los traía); si no, orgánico.
           Campaña y anuncio: utm_campaign y utm_content de la primera visita (docs/metas/atribucion.md).
           País: el del perfil. {estimated && "La comisión no se guarda con el cobro: se calcula con la tarifa y se marca como estimada."}
+        </p>
+      </section>
+
+      <section aria-labelledby="regreso" className="space-y-2.5">
+        <SectionHeading id="regreso" title="Correos de regreso" desc="Correos enviados en las últimas 8 semanas a quien terminó su primer entreno y no hizo el siguiente (docs/emails/regreso.md). Sin filtros. % sobre los enviados." />
+        {!comeback ? (
+          <div className={`${panel} p-4`}><NoData /></div>
+        ) : (
+          <Table caption="Correos de regreso" captionHidden minWidth={640}>
+            <thead className="border-b border-line">
+              <tr><Th>Correo</Th><Th className="text-right">Enviados</Th><Th className="text-right">Tocaron el botón</Th><Th className="text-right">Entrenaron en 48 h</Th></tr>
+            </thead>
+            <tbody>
+              {comeback.map((r) => (
+                <tr key={r.step} className={tr}>
+                  <Td className="whitespace-nowrap font-semibold">{COMEBACK_LABEL[r.step]}</Td>
+                  <Td className="text-right tabular-nums font-bold">{fmtNum(r.sent)}</Td>
+                  <Td className="text-right">{r.step === "r3" ? <span className="text-sm text-muted">Sin botón</span> : <Cell n={r.clicks} total={r.sent} />}</Td>
+                  <Td className="text-right"><Cell n={r.trained} total={r.sent} /></Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+        <p className="text-xs text-muted text-pretty">
+          Enviados: notification_log con canal de correo (kinds regreso_r1 a regreso_r4). Tocaron el botón: cuentas con email_click de ese correo (el botón lleva ?e=regreso_rN).
+          Entrenaron en 48 h: envíos tras los que la cuenta terminó un entreno en las 48 horas siguientes. R3 no tiene botón: sus respuestas llegan a hola@bananaburn.app.
         </p>
       </section>
     </div>

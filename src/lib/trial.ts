@@ -9,7 +9,8 @@
 //     descuento en su PRIMER MES (solo plan mensual; el anual va a precio normal). Una sola vez por cuenta.
 //   - La tarjeta se GUARDA (no se cobra). ONVO no documenta pruebas nativas, así que el primer cobro lo programamos
 //     nosotros (trial_charges).
-//   - Si el cobro del día 7 falla: muro de planes, aviso para cambiar la tarjeta y un solo reintento automático al día 8.
+//   - Si el cobro del día 7 falla (#328): hasta 3 intentos automáticos (el del día, día +1 y día +3, con el cron de las 00:20
+//     de Costa Rica), un aviso distinto por intento y el acceso sigue hasta el segundo rechazo (gracia). Después, muro.
 //   - Cancelar antes del día 7: no se cobra y el acceso sigue hasta el fin de la prueba.
 //   - Cuentas de la beta (creadas antes del lanzamiento, BETA_ENDS_AT): gratis hasta BETA_GRACE_UNTIL (final del 7 de
 //     noviembre en Costa Rica, 7 días después del lanzamiento). Si guardan la tarjeta antes de esa fecha (kind "beta"), se
@@ -21,8 +22,14 @@ import { usd2 } from "./num";
 export const DAY_MS = 864e5;
 /** Aviso antes del cobro: "En 2 días se cobra tu plan". */
 export const REMINDER_DAYS_BEFORE = 2;
-/** Reintento automático: un día después del intento fallido del día 7 (día 8). */
+/** Primer reintento automático: el día siguiente al primer rechazo (día +1). */
 export const RETRY_AFTER_DAYS = 1;
+/** #328: segundo y último reintento automático, día +3 desde el primer rechazo (2 días después del segundo intento). */
+export const LAST_RETRY_DAY = 3;
+/** #328: intentos automáticos del primer cobro (el del día, día +1 y día +3). Los de una tarjeta nueva no se reintentan solos. */
+export const AUTO_ATTEMPTS = 3;
+/** #328: tope de la gracia (acceso después del primer rechazo), contado desde el último intento, por si el cron no corre. */
+export const GRACE_DAYS = 3;
 /** Intentos máximos en total (día 7, día 8 y algunos con tarjetas nuevas). Igual que el CHECK de 0026. */
 export const MAX_ATTEMPTS = 6;
 /** Un intento que lleva más de esto en "cobrando" se cayó a la mitad: pasa a "por confirmar" y se reconcilia con ONVO. */
@@ -69,6 +76,9 @@ export type CardRow = { brand: string | null; last4: string | null; exp_month: n
 
 const ms = (iso: string | null | undefined) => (iso ? Date.parse(iso) : NaN);
 const iso = (t: number) => new Date(t).toISOString();
+/** Medianoche de Costa Rica (UTC-6, sin horario de verano) del día de `t`. */
+const CR_OFFSET_MS = 6 * 3600_000;
+const crMidnight = (t: number) => Math.floor((t - CR_OFFSET_MS) / DAY_MS) * DAY_MS + CR_OFFSET_MS;
 
 /** ¿Ya terminó la beta? Desde ahí cada cuenta nueva tiene su prueba de 7 días (sin tarjeta, 0043). */
 export const cardRequired = (now = new Date(), betaEndsAt = BETA_ENDS_AT) => now.getTime() >= Date.parse(betaEndsAt);
@@ -188,12 +198,39 @@ export function reminderDue(row: Pick<TrialChargeRow, "status" | "kind" | "charg
 }
 
 /**
- * Qué pasa después de un cobro rechazado. Solo el primer intento (día 7) tiene reintento automático, un día después (día 8).
- * Un intento con una tarjeta nueva que también falla no se reintenta solo: la persona vuelve a cambiar la tarjeta.
+ * Qué pasa después de un cobro rechazado (#328). Primer rechazo: reintento al día siguiente. Segundo: reintento 2 días
+ * después (día +3 desde el primero). Tercero: no hay más intentos automáticos; la persona cambia la tarjeta.
+ * El reintento queda a la medianoche de Costa Rica de ese día, así lo toma el cron de las 00:20.
  */
 export function afterDecline(row: Pick<TrialChargeRow, "attempts">, now = new Date()): { status: "retry_scheduled" | "failed"; nextAttemptAt: string | null } {
-  if (row.attempts <= 1) return { status: "retry_scheduled", nextAttemptAt: iso(now.getTime() + RETRY_AFTER_DAYS * DAY_MS) };
-  return { status: "failed", nextAttemptAt: null };
+  const days = row.attempts <= 1 ? RETRY_AFTER_DAYS : row.attempts < AUTO_ATTEMPTS ? LAST_RETRY_DAY - RETRY_AFTER_DAYS : 0;
+  if (!days) return { status: "failed", nextAttemptAt: null };
+  return { status: "retry_scheduled", nextAttemptAt: iso(crMidnight(now.getTime()) + days * DAY_MS) };
+}
+
+/** Qué aviso toca después de un rechazo: 1 = el primero, 2 = "no pasó otra vez", 3 = "tu plan quedó en pausa" (sin más intentos). */
+export function declineStep(row: Pick<TrialChargeRow, "status" | "attempts">): 1 | 2 | 3 {
+  if (row.status === "failed") return 3;
+  return row.attempts <= 1 ? 1 : 2;
+}
+
+/** Push de cada rechazo (#328): 1 = primero (sigue con acceso), 2 = otra vez (en pausa, un intento más), 3 = en pausa. */
+export function declinePush(step: 1 | 2 | 3, retryDay: string | null, paused: boolean): { title: string; body: string } {
+  if (step === 3) return { title: "Tu plan quedó en pausa", body: "Cambia tu tarjeta y se reactiva en el momento. Tu progreso sigue guardado." };
+  if (step === 2) return { title: "Tu tarjeta no pasó otra vez", body: `Llama a tu banco y autoriza Banana Burn${retryDay ? `. Lo intentaremos una última vez el ${retryDay}` : ""}, o cambia tu tarjeta.` };
+  return { title: "No pudimos cobrar tu plan", body: retryDay ? `Lo intentaremos de nuevo el ${retryDay}. ${paused ? "Cambia tu tarjeta para seguir hoy." : "Actualiza tu tarjeta para no perder tu acceso."}` : "Cambia tu tarjeta para seguir. Tu progreso sigue guardado." };
+}
+
+/**
+ * #328: gracia. Después del PRIMER rechazo del cobro de la prueba (o de la beta) el acceso sigue hasta el segundo intento,
+ * también mientras ese segundo intento se confirma. Se pausa recién con el segundo rechazo. Tope: GRACE_DAYS desde el último
+ * intento. Misma regla que public._trial_live() (0074).
+ */
+export function inGrace(row: Pick<TrialChargeRow, "kind" | "status" | "attempts" | "last_attempt_at" | "failure_notified_attempt"> | null | undefined, now = new Date()): boolean {
+  if (!row || row.kind === "inmediato") return false;
+  const first = row.status === "retry_scheduled" && row.attempts === 1;
+  const confirming = (row.status === "charging" || row.status === "pending" || row.status === "unknown") && row.attempts === 2 && row.failure_notified_attempt === 1;
+  return (first || confirming) && now.getTime() < ms(row.last_attempt_at) + GRACE_DAYS * DAY_MS;
 }
 
 /** ¿Se puede cancelar el cobro programado (sin costo)? Antes del cobro, o para dejar de reintentar uno fallido. */

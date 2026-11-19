@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { adminClient } from "@/lib/supabase/admin";
 import { TRIAL_HABIT } from "@/lib/meta-semanal";
 import { CARD_ASK_EVENTS, STEP_EVENTS, secondWorkoutUsers, type FunnelRows, type SignupRow, type Week } from "@/lib/embudo-plata";
+import { COMEBACK_KINDS, comebackTable, type ComebackRow } from "@/lib/regreso";
 
 const PAGE = 1000;
 /** Tope de filas por fuente: con más, la cifra estaría incompleta, así que la fuente sale "sin dato". */
@@ -82,10 +83,28 @@ export async function loadAdSpend(db: SupabaseClient, weeks: Week[]): Promise<Ma
   return new Map((data ?? []).map((r) => [String(r.week_start), Number(r.amount_minor) / 100]));
 }
 
+/**
+ * Correos de regreso (#320) enviados en `weeks`: envíos (notification_log), clics (funnel_events email_click) y entrenos de
+ * esas cuentas, resumidos por comebackTable. Lanza si una lectura falla (getFunnel lo deja en null: "sin dato").
+ */
+export async function loadComeback(db: SupabaseClient, weeks: Week[]): Promise<ComebackRow[]> {
+  const start = weeks[weeks.length - 1].start;
+  const logs = await readAll<{ user_id: string; kind: string; created_at: string; channels: string[] | null }>((f, t) =>
+    db.from("notification_log").select("user_id,kind,created_at,channels").in("kind", COMEBACK_KINDS).gte("created_at", start).order("id").range(f, t));
+  const ids = [...new Set(logs.map((l) => l.user_id))];
+  const [clicks, workouts] = await Promise.all([
+    byUsers<{ user_id: string; kind: string | null }>(ids, (c, f, t) =>
+      db.from("funnel_events").select("user_id,kind:props->>kind").in("user_id", c).eq("name", "email_click").gte("created_at", start).order("id").range(f, t)),
+    byUsers<{ user_id: string; finished_at: string | null }>(ids, (c, f, t) =>
+      db.from("workouts").select("user_id,finished_at").in("user_id", c).gte("finished_at", start).order("id").range(f, t)),
+  ]);
+  return comebackTable(logs, clicks, workouts);
+}
+
 /** Para /admin/embudo. Sin base (sin service_role) o sin perfiles: null. */
-export async function getFunnel(weeks: Week[]): Promise<{ rows: FunnelRows | null; spend: Map<string, number> | null }> {
+export async function getFunnel(weeks: Week[]): Promise<{ rows: FunnelRows | null; spend: Map<string, number> | null; comeback: ComebackRow[] | null }> {
   const db = adminClient();
-  if (!db) return { rows: null, spend: null };
-  const [rows, spend] = await Promise.all([loadFunnelRows(db, weeks).catch(() => null), loadAdSpend(db, weeks).catch(() => null)]);
-  return { rows, spend };
+  if (!db) return { rows: null, spend: null, comeback: null };
+  const [rows, spend, comeback] = await Promise.all([loadFunnelRows(db, weeks).catch(() => null), loadAdSpend(db, weeks).catch(() => null), loadComeback(db, weeks).catch(() => null)]);
+  return { rows, spend, comeback };
 }

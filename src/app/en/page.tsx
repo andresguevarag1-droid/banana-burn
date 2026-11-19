@@ -8,6 +8,8 @@ import { PLANS, annualSavingPct } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/copy";
 import { offerFor } from "@/lib/i18n/offer";
 import { cardRequiredNow } from "@/lib/card-required";
+import { cardTrust } from "@/lib/card-trust";
+import { SecurePay, TrialTimeline, UnderCta } from "@/components/card-trust";
 import { Faq } from "../(marketing)/parts";
 import { StickyCta } from "../(marketing)/sticky-cta";
 import { faqJsonLd, ldScript, ogImage } from "../(marketing)/seo";
@@ -66,6 +68,8 @@ const CTA_CLASS = "pressable inline-flex h-14 w-full items-center justify-center
 export default function EnglishHome() {
   const o = offerFor("en-US");
   const faq = homeFaqEn();
+  // #323: desde CARD_REQUIRED_FROM, cómo funciona la prueba y el pago seguro (después de los 3 pasos).
+  const card = cardTrust("en-US");
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={ldScript(faqJsonLd(faq))} />
@@ -125,7 +129,15 @@ export default function EnglishHome() {
           ))}
         </ol>
         <Link href={SIGNUP_EN} data-cta="pasos" className={`${CTA_CLASS} mt-6`}>{CTA_EN} <ArrowRight weight="bold" className="size-5" /></Link>
+        {card && <UnderCta trust={card} className="mt-2" />}
       </section>
+
+      {card && (
+        <section className="mx-auto max-w-6xl px-4 pt-16 sm:px-6 sm:pt-24">
+          <TrialTimeline trust={card} id="your-trial" />
+          <SecurePay trust={card} className="mt-4" />
+        </section>
+      )}
 
       <section aria-labelledby="method" className="pt-16 sm:pt-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -151,6 +163,7 @@ export default function EnglishHome() {
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink text-balance">I built it because I needed it.</h2>
           <p className="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink/80 text-pretty">I&apos;m Andrés, the founder, and I&apos;m user number 1. My goal: from 207 to 187 lb by December 31, without losing muscle. No app told me exactly what to do at the gym today, with the food I actually eat.</p>
           <p className="mt-3 max-w-[60ch] leading-relaxed text-ink/80 text-pretty">Write to me at <a href="mailto:hola@bananaburn.app" className="tap font-bold text-ink underline underline-offset-2">hola@bananaburn.app</a> and it comes straight to me.</p>
+          {card && <p className="mt-3 max-w-[60ch] text-sm font-semibold text-ink text-pretty">{card.company}</p>}
         </div>
       </section>
 
@@ -168,7 +181,8 @@ export default function EnglishHome() {
         <div className="relative overflow-hidden rounded-[2.25rem] bg-banana px-6 pb-6 pt-12 text-center sm:px-16 sm:pb-8 sm:pt-16">
           <h2 className={`${H2} mx-auto max-w-3xl`}>Your new body starts with your first workout.</h2>
           <Link href={SIGNUP_EN} data-cta="final" className={`${CTA_CLASS} mt-8`}>{CTA_EN} <ArrowRight weight="bold" className="size-5" /></Link>
-          <p className="mt-4 text-sm font-semibold text-ink/80">{o.note} {o.from(FROM_EN)}</p>
+          <p className="mt-4 text-sm font-semibold text-ink/80">{card ? card.underCta : o.note} {o.from(FROM_EN)}</p>
+          {card && <SecurePay trust={card} className="mx-auto mt-4 max-w-xl" />}
           <Image src={POSE.salta} alt="" width={420} height={420} sizes="(min-width: 640px) 240px, 176px" className="mx-auto mt-6 w-36 sm:w-60" />
         </div>
       </section>

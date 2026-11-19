@@ -62,14 +62,14 @@ export function demoReferralPage(now = Date.now()): ReferralPageData {
   return {
     demo: true, code, link: referralLink(SITE_URL, code),
     referrals: [
-      { initial: "M", status: "calificado", created_at: iso(30), qualified_at: iso(28), annual: true, group_no: 1, expired: false },
-      { initial: "J", status: "calificado", created_at: iso(26), qualified_at: iso(25), annual: false, group_no: 1, expired: false },
-      { initial: "C", status: "calificado", created_at: iso(20), qualified_at: iso(18), annual: false, group_no: 1, expired: false },
-      { initial: "L", status: "calificado", created_at: iso(9), qualified_at: iso(8), annual: false, group_no: null, expired: false },
-      { initial: "S", status: "calificado", created_at: iso(5), qualified_at: iso(4), annual: false, group_no: null, expired: false },
-      { initial: "D", status: "registrado", created_at: iso(1), qualified_at: null, annual: false, group_no: null, expired: false },
+      { initial: "M", first_name: "María", status: "calificado", created_at: iso(30), qualified_at: iso(22), annual: true, group_no: 1, expired: false },
+      { initial: "J", first_name: "José", status: "calificado", created_at: iso(26), qualified_at: iso(18), annual: false, group_no: 1, expired: false },
+      { initial: "C", first_name: "Carla", status: "calificado", created_at: iso(20), qualified_at: iso(12), annual: false, group_no: 1, expired: false },
+      { initial: "L", first_name: "Luis", status: "calificado", created_at: iso(12), qualified_at: iso(4), annual: false, group_no: null, expired: false },
+      { initial: "S", first_name: "Sofía", status: "registrado", created_at: iso(5), qualified_at: null, annual: false, group_no: null, expired: false, in_trial: true },
+      { initial: "D", first_name: "Diego", status: "registrado", created_at: iso(1), qualified_at: null, annual: false, group_no: null, expired: false, in_trial: true },
     ],
-    rewards: [{ id: 1, group_no: 1, months: 3, plan: "completo", created_at: iso(18), upgraded_at: null, revoked_at: null }],
+    rewards: [{ id: 1, group_no: 1, months: 3, plan: "completo", created_at: iso(12), upgraded_at: null, revoked_at: null }],
   };
 }
 
