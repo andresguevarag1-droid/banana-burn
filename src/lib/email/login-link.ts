@@ -67,7 +67,7 @@ export function loginUrl(token: string, next: string, site = SITE_URL): string {
 const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * Cambia los enlaces a la app (SITE_URL/app...) de un correo por enlaces de un toque, todos con el mismo token
+ * Cambia los enlaces a la app (SITE_URL/app... y, desde #325, SITE_URL/bienvenida...) de un correo por enlaces de un toque, todos con el mismo token
  * (el primero que se use inicia la sesión; los demás, ya con sesión, entran directo o piden entrar).
  * Sin secreto o sin usuario, el correo queda igual. Los enlaces de baja (/api/email/...) no se tocan.
  */
@@ -77,10 +77,10 @@ export function withLoginLinks(msg: EmailMessage, userId: string | null | undefi
   if (!userId || !UUID.test(userId) || !secret) return msg;
   const token = signLoginToken(userId, secret, opts.now);
   // href="https://sitio/app/..." (en HTML el & va escapado) y la misma URL suelta en el texto plano.
-  const html = msg.html.replace(new RegExp(`href="${escRe(site)}(/app(?:[/?#][^"]*)?)"`, "g"), (_m, path: string) => {
+  const html = msg.html.replace(new RegExp(`href="${escRe(site)}(/(?:app|bienvenida)(?:[/?#][^"]*)?)"`, "g"), (_m, path: string) => {
     const next = path.replace(/&amp;/g, "&");
     return `href="${loginUrl(token, next, site).replace(/&/g, "&amp;")}"`;
   });
-  const text = msg.text.replace(new RegExp(`${escRe(site)}(/app(?:[/?#][^\\s)]*)?)`, "g"), (_m, path: string) => loginUrl(token, path, site));
+  const text = msg.text.replace(new RegExp(`${escRe(site)}(/(?:app|bienvenida)(?:[/?#][^\\s)]*)?)`, "g"), (_m, path: string) => loginUrl(token, path, site));
   return { ...msg, html, text };
 }

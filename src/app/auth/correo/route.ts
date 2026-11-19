@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
 
 const appPath = (raw: string | null) => {
   const p = safeNext(raw, "/app");
-  return p === "/app" || p.startsWith("/app/") || p.startsWith("/app?") || p.startsWith("/app#") ? p : "/app";
+  // #325: los correos de rescate de la tarjeta abren /bienvenida (el paso de la tarjeta).
+  return ["/app", "/bienvenida"].some((r) => p === r || p.startsWith(`${r}/`) || p.startsWith(`${r}?`) || p.startsWith(`${r}#`)) ? p : "/app";
 };
 const toLogin = (origin: string, next: string, why?: string) =>
   NextResponse.redirect(`${origin}/entrar?next=${encodeURIComponent(next)}${why ? `&enlace=${why}` : ""}`, 303);

@@ -1,12 +1,20 @@
 "use client";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { CircleNotch, CreditCard, Info, Lock, WarningCircle } from "@/components/icons";
 import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody, onvoCardError, type CardErrors, type CardInput } from "@/lib/card-input";
 import type { PlanChoice } from "./plan-picker";
 import type { ChargeView } from "@/lib/trial";
 import { onvoFailCode, reportPayFail } from "./report-fail";
+import { track } from "@/components/analytics";
+import { failKind, type FailKind } from "@/lib/pago-fallo";
+import type { CardAskWhere } from "@/app/api/track/event";
 
 const ONVO_PAYMENT_METHODS = "https://api.onvopay.com/v1/payment-methods";
+/** #325: si ONVO tarda más que esto en responder, se ofrece Tilopay. */
+export const ONVO_SLOW_MS = 8000;
+
+/** Mensaje para la persona: los errores 5xx del servidor pueden traer detalles técnicos, así que van con un texto claro. */
+export const plainError = (r: { error?: string; status: number }, fallback: string) => (r.status >= 500 || !r.error ? fallback : r.error);
 
 export type CardSaved = { demo?: boolean; card?: { brand: string | null; last4: string | null }; charge?: ChargeView | null; outcome?: string };
 
@@ -46,10 +54,12 @@ function useProvider(skip: boolean) {
  * Tarjetas de fuera de Costa Rica (Tilopay, 0042): la persona guarda la tarjeta en la página segura de Tilopay y vuelve a
  * Mi plan. `beforeRedirect` deja guardado lo que haga falta antes de salir (la bienvenida guarda el plan).
  */
-export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo, onStart }: {
+export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedirect, condo, onStart, where }: {
   choice: PlanChoice; demo: boolean; submitLabel: string; note: React.ReactNode; onSaved: (r: CardSaved) => void; beforeRedirect?: () => Promise<boolean>; condo?: string;
   /** Se llama al enviar el formulario, antes de ONVO o de salir a Tilopay (Mi plan cuenta ahí su checkout_view, #293). */
   onStart?: () => void;
+  /** #325: el pedido donde va el formulario. Con él se cuentan card_form_start, card_step_error y card_tilopay_hint. */
+  where?: CardAskWhere;
 }) {
   const id = useId();
   const [c, setC] = useState<CardInput>({ holder: "", number: "", exp: "", cvv: "" });
@@ -61,19 +71,34 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   // Condominio con tarjeta (0066): solo tarjetas verificadas con ONVO (el token de Tilopay no se puede verificar).
   const [pay, setProvider] = useProvider(demo || !!condo);
   const tilopay = pay.available && pay.provider === "tilopay";
+  // #325: tocó el formulario (una vez por pantalla), el procesador la rechazó, o ONVO falló o tardó: se ofrece Tilopay.
+  const started = useRef(false);
+  const startOnce = () => { if (started.current) return; started.current = true; if (where) track("card_form_start", { where }); };
+  const fail = (reason: FailKind) => { if (where) track("card_step_error", { where, reason }); };
+  const [onvoTrouble, setOnvoTrouble] = useState(false);
+  useEffect(() => {
+    if (busy !== "tarjeta" || tilopay) return;
+    const t = setTimeout(() => setOnvoTrouble(true), ONVO_SLOW_MS);
+    return () => clearTimeout(t);
+  }, [busy, tilopay]);
+  const tilopayHint = pay.available && !tilopay && onvoTrouble;
+  useEffect(() => { if (tilopayHint && where) track("card_tilopay_hint", { where }); }, [tilopayHint, where]);
 
   async function goTilopay(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setBusy("tarjeta");
+    startOnce();
     onStart?.();
     if (beforeRedirect && !(await beforeRedirect())) { setBusy(null); return; }
     try {
       const r = await fetch("/api/pagos/tilopay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ purpose: "tarjeta", plan: choice.plan, billing: choice.billing }) });
       const j = (await r.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
       if (j.ok && j.url) { window.location.assign(j.url); return; }
-      setErr(j.error ?? "No pudimos abrir la página de pago. Intenta de nuevo.");
+      fail("error");
+      setErr(plainError({ error: j.error, status: r.status }, "No pudimos abrir la página de pago. Intenta de nuevo."));
     } catch {
+      fail("conexion");
       setErr("Sin conexión. Revisa tu internet e intenta de nuevo.");
     }
     setBusy(null);
@@ -115,7 +140,11 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
     }
     setBusy("tarjeta");
     const prep = await post({ action: "preparar" });
-    if (!prep.ok || !prep.customerId || !prep.publicKey) { setBusy(null); return setErr(prep.error ?? "No pudimos preparar el pago. Intenta de nuevo."); }
+    if (!prep.ok || !prep.customerId || !prep.publicKey) {
+      setBusy(null);
+      if (prep.status === 0 || prep.status >= 500) { fail(prep.status === 0 ? "conexion" : "error"); setOnvoTrouble(true); }
+      return setErr(plainError(prep, "No pudimos preparar el pago. Intenta de nuevo."));
+    }
     // Directo a ONVO: nuestro servidor nunca ve estos datos.
     let pmId: string | null = null;
     try {
@@ -127,19 +156,29 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       const j = (await r.json().catch(() => null)) as { id?: unknown } | null;
       if (!r.ok || !j || typeof j.id !== "string") {
         setBusy(null);
-        reportPayFail({ provider: "onvo", stage: "tarjeta", code: j ? onvoFailCode(j) : `onvo_${r.status}`, plan: choice.plan, billing: choice.billing });
+        const code = j ? onvoFailCode(j) : `onvo_${r.status}`;
+        reportPayFail({ provider: "onvo", stage: "tarjeta", code, plan: choice.plan, billing: choice.billing });
+        const kind = failKind(code);
+        fail(kind);
+        // El procesador no respondió bien (no es la tarjeta): se ofrece Tilopay.
+        if (kind === "conexion" || r.status >= 500) setOnvoTrouble(true);
         return setErr(onvoCardError(j));
       }
       pmId = j.id;
     } catch {
       setBusy(null);
       reportPayFail({ provider: "onvo", stage: "tarjeta", code: "conexion", plan: choice.plan, billing: choice.billing });
+      fail("conexion");
+      setOnvoTrouble(true);
       return setErr("No pudimos conectar con el procesador de pagos. Revisa tu conexión e intenta de nuevo.");
     }
     setBusy("guardar");
     const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing, ...(condo ? { condo } : {}) });
     setBusy(null);
-    if (!saved.ok) return setErr(saved.error ?? "No pudimos guardar tu tarjeta. Intenta de nuevo.");
+    if (!saved.ok) {
+      fail(saved.status === 0 ? "conexion" : saved.status === 400 ? "rechazada" : "error");
+      return setErr(plainError(saved, "No pudimos guardar tu tarjeta. Intenta de nuevo."));
+    }
     setC({ holder: "", number: "", exp: "", cvv: "" });
     onSaved({ card: saved.card, charge: saved.charge ?? null, outcome: saved.outcome });
   }
@@ -147,7 +186,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   const field = "input h-12 text-base";
   const errText = (k: keyof CardInput) => errors[k] && <span id={`${id}-${k}-e`} className="mt-1 block text-xs font-semibold text-bad">{errors[k]}</span>;
   return (
-    <form onSubmit={submit} noValidate className="space-y-3" aria-describedby={`${id}-sec`}>
+    <form onSubmit={submit} onFocusCapture={startOnce} noValidate className="space-y-3" aria-describedby={`${id}-sec`}>
       {demo && <p className="flex items-start gap-2 rounded-2xl bg-ink p-3 text-sm text-white/90"><Info weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> no se guarda ninguna tarjeta real ni se llama a ONVO Pay. Usa cualquier número de prueba, como 4242 4242 4242 4242.</span></p>}
       <label className="block">
         <span className="text-sm font-bold text-ink">Nombre en la tarjeta</span>
@@ -178,6 +217,9 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       <button type="submit" disabled={Boolean(busy)} aria-busy={Boolean(busy)} className="btn-banana h-14 w-full text-base">
         {busy ? <><CircleNotch weight="bold" className="size-5 animate-spin motion-reduce:animate-none" />{busy === "tarjeta" ? "Guardando tu tarjeta…" : "Confirmando…"}</> : submitLabel}
       </button>
+      {tilopayHint && (
+        <button type="button" onClick={() => { setErr(null); setProvider("tilopay"); }} className="btn-ghost h-12 w-full text-base">¿No carga? Intenta con Tilopay</button>
+      )}
       <div className="text-sm text-ink text-pretty">{note}</div>
       {switcher && <div>{switcher}</div>}
       <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />El número de tu tarjeta va directo a ONVO Pay, nuestro procesador de pagos. Banana Burn no lo ve ni lo guarda: solo la marca y los últimos 4 dígitos.</p>

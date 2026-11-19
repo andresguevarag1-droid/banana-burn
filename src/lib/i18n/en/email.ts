@@ -139,4 +139,31 @@ export const EMAIL: Record<string, string> = {
   "La sesión te muestra qué hacer en cada ejercicio. Sigue las indicaciones, avanza a tu ritmo y guarda el entreno al terminar.":
     "The session shows you what to do in each exercise. Follow the cues, go at your own pace and save the workout when you finish.",
   "No necesitas recuperar los días que pasaron. Empieza por hoy.": "You don't need to make up for the days that went by. Start with today.",
+
+  // Rescate del paso de la tarjeta (#325)
+  "Tu plan ya está armado: falta un paso": "Your plan is ready: one step left",
+  "Deja tu tarjeta y empiezas tus 7 días gratis.": "Add your card and your 7 free days begin.",
+  "Para empezar tu prueba solo falta dejar tu tarjeta. Tu plan te espera en el mismo paso donde lo dejaste.":
+    "To start your trial, all that's left is adding your card. Your plan is waiting at the same step where you left it.",
+  "Tu primer entreno de 12 min te está esperando": "Your first 12-minute workout is waiting for you",
+  "Deja tu tarjeta y hazlo hoy, también en casa.": "Add your card and do it today, even at home.",
+  "Tu primer entreno dura 12 minutos y lo puedes hacer en casa. Para abrirlo solo falta dejar tu tarjeta.":
+    "Your first workout takes 12 minutes and you can do it at home. To open it, all that's left is adding your card.",
+  "Tu primer entreno te está esperando": "Your first workout is waiting for you",
+  "Deja tu tarjeta y hazlo hoy.": "Add your card and do it today.",
+  "Tu primer entreno dura hasta 15 minutos, con las indicaciones de cada ejercicio en el celular. Para abrirlo solo falta dejar tu tarjeta.":
+    "Your first workout takes up to 15 minutes, with the cues for each exercise on your phone. To open it, all that's left is adding your card.",
+  "Dejar mi tarjeta": "Add my card",
+  "Hoy no se cobra nada. Tienes 7 días gratis y te avisamos 2 días antes del cobro.": "You won't be charged today. You get 7 free days and we'll remind you 2 days before the charge.",
+  "El día 8 se cobra el primer mes de tu plan con 50\u00a0% de descuento: {entreno} con Entreno o {completo} con Entreno + Nutrición. Si eliges el plan anual, se cobra su precio completo.":
+    "On day 8 we charge your plan's first month at 50\u00a0% off: {entreno} for Training or {completo} for Training + Nutrition. If you choose the yearly plan, we charge its full price.",
+  "Cancelas cuando quieras desde Mi plan.": "Cancel anytime from My plan.",
+  "Tu plan para {goal} ya está armado: {days} entrenos por semana, con tus pesos y tu nivel.": "Your plan to {goal} is ready: {days} workouts a week, built around your weights and your level.",
+  "Tu plan ya está armado con tus días, tus pesos y tu nivel.": "Your plan is ready, built around your days, your weights and your level.",
+  "bajar grasa": "lose fat",
+  "bajar grasa y ganar músculo": "lose fat and build muscle",
+  "ganar fuerza": "get stronger",
+  "Tu plan": "Your plan",
+  "Recibes este correo porque armaste tu plan en Banana Burn sin terminar de dejar tu tarjeta y tienes activados los recordatorios.":
+    "You're getting this email because you built your plan on Banana Burn without finishing adding your card, and you have reminders turned on.",
 };

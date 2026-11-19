@@ -24,6 +24,7 @@ import { recoveryDay, recoveryIdemKey, recoveryStep, recoveryStepAt, trialProgre
 import { T1_SLUGS, isSeasonCloseStep, seasonCloseDay, seasonCloseIdemKey, seasonCloseStep, seasonCloseStepAt, type SeasonCloseStep } from "@/lib/temporada-cierre";
 import { todayIn } from "@/lib/today";
 import { ABANDONED_KIND, ABANDONED_LOOKBACK_MS, abandonedCheckoutDue, abandonedIdemKey, type CheckoutEvent, type PaidSub } from "@/lib/checkout-abandonado";
+import { RESCUE_KINDS, RESCUE_LOOKBACK_MS, cardRescueDue, rescueIdemKey } from "@/lib/tarjeta-rescate";
 import { SECOND_KIND, SECOND_WINDOW, TRIAL_DAYS, secondIdemKey, secondWorkoutEmailDue } from "@/lib/segundo-entreno";
 import { WEEKLY_KIND, registrationDay, weekCount, weekMonday, weeklyGoal, weeklyIdemKey, weeklyNudgeCopy, weeklyNudgeDue } from "@/lib/meta-semanal";
 import { DEFAULT_LOCALE, isLocale, isUnits, type Locale, type Units } from "@/lib/i18n/locale";
@@ -98,6 +99,9 @@ export async function runReminders(now = new Date(), mode = cronMode(), opts: { 
   // Checkout abandonado (#237): 1 hora después de abrir el pago sin pagar.
   try { await sendAbandonedCheckoutEmails(admin, now, stats, late); }
   catch (e) { stats.errors++; logError("cron:checkout-abandonado", "run_failed", { kind: errCode(e) }); }
+  // Rescate de la tarjeta de la bienvenida (#325): 1 h y el día siguiente a las 7:00 después de ver el paso sin dejarla.
+  try { await sendCardRescueEmails(admin, now, mode, stats, late); }
+  catch (e) { stats.errors++; logError("cron:tarjeta-rescate", "run_failed", { kind: errCode(e) }); }
   for (let from = 0; ; from += PAGE) {
     if (late()) { stats.partial = true; break; }
     const { data: profiles, error } = await profilePage(admin, from);
@@ -1025,6 +1029,84 @@ export async function sendAbandonedCheckoutEmails(admin: SupabaseClient, now: Da
         else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", id).eq("kind", ABANDONED_KIND).eq("local_day", day).then(() => null, () => null); return; }
         stats.sent[ABANDONED_KIND] = (stats.sent[ABANDONED_KIND] ?? 0) + 1;
       } catch (e) { stats.errors++; logError("cron:checkout-abandonado", "user_failed", { kind: errCode(e) }); }
+    });
+  }
+}
+
+// ───────────── Rescate del paso de la tarjeta (#325) ─────────────
+
+/**
+ * "Tu plan ya está armado: falta un paso" y "Tu primer entreno te está esperando" (tarjeta-rescate.ts) a las cuentas desde
+ * CARD_REQUIRED_FROM que vieron el paso de la tarjeta de la bienvenida (card_ask_view "bienvenida") en las últimas 72 h y no
+ * la dejaron. Cada correo una vez por cuenta (notification_log, kind tarjeta_rescate_1/2), reclamado antes de enviarse; si
+ * Resend lo rechaza, se libera el turno. Si falla una lectura, el lote se salta. Exportada para pruebas.
+ */
+export async function sendCardRescueEmails(admin: SupabaseClient, now: Date, mode: "hourly" | "daily", stats: RunStats, late: () => boolean = () => false) {
+  if (late()) { stats.partial = true; return; }
+  const since = new Date(now.getTime() - RESCUE_LOOKBACK_MS).toISOString();
+  const views = await allPages((a, b) => admin.from("funnel_events").select("user_id,created_at")
+    .eq("name", "card_ask_view").eq("props->>where", "bienvenida").gte("created_at", since).order("id").range(a, b));
+  if (views.error) { stats.ok = false; stats.errors++; logError("cron:tarjeta-rescate", "events_query_failed", { code: views.error.code }); return; }
+  // La primera vez que vio el paso, por cuenta.
+  const stepAt = new Map<string, string>();
+  for (const v of views.data as { user_id: string | null; created_at: string }[]) {
+    if (v.user_id && (!stepAt.has(v.user_id) || v.created_at < stepAt.get(v.user_id)!)) stepAt.set(v.user_id, v.created_at);
+  }
+  const all = [...stepAt.keys()];
+  for (let i = 0; i < all.length; i += CHUNK) {
+    if (late()) { stats.partial = true; break; }
+    const ids = all.slice(i, i + CHUNK);
+    const [profiles, prefs, subs, charges, cards, logs] = await Promise.all([
+      allPages((a, b) => admin.from("profiles").select("id,created_at,timezone,role,train_days,goal_type,equipment").in("id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("notification_prefs").select("*").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("subscriptions").select("user_id,status,current_period_start").in("user_id", ids).order("id").range(a, b)),
+      allPages((a, b) => admin.from("trial_charges").select("user_id,status").in("user_id", ids).order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("payment_methods").select("user_id").in("user_id", ids).eq("status", "active").order("user_id").range(a, b)),
+      allPages((a, b) => admin.from("notification_log").select("user_id,kind,local_day").in("user_id", ids).in("kind", [...RESCUE_KINDS]).order("id").range(a, b)),
+    ]);
+    const failed = [profiles, prefs, subs, charges, cards, logs].find((r) => r.error);
+    if (failed) { stats.ok = false; stats.errors++; logError("cron:tarjeta-rescate", "query_failed", { code: failed.error?.code }); continue; }
+    type P = { id: string; created_at: string | null; timezone: string | null; role: string | null; train_days: number | null; goal_type: string | null; equipment: string | null };
+    const group = <T extends { user_id: string }>(rows: T[]) => { const m = new Map<string, T[]>(); for (const r of rows) m.set(r.user_id, [...(m.get(r.user_id) ?? []), r]); return m; };
+    const prefsOf = new Map<string, Prefs>();
+    for (const p of profiles.data as P[]) prefsOf.set(p.id, { ...DEFAULT_PREFS, timezone: p.timezone || DEFAULT_PREFS.timezone });
+    for (const r of prefs.data as Record<string, unknown>[]) if (prefsOf.has(r.user_id as string)) prefsOf.set(r.user_id as string, { ...DEFAULT_PREFS, ...stripNulls(r) } as Prefs);
+    const langBy = await languagesOf(admin, (profiles.data as P[]).map((p) => p.id));
+    const subsBy = group(subs.data as (PaidSub & { user_id: string })[]);
+    const chargesBy = group(charges.data as { user_id: string; status: string }[]);
+    const cardsBy = group(cards.data as { user_id: string }[]);
+    const logsBy = group(logs.data as { user_id: string; kind: string; local_day: string }[]);
+
+    // Sin perfil (cuenta borrada) no se manda nada. El equipo no recibe estos correos.
+    await forEachLimit(profiles.data as P[], USER_CONCURRENCY, async (p) => {
+      if (late()) { stats.partial = true; return; }
+      try {
+        if (STAFF.includes(p.role as (typeof STAFF)[number])) return;
+        const pr = prefsOf.get(p.id)!;
+        const kind = cardRescueDue({
+          now, createdAt: p.created_at, stepAt: stepAt.get(p.id)!, subs: subsBy.get(p.id) ?? [], chargeStatuses: (chargesBy.get(p.id) ?? []).map((c) => c.status),
+          cards: (cardsBy.get(p.id) ?? []).length, emailReminders: pr.email_reminders !== false, timezone: pr.timezone, quietStart: pr.quiet_start, quietEnd: pr.quiet_end,
+          mode, sent: logsBy.get(p.id) ?? [],
+        });
+        if (!kind) return;
+        const day = localClock(now, pr.timezone).iso;
+        const { data: claimed, error: claimErr } = await admin.from("notification_log")
+          .upsert({ user_id: p.id, kind, local_day: day, channels: ["email"], pushes: 0 }, { onConflict: "user_id,kind,local_day", ignoreDuplicates: true })
+          .select("id");
+        if (claimErr) { stats.errors++; return; }
+        if (!claimed?.length) return;
+        const { data: u } = await admin.auth.admin.getUserById(p.id);
+        const to = u.user?.email;
+        if (!to) return;
+        const goal = p.goal_type === "grasa" || p.goal_type === "recomp" || p.goal_type === "fuerza" ? p.goal_type : null;
+        const unsubscribe = unsubscribeUrl(p.id, "recordatorios");
+        const msg = T.tarjetaRescate({ kind, goal, days: p.train_days, home: offersHomeFirst((p.equipment ?? "gym") as Equipment), unsubscribe, locale: langBy.get(p.id)?.locale });
+        const r = await sendEmail(to, withLoginLinks(msg, p.id), { idempotencyKey: rescueIdemKey(p.id, kind), unsubscribe, tags: { kind } });
+        if (r.ok) stats.email++;
+        // Si Resend lo rechazó, se libera el turno para que la próxima corrida lo intente de nuevo.
+        else if (!r.skipped) { await admin.from("notification_log").delete().eq("user_id", p.id).eq("kind", kind).eq("local_day", day).then(() => null, () => null); return; }
+        stats.sent[kind] = (stats.sent[kind] ?? 0) + 1;
+      } catch (e) { stats.errors++; logError("cron:tarjeta-rescate", "user_failed", { kind: errCode(e) }); }
     });
   }
 }

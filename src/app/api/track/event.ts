@@ -1,5 +1,6 @@
 // Eventos del embudo (sin terceros). Lo que llega del navegador se valida aquí antes de registrarse.
 import { LANDING_VARIANTS } from "@/lib/landing-variants";
+import { FAIL_KINDS } from "@/lib/pago-fallo";
 
 /** Eventos permitidos. Cualquier otro nombre se descarta. */
 export const FUNNEL_EVENTS = [
@@ -20,6 +21,14 @@ export const FUNNEL_EVENTS = [
   // Se mostró el formulario de la tarjeta (#308), con el `where` del pedido que lo trajo: separa no tocar el pedido de abandonar el formulario.
   "card_form_view",
   "card_saved",
+  // Paso de la tarjeta (#325), con el `where` del pedido: tocó el primer campo o el botón de Tilopay (una vez por pantalla),
+  // el procesador la rechazó (`reason`: la clase de pago-fallo, nunca el código crudo) y se ofreció Tilopay porque ONVO
+  // falló o tardó más de 8 s.
+  "card_form_start",
+  "card_step_error",
+  "card_tilopay_hint",
+  // Clic en un correo (#320/#325): `e` es el correo de origen (?e= del enlace).
+  "email_click",
   "install_view",
   "install_click",
   "app_installed",
@@ -68,6 +77,10 @@ export type SignupErrorReason = (typeof SIGNUP_ERRORS)[number];
 /** Dónde se pide la tarjeta (#280). "dia6" es el correo del día 6: se cuenta al llegar a Mi plan desde su enlace. */
 export const CARD_ASK_WHERE = ["bienvenida", "hoy-banner", "primer-entreno", "primera-serie", "salida", "mi-plan", "muro", "dia6"] as const;
 export type CardAskWhere = (typeof CARD_ASK_WHERE)[number];
+/** Correos cuyo enlace lleva ?e= para email_click. */
+export const EMAIL_CLICK_KINDS = ["tarjeta_rescate_1", "tarjeta_rescate_2"] as const;
+export type EmailClickKind = (typeof EMAIL_CLICK_KINDS)[number];
+export const isEmailClickKind = (v: unknown): v is EmailClickKind => (EMAIL_CLICK_KINDS as readonly unknown[]).includes(v);
 /** Pasos de la bienvenida que cuentan en onboarding_step: 0 a 6 (la oferta de la tarjeta ya tiene card_banner_view). */
 export const ONBOARDING_STEPS = 7;
 
@@ -75,13 +88,19 @@ export const ONBOARDING_STEPS = 7;
  * Eventos del registro con forma fija: solo `path` y su único dato permitido. Lo demás se descarta, y si el dato no es uno
  * de los valores conocidos el evento entero se rechaza (así nunca entra texto libre, como un correo).
  */
-const STRICT: Partial<Record<string, { key?: string; ok?: (v: unknown) => boolean }>> = {
+type Rule = { key?: string; ok?: (v: unknown) => boolean; /** Un segundo dato obligatorio. */ also?: { key: string; ok: (v: unknown) => boolean } };
+const isWhere = (v: unknown) => (CARD_ASK_WHERE as readonly unknown[]).includes(v);
+const STRICT: Partial<Record<string, Rule>> = {
   signup_view: { key: "inapp", ok: (v) => typeof v === "boolean" },
   signup_submit: { key: "method", ok: (v) => (SIGNUP_METHODS as readonly unknown[]).includes(v) },
   signup_error: { key: "reason", ok: (v) => (SIGNUP_ERRORS as readonly unknown[]).includes(v) },
   landing_variant_view: { key: "variant", ok: (v) => (LANDING_VARIANTS as readonly unknown[]).includes(v) },
   card_ask_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
   card_form_view: { key: "where", ok: (v) => (CARD_ASK_WHERE as readonly unknown[]).includes(v) },
+  card_form_start: { key: "where", ok: isWhere },
+  card_step_error: { key: "where", ok: isWhere, also: { key: "reason", ok: (v) => (FAIL_KINDS as readonly unknown[]).includes(v) } },
+  card_tilopay_hint: { key: "where", ok: isWhere },
+  email_click: { key: "e", ok: isEmailClickKind },
   onboarding_step: { key: "step", ok: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < ONBOARDING_STEPS },
 };
 
@@ -103,8 +122,10 @@ export function cleanEvent(raw: unknown): CleanEvent | null {
   if (strict) {
     const p = (props && typeof props === "object" && !Array.isArray(props) ? props : {}) as Record<string, unknown>;
     if (strict.key && !strict.ok?.(p[strict.key])) return null;
+    if (strict.also && !strict.also.ok(p[strict.also.key])) return null;
     if (typeof p.path === "string" && !PII.test(p.path)) out.path = p.path.slice(0, 120);
     if (strict.key) out[strict.key] = p[strict.key] as string | number;
+    if (strict.also) out[strict.also.key] = p[strict.also.key] as string | number;
     return { name: name as FunnelEvent, props: out };
   }
   if (props && typeof props === "object" && !Array.isArray(props)) {
