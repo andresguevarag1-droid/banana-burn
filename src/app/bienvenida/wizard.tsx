@@ -245,6 +245,8 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
         const r = await safeAction(completeOnboarding(full));
         if (!r.ok) return setErr(t(r.error ?? "No se pudo guardar tu plan. Intenta de nuevo."));
         setProfileSaved(true);
+        // #348: la cuenta quedó creada con su perfil. Meta la cuenta como registro aquí, antes de la tarjeta.
+        trackOnce("profile_done", { goal: full.goal });
         go(STEPS);
       });
       return;
@@ -275,7 +277,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
         track("card_saved", { step: cardRequired ? "card" : "trial", demo: Boolean(card.demo), outcome: card.outcome ?? "demo", where: "bienvenida" });
       }
       // Una sola vez por cuenta: aquí, al terminar la bienvenida (la pantalla final no lo repite).
-      trackOnce("onboarding_done", { goal: full?.goal ?? o.goal, trial: Boolean(trialEnd) || cardRequired });
+      trackOnce("onboarding_done", { goal: full?.goal ?? o.goal, trial: Boolean(trialEnd) || cardRequired, card: cardRequired });
       // Embudo (5 nov): la mitad llegaba a Hoy y no abría el entreno. Ahora se le pregunta "¿Entrenamos ahora?".
       router.replace(demo ? "/app?primera=1" : "/app/primer-entreno");
       router.refresh();

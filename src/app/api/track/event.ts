@@ -16,6 +16,9 @@ export const FUNNEL_EVENTS = [
   "checkout_view",
   "purchase_success",
   "onboarding_done",
+  // #348: con la tarjeta obligatoria, el perfil quedó guardado y llegó al paso de la tarjeta. Es el CompleteRegistration de Meta
+  // (antes de la tarjeta), para que la campaña no se quede sin señal; la tarjeta guardada va como StartTrial.
+  "profile_done",
   "card_banner_view",
   // Cada pedido de tarjeta (#280): dónde se vio (CARD_ASK_WHERE). card_saved lleva el mismo `where` del pedido que funcionó.
   "card_ask_view",
@@ -70,7 +73,7 @@ export const FUNNEL_EVENTS = [
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
 /** Eventos que cuentan una sola vez por cuenta: el navegador los guarda en sessionStorage y /api/track rechaza el segundo. */
-export const ONCE_PER_ACCOUNT: ReadonlySet<FunnelEvent> = new Set<FunnelEvent>(["onboarding_done", "plan_wall_exit_offer"]);
+export const ONCE_PER_ACCOUNT: ReadonlySet<FunnelEvent> = new Set<FunnelEvent>(["onboarding_done", "profile_done", "plan_wall_exit_offer"]);
 
 /** Cómo se intenta crear la cuenta en /entrar?modo=registro. */
 export const SIGNUP_METHODS = ["password", "code", "google", "apple"] as const;

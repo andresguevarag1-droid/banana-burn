@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 import { PLANS } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
 
@@ -8,6 +8,11 @@ vi.mock("@/app/condominios/lead-form", () => ({
   LeadForm: ({ condo }: { condo: string }) => <form aria-label="Solicitud de reunión"><input defaultValue={condo} /></form>,
 }));
 import Condominios, { metadata } from "@/app/condominios/page";
+
+// Estas pruebas revisan los textos de antes de la tarjeta obligatoria (23 nov, CARD_REQUIRED_FROM): reloj fijo en el 20 nov
+// para que no cambien de resultado según la fecha del día.
+beforeAll(() => { vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-20T18:00:00.000Z") }); });
+afterAll(() => { vi.useRealTimers(); });
 
 const report = readFileSync("marketing/condominios/revision-landing-149.md", "utf8");
 const render = async (c?: string) => renderToStaticMarkup(await Condominios({ searchParams: Promise.resolve({ c }) }));

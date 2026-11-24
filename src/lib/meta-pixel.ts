@@ -41,7 +41,12 @@ export function toMetaEvent(name: FunnelEvent, props: FunnelProps = {}): MetaEve
       if (LEAD_CTA.test(cta)) return { name: "Lead", params: { content_name: cta.slice(0, 60) } };
       return null;
     }
+    // #348: con la tarjeta obligatoria (card: true) el CompleteRegistration ya salió en profile_done, al llegar al paso de la
+    // tarjeta; aquí no se repite. La tarjeta guardada va a Meta como StartTrial (#331).
+    case "profile_done":
+      return { name: "CompleteRegistration", params: { status: "card_step" } };
     case "onboarding_done":
+      if (props.card === true) return null;
       return { name: "CompleteRegistration", params: { status: props.trial ? "trial" : "registered" } };
     case "checkout_view": {
       const value = planValue(props.plan, props.billing);

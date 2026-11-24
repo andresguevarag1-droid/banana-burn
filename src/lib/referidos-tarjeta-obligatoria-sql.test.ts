@@ -26,7 +26,7 @@ const giftMonths = async () => (await db.query<{ n: number }>("select count(*)::
 
 beforeAll(async () => {
   await db.exec(readFileSync("supabase/tests/stub.sql", "utf8"));
-  for (const f of readdirSync("supabase/migrations").filter((f) => f.endsWith(".sql") && f < "0075").sort()) {
+  for (const f of readdirSync("supabase/migrations").filter((f) => f.endsWith(".sql") && f < "0078").sort()) {
     await db.exec(readFileSync(`supabase/migrations/${f}`, "utf8"));
   }
   for (let n = 0; n < NAMES.length; n++) {
