@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type Row = Record<string, unknown>;
 let tables: Record<string, Row[]> = {};
 let failing = new Set<string>();
-const sent: { to: string; subject: string; key?: string; kind?: string }[] = [];
+const sent: { to: string; subject: string; key?: string; kind?: string; text?: string }[] = [];
 
 /** Base en memoria: lo justo de PostgREST que usa notify-run (select, in, eq, gte, is, order, range, upsert, insert). */
 function query(name: string) {
@@ -43,8 +43,8 @@ vi.mock("@/lib/supabase/server", () => ({ STAFF: ["coach", "support", "admin", "
 vi.mock("@/lib/push", () => ({ sendPush: async () => 0 }));
 vi.mock("@/lib/email/send", () => ({
   unsubscribeUrl: (u: string, s: string) => `https://bananaburn.app/api/email/baja?u=${u}&s=${s}`,
-  sendEmail: async (to: string, msg: { subject: string }, o: { idempotencyKey?: string; tags?: { kind?: string } }) => {
-    sent.push({ to, subject: msg.subject, key: o.idempotencyKey, kind: o.tags?.kind });
+  sendEmail: async (to: string, msg: { subject: string; text?: string }, o: { idempotencyKey?: string; tags?: { kind?: string } }) => {
+    sent.push({ to, subject: msg.subject, key: o.idempotencyKey, kind: o.tags?.kind, text: msg.text });
     return { ok: true };
   },
 }));
@@ -68,6 +68,17 @@ beforeEach(() => {
 });
 
 describe("secuencia de la prueba en runReminders", () => {
+  it("#327: sin entrenos, la pieza habla de su primer entreno de 12 min (con entrenos, ese día gana el correo de regreso)", async () => {
+    tables.profiles = [profile(1), profile(2)];
+    tables.workouts = [{ id: "w1", user_id: uid(1), template: "A", finished_at: "2026-11-02T20:00:00.000Z", day: "2026-11-02" }];
+    tables.workout_sets = [{ workout_id: "w1", user_id: uid(1), kg: 40, reps: 10, done: true }];
+    await runReminders(DAY2, "daily");
+    expect(kinds(1)).toEqual(["regreso_r1"]);
+    const d2 = sent.find((x) => x.kind === "prueba_d2" && x.to.startsWith(uid(2).slice(0, 8)));
+    expect(d2?.text).toContain("Tu primer entreno dura 12 min");
+    expect(d2?.text).not.toContain("Llevas");
+  });
+
   it("llega a la prueba normal y reemplaza el correo del recordatorio de ese día", async () => {
     tables.profiles = [profile(1)];
     const stats = await runReminders(DAY2, "daily");

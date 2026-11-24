@@ -71,6 +71,8 @@ export const EMAIL: Record<string, string> = {
   "{total} levantados": "{total} lifted",
   ", con {items}": ", with {items}",
   " y ": " and ",
+  "Llevas {workouts}{extra} en tu prueba. Todo queda guardado en Progreso.": "You've done {workouts}{extra} in your trial. It's all saved in Progress.",
+  "Tu primer entreno dura {min} min y lo puedes hacer hoy, también en casa.": "Your first workout takes {min} min and you can do it today, even at home.",
   "En tu prueba guardaste {workouts}{extra}. Todo eso sigue en tu cuenta.": "During your trial you saved {workouts}{extra}. All of it is still in your account.",
   " de {days} por semana": " for {days} a week",
   "Tu plan{days} sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos.":

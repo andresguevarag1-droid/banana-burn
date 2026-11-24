@@ -299,3 +299,28 @@ describe("cierre de la Temporada 1 (docs/emails/temporada-1-cierre.md)", () => {
     }
   });
 });
+
+describe("#327 secuencia de la prueba con sus datos", () => {
+  const unsubscribe = "https://bananaburn.app/baja";
+  it("con entrenos: cuántos, series y kg, antes de la pieza de siempre", async () => {
+    const { trialSequenceLine } = await import("./templates");
+    const m = secuenciaPrueba({ day: 2, unsubscribe, personal: true, progress: { workouts: 2, sets: 18, kg: 1450 } });
+    expect(m.text).toContain(trialSequenceLine({ workouts: 2, sets: 18, kg: 1450 }));
+    expect(m.text).toMatch(/Llevas 2 entrenos, con 18 series y .+ levantados en tu prueba/);
+    expect(m.text.indexOf("Llevas 2 entrenos")).toBeLessThan(m.text.indexOf(TRIAL_SEQUENCE[2].paragraphs[0].slice(0, 30)));
+  });
+  it("sin entrenos o sin datos: su primer entreno de 12 min, sin inventar logros", () => {
+    for (const progress of [null, { workouts: 0, sets: 0, kg: 0 }]) {
+      const m = secuenciaPrueba({ day: 4, unsubscribe, personal: true, progress });
+      expect(m.text).toContain("Tu primer entreno dura 12 min");
+      expect(m.text).not.toContain("Llevas");
+    }
+  });
+  it("en inglés", () => {
+    const m = secuenciaPrueba({ day: 6, unsubscribe, personal: true, progress: { workouts: 1, sets: 6, kg: 0 }, locale: "en-US" });
+    expect(m.text).toContain("You've done 1 workout, with 6 sets in your trial.");
+  });
+  it("sin personal: igual que antes", () => {
+    expect(secuenciaPrueba({ day: 2, unsubscribe }).text).not.toContain("Tu primer entreno dura");
+  });
+});
