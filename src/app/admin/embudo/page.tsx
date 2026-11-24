@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { requireSection } from "@/lib/admin-auth";
 import { ActionForm, Submit } from "@/components/admin/action-form";
-import { DemoNotice, Field, FilterBar, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, fmtDay, fmtNum, fmtPct, fw, inputSm, money, panel, tr } from "@/components/admin/ui";
+import { DemoNotice, Field, FilterBar, Kpi, Notice, PageHeader, SectionHeading, Table, Td, Th, btnGhost, fmtDay, fmtNum, fmtPct, fw, inputSm, money, panel, tr } from "@/components/admin/ui";
 import { COUNTRY_NAME } from "@/lib/countries";
 import {
   CARD_ASK_LABEL, CARD_ERA_LABEL, NO_COUNTRY, ORIGIN_LABEL, STEPS, adsOf, applyFilters, buildAccounts, campaignsOf, cardAskTable, cohortTable, countriesOf, crWeeks, netAfterAds, pctOf,
@@ -109,7 +110,9 @@ export default async function Embudo({ searchParams }: { searchParams: Promise<P
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Embudo de plata" desc="Cuentas nuevas por semana de registro (lunes a domingo, hora de Costa Rica), sin staff ni testers, y cuántas llegan a cada paso hasta pagar. Solo cantidades. Sirve para decidir cada semana dónde poner el presupuesto de anuncios." />
+      <PageHeader title="Embudo de plata" desc="Cuentas nuevas por semana de registro (lunes a domingo, hora de Costa Rica), sin staff ni testers, y cuántas llegan a cada paso hasta pagar. Solo cantidades. Sirve para decidir cada semana dónde poner el presupuesto de anuncios.">
+        <Link href="/admin/embudo/campana-50" className={btnGhost}>Campaña 50 % cuentas actuales</Link>
+      </PageHeader>
       {v.demo && <DemoNotice what="el embudo" />}
       {!v.demo && !rows && <Notice tone="warn" title="Sin dato">No se pudieron leer las cuentas nuevas o los testers. Revisa la conexión con la base (SUPABASE_SERVICE_ROLE_KEY en Vercel, la revisa Andrés).</Notice>}
       {unknownSources > 0 && <Notice tone="warn" title="Algunas fuentes no respondieron">Las columnas que dependen de ellas dicen &quot;Sin dato&quot;. Recarga en un momento.</Notice>}

@@ -123,7 +123,8 @@ export const promoPrice = (plan: PlanId) => discountedMinor(amountMinorFor(plan,
  * ¿Gana la promoción al guardar la tarjeta ahora? Solo si el primer cobro todavía no llega (prueba o beta: cobro
  * programado a futuro) y nunca pagó un plan. "inmediato" (la prueba ya terminó) va a precio normal.
  */
-export const promoFor = (kind: ChargeKind, paidBefore: boolean): Promo => (!paidBefore && (kind === "prueba" || kind === "beta") ? PROMO_ID : null);
+/** 50 % del primer mes: prueba o beta, o (#332) la oferta de la campaña a cuentas anteriores (offer), si nunca pagó. */
+export const promoFor = (kind: ChargeKind, paidBefore: boolean, offer = false): Promo => (!paidBefore && (kind === "prueba" || kind === "beta" || offer) ? PROMO_ID : null);
 
 /** Clave de idempotencia de la prueba: una por persona y para siempre (UNIQUE en 0026). */
 export const idemKeyFor = (userId: string) => `trial:${userId}`;

@@ -1,4 +1,5 @@
 import "server-only";
+import { offerActive } from "./campana-50";
 import { cardRequiredFor } from "@/lib/card-required";
 // Tarjeta guardada y primer cobro programado (servidor, service_role). Reglas puras en trial.ts; tabla en 0026.
 //
@@ -102,6 +103,12 @@ async function livePaidSubs(db: SupabaseClient, userId: string): Promise<LiveSub
 const subProvider = (s: Pick<SubscriptionRow, "provider">): PayProvider => (s.provider === "tilopay" ? "tilopay" : "onvo");
 
 /** ¿Pagó un plan alguna vez? (una fila activada tiene current_period_start). Sin esto gana el 50 % del primer mes. */
+/** #332: ¿tiene vigente la oferta de la campaña "primer mes al 50 %" (promo_offers)? Si la lectura falla, no. */
+async function promoOffer(db: SupabaseClient, userId: string, now = new Date()): Promise<boolean> {
+  const { data, error } = await db.from("promo_offers").select("expires_at").eq("user_id", userId).maybeSingle();
+  return !error && offerActive(data as { expires_at: string } | null, now);
+}
+
 async function paidBefore(db: SupabaseClient, userId: string): Promise<boolean> {
   const { data } = await db.from("subscriptions").select("current_period_start").eq("user_id", userId).limit(50);
   return ((data as { current_period_start: string | null }[] | null) ?? []).some((r) => Boolean(r.current_period_start));
@@ -385,7 +392,7 @@ export function checkConsent(consent: Consent | undefined, plan: PlanId, billing
 
 /** #329: el 50 % del primer cobro de una cuenta que empieza un plan, sin mirar la tarjeta (Tilopay antes de su página). */
 export async function promoBeforeCard(db: SupabaseClient, userId: string, plan: CardSavedPlan, row: TrialChargeRow | null): Promise<Promo> {
-  return plan.do === "create" ? promoFor(plan.kind, await paidBefore(db, userId)) : (row?.promo ?? null);
+  return plan.do === "create" ? promoFor(plan.kind, await paidBefore(db, userId), await promoOffer(db, userId)) : (row?.promo ?? null);
 }
 
 /** #329: guarda la aceptación del cobro recurrente (0074). Sin esta fila no se programa el cobro. */
@@ -417,7 +424,7 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
   // El monto lo pone el servidor: con el 50 % del primer mes solo si la fila ganó la promoción y el plan es mensual.
   // 0045: una vez por tarjeta, no por cuenta (la misma tarjeta en otra cuenta que ya la ganó o ya pagó no la vuelve a ganar).
   const fp = cardFingerprint(c);
-  const promo = condoHold ? null : plan.do === "create" ? promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp))) : (row?.promo ?? null);
+  const promo = condoHold ? null : plan.do === "create" ? promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp)), await promoOffer(db, v.id, now)) : (row?.promo ?? null);
   // #329: antes de guardar nada, el monto que la persona vio tiene que ser el que se va a cobrar.
   if (recurring) checkConsent(input.consent, input.plan, input.billing, promo);
   const card = await storeCard(db, v, c, now);
@@ -455,7 +462,7 @@ export async function saveVerifiedCard(db: SupabaseClient, v: Viewer, c: Verifie
         throw new BillingError("Tu tarjeta quedó guardada, pero no pudimos activar el regalo de tu condominio. Intenta de nuevo en unos minutos.", 503);
       } else if ("moved_from" in held) {
         // Sin vínculo no hay acceso gratis: el cobro vuelve a la fecha normal de su prueba, con su 50 % si le toca.
-        const back = promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp)));
+        const back = promoFor(plan.kind, (await paidBefore(db, v.id)) || (await promoUsedByCard(db, v.id, fp)), await promoOffer(db, v.id, now));
         await db.from("trial_charges").update({ charge_at: s.chargeAt, next_attempt_at: s.chargeAt, moved_from: null, promo: back, amount_minor: firstChargeMinor(input.plan, input.billing, back), updated_at: now.toISOString() }).eq("id", row.id).eq("status", "scheduled");
         log("condominio con tarjeta: no se pudo vincular, cobro a su fecha normal", { userId: v.id, chargeId: row.id });
       }

@@ -85,7 +85,7 @@ export type SignupErrorReason = (typeof SIGNUP_ERRORS)[number];
 export const CARD_ASK_WHERE = ["bienvenida", "hoy-banner", "primer-entreno", "primera-serie", "salida", "mi-plan", "muro", "dia6"] as const;
 export type CardAskWhere = (typeof CARD_ASK_WHERE)[number];
 /** Correos cuyo enlace lleva ?e= para email_click. */
-export const EMAIL_CLICK_KINDS = ["tarjeta_rescate_1", "tarjeta_rescate_2"] as const;
+export const EMAIL_CLICK_KINDS = ["tarjeta_rescate_1", "tarjeta_rescate_2", "campana_50_actuales"] as const;
 export type EmailClickKind = (typeof EMAIL_CLICK_KINDS)[number];
 export const isEmailClickKind = (v: unknown): v is EmailClickKind => (EMAIL_CLICK_KINDS as readonly unknown[]).includes(v);
 /** Pasos de la bienvenida que cuentan en onboarding_step: 0 a 6 (la oferta de la tarjeta ya tiene card_banner_view). */

@@ -16,6 +16,7 @@ import { ANNUAL_SEASON_NOTE, BETA_GRACE_UNTIL, PLANS, annualSaving, type Billing
 import { PROMO_PCT, planLine, promoPrice } from "../trial";
 import { intentPath } from "../checkout-intent";
 import { rescuePath } from "../tarjeta-rescate";
+import { FIRST_HOME_MIN } from "../engine";
 import type { TrialProgress } from "../recuperacion";
 import { DEFAULT_LOCALE, defaultUnits, type Locale, type Units } from "../i18n/locale";
 import { kgToLb, loadShown, weightUnit } from "../i18n/format";
@@ -817,6 +818,48 @@ export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string; loc
     subject: c.subject, preheader: c.preheader,
     html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, coach, locale }),
     text: textLayout([c.subject, "", ...body.flatMap((x) => [x, ""]), `${c.cta}: ${abs(c.path)}`], d.unsubscribe, reason, coach, locale),
+  };
+}
+
+// ───────────── Campaña "primer mes al 50 %" a cuentas anteriores (#332) ─────────────
+// La envía el staff desde /admin/campana-50 (campana-50-server.ts), nunca un cron. Firmada por Andrés.
+
+export const CAMPAIGN_50_PATH = "/app/suscripcion?plan=completo&pago=mes&e=campana_50_actuales#tarjeta";
+
+/** Correo de la campaña. "entrenaron": lo que lograron y la oferta. "sin_entreno": su primer entreno y, abajo, la oferta. */
+export function campana50(d: { segment: "entrenaron" | "sin_entreno"; progress: TrialProgress | null; unsubscribe: string; offerDays: number; locale?: Locale; units?: Units }): Email {
+  const locale = d.locale ?? DEFAULT_LOCALE;
+  const t = tr(locale), units = d.units ?? defaultUnits(locale);
+  const [e1, e0, c1, c0] = [usd2(promoPrice("entreno")), usd2(ENTRENO.price.mes), usd2(promoPrice("completo")), usd2(COMPLETO.price.mes)];
+  const offer = t("Tu primer mes de {entreno} cuesta {e1} en vez de {e0}, y {completo} cuesta {c1} en vez de {c0}. Desde el segundo mes, precio normal, y cancelas cuando quieras desde Mi plan.",
+    { entreno: ENTRENO.name, e1, e0, completo: COMPLETO.name, c1, c0 });
+  const until = t("La oferta vale {n} días desde este correo. Precios en USD, IVA incluido.", { n: d.offerDays });
+  const prog = d.progress;
+  const trained = d.segment === "entrenaron" && prog && prog.workouts > 0;
+  const progress = trained
+    ? (() => {
+      const extra = [prog.sets > 0 && plural(t, prog.sets, "{n} serie", "{n} series"), prog.kg > 0 && t("{total} levantados", { total: liftedTotal(prog.kg, units) })].filter(Boolean) as string[];
+      return t("En Banana Burn ya hiciste {workouts}{extra}. Todo eso sigue guardado en tu cuenta.", { workouts: plural(t, prog.workouts, "{n} entreno", "{n} entrenos"), extra: extra.length ? t(", con {items}", { items: extra.join(t(" y ")) }) : "" });
+    })()
+    : null;
+  const c = d.segment === "entrenaron"
+    ? { subject: t("Tu primer mes a mitad de precio"), preheader: t("Sigue donde quedaste: tu primer mes al 50 %."),
+        paragraphs: [progress ?? t("Tu plan sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos."), offer, until], cta: t("Quiero mi primer mes al 50 %") }
+    : { subject: t("Tu primer entreno dura {min} min", { min: FIRST_HOME_MIN }), preheader: t("Lo haces en casa y la app te dice cada ejercicio. Tu primer mes va al 50 %."),
+        paragraphs: [
+          t("Creaste tu cuenta en Banana Burn, pero todavía no hiciste tu primer entreno. Dura {min} min, lo puedes hacer en casa y la app te dice cada ejercicio, cuántas veces y cuándo descansar.", { min: FIRST_HOME_MIN }),
+          t("Para empezar, activa tu plan con tu primer mes a mitad de precio:"), offer, until,
+        ], cta: t("Empezar con mi primer mes al 50 %") };
+  // Firma de Andrés como párrafo (no el bloque de Coach Banana). "50 %" sin cortar la línea.
+  const sign = t("Andrés, de Banana Burn");
+  const nb = (x: string) => esc(x).replace(/ %/g, "&nbsp;%");
+  const hero: Hero = { eyebrow: t("Primer mes al 50 %"), title: nb(c.subject), lead: nb(c.preheader) };
+  const html = c.paragraphs.map((x) => p(nb(x))).join("") + button(c.cta, CAMPAIGN_50_PATH, "primary") + p(`<b>${esc(sign)}</b>`);
+  const reason = t("Recibes este correo porque tienes una cuenta en Banana Burn y los correos de Banana Burn activados.");
+  return {
+    subject: c.subject, preheader: c.preheader,
+    html: layout({ preheader: c.preheader, hero, body: html, unsubscribe: d.unsubscribe, reason, locale }),
+    text: textLayout([c.subject, "", ...c.paragraphs.flatMap((x) => [x, ""]), `${c.cta}: ${abs(CAMPAIGN_50_PATH)}`, "", sign], d.unsubscribe, reason, undefined, locale),
   };
 }
 

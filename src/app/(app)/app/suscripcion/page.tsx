@@ -19,6 +19,7 @@ import { demoCardState } from "@/lib/trial-demo";
 import { pendingCardCondo } from "@/lib/condos-server";
 import { adminClient } from "@/lib/supabase/admin";
 import { askWhere } from "@/lib/card-ask";
+import { CAMPAIGN, offerActive } from "@/lib/campana-50";
 import { TilopayNotice } from "./tilopay-notice";
 
 export const metadata = { title: "Mi plan" };
@@ -52,7 +53,7 @@ const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
 
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };
 
-export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string; motivo?: string; para?: string; inicio?: string }> }) {
+export default async function Suscripcion({ searchParams }: { searchParams: Promise<{ e?: string; plan?: string; pago?: string; demo?: string; tilopay?: string; desde?: string; motivo?: string; para?: string; inicio?: string }> }) {
   const v = (await getViewer())!;
   const sp = await searchParams;
   const [real, gifts] = await Promise.all([getEntitlements(v), getMyGifts(v)]);
@@ -65,6 +66,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
   // 0066: residente de un condominio con tarjeta sin tarjeta todavía: su oferta es la del condominio, no el 50 % del primer mes.
   const condoDb = v.demo ? null : adminClient();
   const condoPending = condoDb ? await pendingCardCondo(condoDb, v.id).catch(() => null) : null;
+  const promoOffer = condoDb && !charge ? await condoDb.from("promo_offers").select("expires_at").eq("user_id", v.id).maybeSingle().then(({ data, error }) => !error && offerActive(data as { expires_at: string } | null)) : false; // #332: campaña 50 %
   const payments = isOnvoConfigured() && !v.demo;
   const tlp = sp.tilopay && Object.hasOwn(TILOPAY_NOTICE, sp.tilopay) ? TILOPAY_NOTICE[sp.tilopay] : null;
   const intent = parseIntent(sp.plan, sp.pago) ?? decodeIntent(jar.get(INTENT_COOKIE)?.value);
@@ -108,7 +110,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-5 animate-enter max-w-2xl">
-      <FunnelTracker view="page_view" props={{ screen: "suscripcion", access: ent.access }} />
+      <FunnelTracker view="page_view" props={{ screen: "suscripcion", access: ent.access }} />{sp.e === CAMPAIGN && <FunnelTracker view="email_click" props={{ kind: CAMPAIGN }} />}
       <Link href="/app/perfil" className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Perfil</Link>
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Mi plan</h1>
@@ -131,7 +133,7 @@ export default async function Suscripcion({ searchParams }: { searchParams: Prom
         </section>
       )}
       {!(condoPending && !charge) && (cardStep !== "none" || (charge && charge.phase !== "cobrado")) && (
-        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null} where={askWhere(sp.desde) ?? "mi-plan"} promoLost={sp.tilopay === "monto"}
+        <CardPanel step={cardStep} charge={charge} card={ent.card ?? null} demo={v.demo} payments={payments} tz={v.tz} betaFirstPaid={betaDates().firstPaid} trialEndsAt={ent.trial && !ent.trial.beta ? ent.trial.endsAt : null} where={askWhere(sp.desde) ?? "mi-plan"} promoLost={sp.tilopay === "monto"} promoOffer={promoOffer}
           initial={charge ? { plan: charge.plan, billing: charge.billing } : intent ?? { plan: "completo", billing: "mes" }} />
       )}
 

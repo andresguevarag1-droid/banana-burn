@@ -30,14 +30,14 @@ async function prueba(body: Record<string, unknown>): Promise<{ ok?: boolean; er
  * Tarjeta guardada y primer cobro en Mi plan (#tarjeta): empezar la prueba, agregar la tarjeta en la beta, cambiarla después
  * de un rechazo, ver cuándo y cuánto se cobra, cambiar el plan y cancelar sin costo antes del cobro.
  */
-export function CardPanel({ step, charge, card, demo, payments, initial, tz, betaFirstPaid, trialEndsAt = null, where = "mi-plan", promoLost = false }: {
+export function CardPanel({ step, charge, card, demo, payments, initial, tz, betaFirstPaid, trialEndsAt = null, where = "mi-plan", promoLost = false, promoOffer = false }: {
   step: CardStep; charge: ChargeView | null; card: Card; demo: boolean; payments: boolean; initial: PlanChoice; tz: string; betaFirstPaid: string;
   /** Fin de su prueba de 7 días (para "trial"): ese día sería el primer cobro si deja la tarjeta lista. */
   trialEndsAt?: string | null;
   /** Pedido que trajo aquí (?desde, #280): va en card_saved. Sin él es el de Mi plan. Solo Mi plan y el correo del día 6 cuentan aquí su card_ask_view; los demás, donde se mostraron. */
   where?: CardAskWhere;
   /** #329: la vuelta de Tilopay (?tilopay=monto) dijo que el primer cobro va sin el 50 %. */
-  promoLost?: boolean;
+  promoLost?: boolean; /** #332: oferta vigente de la campaña "primer mes al 50 %" (promo_offers). */ promoOffer?: boolean;
 }) {
   const router = useRouter();
   const [choice, setChoice] = useState<PlanChoice>(charge ? { plan: charge.plan, billing: charge.billing } : initial);
@@ -53,7 +53,7 @@ export function CardPanel({ step, charge, card, demo, payments, initial, tz, bet
   const start = () => { if (!demo && !started.current) { started.current = true; track("checkout_view", { plan: choice.plan, billing: choice.billing }); } };
   const price = money(priceOf(choice));
   // 0043: en la beta o en la prueba, dejar la tarjeta lista da el 50 % del primer mes (solo mensual).
-  const offer = step === "trial" || step === "beta";
+  const offer = step === "trial" || step === "beta" || promoOffer;
   // También la cuenta con tarjeta obligatoria (#269), como en la bienvenida, salvo que Tilopay dijera que ya no (#329).
   const promoNow = (offer || step === "card") && choice.billing === "mes" && !promoLost;
   const firstPrice = promoNow ? money(promoPrice(choice.plan)) : price;
