@@ -24,8 +24,12 @@ export type CardTrust = {
   cancel: string;
   /** Versión de una línea, junto al formulario de tarjeta (bienvenida) y al registro (/entrar). */
   oneLine: string;
-  /** Fila "Pago seguro": texto y marcas aceptadas. */
+  /** Bloque "Pago seguro" (#350): título, 3 garantías (título y detalle) y la línea de abajo (conexión y empresa). */
+  secureTitle: string;
+  securePoints: [string, string][];
   secure: string;
+  /** Marcas aceptadas, en el orden en que se muestran. */
+  brandList: string[];
   brands: string;
   /** Línea chica debajo de cada botón de registro. */
   underCta: string;
@@ -55,7 +59,14 @@ export function trustCopy(locale: Locale = "es-419"): CardTrust {
       ],
       cancel: `Cancel in 2 taps from My plan. If you cancel before day ${CHARGE_DAY}, you pay nothing.`,
       oneLine: `Nothing is charged today. We email you on day ${NOTICE_DAY} and charge on day ${CHARGE_DAY}. Cancel before then and you pay nothing.`,
-      secure: "You pay with ONVO (Costa Rican cards) or Tilopay (other countries). Your card details are stored by the payment processor, not by Banana Burn. Encrypted connection.",
+      secureTitle: "Secure payment",
+      securePoints: [
+        ["Nothing is charged today", `Your first charge is on day ${CHARGE_DAY}, never before.`],
+        ["Banana Burn never sees your card", "Your card number goes straight to ONVO (Costa Rican cards) or Tilopay (other countries), the payment processors. We only see the last 4 digits."],
+        ["We remind you before charging", `We email you on day ${NOTICE_DAY} with the date and the amount. Cancel in 2 taps from My plan.`],
+      ],
+      secure: "Encrypted connection. Banana Burn is run by Atlas Resources SRL, Costa Rica.",
+      brandList: ["Visa", "Mastercard"],
       brands: "Visa and Mastercard",
       underCta: `${TRIAL_DAYS} days free · Nothing charged today · Cancel anytime`,
       company: "Banana Burn is run by Atlas Resources SRL, a company in Costa Rica. Email us at hola@bananaburn.app and a real person will answer.",
@@ -82,7 +93,14 @@ export function trustCopy(locale: Locale = "es-419"): CardTrust {
     ],
     cancel: `Cancelas en 2 toques desde Mi plan. Si cancelas antes del día ${CHARGE_DAY}, no pagas nada.`,
     oneLine: `Hoy no se cobra nada. Te avisamos por correo el día ${NOTICE_DAY} y el cobro es el día ${CHARGE_DAY}. Si cancelas antes, no pagas nada.`,
-    secure: "Pagas con ONVO (tarjetas de Costa Rica) o Tilopay (otros países). Los datos de tu tarjeta los guarda el procesador, no Banana Burn. Conexión cifrada.",
+    secureTitle: "Pago seguro",
+    securePoints: [
+      ["Hoy no se cobra nada", `El primer cobro es el día ${CHARGE_DAY}, nunca antes.`],
+      ["Banana Burn nunca ve tu tarjeta", "Tu número va directo a ONVO (tarjetas de Costa Rica) o Tilopay (otros países), los procesadores de pago. Nosotros solo vemos los últimos 4 dígitos."],
+      ["Te avisamos antes de cobrar", `Te escribimos el día ${NOTICE_DAY} con la fecha y el monto. Cancelas en 2 toques desde Mi plan.`],
+    ],
+    secure: "Conexión cifrada. Banana Burn es de Atlas Resources SRL, Costa Rica.",
+    brandList: ["Visa", "Mastercard"],
     brands: "Visa y Mastercard",
     underCta: `${TRIAL_DAYS} días gratis · Hoy no se cobra nada · Cancelas cuando quieras`,
     company: "Banana Burn es de Atlas Resources SRL, una empresa de Costa Rica. Escríbenos a hola@bananaburn.app; te responde una persona.",
