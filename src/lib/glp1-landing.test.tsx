@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import Glp1Landing, { generateMetadata } from "@/app/(marketing)/glp1/page";
 import { PLANS } from "@/lib/plans";
 import { usd2 } from "@/lib/num";
 import { toMetaEvent } from "@/lib/meta-pixel";
+
+// Estas pruebas revisan los textos de antes de la tarjeta obligatoria (23 nov, CARD_REQUIRED_FROM): reloj fijo en el 20 nov
+// para que no cambien de resultado según la fecha del día.
+beforeAll(() => { vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-20T18:00:00.000Z") }); });
+afterAll(() => { vi.useRealTimers(); });
 
 describe("landing GLP-1", () => {
   it("presenta una oferta sin atribuir una condición ni garantizar resultados", () => {

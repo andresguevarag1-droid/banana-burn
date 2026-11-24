@@ -1,11 +1,17 @@
 import { existsSync, readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterAll } from "vitest";
 import RunningLanding, { metadata } from "@/app/(marketing)/running/page";
 import { PLANS } from "@/lib/plans";
 import { SEASONS_T1 } from "@/lib/seasons";
 import { usd2 } from "@/lib/num";
 import { SIGNUP } from "@/app/(marketing)/content";
+
+// Estas pruebas revisan los textos de antes de la tarjeta obligatoria (23 nov, CARD_REQUIRED_FROM): reloj fijo en el 20 nov
+// para que no cambien de resultado según la fecha del día.
+// La página se arma al cargar el archivo (const html), así que el reloj se fija aquí mismo y no en beforeAll.
+vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-20T18:00:00.000Z") });
+afterAll(() => { vi.useRealTimers(); });
 
 const html = renderToStaticMarkup(<RunningLanding />);
 const doc = readFileSync("docs/running-conversion-131.md", "utf8");

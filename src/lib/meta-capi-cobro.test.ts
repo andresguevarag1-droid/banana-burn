@@ -128,7 +128,8 @@ describe("Subscribe del cobro automático", () => {
 
   it("#228: compra de /pago/checkout con Tilopay (vuelve a Mi plan, sin píxel): 1 evento con el event_id de la suscripción", async () => {
     const f = setup({ subscriptions: [{ id: 5, user_id: USER, provider: "tilopay", provider_subscription_id: "tlp:bbc-1", status: "incomplete", plan: "entreno", billing: "mes" }] });
-    const pay = { periodStart: D7.toISOString(), periodEnd: D7.toISOString(), amountMinor: 999, currency: "USD", reference: "orden_1", provider: "tilopay" as const };
+    // periodEnd en el futuro real: con D7 ya pasado, el plan vencía y la prueba dependía de la fecha del día.
+    const pay = { periodStart: D7.toISOString(), periodEnd: "2099-01-01T00:00:00.000Z", amountMinor: 999, currency: "USD", reference: "orden_1", provider: "tilopay" as const };
     await billing.activateVerified(f.db, f.tables.subscriptions[0] as never, pay);
     expect(await billing.activateVerified(f.db, f.tables.subscriptions[0] as never, pay)).toMatchObject({ note: "duplicado" });
     expect(f.tables.profiles[0].plan).toBe("entreno");

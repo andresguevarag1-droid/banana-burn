@@ -2,8 +2,13 @@
 // estas pruebas vigilan que siga el panel y el enlace /c/ tal como existen en el código, y que cada correo cumpla las reglas
 // de Harvey (un solo enlace, sin precios, sin teléfonos ni WhatsApp propio, sin IA, sin exclamaciones).
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 import { CONDO_FREE_DAYS, CONDO_NOTICE_DAYS, CONDO_STATUSES, condoCodeFromName, condoWhatsapp, joinMessage } from "@/lib/condos";
+
+// Estas pruebas revisan los textos de antes de la tarjeta obligatoria (23 nov, CARD_REQUIRED_FROM): reloj fijo en el 20 nov
+// para que no cambien de resultado según la fecha del día.
+beforeAll(() => { vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-20T18:00:00.000Z") }); });
+afterAll(() => { vi.useRealTimers(); });
 
 const kit = readFileSync("marketing/condominios/kit-implementacion.md", "utf8");
 const panel = readFileSync("src/app/admin/condominios/page.tsx", "utf8");
