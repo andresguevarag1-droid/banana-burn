@@ -29,7 +29,7 @@ const POINT_ICONS = [CheckCircle, EyeSlash, Bell] as const;
 
 /**
  * "Pago seguro" (#350): las 3 garantías que la gente busca antes de dejar la tarjeta (hoy no se cobra, no vemos tu tarjeta,
- * avisamos antes), las marcas aceptadas como sellos de texto (sin logos de terceros) y la empresa detrás.
+ * avisamos antes), las marcas aceptadas con su logo y la empresa detrás.
  */
 export function SecurePay({ trust, className = "" }: { trust: CardTrust; className?: string }) {
   return (
@@ -41,7 +41,11 @@ export function SecurePay({ trust, className = "" }: { trust: CardTrust; classNa
         </p>
         <ul aria-label={trust.brands} className="flex gap-1.5">
           {trust.brandList.map((b) => (
-            <li key={b} className="rounded-md border border-line bg-cream px-2 py-1 text-xs font-extrabold tracking-wide text-ink">{b}</li>
+            <li key={b} className="grid h-8 w-12 place-items-center rounded-md border border-line bg-white">
+              {/* Marcas de aceptación (simple-icons, CC0) en /public/pagos; el alt dice cuál es. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/pagos/${b.toLowerCase()}.svg`} alt={b} width={32} height={32} className="size-8" />
+            </li>
           ))}
         </ul>
       </div>
