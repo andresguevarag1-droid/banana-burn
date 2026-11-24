@@ -35,7 +35,7 @@ Banana Burn es una LinkApp (marca registrada en Costa Rica, usada con permiso): 
 ${plans}
 - ${PREMIUM_RETOS_NOTE}
 - Temporadas: pago único de $14.99 (Running), $16.99 (Raquetas) o $18.99 (Cross Training), sobre un plan activo o la prueba gratis. El plan anual incluye 1 temporada deportiva gratis por cada año pagado.
-- ${o.llms} Pago con tarjeta de crédito o débito procesado por ONVO Pay (Costa Rica) o Tilopay (otros países). Se cancela cuando quieras.
+- ${o.llms} Pago con tarjeta de crédito o débito (Visa o Mastercard). Se cancela cuando quieras.
 
 ## Enlaces
 - Inicio: ${SITE_URL}/
