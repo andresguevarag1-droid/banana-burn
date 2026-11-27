@@ -82,7 +82,7 @@ const risk = (): [typeof Lock, string][] => [
   [CreditCard, offer().riskLine],
   [ArrowCounterClockwise, "Cancelas cuando quieras"],
   [Scroll, "8 días hábiles de retracto al pagar"],
-  [Lock, "Pago seguro con ONVO Pay"],
+  [Lock, "Pago seguro con tarjeta"],
 ];
 
 const H2 = "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-0.03em] text-ink text-balance";

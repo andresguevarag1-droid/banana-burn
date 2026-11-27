@@ -56,7 +56,7 @@ const guarantees = (trial: readonly [string, string]) => [
   [Gift, trial[0], trial[1]],
   [ArrowCounterClockwise, "Cancela cuando quieras", "Desde Mi plan, sin llamadas. Conservas el acceso hasta el final del periodo pagado y no se te vuelve a cobrar."],
   [Scroll, "8 días hábiles de retracto", "Si compraste y cambias de opinión, escríbenos dentro de los 8 días hábiles siguientes a la compra (Ley 7472)."],
-  [Lock, "Pago seguro", "Los datos de tu tarjeta van directo a nuestro procesador de pagos (ONVO Pay o Tilopay) y nunca pasan por nuestros servidores."],
+  [Lock, "Pago seguro", "Tu tarjeta viaja cifrada directo al procesador de pago y nunca pasa por nuestros servidores. Solo vemos los últimos 4 dígitos."],
 ] as const;
 
 /**

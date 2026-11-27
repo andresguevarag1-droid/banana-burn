@@ -23,8 +23,9 @@ describe("/precios", () => {
     }
     expect(html).toContain("No sustituye la indicación de tu médico.");
     expect(html).toContain("sin prorrateo");
-    expect(html).toContain("ONVO Pay");
-    expect(html).toContain("Tilopay");
+    // Sin nombres de procesadores de pago en las páginas de venta (decisión de Andrés, 26 nov).
+    expect(html).toContain("Solo vemos los últimos 4 dígitos.");
+    expect(html).not.toMatch(/ONVO|Tilopay/);
   });
 
   it("anual preseleccionado, ahorro en dólares e IVA incluido, sin 'equivale' (#227)", () => {

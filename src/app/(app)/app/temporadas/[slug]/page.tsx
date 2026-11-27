@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: P) {
 }
 
 const PAGO: Record<string, string> = {
-  confirmando: "Estamos confirmando tu pago con Tilopay. Revisa en unos minutos; no vuelvas a pagar.",
+  confirmando: "Estamos confirmando tu pago con tu banco. Revisa en unos minutos; no vuelvas a pagar.",
   rechazada: "El pago no se completó. Puedes intentarlo de nuevo con otra tarjeta.",
   error: "No pudimos confirmar tu pago. Si ves el cargo, escríbenos a hola@bananaburn.app.",
 };

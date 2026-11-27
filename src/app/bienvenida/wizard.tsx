@@ -4,7 +4,7 @@ import { track, trackOnce, FunnelTracker } from "@/components/analytics";
 import { ONBOARDING_STEPS, type EmailClickKind } from "@/app/api/track/event";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning } from "@/components/icons";
+import { ArrowLeft, ArrowRight, ArrowsLeftRight, Banana, BananaFlame, CircleNotch, Barbell, BrandIcon, Check, CheckCircle, Egg, Gorilla, House, MonkeyBanana, Minus, PersonSimpleRun, Plus, Scales, Syringe, Target, Timer, Warning, Info } from "@/components/icons";
 import { ageOn, planWeek, scheduleFor, targets } from "@/lib/engine";
 import { MEDS, glp1Targets } from "@/lib/glp1";
 import { Logo } from "@/components/brand";
@@ -499,7 +499,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos. Escríbenos a hola@bananaburn.app.")}</p>
             )}
-            <p className="text-xs text-muted text-pretty">{t(PROMO_TERMS)}</p>
+            <p className="flex items-start gap-2 rounded-2xl bg-cream/70 p-3 text-xs leading-relaxed text-muted text-pretty"><Info weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>{t(PROMO_TERMS)}</span></p>
             {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />{t("Creando tu plan…")}</p>}
             {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{t(err)}</p>}
           </>)}
@@ -532,7 +532,7 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
             ) : (
               <p className="rounded-2xl bg-banana-soft p-4 text-sm font-semibold text-banana-ink">{t("Los pagos todavía no están activos, así que no podemos guardar tu tarjeta. Puedes seguir sin tarjeta.")}</p>
             )}
-            <p className="text-xs text-muted text-pretty">{t(PROMO_TERMS)}</p>
+            <p className="flex items-start gap-2 rounded-2xl bg-cream/70 p-3 text-xs leading-relaxed text-muted text-pretty"><Info weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>{t(PROMO_TERMS)}</span></p>
             {pending && <p role="status" className="flex items-center gap-2 text-sm text-muted"><CircleNotch weight="bold" className="size-4 animate-spin motion-reduce:animate-none" />{t("Creando tu plan…")}</p>}
             {err && <p role="alert" className="rounded-2xl bg-bad/10 p-3 text-sm font-semibold text-bad">{t(err)}</p>}
           </>)}

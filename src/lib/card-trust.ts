@@ -24,8 +24,12 @@ export type CardTrust = {
   cancel: string;
   /** Versión de una línea, junto al formulario de tarjeta (bienvenida) y al registro (/entrar). */
   oneLine: string;
-  /** Fila "Pago seguro": texto y marcas aceptadas. */
+  /** Bloque "Pago seguro" (#350): título, 3 garantías (título y detalle) y la línea de abajo (conexión y empresa). */
+  secureTitle: string;
+  securePoints: [string, string][];
   secure: string;
+  /** Marcas aceptadas, en el orden en que se muestran. */
+  brandList: string[];
   brands: string;
   /** Línea chica debajo de cada botón de registro. */
   underCta: string;
@@ -55,7 +59,14 @@ export function trustCopy(locale: Locale = "es-419"): CardTrust {
       ],
       cancel: `Cancel in 2 taps from My plan. If you cancel before day ${CHARGE_DAY}, you pay nothing.`,
       oneLine: `Nothing is charged today. We email you on day ${NOTICE_DAY} and charge on day ${CHARGE_DAY}. Cancel before then and you pay nothing.`,
-      secure: "You pay with ONVO (Costa Rican cards) or Tilopay (other countries). Your card details are stored by the payment processor, not by Banana Burn. Encrypted connection.",
+      secureTitle: "Secure payment",
+      securePoints: [
+        ["Nothing is charged today", `Your first charge is on day ${CHARGE_DAY}, never before.`],
+        ["Banana Burn never sees your card", "Your card number goes encrypted straight to the payment processor. We only see the last 4 digits."],
+        ["We remind you before charging", `We email you on day ${NOTICE_DAY} with the date and the amount. Cancel in 2 taps from My plan.`],
+      ],
+      secure: "Encrypted connection. Banana Burn is run by Atlas Resources SRL, Costa Rica.",
+      brandList: ["Visa", "Mastercard"],
       brands: "Visa and Mastercard",
       underCta: `${TRIAL_DAYS} days free · Nothing charged today · Cancel anytime`,
       company: "Banana Burn is run by Atlas Resources SRL, a company in Costa Rica. Email us at hola@bananaburn.app and a real person will answer.",
@@ -65,7 +76,7 @@ export function trustCopy(locale: Locale = "es-419"): CardTrust {
         ["Will you remind me before charging?", `Yes. On day ${NOTICE_DAY}, ${REMINDER_DAYS_BEFORE} days before the charge, we email you the date and the amount. You can always see them in My plan too.`],
         ["How do I cancel?", `Go to My plan, tap Cancel at no cost and then Confirm cancellation. No calls, no emails. If you cancel before day ${CHARGE_DAY}, nothing is charged and you keep access until your trial ends. If you already pay for a plan, you keep access until the end of the period you paid for.`],
         ["What if I change my mind after paying?", "You have 8 business days from each purchase to withdraw (right of withdrawal under Costa Rica's Law 7472). Email hola@bananaburn.app and we refund your payment. Outside that window we don't give prorated refunds for periods already started, unless the law requires it or we made a billing mistake."],
-        ["Is it safe to add my card?", "Yes. You pay with ONVO (Costa Rican cards) or Tilopay (other countries). Your card details are stored by the payment processor, not by Banana Burn, and travel over an encrypted connection. We accept Visa and Mastercard."],
+        ["Is it safe to add my card?", "Yes. Your card goes encrypted straight to the payment processor, which stores it. Banana Burn never sees your card number, only the last 4 digits. We accept Visa and Mastercard."],
         ["Does it work if I've never been to a gym?", "Yes, it's built for starting from zero. Your first workout is guided step by step, every exercise has an animated demo, and during the first week Coach Banana learns your weights."],
         ["Can I train at home?", `Yes. Choose home with dumbbells or bands, or no equipment, and your plan uses what you have. Your first workout takes ${FIRST_HOME_MIN} min and you can do it at home.`],
       ],
@@ -82,7 +93,14 @@ export function trustCopy(locale: Locale = "es-419"): CardTrust {
     ],
     cancel: `Cancelas en 2 toques desde Mi plan. Si cancelas antes del día ${CHARGE_DAY}, no pagas nada.`,
     oneLine: `Hoy no se cobra nada. Te avisamos por correo el día ${NOTICE_DAY} y el cobro es el día ${CHARGE_DAY}. Si cancelas antes, no pagas nada.`,
-    secure: "Pagas con ONVO (tarjetas de Costa Rica) o Tilopay (otros países). Los datos de tu tarjeta los guarda el procesador, no Banana Burn. Conexión cifrada.",
+    secureTitle: "Pago seguro",
+    securePoints: [
+      ["Hoy no se cobra nada", `El primer cobro es el día ${CHARGE_DAY}, nunca antes.`],
+      ["Banana Burn nunca ve tu tarjeta", "Tu número va cifrado directo al procesador de pago. Nosotros solo vemos los últimos 4 dígitos."],
+      ["Te avisamos antes de cobrar", `Te escribimos el día ${NOTICE_DAY} con la fecha y el monto. Cancelas en 2 toques desde Mi plan.`],
+    ],
+    secure: "Conexión cifrada. Banana Burn es de Atlas Resources SRL, Costa Rica.",
+    brandList: ["Visa", "Mastercard"],
     brands: "Visa y Mastercard",
     underCta: `${TRIAL_DAYS} días gratis · Hoy no se cobra nada · Cancelas cuando quieras`,
     company: "Banana Burn es de Atlas Resources SRL, una empresa de Costa Rica. Escríbenos a hola@bananaburn.app; te responde una persona.",
@@ -92,7 +110,7 @@ export function trustCopy(locale: Locale = "es-419"): CardTrust {
       ["¿Me avisan antes de cobrar?", `Sí. El día ${NOTICE_DAY}, ${REMINDER_DAYS_BEFORE} días antes del cobro, te escribimos por correo con la fecha y el monto. También los ves siempre en Mi plan.`],
       ["¿Cómo cancelo?", `En Mi plan tocas Cancelar sin costo y luego Confirmar cancelación. Sin llamadas ni correos. Si cancelas antes del día ${CHARGE_DAY}, no se cobra nada y sigues con acceso hasta el final de tu prueba. Si ya pagas un plan, conservas el acceso hasta el final del periodo pagado.`],
       ["¿Y si me arrepiento después de pagar?", "Tienes 8 días hábiles desde cada compra para ejercer tu derecho de retracto, según la Ley 7472 de Costa Rica. Escríbenos a hola@bananaburn.app y te devolvemos el pago. Fuera de ese plazo no hacemos reembolsos proporcionales de periodos ya iniciados, salvo que la ley lo exija o por un error de cobro nuestro."],
-      ["¿Es seguro poner mi tarjeta?", "Sí. Pagas con ONVO (tarjetas de Costa Rica) o Tilopay (otros países). Los datos de tu tarjeta los guarda el procesador, no Banana Burn, y viajan por una conexión cifrada. Aceptamos Visa y Mastercard."],
+      ["¿Es seguro poner mi tarjeta?", "Sí. Tu tarjeta va cifrada directo al procesador de pago, que es quien la guarda. Banana Burn nunca ve el número, solo los últimos 4 dígitos. Aceptamos Visa y Mastercard."],
       ["¿Sirve si nunca he ido a un gym?", "Sí, está hecha para empezar de cero. Tu primer entreno es guiado paso a paso, cada ejercicio trae su animación y la primera semana Coach Banana aprende tus pesos."],
       ["¿Puedo entrenar en casa?", `Sí. Eliges casa con mancuernas o bandas, o sin equipo, y el plan usa lo que tienes. Tu primer entreno dura ${FIRST_HOME_MIN} min y también lo puedes hacer en casa.`],
     ],

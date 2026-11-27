@@ -54,7 +54,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
   else if (!owned) cta = (
     <>
       <BuyButton slug={c.id} label={`Comprar por ${usd(finalMinor)}`} />
-      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento. ` : ""}Pago único con tarjeta en USD, procesado por ONVO Pay. Es tuyo para siempre.</p>
+      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento. ` : ""}Pago único con tarjeta en USD, pago seguro. Es tuyo para siempre.</p>
     </>
   );
   else if (!ent.app) cta = (
@@ -229,7 +229,7 @@ export async function ProgramDetail({ v, c, preview = false }: { v: Viewer; c: P
               <li>Necesita un plan activo para entrenarlo; si tu plan vence, el programa queda guardado.</li>
               <li>Los retos de hábitos (agua, pasos, proteína) siguen funcionando junto con el programa.</li>
             </ul>
-            {!owned && !preview && <p className="mt-3 flex gap-2 text-xs text-muted"><Info weight="duotone" className="size-4 shrink-0" />El programa se activa en tu cuenta cuando ONVO confirma el pago, normalmente en segundos.</p>}
+            {!owned && !preview && <p className="mt-3 flex gap-2 text-xs text-muted"><Info weight="duotone" className="size-4 shrink-0" />El programa se activa en tu cuenta cuando tu banco confirma el pago, normalmente en segundos.</p>}
           </section>
         </aside>
       </div>

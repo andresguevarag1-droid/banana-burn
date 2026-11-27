@@ -41,13 +41,13 @@ const STATUS: Record<Entitlements["status"], { label: string; cls: string }> = {
 const TILOPAY_NOTICE: Record<string, { ok: boolean; text: string }> = {
   tarjeta_ok: { ok: true, text: "Listo, tu tarjeta quedó guardada." },
   pago_ok: { ok: true, text: "Listo, tu pago se aprobó y tu plan está activo." },
-  confirmando: { ok: true, text: "Estamos confirmando tu pago con Tilopay. Revisa en unos minutos." },
+  confirmando: { ok: true, text: "Estamos confirmando tu pago con tu banco. Revisa en unos minutos." },
   rechazada: { ok: false, text: "Tu banco no aprobó la tarjeta. Prueba con otra o pide a tu banco activar las compras internacionales." },
-  sin_tarjeta: { ok: false, text: "No recibimos tu tarjeta desde Tilopay. Intenta de nuevo." },
+  sin_tarjeta: { ok: false, text: "No se guardó tu tarjeta. Intenta de nuevo: la verificación de centavos se libera sola." },
   vencido: { ok: false, text: "El enlace de pago venció. Vuelve a intentarlo." },
   ocupado: { ok: false, text: "Estamos procesando tu cobro. Revisa en unos minutos." },
   monto: { ok: false, text: "Esa tarjeta ya usó el 50 % del primer mes, así que el primer cobro es al precio normal. No guardamos nada: revisa el monto arriba del botón y vuelve a intentarlo." },
-  error: { ok: false, text: "No pudimos terminar con Tilopay. Intenta de nuevo en un momento." },
+  error: { ok: false, text: "No pudimos terminar el pago seguro. Intenta de nuevo en un momento." },
 };
 
 type Payment = { id: number; provider_payment_intent_id: string | null; received_at: string; amount_minor: number | null; currency: string | null; period_start: string | null; period_end: string | null };

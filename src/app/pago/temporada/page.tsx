@@ -48,8 +48,8 @@ export default async function PagoTemporada({ searchParams }: { searchParams: Pr
         </div>
         <OnvoPayForm publicKey={publicKey} paymentIntentId={pi} customerId={(row.provider_customer_id as string) ?? undefined} successHref={`/pago/temporada/exito?pi=${encodeURIComponent(pi)}`} />
         <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-body">
-          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Procesado por ONVO Pay. Banana Burn no ve ni guarda tu tarjeta. Cobro en dólares (USD).</span></li>
-          <li className="flex gap-2.5"><CalendarCheck weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Te llevamos a la confirmación. Cuando ONVO confirme el pago, podrás completar el cuestionario para armar tu semana. Si tarda, espera allí y no vuelvas a pagar.</span></li>
+          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Pago cifrado. Banana Burn nunca ve tu tarjeta, solo los últimos 4 dígitos. Cobro en dólares (USD).</span></li>
+          <li className="flex gap-2.5"><CalendarCheck weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Te llevamos a la confirmación. Cuando tu banco confirme el pago, podrás completar el cuestionario para armar tu semana. Si tarda, espera allí y no vuelvas a pagar.</span></li>
           <li className="flex gap-2.5"><Scroll weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Lee los <Link href="/terminos#temporadas" className="font-semibold text-ink underline underline-offset-2">términos de las temporadas</Link>.</span></li>
         </ul>
       </section>
@@ -63,7 +63,7 @@ export default async function PagoTemporada({ searchParams }: { searchParams: Pr
         <h2 id="includes-title" className="font-extrabold text-ink">Qué incluye tu temporada</h2>
         <p className="mt-2 text-sm text-body">8 semanas de fuerza para {SPORTS[m.sport].name}, con ejercicios de técnica y una semana organizada alrededor de los días de tu deporte. El cuestionario adapta las sesiones a tu nivel, tiempo y equipo.</p>
         <p className="mt-2 text-sm text-muted">Las semanas siguen el calendario oficial, aunque te incorpores después del inicio.</p>
-        <p className="mt-2 text-sm text-body">Aquí pagas con tarjeta de crédito o débito mediante ONVO Pay, en USD.</p>
+        <p className="mt-2 text-sm text-body">Aquí pagas con tarjeta de crédito o débito de forma segura, en USD.</p>
       </section>
       <Link href={`/app/temporadas/${slug}`} className="tap inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted transition-colors duration-150 hover:text-ink"><ArrowLeft weight="bold" className="size-4" />Volver a la temporada</Link>
     </div>
