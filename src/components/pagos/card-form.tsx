@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { CircleNotch, CreditCard, Info, Lock, WarningCircle } from "@/components/icons";
+import { ArrowCounterClockwise, CircleNotch, CreditCard, Globe, Info, Lock, ShieldCheck, WarningCircle } from "@/components/icons";
 import { cardInputErrors, formatCardNumber, formatExp, onlyDigits, onvoCardBody, onvoCardError, type CardErrors, type CardInput } from "@/lib/card-input";
 import type { PlanChoice } from "./plan-picker";
 import type { ChargeView } from "@/lib/trial";
@@ -131,7 +131,23 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   if (tilopay) {
     return (
       <form onSubmit={goTilopay} noValidate className="space-y-3" aria-describedby={`${id}-sec`}>
-        <p className="flex items-start gap-2 rounded-2xl bg-banana-soft p-3 text-sm text-ink text-pretty"><CreditCard weight="duotone" aria-hidden className="mt-0.5 size-5 shrink-0" /><span>Vas a guardar tu tarjeta en la página segura de Tilopay, nuestro procesador para tarjetas de otros países. Al terminar vuelves aquí.</span></p>
+        {/* Lo que la persona va a ver en la página de pago, antes de ir: la verificación temporal que muestra esa página
+            (Total $0.10 y pre-autorización de $1) asustaba y casi todos cancelaban en segundos. */}
+        <ul aria-label="Antes de seguir" className="space-y-3 rounded-[1.5rem] border border-line bg-white p-4 shadow-sm">
+          {[
+            [ShieldCheck, "Página de pago segura", "Escribes tu tarjeta en una página cifrada y vuelves aquí sola al terminar."],
+            [ArrowCounterClockwise, "Verás una verificación de centavos", "Tu banco hace una retención temporal (de $0.10 hasta $1) para confirmar que la tarjeta es real y la libera al instante. No es el cobro de tu plan."],
+            [Globe, "Tarjetas de cualquier país", "Se cobra en dólares. Si tu banco lo pide, activa las compras internacionales."],
+          ].map(([Icon, title, detail]) => {
+            const I = Icon as typeof ShieldCheck;
+            return (
+              <li key={title as string} className="flex gap-3">
+                <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-peel/10"><I weight="duotone" className="size-[18px] text-peel" /></span>
+                <div><p className="text-sm font-extrabold text-ink">{title as string}</p><p className="mt-0.5 text-sm leading-relaxed text-body text-pretty">{detail as string}</p></div>
+              </li>
+            );
+          })}
+        </ul>
         {err && <p role="alert" className="flex gap-2 rounded-2xl border border-bad/20 bg-bad/5 p-3 text-sm font-semibold text-bad"><WarningCircle weight="duotone" className="size-5 shrink-0" />{err}</p>}
         {consentText}
         <button type="submit" disabled={Boolean(busy)} aria-busy={Boolean(busy)} className="btn-banana h-14 w-full text-base">
@@ -139,7 +155,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
         </button>
         <div className="text-sm text-ink text-pretty">{note}</div>
         <div>{switcher}</div>
-        <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />El número de tu tarjeta lo escribes en Tilopay. Banana Burn no lo ve ni lo guarda. Se cobra en dólares: si tu banco lo pide, activa las compras internacionales.</p>
+        <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />Banana Burn nunca ve tu número de tarjeta: solo los últimos 4 dígitos.</p>
       </form>
     );
   }
@@ -189,7 +205,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
       reportPayFail({ provider: "onvo", stage: "tarjeta", code: "conexion", plan: choice.plan, billing: choice.billing });
       fail("conexion");
       setOnvoTrouble(true);
-      return setErr("No pudimos conectar con el procesador de pagos. Revisa tu conexión e intenta de nuevo.");
+      return setErr("No pudimos abrir el pago seguro. Revisa tu conexión e intenta de nuevo.");
     }
     setBusy("guardar");
     const saved = await post({ action: "guardar", paymentMethodId: pmId, plan: choice.plan, billing: choice.billing, ...(condo ? { condo } : {}), ...accepted });
@@ -241,11 +257,11 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
         {busy ? <><CircleNotch weight="bold" className="size-5 animate-spin motion-reduce:animate-none" />{busy === "tarjeta" ? "Guardando tu tarjeta…" : "Confirmando…"}</> : submitLabel}
       </button>
       {tilopayHint && (
-        <button type="button" onClick={() => { setErr(null); setProvider("tilopay"); }} className="btn-ghost h-12 w-full text-base">¿No carga? Intenta con Tilopay</button>
+        <button type="button" onClick={() => { setErr(null); setProvider("tilopay"); }} className="btn-ghost h-12 w-full text-base">¿No carga? Prueba con la otra página de pago</button>
       )}
       <div className="text-sm text-ink text-pretty">{note}</div>
       {switcher && <div>{switcher}</div>}
-      <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />El número de tu tarjeta va directo a ONVO Pay, nuestro procesador de pagos. Banana Burn no lo ve ni lo guarda: solo la marca y los últimos 4 dígitos.</p>
+      <p id={`${id}-sec`} className="flex items-start gap-2 text-xs text-muted text-pretty"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" />Tu tarjeta viaja cifrada directo al procesador de pago. Banana Burn nunca ve el número: solo la marca y los últimos 4 dígitos.</p>
     </form>
   );
 }

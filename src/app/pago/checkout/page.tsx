@@ -62,14 +62,14 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
         <OnvoPayForm publicKey={publicKey} subscriptionId={s} customerId={row.provider_customer_id ?? undefined} />
         <p className="mt-2 text-center"><Link href={`/pago/cancelado?s=${encodeURIComponent(s)}`} data-cta="checkout-ahora-no" className="tap inline-flex min-h-11 items-center text-sm font-semibold text-muted underline hover:text-ink">Continuar sin tarjeta</Link></p>
         <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-body">
-          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Procesado por ONVO Pay. Banana Burn no ve ni guarda tu tarjeta. Cobro en dólares (USD).</span></li>
+          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Pago cifrado. Banana Burn nunca ve tu tarjeta, solo los últimos 4 dígitos. Cobro en dólares (USD).</span></li>
           <li className="flex gap-2.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">Cancelas cuando quieras desde Mi plan, sin llamadas. Conservas el acceso hasta el final del periodo pagado.</span></li>
           <li className="flex gap-2.5"><Scroll weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span className="text-pretty">8 días hábiles de derecho de retracto. Lee los <Link href="/terminos#planes" className="font-semibold text-ink underline underline-offset-2">Términos</Link> y <Link href="/terminos#reembolsos" className="font-semibold text-ink underline underline-offset-2">reembolsos y retracto</Link>.</span></li>
         </ul>
       </section>
       <section className="card p-4" aria-labelledby="after-pay-title">
         <h2 id="after-pay-title" className="font-extrabold text-ink">¿Qué pasa después del pago?</h2>
-        <p className="mt-2 text-sm text-body text-pretty">Te llevamos a la confirmación. Cuando ONVO confirme el cobro, tu plan se activa y puedes ir a tu entreno de hoy. Tu progreso sigue guardado.</p>
+        <p className="mt-2 text-sm text-body text-pretty">Te llevamos a la confirmación. Cuando tu banco confirme el cobro, tu plan se activa y puedes ir a tu entreno de hoy. Tu progreso sigue guardado.</p>
         <p className="mt-2 text-sm text-muted">Si la confirmación tarda, espera en esa pantalla. No vuelvas a pagar.</p>
         <dl className="mt-3 border-t border-line pt-3 text-sm">
           <div className="flex items-baseline justify-between gap-3"><dt className="text-muted">Próxima renovación</dt><dd className="text-right font-semibold text-ink">{renews}, por <span className="tabular-nums">{money(price)} USD</span></dd></div>

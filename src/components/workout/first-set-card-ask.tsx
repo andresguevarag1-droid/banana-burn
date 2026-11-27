@@ -3,7 +3,7 @@
 // abre el formulario en una hoja encima del entreno (no se sale del entreno). "Cerrar" la oculta en este teléfono.
 // Hoy no se cobra nada: con la prueba en curso, guardar la tarjeta programa el cobro al terminarla (saveCard).
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle, CreditCard, X } from "@/components/icons";
+import { CheckCircle, CreditCard, X, Info } from "@/components/icons";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
 import { firstWorkoutOffer } from "@/lib/first-workout-offer";
 import { PROMO_TERMS } from "@/lib/trial";
@@ -51,7 +51,7 @@ export function FirstSetCardSheet({ onClose, onSaved }: { onClose: () => void; o
           <p className="text-body text-pretty">{t("{plan} mensual:", { plan: t(o.name) })} <b className="tabular-nums">{usd2(o.monthFirst)}</b> {t("el primer mes, después")} <span className="tabular-nums">{usd2(o.month)}</span> {t("al mes. Precios en USD, IVA incluido.")}</p>
           <CardForm choice={{ plan: o.plan, billing: "mes" }} demo={false} submitLabel={t("Dejar mi tarjeta")} consent={(promo = true) => consentFor({ button: t("Dejar mi tarjeta"), plan: o.plan, billing: "mes", promo, day: null }, t)} onSaved={(r) => { onSaved(r); setDone(true); }}
             note={<><b>{t("Hoy no se cobra nada.")}</b> {t("Se cobra al terminar tu prueba, salvo que canceles antes desde Mi plan. Te avisamos 2 días antes.")}</>} />
-          <p className="text-xs text-muted text-pretty">{t(PROMO_TERMS)}</p>
+          <p className="flex items-start gap-2 rounded-2xl bg-cream/70 p-3 text-xs leading-relaxed text-muted text-pretty"><Info weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>{t(PROMO_TERMS)}</span></p>
           <button type="button" onClick={onClose} className="btn-ghost h-12 w-full">{t("Seguir entrenando")}</button>
         </>)}
       </div>
