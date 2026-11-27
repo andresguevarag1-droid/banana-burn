@@ -66,7 +66,7 @@ describe("registro con la tarjeta obligatoria (#323)", () => {
   it("desde la fecha, junto al registro: el cobro en una línea y el pago seguro", async () => {
     at(CARD_REQUIRED_FROM);
     const html = await render("registro");
-    expect(html).toContain(trustCopy().oneLine);
+    expect(html).toContain(trustCopy().securePoints[0][0]);
     expect(html).toContain(trustCopy().secure);
     expect(await render()).not.toContain(trustCopy().secure);
   });

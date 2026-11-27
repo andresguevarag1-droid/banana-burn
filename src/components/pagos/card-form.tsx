@@ -225,7 +225,7 @@ export function CardForm({ choice, demo, submitLabel, note, onSaved, beforeRedir
   const errText = (k: keyof CardInput) => errors[k] && <span id={`${id}-${k}-e`} className="mt-1 block text-xs font-semibold text-bad">{errors[k]}</span>;
   return (
     <form onSubmit={submit} onFocusCapture={startOnce} noValidate className="space-y-3" aria-describedby={`${id}-sec`}>
-      {demo && <p className="flex items-start gap-2 rounded-2xl bg-ink p-3 text-sm text-white/90"><Info weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> no se guarda ninguna tarjeta real ni se llama a ONVO Pay. Usa cualquier número de prueba, como 4242 4242 4242 4242.</span></p>}
+      {demo && <p className="flex items-start gap-2 rounded-2xl bg-ink p-3 text-sm text-white/90"><Info weight="duotone" className="mt-0.5 size-5 shrink-0 text-banana" /><span><b>Modo demo:</b> no se guarda ninguna tarjeta real ni se hace ningún cobro. Usa cualquier número de prueba, como 4242 4242 4242 4242.</span></p>}
       <label className="block">
         <span className="text-sm font-bold text-ink">Nombre en la tarjeta</span>
         <input value={c.holder} onChange={(e) => up({ holder: e.target.value.slice(0, 80) })} autoComplete="cc-name" className={`${field} mt-1`} aria-invalid={Boolean(errors.holder)} aria-describedby={errors.holder ? `${id}-holder-e` : undefined} />

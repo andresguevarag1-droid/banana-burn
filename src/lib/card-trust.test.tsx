@@ -115,16 +115,18 @@ describe("páginas públicas antes y después de la fecha", () => {
 
 describe("bienvenida: el paso de la tarjeta obligatoria", () => {
   const props = { name: "Ana", demo: true, initialGoal: null, glp1: false, country: "CR", intent: null, trialEndsAt: "2026-11-30T06:00:00.000Z", chargeAt: "2026-11-30T06:00:00.000Z", startOnCard: true };
-  it("junto al formulario: la línea del cobro y el pago seguro; en el paso opcional de antes, no", () => {
+  it("junto al formulario: los pasos del cobro y el pago seguro; en el paso opcional de antes, no", () => {
     const t = text(renderToStaticMarkup(<Wizard {...props} cardOffer cardRequired />));
-    expect(t).toContain(nb(trustCopy().oneLine));
+    expect(t).toContain("$0: empiezas tus 7 días gratis");
+    expect(t).toContain("Te avisamos por correo");
     expect(t).toContain(trustCopy().secure);
     const optional = text(renderToStaticMarkup(<Wizard {...props} cardOffer />));
     expect(optional).not.toContain(trustCopy().secure);
   });
   it("en inglés, con los mismos datos", () => {
     const t = text(renderToStaticMarkup(<Wizard {...props} locale="en-US" cardOffer cardRequired />));
-    expect(t).toContain(trustCopy("en-US").oneLine);
+    expect(t).toContain("$0: your 7 free days start");
+    expect(t).toContain("We email you");
     expect(t).toContain(trustCopy("en-US").secure);
   });
 });

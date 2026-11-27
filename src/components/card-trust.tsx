@@ -1,6 +1,6 @@
 // Piezas de confianza del registro con tarjeta (#323). Reciben los textos de cardTrust() (src/lib/card-trust.ts), que es
 // null antes de CARD_REQUIRED_FROM: quien las usa no muestra nada en ese caso.
-import { Bell, CheckCircle, EyeSlash, Lock, ShieldCheck } from "@/components/icons";
+import { Bell, CalendarCheck, CheckCircle, EyeSlash, Gift, Lock, ShieldCheck } from "@/components/icons";
 import type { CardTrust } from "@/lib/card-trust";
 
 /** "Así funciona tu prueba": línea de tiempo de 4 pasos y, debajo, la línea de la cancelación. */
@@ -26,6 +26,33 @@ export function TrialTimeline({ trust, id = "tu-prueba", className = "" }: { tru
 }
 
 const POINT_ICONS = [CheckCircle, EyeSlash, Bell] as const;
+
+/**
+ * Lo que pasa con su tarjeta, con sus fechas y su monto, junto al formulario: hoy $0, aviso por correo, primer cobro.
+ * Va arriba del formulario de la tarjeta en la bienvenida (en vez de una línea de texto).
+ */
+export function ChargeSteps({ rows, ariaLabel, className = "" }: { rows: [string, string, string][]; ariaLabel: string; className?: string }) {
+  const icons = [Gift, Bell, CalendarCheck];
+  return (
+    <ol aria-label={ariaLabel} className={`relative space-y-0 rounded-[1.5rem] border border-line bg-white p-4 shadow-sm ${className}`}>
+      {rows.map(([when, title, detail], i) => {
+        const Icon = icons[i % icons.length];
+        const last = i === rows.length - 1;
+        return (
+          <li key={when} className="relative flex gap-3 pb-4 last:pb-0">
+            {!last && <span aria-hidden className="absolute left-[17px] top-9 bottom-0 w-0.5 bg-line" />}
+            <span aria-hidden className={`relative grid size-9 shrink-0 place-items-center rounded-full ${i === 0 ? "bg-peel text-white" : "bg-banana-soft text-ink"}`}><Icon weight="duotone" className="size-5" /></span>
+            <div className="min-w-0 pt-0.5">
+              <p className="text-xs font-extrabold uppercase tracking-wide text-banana-ink tabular-nums">{when}</p>
+              <p className="text-base font-extrabold text-ink text-balance tabular-nums">{title}</p>
+              <p className="mt-0.5 text-sm leading-relaxed text-body text-pretty">{detail}</p>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 /**
  * "Pago seguro" (#350): las 3 garantías que la gente busca antes de dejar la tarjeta (hoy no se cobra, no vemos tu tarjeta,

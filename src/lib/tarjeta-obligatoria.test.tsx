@@ -154,7 +154,10 @@ describe("bienvenida: el paso de la tarjeta obligatoria", () => {
   it("con la tarjeta obligatoria: sin \"Empezar gratis sin tarjeta\" ni \"La tarjeta es opcional\", y con el texto del cobro", () => {
     const t = text(renderToStaticMarkup(<Wizard {...props} cardOffer cardRequired />));
     expect(t).toContain("Deja tu tarjeta para empezar tus 7 días gratis");
-    expect(t).toContain("Hoy no se cobra nada. El 30 de noviembre se cobra $7.49, tu primer mes con 50 %. Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.");
+    // Los pasos del cobro, con la fecha y el monto (la línea completa queda como aria-label de la lista).
+    expect(t).toMatch(/Hoy\s*\$0: empiezas tus 7 días gratis/);
+    expect(t).toMatch(/30 de noviembre\s*\$7\.49, tu primer mes al 50/);
+    expect(renderToStaticMarkup(<Wizard {...props} cardOffer cardRequired />)).toContain('aria-label="Hoy no se cobra nada. El 30 de noviembre se cobra $7.49');
     expect(t).not.toMatch(/sin tarjeta|opcional/i);
   });
   it("al volver con el plan ya guardado abre directo en la tarjeta, sin volver atrás", () => {
