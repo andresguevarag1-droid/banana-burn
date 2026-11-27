@@ -61,7 +61,9 @@ export default async function Bienvenida({ searchParams }: { searchParams: Promi
   const vista = params.vista;
   // #269: si ya guardó su plan y cerró la bienvenida en la tarjeta, al volver abre directo en ese paso.
   const resumeCard = cardRequired && !v.demo && v.onboarded;
-  const startOnCard = v.demo && cardOffer && vista === "tarjeta";
+  // Solo demo: ?vista=tarjeta-obligatoria abre el paso de la tarjeta obligatoria (desde el 23 nov), para revisarlo.
+  if (v.demo && vista === "tarjeta-obligatoria") { cardRequired = true; cardOffer = true; nutrition = true; chargeAt ??= new Date(Date.now() + 7 * 864e5).toISOString(); }
+  const startOnCard = v.demo && cardOffer && (vista === "tarjeta" || vista === "tarjeta-obligatoria");
   // #325: el botón de los correos de rescate (?e=tarjeta_rescate_1/2). Si ya dejó la tarjeta y terminó la bienvenida, a la app.
   const emailClick = isEmailClickKind(params.e) ? params.e : null;
   if (emailClick && !v.demo && v.onboarded && !resumeCard) redirect("/app");

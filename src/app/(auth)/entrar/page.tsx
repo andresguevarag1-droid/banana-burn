@@ -85,7 +85,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
               <>
                 {invited && <p className="mb-5 flex items-center gap-2 rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-banana-ink"><Banana weight="fill" aria-hidden className="size-5 shrink-0" />{t("Llegaste con una invitación. Crea tu cuenta y entrena gratis {n} días.", { n: TRIAL_DAYS })}</p>}
                 <LocaleProvider locale={locale}><Suspense><LoginForm configured={isSupabaseConfigured} googleEnabled={process.env.NEXT_PUBLIC_GOOGLE_AUTH === "1"} signupChecks={o.signupChecks} platform={await requestPlatform()} openIn={openIn} /></Suspense></LocaleProvider>
-                {trust && <><p className="mt-5 text-sm font-semibold text-ink text-pretty">{trust.oneLine}</p><SecurePay trust={trust} className="mt-3" /></>}
+                {trust && <SecurePay trust={trust} className="mt-5" />}
               </>
             )}
           </div>

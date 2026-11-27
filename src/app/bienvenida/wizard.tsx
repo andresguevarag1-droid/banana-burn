@@ -17,7 +17,7 @@ import { TRIAL_DAYS } from "@/lib/copy";
 import { GOALS, goalError, paceFor, suggestDate, type Goal } from "./goal";
 import { safeAction } from "@/lib/action-client";
 import { CardForm, type CardSaved } from "@/components/pagos/card-form";
-import { SecurePay } from "@/components/card-trust";
+import { ChargeSteps, SecurePay } from "@/components/card-trust";
 import { trustCopy } from "@/lib/card-trust";
 import { PlanPicker, type PlanChoice } from "@/components/pagos/plan-picker";
 import { DAY_MS, PROMO_TERMS, PROMO_TITLE, promoApplies, promoChargeLine, promoPrice } from "@/lib/trial";
@@ -101,6 +101,18 @@ export function requiredLine(chargeDay: string | null, c: PlanChoice, t: T = tr(
   const when = chargeDay ? t("El {day}", { day: chargeDay }) : t("Al terminar tu prueba");
   const charge = c.billing === "mes" ? t("se cobra {price}, tu primer mes con 50 %", { price: money2(promoPrice(c.plan)) }) : t("se cobran {price} del plan anual", { price: money2(PLANS.find((p) => p.id === c.plan)!.price.anual) });
   return `${t("Hoy no se cobra nada.")} ${when} ${charge}. ${t("Cancela cuando quieras desde Mi plan. Te avisamos 2 días antes.")}`;
+}
+
+/** Las 3 filas de ChargeSteps: hoy $0, el aviso por correo (2 días antes) y el primer cobro con su monto. */
+export function chargeRows(chargeDay: string | null, c: PlanChoice, t: T = tr(DEFAULT_LOCALE)): [string, string, string][] {
+  const first = c.billing === "mes"
+    ? t("{price}, tu primer mes al 50 %", { price: money2(promoPrice(c.plan)) })
+    : t("{price} del plan anual", { price: money2(PLANS.find((p) => p.id === c.plan)!.price.anual) });
+  return [
+    [t("Hoy"), t("$0: empiezas tus {n} días gratis", { n: TRIAL_DAYS }), t("Con todo incluido. Hoy no se cobra nada.")],
+    [t("2 días antes"), t("Te avisamos por correo"), t("Con la fecha y el monto. Si no te convence, cancelas en 2 toques desde Mi plan.")],
+    [chargeDay ?? t("Al terminar tu prueba"), first, c.billing === "mes" ? t("Solo si no cancelaste antes. Desde el segundo mes, precio normal.") : t("Solo si no cancelaste antes. Se renueva cada año.")],
+  ];
 }
 
 export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: initialName, demo, initialGoal, glp1, country, intent, trialEndsAt, trialBeta = false, nutrition = true, cardOffer = false, cardRequired = false, onboarded = false, chargeAt: offerChargeAt = null, payments = true, startOnCard = false, startOnVoice = false, betaFirstPaid = "", betaLastFree = "", emailClick = null }: {
@@ -486,14 +498,14 @@ export function Wizard({ locale = DEFAULT_LOCALE, units: initialUnits, name: ini
               <h1 className="text-2xl font-extrabold tracking-tight text-ink text-balance">{t("Deja tu tarjeta para empezar tus {n} días gratis", { n: TRIAL_DAYS })}</h1>
               <p className="mt-2 text-muted text-pretty">{t("Tienes todo incluido: entreno, Coach Banana, nutrición y Banana Shield.")}</p>
             </div>
-            <p className="rounded-2xl bg-banana-soft px-4 py-3 text-sm font-semibold text-ink text-pretty">{requiredLine(chargeDay, choice, t)}</p>
             <PlanPicker value={choice} onChange={setChoice} disabled={pending} promo />
+            {/* Hoy $0, aviso y primer cobro con su fecha y su monto, en vez de una línea de texto (sigue en requiredLine para las pruebas y el lector). */}
+            <ChargeSteps ariaLabel={requiredLine(chargeDay, choice, t)} rows={chargeRows(chargeDay, choice, t)} />
             {payments || demo ? (
               <>
                 <CardForm choice={choice} demo={demo} submitLabel={t("Empezar mis {n} días gratis", { n: TRIAL_DAYS })} onSaved={(r) => finish(r)} beforeRedirect={saveBeforeTilopay} where="bienvenida" note={null}
                   consent={(promo = true) => consentFor({ button: t("Empezar mis {n} días gratis", { n: TRIAL_DAYS }), ...choice, promo, day: chargeDay }, t)} />
-                {/* #323: cómo funciona el cobro en una línea y quién guarda la tarjeta, pegado al formulario. */}
-                <p className="text-sm font-semibold text-ink text-pretty">{trustCopy(locale).oneLine}</p>
+                {/* #323: quién guarda la tarjeta y qué garantizamos, pegado al formulario. */}
                 <SecurePay trust={trustCopy(locale)} />
               </>
             ) : (
