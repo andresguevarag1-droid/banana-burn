@@ -198,6 +198,10 @@ begin
   insert into public.kudos (post_id, user_id) values (p, u);
   insert into public.reports (target_type, target_id, reporter, reason) values ('user', bbtest.u('S')::text, u, 'otro');
 end $$;
+-- La suite crea cuentas "hoy". Desde el 23 nov 2026 (0073) una cuenta nueva sin tarjeta ya no tiene prueba, así que estas
+-- verificaciones (escritas para la prueba sin tarjeta de 0043) corren con la fecha del cambio en el futuro. Al final, con la
+-- fecha real de 0073, se revisa la tarjeta obligatoria.
+create or replace function public._card_required_from() returns timestamptz language sql immutable set search_path = public as $$ select timestamptz '2099-01-01 00:00:00+00'; $$;
 select bbtest.seed(n) from unnest(array['A','B','D']) n;
 -- A y B siguen a E (ajena a los pares que se prueban); D sigue a B (para la prueba de comunidad).
 insert into public.follows (follower, followee) values (bbtest.u('A'), bbtest.u('E')), (bbtest.u('B'), bbtest.u('E')), (bbtest.u('D'), bbtest.u('B'));
@@ -2540,6 +2544,13 @@ select bbtest.fails('0065: el admin no cambia el texto', $q$update public.testim
 reset role;
 select bbtest.ok('0065: anónimo no lee opiniones', not has_table_privilege('anon', 'public.testimonials', 'select'));
 delete from public.testimonials;
+
+-- ───────────── Tarjeta obligatoria (0071/0073), con la fecha real ─────────────
+create or replace function public._card_required_from() returns timestamptz language sql immutable set search_path = public as $$ select timestamptz '2026-11-23 06:00:00+00'; $$;
+insert into auth.users (id, email) values ('ab000000-0000-4000-8000-0000000000c1', 'c1@prueba.test'), ('ab000000-0000-4000-8000-0000000000c2', 'c2@prueba.test');
+select bbtest.card_trial('ab000000-0000-4000-8000-0000000000c2');
+select bbtest.ok('0073: cuenta nueva sin tarjeta no tiene la app', not public._has_app_access('ab000000-0000-4000-8000-0000000000c1')) where now() >= timestamptz '2026-11-23 06:00:00+00';
+select bbtest.ok('0073: cuenta nueva con tarjeta y cobro programado tiene la app', public._has_app_access('ab000000-0000-4000-8000-0000000000c2')) where now() >= timestamptz '2026-11-23 06:00:00+00';
 
 -- ───────────── Resumen ─────────────
 select bbtest.ok('aislamiento: ninguna fila de B quedó modificada por A', (select count(*) = 1 from public.weights where user_id = bbtest.u('B')));
