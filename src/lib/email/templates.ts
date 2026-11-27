@@ -806,10 +806,25 @@ export const TRIAL_SEQUENCE: Record<TrialStepDay, { subject: string; preheader: 
 };
 
 /** Una pieza de la secuencia de la prueba. Lleva enlace de baja (scope "recordatorios": reemplaza al recordatorio del día). */
-export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string; locale?: Locale }): Email {
+/**
+ * #327: la primera línea de cada pieza de la prueba, con sus datos reales. Con entrenos: cuántos, series y kg levantados.
+ * Sin entrenos (o si la lectura falló, progress null): el primer entreno de 12 min, sin inventar logros.
+ */
+export function trialSequenceLine(p: TrialProgress | null, locale: Locale = DEFAULT_LOCALE, units: Units = "metric"): string {
+  const t = tr(locale);
+  if (p && p.workouts > 0) {
+    const extra = [p.sets > 0 && plural(t, p.sets, "{n} serie", "{n} series"), p.kg > 0 && t("{total} levantados", { total: liftedTotal(p.kg, units) })].filter(Boolean) as string[];
+    const workouts = plural(t, p.workouts, "{n} entreno", "{n} entrenos");
+    return t("Llevas {workouts}{extra} en tu prueba. Todo queda guardado en Progreso.", { workouts, extra: extra.length ? t(", con {items}", { items: extra.join(t(" y ")) }) : "" });
+  }
+  return t("Tu primer entreno dura {min} min y lo puedes hacer hoy, también en casa.", { min: FIRST_HOME_MIN });
+}
+
+export function secuenciaPrueba(d: { day: TrialStepDay; unsubscribe: string; locale?: Locale; progress?: TrialProgress | null; personal?: boolean; units?: Units }): Email {
   const locale = d.locale ?? DEFAULT_LOCALE;
   const c = localized(TRIAL_SEQUENCE[d.day], tr(locale));
-  const body = c.paragraphs.slice(0, -1);
+  // #327: con personal, primero lo que lleva (o su primer entreno) y después la pieza de siempre.
+  const body = [...(d.personal ? [trialSequenceLine(d.progress ?? null, locale, d.units ?? defaultUnits(locale))] : []), ...c.paragraphs.slice(0, -1)];
   const coach = esc(c.paragraphs.at(-1));
   const hero: Hero = { eyebrow: tr(locale)("Tu prueba de 7 días"), title: esc(c.subject), lead: esc(c.preheader) };
   const html = body.map((x) => p(esc(x))).join("") + button(c.cta, c.path, c.kind);

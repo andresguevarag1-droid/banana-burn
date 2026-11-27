@@ -596,7 +596,9 @@ async function sendTrialStep(admin: SupabaseClient, u: Profile, step: TrialStep,
   const to = await getEmail();
   if (to) {
     const unsubscribe = unsubscribeUrl(userId, "recordatorios");
-    const r = await sendEmail(to, withLoginLinks(T.secuenciaPrueba({ day: stepDay(step), unsubscribe, locale: u.locale }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
+    // #327: con sus datos reales (entrenos, series, kg); si la lectura falla, progress null y habla de su primer entreno.
+    const progress = await progressOf(admin, userId);
+    const r = await sendEmail(to, withLoginLinks(T.secuenciaPrueba({ day: stepDay(step), unsubscribe, locale: u.locale, progress, personal: true, units: u.units ?? undefined }), userId), { idempotencyKey: `${step}/${userId}`, unsubscribe, tags: { kind: step } });
     if (r.ok) stats.email++;
   }
   stats.sent[step] = (stats.sent[step] ?? 0) + 1;

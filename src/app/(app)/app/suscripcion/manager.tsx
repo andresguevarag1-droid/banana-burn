@@ -105,7 +105,7 @@ export function SubscriptionManager({ current, intent, payments, demo }: { curre
         {!payments && demo && <p className="mt-3 text-sm text-muted">Modo demo: los botones de pago están desactivados.</p>}
         {!paid && (
           <ul className="mt-4 grid gap-1.5 text-xs font-semibold text-muted sm:grid-cols-3">
-            <li className="flex items-center gap-1.5"><Lock weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />Pago seguro con ONVO Pay</li>
+            <li className="flex items-center gap-1.5"><Lock weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />Pago seguro con tarjeta</li>
             <li className="flex items-center gap-1.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />Cancela cuando quieras</li>
             <li className="flex items-center gap-1.5"><Scroll weight="duotone" aria-hidden className="size-4 shrink-0 text-peel" />8 días hábiles de retracto</li>
           </ul>

@@ -46,8 +46,8 @@ export default async function PagoReto({ searchParams }: { searchParams: Promise
         </div>
         <OnvoPayForm publicKey={publicKey} paymentIntentId={pi} customerId={(row.provider_customer_id as string) ?? undefined} successHref={`/pago/reto/exito?pi=${encodeURIComponent(pi)}`} />
         <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-body">
-          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Procesado por ONVO Pay. Banana Burn no ve ni guarda tu tarjeta. Cobro en dólares (USD).</span></li>
-          <li className="flex gap-2.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Un solo cobro. El reto se activa en tu cuenta en cuanto ONVO confirma el pago.</span></li>
+          <li className="flex gap-2.5"><Lock weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Pago cifrado. Banana Burn nunca ve tu tarjeta, solo los últimos 4 dígitos. Cobro en dólares (USD).</span></li>
+          <li className="flex gap-2.5"><ArrowCounterClockwise weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Un solo cobro. El reto se activa en tu cuenta en cuanto tu banco confirma el pago.</span></li>
           <li className="flex gap-2.5"><Scroll weight="duotone" aria-hidden className="mt-0.5 size-4 shrink-0 text-peel" /><span>Lee los <Link href="/terminos#reembolsos" className="font-semibold text-ink underline underline-offset-2">reembolsos y derecho de retracto</Link>.</span></li>
         </ul>
       </section>

@@ -72,7 +72,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
   else if (paid && !isOwned && open !== "cerrado") cta = (
     <>
       <BuyButton slug={c.id} label={`Comprar por ${usd(finalMinor)}`} />
-      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento. ` : ""}Pago único con tarjeta en USD, procesado por ONVO Pay.{open === "pronto" ? " Puedes comprarlo ya y empezarlo cuando abra." : ""}</p>
+      <p className="mt-2 text-center text-xs text-muted">{finalMinor < listMinor ? `Precio normal ${usd(listMinor)}. Tu nivel ${perks.level.n} te da ${perks.discountPct} % de descuento. ` : ""}Pago único con tarjeta en USD, pago seguro.{open === "pronto" ? " Puedes comprarlo ya y empezarlo cuando abra." : ""}</p>
     </>
   );
   else if (open === "pronto") cta = <p className="rounded-2xl bg-sky/10 p-3 text-center text-sm font-bold text-sky">{c.startDate ? `Abre el ${fmtStart(c.startDate)}` : "Muy pronto"}</p>;
@@ -179,7 +179,7 @@ export default async function RetoDetalle({ params, searchParams }: P) {
               <li>Máximo {MAX_ACTIVE} retos en curso a la vez.</li>
               {c.startMode === "fecha" && c.startDate && <li>Empieza el {fmtStart(c.startDate)}; puedes unirte durante sus primeros 3 días.</li>}
             </ul>
-            {paid && !isOwned && <p className="mt-3 flex gap-2 text-xs text-muted"><WarningCircle weight="duotone" className="size-4 shrink-0" />El reto se activa en tu cuenta cuando ONVO confirma el pago, normalmente en segundos.</p>}
+            {paid && !isOwned && <p className="mt-3 flex gap-2 text-xs text-muted"><WarningCircle weight="duotone" className="size-4 shrink-0" />El reto se activa en tu cuenta cuando tu banco confirma el pago, normalmente en segundos.</p>}
           </section>
         </aside>
       </div>

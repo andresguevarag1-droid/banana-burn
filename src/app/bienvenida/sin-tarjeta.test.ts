@@ -7,7 +7,7 @@ describe("bienvenida sin oferta de tarjeta (#254)", () => {
   it("el paso de la tarjeta solo se abre en la demo con ?vista=tarjeta", () => {
     expect(page).toContain("cardOffer={startOnCard}");
     expect(page).not.toContain("cardOffer={cardOffer}");
-    expect(page).toMatch(/const startOnCard = v\.demo && cardOffer && vista === "tarjeta";/);
+    expect(page).toContain('const startOnCard = v.demo && cardOffer && (vista === "tarjeta" || vista === "tarjeta-obligatoria");');
   });
   it("sin el paso de la tarjeta, Crear mi plan guarda y pregunta \"¿Entrenamos ahora?\"", () => {
     const w = readFileSync("src/app/bienvenida/wizard.tsx", "utf8");

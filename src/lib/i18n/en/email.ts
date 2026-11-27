@@ -89,6 +89,8 @@ export const EMAIL: Record<string, string> = {
   "Andrés, de Banana Burn": "Andrés, from Banana Burn",
   "Primer mes al 50 %": "First month at 50% off",
   "Recibes este correo porque tienes una cuenta en Banana Burn y los correos de Banana Burn activados.": "You're getting this email because you have a Banana Burn account and Banana Burn emails turned on.",
+  "Llevas {workouts}{extra} en tu prueba. Todo queda guardado en Progreso.": "You've done {workouts}{extra} in your trial. It's all saved in Progress.",
+  "Tu primer entreno dura {min} min y lo puedes hacer hoy, también en casa.": "Your first workout takes {min} min and you can do it today, even at home.",
   "En tu prueba guardaste {workouts}{extra}. Todo eso sigue en tu cuenta.": "During your trial you saved {workouts}{extra}. All of it is still in your account.",
   " de {days} por semana": " for {days} a week",
   "Tu plan{days} sigue listo en tu cuenta, con las rutinas armadas a partir de tus datos.":
