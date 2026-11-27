@@ -42,6 +42,7 @@ export type Capability =
   | "leads.b2b"            // solicitudes de reunión de condominios (0052): ver, cambiar estado y notas
   | "testimonials.manage" // opiniones del tercer entreno (0065): ver todas y aprobar cuáles se usan
   | "alerts.manage"       // avisos al dueño cuando entra alguien o entra dinero (0059). Solo el dueño
+  | "marketing.campaign"   // #332: enviar la campaña "primer mes al 50 %" a cuentas anteriores (correo + oferta). Decisión de ingresos
   | "users.manage";        // gestión completa de la cuenta (0056): nombre, correo, acceso, bloqueo, temporadas, retos, insignias y XP. Solo el dueño
 
 const ALL_STAFF = STAFF_ROLES;
@@ -78,6 +79,7 @@ export const MATRIX: Record<Capability, Role[]> = {
   "ops.health": PRIVILEGED, // igual que public.is_admin() en app_errors y ops_heartbeats (0041)
   "affiliates.manage": ["superadmin"], // igual que public.is_superadmin() en las tablas de 0051
   "leads.b2b": SUPPORT_ADMIN, // igual que public.is_support_staff() en b2b_leads (0052)
+  "marketing.campaign": PRIVILEGED,
   "users.manage": ["superadmin"], // igual que public.is_superadmin() en las RPC de 0056
   "testimonials.manage": PRIVILEGED, // igual que public.is_admin() en testimonials (0065)
   "alerts.manage": ["superadmin"], // igual que public.is_superadmin() en admin_events y admin_notify_prefs (0059)
